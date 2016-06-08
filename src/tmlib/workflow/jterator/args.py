@@ -22,10 +22,32 @@ class JteratorSubmissionArguments(SubmissionArguments):
     pass
 
 
+def get_names_of_existing_pipelines(experiment):
+    '''Gets names of all existing jterator pipelines for a given experiment.
+
+    Parameters
+    ----------
+    experiment: tmlib.models.Experiment
+        processed experiment
+
+    Returns
+    -------
+    List[str]
+        names of jterator pipelines
+    '''
+    import os
+    from tmlib.workflow.jterator.project import list_projects
+    return [
+        os.path.basename(project)
+        for project
+        in list_projects(os.path.join(experiment.workflow_location, 'jterator'))
+    ]
+
+
 @extra_args('jterator')
 class JteratorExtraArguments(ExtraArguments):
 
     pipeline = Argument(
         type=str, help='name of the pipeline that should be processed',
-        required=True, flag='p'
+        required=True, flag='p', get_choices=get_names_of_existing_pipelines
     )

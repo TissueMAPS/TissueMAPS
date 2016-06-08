@@ -87,11 +87,17 @@ class Project(object):
     def handles(self, value):
         self._handles = value
 
+    @property
+    def _pipe_filename(self):
+        '''str: name of the YAML pipeline descriptor file
+        '''
+        return '%s%s' % (self.pipe_name, PIPE_SUFFIX)
+
     def _get_pipe_file(self, directory=None):
         if not directory:
             directory = self.step_location
         pipe_files = glob.glob(
-            os.path.join(directory, '%s%s' % (self.pipe_name, PIPE_SUFFIX))
+            os.path.join(directory, self._pipe_filename)
         )
         if len(pipe_files) == 1:
             return pipe_files[0]
@@ -239,9 +245,8 @@ class Project(object):
         Creates the file with an empty pipeline description in case it doesn't
         exist.
         '''
-        pipe_file = os.path.join(
-            self.step_location,
-            '%s%s' % (self.pipe_name, PIPE_SUFFIX)
+        pipe_file= os.path.join(
+            self.step_location, self._pipe_filename
         )
         if not os.path.exists(pipe_file):
             self._create_pipe_file(pipe_file)
@@ -406,7 +411,10 @@ class Project(object):
         if skel_dir:
             self._create_project_from_skeleton(skel_dir, repo_dir)
         else:
-            self._create_pipe_file(repo_dir)
+            pipe_file_path = os.path.join(
+                self.step_location, self._pipe_filename
+            )
+            self._create_pipe_file(pipe_file_path)
             self._create_handles_folder()
 
     def remove(self):

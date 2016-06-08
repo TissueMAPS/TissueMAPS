@@ -72,7 +72,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         description, log output, and figures are stored
         '''
         return os.path.join(
-            self.workflow_location, '%s_%s' % (self.step_name, self.pipe_name)
+            self.workflow_location, self.step_name, self.pipe_name
         )
 
     @property
