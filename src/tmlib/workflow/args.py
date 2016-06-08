@@ -1,6 +1,7 @@
 import re
 import types
 import logging
+import inspect
 from abc import ABCMeta
 
 from tmlib.utils import assert_type
@@ -18,7 +19,7 @@ class Argument(object):
         flag=['basestring', 'types.NoneType']
     )
     def __init__(self, type, help, default=None, choices=None, flag=None,
-            required=False, disabled=False):
+            required=False, disabled=False, get_choices=None):
         '''
         Parameters
         ----------
@@ -28,8 +29,8 @@ class Argument(object):
             help message that describes the argument 
         default: , optional
             default value (default: ``None``)
-        choices: set or list, optional
-            set of choices for value (default: ``None``)
+        choices: set or list or function, optional
+            choices for value
         flag: str, optional
             single letter that serves as a flag for command line usage
             (default: ``None``)
@@ -38,6 +39,11 @@ class Argument(object):
         disabled: bool, optional
             whether the argument should be disabled in the UI
             (default: ``False``)
+        get_choices: function, optional
+            function that takes an object
+            of type :py:class:`tmlib.models.Experiment` and returns the
+            choices in case they need to (and can) be determined dynamically
+            (default: ``None``)
 
         Note
         ----
@@ -55,6 +61,14 @@ class Argument(object):
         self.disabled = disabled
         self.default = default
         self.value = None
+        if isinstance(get_choices, types.FunctionType):
+            arg_names = inspect.getargspec(get_choices).args
+            if len(arg_names) > 1:
+                raise ValueError(
+                    'Function "%s" for getting argument choices must only have '
+                    'a single argument.' % get_choices.__name__
+                )
+            self.get_choices = get_choices
         if self.default is not None:
             if self.type == str:
                 if not isinstance(self.default, basestring):
