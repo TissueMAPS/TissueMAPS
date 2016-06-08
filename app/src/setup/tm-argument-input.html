@@ -1,4 +1,4 @@
-<div class="form-group argument-input" ng-class="{blank: shouldAlert()}">
+<div class="form-group argument-input" ng-hide="{{arg.disabled}}" ng-class="{blank: shouldAlert()}">
     <label>{{:: arg.name }}</label>
     <span ng-hide="{{ arg.required }}">(optional)</span>
     <input ng-if="widgetType == 'textInput'" type="text" ng-model="arg.value">
