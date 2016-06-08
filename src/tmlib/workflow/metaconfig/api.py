@@ -356,8 +356,7 @@ class MetadataConfigurator(ClusterRoutines):
                                 ifm.cycle_id = cycle.id
                                 ifm.channel_id = channel.id
 
-                        if is_multiplexing_experiment:
-                            w_index += 1
+                        w_index += 1
 
                     if is_time_series_experiment:
                         t_index += 1
