@@ -19,16 +19,23 @@
           <tm-argument-input arg="arg" ng-repeat="arg in step.extra_args"
               arg-collection="setupCtrl.args[stage.name][step.name].extra_args"></tm-argument-input>
 
-          <div ng-show="stage.name == 'image_analysis'"
-               ng-disabled="!setupCtrl.canModifyPipeline()">
+          <div ng-show="stage.name == 'image_analysis'">
               <button class="btn btn-default"
-                  ng-click="stageCtrl.editPipeline(step)">
-                Edit pipeline
+                  ng-click="setupCtrl.editPipeline(step)"
+                  ng-disabled="!setupCtrl.canModifyPipeline()">
+                <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                Edit
               </button>
               <button class="btn btn-default"
-                  ng-click="stageCtrl.createPipeline(step)"
+                  ng-click="setupCtrl.deletePipeline(step)"
                   ng-disabled="!setupCtrl.canModifyPipeline()">
-                Create new pipeline
+                <i class="fa fa-trash-o" aria-hidden="true"></i>
+                Delete
+              </button>
+              <button class="btn btn-default"
+                  ng-click="setupCtrl.createPipeline()"
+                  ng-disabled="!setupCtrl.canModifyPipeline()">
+                Create new
               </button>
           </div>
 
@@ -58,6 +65,20 @@
         ng-disabled="!setupCtrl.isRunning()"
         class="btn btn-default">
         <i class="fa fa-stop"></i>
+        Kill
+    </button>
+
+    <button ng-click="setupCtrl.save()"
+        ng-disabled="setupCtrl.isRunning()"
+        class="btn btn-default">
+        <i class="fa fa-floppy-o"></i>
+        Save
+    </button>
+
+    <button ng-click="setupCtrl.update()"
+        class="btn btn-default">
+        <i class="fa fa-refresh"></i>
+        Reload
     </button>
 
   </div>

@@ -174,32 +174,14 @@ angular.module('jtui.project')
 
     function createJtproject(newProject) {
 
-        // console.log('create new project: ', newProject)
-
-        // var projectDef = $q.defer();
-        // $http.get('/create_jtproject' + '/' +
-        //           newProject.experimentID + '/' +
-        //           newProject.projectName + '/' +
-        //           newProject.skelName).success(function(data) {
-        //     var proj = jsyaml.safeDump(values2yaml(data.jtproject));
-        //     var project = new Project(proj['experiment'],
-        //                               proj['name'],
-        //                               proj['pipe'],
-        //                               proj['handles']);
-
-        //     projectDef.resolve(project);
-        // });
-
-        // return(projectDef.promise);
-
         console.log('project: ', newProject)
 
         var request = $http({
             method: 'post',
             url: '/jtui/create_jtproject' + '/' + newProject.experiment_id,
             data: {
-                project: newProject.projectName,
-                skeleton: newProject.skelName
+                pipeline: newProject.projectName,
+                template: newProject.skelName
             }
         });
 

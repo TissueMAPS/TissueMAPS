@@ -142,7 +142,7 @@ class SetupCtrl {
                 )
                 .then((resumeForReal) => {
                     if (resumeForReal) {
-                        result = this.experiment.resubmitWorkflow(desc, idx - 1)
+                        result = this._resubmitWorkflow(desc, idx - 1)
                         .then(function(res) {
                             return {
                                 success: res.status == 200,
@@ -162,6 +162,19 @@ class SetupCtrl {
         }
     }
 
+    save() {
+        var desc = this._updateWorkflowDescription(this.stages.length - 1);
+        console.log('save workflow description: ', desc)
+        this._saveWorkflowDescription(desc)
+        .then((res) => {
+            var result = {
+                success: res.status == 200,
+                message: res.statusText
+            };
+            this._displayResult('Save', result);
+        });
+    }
+
     submit() {
         var idx = this.stages.indexOf(this.currentStage);
         var notInUploadFiles = idx > 0;
@@ -176,7 +189,7 @@ class SetupCtrl {
                 )
                 .then((submitForReal) => {
                     if (submitForReal) {
-                        result = this.experiment.submitWorkflow(desc)
+                        result = this._submitWorkflow(desc)
                         .then(function(res) {
                             return {
                                 success: res.status == 200,
@@ -223,7 +236,7 @@ class SetupCtrl {
                                 index = i;
                             }
                         }
-                        result = this.experiment.resubmitWorkflow(desc, index)
+                        result = this._resubmitWorkflow(desc, index)
                         .then(function(res) {
                             return {
                                 success: res.status == 200,
@@ -263,6 +276,114 @@ class SetupCtrl {
         //     }
         // });
         this._displayResult('Kill', result);
+    }
+
+    deletePipeline(s: Step) {
+        var projectName = '';
+        for (var arg in s.extra_args) {
+            if (s.extra_args[arg].name == 'pipeline') {
+                projectName = s.extra_args[arg].value;
+            }
+        }
+        var result;
+        if (projectName == '' || projectName == null) {
+            result = {
+                success: false,
+                message: 'No pipeline selected.'
+            };
+            this._displayResult('Delete pipeline', result);
+        } else {
+            console.log('pipeline that should be deleted: ', projectName)
+            this._getFeedback(
+                'Delete pipeline',
+                'Do you really want to delete the pipeline?'
+            )
+            .then((deleteForReal) => {
+                if (deleteForReal) {
+                    console.log('delete pipeline HAAAAARD')
+                    result = this._removeJteratorProject(projectName)
+                    .then((res) => {
+                        result = {
+                            success: res.status == 200,
+                            message: res.statusText
+                        };
+                        this._displayResult('Delete Pipeline', result);
+                        if (result.success) {
+                            // reload descrioption such that choices are
+                            // updated
+                            var desc = this._updateWorkflowDescription(
+                                this.stages.length - 1
+                            );
+                            this._saveWorkflowDescription(desc)
+                            this._getWorkflowDescription();
+                        }
+                    });
+                }
+            });
+        }
+    }
+
+    createPipeline() {
+        // TODO: create template pipelines
+        var pipelineNames = [];
+        this._getInput(
+            'Create pipeline',
+            'Select a pipeline template:',
+            'dropdown',
+            pipelineNames
+        )
+        .then((templateName) => {
+            if (templateName == undefined) {
+                templateName = null;
+            }
+            console.log('create new pipeline using template: ', templateName)
+            this._getInput(
+                'Create pipeline',
+                'How should the new pipeline be called?',
+                'text',
+                null
+            )
+            .then((pipeName) => {
+                console.log('create pipeline: ', pipeName)
+                this._createJteratorProject(pipeName, templateName)
+                .then((res) => {
+                    var result = {
+                        success: res.status == 200,
+                        message: res.statusText
+                    };
+                    if (result.success) {
+                        this._$state.go('project', {
+                            experimentid: this.experiment.id,
+                            projectName: pipeName
+                        });
+                    } else {
+                        this._displayResult('Create pipeline', result);
+                    }
+                });
+            });
+        });
+    }
+
+    editPipeline(s: Step) {
+        var project = '';
+        for (var arg in s.extra_args) {
+            if (s.extra_args[arg].name == 'pipeline') {
+                project = s.extra_args[arg].value;
+            }
+        }
+        console.log(project)
+        if (project == '' || project == null) {
+            var result = {
+                success: false,
+                message: 'No pipeline selected.'
+            };
+            this._displayResult('Edit pipeline', result);
+        } else {
+            this._$state.go('project', {
+                experimentid: this.experiment.id,
+                projectName: project
+            });
+        }
     }
 
     private _getInput(task: string, description: string, widgetType: string, choices: any) {
@@ -307,8 +428,13 @@ class SetupCtrl {
     }
 
     canModifyPipeline(): boolean {
-        if (this.currentStageSubmission.state == 'RUNNING') {
+        if (this.currentStageSubmission == undefined) {
             return false;
+        }
+        else if (this.currentStageSubmission.state == 'RUNNING') {
+            return false;
+        } else {
+            return true;
         }
     }
 
@@ -363,9 +489,13 @@ class SetupCtrl {
         }
     }
 
+    update() {
+        this._getWorkflowDescription()
+    }
+
     getStatus() {
         console.log('get workflow status')
-        this.experiment.getWorkflowStatus();
+        this._getWorkflowStatus();
         this.submission = this.experiment.workflowStatus;
         if (this.submission == null) {
             this.submission = {
@@ -421,9 +551,9 @@ class SetupCtrl {
             desc.stages.push(stage);
         });
         if (redo) {
-            this.experiment.resubmitWorkflow(desc, index);
+            this._resubmitWorkflow(desc, index);
         } else {
-            this.experiment.submitWorkflow(desc);
+            this._submitWorkflow(desc);
         }
     }
 
@@ -433,6 +563,138 @@ class SetupCtrl {
         } else {
             return 'Next';
         }
+    }
+
+    private _submitWorkflow(workflowArgs) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        var data = {
+            description: workflowArgs
+        };
+        return $http.post('/api/experiments/' + this.experiment.id + '/workflow/submit', data)
+        .then((resp) => {
+            console.log(resp);
+            return resp;
+        })
+        .catch((resp) => {
+            console.log(resp)
+            return resp;
+            // return $q.reject(resp.data.error);
+        });
+    }
+
+    private _createJteratorProject(projectName, templateName) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        var data = {
+            pipeline: projectName,
+            template: templateName
+        };
+        return $http.post('/jtui/create_jtproject/' + this.experiment.id, data)
+        .then((resp) => {
+            console.log(resp)
+            return resp;
+        })
+        .catch((resp) => {
+            console.log(resp)
+            return resp;
+            // return $q.reject(resp.data.error);
+        });
+    }
+
+    private _removeJteratorProject(projectName) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        var data = {
+            pipeline: projectName
+        };
+        return $http.post('/jtui/remove_jtproject/' + this.experiment.id, data)
+        .then((resp) => {
+            console.log(resp)
+            return resp;
+        })
+        .catch((resp) => {
+            console.log(resp)
+            return resp;
+            // return $q.reject(resp.data.error);
+        });
+    }
+
+    private _resubmitWorkflow(workflowArgs, index) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        var data = {
+            description: workflowArgs,
+            index: index
+        };
+        return $http.post('/api/experiments/' + this.experiment.id + '/workflow/resubmit', data)
+        .then((resp) => {
+            console.log(resp)
+            return resp;
+        })
+        .catch((resp) => {
+            console.log(resp)
+            return resp;
+            // return $q.reject(resp.data.error);
+        });
+    }
+
+    private _killWorkflow() {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        return $http.post('/api/experiments/' + this.experiment.id + '/workflow/kill', {})
+        .then((resp) => {
+            console.log(resp)
+            return resp;
+        })
+        .catch((resp) => {
+            console.log(resp)
+            return resp;
+            // return $q.reject(resp.data.error);
+        });
+
+    }
+
+    private _saveWorkflowDescription(workflowArgs) {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        var data = {
+            description: workflowArgs
+        };
+        return $http.post('/api/experiments/' + this.experiment.id + '/workflow/save', data)
+        .then((resp) => {
+            console.log(resp)
+            return resp;
+        })
+        .catch((resp) => {
+            console.log(resp)
+            return resp;
+            // return $q.reject(resp.data.error);
+        });
+    }
+
+    private _getWorkflowDescription() {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        return $q.all({
+            description: $http.get('/api/experiments/' + this.experiment.id + '/workflow/load')
+        }).then((responses: any) => {
+           // console.log(responses.taskStatus.data.data)
+            this.experiment.workflowDescription = responses.description.data.data;
+           return this.experiment.workflowDescription;
+        });
+    }
+
+    private _getWorkflowStatus() {
+        var $http = $injector.get<ng.IHttpService>('$http');
+        var $q = $injector.get<ng.IQService>('$q');
+        return $q.all({
+            status: $http.get('/api/experiments/' + this.experiment.id + '/workflow/status')
+        }).then((responses: any) => {
+           // console.log(responses.taskStatus.data.data)
+            this.experiment.workflowStatus = responses.status.data.data;
+           return this.experiment.workflowStatus;
+        });
     }
 
     constructor(public experiment: Experiment,

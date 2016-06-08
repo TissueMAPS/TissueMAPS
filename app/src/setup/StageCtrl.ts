@@ -15,34 +15,6 @@ class StageCtrl {
         this._$scope.setupCtrl.currentStage = stage;
     }
 
-    editPipeline(s: Step) {
-        var experiment = this._$scope.$parent.setupCtrl.experiment;
-        var project = '';
-        for (var arg in s.extra_args) {
-            if (s.extra_args[arg].name == 'pipeline') {
-                project = s.extra_args[arg].value;
-            }
-        }
-        this._$state.go('project', {
-            experimentid: experiment.id,
-            projectName: project
-        });
-    }
-
-    createPipeline(s: Step) {
-        var experiment = this._$scope.$parent.setupCtrl.experiment;
-        var project = '';
-        for (var arg in s.extra_args) {
-            if (s.extra_args[arg].name == 'pipeline') {
-                project = s.extra_args[arg].value;
-            }
-        }
-        // TODO: modal that complains if pipeline does not exist
-        this._$state.go('project', {
-            experimentid: experiment.id,
-            projectName: project
-        });
-    }
 }
 
 angular.module('tmaps.ui').controller('StageCtrl', StageCtrl);
