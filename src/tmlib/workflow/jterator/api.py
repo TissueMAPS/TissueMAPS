@@ -71,8 +71,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''str: directory where files for job description, pipeline and module
         description, log output, and figures are stored
         '''
+        step_location = os.path.join(self.workflow_location, self)
+        if not os.path.exists(step_location):
+            os.mkdir(step_location)
         return os.path.join(
-            self.workflow_location, self.step_name, self.pipe_name
+            self.step_location, self.pipe_name
         )
 
     @property
