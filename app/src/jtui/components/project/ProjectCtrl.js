@@ -25,13 +25,24 @@ angular.module('jtui.project')
         if (checkIsOpen) return;
         console.log('check project:', $scope.project)
         var modalInst = $uibModal.open({
-            templateUrl: 'src/jtui/components/project/modals/check.html',
+            templateUrl: 'src/setup/modals/result.html',
+            controller: 'SetupResultCtrl',
+            controllerAs: 'result',
             resolve: {
-                checked: ['projectService', function(projectService){
-                            return projectService.checkProject($scope.project);
+                title: function() {
+                    return 'Check';
+                },
+                response: ['projectService', function(projectService){
+                    return projectService.checkProject($scope.project).then(
+                        function(res) {
+                            return {
+                                success: res.success,
+                                message: res.error
+                            }
+                        }
+                    )
                 }]
-            },
-            controller: 'CheckCtrl'
+            }
         });
 
         checkIsOpen = true;
@@ -48,13 +59,24 @@ angular.module('jtui.project')
         if (saveIsOpen) return;
         console.log('save project:', $scope.project)
         var modalInst = $uibModal.open({
-            templateUrl: 'src/jtui/components/project/modals/save.html',
+            templateUrl: 'src/setup/modals/result.html',
+            controller: 'SetupResultCtrl',
+            controllerAs: 'result',
             resolve: {
-                saved: ['projectService', function(projectService){
-                            return projectService.saveProject($scope.project);
+                title: function() {
+                    return 'Save';
+                },
+                response: ['projectService', function(projectService){
+                    return projectService.saveProject($scope.project).then(
+                        function(res) {
+                            return {
+                                success: res.success,
+                                message: res.error
+                            }
+                        }
+                    )
                 }]
-            },
-            controller: 'SaveCtrl'
+            }
         });
 
         saveIsOpen = true;
@@ -123,15 +145,21 @@ angular.module('jtui.project')
     var killIsOpen = false;
     $scope.kill = function() {
         if (killIsOpen) return;
-        console.log('kill jobs: ', $scope.taskId)
         var modalInst = $uibModal.open({
-            templateUrl: 'src/jtui/components/project/modals/kill.html',
+            templateUrl: 'src/setup/modals/result.html',
+            controller: 'SetupResultCtrl',
+            controllerAs: 'result',
             resolve: {
-                killed: ['runnerService', function(runnerService){
-                    return runnerService.kill($scope.project, $scope.taskId);
-                }]
-            },
-            controller: 'KillCtrl'
+                title: function() {
+                    return 'Kill';
+                },
+                response: function() {
+                    return {
+                        success: false,
+                        message: 'Not yet implemented.'
+                    };
+                }
+            }
         });
 
         killIsOpen = true;
