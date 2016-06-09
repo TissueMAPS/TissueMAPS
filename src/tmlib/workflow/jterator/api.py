@@ -74,9 +74,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         step_location = os.path.join(self.workflow_location, self.step_name)
         if not os.path.exists(step_location):
             os.mkdir(step_location)
-        return os.path.join(
-            self.step_location, self.pipe_name
-        )
+        return os.path.join(step_location, self.pipe_name)
 
     @property
     def project(self):
