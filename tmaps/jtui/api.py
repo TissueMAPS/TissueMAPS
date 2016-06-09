@@ -388,12 +388,18 @@ def get_module_figure(experiment, project_name, module_name, job_id):
         for m in jt.pipeline if m.name == module_name
     ]
     if len(fig_file) == 0:
-        return None
+        return jsonify(
+            'success': False,
+            'error': 'No figure file found for module "%s"' % module_name
+        )
     fig_file = fig_file[0]
     if os.path.exists(fig_file):
         return send_file(fig_file)
     else:
-        return None
+        return jsonify(
+            'success': False,
+            'error': 'No figure file found for module "%s"' % module_name
+        )
 
 
 @jtui.route('/create_joblist/<path:experiment_id>', methods=['POST'])
