@@ -110,19 +110,6 @@ angular.module('jtui.project')
         return(figureDef.promise)
     }
 
-    function getModuleSourceCode(moduleName) {
-
-        // TODO: name of the source rather than name of the handle file
-        var sourceDef = $q.defer();
-        var url = '/jtui/get_module_source_code' +
-                  '/' + moduleName;
-        $http.get(url).success(function (data) {
-            sourceDef.resolve(data)
-        });
-
-        return(sourceDef.promise)
-    }
-
     function saveProject(project) {
 
         // console.log('changed project:', values2yaml(project))
@@ -229,7 +216,6 @@ angular.module('jtui.project')
         getProject: getProject,
         // getExperiments: getExperiments,
         getChannels: getChannels,
-        getModuleSourceCode: getModuleSourceCode,
         getModuleFigure: getModuleFigure,
         saveProject: saveProject,
         checkProject: checkProject,

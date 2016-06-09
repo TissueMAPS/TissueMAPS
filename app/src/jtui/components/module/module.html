@@ -24,9 +24,9 @@
                         ng-drag="true" ng-drag-data="m"
                         ng-drag-success="onDragSuccess($data,$event)">
                         {{m.name}}
-                        <i class="fa fa-question" style="float: right"
-                           ng-click=""
-                           uib-tooltip="documentation" tooltip-placement="left">
+                        <i class="fa fa-question"
+                           style="float: right"
+                           ng-click="showSourceCode(m)">
                         </i>
                     </span>
                 </li>

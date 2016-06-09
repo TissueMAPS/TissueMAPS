@@ -9,18 +9,6 @@ angular.module('jtui.runner')
           console.log($scope.project)
           var currentModule = $scope.project.handles[i];
           var currentModuleIndex = i;
-          var filename = $scope.project.pipe.description.pipeline[i].source;
-          var extension = filename.split('.').pop();
-          if (extension == 'py') {
-            currentModule.language = 'python';
-          } else if (extension == 'm') {
-            currentModule.language = 'matlab';
-          } else if (extension == 'r' | extension == 'R') {
-            currentModule.language = 'r';
-          } else if (extension == 'jl') {
-            currentModule.language = 'julia';
-          }
-          currentModule.filename = filename;
         }
     }
     $scope.module = currentModule;
@@ -116,35 +104,6 @@ angular.module('jtui.runner')
             logIsOpen = false;
         }, function () {
             logIsOpen = false;
-        });
-    };
-
-    var codeIsOpen = false;
-    $scope.showSourceCode = function () {
-        if (codeIsOpen) return;
-        var modalInst = $uibModal.open({
-            templateUrl: 'src/jtui/components/runner/modals/code.html',
-            size: 'lg',
-            resolve: {
-                code: ['projectService', function(projectService){
-                            return projectService.getModuleSourceCode($scope.module.filename);
-                        }],
-                language: function () {
-                    return $scope.module.language;
-                },
-                name: function () {
-                    return $scope.module.name;
-                }
-            },
-            controller: 'CodeCtrl'
-        });
-
-        codeIsOpen = true;
-
-        modalInst.result.then(function () {
-            codeIsOpen = false;
-        }, function () {
-            codeIsOpen = false;
         });
     };
 

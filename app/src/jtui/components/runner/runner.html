@@ -13,30 +13,18 @@
 
         <div btn-group>
 
-            <button type="button"
-                    class="btn btn-jtui"
-                    ng-click="showSourceCode()">
-                <i class="fa fa-code"></i>
-            </button>
-
-            <button type="button"
-                    class="btn btn-jtui"
-                    ng-click="reportBug()">
-                <i class="fa fa-bug"></i>
-            </button>
-
             <span ng-show="outputAvailable">
 
               <!-- TODO: type "danger" for module that failed -->
 
                 <button type="button"
-                    class="btn btn-jtui"
+                    class="btn btn-default"
                     ng-click="showOutput()">
                     <i class="fa fa-terminal"></i>
                 </button>
 
                 <button type="button"
-                    class="btn btn-jtui"
+                    class="btn btn-default"
                     ng-click="showFigure()">
                     <i class="fa fa-bar-chart" aria-hidden="true"></i>
                 </button>

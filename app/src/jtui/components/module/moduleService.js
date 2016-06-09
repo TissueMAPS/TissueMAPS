@@ -34,4 +34,18 @@ angular.module('jtui.module')
     this.pipelines = pipelinesDef.promise;
 
 
+    this.getModuleSourceCode = function(moduleName) {
+
+        // TODO: name of the source rather than name of the handle file
+        var sourceDef = $q.defer();
+        var url = '/jtui/get_module_source_code' +
+                  '/' + moduleName;
+        $http.get(url).success(function (data) {
+            sourceDef.resolve(data)
+        });
+
+        return(sourceDef.promise)
+    }
+
+
 }]);

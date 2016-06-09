@@ -46,19 +46,22 @@
                     </div>
 
                     <div btn-group role="group">
-                        <button type="button" class="btn btn-jtui"
+                        <button type="button" class="btn btn-default"
                                               ng-click="addChannel()">
                             <i class="fa fa-plus"></i>
+                            Add
                         </button>
 
-                        <button type="button" class="btn btn-jtui"
+                        <button type="button" class="btn btn-default"
                                             ng-click="removeChannel()">
                             <i class="fa fa-minus"></i>
+                            Remove
                         </button>
 
-                        <button type="button" class="btn btn-jtui"
+                        <button type="button" class="btn btn-default"
                                             ng-click="listJobs()">
                             <i class="fa fa-list-ol"></i>
+                            List jobs
                         </button>
 
                     </div>
@@ -90,7 +93,7 @@
                             class="list-group-item"
                             ng-class="{active: $stateParams.moduleName == m.name}">
 
-                            <span type="button" >
+                            <span type="button">
                                 <span ng-show="m.active"
                                       ng-click="deactivateModule($index, $event)"
                                       class="fa fa-eye" aria-label="Left Align"
@@ -135,30 +138,35 @@
                     </div>
 
                     <div btn-group role="group" aria-label="...">
-                        <button type="button" class="btn btn-jtui"
-                                            ng-click="getHelpForPipeline()">
-                            <i class="fa fa-question"></i>
-                        </button>
-
-                        <button type="button" class="btn btn-jtui"
-                                            ng-click="checkProject()">
-                            <i class="fa fa-check"></i>
-                        </button>
-
-                        <button type="button" class="btn btn-jtui"
-                                            ng-click="saveProject()">
-                            <i class="fa fa-floppy-o"></i>
-                        </button>
-
-                        <button type="button" class="btn btn-jtui"
+                        <button type="button" class="btn btn-primary"
                                             ng-click="run()">
-                            <i class="fa fa-play"></i>
+                            Submit
                         </button>
 
-                        <button type="button" class="btn btn-jtui"
+                        <button type="button" class="btn btn-default"
                                             ng-click="kill()">
                             <i class="fa fa-stop"></i>
+                            Kill
                         </button>
+
+                        <!-- <button type="button" class="btn btn-default" -->
+                        <!--                     ng-click="getHelpForPipeline()"> -->
+                        <!--     <i class="fa fa-question"></i> -->
+                        <!--     Help -->
+                        <!-- </button> -->
+
+                        <button type="button" class="btn btn-default"
+                                            ng-click="checkProject()">
+                            <i class="fa fa-check"></i>
+                            Check
+                        </button>
+
+                        <button type="button" class="btn btn-default"
+                                            ng-click="saveProject()">
+                            <i class="fa fa-floppy-o"></i>
+                            Save
+                        </button>
+
                     </div>
 
                 </div>
@@ -178,7 +186,9 @@
     </div>
 
     <div class="pane-content">
-        <div ui-view="handles"></div>
+        <div class="pane-subcontent" perfect-scrollbar>
+            <div ui-view="handles"></div>
+        </div>
     </div>
 </div>
 

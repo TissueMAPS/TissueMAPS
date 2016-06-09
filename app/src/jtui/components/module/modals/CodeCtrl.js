@@ -1,4 +1,4 @@
-angular.module('jtui.runner')
+angular.module('jtui.module')
 .controller('CodeCtrl', ['$scope', 'code', 'language', 'name', 'marked', '$uibModalInstance',
     function($scope, code, language, name, marked, $uibModalInstance) {
 
