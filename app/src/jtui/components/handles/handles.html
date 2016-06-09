@@ -85,9 +85,7 @@
                           ng-class="{'error-input': duplicate}"
                           type="text" id="outputArg"
                           ng-model="outarg.key"
-                          ng-change="duplicate = isDuplicate(outarg)"
-                          uib-popover="{{ outarg.type }}"
-                          popover-trigger="focus" popover-placement="top">
+                          ng-change="duplicate = isDuplicate(outarg)">
 
                   <div ng-show="duplicate" class="error-text">
                       Names of outputs must be unique!

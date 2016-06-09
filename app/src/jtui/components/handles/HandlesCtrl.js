@@ -56,7 +56,7 @@ angular.module('jtui.handles')
     }
 
     $scope.isDuplicate = function(output_arg) {
-    
+
         var allOutputs = $scope.project.handles.map(function (h) {
             return h.description.output;
         });
@@ -67,13 +67,13 @@ angular.module('jtui.handles')
                 return !_.isNull(out.key) && (out.key == output_arg.key);
             }
         });
-        console.log('identical Outputs:', identicalOutputs)
 
-        var isChannel = $scope.project.pipe.description.input.channels.map(
-                function(channel) { channel.name == output_arg.key}
+        var isChannel = $scope.project.pipe.description.input.channels.some(
+                function(channel) {
+                    return channel.name == output_arg.key
+                }
         );
 
-        console.log('is Input:', isChannel)
         return identicalOutputs.length > 1 || isChannel;
 
     }
