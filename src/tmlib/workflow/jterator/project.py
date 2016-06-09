@@ -29,15 +29,12 @@ def list_projects(directory):
     directory: str
         absolute path to a directory
     '''
-    projects = [
+    return [
         os.path.join(directory, name)
         for name in os.listdir(directory)
         if os.path.isdir(os.path.join(directory, name)) and
         glob.glob(os.path.join(directory, name, '*%s' % PIPE_SUFFIX))
     ]
-    if not projects:
-        logger.warning('No Jterator projects found in %s' % directory)
-    return projects
 
 
 class Project(object):

@@ -366,18 +366,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         batch: dict
             job description
         '''
-        # TODO: break down into functions
-        if batch['plot']:
-            can_create_thumbnail = False
-            if 'RASTERIZE' not in os.environ:
-                logger.warn('"RASTERIZE" environment variable not set')
-            else:
-                rasterize_file = os.path.expandvars('$RASTERIZE')
-                if not os.path.exists(rasterize_file):
-                    logger.warn('"phantomjs" is not properly installed')
-                else:
-                    can_create_thumbnail = True
-
         # Handle pipeline input
         # ---------------------
 
@@ -525,6 +513,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 sys.exit(output['error_message'])
 
             store = module.update_store(store)
+
+            if batch['plot']:
+                figure_file = module.build_figure_filename(
+                    self.figures_location, job_id
+                )
+                with TextWriter(figure_file) as f:
+                    f.write(store['current_figure'])
 
         # Write output
         # ------------
