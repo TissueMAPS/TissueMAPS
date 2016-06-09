@@ -7,11 +7,15 @@
         </div>
         <div class="panel-body">
 
+          <h3>{{step.fullname}}</h3>
+
+          <p>{{step.help}}</p>
+
           <h4>Batch arguments</h4>
           <tm-argument-input arg="arg" ng-repeat="arg in step.batch_args"
               arg-collection="setupCtrl.args[stage.name][step.name].batch_args"></tm-argument-input>
 
-          <h4>Submit arguments</h4>
+          <h4>Submission arguments</h4>
           <tm-argument-input arg="arg" ng-repeat="arg in step.submission_args"
               arg-collection="setupCtrl.args[stage.name][step.name].submission_args"></tm-argument-input>
 
