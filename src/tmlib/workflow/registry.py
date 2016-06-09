@@ -221,6 +221,32 @@ def get_step_api(name):
     return _step_register[name]['api']
 
 
+def get_step_information(name):
+    '''Gets the full name of the given step and a brief description.
+
+    Parameters
+    ----------
+    name: str
+        name of the step
+
+    Returns
+    -------
+    Tuple[str]
+        full name and brief description
+    '''
+    pkg_name = '.'.join(__name__.split('.')[:-1])
+    subpkg_name = '%s.%s' % (pkg_name, name)
+    try:
+        subpkg = importlib.import_module(subpkg_name)
+    except ImportError as error:
+        raise ImportError(
+            'Import of package "%s" failed: %s' % (subpkg_name, str(error))
+        )
+    except:
+        raise
+    return (subpkg.__fullname__, subpkg.__description__)
+
+
 def get_workflow_dependencies(name):
     '''Gets an implementation of a workflow dependency declaration.
 

@@ -6,6 +6,7 @@ from tmlib.utils import assert_type
 from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow.registry import get_step_args
 from tmlib.workflow.registry import get_step_api
+from tmlib.workflow.registry import get_step_information
 from tmlib.workflow.registry import get_workflow_dependencies
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
@@ -308,6 +309,7 @@ class WorkflowStepDescription(object):
             when a provided argument is not a valid argument for the given step
         '''
         self.name = str(name)
+        self.fullname, self.help = get_step_information(name)
         self.active = active
         BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(name)
         if batch_args is None:
@@ -377,6 +379,8 @@ class WorkflowStepDescription(object):
         '''
         description = dict()
         description['name'] = self.name
+        description['fullname'] = self.fullname
+        description['help'] = self.help
         description['active'] = self.active
         description['batch_args'] = self.batch_args.as_list()
         description['submission_args'] = self.submission_args.as_list()
