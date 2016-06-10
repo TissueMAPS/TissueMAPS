@@ -62,21 +62,24 @@ def register_upload(acquisition):
     microscope_type = acquisition.plate.experiment.microscope_type
     imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
-    imgfiles = [
-        dict(name=secure_filename(f), acquisition_id=acquisition.id)
+    img_filenames = [f.name for f in acquisition.microscope_image_files]
+    img_files = [
+        MicroscopeImageFile(
+            name=secure_filename(f), acquisition_id=acquisition.id
+        )
         for f in data['files']
-        if imgfile_regex.match(f)
-        and f not in acquisition.microscope_image_files
+        if imgfile_regex.match(f) and f not in img_filenames
     ]
-    metafiles = [
-        dict(name=secure_filename(f), acquisition_id=acquisition.id)
+    meta_filenames = [f.name for f in acquisition.microscope_metadata_files]
+    meta_files = [
+        MicroscopeMetadataFile(
+            name=secure_filename(f), acquisition_id=acquisition.id
+        )
         for f in data['files']
-        if metadata_regex.match(f)
-        and f not in acquisition.microscope_metadata_files
+        if metadata_regex.match(f) and f not in meta_filenames
     ]
 
-    db.session.bulk_insert_mappings(MicroscopeImageFile, imgfiles)
-    db.session.bulk_insert_mappings(MicroscopeMetadataFile, metafiles)
+    db.session.add_all(img_files + meta_files)
     db.session.commit()
 
     return jsonify(message='Upload registered')
@@ -114,37 +117,23 @@ def file_validity_check(acquisition):
 @jwt_required()
 @extract_model_from_path(Acquisition, check_ownership=True)
 def upload_file(acquisition):
-    if acquisition.status == FileUploadStatus.FAILED:
-        raise InternalServerError(
-            'One or more files in this upload failed. This upload has to be '
-            'registered again before any upload attempt can be made again.'
-        )
-    elif acquisition.status == FileUploadStatus.COMPLETE:
-        raise MalformedRequestError(
-            'No upload was registered for this acquisition.'
-        )
+    f = request.files.get('file')
+    if acquisition.status == FileUploadStatus.COMPLETE:
+        logger.info('acquisition already complete')
+        return jsonify(message='Acquisition complete')
 
     # Get the file form the form
-    f = request.files.get('file')
     if not f:
         raise MalformedRequestError('Missing file entry in this request.')
 
     # filename = secure_filename(f.filename)
     filename = f.filename
-    logger.info('upload file "%s"', filename)
-    try:
-        imgfile = db.session.query(MicroscopeImageFile).\
-            filter_by(name=filename, acquisition_id=acquisition.id).\
-            one_or_none()
-    except MultipleResultsFound:
-        return jsonify(message='File already exists.')
-
-    try:
-        metafile = db.session.query(MicroscopeMetadataFile).\
-            filter_by(name=filename, acquisition_id=acquisition.id).\
-            one_or_none()
-    except MultipleResultsFound:
-        return jsonify(message='File already exists.')
+    imgfile = db.session.query(MicroscopeImageFile).\
+        filter_by(name=filename, acquisition_id=acquisition.id).\
+        one_or_none()
+    metafile = db.session.query(MicroscopeMetadataFile).\
+        filter_by(name=filename, acquisition_id=acquisition.id).\
+        one_or_none()
 
     is_imgfile = imgfile is not None
     is_metafile = metafile is not None
@@ -158,9 +147,18 @@ def upload_file(acquisition):
         file_obj = metafile
     else:
         raise MalformedRequestError(
-            'File was registered as both image and metadata file.'
+            'File was registered as both image and metadata file: "%s"'
+            % filename
         )
 
+    if file_obj.upload_status == FileUploadStatus.COMPLETE:
+        logger.info('file "%s" already uploaded')
+        return jsonify(message='File already uploaded')
+    elif file_obj.upload_status == FileUploadStatus.UPLOADING:
+        logger.info('file "%s" already uploading')
+        return jsonify(message='File upload already in progress')
+
+    logger.info('upload file "%s"', filename)
     file_obj.upload_status = FileUploadStatus.UPLOADING
     db.session.add(file_obj)
     db.session.commit()

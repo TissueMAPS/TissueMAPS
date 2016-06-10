@@ -423,7 +423,10 @@ def get_acquisition(acquisition):
 @extract_model_from_path(Acquisition, check_ownership=True)
 def get_acquisition_image_files(acquisition):
     return jsonify(
-        data=[{'name': f.name} for f in acquisition.microscope_image_files]
+        data=[
+            {'name': f.name, 'upload_status': f.upload_status}
+            for f in acquisition.microscope_image_files
+        ]
     )
 
 
@@ -432,5 +435,8 @@ def get_acquisition_image_files(acquisition):
 @extract_model_from_path(Acquisition, check_ownership=True)
 def get_acquisition_metadata_files(acquisition):
     return jsonify(
-        data=[{'name': f.name} for f in acquisition.microscope_metadata_files]
+        data=[
+            {'name': f.name, 'upload_status': f.upload_status}
+            for f in acquisition.microscope_metadata_files
+        ]
     )
