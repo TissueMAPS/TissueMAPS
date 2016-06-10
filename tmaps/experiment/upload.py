@@ -82,6 +82,11 @@ def register_upload(acquisition):
     db.session.add_all(img_files + meta_files)
     db.session.commit()
 
+    # Trigger creation of directories
+    acquisition.location
+    acquisition.microscope_images_location
+    acquisition.microscope_metadata_location
+
     return jsonify(message='Upload registered')
 
 
@@ -173,7 +178,7 @@ def upload_file(acquisition):
         db.session.add(file_obj)
         db.session.commit()
         raise InternalServerError(
-            'Upload of file failed: %s', str(error)
+            'Upload of file failed: %s' % str(error)
         )
 
     return jsonify(message='Upload ok')
