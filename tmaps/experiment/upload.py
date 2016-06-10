@@ -2,11 +2,13 @@ import os.path as p
 import json
 import datetime
 import importlib
+import logging
 import re
 
 from flask import request
 from flask.ext.jwt import jwt_required
 from werkzeug import secure_filename
+from sqlalchemy.orm.exc import MultipleResultsFound
 
 from tmlib.models import (
     Acquisition,
@@ -14,7 +16,7 @@ from tmlib.models import (
     MicroscopeMetadataFile
 )
 from tmlib.models.status import FileUploadStatus
-import tmlib.workflow.metaconfig
+from tmlib.workflow.metaconfig import get_microscope_type_regex
 
 from tmaps.extensions import redis_store
 from tmaps.api import api
@@ -24,6 +26,8 @@ from tmaps.util import (
     extract_model_from_body
 )
 from tmaps.error import *
+
+logger = logging.getLogger(__name__)
 
 
 @api.route('/acquisitions/<acquisition_id>/register-upload',
@@ -52,7 +56,8 @@ def register_upload(acquisition):
 
     if data is None or len(data.get('files', [])) == 0:
         raise MalformedRequestError(
-            'No files supplied. Cannot register upload.')
+            'No files supplied. Cannot register upload.'
+        )
 
     # Delete any old files
     for f in acquisition.microscope_image_files:
@@ -61,32 +66,24 @@ def register_upload(acquisition):
         db.session.delete(f)
     db.session.commit()
 
-    # file_key = 'acquisition:%d:upload:files' % acquisition.id
-    # registered_flag_key = 'acquisition:%d:upload:registered' % acquisition.id
-
-    # redis_store.set(registered_flag_key, True)
-
     microscope_type = acquisition.plate.experiment.microscope_type
-    metaconfig = importlib.import_module(
-        'tmlib.workflow.metaconfig.%s' % microscope_type)
-    imgfile_regex = re.compile(metaconfig.IMAGE_FILE_REGEX_PATTERN)
-    metadata_regex = re.compile(metaconfig.METADATA_FILE_REGEX_PATTERN)
+    imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
-    imgfiles = [secure_filename(f) for f in data['files'] if imgfile_regex.match(f)]
-    metafiles = [secure_filename(f) for f in data['files'] if metadata_regex.match(f)]
+    imgfiles = [
+        MicroscopeImageFile(
+            name=secure_filename(f), acquisition_id=acquisition.id
+        )
+        for f in data['files'] if imgfile_regex.match(f)
+    ]
+    metafiles = [
+        MicroscopeMetadataFile(
+            name=secure_filename(f), acquisition_id=acquisition.id
+        )
+        for f in data['files'] if metadata_regex.match(f)
+    ]
 
-    imgfile_objects = \
-        [MicroscopeImageFile(name=f, acquisition_id=acquisition.id)
-         for f in imgfiles]
-    metafile_objects = \
-        [MicroscopeMetadataFile(name=f, acquisition_id=acquisition.id)
-         for f in metafiles]
-
-    db.session.add_all(imgfile_objects + metafile_objects)
+    db.session.add_all(imgfiles + metafiles)
     db.session.commit()
-
-    # redis_store.delete(file_key)  # clear before adding
-    # redis_store.sadd(file_key, *filenames)
 
     return jsonify(message='Upload registered')
 
@@ -102,17 +99,14 @@ def file_validity_check(acquisition):
         raise MalformedRequestError()
 
     microscope_type = acquisition.plate.experiment.microscope_type
-    metaconfig = importlib.import_module(
-        'tmlib.workflow.metaconfig.%s' % microscope_type)
-
-    imgfile_regex = re.compile(metaconfig.IMAGE_FILE_REGEX_PATTERN)
-    metadata_regex = re.compile(metaconfig.METADATA_FILE_REGEX_PATTERN)
+    imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
     def check_file(fname):
         is_imgfile = imgfile_regex.match(fname) is not None
         is_metadata_file = metadata_regex.match(fname) is not None
         return is_metadata_file or is_imgfile
 
+    # TODO: check if metadata files are missing
     data = json.loads(request.data)
     filenames = [f['name'] for f in data['files']]
     is_valid = map(check_file, filenames)
@@ -126,16 +120,6 @@ def file_validity_check(acquisition):
 @jwt_required()
 @extract_model_from_path(Acquisition, check_ownership=True)
 def upload_file(acquisition):
-    # file_key = 'acquisition:%d:upload:files' % acquisition.id
-    # registered_flag_key = 'acquisition:%d:upload:registered' % acquisition.id
-
-    # is_registered = redis_store.get(registered_flag_key)
-
-    # if not is_registered:
-    #     acquisition.upload_status = FileUploadStatus.FAILED
-    #     raise MalformedRequestError('No upload was registered for this acquisition.')
-    # else:
-    #     acquisition.upload_status = FileUploadStatus.UPLOADING
     if acquisition.status == FileUploadStatus.FAILED:
         raise InternalServerError(
             'One or more files in this upload failed. This upload has to be '
@@ -153,35 +137,56 @@ def upload_file(acquisition):
 
     # filename = secure_filename(f.filename)
     filename = f.filename
-    imgfile_objs = [fl for fl in acquisition.microscope_image_files if fl.name == filename]
-    metafile_objs = [fl for fl in acquisition.microscope_metadata_files if fl.name == filename]
+    logger.info('upload file "%s"', filename)
+    try:
+        imgfile = db.session.query(MicroscopeImageFile).\
+            filter_by(name=filename, acquisition_id=acquisition.id).\
+            one_or_none()
+    except MultipleResultsFound:
+        raise MalformedRequestError(
+            'Image file already exists: "%s"' % filename
+        )
 
-    if len(imgfile_objs) > 1:
-        raise MalformedRequestError('Multiple image files found with this name.')
-    if len(metafile_objs) > 1:
-        raise MalformedRequestError('Multiple metadata files found with this name.')
+    try:
+        metafile = db.session.query(MicroscopeMetadataFile).\
+            filter_by(name=filename, acquisition_id=acquisition.id).\
+            one_or_none()
+    except MultipleResultsFound:
+        raise MalformedRequestError(
+            'Metadata file already exists: "%s"' % filename
+        )
 
-    is_imgfile = len(imgfile_objs) == 1
-    is_metafile = len(metafile_objs) == 1
-    if is_imgfile and is_metafile:
-        raise MalformedRequestError('This file was registered as a metadata and as an image file.')
-    if is_imgfile:
-        file_obj = imgfile_objs[0]
+    is_imgfile = imgfile is not None
+    is_metafile = metafile is not None
+    if not is_metafile and not is_imgfile:
+        raise MalformedRequestError(
+            'File was not registered: "%s"' % filename
+        )
+    elif is_imgfile:
+        file_obj = imgfile
     elif is_metafile:
-        file_obj = metafile_objs[0]
+        file_obj = metafile
     else:
-        raise MalformedRequestError('This file was registered never registered.')
+        raise MalformedRequestError(
+            'File was registered as both image and metadata file: "%s"'
+            % filename
+        )
 
-    f.save(file_obj.location)
-    file_obj.upload_status = FileUploadStatus.COMPLETE
-
-    # acquisition.save_microscope_image_file(f)
-    # redis_store.srem(file_key, f.filename)
-
-    # Check if this was the last upload
-    # remaining_files = redis_store.smembers(file_key)
-    # if len(remaining_files) == 0:
-    #     acquisition.status = FileUploadStatus.COMPLETE
-
+    file_obj.upload_status = FileUploadStatus.UPLOADING
+    db.session.add(file_obj)
     db.session.commit()
+
+    try:
+        f.save(file_obj.location)
+        file_obj.upload_status = FileUploadStatus.COMPLETE
+        db.session.add(file_obj)
+        db.session.commit()
+    except Exception as error:
+        file_obj.upload_status = FileUploadStatus.FAILED
+        db.session.add(file_obj)
+        db.session.commit()
+        raise InternalServerError(
+            'Upload of file "%s" failed: %s', file_obj.name, str(error)
+        )
+
     return jsonify(message='Upload ok')
