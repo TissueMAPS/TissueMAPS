@@ -137,18 +137,14 @@ def upload_file(acquisition):
             filter_by(name=filename, acquisition_id=acquisition.id).\
             one_or_none()
     except MultipleResultsFound:
-        raise MalformedRequestError(
-            'Image file already exists: "%s"' % filename
-        )
+        return jsonify(message='File already exists.')
 
     try:
         metafile = db.session.query(MicroscopeMetadataFile).\
             filter_by(name=filename, acquisition_id=acquisition.id).\
             one_or_none()
     except MultipleResultsFound:
-        raise MalformedRequestError(
-            'Metadata file already exists: "%s"' % filename
-        )
+        return jsonify(message='File already exists.')
 
     is_imgfile = imgfile is not None
     is_metafile = metafile is not None
@@ -162,8 +158,7 @@ def upload_file(acquisition):
         file_obj = metafile
     else:
         raise MalformedRequestError(
-            'File was registered as both image and metadata file: "%s"'
-            % filename
+            'File was registered as both image and metadata file.'
         )
 
     file_obj.upload_status = FileUploadStatus.UPLOADING
@@ -180,7 +175,7 @@ def upload_file(acquisition):
         db.session.add(file_obj)
         db.session.commit()
         raise InternalServerError(
-            'Upload of file "%s" failed: %s', file_obj.name, str(error)
+            'Upload of file failed: %s', str(error)
         )
 
     return jsonify(message='Upload ok')
