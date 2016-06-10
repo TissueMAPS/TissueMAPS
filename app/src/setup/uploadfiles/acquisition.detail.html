@@ -12,7 +12,7 @@
         ngf-drag-over-class="file-drop-zone-hover"
         ngf-multiple="true"
         ngf-allow-dir="true"
-        ngf-keep="false"
+        ngf-keep="'distinct'"
         ngf-accept="'*'">
 
         <div ng-show="!acquisitionDetailCtrl.newFiles.length">
@@ -38,11 +38,11 @@
       </button>
     </div>
     <div class="col-md-6 already-added-files-container">
-      Already added files:
+      Successfully uploaded files:
 
       <div class="already-added-files" perfect-scrollbar>
         <ul>
-          <li ng-repeat="f in aq.files">
+            <li ng-repeat="f in aq.files | filter:{upload_status: 'COMPLETE'} | orderBy:'name'">
           {{:: f.name}}
           </li>
         </ul>
@@ -74,6 +74,7 @@
               <th width="10%">Status</th>
             </thead>
             <tbody>
+
             <tr ng-repeat="f in acquisitionDetailCtrl.newFiles">
               <td><b>{{ f.name }}</b></td>
               <td>{{ f.size | fsize }}</td>

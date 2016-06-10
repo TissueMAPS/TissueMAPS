@@ -4,6 +4,7 @@
  */
 interface MicroscopeFile {
     name: string;
+    upload_status: string;
 }
 
 /**
@@ -39,6 +40,7 @@ class Acquisition {
 
         this._uploader = $injector.get<any>('Upload');
         this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 20000000});
+        console.log(this._uploader)
     }
 
     fetchExistingFiles(): ng.IPromise<MicroscopeFile[]> {
@@ -65,8 +67,10 @@ class Acquisition {
         var $q = $injector.get<ng.IQService>('$q');
         var $window = $injector.get<ng.IWindowService>('$window');
         this.status = 'UPLOADING';
+        console.log(newFiles)
         var filePromises = newFiles.map((f) => {
             var fileDef = $q.defer();
+            var filenames = this.files.map(function(f) {return f.name;});
             f.upload = this._uploader.upload({
                 url: url,
                 header: {'Authorization': 'JWT ' + $window.sessionStorage['token']},
@@ -110,7 +114,7 @@ class Acquisition {
         var $q = $injector.get<ng.IQService>('$q');
         return $http.put(url, { files: fileNames })
         .then((resp) => {
-            this.clearFiles();
+            // this.clearFiles();
             return resp.status === 200;
         })
         .catch((resp) => {
