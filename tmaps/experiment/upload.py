@@ -59,30 +59,24 @@ def register_upload(acquisition):
             'No files supplied. Cannot register upload.'
         )
 
-    # Delete any old files
-    for f in acquisition.microscope_image_files:
-        db.session.delete(f)
-    for f in acquisition.microscope_metadata_files:
-        db.session.delete(f)
-    db.session.commit()
-
     microscope_type = acquisition.plate.experiment.microscope_type
     imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
     imgfiles = [
-        MicroscopeImageFile(
-            name=secure_filename(f), acquisition_id=acquisition.id
-        )
-        for f in data['files'] if imgfile_regex.match(f)
+        dict(name=secure_filename(f), acquisition_id=acquisition.id)
+        for f in data['files']
+        if imgfile_regex.match(f)
+        and f not in acquisition.microscope_image_files
     ]
     metafiles = [
-        MicroscopeMetadataFile(
-            name=secure_filename(f), acquisition_id=acquisition.id
-        )
-        for f in data['files'] if metadata_regex.match(f)
+        dict(name=secure_filename(f), acquisition_id=acquisition.id)
+        for f in data['files']
+        if metadata_regex.match(f)
+        and f not in acquisition.microscope_metadata_files
     ]
 
-    db.session.add_all(imgfiles + metafiles)
+    db.session.bulk_insert_mappings(MicroscopeImageFile, imgfiles)
+    db.session.bulk_insert_mappings(MicroscopeMetadataFile, metafiles)
     db.session.commit()
 
     return jsonify(message='Upload registered')
