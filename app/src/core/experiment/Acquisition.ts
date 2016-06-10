@@ -44,6 +44,7 @@ class Acquisition {
     }
 
     fetchExistingFiles(): ng.IPromise<MicroscopeFile[]> {
+        this.clearFiles();
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
         return $q.all({
@@ -82,7 +83,9 @@ class Acquisition {
             }).success((data, status, headers, config) => {
                 config.file.progress = 100;
                 config.file.status = 'COMPLETE';
-                this.files.push(<MicroscopeFile>{name: config.file.name});
+                this.files.push(<MicroscopeFile>{
+                    name: config.file.name, upload_status: 'COMPLETE'
+                });
                 fileDef.resolve(config.file);
             }).error((data, status, headers, config) => {
                 config.file.status = 'FAILED';
