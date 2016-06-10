@@ -1,3 +1,4 @@
+import re
 import importlib
 from tmlib import __version__
 
@@ -59,15 +60,18 @@ def get_microscope_type_regex(microscope_type):
 
     Returns
     -------
-    Tuple[str]
+    Tuple[_sre.SRE_Pattern]
         regex pattern for image and metadata files
     '''
-    module = import_microscope_type_specific_module(microscope_type)
-    return (module.IMAGE_FILE_REGEX_PATTERN, module.METADATA_FILE_REGEX_PATTERN)
+    module = import_microscope_type_module(microscope_type)
+    return (
+        re.compile(module.IMAGE_FILE_REGEX_PATTERN), 
+        re.compile(module.METADATA_FILE_REGEX_PATTERN)
+    )
 
 
 def metadata_reader_factory(microscope_type):
-    '''Return the implementation
+    '''Gets the implementation
     of the :py:class:`tmlib.workflow.metaconfig.default.MetadataReader`
     abstract base class for the given microscope type.
 
@@ -78,7 +82,7 @@ def metadata_reader_factory(microscope_type):
 
     Returns
     -------
-    tmlib.workflow.metaconfig.default.MetadataReader
+    classobj
     '''
     module = import_microscope_type_module(microscope_type)
     class_name = '%sMetadataReader' % microscope_type.capitalize()
@@ -86,7 +90,7 @@ def metadata_reader_factory(microscope_type):
 
 
 def metadata_handler_factory(microscope_type):
-    '''Return the implementation of the
+    '''Gets the implementation of the
     :py:class:`tmlib.workflow.metaconfig.default.MetadataHandler`
     abstract base class for the given microscope type.
 
@@ -97,7 +101,7 @@ def metadata_handler_factory(microscope_type):
 
     Returns
     -------
-    tmlib.workflow.metaconfig.default.MetadataHandler
+    classobj
     '''
     module = import_microscope_type_module(microscope_type)
     class_name = '%sMetadataHandler' % microscope_type.capitalize()
