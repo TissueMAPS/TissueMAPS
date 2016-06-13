@@ -40,6 +40,7 @@ class Acquisition {
 
         this._uploader = $injector.get<any>('Upload');
         this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 20000000});
+        this._uploader.defaults.blobUrlsMaxQueueSize = 10;  // default: 200
         console.log(this._uploader)
     }
 
