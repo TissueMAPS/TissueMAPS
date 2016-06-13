@@ -54,7 +54,7 @@ class Tmaps(SubmissionManager):
         self._print_logo()
         logger.info('submit workflow')
         api = self.api_instance
-        submission_id, user_name = self.register_submission()
+        submission_id, user_name = self.register_submission('workflow')
         workflow = api.create_workflow(submission_id, user_name)
         store = create_gc3pie_sql_store()
         store.save(workflow)

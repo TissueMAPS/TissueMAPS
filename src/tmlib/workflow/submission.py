@@ -27,10 +27,15 @@ class SubmissionManager(object):
         self.experiment_id = experiment_id
         self.program_name = program_name
 
-    def register_submission(self):
+    def register_submission(self, program_name=None):
         '''Generates a unique submission ID.
 
         Creates a database entry in the "submissions" table.
+
+        Parameters
+        ----------
+        program_name: str, optional
+            name of the submitting program (default: ``None``)
 
         Returns
         -------
@@ -48,10 +53,12 @@ class SubmissionManager(object):
         --------
         :py:class:`tmlib.models.Submission`
         '''
+        if program_name is None:
+            program_name = self.program_name
         with tm.utils.Session() as session:
             submission = tm.Submission(
                 experiment_id=self.experiment_id,
-                program=self.program_name
+                program=program_name
             )
             session.add(submission)
             session.flush()
