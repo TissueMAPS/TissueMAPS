@@ -209,7 +209,7 @@ Then:
     $ wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
       sudo apt-key add -
     $ sudo apt-get update
-    $ apt-get install postgresql-9.4
+    $ apt-get install postgresql-9.5
 
 For more details, see: [](http://www.postgresql.org/download/linux/ubuntu/).
 
@@ -231,7 +231,7 @@ So doing it manually:
 psycopg2 won't install via pip on Ubuntu since it needs the dev package of
 postgres:
 
-    $ sudo apt-get install postgresql-server-dev-9.4
+    $ sudo apt-get install postgresql-server-dev-9.5
     $ sudo apt-get install python-psycopg2
 
     $ Somehow install tmlib
@@ -283,14 +283,24 @@ Add the contents:
     module = wsgi:app
 
     master = true
+    
+    # Parallelization and concurrency
     processes = 5
+    gevent = 100
 
     socket = nginx-comm.sock
     chmod-socket = 777 # CHANGE THIS TO 660 AND CHECK THAT NGINX HAS PERMISSION
     vacuum = true
-    enable-threads = true
 
     die-on-term = true
+    
+    # Overwrite default "www-data" group (important for SLURM job submission)
+    gid = ubuntu
+    
+    # Capture environment for uWSGI ($env > ~/TissueMaps/server/environment.txt)
+    for-readline = environment.txt
+      env = %(_)
+    endfor =
 
 
 Now create an upstart scripts according to the link above.
@@ -321,6 +331,11 @@ Configuring nginx:
     $ sudo vim /etc/nginx/sites-available/tmaps
 
 Add the contents:
+
+    http {
+        uwsgi_read_timeout 3600;
+        client_max_body_size 1000M;
+    }
 
     server {
         listen 80;
