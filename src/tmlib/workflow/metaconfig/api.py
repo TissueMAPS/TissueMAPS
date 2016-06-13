@@ -194,23 +194,23 @@ class MetadataConfigurator(ClusterRoutines):
         mdhandler.configure_omexml_from_metadata_files(batch['regex'])
         missing = mdhandler.determine_missing_metadata()
         if missing:
-            if batch['regex']:
-                logger.warning('required metadata information is missing')
-                logger.info(
-                    'try to retrieve missing metadata from filenames '
-                    'using regular expression'
-                )
-                n_wells = self.experiment.plate_format
-                plate_dimensions = determine_plate_dimensions(n_wells)
-                mdhandler.configure_metadata_from_filenames(
-                    plate_dimensions=plate_dimensions,
-                    regex=batch['regex']
-                )
-            else:
-                raise MetadataError(
-                    'The following metadata information is missing:\n"%s"\n'
+            logger.warning('required metadata information is missing')
+            logger.info(
+                'try to retrieve missing metadata from filenames '
+                'using regular expression'
+            )
+            n_wells = self.experiment.plate_format
+            plate_dimensions = determine_plate_dimensions(n_wells)
+            mdhandler.configure_metadata_from_filenames(
+                plate_dimensions=plate_dimensions,
+                regex=batch['regex']
+            )
+            if (batch['regex'] is None and
+                    mdhandler.IMAGE_FILE_REGEX_PATTERN is None):
+                logger.warning(
+                    'The following metadata information is missing: "%s"'
                     'You can provide a regular expression in order to '
-                    'retrieve the missing information from filenames '
+                    'retrieve the missing information from filenames.'
                     % '", "'.join(missing)
                 )
         missing = mdhandler.determine_missing_metadata()
