@@ -15,10 +15,10 @@ angular.module('tmaps.ui')
         restrict: 'EA',
         link: function($scope, $elem, $attr) {
 
-            var left = $elem.css('left') == 'auto' ? 0 : parseInt($elem.css('left'));
-            var right = $elem.css('right') == 'auto' ? 0 : parseInt($elem.css('right'));
-            var top = $elem.css('top') == 'auto' ? 0 : parseInt($elem.css('top'));
-            var bottom = $elem.css('bottom') == 'auto' ? 0 : parseInt($elem.css('bottom'));
+            // var left = $elem.css('left') == 'auto' ? 0 : parseInt($elem.css('left'));
+            // var right = $elem.css('right') == 'auto' ? 0 : parseInt($elem.css('right'));
+            // var top = $elem.css('top') == 'auto' ? 0 : parseInt($elem.css('top'));
+            // var bottom = $elem.css('bottom') == 'auto' ? 0 : parseInt($elem.css('bottom'));
             var width = parseInt($elem.css('width'));
 
             if (!width) {
@@ -32,10 +32,13 @@ angular.module('tmaps.ui')
             // should also be shown to the right of an element.
             function updatePosition() {
                 var parentPos = $parent.offset();
-                $elem.css({
-                    left: parentPos.left - right + left - width,
-                    top: parentPos.top - bottom + top
-                });
+                var updatedPos = {
+                    left: parentPos.left - width,
+                    top: parentPos.top
+                    // left: parentPos.left - right + left - width,
+                    // top: parentPos.top - bottom + top
+                };
+                $elem.css(updatedPos);
             }
 
             $(window).resize(function() {
