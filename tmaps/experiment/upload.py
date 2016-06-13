@@ -104,8 +104,8 @@ def file_validity_check(acquisition):
     imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
     def check_file(fname):
-        is_imgfile = imgfile_regex.match(fname) is not None
-        is_metadata_file = metadata_regex.match(fname) is not None
+        is_imgfile = imgfile_regex.search(fname) is not None
+        is_metadata_file = metadata_regex.search(fname) is not None
         return is_metadata_file or is_imgfile
 
     # TODO: check if metadata files are missing
