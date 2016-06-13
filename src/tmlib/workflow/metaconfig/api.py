@@ -8,7 +8,6 @@ import tmlib.models as tm
 from tmlib.workflow.metaconfig import metadata_handler_factory
 from tmlib.workflow.metaconfig import metadata_reader_factory
 from tmlib.workflow.api import ClusterRoutines
-from tmlib.models.plate import determine_plate_dimensions
 from tmlib.errors import MetadataError
 from tmlib.workflow.registry import api
 
@@ -199,8 +198,9 @@ class MetadataConfigurator(ClusterRoutines):
                 'try to retrieve missing metadata from filenames '
                 'using regular expression'
             )
-            n_wells = self.experiment.plate_format
-            plate_dimensions = determine_plate_dimensions(n_wells)
+            with tm.utils.Session() as session:
+                experiment = session.query(tm.Experiment).get(self.experiment_id)
+                plate_dimensions = experiment.plates[0].dimensions
             mdhandler.configure_metadata_from_filenames(
                 plate_dimensions=plate_dimensions,
                 regex=batch['regex']
