@@ -166,8 +166,8 @@ def get_task_data_from_engine(task):
 
         * ``"name"`` (*str*): name of task
         * ``"state"`` (*g3clibs.Run.State*): state of the task
-        * ``"is_live"`` (*bool*): whether the task is currently processed
-        * ``"is_done"`` (*bool*): whether the task is done
+        * ``"live"`` (*bool*): whether the task is currently processed
+        * ``"done"`` (*bool*): whether the task is done
         * ``"failed"`` (*bool*): whether the task failed, i.e. terminated
           with non-zero exitcode
         * ``"exitcode"`` (*int*): status code returned by the program
@@ -189,12 +189,12 @@ def get_task_data_from_engine(task):
     '''
     # TODO: Implement WAITING state for stages/steps that are not yet created
     def get_info(task_, i):
-        is_live_states = {
+        live_states = {
             gc3libs.Run.State.SUBMITTED,
             gc3libs.Run.State.RUNNING,
             gc3libs.Run.State.STOPPED
         }
-        is_done = task_.execution.state == gc3libs.Run.State.TERMINATED
+        done = task_.execution.state == gc3libs.Run.State.TERMINATED
         failed = (
             task_.execution.exitcode != 0 and
             task_.execution.exitcode is not None
@@ -204,9 +204,9 @@ def get_task_data_from_engine(task):
             'submission_id': task_.submission_id,
             'name': task_.jobname,
             'state': task_.execution.state,
-            'is_live': task_.execution.state in is_live_states,
-            'is_done': is_done,
-            'failed': is_done and failed,
+            'live': task_.execution.state in live_states,
+            'done': done,
+            'failed': done and failed,
             'exitcode': task_.execution.exitcode,
             'percent_done': 0.0,  # fix later, if possible
             'time': task_.execution.get('duration', None),
@@ -283,6 +283,8 @@ def get_task_data_from_engine(task):
         if hasattr(task_, 'tasks'):
             # loop recursively over subtasks
             data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
+        else:
+            data['subtasks'] = []
 
         return data
 
@@ -297,8 +299,8 @@ def get_task_data_from_sql_store(task):
         * ``"submission_id"`` (*int*): id of submission
         * ``"name"`` (*str*): name of task
         * ``"state"`` (*g3clibs.Run.State*): state of the task
-        * ``"is_live"`` (*bool*): whether the task is currently processed
-        * ``"is_done"`` (*bool*): whether the task is done
+        * ``"live"`` (*bool*): whether the task is currently processed
+        * ``"done"`` (*bool*): whether the task is done
         * ``"failed"`` (*bool*): whether the task failed, i.e. terminated
           with non-zero exitcode
         * ``"percent_done"`` (*float*): percent of subtasks that are *done*
@@ -319,7 +321,7 @@ def get_task_data_from_sql_store(task):
         information about each task and its subtasks
     '''
     def get_info(task_, i):
-        is_live_states = {
+        live_states = {
             gc3libs.Run.State.SUBMITTED,
             gc3libs.Run.State.RUNNING,
             gc3libs.Run.State.STOPPED
@@ -328,10 +330,11 @@ def get_task_data_from_sql_store(task):
         with tm.utils.Session() as session:
             task_info = session.query(tm.Task).get(task_.persistent_id)
             failed = task_info.exitcode != 0 and task_info.exitcode is not None
-            data['is_done'] = task_info.state == gc3libs.Run.State.TERMINATED
+            data['done'] = task_info.state == gc3libs.Run.State.TERMINATED
             data['failed'] = failed
             data['name'] = task_info.name
             data['state'] = task_info.state
+            data['live'] = task_info.state in live_states,
             data['memory'] = task_info.memory
             data['type'] = task_info.type
             data['exitcode'] = task_info.exitcode
@@ -363,6 +366,8 @@ def get_task_data_from_sql_store(task):
 
             if hasattr(task_, 'tasks'):
                 data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
+            else:
+                data['subtasks'] = []
 
         return data
 
