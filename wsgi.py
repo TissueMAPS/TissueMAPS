@@ -15,7 +15,7 @@ development server.
 """
 
 import os
-import os.path as p
+import logging
 from werkzeug.contrib.profiler import ProfilerMiddleware
 import flask
 from tmaps.appfactory import create_app
@@ -32,7 +32,10 @@ logo = """
 
 print logo
 
-configure_logging(1)
+configure_logging(logging.INFO)
+tmlib_logger = logging.getLogger('tmlib')
+tmlib_logger.setLevel(logging.INFO)
+
 app = create_app()
 
 if __name__ == '__main__':
