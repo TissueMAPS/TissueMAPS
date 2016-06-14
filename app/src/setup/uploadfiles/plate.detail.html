@@ -1,29 +1,34 @@
-<h2>Plate: {{::plateDetailCtrl.plate.name}}</h2>
+<h3>
+    Plate:
+<a ui-sref="^.detail({plateid: plateDetailCtrl.plate.id})">{{:: plateDetailCtrl.plate.name}}</a>
+</h3>
 
-<div ui-view ng-init="plate = plateDetailCtrl.plate">
+<div class="experiment-list" ui-view ng-init="plate = plateDetailCtrl.plate">
   <div ng-show="plate.description" class="well">{{:: plate.description }}</div>
 
   <div class="panel panel-default">
     <div class="panel-heading">Acquisitions</div>
     <div class="panel-body">
-      <div class="list-group">
-        <li class="list-group-item"
-            ng-repeat="aq in plate.acquisitions">
+      <ul class="list-group">
+        <li class="list-group-item" ng-repeat="aq in plate.acquisitions">
 
-            <a ui-sref="acquisition.detail({acquisitionid: aq.id})">{{::aq.name}}</a>
-          <span ng-show="aq.description" style="color: gray;">- {{::aq.description}}</span>
+          <a ui-sref="acquisition.detail({acquisitionid: aq.id})">{{aq.name}}</a>
+          <span ng-show="aq.description" style="color: gray;">- {{aq.description}}</span>
 
           <span>({{aq.status}})</span>
 
-          <button ng-click="plateDetailCtrl.deleteAcquisition(aq)" class="pull-right">
+          <button class="btn btn-danger pull-right"
+                ng-click="plateDetailCtrl.deleteAcquisition(aq)">
+            <i class="fa fa-trash-o" aria-hidden="true"></i>
             Delete
           </button>
         </li>
-      </div>
+      </ul>
     </div>
     <div class="panel-footer">
       <button ui-sref="acquisition.create" class="btn btn-default">
-          Add new acquisition
+          <i class="fa fa-plus" aria-hidden="true"></i>
+          Add acquisition
       </button>
     </div>
   </div>

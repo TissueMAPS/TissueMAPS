@@ -6,41 +6,70 @@
           {{:: step.name }}
         </div>
         <div class="panel-body">
+          <div class="col-md-6">
 
-          <h3>{{step.fullname}}</h3>
+              <h3>{{step.fullname}}</h3>
 
-          <p>{{step.help}}</p>
+              <p>{{step.help}}</p>
 
-          <h4>Batch arguments</h4>
-          <tm-argument-input arg="arg" ng-repeat="arg in step.batch_args"
-              arg-collection="setupCtrl.args[stage.name][step.name].batch_args"></tm-argument-input>
+              <h4>Batch arguments</h4>
+              <tm-argument-input arg="arg" ng-repeat="arg in step.batch_args"
+                  arg-collection="setupCtrl.args[stage.name][step.name].batch_args"></tm-argument-input>
 
-          <h4>Submission arguments</h4>
-          <tm-argument-input arg="arg" ng-repeat="arg in step.submission_args"
-              arg-collection="setupCtrl.args[stage.name][step.name].submission_args"></tm-argument-input>
+              <h4>Submission arguments</h4>
+              <tm-argument-input arg="arg" ng-repeat="arg in step.submission_args"
+                  arg-collection="setupCtrl.args[stage.name][step.name].submission_args"></tm-argument-input>
 
-          <h4>Extra arguments</h4>
-          <tm-argument-input arg="arg" ng-repeat="arg in step.extra_args"
-              arg-collection="setupCtrl.args[stage.name][step.name].extra_args"></tm-argument-input>
+              <h4>Extra arguments</h4>
+              <tm-argument-input arg="arg" ng-repeat="arg in step.extra_args"
+                  arg-collection="setupCtrl.args[stage.name][step.name].extra_args"></tm-argument-input>
 
-          <div ng-show="stage.name == 'image_analysis'">
-              <button class="btn btn-default"
-                  ng-click="setupCtrl.editPipeline(step)"
-                  ng-disabled="!setupCtrl.canModifyPipeline()">
-                <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
-                Edit
-              </button>
-              <button class="btn btn-default"
-                  ng-click="setupCtrl.deletePipeline(step)"
-                  ng-disabled="!setupCtrl.canModifyPipeline()">
-                <i class="fa fa-trash-o" aria-hidden="true"></i>
-                Delete
-              </button>
-              <button class="btn btn-default"
-                  ng-click="setupCtrl.createPipeline()"
-                  ng-disabled="!setupCtrl.canModifyPipeline()">
-                Create new
-              </button>
+              <div ng-show="stage.name == 'image_analysis'">
+                  <button class="btn btn-default"
+                      ng-click="setupCtrl.editPipeline(step)"
+                      ng-disabled="!setupCtrl.canModifyPipeline()">
+                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                    Edit
+                  </button>
+                  <button class="btn btn-default"
+                      ng-click="setupCtrl.deletePipeline(step)"
+                      ng-disabled="!setupCtrl.canModifyPipeline()">
+                    <i class="fa fa-trash-o" aria-hidden="true"></i>
+                    Delete
+                  </button>
+                  <button class="btn btn-default"
+                      ng-click="setupCtrl.createPipeline()"
+                      ng-disabled="!setupCtrl.canModifyPipeline()">
+                    Create new
+                  </button>
+              </div>
+
+          </div>
+
+          <div class="col-md-6">
+            <!-- <div ui-tree> -->
+            <!--   <ol ui-tree-nodes="" ng-model="stage.status.subtasks"> -->
+            <!--     <li ng-repeat="step in stage.status.subtasks" ui-tree-node> -->
+            <!--       <div ui-tree-handle> -->
+            <!--         {{step.name}} -->
+            <!--       </div> -->
+            <!--       <ol ui-tree-nodes="" ng-model="step.subtasks"> -->
+            <!--         <li ng-repeat="phase in step.subtasks" ui-tree-node> -->
+            <!--           <div ui-tree-handle> -->
+            <!--             {{phase.name}} -->
+            <!--           </div> -->
+            <!--           <ol ui-tree-nodes="" ng-model="phase.subtasks"> -->
+            <!--             <li ng-repeat="job in phase.subtasks" ui-tree-node> -->
+            <!--               <div ui-tree-handle> -->
+            <!--                 {{phase.name}} -->
+            <!--               </div> -->
+            <!--             </li> -->
+            <!--           </ol> -->
+            <!--         </li> -->
+            <!--       </ol> -->
+            <!--     </li> -->
+            <!--   </ol> -->
+            <!-- </div> -->
           </div>
 
         </div>
@@ -86,5 +115,6 @@
     </button>
 
   </div>
+
 </form>
 

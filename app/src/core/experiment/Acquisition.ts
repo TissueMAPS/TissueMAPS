@@ -41,7 +41,6 @@ class Acquisition {
         this._uploader = $injector.get<any>('Upload');
         this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 20000000});
         this._uploader.defaults.blobUrlsMaxQueueSize = 10;  // default: 200
-        console.log(this._uploader)
     }
 
     fetchExistingFiles(): ng.IPromise<MicroscopeFile[]> {
@@ -69,7 +68,6 @@ class Acquisition {
         var $q = $injector.get<ng.IQService>('$q');
         var $window = $injector.get<ng.IWindowService>('$window');
         this.status = 'UPLOADING';
-        console.log(newFiles)
         var filePromises = newFiles.map((f) => {
             var fileDef = $q.defer();
             var filenames = this.files.map(function(f) {return f.name;});

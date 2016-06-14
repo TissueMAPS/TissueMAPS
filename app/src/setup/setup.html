@@ -4,21 +4,20 @@
     <div class="row header">
 
       <div class="col-md-9">
-          <h3>{{setupCtrl.submission.name}}</h3>
+          <h3>{{setupCtrl.workflowStatus.name}}</h3>
       </div>
 
       <div class="col-md-3">
         <i class="fa fa-cog fa-fw"
-           ng-hide="setupCtrl.isRunning()">
+           ng-show="!setupCtrl.isRunning(setupCtrl.status)">
         </i>
         <i class="fa fa-cog fa-spin fa-fw"
-           ng-show="setupCtrl.isRunning()">
+           ng-show="setupCtrl.isRunning(setupCtrl.status)">
         </i>
-        <i>{{setupCtrl.submission.state}}</i>
+        <i>{{setupCtrl.status.state}}</i>
         <!-- <h4>{{setupCtrl.experiment.name}} ({{setupCtrl.experiment.workflowStatus.state}})</h4> -->
-        {{submission.indicator}}
-        <uib-progressbar max="100" style="height: 15px;" value="setupCtrl.submission.percent_done"
-           type="{{setupCtrl.submission.failed ? 'failed' : 'success'}}">
+        <uib-progressbar max="100" style="height: 15px;" value="setupCtrl.status.percent_done"
+           type="{{setupCtrl.status.failed ? 'failed' : 'success'}}">
         </uib-progressbar>
       </div>
 
@@ -30,23 +29,33 @@
         <ul class="stage-indicators">
           <li class="stage-indicator" ng-repeat="stage in setupCtrl.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
             ng-click="setupCtrl.goToStage(stage)">
-              {{stage.name}}
-            <!-- {{::stage.name.replace('_', ' ')}} -->
+            <i ng-show="!stage.status.failed && stage.status.done" style="color: green;"
+                class="fa fa-check-circle" aria-hidden="true">
+            </i>
+            <i ng-show="stage.status.failed" style="color: red;"
+                class="fa fa-exclamation-circle" aria-hidden="true">
+            </i>
+            <i class="fa fa-question-circle"
+               ng-show="setupCtrl.isSubmitted(stage.status)">
+            </i>
+            <i class="fa fa-cog fa-spin fa-fw"
+               ng-show="setupCtrl.isRunning(stage.status)">
+            </i>
+            {{::stage.name.replace('_', ' ')}}
           </li>
         </ul>
       </div>
 
       <div class="col-md-3">
         <i class="fa fa-cog fa-fw"
-           ng-hide="setupCtrl.currentStageSubmission.state == 'RUNNING'"
-           ng-hide="setupCtrl.currentStageSubmission.stage == ''">
+           ng-show="!setupCtrl.isRunning(setupCtrl.currentStage.status)">
         </i>
         <i class="fa fa-cog fa-spin fa-fw"
-           ng-show="setupCtrl.currentStageSubmission.state == 'RUNNING'">
+           ng-show="setupCtrl.isRunning(setupCtrl.currentStage.status)">
         </i>
-        <i>{{setupCtrl.currentStageSubmission.state}}</i>
-        <uib-progressbar max="100" style="height: 15px;" value="setupCtrl.currentStageSubmission.percent_done"
-           type="{{setupCtrl.currentStageSubmission.failed ? 'failed' : 'success'}}">
+        <i>{{setupCtrl.currentStage.status.state}}</i>
+        <uib-progressbar max="100" style="height: 15px;" value="setupCtrl.currentStage.status.percent_done"
+           type="{{setupCtrl.currentStage.status.failed ? 'failed' : 'success'}}">
         </uib-progressbar>
       </div>
 
