@@ -19,7 +19,6 @@ import os.path as p
 from werkzeug.contrib.profiler import ProfilerMiddleware
 import flask
 from tmaps.appfactory import create_app
-from tmaps import log
 from tmlib.logging_utils import configure_logging
 
 logo = """
@@ -46,6 +45,9 @@ if __name__ == '__main__':
         '--threaded', action='store_true', default=False,
         help='if the dev server should run in multi-threaded mode')
     parser.add_argument(
+        '--gevent', action='store_true', default=False,
+        help='if the dev server should run in gevent mode')
+    parser.add_argument(
         '--profile', action='store_true', default=False,
         help='if application should be profiled')
     args = parser.parse_args()
@@ -54,11 +56,7 @@ if __name__ == '__main__':
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
-    use_jtui = app.config.get('USE_JTUI', False)
-    if use_jtui:
-        if args.threaded:
-            app.run(port=args.port, debug=True, gevent=100, threaded=True)
-        else:
-            app.run(port=args.port, debug=True, gevent=100)
+    if args.gevent:
+        app.run(port=args.port, debug=True, gevent=100, threaded=args.threaded)
     else:
         app.run(port=args.port, debug=True, threaded=args.threaded)
