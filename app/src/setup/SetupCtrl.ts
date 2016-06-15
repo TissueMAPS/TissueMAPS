@@ -22,28 +22,6 @@ class SetupCtrl {
         }
     }
 
-    private _updateWorkflowDescription(index: number) {
-        var desc = $.extend(true, {}, this.experiment.workflowDescription);
-        desc.stages = [];
-        for (var i = 1; i < this.workflow.stages.length;  i++) {
-            var stage = $.extend(true, {}, this.workflow.stages[i]);
-            // The 1. stage "upload" is not a stages that can
-            // be submitted. It will be removed from the description.
-            if (index < i) {
-                // These stages should not be submitted. They will
-                // be included in the description, but set inactive.
-                stage.active = false;
-            } else {
-                // in case they have been inactivated previously for whatever
-                // reason
-                stage.active = true;
-            }
-            delete stage.status;
-            desc.stages.push(stage);
-        }
-        return desc;
-    }
-
     private _isLastStage(stage: WorkflowStage): boolean {
         if (stage != undefined) {
             var idx = this.workflow.stages.indexOf(stage);
@@ -71,7 +49,7 @@ class SetupCtrl {
             var areStagesOk = this.workflow.check(idx);
             var result;
             if (areStagesOk) {
-                var desc = this._updateWorkflowDescription(idx);
+                var desc = this.workflow.getDescription(idx);
                 this._dialogService.warning('Do you really want to resume the workflow?')
                 .then((resumeForReal) => {
                     if (resumeForReal) {
@@ -96,7 +74,7 @@ class SetupCtrl {
     }
 
     save() {
-        var desc = this._updateWorkflowDescription(this.workflow.stages.length - 1);
+        var desc = this.workflow.getDescription(this.workflow.stages.length - 1);
         // console.log('save workflow description: ', desc)
         this._saveWorkflowDescription(desc)
         .then((res) => {
@@ -115,7 +93,7 @@ class SetupCtrl {
             var areStagesOk = this.workflow.check(idx);
             var result;
             if (areStagesOk) {
-                var desc = this._updateWorkflowDescription(idx);
+                var desc = this.workflow.getDescription(idx);
                 this._dialogService.warning(
                     'Do you really want to submit the workflow?'
                 )
@@ -148,7 +126,7 @@ class SetupCtrl {
             var areStagesOk = this.workflow.check(idx);
             var result;
             if (areStagesOk) {
-                var desc = this._updateWorkflowDescription(idx);
+                var desc = this.workflow.getDescription(idx);
                 var stageNames = this.experiment.workflowDescription.stages.map((st) => {
                     return st.name
                 });
@@ -242,7 +220,7 @@ class SetupCtrl {
                         if (result.success) {
                             // reload descrioption such that choices are
                             // updated
-                            var desc = this._updateWorkflowDescription(
+                            var desc = this.workflow.getDescription(
                                 this.workflow.stages.length - 1
                             );
                             this._saveWorkflowDescription(desc)
@@ -678,14 +656,16 @@ class SetupCtrl {
                 private _$interval,
                 private _$scope,
                 private _$uibModal: ng.ui.bootstrap.IModalService) {
+        this._$scope.$watch('currentStage');
         this._getWorkflowDescription();
         this._getWorkflowStatus()
         .then((workflowStatus) => {
+            // console.log(workflowStatus)
+            // TODO: handle null status
             this.workflow = new Workflow(
                 this.experiment.workflowDescription, workflowStatus
             );
-            this.currentStage = this.workflow.stages[0];
-            this._$scope.$watch('currentStage');
+            this.goToStage(this.workflow.stages[0]);
             //  start monitoring as soon as the user enters the "setup" view
             this._startMonitoring();
         });

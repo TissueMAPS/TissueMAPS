@@ -74,13 +74,13 @@ class WorkflowStage extends JobCollection {
         return _.all(areStepsOk);
     }
 
-    serialize(): WorkflowStageDescription {
+    getDescription(): WorkflowStageDescription {
         return {
             name: this.name,
             mode: this.mode,
             active: this.active,
             steps: this.steps.map((step, idx) => {
-                return step.serialize();
+                return step.getDescription();
             })
         }
     }

@@ -1,5 +1,6 @@
 interface WorkflowStepDescription {
     name: string;
+    active: boolean;
     batch_args: any;
     submission_args: any;
     extra_args: any;
@@ -8,6 +9,7 @@ interface WorkflowStepDescription {
 
 class WorkflowStep extends JobCollection {
     name: string;
+    active: boolean;
     batch_args: Argument[];
     submission_args: Argument[];
     extra_args: Argument[];
@@ -17,6 +19,7 @@ class WorkflowStep extends JobCollection {
                 workflowStepStatus: any) {
         super(workflowStepStatus);
         this.name = description.name;
+        this.active = description.active;
         this.batch_args = description.batch_args.map((arg) => {
             return new Argument(arg);
         });
@@ -30,12 +33,13 @@ class WorkflowStep extends JobCollection {
         }
     }
 
-    serialize(): WorkflowStepDescription {
+    getDescription(): WorkflowStepDescription {
         return {
             name: this.name,
             batch_args: this.batch_args,
             submission_args: this.submission_args,
-            extra_args: this.extra_args
+            extra_args: this.extra_args,
+            active: this.active
         }
     }
 }

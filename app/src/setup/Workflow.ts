@@ -53,17 +53,23 @@ class Workflow extends JobCollection {
         });
     }
 
-    serialize(index: number): WorkflowDescription {
+    getDescription(index: number): WorkflowDescription {
         return {
             type: this.type,
             stages: this.stages.map((stage, idx) => {
-                var serializedStage = stage.serialize();
-                if (index < idx) {
-                    serializedStage.active = true;
-                } else {
-                    serializedStage.active = false;
+                if (idx > 0 && stage.name != 'upload') {
+                    // skip "upload" stage
+                    var getDescriptiondStage = stage.getDescription();
+                    if (idx <= index) {
+                        getDescriptiondStage.active = true;
+                    } else {
+                        getDescriptiondStage.active = false;
+                    }
+                    return getDescriptiondStage;
                 }
-                return serializedStage;
+            })
+            .filter((stage) => {
+                return stage != undefined;
             })
         }
     }
