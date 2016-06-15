@@ -30,7 +30,7 @@
 </div>
 
 <button ng-click="setupCtrl.goToNextStage()"
-    ng-disabled="!setupCtrl.canProceedToNextStage()"
+    ng-disabled="!setupCtrl.canProceedToNextStage(setupCtrl.currentStage)"
     class="btn btn-primary">
   Next
 </button>

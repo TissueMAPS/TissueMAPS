@@ -21,6 +21,7 @@
         'ui.slider',
         'ui.bootstrap',
         'ui.router',
+        'ui.tree',
         'tmaps.auth',
         'ngFileUpload',
         'ui.router.breadcrumbs'
@@ -40,6 +41,7 @@
         'ui.bootstrap',
         'ui.sortable',
         'ui.slider',
+        'ui.tree',
 
         'perfect_scrollbar',
 

@@ -161,20 +161,6 @@ angular.module('tmaps.ui')
                 controller: 'StageCtrl',
                 controllerAs: 'stageCtrl'
             }
-        },
-        resolve: {
-            stage: ['experiment', '$stateParams', (experiment, $stateParams) => {
-                var stage = _.find(experiment.workflowDescription.stages, (st: any) => {
-                    return st.name === $stateParams.stageName;
-                });
-                if (stage !== undefined) {
-                    return stage;
-                } else {
-                    return {
-                        name: 'uploadfiles'
-                    };
-                }
-            }]
         }
     })
     .state('plate', {

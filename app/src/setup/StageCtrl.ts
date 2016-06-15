@@ -1,30 +1,11 @@
-interface Step {
-    name: string;
-    extra_args: any[];
-    batch_args: any[];
-    submit_args: any[];
-    status: any;
-}
-
 class StageCtrl {
+    stage: WorkflowStage;
 
-    static $inject = ['stage', '$state', '$scope'];
+    static $inject = ['$state', '$scope'];
 
-    constructor(public stage: any,
-                private _$state: any,
+    constructor(private _$state: any,
                 private _$scope: any) {
-
-        if (stage.status == undefined) {
-            stage.status = {
-                done: false,
-                failed: false,
-                percent_done: 0,
-                state: '',
-                subtasks: []
-            };
-        }
-        this._$scope.setupCtrl.currentStage = stage;
-        // TODO: step controller
+        this.stage = this._$scope.setupCtrl.currentStage;
     }
 
 }

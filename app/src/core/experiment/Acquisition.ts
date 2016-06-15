@@ -21,7 +21,6 @@ class Acquisition {
     id: string;
     name: string;
     description: string;
-    // The upload status
     status: string;
     files: MicroscopeFile[] = [];
 

@@ -1,27 +1,18 @@
-interface Stage {
-    name: string;
-    steps: any[];
-    active: boolean;
-    mode: string;
-    status: any;
-}
-
 class SetupCtrl {
 
-    currentStage: Stage;
-    stages: Stage[];
-    status: any;
+    currentStage: WorkflowStage;
+    workflow: Workflow;
     _monitoringPromise: ng.IPromise<void> = null;
 
     static $inject = ['experiment', 'plates', 'dialogService', '$state', '$interval', '$scope', '$uibModal'];
 
-    isInStage(stage: Stage) {
+    isInStage(stage: WorkflowStage) {
         return this.currentStage.name === stage.name;
     }
 
-    goToStage(stage: Stage) {
+    goToStage(stage: WorkflowStage) {
         this.currentStage = stage;
-        console.log(this.currentStage)
+        // console.log('go to stage: ', this.currentStage)
         if (stage.name === 'upload') {
             this._$state.go('plate');
         } else {
@@ -34,8 +25,8 @@ class SetupCtrl {
     private _updateWorkflowDescription(index: number) {
         var desc = $.extend(true, {}, this.experiment.workflowDescription);
         desc.stages = [];
-        for (var i = 1; i < this.stages.length;  i++) {
-            var stage = $.extend(true, {}, this.stages[i]);
+        for (var i = 1; i < this.workflow.stages.length;  i++) {
+            var stage = $.extend(true, {}, this.workflow.stages[i]);
             // The 1. stage "upload" is not a stages that can
             // be submitted. It will be removed from the description.
             if (index < i) {
@@ -53,88 +44,31 @@ class SetupCtrl {
         return desc;
     }
 
-    private _checkArgsForWorkflowStage(stage: Stage): boolean {
-        var workflowStatusArgsAreValid, batchArgsAreValid, extraArgsAreValid;
-        var isValid: boolean;
-
-        function checkArgs(args) {
-            return _.chain(args).map((arg) => {
-                var isValid;
-                if (arg.required) {
-                    isValid = arg.value !== undefined
-                        && arg.value !== null
-                        && arg.value !== '';
-                } else {
-                    isValid = true;
-                }
-                return isValid;
-            }).all().value();
-        }
-
-        var areStepsOk: boolean[] =  stage.steps.map((step) => {
-            batchArgsAreValid = checkArgs(step.batch_args);
-            workflowStatusArgsAreValid = checkArgs(step.workflowStatus_args);
-
-            if (step.extra_args) {
-                extraArgsAreValid = checkArgs(step.extra_args);
-            } else {
-                extraArgsAreValid = true;
-            }
-
-            return batchArgsAreValid && workflowStatusArgsAreValid && extraArgsAreValid;
-        });
-        return _.all(areStepsOk);
-    }
-
-    private _isUploadStageOk() {
-        var atLeastOnePlate = this.plates.length > 0;
-        var allPlatesReady = _.all(this.plates.map((pl) => {
-            return pl.isReadyForProcessing;
-        }));
-        var isUploadStageOk = atLeastOnePlate && allPlatesReady;
-        return isUploadStageOk;
-    }
-
-    private _areWorkflowStagesOk(index: number) {
-        return _.all(this.stages.map((st, idx) => {
-            if (idx == 0) {
-                // first stage "uploadfiles" is not checked here
-                return true;
-            } else if (idx <= index) {
-                return this._checkArgsForWorkflowStage(st);
-            } else {
-                // subsequent step which don't get submitted
-                // are not checked here
-                return true;
-            }
-        }));
-    }
-
-    private _areAllStagesOk(): boolean {
-        var index = this.experiment.workflowDescription.stages.length - 1;
-        return this._isUploadStageOk() && this._areWorkflowStagesOk(index);
-    }
-
-    private _isLastStage(stage): boolean {
-        var idx = this.stages.indexOf(stage);
-        return idx === this.stages.length - 1;
-    }
-
-    canProceedToNextStage(): boolean {
-        if (this._isLastStage(this.currentStage)) {
-            return false;
-        } else if (this.currentStage.name === 'upload') {
-            return this._isUploadStageOk();
+    private _isLastStage(stage: WorkflowStage): boolean {
+        if (stage != undefined) {
+            var idx = this.workflow.stages.indexOf(stage);
+            return idx === this.workflow.stages.length - 1;
         } else {
-            return this._checkArgsForWorkflowStage(this.currentStage);
+            return false;
+        }
+    }
+
+    canProceedToNextStage(stage: WorkflowStage): boolean {
+        if (stage == undefined) {
+            return false;
+        }
+        if (this._isLastStage(stage)) {
+            return false;
+        } else {
+            return stage.check();
         }
     }
 
     resume() {
-        var idx = this.stages.indexOf(this.currentStage);
+        var idx = this.workflow.stages.indexOf(this.currentStage);
         var notInUploadFiles = idx > 0;
         if (notInUploadFiles) {
-            var areStagesOk = this._areWorkflowStagesOk(idx);
+            var areStagesOk = this.workflow.check(idx);
             var result;
             if (areStagesOk) {
                 var desc = this._updateWorkflowDescription(idx);
@@ -162,8 +96,8 @@ class SetupCtrl {
     }
 
     save() {
-        var desc = this._updateWorkflowDescription(this.stages.length - 1);
-        console.log('save workflow description: ', desc)
+        var desc = this._updateWorkflowDescription(this.workflow.stages.length - 1);
+        // console.log('save workflow description: ', desc)
         this._saveWorkflowDescription(desc)
         .then((res) => {
             var result = {
@@ -175,10 +109,10 @@ class SetupCtrl {
     }
 
     submit() {
-        var idx = this.stages.indexOf(this.currentStage);
+        var idx = this.workflow.stages.indexOf(this.currentStage);
         var notInUploadFiles = idx > 0;
         if (notInUploadFiles) {
-            var areStagesOk = this._areWorkflowStagesOk(idx);
+            var areStagesOk = this.workflow.check(idx);
             var result;
             if (areStagesOk) {
                 var desc = this._updateWorkflowDescription(idx);
@@ -188,7 +122,7 @@ class SetupCtrl {
                 .then((submitForReal) => {
                     if (submitForReal) {
                         result = this._submitWorkflow(desc)
-                        .then(function(res) {
+                        .then((res) => {
                             return {
                                 success: res.status == 200,
                                 message: res.statusText
@@ -208,10 +142,10 @@ class SetupCtrl {
     }
 
     resubmit() {
-        var idx = this.stages.indexOf(this.currentStage);
+        var idx = this.workflow.stages.indexOf(this.currentStage);
         var notInUploadFiles = idx > 0;
         if (notInUploadFiles) {
-            var areStagesOk = this._areWorkflowStagesOk(idx);
+            var areStagesOk = this.workflow.check(idx);
             var result;
             if (areStagesOk) {
                 var desc = this._updateWorkflowDescription(idx);
@@ -225,7 +159,7 @@ class SetupCtrl {
                     stageNames
                 )
                 .then((stageName) => {
-                    console.log('resubmit starting at stage: ', stageName)
+                    // console.log('resubmit starting at stage: ', stageName)
                     var result;
                     if (stageName !== undefined) {
                         var index = 0;
@@ -235,7 +169,7 @@ class SetupCtrl {
                             }
                         }
                         result = this._resubmitWorkflow(desc, index)
-                        .then(function(res) {
+                        .then((res) => {
                             return {
                                 success: res.status == 200,
                                 message: res.statusText
@@ -276,7 +210,7 @@ class SetupCtrl {
         this._displayResult('Kill', result);
     }
 
-    deletePipeline(s: Step) {
+    deletePipeline(s: WorkflowStep) {
         var projectName = '';
         for (var arg in s.extra_args) {
             if (s.extra_args[arg].name == 'pipeline') {
@@ -291,13 +225,13 @@ class SetupCtrl {
             };
             this._displayResult('Delete pipeline', result);
         } else {
-            console.log('pipeline that should be deleted: ', projectName)
+            // console.log('pipeline that should be deleted: ', projectName)
             this._dialogService.warning(
                 'Do you really want to delete the pipeline?'
             )
             .then((deleteForReal) => {
                 if (deleteForReal) {
-                    console.log('delete pipeline HAAAAARD')
+                    // console.log('delete pipeline HAAAAARD')
                     result = this._removeJteratorProject(projectName)
                     .then((res) => {
                         result = {
@@ -309,7 +243,7 @@ class SetupCtrl {
                             // reload descrioption such that choices are
                             // updated
                             var desc = this._updateWorkflowDescription(
-                                this.stages.length - 1
+                                this.workflow.stages.length - 1
                             );
                             this._saveWorkflowDescription(desc)
                             this._getWorkflowDescription();
@@ -333,7 +267,7 @@ class SetupCtrl {
             if (templateName == undefined) {
                 templateName = null;
             }
-            console.log('create new pipeline using template: ', templateName)
+            // console.log('create new pipeline using template: ', templateName)
             this._getInput(
                 'Create pipeline',
                 'How should the new pipeline be called?',
@@ -341,7 +275,7 @@ class SetupCtrl {
                 null
             )
             .then((pipeName) => {
-                console.log('create pipeline: ', pipeName)
+                // console.log('create pipeline: ', pipeName)
                 this._createJteratorProject(pipeName, templateName)
                 .then((res) => {
                     var result = {
@@ -361,14 +295,14 @@ class SetupCtrl {
         });
     }
 
-    editPipeline(s: Step) {
+    editPipeline(s: WorkflowStep) {
         var project = '';
         for (var arg in s.extra_args) {
             if (s.extra_args[arg].name == 'pipeline') {
                 project = s.extra_args[arg].value;
             }
         }
-        console.log(project)
+        // console.log(project)
         if (project == '' || project == null) {
             var result = {
                 success: false,
@@ -423,7 +357,10 @@ class SetupCtrl {
     }
 
     canSubmit(): boolean {
-        if (this.status == undefined) {
+        if (this.workflow == undefined) {
+            return false;
+        }
+        if (this.workflow.status == undefined) {
             return false;
         } else {
             var blockedStates = [
@@ -432,7 +369,7 @@ class SetupCtrl {
             if (this.currentStage.name === 'upload') {
                 // Submit button should not be pressable from upload files stage
                 return false;
-            } else if (blockedStates.indexOf(this.status.state) != -1) {
+            } else if (blockedStates.indexOf(this.workflow.status.state) != -1) {
                 // workflowStatus should be prevented when the workflow is already
                 // running or in any other state that would cause problems
                 return false;
@@ -443,46 +380,25 @@ class SetupCtrl {
     }
 
     canResubmit(): boolean {
-        if (this.status == undefined) {
+        if (this.workflow == undefined) {
+            return false;
+        }
+        if (this.workflow.status == undefined) {
             return false;
         } else {
             var resubmittableStates = [
                 'TERMINATED', 'STOPPED'
             ];
-            return this.canSubmit() && resubmittableStates.indexOf(this.status.state) != -1;
-        }
-    }
-
-    isWaiting(task: any): boolean {
-        if (task == undefined) {
-            return true;
-        } else {
-            return task.state == '';
-        }
-    }
-
-    isSubmitted(task: any): boolean {
-        if (task == undefined) {
-            return false;
-        } else {
-            return task.state == 'SUBMITTED' || task.state == 'NEW';
-        }
-    }
-
-    isRunning(task: any): boolean {
-        if (task == undefined) {
-            return false;
-        } else {
-            return task.state == 'RUNNING';
+            return this.canSubmit() && resubmittableStates.indexOf(this.workflow.status.state) != -1;
         }
     }
 
     goToNextStage() {
-        var idx = this.stages.indexOf(this.currentStage);
+        var idx = this.workflow.stages.indexOf(this.currentStage);
         if (idx >= 0) {
-            var inLastStage = idx == this.stages.length - 1;
+            var inLastStage = idx == this.workflow.stages.length - 1;
             if (!inLastStage) {
-                var newStage = this.stages[idx + 1];
+                var newStage = this.workflow.stages[idx + 1];
                 this.currentStage = newStage;
                 this._$state.go('setup.stage', {
                     stageName: newStage.name
@@ -502,57 +418,97 @@ class SetupCtrl {
     }
 
     getStatus() {
-        console.log('get workflow status')
-        this._getWorkflowStatus();
-        if (this.experiment.workflowStatus != null) {
-            this.status = this.experiment.workflowStatus;
-            this.status.subtasks.map((subtask, index) => {
-                // skip 1. stage "upload"
-                this.stages[(index + 1)].status = subtask;
-            });
-            // TODO: do this server side based on database entries
-            var uploadFailed = false;
-            var processingState = '';
-            var uploadStates = [];
-            var uploadProgress = 0;
-            var doneCount = 0;
-            var totalCount = 0;
-            this.plates.map((plt) => {
-                plt.acquisitions.map((acq) => {
-                    totalCount++;
-                    uploadStates.push(acq.status);
-                    if (acq.status == 'FAILED') {
-                        uploadFailed = true;
-                        doneCount++;
-                    } else if (acq.status == 'COMPLETE') {
-                        doneCount++;
+        // console.log('get workflow status')
+        this._getWorkflowStatus()
+        .then((workflowStatus) => {
+            // recursively update the job tree
+            this.workflow.status = new JobCollectionStatus(workflowStatus);
+            this.workflow.stages.map((stage, stageIndex) => {
+                if (stageIndex == 0 && stage.name == 'upload') {
+                    // hack around "upload" stage
+                    stage.status = this._getUploadStatus();
+                } else {
+                    var workflowStageDescription = this.experiment.workflowDescription.stages[stageIndex - 1];
+                    var workflowStageStatus = null;
+                    if (stageIndex - 1 < workflowStatus.subtasks.length) {
+                        var workflowStageStatus = workflowStatus.subtasks[stageIndex - 1];
+                        stage.status = new JobCollectionStatus(workflowStageStatus);
                     }
-                });
+                    // NOTE: The list of jobs within a step is subject to change,
+                    // since steps are build dynamically upon processing.
+                    // Therefore, we recreate the whole step, rather than just
+                    // updating its status.
+                    stage.steps.map((step, stepIndex) => {
+                        if (workflowStageStatus != null) {
+                            var workflowStepDescription = workflowStageDescription.steps[stepIndex];
+                            var workflowStepStatus = workflowStageStatus.subtasks[stepIndex];
+                            step = new WorkflowStep(
+                                workflowStepDescription, workflowStepStatus
+                            );
+                        }
+                    });
+                    if (stage.name === this.currentStage.name) {
+                        // TODO: can't this be watched on scope?
+                        this.currentStage = stage;
+                    }
+                }
             });
-            uploadProgress = doneCount / totalCount * 100;
-            if (uploadStates.every((s) => {return s == 'COMPLETE';})) {
-                processingState = 'TERMINATED';
-            } else if (uploadStates.some((s) => {return s == 'UPLOADING';})) {
-                processingState = 'RUNNING';
-            } else {
-                processingState = 'NEW';
-            }
-            this.stages[0].status = {
-                failed: uploadFailed,
-                state: processingState,
-                percent_done: uploadProgress,
-                done: uploadProgress == 100,
-                subtasks: []
-            };
-        }
+        });
     }
 
+    private _getUploadStatus() {
+        // TODO: this could be done server side based on the database entries
+        // and included in the workflow status
+        var uploadFailed = false;
+        var processingState = '';
+        var uploadStates = [];
+        var uploadProgress = 0;
+        var doneCount = 0;
+        var totalCount = 0;
+        this.plates.map((plt) => {
+            plt.acquisitions.map((acq) => {
+                totalCount++;
+                uploadStates.push(acq.status);
+                if (acq.status == 'FAILED') {
+                    uploadFailed = true;
+                    doneCount++;
+                } else if (acq.status == 'COMPLETE') {
+                    doneCount++;
+                }
+            });
+        });
+        uploadProgress = doneCount / totalCount * 100;
+        if (uploadStates.every((s) => {return s == 'COMPLETE';})) {
+            processingState = 'TERMINATED';
+        } else if (uploadStates.some((s) => {return s == 'UPLOADING';})) {
+            processingState = 'RUNNING';
+        } else {
+            processingState = 'NEW';
+        }
+        return new JobCollectionStatus({
+            failed: uploadFailed,
+            state: processingState,
+            percent_done: uploadProgress,
+            done: uploadProgress == 100,
+            subtasks: [],  // TODO: monitor each acquisition individually
+            name: 'fileupload',
+            live: uploadProgress < 100,
+            memory: null,
+            type: null,
+            exitcode: null,
+            id: null,
+            submission_id: null,
+            time: null,
+            cpu_time: null
+        });
+
+    }
     // starts the interval
     private _startMonitoring() {
         // stops any running interval to avoid two intervals running at the same time
         this._stopMonitoring();
         this.getStatus();
-        console.log('start monitoring status')
+        // console.log('start monitoring status')
         this._monitoringPromise = this._$interval(() => {
                 this.getStatus()
             }, 5000
@@ -560,32 +516,24 @@ class SetupCtrl {
     }
 
     private _stopMonitoring() {
-        console.log('stop monitoring status')
+        // console.log('stop monitoring status')
         this._$interval.cancel(this._monitoringPromise);
         this._monitoringPromise = null;
     }
 
-    private _submitStages(stages: Stage[], redo: boolean, index: number) {
-        // Only send the description up to the stage that the user submitted
-        var desc = $.extend(true, {}, this.experiment.workflowDescription);
-        desc.stages = [];
-        stages.forEach((stage) => {
-            desc.stages.push(stage);
-        });
-        if (redo) {
-            this._resubmitWorkflow(desc, index);
-        } else {
-            this._submitWorkflow(desc);
-        }
-    }
-
-    get submitButtonText() {
-        if (this._isLastStage(this.currentStage)) {
-            return 'Submit';
-        } else {
-            return 'Next';
-        }
-    }
+    // private _submitStages(stages: WorkflowStage[], redo: boolean, index: number) {
+    //     // Only send the description up to the stage that the user submitted
+    //     var desc = $.extend(true, {}, this.experiment.workflowDescription);
+    //     desc.stages = [];
+    //     stages.forEach((stage) => {
+    //         desc.stages.push(stage);
+    //     });
+    //     if (redo) {
+    //         this._resubmitWorkflow(desc, index);
+    //     } else {
+    //         this._submitWorkflow(desc);
+    //     }
+    // }
 
     private _submitWorkflow(workflowArgs) {
         var $http = $injector.get<ng.IHttpService>('$http');
@@ -595,11 +543,11 @@ class SetupCtrl {
         };
         return $http.post('/api/experiments/' + this.experiment.id + '/workflow/submit', data)
         .then((resp) => {
-            console.log(resp);
+            // console.log(resp);
             return resp;
         })
         .catch((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
             // return $q.reject(resp.data.error);
         });
@@ -614,11 +562,11 @@ class SetupCtrl {
         };
         return $http.post('/jtui/create_jtproject/' + this.experiment.id, data)
         .then((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
         })
         .catch((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
             // return $q.reject(resp.data.error);
         });
@@ -632,11 +580,11 @@ class SetupCtrl {
         };
         return $http.post('/jtui/remove_jtproject/' + this.experiment.id, data)
         .then((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
         })
         .catch((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
             // return $q.reject(resp.data.error);
         });
@@ -651,11 +599,11 @@ class SetupCtrl {
         };
         return $http.post('/api/experiments/' + this.experiment.id + '/workflow/resubmit', data)
         .then((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
         })
         .catch((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
             // return $q.reject(resp.data.error);
         });
@@ -666,11 +614,11 @@ class SetupCtrl {
         var $q = $injector.get<ng.IQService>('$q');
         return $http.post('/api/experiments/' + this.experiment.id + '/workflow/kill', {})
         .then((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
         })
         .catch((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
             // return $q.reject(resp.data.error);
         });
@@ -685,37 +633,41 @@ class SetupCtrl {
         };
         return $http.post('/api/experiments/' + this.experiment.id + '/workflow/save', data)
         .then((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
         })
         .catch((resp) => {
-            console.log(resp)
+            // console.log(resp)
             return resp;
             // return $q.reject(resp.data.error);
         });
     }
 
-    private _getWorkflowDescription() {
+    private _getWorkflowDescription(): ng.IPromise<any> {
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
-        return $q.all({
-            description: $http.get('/api/experiments/' + this.experiment.id + '/workflow/load')
-        }).then((responses: any) => {
-           // console.log(responses.taskStatus.data.data)
-            this.experiment.workflowDescription = responses.description.data.data;
-           return this.experiment.workflowDescription;
+        return $http.get('/api/experiments/' + this.experiment.id + '/workflow/load')
+        .then((resp: any) => {
+            // console.log(resp)
+            this.experiment.workflowDescription = resp.data.data;
+            return resp.data.data;
+        })
+        .catch((resp) => {
+            return $q.reject(resp.data.error);
         });
     }
 
-    private _getWorkflowStatus() {
+    private _getWorkflowStatus(): ng.IPromise<any> {
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
-        return $q.all({
-            status: $http.get('/api/experiments/' + this.experiment.id + '/workflow/status')
-        }).then((responses: any) => {
-           // console.log(responses.taskStatus.data.data)
-            this.experiment.workflowStatus = responses.status.data.data;
-           return this.experiment.workflowStatus;
+        return $http.get('/api/experiments/' + this.experiment.id + '/workflow/status')
+        .then((resp: any) => {
+            // console.log(resp)
+            this.experiment.workflowStatus = resp.data.data;
+            return resp.data.data;
+        })
+        .catch((resp) => {
+            return $q.reject(resp.data.error);
         });
     }
 
@@ -726,30 +678,17 @@ class SetupCtrl {
                 private _$interval,
                 private _$scope,
                 private _$uibModal: ng.ui.bootstrap.IModalService) {
-        var uploadStage = {
-            name: 'upload',
-            steps: null,
-            active: true,
-            mode: 'sequential',
-            status: {
-                done: false,
-                failed: false,
-                percent_done: 0,
-                state: '',
-                subtasks: []
-            }
-        };
-        this.currentStage = uploadStage;
-        this.stages = [uploadStage].concat(this.experiment.workflowDescription.stages);
-        this.status = {
-            done: false,
-            failed: false,
-            percent_done: 0,
-            state: '',
-            subtasks: []
-        };
-        //  start monitoring as soon as the user enters the "setup" view
-        this._startMonitoring();
+        this._getWorkflowDescription();
+        this._getWorkflowStatus()
+        .then((workflowStatus) => {
+            this.workflow = new Workflow(
+                this.experiment.workflowDescription, workflowStatus
+            );
+            this.currentStage = this.workflow.stages[0];
+            this._$scope.$watch('currentStage');
+            //  start monitoring as soon as the user enters the "setup" view
+            this._startMonitoring();
+        });
 
         this._$scope.$on('$destroy', () => {
             // stop monitoring when user leaves the "setup" view

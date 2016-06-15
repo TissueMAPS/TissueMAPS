@@ -11,6 +11,7 @@ interface MapobjectType {
     features: Feature[];
 }
 
+
 class Experiment implements Model {
     id: string;
     name: string;
@@ -22,7 +23,6 @@ class Experiment implements Model {
     channels: Channel[] = [];
     workflowDescription: any;
     workflowStatus: any;
-    // workflowStatus: TaskStatus;
 
     /**
      * Construct a new Experiment.
