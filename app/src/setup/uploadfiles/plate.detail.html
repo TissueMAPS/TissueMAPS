@@ -1,6 +1,16 @@
 <h3>
-    Plate:
-<a ui-sref="^.detail({plateid: plateDetailCtrl.plate.id})">{{:: plateDetailCtrl.plate.name}}</a>
+  Plate:
+  <a ui-sref="^.detail({plateid: plateDetailCtrl.plate.id})">
+    {{:: plateDetailCtrl.plate.name}}
+  </a>
+  <span class="plate-status-indicator">
+    <span ng-show="plateDetailCtrl.plate.isReadyForProcessing">
+      (READY FOR PROCESSING)
+    </span>
+    <span ng-hide="plateDetailCtrl.plate.isReadyForProcessing">
+      (NOT READY FOR PROCESSING)
+    </span>
+  </span>
 </h3>
 
 <div class="experiment-list" ui-view ng-init="plate = plateDetailCtrl.plate">
