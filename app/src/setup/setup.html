@@ -28,21 +28,21 @@
       <div class="col-md-9">
         <ul class="stage-indicators">
           <li class="stage-indicator" ng-repeat="stage in setupCtrl.workflow.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
-            ng-click="setupCtrl.goToStage(stage)">
-            <i ng-show="!stage.status.failed && stage.status.done" style="color: green;"
-                class="fa fa-check-circle" aria-hidden="true">
+            ng-click="setupCtrl.goToStage(stage)" ng-disabled="!stage.check()">
+            <i class="fa fa-check-circle" aria-hidden="true"
+               ng-show="!stage.status.failed && stage.status.done" style="color: green;">
             </i>
-            <i ng-show="stage.status.failed" style="color: red;"
-                class="fa fa-exclamation-circle" aria-hidden="true">
+            <i class="fa fa-exclamation-circle" aria-hidden="true"
+               ng-show="stage.status.failed" style="color: red;">
             </i>
-            <i class="fa fa-question-circle"
+            <i class="fa fa-cog"
                ng-show="stage.isSubmitted()">
             </i>
             <i class="fa fa-cog fa-spin fa-fw"
                ng-show="stage.isRunning()">
             </i>
             <i class="fa fa-minus-circle" aria-hidden="true"
-                ng-show="!setupCtrl.canProceedToNextStage(stage)">
+               ng-show="!stage.check()">
             </i>
             {{::stage.name.replace('_', ' ')}}
           </li>

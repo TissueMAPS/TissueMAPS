@@ -43,7 +43,6 @@ class Workflow extends JobCollection {
         }
         return this.stages.every((stage, idx) => {
             if (idx <= index) {
-                console.log(stage.name)
                 return stage.check();
             } else {
                 // subsequent step which don't get submitted
