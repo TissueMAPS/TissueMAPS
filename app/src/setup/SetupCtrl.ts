@@ -324,6 +324,9 @@ class SetupCtrl {
     }
 
     canModifyPipeline(): boolean {
+        if (this.currentStage == undefined) {
+            return false;
+        }
         if (this.currentStage.status == undefined) {
             return false;
         }
@@ -396,7 +399,7 @@ class SetupCtrl {
     }
 
     getStatus() {
-        // console.log('get workflow status')
+        console.log('get workflow status')
         this._getWorkflowStatus()
         .then((workflowStatus) => {
             // recursively update the job tree
@@ -406,6 +409,7 @@ class SetupCtrl {
                     // hack around "upload" stage
                     stage.status = this._getUploadStatus();
                 } else {
+                    console.log('update stage: ', stage.name)
                     var workflowStageDescription = this.experiment.workflowDescription.stages[stageIndex - 1];
                     var workflowStageStatus = null;
                     if (stageIndex - 1 < workflowStatus.subtasks.length) {
@@ -418,15 +422,19 @@ class SetupCtrl {
                     // updating its status.
                     stage.steps.map((step, stepIndex) => {
                         if (workflowStageStatus != null) {
+                            console.log('update step: ', step.name)
                             var workflowStepDescription = workflowStageDescription.steps[stepIndex];
                             var workflowStepStatus = workflowStageStatus.subtasks[stepIndex];
                             step = new WorkflowStep(
                                 workflowStepDescription, workflowStepStatus
                             );
+                            // TODO: how to access currentStep of stageCtrl??
+                            // this._$scope.stageCtrl.currentStep = step;
                         }
                     });
                     if (stage.name === this.currentStage.name) {
                         // TODO: can't this be watched on scope?
+                        this._$scope.setupCtrl.currentStage = stage;
                         this.currentStage = stage;
                     }
                 }

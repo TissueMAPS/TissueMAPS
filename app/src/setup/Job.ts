@@ -1,6 +1,20 @@
 class Job {
-    name: string;
+    id: number;
+    dbId: number;
+    phase: string;
     status: JobStatus;
+
+    constructor(args: StatusArgs) {
+        var startIdx = args.name.lastIndexOf('_') + 1;
+        this.id = Number(args.name.substring(startIdx));
+        this.dbId = args.id;
+        if (args.type == 'RunJob') {
+            this.phase = 'run';
+        } else {
+            this.phase = 'collect';
+        }
+        this.status = new JobStatus(args);
+    }
 }
 
 

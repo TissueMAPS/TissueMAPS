@@ -28,15 +28,6 @@ class JobCollectionStatus {
         this.state = args.state;
         this.percentDone = args.percent_done;
     }
-
-
-    isRunning() {
-
-    }
-
-    isSubmitted() {
-
-    }
 }
 
 

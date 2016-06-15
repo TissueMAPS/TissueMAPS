@@ -1,0 +1,42 @@
+<table st-table="stepCtrl.step.jobs" class="table table-striped">
+
+  <thead>
+    <tr>
+      <th></th>
+      <th>phase</th>
+      <th>id</th>
+      <th>state</th>
+      <th>exitcode</th>
+      <th>memory (KB)</th>
+      <th>time (HH:MM:SS)</th>
+      <th>log</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr ng-repeat="job in stepCtrl.step.jobs">
+      <td>
+        <i class="fa fa-exclamation-circle" aria-hidden="true" style="color: red;"
+          ng-show="job.failed">
+        </i>
+        <i class="fa fa-check-circle" aria-hidden="true" style="color: green;"
+          ng-hide="job.failed">
+        </i>
+      </td>
+      <td>{{ job.phase }}</td>
+      <td>{{ job.id }}</td>
+      <td>{{ job.status.state }}</td>
+      <td>{{ job.status.exitcode }}</td>
+      <td>{{ job.status.memory }}</td>
+      <td>{{ job.status.time }}</td>
+      <td>
+        <button class="btn btn-default" ng-click="stepCtrl.getLogOutput(job)">
+          <i class="fa fa-file-text-o" aria-hidden="true"></i>
+        </button>
+      </td>
+    </tr>
+  </tbody>
+
+</table>
+
+

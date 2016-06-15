@@ -1,11 +1,31 @@
 class StageCtrl {
     stage: WorkflowStage;
+    currentStep: WorkflowStep;
 
-    static $inject = ['$state', '$scope'];
+    static $inject = ['$state', '$scope', '$rootScope'];
 
     constructor(private _$state: any,
                 private _$scope: any) {
         this.stage = this._$scope.setupCtrl.currentStage;
+        this._$scope.$watch('setupCtrl.currentStage');
+        if (this.stage == undefined) {
+            // TODO: different plates instead of steps?
+            this._$state.go('plate');
+        } else {
+            this.goToStep(this.stage.steps[0]);
+        }
+    }
+
+    isInStep(step: WorkflowStep) {
+        return this.currentStep.name === step.name;
+    }
+
+    goToStep(step: WorkflowStep) {
+        this.currentStep = step;
+        // console.log('go to step: ', this.currentStep)
+        this._$state.go('setup.step', {
+            stepName: step.name
+        });
     }
 
 }

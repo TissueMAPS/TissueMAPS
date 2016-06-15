@@ -1,79 +1,56 @@
-<form ng-init="stage = stageCtrl.stage">
+<div class="row step-indicator-container">
+
+  <div class="col-md-9">
+    <ul class="step-indicators">
+      <li class="step-indicator" ng-repeat="step in stageCtrl.stage.steps" ng-class="{active: stageCtrl.isInStep(step)}"
+        ng-click="stageCtrl.goToStep(step)">
+        <i class="fa fa-check-circle" aria-hidden="true"
+           ng-show="!step.status.failed && step.status.done" style="color: green;">
+        </i>
+        <i class="fa fa-exclamation-circle" aria-hidden="true"
+           ng-show="step.status.failed" style="color: red;">
+        </i>
+        <i class="fa fa-cog"
+           ng-show="step.isSubmitted()">
+        </i>
+        <i class="fa fa-cog fa-spin fa-fw"
+           ng-show="step.isRunning()">
+        </i>
+        <i class="fa fa-minus-circle" aria-hidden="true"
+           ng-show="!step.check()">
+        </i>
+        {{::step.name.replace('_', ' ')}}
+      </li>
+    </ul>
+  </div>
+
+  <div class="col-md-3">
+    <i class="fa fa-cog fa-fw"
+       ng-show="!stageCtrl.currentStep.isRunning()">
+    </i>
+    <i class="fa fa-cog fa-spin fa-fw"
+       ng-show="stageCtrl.currentStep.isRunning()">
+    </i>
+    <i>{{stageCtrl.currentStep.status.state}}</i>
+    <uib-progressbar max="100" style="height: 15px;" value="stageCtrl.currentStep.status.percentDone"
+       type="{{stageCtrl.currentStep.status.failed ? 'failed' : 'success'}}">
+    </uib-progressbar>
+  </div>
+
+</div>
+
+<div class="row step-view-container">
   <div class="col-md-12">
-    <div ng-repeat="step in stage.steps">
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          {{:: step.name }}
-        </div>
-        <div class="panel-body">
-          <div class="col-md-6">
+    <div class="row">
 
-              <h3>{{step.fullname}}</h3>
-
-              <p>{{step.help}}</p>
-
-              <h4>Batch arguments</h4>
-              <tm-argument-input arg="arg" ng-repeat="arg in step.batch_args"
-                  arg-collection="setupCtrl.args[stage.name][step.name].batch_args"></tm-argument-input>
-
-              <h4>Submission arguments</h4>
-              <tm-argument-input arg="arg" ng-repeat="arg in step.submission_args"
-                  arg-collection="setupCtrl.args[stage.name][step.name].submission_args"></tm-argument-input>
-
-              <h4>Extra arguments</h4>
-              <tm-argument-input arg="arg" ng-repeat="arg in step.extra_args"
-                  arg-collection="setupCtrl.args[stage.name][step.name].extra_args"></tm-argument-input>
-
-              <div ng-show="stage.name == 'image_analysis'">
-                  <button class="btn btn-default"
-                      ng-click="setupCtrl.editPipeline(step)"
-                      ng-disabled="!setupCtrl.canModifyPipeline()">
-                    <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
-                    Edit
-                  </button>
-                  <button class="btn btn-default"
-                      ng-click="setupCtrl.deletePipeline(step)"
-                      ng-disabled="!setupCtrl.canModifyPipeline()">
-                    <i class="fa fa-trash-o" aria-hidden="true"></i>
-                    Delete
-                  </button>
-                  <button class="btn btn-default"
-                      ng-click="setupCtrl.createPipeline()"
-                      ng-disabled="!setupCtrl.canModifyPipeline()">
-                    Create new
-                  </button>
-              </div>
-
-          </div>
-
-          <div class="col-md-6">
-            <!-- <div ui-tree> -->
-            <!--   <ol ui-tree-nodes="" ng-model="stage.status.subtasks"> -->
-            <!--     <li ng-repeat="step in stage.status.subtasks" ui-tree-node> -->
-            <!--       <div ui-tree-handle> -->
-            <!--         {{step.name}} -->
-            <!--       </div> -->
-            <!--       <ol ui-tree-nodes="" ng-model="step.subtasks"> -->
-            <!--         <li ng-repeat="phase in step.subtasks" ui-tree-node> -->
-            <!--           <div ui-tree-handle> -->
-            <!--             {{phase.name}} -->
-            <!--           </div> -->
-            <!--           <ol ui-tree-nodes="" ng-model="phase.subtasks"> -->
-            <!--             <li ng-repeat="job in phase.subtasks" ui-tree-node> -->
-            <!--               <div ui-tree-handle> -->
-            <!--                 {{phase.name}} -->
-            <!--               </div> -->
-            <!--             </li> -->
-            <!--           </ol> -->
-            <!--         </li> -->
-            <!--       </ol> -->
-            <!--     </li> -->
-            <!--   </ol> -->
-            <!-- </div> -->
-          </div>
-
-        </div>
+      <div class="col-md-6">
+        <ui-view name="step-settings-view"></ui-view>
       </div>
+
+      <div class="col-md-6">
+        <ui-view name='step-jobs-view'></ui-view>
+      </div>
+
     </div>
 
     <button ng-click="setupCtrl.submit()"
@@ -115,6 +92,5 @@
     </button>
 
   </div>
-
-</form>
+</div>
 
