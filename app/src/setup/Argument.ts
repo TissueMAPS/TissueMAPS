@@ -1,4 +1,4 @@
-interface ArgumentArgs {
+interface ArgumentDescription {
     name: string;
     value: any;
     default: any;
@@ -16,12 +16,14 @@ class Argument {
     default: any;
     choices: any[];
     help: string;
+    type: string;
     required: boolean;
     disabled: boolean;
 
-    constructor(args: ArgumentArgs) {
+    constructor(args: ArgumentDescription) {
         this.name = args.name;
         this.value = args.value;
+        this.type = args.type;
         this.default = args.default;
         this.choices = args.choices;
         this.help = args.help;

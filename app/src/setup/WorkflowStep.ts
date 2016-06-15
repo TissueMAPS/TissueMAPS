@@ -1,3 +1,11 @@
+interface WorkflowStepDescription {
+    name: string;
+    batch_args: any;
+    submission_args: any;
+    extra_args: any;
+}
+
+
 class WorkflowStep extends JobCollection {
     name: string;
     batch_args: Argument[];
@@ -5,20 +13,29 @@ class WorkflowStep extends JobCollection {
     extra_args: Argument[];
     jobs: Job[];
 
-    constructor(workflowStepDescription: any,
+    constructor(description: WorkflowStepDescription,
                 workflowStepStatus: any) {
         super(workflowStepStatus);
-        this.name = workflowStepDescription.name;
-        this.batch_args = workflowStepDescription.batch_args.map((arg) => {
+        this.name = description.name;
+        this.batch_args = description.batch_args.map((arg) => {
             return new Argument(arg);
         });
-        this.submission_args = workflowStepDescription.submission_args.map((arg) => {
+        this.submission_args = description.submission_args.map((arg) => {
             return new Argument(arg);
         });
-        if (workflowStepDescription.extra_args != null) {
-            this.extra_args = workflowStepDescription.extra_args.map((arg) => {
+        if (description.extra_args != null) {
+            this.extra_args = description.extra_args.map((arg) => {
                 return new Argument(arg);
             });
+        }
+    }
+
+    serialize(): WorkflowStepDescription {
+        return {
+            name: this.name,
+            batch_args: this.batch_args,
+            submission_args: this.submission_args,
+            extra_args: this.extra_args
         }
     }
 }

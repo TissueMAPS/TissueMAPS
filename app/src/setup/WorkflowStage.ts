@@ -1,16 +1,25 @@
+interface WorkflowStageDescription {
+    name: string;
+    active: boolean;
+    mode: string;
+    steps: WorkflowStepDescription[];
+}
+
+
 class WorkflowStage extends JobCollection {
     name: string;
     active: boolean;
     mode: string;
     steps: WorkflowStep[];
 
-    constructor(workflowStageDescription: any,
+    constructor(description: WorkflowStageDescription,
                 workflowStageStatus: any) {
         super(workflowStageStatus);
-        this.name = workflowStageDescription.name;
-        if (workflowStageDescription.steps != null) {
+        this.name = description.name;
+        this.mode = description.mode;
+        if (description.steps != null) {
             // NOTE: due to hack for "upload" stage, which doens't have any steps
-            this.steps = workflowStageDescription.steps.map((step, index) => {
+            this.steps = description.steps.map((step, index) => {
                 var workflowStepStatus = null;
                 if (workflowStageStatus != null) {
                     workflowStepStatus = workflowStageStatus.subtasks[index];
@@ -65,5 +74,15 @@ class WorkflowStage extends JobCollection {
         return _.all(areStepsOk);
     }
 
+    serialize(): WorkflowStageDescription {
+        return {
+            name: this.name,
+            mode: this.mode,
+            active: this.active,
+            steps: this.steps.map((step, idx) => {
+                return step.serialize();
+            })
+        }
+    }
 }
 

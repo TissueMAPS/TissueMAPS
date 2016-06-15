@@ -1,10 +1,18 @@
+interface WorkflowDescription {
+    type: string;
+    stages: WorkflowStageDescription[];
+}
+
+
 class Workflow extends JobCollection {
+    type: string;
     stages: WorkflowStage[];
 
-    constructor(workflowDescription: any,
+    constructor(description: WorkflowDescription,
                 workflowStatus: any) {
 
         super(workflowStatus);
+        this.type = description.type;
         var uploadStage = new WorkflowStage({
                 name: 'upload',
                 steps: [],
@@ -17,7 +25,7 @@ class Workflow extends JobCollection {
                 state: '',
                 subtasks: []
         });
-        var processingStages = workflowDescription.stages.map((stage, index) => {
+        var processingStages = description.stages.map((stage, index) => {
             var workflowStageStatus = null;
             if (workflowStatus != null) {
                 if (index < workflowStatus.subtasks.length) {
@@ -30,12 +38,12 @@ class Workflow extends JobCollection {
     }
 
     check(index: number): boolean {
-        console.log(index)
-        if (index == null) {
+        if (index == null || index == undefined) {
             index = this.stages.length - 1;
         }
         return this.stages.every((stage, idx) => {
             if (idx <= index) {
+                console.log(stage.name)
                 return stage.check();
             } else {
                 // subsequent step which don't get submitted
@@ -43,6 +51,21 @@ class Workflow extends JobCollection {
                 return true;
             }
         });
+    }
+
+    serialize(index: number): WorkflowDescription {
+        return {
+            type: this.type,
+            stages: this.stages.map((stage, idx) => {
+                var serializedStage = stage.serialize();
+                if (index < idx) {
+                    serializedStage.active = true;
+                } else {
+                    serializedStage.active = false;
+                }
+                return serializedStage;
+            })
+        }
     }
 
 }
