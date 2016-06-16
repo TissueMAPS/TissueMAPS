@@ -228,7 +228,7 @@ class WorkflowService {
         return this._$http.post('/api/experiments/' + experiment.id + '/workflow/log', data)
         .then((resp) => {
             // console.log(resp)
-            return resp.data;
+            return resp;
         })
         .catch((resp) => {
             // console.log(resp)

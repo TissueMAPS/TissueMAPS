@@ -61,7 +61,7 @@ class SetupCtrl {
                         result = this._workflowService.resubmit(
                             this.experiment, idx, idx - 1
                         )
-                        .then(function(res) {
+                        .then((res) => {
                             return {
                                 success: res.status == 200,
                                 message: res.statusText
@@ -432,8 +432,17 @@ class SetupCtrl {
     getLogOutput(job: Job) {
         console.log('get log output')
         this._workflowService.getLogOutput(this.experiment, job.dbId)
-        .then((log) => {
-            this._displayOutput(log.stdout, log.stderr);
+        .then((res) => {
+            var result = {
+                success: res.status == 200,
+                message: res.statusText
+            };
+            if (result.success) {
+                var log = res.data;
+                this._displayOutput(log.stdout, log.stderr);
+            } else {
+                this._displayResult('Log', result);
+            }
         })
     }
 
