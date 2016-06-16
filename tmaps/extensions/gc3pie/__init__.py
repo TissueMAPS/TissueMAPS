@@ -150,9 +150,26 @@ class GC3Pie(object):
             last_submission = db.session.query(tm.Submission).\
                 get(last_submission_id)
             job_id = last_submission.top_task_id
+            if job_id is None:
+                return None
             return self._store.load(job_id)
         else:
             return None
+
+    def retrieve_single_job(self, job_id):
+        """Retrieves an individual job from the store.
+
+        Parameters
+        ----------
+        job_id: int
+            persistent job Id
+
+        Returns
+        -------
+        gc3libs.Task or gc3libs.TaskCollection
+            job
+        """
+        return self._store.load(job_id)
 
     def submit_jobs(self, jobs):
         """Submits jobs to the cluster.

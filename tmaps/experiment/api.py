@@ -1,5 +1,5 @@
 import json
-import os.path as p
+import os
 import logging
 
 import numpy as np
@@ -209,11 +209,32 @@ def save_workflow_description(experiment):
 @jwt_required()
 @extract_model_from_path(Experiment)
 def kill_workflow(experiment):
+    data = json.loads(request.data)
     logger.info('kill workflow')
     workflow = gc3pie.retrieve_jobs(experiment, 'workflow')
     gc3pie.kill_jobs(workflow)
     return jsonify({
         'message': 'ok'
+    })
+
+
+@api.route('/experiments/<experiment_id>/workflow/log', methods=['POST']) 
+@jwt_required()
+@extract_model_from_path(Experiment)
+def get_job_log_output(experiment):
+    data = json.loads(request.data)
+    logger.info('get job log output')
+    job = gc3pie.retrieve_single_job(data['id'])
+    stdout_file = os.path.join(job.output_dir, job.stdout)
+    with open(stdout_file, 'r') as f:
+        out = f.read()
+    stderr_file = os.path.join(job.output_dir, job.stderr)
+    with open(stderr_file, 'r') as f:
+        err = f.read()
+    return jsonify({
+        'message': 'ok',
+        'stdout': out,
+        'stderr': err
     })
 
 
