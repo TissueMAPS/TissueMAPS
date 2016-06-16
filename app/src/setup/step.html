@@ -41,15 +41,15 @@
           ng-repeat="arg in stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex].extra_args"
           arg-collection="setupCtrl.args[stage.name][step.name].extra_args"></tm-argument-input>
 
-      <div ng-show="stage.name == 'image_analysis'">
+      <div ng-show="stepCtrl.workflow.stages[stepCtrl.currentStageIndex].name == 'image_analysis'">
         <button class="btn btn-default"
-            ng-click="setupCtrl.editPipeline(step)"
+            ng-click="setupCtrl.editPipeline(stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex])"
             ng-disabled="!setupCtrl.canModifyPipeline()">
           <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
           Edit
         </button>
         <button class="btn btn-default"
-            ng-click="setupCtrl.deletePipeline(step)"
+            ng-click="setupCtrl.deletePipeline(stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex])"
             ng-disabled="!setupCtrl.canModifyPipeline()">
           <i class="fa fa-trash-o" aria-hidden="true"></i>
           Delete
