@@ -45,6 +45,7 @@ class JobStatus {
     memory: number;
     time: string;
     cpu_time: string;
+    exitcode: number;
 
     constructor(args: StatusArgs) {
         this.done = args.done;
@@ -53,6 +54,7 @@ class JobStatus {
         this.memory = args.memory;
         this.time = args.time;
         this.cpu_time = args.cpu_time;
+        this.exitcode = args.exitcode;
     }
 
 
