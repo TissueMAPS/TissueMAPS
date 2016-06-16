@@ -36,7 +36,7 @@
     <i>{{stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.state}}</i>
     <uib-progressbar max="100" style="height: 15px;"
        value="stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.percentDone"
-       type="{{stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.failed ? 'failed' : 'success'}}">
+       type="{{stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.failed ? 'danger' : 'success'}}">
     </uib-progressbar>
   </div>
 

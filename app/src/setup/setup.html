@@ -17,7 +17,7 @@
         <i>{{setupCtrl.workflow.status.state}}</i>
         <!-- <h4>{{setupCtrl.experiment.name}} ({{setupCtrl.experiment.workflowStatus.state}})</h4> -->
         <uib-progressbar max="100" style="height: 15px;" value="setupCtrl.workflow.status.percentDone"
-           type="{{setupCtrl.workflow.status.failed ? 'failed' : 'success'}}">
+           type="{{setupCtrl.workflow.status.failed ? 'danger' : 'success'}}">
         </uib-progressbar>
       </div>
 
