@@ -139,14 +139,22 @@ angular.module('tmaps.ui')
                     def.reject(error);
                 })
                 return def.promise;
+            }],
+            workflow: ['workflowService', 'experiment', 'plates',
+                        (workflowService, experiment, plates) => {
+                return workflowService.get(experiment)
+                .then((workflow) => {
+                    // console.log(workflow)
+                    return workflow;
+                });
             }]
         },
         onEnter: function() {
             console.log('Enter setup');
         }
     })
-    .state('setup.uploadfiles', {
-        url: '/stages/uploadfiles',
+    .state('setup.upload', {
+        url: '/stages/upload',
         views: {
             'stage-view': {
                 templateUrl: '/src/setup/uploadfiles/uploadfiles.html'
@@ -155,6 +163,17 @@ angular.module('tmaps.ui')
     })
     .state('setup.stage', {
         url: '/stages/:stageName',
+        resolve: {
+            workflow: ['workflowService', 'experiment', 'plates',
+                        (workflowService, experiment, plates) => {
+                return workflowService.get(experiment)
+                .then((workflow) => {
+                    // console.log(workflow)
+                    return workflow;
+                });
+            }]
+
+        },
         views: {
             'stage-view': {
                 templateUrl: '/src/setup/stage.html',
@@ -163,8 +182,35 @@ angular.module('tmaps.ui')
             }
         }
     })
+    .state('setup.step', {
+        parent: 'setup.stage',
+        url: '/steps/:stepName',
+        resolve: {
+            workflow: ['workflowService', 'experiment', 'plates',
+                        (workflowService, experiment, plates) => {
+                return workflowService.get(experiment)
+                .then((workflow) => {
+                    // console.log(workflow)
+                    return workflow;
+                });
+            }]
+
+        },
+        views: {
+            'step-settings-view': {
+                templateUrl: '/src/setup/step.html',
+                controller: 'StepCtrl',
+                controllerAs: 'stepCtrl'
+            },
+            'step-jobs-view': {
+                templateUrl: '/src/setup/jobs.html',
+                controller: 'StepCtrl',
+                controllerAs: 'stepCtrl'
+            }
+        }
+    })
     .state('plate', {
-        parent: 'setup.uploadfiles',
+        parent: 'setup.upload',
         url: '/plates',
         templateUrl: '/src/setup/uploadfiles/plate.html',
         controller: 'PlateListCtrl',
