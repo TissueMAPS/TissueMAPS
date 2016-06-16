@@ -154,7 +154,7 @@ angular.module('tmaps.ui')
         }
     })
     .state('setup.upload', {
-        url: '/stages/upload',
+        url: '/stages/:stageName',
         views: {
             'stage-view': {
                 templateUrl: '/src/setup/uploadfiles/uploadfiles.html'
