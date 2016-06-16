@@ -168,10 +168,13 @@
         "app/src/setup/WorkflowStep.ts",
         "app/src/setup/Argument.ts",
         "app/src/setup/Status.ts",
+        "app/src/setup/WorkflowService.ts",
 
         "app/src/setup/SetupCtrl.ts",
         "app/src/setup/StageCtrl.ts",
+        "app/src/setup/StepCtrl.ts",
         "app/src/setup/modals/SetupResultCtrl.ts",
+        "app/src/setup/modals/SetupOutputCtrl.ts",
         "app/src/setup/modals/SetupInputCtrl.ts",
 
         "app/src/setup/uploadfiles/PlateListCtrl.ts",
