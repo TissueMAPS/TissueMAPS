@@ -168,7 +168,7 @@
         "app/src/setup/WorkflowStep.ts",
         "app/src/setup/Argument.ts",
         "app/src/setup/Status.ts",
-        "app/src/setup/WorkflowService.ts",
+        "app/src/setup/workflowService.ts",
 
         "app/src/setup/SetupCtrl.ts",
         "app/src/setup/StageCtrl.ts",
