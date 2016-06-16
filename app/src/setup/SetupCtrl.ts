@@ -18,7 +18,9 @@ class SetupCtrl {
         this._$scope.$watch('setupCtrl.currentStageIndex')
         // console.log('go to stage: ', stage)
         if (stage.name === 'upload') {
-            this._$state.go('plate', {});
+            this._$state.go('plate', {
+                stageName: stage.name
+            });
         } else {
             this._$state.go('setup.stage', {
                 stageName: stage.name

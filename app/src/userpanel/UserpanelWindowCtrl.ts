@@ -23,6 +23,7 @@ class UserpanelWindowCtrl {
 
     modifyExperiment(e: Experiment) {
         this._$state.go('plate', {
+            stageName: 'upload',
             experimentid: e.id
         });
     }
