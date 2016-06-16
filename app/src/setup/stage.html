@@ -2,7 +2,9 @@
 
   <div class="col-md-9">
     <ul class="step-indicators">
-      <li class="step-indicator" ng-repeat="step in stageCtrl.stage.steps" ng-class="{active: stageCtrl.isInStep(step)}"
+      <li class="step-indicator"
+        ng-repeat="step in stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps"
+        ng-class="{active: stageCtrl.isInStep(step)}"
         ng-click="stageCtrl.goToStep(step)">
         <i class="fa fa-check-circle" aria-hidden="true"
            ng-show="!step.status.failed && step.status.done" style="color: green;">
@@ -26,14 +28,15 @@
 
   <div class="col-md-3">
     <i class="fa fa-cog fa-fw"
-       ng-show="!stageCtrl.currentStep.isRunning()">
+       ng-show="!stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].isRunning()">
     </i>
     <i class="fa fa-cog fa-spin fa-fw"
-       ng-show="stageCtrl.currentStep.isRunning()">
+       ng-show="stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].isRunning()">
     </i>
-    <i>{{stageCtrl.currentStep.status.state}}</i>
-    <uib-progressbar max="100" style="height: 15px;" value="stageCtrl.currentStep.status.percentDone"
-       type="{{stageCtrl.currentStep.status.failed ? 'failed' : 'success'}}">
+    <i>{{stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.state}}</i>
+    <uib-progressbar max="100" style="height: 15px;"
+       value="stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.percentDone"
+       type="{{stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.failed ? 'failed' : 'success'}}">
     </uib-progressbar>
   </div>
 
@@ -41,18 +44,20 @@
 
 <div class="row step-view-container">
   <div class="col-md-12">
-    <div class="row">
 
-      <div class="col-md-6">
+    <div class="col-md-6">
         <ui-view name="step-settings-view"></ui-view>
-      </div>
-
-      <div class="col-md-6">
-        <ui-view name='step-jobs-view'></ui-view>
-      </div>
-
     </div>
 
+    <div class="col-md-6">
+        <ui-view name='step-jobs-view'></ui-view>
+    </div>
+
+  </div>
+</div>
+
+<div class="row stage-control-container">
+  <div class="col-md-12">
     <button ng-click="setupCtrl.submit()"
         ng-disabled="!setupCtrl.canSubmit()"
         class="btn btn-primary">

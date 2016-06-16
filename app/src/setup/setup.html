@@ -51,14 +51,14 @@
 
       <div class="col-md-3">
         <i class="fa fa-cog fa-fw"
-           ng-show="!setupCtrl.currentStage.isRunning()">
+           ng-show="!setupCtrl.workflow.stages[setupCtrl.currentStageIndex].isRunning()">
         </i>
         <i class="fa fa-cog fa-spin fa-fw"
-           ng-show="setupCtrl.currentStage.isRunning()">
+           ng-show="setupCtrl.workflow.stages[setupCtrl.currentStageIndex].isRunning()">
         </i>
-        <i>{{setupCtrl.currentStage.status.state}}</i>
-        <uib-progressbar max="100" style="height: 15px;" value="setupCtrl.currentStage.status.percentDone"
-           type="{{setupCtrl.currentStage.status.failed ? 'failed' : 'success'}}">
+        <i>{{setupCtrl.workflow.stages[setupCtrl.currentStageIndex].status.state}}</i>
+        <uib-progressbar max="100" style="height: 15px;" value="setupCtrl.workflow.stages[setupCtrl.currentStageIndex].status.percentDone"
+           type="{{setupCtrl.workflow.stages[setupCtrl.currentStageIndex].status.failed ? 'failed' : 'success'}}">
         </uib-progressbar>
       </div>
 

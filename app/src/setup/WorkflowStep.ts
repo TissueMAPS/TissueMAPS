@@ -68,4 +68,34 @@ class WorkflowStep extends JobCollection {
             fullname: this.fullname
         }
     }
+
+    private _checkArgs(args: Argument[]) {
+        return _.chain(args).map((arg) => {
+            var isValid;
+            if (arg.required) {
+                isValid = arg.value !== undefined
+                    && arg.value !== null
+                    && arg.value !== '';
+            } else {
+                isValid = true;
+            }
+            return isValid;
+        }).all().value();
+    }
+
+    check() {
+        var workflowStatusArgsAreValid, batchArgsAreValid, extraArgsAreValid;
+        var isValid: boolean;
+
+        batchArgsAreValid = this._checkArgs(this.batch_args);
+        workflowStatusArgsAreValid = this._checkArgs(this.submission_args);
+
+        if (this.extra_args) {
+            extraArgsAreValid = this._checkArgs(this.extra_args);
+        } else {
+            extraArgsAreValid = true;
+        }
+
+        return batchArgsAreValid && workflowStatusArgsAreValid && extraArgsAreValid;
+    }
 }

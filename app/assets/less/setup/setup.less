@@ -44,11 +44,69 @@
         }
     }
 
-    .stage-view-container {
-        padding-bottom: 15px;
+    // .stage-view-container {
+    //     padding-bottom: 15px;
+    //     border-top: 1px solid #626262;
+    //     height: calc(~'100% - @{stage-indicator-container-height} - @{setup-window-header-height}');
+    //     overflow-y: scroll;
+    // }
+
+    .step-indicator-container {
         border-top: 1px solid #626262;
-        height: calc(~'100% - @{stage-indicator-container-height} - @{setup-window-header-height}');
+        height: @stage-indicator-container-height;
+        background: #444;
+        border-bottom: 1px solid #222222;
+        color: @font-color-light;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    ul.step-indicators {
+        margin: 0;
+        padding: 0;
+    }
+
+    .step-indicator {
+        display: inline-block;
+        background: #555555;
+        padding: 15px 20px;
+        border: 1px solid black;
+
+        &.active {
+            background-color: @flashy-blue;
+        }
+    }
+
+    .step-view-container {
+        padding-bottom: 15px;
+        // background: blue;
+        border-top: 1px solid #626262;
+        height: calc(~'100% - @{stage-indicator-container-height} - @{setup-window-header-height} - @{step-indicator-container-height} - @{stage-control-container-height}');
         overflow-y: scroll;
+
+    }
+
+    // .step-settings-container {
+    //     border-right: 1px solid #626262;
+    //     background: red;
+    //     // overflow-y: scroll;
+    //     // height: 500px;
+    // }
+
+    // .step-jobs-container {
+    //     background: green;
+    //     // overflow-y: scroll;
+    //     // height: 500px;
+    // }
+
+    .stage-control-container {
+        border-top: 1px solid #626262;
+        height: @stage-control-container-height;
+        background: #444;
+        border-bottom: 1px solid #222222;
+        color: @font-color-light;
+        padding-top: 5px;
+        padding-bottom: 5px;
     }
 }
 

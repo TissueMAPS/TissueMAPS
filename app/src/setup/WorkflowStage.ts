@@ -31,45 +31,14 @@ class WorkflowStage extends JobCollection {
 
     private _isUploadOk() {
         return this.status.done && !this.status.failed;
-        // var atLeastOnePlate = this.plates.length > 0;
-        // var allPlatesReady = _.all(this.plates.map((pl) => {
-        //     return pl.isReadyForProcessing;
-        // }));
-        // return atLeastOnePlate && allPlatesReady;
     }
 
     check(): boolean {
         if (this.name == 'upload') {
             return this._isUploadOk();
         }
-        var workflowStatusArgsAreValid, batchArgsAreValid, extraArgsAreValid;
-        var isValid: boolean;
-
-        function checkArgs(args) {
-            return _.chain(args).map((arg) => {
-                var isValid;
-                if (arg.required) {
-                    isValid = arg.value !== undefined
-                        && arg.value !== null
-                        && arg.value !== '';
-                } else {
-                    isValid = true;
-                }
-                return isValid;
-            }).all().value();
-        }
-
         var areStepsOk: boolean[] = this.steps.map((step) => {
-            batchArgsAreValid = checkArgs(step.batch_args);
-            workflowStatusArgsAreValid = checkArgs(step.submission_args);
-
-            if (step.extra_args) {
-                extraArgsAreValid = checkArgs(step.extra_args);
-            } else {
-                extraArgsAreValid = true;
-            }
-
-            return batchArgsAreValid && workflowStatusArgsAreValid && extraArgsAreValid;
+            return step.check();
         });
         return _.all(areStepsOk);
     }

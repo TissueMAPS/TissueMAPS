@@ -23,10 +23,17 @@ class JobCollectionStatus {
     percentDone: number;
 
     constructor(args: StatusArgs) {
-        this.done = args.done;
-        this.failed = args.failed;
-        this.state = args.state;
-        this.percentDone = args.percent_done;
+        if (args == null) {
+            this.done = false;
+            this.failed = false;
+            this.percentDone = 0;
+            this.state = '';
+        } else {
+            this.done = args.done;
+            this.failed = args.failed;
+            this.state = args.state;
+            this.percentDone = args.percent_done;
+        }
     }
 }
 

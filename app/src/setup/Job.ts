@@ -23,11 +23,7 @@ class JobCollection {
     status: JobCollectionStatus;
 
     constructor(args: any) {
-        if (args != null) {
-            this.status = new JobCollectionStatus(args);
-        } else {
-            this.status = null;
-        }
+        this.status = new JobCollectionStatus(args);
     }
 
     isWaiting(): boolean {

@@ -1,20 +1,24 @@
 class SetupCtrl {
 
-    currentStage: WorkflowStage;
-    workflow: Workflow;
+    currentStageIndex: number;
     _monitoringPromise: ng.IPromise<void> = null;
 
-    static $inject = ['experiment', 'plates', 'dialogService', '$state', '$interval', '$scope', '$uibModal'];
+    static $inject = ['experiment', 'plates', 'workflow', 'workflowService', 'dialogService', '$state', '$interval', '$scope', '$uibModal'];
 
     isInStage(stage: WorkflowStage) {
-        return this.currentStage.name === stage.name;
+        if (stage == undefined) {
+            return false;
+        }
+        var idx = this.currentStageIndex;
+        return this.workflow.stages[idx].name === stage.name;
     }
 
     goToStage(stage: WorkflowStage) {
-        this.currentStage = stage;
-        // console.log('go to stage: ', this.currentStage)
+        this.currentStageIndex = this.workflow.stages.indexOf(stage);
+        this._$scope.$watch('setupCtrl.currentStageIndex')
+        // console.log('go to stage: ', stage)
         if (stage.name === 'upload') {
-            this._$state.go('plate');
+            this._$state.go('plate', {});
         } else {
             this._$state.go('setup.stage', {
                 stageName: stage.name
@@ -23,12 +27,11 @@ class SetupCtrl {
     }
 
     private _isLastStage(stage: WorkflowStage): boolean {
-        if (stage != undefined) {
-            var idx = this.workflow.stages.indexOf(stage);
-            return idx === this.workflow.stages.length - 1;
-        } else {
+        if (stage == undefined) {
             return false;
         }
+        var idx = this.currentStageIndex;
+        return idx === this.workflow.stages.length - 1;
     }
 
     canProceedToNextStage(stage: WorkflowStage): boolean {
@@ -43,7 +46,7 @@ class SetupCtrl {
     }
 
     resume() {
-        var idx = this.workflow.stages.indexOf(this.currentStage);
+        var idx = this.currentStageIndex;
         var notInUploadFiles = idx > 0;
         if (notInUploadFiles) {
             var areStagesOk = this.workflow.check(idx);
@@ -53,7 +56,9 @@ class SetupCtrl {
                 this._dialogService.warning('Do you really want to resume the workflow?')
                 .then((resumeForReal) => {
                     if (resumeForReal) {
-                        result = this._resubmitWorkflow(desc, idx - 1)
+                        result = this._workflowService.resubmit(
+                            this.experiment, idx, idx - 1
+                        )
                         .then(function(res) {
                             return {
                                 success: res.status == 200,
@@ -74,9 +79,7 @@ class SetupCtrl {
     }
 
     save() {
-        var desc = this.workflow.getDescription(this.workflow.stages.length - 1);
-        // console.log('save workflow description: ', desc)
-        this._saveWorkflowDescription(desc)
+        this._workflowService.save(this.experiment)
         .then((res) => {
             var result = {
                 success: res.status == 200,
@@ -87,19 +90,20 @@ class SetupCtrl {
     }
 
     submit() {
-        var idx = this.workflow.stages.indexOf(this.currentStage);
+        var idx = this.currentStageIndex;
         var notInUploadFiles = idx > 0;
         if (notInUploadFiles) {
             var areStagesOk = this.workflow.check(idx);
             var result;
             if (areStagesOk) {
-                var desc = this.workflow.getDescription(idx);
                 this._dialogService.warning(
                     'Do you really want to submit the workflow?'
                 )
                 .then((submitForReal) => {
                     if (submitForReal) {
-                        result = this._submitWorkflow(desc)
+                        result = this._workflowService.submit(
+                            this.experiment, idx
+                        )
                         .then((res) => {
                             return {
                                 success: res.status == 200,
@@ -120,14 +124,14 @@ class SetupCtrl {
     }
 
     resubmit() {
-        var idx = this.workflow.stages.indexOf(this.currentStage);
+        var idx = this.currentStageIndex;
         var notInUploadFiles = idx > 0;
         if (notInUploadFiles) {
             var areStagesOk = this.workflow.check(idx);
             var result;
             if (areStagesOk) {
-                var desc = this.workflow.getDescription(idx);
-                var stageNames = this.experiment.workflowDescription.stages.map((st) => {
+                var description = this.workflow.getDescription(idx);
+                var stageNames = description.stages.map((st) => {
                     return st.name
                 });
                 this._getInput(
@@ -141,12 +145,14 @@ class SetupCtrl {
                     var result;
                     if (stageName !== undefined) {
                         var index = 0;
-                        for (var i = 0; i < this.experiment.workflowDescription.stages.length; i++) {
-                            if (this.experiment.workflowDescription.stages[i].name == stageName) {
+                        for (var i = 0; i < description.stages.length; i++) {
+                            if (description.stages[i].name == stageName) {
                                 index = i;
                             }
                         }
-                        result = this._resubmitWorkflow(desc, index)
+                        result = this._workflowService.resubmit(
+                            this.experiment, idx, index
+                        )
                         .then((res) => {
                             return {
                                 success: res.status == 200,
@@ -178,7 +184,7 @@ class SetupCtrl {
             success: false,
             message: 'Not yet implemented'
         };
-        // var result = this.experiment.killWorkflow()
+        // var result = this._workflowService.kill(this.experiment)
         // .then(function(res) {
         //     return {
         //         success: res.status == 200,
@@ -223,8 +229,10 @@ class SetupCtrl {
                             var desc = this.workflow.getDescription(
                                 this.workflow.stages.length - 1
                             );
-                            this._saveWorkflowDescription(desc)
-                            this._getWorkflowDescription();
+                            this._workflowService.save(this.experiment)
+                            this._workflowService.update(
+                                this.experiment, this.plates
+                            );
                         }
                     });
                 }
@@ -310,6 +318,21 @@ class SetupCtrl {
         return this._$uibModal.open(options).result;
     }
 
+    private _displayOutput(stdout: string, stderr: string) {
+        var options: ng.ui.bootstrap.IModalSettings = {
+            templateUrl: 'src/setup/modals/output.html',
+            controller: SetupOutputCtrl,
+            controllerAs: 'output',
+            size: 'lg',
+            resolve: {
+                title: () => 'Log output',
+                stdout: () => stdout,
+                stderr: () => stderr
+            }
+        };
+        return this._$uibModal.open(options).result;
+    }
+
     private _displayResult(task: string, response: any) {
         var options: ng.ui.bootstrap.IModalSettings = {
             templateUrl: 'src/setup/modals/result.html',
@@ -324,13 +347,14 @@ class SetupCtrl {
     }
 
     canModifyPipeline(): boolean {
-        if (this.currentStage == undefined) {
+        var idx = this.currentStageIndex;
+        if (this.workflow.stages[idx] == undefined) {
             return false;
         }
-        if (this.currentStage.status == undefined) {
+        if (this.workflow.stages[idx].status == undefined) {
             return false;
         }
-        else if (this.currentStage.status.state == 'RUNNING') {
+        else if (this.workflow.stages[idx].status.state == 'RUNNING') {
             return false;
         } else {
             return true;
@@ -338,6 +362,7 @@ class SetupCtrl {
     }
 
     canSubmit(): boolean {
+        var idx = this.currentStageIndex;
         if (this.workflow == undefined) {
             return false;
         }
@@ -347,7 +372,7 @@ class SetupCtrl {
             var blockedStates = [
                 'RUNNING', 'NEW', 'TERMINATING', 'STOPPING', 'UNKNOWN'
             ];
-            if (this.currentStage.name === 'upload') {
+            if (this.workflow.stages[idx].name === 'upload') {
                 // Submit button should not be pressable from upload files stage
                 return false;
             } else if (blockedStates.indexOf(this.workflow.status.state) != -1) {
@@ -375,12 +400,12 @@ class SetupCtrl {
     }
 
     goToNextStage() {
-        var idx = this.workflow.stages.indexOf(this.currentStage);
+        var idx = this.currentStageIndex;
         if (idx >= 0) {
             var inLastStage = idx == this.workflow.stages.length - 1;
             if (!inLastStage) {
                 var newStage = this.workflow.stages[idx + 1];
-                this.currentStage = newStage;
+                this.currentStageIndex = this.workflow.stages.indexOf(newStage);
                 this._$state.go('setup.stage', {
                     stageName: newStage.name
                 }, {
@@ -389,107 +414,27 @@ class SetupCtrl {
             }
         } else {
             throw new Error(
-                'Cannot proceed to next stage from unknown stage ' + this.currentStage
+                'Cannot proceed to next stage from unknown stage '
             );
         }
     }
 
     update() {
-        this._getWorkflowDescription()
+        this._workflowService.get(this.experiment);
     }
 
     getStatus() {
-        console.log('get workflow status')
-        this._getWorkflowStatus()
-        .then((workflowStatus) => {
-            // recursively update the job tree
-            this.workflow.status = new JobCollectionStatus(workflowStatus);
-            this.workflow.stages.map((stage, stageIndex) => {
-                if (stageIndex == 0 && stage.name == 'upload') {
-                    // hack around "upload" stage
-                    stage.status = this._getUploadStatus();
-                } else {
-                    console.log('update stage: ', stage.name)
-                    var workflowStageDescription = this.experiment.workflowDescription.stages[stageIndex - 1];
-                    var workflowStageStatus = null;
-                    if (stageIndex - 1 < workflowStatus.subtasks.length) {
-                        var workflowStageStatus = workflowStatus.subtasks[stageIndex - 1];
-                        stage.status = new JobCollectionStatus(workflowStageStatus);
-                    }
-                    // NOTE: The list of jobs within a step is subject to change,
-                    // since steps are build dynamically upon processing.
-                    // Therefore, we recreate the whole step, rather than just
-                    // updating its status.
-                    stage.steps.map((step, stepIndex) => {
-                        if (workflowStageStatus != null) {
-                            console.log('update step: ', step.name)
-                            var workflowStepDescription = workflowStageDescription.steps[stepIndex];
-                            var workflowStepStatus = workflowStageStatus.subtasks[stepIndex];
-                            step = new WorkflowStep(
-                                workflowStepDescription, workflowStepStatus
-                            );
-                            // TODO: how to access currentStep of stageCtrl??
-                            // this._$scope.stageCtrl.currentStep = step;
-                        }
-                    });
-                    if (stage.name === this.currentStage.name) {
-                        // TODO: can't this be watched on scope?
-                        this._$scope.setupCtrl.currentStage = stage;
-                        this.currentStage = stage;
-                    }
-                }
-            });
-        });
+        this._workflowService.update(this.experiment, this.plates);
     }
 
-    private _getUploadStatus() {
-        // TODO: this could be done server side based on the database entries
-        // and included in the workflow status
-        var uploadFailed = false;
-        var processingState = '';
-        var uploadStates = [];
-        var uploadProgress = 0;
-        var doneCount = 0;
-        var totalCount = 0;
-        this.plates.map((plt) => {
-            plt.acquisitions.map((acq) => {
-                totalCount++;
-                uploadStates.push(acq.status);
-                if (acq.status == 'FAILED') {
-                    uploadFailed = true;
-                    doneCount++;
-                } else if (acq.status == 'COMPLETE') {
-                    doneCount++;
-                }
-            });
-        });
-        uploadProgress = doneCount / totalCount * 100;
-        if (uploadStates.every((s) => {return s == 'COMPLETE';})) {
-            processingState = 'TERMINATED';
-        } else if (uploadStates.some((s) => {return s == 'UPLOADING';})) {
-            processingState = 'RUNNING';
-        } else {
-            processingState = 'NEW';
-        }
-        return new JobCollectionStatus({
-            failed: uploadFailed,
-            state: processingState,
-            percent_done: uploadProgress,
-            done: uploadProgress == 100,
-            subtasks: [],  // TODO: monitor each acquisition individually
-            name: 'fileupload',
-            live: uploadProgress < 100,
-            memory: null,
-            type: null,
-            exitcode: null,
-            id: null,
-            submission_id: null,
-            time: null,
-            cpu_time: null
-        });
-
+    getLogOutput(job: Job) {
+        console.log('get log output')
+        this._workflowService.getLogOutput(this.experiment, job.dbId)
+        .then((log) => {
+            this._displayOutput(log.stdout, log.stderr);
+        })
     }
-    // starts the interval
+
     private _startMonitoring() {
         // stops any running interval to avoid two intervals running at the same time
         this._stopMonitoring();
@@ -500,43 +445,10 @@ class SetupCtrl {
             }, 5000
         );
     }
-
     private _stopMonitoring() {
         // console.log('stop monitoring status')
         this._$interval.cancel(this._monitoringPromise);
         this._monitoringPromise = null;
-    }
-
-    // private _submitStages(stages: WorkflowStage[], redo: boolean, index: number) {
-    //     // Only send the description up to the stage that the user submitted
-    //     var desc = $.extend(true, {}, this.experiment.workflowDescription);
-    //     desc.stages = [];
-    //     stages.forEach((stage) => {
-    //         desc.stages.push(stage);
-    //     });
-    //     if (redo) {
-    //         this._resubmitWorkflow(desc, index);
-    //     } else {
-    //         this._submitWorkflow(desc);
-    //     }
-    // }
-
-    private _submitWorkflow(workflowArgs) {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
-        var data = {
-            description: workflowArgs
-        };
-        return $http.post('/api/experiments/' + this.experiment.id + '/workflow/submit', data)
-        .then((resp) => {
-            // console.log(resp);
-            return resp;
-        })
-        .catch((resp) => {
-            // console.log(resp)
-            return resp;
-            // return $q.reject(resp.data.error);
-        });
     }
 
     private _createJteratorProject(projectName, templateName) {
@@ -576,110 +488,30 @@ class SetupCtrl {
         });
     }
 
-    private _resubmitWorkflow(workflowArgs, index) {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
-        var data = {
-            description: workflowArgs,
-            index: index
-        };
-        return $http.post('/api/experiments/' + this.experiment.id + '/workflow/resubmit', data)
-        .then((resp) => {
-            // console.log(resp)
-            return resp;
-        })
-        .catch((resp) => {
-            // console.log(resp)
-            return resp;
-            // return $q.reject(resp.data.error);
-        });
-    }
-
-    private _killWorkflow() {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
-        return $http.post('/api/experiments/' + this.experiment.id + '/workflow/kill', {})
-        .then((resp) => {
-            // console.log(resp)
-            return resp;
-        })
-        .catch((resp) => {
-            // console.log(resp)
-            return resp;
-            // return $q.reject(resp.data.error);
-        });
-
-    }
-
-    private _saveWorkflowDescription(workflowArgs) {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
-        var data = {
-            description: workflowArgs
-        };
-        return $http.post('/api/experiments/' + this.experiment.id + '/workflow/save', data)
-        .then((resp) => {
-            // console.log(resp)
-            return resp;
-        })
-        .catch((resp) => {
-            // console.log(resp)
-            return resp;
-            // return $q.reject(resp.data.error);
-        });
-    }
-
-    private _getWorkflowDescription(): ng.IPromise<any> {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
-        return $http.get('/api/experiments/' + this.experiment.id + '/workflow/load')
-        .then((resp: any) => {
-            // console.log(resp)
-            this.experiment.workflowDescription = resp.data.data;
-            return resp.data.data;
-        })
-        .catch((resp) => {
-            return $q.reject(resp.data.error);
-        });
-    }
-
-    private _getWorkflowStatus(): ng.IPromise<any> {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
-        return $http.get('/api/experiments/' + this.experiment.id + '/workflow/status')
-        .then((resp: any) => {
-            // console.log(resp)
-            this.experiment.workflowStatus = resp.data.data;
-            return resp.data.data;
-        })
-        .catch((resp) => {
-            return $q.reject(resp.data.error);
-        });
-    }
-
     constructor(public experiment: Experiment,
                 public plates: Plate[],
+                public workflow: Workflow,
+                private _workflowService: WorkflowService,
                 private _dialogService: DialogService,
                 private _$state,
                 private _$interval,
                 private _$scope,
                 private _$uibModal: ng.ui.bootstrap.IModalService) {
-        this._$scope.$watch('currentStage');
-        this._getWorkflowDescription();
-        this._getWorkflowStatus()
-        .then((workflowStatus) => {
-            // console.log(workflowStatus)
-            // TODO: handle null status
-            this.workflow = new Workflow(
-                this.experiment.workflowDescription, workflowStatus
-            );
-            this.goToStage(this.workflow.stages[0]);
-            //  start monitoring as soon as the user enters the "setup" view
-            this._startMonitoring();
-        });
+        // console.log(this.workflow)
+        this.workflow = this._workflowService.workflow;
+        var stageName = this._$state.params.stageName;
+        this.workflow.stages.map((stage, stageIndex) => {
+            if (stage.name == stageName) {
+                this.currentStageIndex  = stageIndex;
+            }
+        })
 
+        this.goToStage(this.workflow.stages[this.currentStageIndex]);
+        //  start monitoring as soon as the user enters the "setup" view
+        this._startMonitoring();
+        // stop monitoring when the scope gets destroyed, i.e. when the user
+        // leaves the "setup" view
         this._$scope.$on('$destroy', () => {
-            // stop monitoring when user leaves the "setup" view
             this._stopMonitoring();
         });
 

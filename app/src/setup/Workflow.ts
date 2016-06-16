@@ -21,7 +21,7 @@ class Workflow extends JobCollection {
             }, {
                 done: false,
                 failed: false,
-                percentDone: 0,
+                percent_done: 0,
                 state: '',
                 subtasks: []
         });
