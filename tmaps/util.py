@@ -114,6 +114,10 @@ def extract_model_from_path(model_cls, check_ownership=False):
                 model_id = request.view_args.get(model_id_arg)
                 if model_id is None:
                     raise MalformedRequestError()
+                if model_id == 'undefined':
+                    raise ValueError(
+                        'ID for model "%s" not defined' % model_cls.__name__
+                    )
                 obj = db.session.query(model_cls).get_with_hash(model_id)
                 kwargs.update({
                     model_arg: obj
