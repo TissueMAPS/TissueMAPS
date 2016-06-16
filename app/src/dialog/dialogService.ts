@@ -5,11 +5,12 @@ class DialogService {
 
     }
 
-    private showDialog(title, message) {
+    private showDialog(title, message, size) {
         var instance = this._$uibModal.open({
             templateUrl: '/src/dialog/dialog.html',
             controller: 'DialogCtrl',
             controllerAs: 'dialog',
+            size: size,
             resolve: {
                 title: () => {
                     return title;
@@ -24,11 +25,15 @@ class DialogService {
     }
 
     error(message: string) {
-        return this.showDialog('Error', message);
+        return this.showDialog('Error', message, 'sm');
     }
 
     warning(message: string) {
-        return this.showDialog('Warning', message);
+        return this.showDialog('Warning', message, 'sm');
+    }
+
+    info(message: string) {
+        return this.showDialog('Info', message, 'sm');
     }
 
 }
