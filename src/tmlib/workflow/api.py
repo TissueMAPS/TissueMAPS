@@ -23,7 +23,7 @@ from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import CollectJob
-from tmlib.workflow.workflow import WorkflowStep
+from tmlib.workflow import WorkflowStep
 
 logger = logging.getLogger(__name__)
 

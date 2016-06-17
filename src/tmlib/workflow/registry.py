@@ -1,10 +1,14 @@
 import logging
 import inspect
 import importlib
+import types
 import collections
 
 from tmlib import __version__
 from tmlib.workflow.args import Argument
+from tmlib.workflow.args import BatchArguments
+from tmlib.workflow.args import SubmissionArguments
+from tmlib.workflow.args import ExtraArguments
 from tmlib.workflow.args import CliMethodArguments
 from tmlib.workflow.args import ArgumentMeta
 
@@ -28,8 +32,20 @@ def api(step_name):
     Returns
     -------
     tmlib.workflow.args.ClusterRoutines
+
+    Raises
+    ------
+    TypeError
+        when decorated class is not derived from
+        :py:class:`tmlib.workflow.api.ClusterRoutines`
     '''
+    from tmlib.workflow.api import ClusterRoutines
     def decorator(cls):
+        if ClusterRoutines not in inspect.getmro(cls):
+            raise TypeError(
+                'Api class must be derived from '
+                '"tmlib.workflow.api.ClusterRoutines"'
+            )
         _step_register[step_name]['api'] = cls
         return cls
     return decorator
@@ -48,8 +64,20 @@ def workflow(workflow_type):
     Returns
     -------
     tmlib.workflow.description.WorkflowDependencies
+
+    Raises
+    ------
+    TypeError
+        when decorated class is not derived from
+        :py:class:`tmlib.workflow.dependencies.WorkflowDependencies`
     '''
+    from tmlib.workflow.dependencies import WorkflowDependencies
     def decorator(cls):
+        if WorkflowDependencies not in inspect.getmro(cls):
+            raise TypeError(
+                'Registered class must be derived from '
+                '"tmlib.workflow.dependencies.WorkflowDependencies"'
+            )
         cls.type = workflow_type
         _workflow_register[workflow_type] = cls
         return cls
@@ -70,9 +98,31 @@ def climethod(help, **kwargs):
 
     Returns
     -------
-    function
+    unboundmethod
+
+    Raises
+    ------
+    TypeError
+        when registered function is not a method
+    TypeError
+        when the class of the registered method is not derived from
+        :py:class:`tmlib.workflow.cli.CommandLineInterface`
+    TypeError
+        when the value specified by a keyword argument doesn't have type
+        :py:class:`tmlib.workflow.args.Argument`
+    ValueError
+        when the key of an keyword argument doesn't match a parameter
+        of the method
     '''
+    from tmlib.workflow.cli import CommandLineInterface
     def decorator(func):
+        if not isinstance(func, types.FunctionType):
+            raise TypeError('Registered object must be a function.')
+        if CommandLineInterface not in inspect.getmro(func.im_class):
+            raise TypeError(
+                'Class of registered method must be derived from '
+                'tmlib.workflow.cli.CommandLineInterface'
+            )
         func.is_climethod = True
         func.help = help
         func.args = ArgumentMeta(
@@ -117,8 +167,19 @@ def batch_args(step_name):
     Returns
     -------
     tmlib.workflow.args.BatchArguments
+
+    Raises
+    ------
+    TypeError
+        when decorated class is not derived from
+        :py:class:`tmlib.workflow.args.BatchArguments`
     '''
     def decorator(cls):
+        if BatchArguments not in inspect.getmro(cls):
+            raise TypeError(
+                'Registered class must be derived from '
+                'tmlib.workflow.args.BatchArguments'
+            )
         _step_register[step_name]['batch_args'] = cls
         return cls
     return decorator 
@@ -137,8 +198,19 @@ def submission_args(step_name):
     Returns
     -------
     tmlib.workflow.args.SubmissionArguments
+
+    Raises
+    ------
+    TypeError
+        when decorated class is not derived from
+        :py:class:`tmlib.workflow.args.SubmissionArguments`
     '''
     def decorator(cls):
+        if SubmissionArguments not in inspect.getmro(cls):
+            raise TypeError(
+                'Registered class must be derived from '
+                'tmlib.workflow.args.SubmissionArguments'
+            )
         _step_register[step_name]['submission_args'] = cls
         return cls
     return decorator
@@ -157,8 +229,19 @@ def extra_args(step_name):
     Returns
     -------
     tmlib.workflow.args.ExtraArguments
+
+    Raises
+    ------
+    TypeError
+        when decorated class is not derived from
+        :py:class:`tmlib.workflow.args.ExtraArguments`
     '''
     def decorator(cls):
+        if ExtraArguments not in inspect.getmro(cls):
+            raise TypeError(
+                'Registered class must be derived from '
+                'tmlib.workflow.args.ExtraArguments'
+            )
         _step_register[step_name]['extra_args'] = cls
         return cls
     return decorator
@@ -191,7 +274,7 @@ def get_step_args(name):
     # are available in the register
     batch_args = _step_register[name]['batch_args']
     submission_args = _step_register[name]['submission_args']
-    extra_args = _step_register[name].get('extra_args', None) 
+    extra_args = _step_register[name].get('extra_args', None)
     return (batch_args, submission_args, extra_args)
 
 

@@ -9,12 +9,12 @@ from tmlib.utils import notimplemented
 from tmlib.readers import BFImageReader
 from tmlib.image import ChannelImage
 from tmlib.workflow.api import ClusterRoutines
-from tmlib.workflow.registry import api
+from tmlib.workflow import register_api
 
 logger = logging.getLogger(__name__)
 
 
-@api('imextract')
+@register_api('imextract')
 class ImageExtractor(ClusterRoutines):
 
     '''Class for extraction of pixel arrays (planes) stored in image files using

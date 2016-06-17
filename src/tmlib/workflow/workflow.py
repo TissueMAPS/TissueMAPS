@@ -12,7 +12,7 @@ from gc3libs.workflow import AbortOnError
 
 import tmlib.models
 from tmlib.utils import assert_type
-from tmlib.workflow.registry import get_step_api
+from tmlib.workflow import get_step_api
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.description import WorkflowStageDescription
 from tmlib.errors import WorkflowTransitionError

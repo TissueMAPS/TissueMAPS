@@ -334,7 +334,7 @@ def get_task_data_from_sql_store(task):
             data['failed'] = failed
             data['name'] = task_info.name
             data['state'] = task_info.state
-            data['live'] = task_info.state in live_states,
+            data['live'] = task_info.state in live_states
             data['memory'] = task_info.memory
             data['type'] = task_info.type
             data['exitcode'] = task_info.exitcode

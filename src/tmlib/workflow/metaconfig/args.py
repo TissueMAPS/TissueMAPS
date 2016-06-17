@@ -1,11 +1,11 @@
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
 from tmlib.workflow.args import Argument
-from tmlib.workflow.registry import batch_args
-from tmlib.workflow.registry import submission_args
+from tmlib.workflow import register_batch_args
+from tmlib.workflow import register_submission_args
 
 
-@batch_args('metaconfig')
+@register_batch_args('metaconfig')
 class MetaconfigBatchArguments(BatchArguments):
 
     keep_zplanes = Argument(
@@ -49,7 +49,7 @@ class MetaconfigBatchArguments(BatchArguments):
     )
 
 
-@submission_args('metaconfig')
+@register_submission_args('metaconfig')
 class MetaconfigSubmissionArguments(SubmissionArguments):
 
     pass

@@ -2,12 +2,12 @@ import collections
 import logging
 
 from tmlib.workflow.canonical import CanonicalWorkflowDependencies
-from tmlib.workflow.registry import workflow
+from tmlib.workflow import register_workflow_type
 
 logger = logging.getLogger(__name__)
 
 
-@workflow('multiplexing')
+@register_workflow_type('multiplexing')
 class MultiplexingWorkflowDependencies(CanonicalWorkflowDependencies):
 
     '''Declaration of dependencies for the multiplexing workflow.'''

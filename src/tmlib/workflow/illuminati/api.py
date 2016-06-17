@@ -19,12 +19,12 @@ from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import MultiRunJobCollection
 from tmlib.workflow.jobs import CollectJob
-from tmlib.workflow.registry import api
+from tmlib.workflow import register_api
 
 logger = logging.getLogger(__name__)
 
 
-@api('illuminati')
+@register_api('illuminati')
 class PyramidBuilder(ClusterRoutines):
 
     def __init__(self, experiment_id, verbosity):

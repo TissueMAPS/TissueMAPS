@@ -19,9 +19,9 @@ from abc import abstractmethod
 from abc import abstractproperty
 
 from tmlib import __version__
-from tmlib.workflow.registry import get_step_api
-from tmlib.workflow.registry import get_step_args
-from tmlib.workflow.registry import climethod
+from tmlib.workflow import get_step_api
+from tmlib.workflow import get_step_args
+from tmlib.workflow import climethod
 from tmlib.workflow.args import Argument
 from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.utils import create_gc3pie_session

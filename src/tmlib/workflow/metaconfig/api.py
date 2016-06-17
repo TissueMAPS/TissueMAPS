@@ -9,12 +9,12 @@ from tmlib.workflow.metaconfig import metadata_handler_factory
 from tmlib.workflow.metaconfig import metadata_reader_factory
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.errors import MetadataError
-from tmlib.workflow.registry import api
+from tmlib.workflow import register_api
 
 logger = logging.getLogger(__name__)
 
 
-@api('metaconfig')
+@register_api('metaconfig')
 class MetadataConfigurator(ClusterRoutines):
 
     '''Class for configuration of microscope image metadata.

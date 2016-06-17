@@ -40,8 +40,6 @@ class Job(gc3libs.Application):
 
     def __init__(self, step_name, arguments, output_dir, submission_id, user_name):
         '''
-        Initialize an instance of class Job.
-
         Parameters
         ----------
         step_name: str

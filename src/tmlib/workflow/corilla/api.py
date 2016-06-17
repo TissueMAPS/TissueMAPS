@@ -1,17 +1,17 @@
 import os
 import logging
 
-import tmlib.models
+import tmlib.models as tm
 from tmlib.utils import notimplemented
 from tmlib.image import IllumstatsContainer
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.corilla.stats import OnlineStatistics
-from tmlib.workflow.registry import api
+from tmlib.workflow import register_api
 
 logger = logging.getLogger(__name__)
 
 
-@api('corilla')
+@register_api('corilla')
 class IllumstatsCalculator(ClusterRoutines):
 
     '''Class for calculating illumination statistics.'''
@@ -44,9 +44,9 @@ class IllumstatsCalculator(ClusterRoutines):
         job_descriptions['run'] = list()
         count = 0
 
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
-            channels = session.query(tmlib.models.Channel).\
+            channels = session.query(tm.Channel).\
                 filter_by(experiment_id=self.experiment_id).\
                 all()
 
@@ -57,10 +57,10 @@ class IllumstatsCalculator(ClusterRoutines):
             # TODO: Enable pooling image files across cycles, which may be
             # necessary to get enough images for robust statistics in case
             # each cycle has only a few images.
-            for cycle in session.query(tmlib.models.Cycle).\
-                    join(tmlib.models.Plate).\
-                    join(tmlib.models.Experiment).\
-                    filter(tmlib.models.Experiment.id == self.experiment_id):
+            for cycle in session.query(tm.Cycle).\
+                    join(tm.Plate).\
+                    join(tm.Experiment).\
+                    filter(tm.Experiment.id == self.experiment_id):
 
                 for channel in channels:
 
@@ -84,7 +84,7 @@ class IllumstatsCalculator(ClusterRoutines):
                             'illumstats_files': [
                                 os.path.join(
                                     cycle.illumstats_location,
-                                    tmlib.models.IllumstatsFile.
+                                    tm.IllumstatsFile.
                                     FILENAME_FORMAT.format(
                                         channel_id=channel.id
                                     )
@@ -101,24 +101,24 @@ class IllumstatsCalculator(ClusterRoutines):
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :py:class:`tmlib.models.IllumstatsFile` as well as all children for the
+        :py:class:`tm.IllumstatsFile` as well as all children for the
         processed experiment.
         '''
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
 
-            cycle_ids = session.query(tmlib.models.Cycle.id).\
-                join(tmlib.models.Plate).\
-                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+            cycle_ids = session.query(tm.Cycle.id).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id).\
                 all()
             cycle_ids = [p[0] for p in cycle_ids]
 
         if cycle_ids:
 
-            with tmlib.models.utils.Session() as session:
+            with tm.utils.Session() as session:
 
                 logger.info('delete existing illumination statistics files')
-                session.query(tmlib.models.IllumstatsFile).\
-                    filter(tmlib.models.IllumstatsFile.cycle_id.in_(cycle_ids)).\
+                session.query(tm.IllumstatsFile).\
+                    filter(tm.IllumstatsFile.cycle_id.in_(cycle_ids)).\
                     delete()
 
     def run_job(self, batch):
@@ -131,21 +131,21 @@ class IllumstatsCalculator(ClusterRoutines):
         '''
         file_ids = batch['channel_image_files_ids']
         logger.info('calculate illumination statistics')
-        with tmlib.models.utils.Session() as session:
-            file = session.query(tmlib.models.ChannelImageFile).\
+        with tm.utils.Session() as session:
+            file = session.query(tm.ChannelImageFile).\
                 get(file_ids[0])
             img = file.get()
         stats = OnlineStatistics(image_dimensions=img.dimensions)
         for fid in file_ids:
-            with tmlib.models.utils.Session() as session:
-                file = session.query(tmlib.models.ChannelImageFile).get(fid)
+            with tm.utils.Session() as session:
+                file = session.query(tm.ChannelImageFile).get(fid)
                 img = file.get()
                 logger.info('update statistics for image: %s', file.name)
             stats.update(img)
 
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
             stats_file = session.get_or_create(
-                tmlib.models.IllumstatsFile,
+                tm.IllumstatsFile,
                 channel_id=batch['channel_id'], cycle_id=batch['cycle_id']
             )
             logger.info('write calculated statistics to file')

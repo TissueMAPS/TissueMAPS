@@ -1,11 +1,11 @@
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
 from tmlib.workflow.args import Argument
-from tmlib.workflow.registry import batch_args
-from tmlib.workflow.registry import submission_args
+from tmlib.workflow import register_batch_args
+from tmlib.workflow import register_submission_args
 
 
-@batch_args('align')
+@register_batch_args('align')
 class AlignBatchArguments(BatchArguments):
 
     ref_cycle = Argument(
@@ -26,7 +26,7 @@ class AlignBatchArguments(BatchArguments):
     )
 
 
-@submission_args('align')
+@register_submission_args('align')
 class AlignSubmissionArguments(SubmissionArguments):
 
     pass

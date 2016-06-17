@@ -25,12 +25,12 @@ from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.handles import SegmentedObjects
 from tmlib.workflow.jterator.checkers import PipelineChecker
-from tmlib.workflow.registry import api
+from tmlib.workflow import register_api
 
 logger = logging.getLogger(__name__)
 
 
-@api('jterator')
+@register_api('jterator')
 class ImageAnalysisPipeline(ClusterRoutines):
 
     '''Class for running image processing pipelines.'''
@@ -710,6 +710,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         logger.debug('add value for feature "%s"' % f.name)
                         for t, measurement in enumerate(segm_objs.measurements):
                             if measurement.empty:
+                                continue
+                            elif f.name not in measurement.columns:
                                 continue
                             fvalue = measurement.loc[label, f.name]
                             feature_values.append(

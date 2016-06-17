@@ -643,7 +643,7 @@ class Sequence(InputHandle):
             if all([not isinstance(v, t) for t in {int, float, basestring}]):
                 raise TypeError(
                     'Elements of argument "value" must have type '
-                        'int, float, or str.')
+                        'int, float, or basestring.')
         super(Sequence, self).__init__(name, value, help)
 
     def __str__(self):
@@ -815,7 +815,8 @@ class Attribute(OutputHandle):
 class Figure(OutputHandle):
 
     '''Handle for a figure whose value is a JSON string representing
-    a figure created by a module.
+    a figure created by a module, see
+    `Plotly JSON schema <http://help.plot.ly/json-chart-schema/>`_.
     '''
 
     def __init__(self, name, help=''):

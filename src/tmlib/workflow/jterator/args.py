@@ -2,12 +2,12 @@ from tmlib.workflow.args import Argument
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
 from tmlib.workflow.args import ExtraArguments
-from tmlib.workflow.registry import batch_args
-from tmlib.workflow.registry import submission_args
-from tmlib.workflow.registry import extra_args
+from tmlib.workflow import register_batch_args
+from tmlib.workflow import register_submission_args
+from tmlib.workflow import register_extra_args
 
 
-@batch_args('jterator')
+@register_batch_args('jterator')
 class JteratorBatchArguments(BatchArguments):
 
     plot = Argument(
@@ -16,7 +16,7 @@ class JteratorBatchArguments(BatchArguments):
     )
 
 
-@submission_args('jterator')
+@register_submission_args('jterator')
 class JteratorSubmissionArguments(SubmissionArguments):
 
     pass
@@ -47,7 +47,7 @@ def get_names_of_existing_pipelines(experiment):
         ]
 
 
-@extra_args('jterator')
+@register_extra_args('jterator')
 class JteratorExtraArguments(ExtraArguments):
 
     pipeline = Argument(

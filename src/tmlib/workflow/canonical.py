@@ -2,12 +2,12 @@ import collections
 import logging
 
 from tmlib.workflow.dependencies import WorkflowDependencies
-from tmlib.workflow.registry import workflow
+from tmlib.workflow import register_workflow_type
 
 logger = logging.getLogger(__name__)
 
 
-@workflow('canonical')
+@register_workflow_type('canonical')
 class CanonicalWorkflowDependencies(WorkflowDependencies):
 
     '''Declaration of dependencies for the canonical workflow.'''

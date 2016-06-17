@@ -4,7 +4,7 @@ import logging
 import subprocess
 
 import tmlib.models
-from tmlib.workflow.registry import api
+from tmlib.workflow import register_api
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.workflow.api import ClusterRoutines
@@ -12,7 +12,7 @@ from tmlib.workflow.api import ClusterRoutines
 logger = logging.getLogger(__name__)
 
 
-@api('metaextract')
+@register_api('metaextract')
 class MetadataExtractor(ClusterRoutines):
 
     '''Class for extraction of metadata from microscopic image files.

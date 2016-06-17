@@ -1,11 +1,11 @@
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
 from tmlib.workflow.args import Argument
-from tmlib.workflow.registry import batch_args
-from tmlib.workflow.registry import submission_args
+from tmlib.workflow import register_batch_args
+from tmlib.workflow import register_submission_args
 
 
-@batch_args('imextract')
+@register_batch_args('imextract')
 class ImextractBatchArguments(BatchArguments):
 
     batch_size = Argument(
@@ -14,7 +14,7 @@ class ImextractBatchArguments(BatchArguments):
     )
 
 
-@submission_args('imextract')
+@register_submission_args('imextract')
 class ImextractSubmissionArguments(SubmissionArguments):
 
     pass

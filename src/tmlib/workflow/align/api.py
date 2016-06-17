@@ -8,12 +8,12 @@ from tmlib.utils import same_docstring_as
 from tmlib.errors import NotSupportedError
 from tmlib.workflow.align import registration as reg
 from tmlib.workflow.api import ClusterRoutines
-from tmlib.workflow.registry import api
+from tmlib.workflow import register_api
 
 logger = logging.getLogger(__name__)
 
 
-@api('align')
+@register_api('align')
 class ImageRegistrator(ClusterRoutines):
 
     '''Class for registering and aligning images between cycles.
