@@ -136,7 +136,7 @@ class Session(object):
     ----
     The engine is cached and reused in case of a reconnection within the same
     Python process.
-    
+
     Warning
     -------
     This is *not* thread-safe!

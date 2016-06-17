@@ -13,3 +13,4 @@ class FileUploadStatus(object):
 
     #: Upload has failed
     FAILED = 'FAILED'
+

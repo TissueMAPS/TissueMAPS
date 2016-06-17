@@ -3,8 +3,10 @@ from sqlalchemy.dialects.postgres import JSONB
 from sqlalchemy.orm import relationship, backref
 
 from tmlib.models import Model, DateMixIn
+from tmlib.models import distribute_by
 
 
+@distribute_by('id')
 class Submission(Model, DateMixIn):
 
     '''A *submission* handles the processing of a computational *task*
@@ -66,68 +68,69 @@ class Submission(Model, DateMixIn):
         )
 
 
-class Batch(Model):
+# class Batch(Model):
 
-    '''A *batch* describes all inputs as well as the expected outputs of
-    an individual *task*.
+#     '''A *batch* describes all inputs as well as the expected outputs of
+#     an individual *task*.
 
-    Attributes
-    ----------
-    name: str
-        name of the corresponding task
-    job_description: dict
-        specification of inputs and outputs (and potentially other
-        parameters)
-    submission_id: int
-        ID of the parent submission
-    submission: tmlib.models.Submission
-        parent submission to which the batch belongs
-    '''
+#     Attributes
+#     ----------
+#     name: str
+#         name of the corresponding task
+#     job_description: dict
+#         specification of inputs and outputs (and potentially other
+#         parameters)
+#     submission_id: int
+#         ID of the parent submission
+#     submission: tmlib.models.Submission
+#         parent submission to which the batch belongs
+#     '''
 
-    #: str: name of the corresponding database table
-    __tablename__ = 'batches'
+#     #: str: name of the corresponding database table
+#     __tablename__ = 'batches'
 
-    # Table columns
-    name = Column(String, index=True)
-    job_description = Column(JSONB)
-    submission_id = Column(
-        Integer,
-        ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE')
-    )
+#     # Table columns
+#     name = Column(String, index=True)
+#     job_description = Column(JSONB)
+#     submission_id = Column(
+#         Integer,
+#         ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE')
+#     )
 
-    # Relationships to other tables
-    submission = relationship(
-        'Submission',
-        backref=backref('batches', cascade='all, delete-orphan')
-    )
+#     # Relationships to other tables
+#     submission = relationship(
+#         'Submission',
+#         backref=backref('batches', cascade='all, delete-orphan')
+#     )
 
-    def __init__(self, name, job_description, submission_id):
-        '''
-        Parameters
-        ----------
-        name: str
-            name of the corresponding task
-        job_description: dict
-            specification of inputs and outputs (and potentially other
-            parameters)
-        submission_id: int
-            ID of the parent submission
+#     def __init__(self, name, job_description, submission_id):
+#         '''
+#         Parameters
+#         ----------
+#         name: str
+#             name of the corresponding task
+#         job_description: dict
+#             specification of inputs and outputs (and potentially other
+#             parameters)
+#         submission_id: int
+#             ID of the parent submission
 
-        See also
-        --------
-        :py:method:`tmlib.workflow.api.create_batches`
-        '''
-        self.name = name
-        self.job_description = job_description
-        self.submission_id = submission_id
+#         See also
+#         --------
+#         :py:method:`tmlib.workflow.api.create_batches`
+#         '''
+#         self.name = name
+#         self.job_description = job_description
+#         self.submission_id = submission_id
 
-    def __repr__(self):
-        return (
-            '<Batch(id=%r, name=%r, submission_id=%r)>'
-            % (self.id, self.name, self.submission_id)
-        )
+#     def __repr__(self):
+#         return (
+#             '<Batch(id=%r, name=%r, submission_id=%r)>'
+#             % (self.id, self.name, self.submission_id)
+#         )
 
 
+@distribute_by('id')
 class Task(Model):
 
     '''A *task* represents a computational job that can be submitted to a

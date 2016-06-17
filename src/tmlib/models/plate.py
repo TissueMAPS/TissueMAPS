@@ -6,6 +6,7 @@ from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
+from tmlib.models import distribute_by
 from tmlib.models.base import Model, DateMixIn
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.models.status import FileUploadStatus as fus
@@ -49,6 +50,7 @@ def determine_plate_dimensions(n_wells):
 
 
 @remove_location_upon_delete
+@distribute_by('id')
 class Plate(Model, DateMixIn):
 
     '''A *plate* represents a container with reservoirs for biological

@@ -3,11 +3,13 @@ from sqlalchemy import Column, String, Integer, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models.base import Model
+from tmlib.models import distribute_by
+from tmlib.models import Model
 
 logger = logging.getLogger(__name__)
 
 
+@distribute_by('id')
 class Feature(Model):
 
     '''A *feature* is a measurement that is associated with a particular
@@ -67,6 +69,7 @@ class Feature(Model):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
 
 
+@distribute_by('id')
 class FeatureValue(Model):
 
     '''An individual value of a *feature* that was measured for a given
@@ -103,7 +106,8 @@ class FeatureValue(Model):
     )
     mapobject_id = Column(
         Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables

@@ -6,10 +6,13 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
+from tmlib.models import distribute_by
+
 
 logger = logging.getLogger(__name__)
 
 
+@distribute_by('id')
 class Site(Model, DateMixIn):
 
     '''A *site* is a unique `y`, `x` position projected onto the
