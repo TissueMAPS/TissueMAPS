@@ -244,7 +244,31 @@ Input and output of modules is described in module-specific *handles* files:
 
 Each item (*handle*) in the array of inputs describes an argument that is passed to the module function and each item in the array of outputs describes a key-value pair of the mapping that should be returned by the function.
 
-The *type* descriped in the YAML file is mirrored by a Python class. Constant input arguments have a "value" key, which represents the actual argument. Images can be piped between modules and have a "key" key, which serves as a lookup for the actual value, i.e. the image, in an in-memory key-value store. The value for that YAML key must be a hashable, i.e. a string that's unique within the pipeline. Since the names of handles files are unique, best practice is to use handle filenames as a namespace and combine them with the name of the output handle to create a unique hashable identifier.
+The *type* of a handle descriped in the YAML file is mirrored by a Python class. Constant input arguments have a "value" key, which represents the actual argument. Images can be piped between modules and have a "key" key, which serves as a lookup for the actual value, i.e. the image, in an in-memory key-value store. The value for that YAML key must be a hashable, i.e. a string that's unique within the pipeline. Since the names of handles files are unique, best practice is to use handle filenames as a namespace and combine them with the name of the output handle to create a unique hashable identifier (e.g. for the above Python example the key would be `"my_python_module.output_image"`).
+
+The following handle *types* are available:
+
+    * Constant input handles: parameters that specify the actual argument value
+        - **Numeric**: number (``int`` or ``float``)
+        - **Character**: string (``basestring``)
+        - **Boolean**: boolean (``bool``)
+        - **Sequence**: array (``list`` of `int` or ``float`` or ``basestring``)
+        - **Plot**: boolean (``bool``)
+        
+    * Pipe handles (input and output): parameters that specify a "key" to retrieve the actual argument value (``numpy.ndarray``)
+        - **IntensityImage**: grayscale image  with 8-bit or 16-bit unsigned integer data type (```numpy.uint8`` or ``numpy.uint16``)
+        - **LabelImage**: labeled image with 32-bit integer data type (``numpy.int32``)
+        - **BinaryImage**: binary image with boolean data type (``numpy.bool``)
+        - **SegmentedObjects**: same as *LabelImage*, but automatically registers connected components in the image as segmented objects, which can subsequently be used by measurement modules to extract features for the objects
+        
+    * Measurement output handles: parameters that specify an ``"object_ref"`` to reference the provided value to an instance of ``SegmentedObjects`` (and optionally a ``"channel_ref"`` to also reference the value to an instance of ``IntensityImage`` representing a "channel")
+        - **Measurement**: measurements as a multidimensional matrix per time point, where columns are features and rows are segmented objects (``list`` of ``pandas.DataFrame`` with data type ``numpy.float``)
+
+    * Figure output handles: parameters that register the provided value as a figure
+        - **Figure**: serialized figure (``basestring``), see [plotly JSON schema](http://help.plot.ly/json-chart-schema/)
+        
+The values of ``SegmentedObjects``, ``Measurement``, and ``Figure`` handles are automatically persisted - either on disk or in the database. The values of ``SegmentedObjects`` are available in the *TissueMAPS* viewer as *objects* and drawn on the map and those of ``Measurement`` as *"features"*, which can be used by the data analysis *tools*.
+        
 
 
 The ``Plot`` input handle type and ``Figure`` output handle type are used to implement plotting functionality. The program will set ``plot`` to ``false`` when running in headless mode on the cluster.
