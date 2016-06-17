@@ -72,7 +72,8 @@ class PostgresXl(object):
         :py:class:`tmlib.models.Model`.
         '''
         sql = self.generate_create_table_statements()
-        Session._engine.execute(sql)
+        with Session() as session:
+            session._engine.execute(sql)
 
     def _dump(self, sql, *multiparams, **params):
         if isinstance(sql, basestring):
