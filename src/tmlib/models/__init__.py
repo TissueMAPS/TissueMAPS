@@ -9,6 +9,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.sql.schema import Table
 
 from utils import DATABASE_URI
+from utils import Session
 
 _postgresxl_register = collections.defaultdict(dict)
 
@@ -71,7 +72,7 @@ class PostgresXl(object):
         :py:class:`tmlib.models.Model`.
         '''
         sql = self.generate_create_table_statements()
-        tm.utils.Session._engine.execute(sql)
+        Session._engine.execute(sql)
 
     def _dump(self, sql, *multiparams, **params):
         if isinstance(sql, basestring):
