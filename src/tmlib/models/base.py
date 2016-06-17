@@ -15,6 +15,9 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
     '''Metaclass for abstract declarative base classes.'''
 
 
+    # TODO: handle __distribute__ in metadata
+
+
 _Base = declarative_base(metaclass=_DeclarativeABCMeta)
 
 
@@ -53,7 +56,7 @@ class Model(_Base):
     __abstract__ = True
 
     # Table columns
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, unique=True)
 
     @property
     def hash(self):
