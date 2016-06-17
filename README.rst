@@ -248,24 +248,24 @@ The *type* of a handle descriped in the YAML file is mirrored by a Python class.
 
 The following handle *types* are available:
 
-    * Constant input handles: parameters that specify the actual argument value
-        - **Numeric**: number (``int`` or ``float``)
-        - **Character**: string (``basestring``)
-        - **Boolean**: boolean (``bool``)
-        - **Sequence**: array (``list`` of `int` or ``float`` or ``basestring``)
-        - **Plot**: boolean (``bool``)
+* Constant input handles: parameters that specify the actual argument value
+    - **Numeric**: number (``int`` or ``float``)
+    - **Character**: string (``basestring``)
+    - **Boolean**: boolean (``bool``)
+    - **Sequence**: array (``list`` of `int` or ``float`` or ``basestring``)
+    - **Plot**: boolean (``bool``)
         
-    * Pipe handles (input and output): parameters that specify a "key" to retrieve the actual argument value (``numpy.ndarray``)
-        - **IntensityImage**: grayscale image  with 8-bit or 16-bit unsigned integer data type (```numpy.uint8`` or ``numpy.uint16``)
-        - **LabelImage**: labeled image with 32-bit integer data type (``numpy.int32``)
-        - **BinaryImage**: binary image with boolean data type (``numpy.bool``)
-        - **SegmentedObjects**: same as *LabelImage*, but automatically registers connected components in the image as segmented objects, which can subsequently be used by measurement modules to extract features for the objects
+* Pipe handles (input and output): parameters that specify a "key" to retrieve the actual argument value (``numpy.ndarray``)
+    - **IntensityImage**: grayscale image  with 8-bit or 16-bit unsigned integer data type (```numpy.uint8`` or ``numpy.uint16``)
+    - **LabelImage**: labeled image with 32-bit integer data type (``numpy.int32``)
+    - **BinaryImage**: binary image with boolean data type (``numpy.bool``)
+    - **SegmentedObjects**: same as *LabelImage*, but automatically registers connected components in the image as segmented objects, which can subsequently be used by measurement modules to extract features for the objects
         
-    * Measurement output handles: parameters that specify an ``"object_ref"`` to reference the provided value to an instance of ``SegmentedObjects`` (and optionally a ``"channel_ref"`` to also reference the value to an instance of ``IntensityImage`` representing a "channel")
-        - **Measurement**: measurements as a multidimensional matrix per time point, where columns are features and rows are segmented objects (``list`` of ``pandas.DataFrame`` with data type ``numpy.float``)
+* Measurement output handles: parameters that specify an ``"object_ref"`` to reference the provided value to an instance of ``SegmentedObjects`` (and optionally a ``"channel_ref"`` to also reference the value to an instance of ``IntensityImage`` representing a "channel")
+    - **Measurement**: measurements as a multidimensional matrix per time point, where columns are features and rows are segmented objects (``list`` of ``pandas.DataFrame`` with data type ``numpy.float``)
 
-    * Figure output handles: parameters that register the provided value as a figure
-        - **Figure**: serialized figure (``basestring``), see [plotly JSON schema](http://help.plot.ly/json-chart-schema/)
+* Figure output handles: parameters that register the provided value as a figure
+    - **Figure**: serialized figure (``basestring``), see [plotly JSON schema](http://help.plot.ly/json-chart-schema/)
         
 The values of ``SegmentedObjects``, ``Measurement``, and ``Figure`` handles are automatically persisted - either on disk or in the database. The values of ``SegmentedObjects`` are available in the *TissueMAPS* viewer as *objects* and drawn on the map and those of ``Measurement`` as *"features"*, which can be used by the data analysis *tools*.
         
