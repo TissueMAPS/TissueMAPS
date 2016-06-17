@@ -393,7 +393,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
                 next_step_name = self.description.steps[done+1].name
                 logger.info(
                     'transit to next step ({0} of {1}): "{2}"'.format(
-                        done+1, self.n_steps, next_step_name
+                        done+2, self.n_steps, next_step_name
                     )
                 )
                 self.update_step(done+1)
@@ -663,7 +663,7 @@ class Workflow(SequentialTaskCollection, State):
                 next_stage_name = self.description.stages[done+1].name
                 logger.info(
                     'transit to next stage ({0} of {1}): "{2}"'.format(
-                        done+1, self.n_stages, next_stage_name
+                        done+2, self.n_stages, next_stage_name
                     )
                 )
                 self.update_stage(done+1)
