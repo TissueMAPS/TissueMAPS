@@ -265,7 +265,7 @@ The following handle *types* are available:
     - **Measurement**: measurements as a multidimensional matrix per time point, where columns are features and rows are segmented objects (``list`` of ``pandas.DataFrame`` with data type ``numpy.float``)
 
 * Figure output handles: parameters that register the provided value as a figure
-    - **Figure**: serialized figure (``basestring``), see [plotly JSON schema](http://help.plot.ly/json-chart-schema/)
+    - **Figure**: serialized figure (``basestring``), see `plotly JSON schema <http://help.plot.ly/json-chart-schema/>`_.
         
 The values of ``SegmentedObjects``, ``Measurement``, and ``Figure`` handles are automatically persisted - either on disk or in the database. The values of ``SegmentedObjects`` are available in the *TissueMAPS* viewer as *objects* and drawn on the map and those of ``Measurement`` as *"features"*, which can be used by the data analysis *tools*.
         
