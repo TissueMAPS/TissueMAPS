@@ -23,12 +23,23 @@ class StepCtrl {
                 });
             }
         });
-        // this._$scope.$watch('stageCtrl.currentStep');
     }
 
     goToJobStatus() {
-        console.log('go to job status')
+        // console.log('go to job status')
         this._$state.go('setup.jobs', {});
+    }
+
+    hasExtraArgs() {
+        var stageIdx = this.currentStageIndex;
+        var stepIdx = this.currentStepIndex;
+        if (this.workflow.stages[stageIdx].steps[stepIdx] == undefined) {
+            return false;
+        } else if (this.workflow.stages[stageIdx].steps[stepIdx].extra_args) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
 }

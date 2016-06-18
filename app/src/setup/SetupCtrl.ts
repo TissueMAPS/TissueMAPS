@@ -30,12 +30,24 @@ class SetupCtrl {
                     stageName: stage.name
                 });
             } else {
-                this._$state.go('setup.stage', {
-                    stageName: stage.name
+                var stepName = this._$state.params.stepName;
+                if (stepName) {
+                    this._$state.go('setup.step', {
+                        stageName: stage.name,
+                        stepName: stepName
+                    });
+                } else {
+                    var stageIdx = this.currentStageIndex;
+                    stepName = this.workflow.stages[stageIdx].steps[0].name;
+                    this._$state.go('setup.step', {
+                        stageName: stage.name,
+                        stepName: stepName
                 });
+                }
             }
         }
     }
+
 
     private _isLastStage(stage: WorkflowStage): boolean {
         if (stage == undefined) {

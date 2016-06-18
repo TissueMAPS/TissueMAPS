@@ -153,7 +153,7 @@ angular.module('tmaps.ui')
             'stage-view': {
                 templateUrl: '/src/setup/uploadfiles/uploadfiles.html'
             }
-        },
+        }
     })
     .state('setup.stage', {
         url: '/stages/:stageName',
@@ -180,11 +180,10 @@ angular.module('tmaps.ui')
         parent: 'setup.stage',
         url: '/steps/:stepName',
         resolve: {
-            workflow: ['workflowService', 'experiment', 'plates',
-                        (workflowService, experiment, plates) => {
+            workflow: ['workflowService', 'experiment',
+                        (workflowService, experiment) => {
                 return workflowService.getWorkflow(experiment)
                 .then((workflow) => {
-                    // console.log(workflow)
                     return workflow;
                 });
             }]

@@ -20,20 +20,25 @@ class StageCtrl {
         var stageIdx = this.currentStageIndex;
         if (this.workflow.stages[stageIdx] == undefined) {
             // TODO: different plates instead of steps?
-            this._$state.go('plate');
+            this._$state.go('plate', {
+                stageName: this.workflow.stages[stageIdx].name
+            });
         } else {
-            var selectedStage = this.workflow.stages[stageIdx];
             var stepIdx;
             this.workflow.stages[stageIdx].steps.map((step, stepIndex) => {
                 if (step.name == stepName) {
                     stepIdx = stepIndex;
                 }
             });
-            if (this.workflow.stages[stageIdx].steps[stepIdx] != undefined) {
-                this.goToStep(this.workflow.stages[stageIdx].steps[stepIdx]);
-            } else {
-                this.goToStep(this.workflow.stages[stageIdx].steps[0]);
+            if (this.workflow.stages[stageIdx].name == 'upload') {
+                console.log('YES')
             }
+            if (this.workflow.stages[stageIdx].steps[stepIdx] != undefined) {
+                var selectedStep = this.workflow.stages[stageIdx].steps[stepIdx];
+            } else {
+                var selectedStep = this.workflow.stages[stageIdx].steps[0];
+            }
+            this.goToStep(selectedStep)
         }
     }
 
