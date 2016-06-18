@@ -5,7 +5,9 @@ class WorkflowService {
     private _$http: ng.IHttpService;
     private _$q: ng.IQService;
 
-    constructor() {
+    static $inject = ['$state'];
+
+    constructor(private _$state) {
         // TODO: inject experiment and plates
         this._$http = $injector.get<ng.IHttpService>('$http');
         this._$q = $injector.get<ng.IQService>('$q');
@@ -38,6 +40,8 @@ class WorkflowService {
 
     private _getUploadStatus(plates: Plate[]) {
         var uploadStatus;
+        // console.log(this._$state.params)
+        var inAcquisitionView = 'acquisitionid' in this._$state.params;
         // console.log(plates)
         var noPlates = plates.length == 0;
         var noAcquisitions = plates.every((p) => {
@@ -80,19 +84,24 @@ class WorkflowService {
                 });
             });
             uploadProgress = doneCount / totalCount * 100;
-            if (uploadStates.every((s) => {return s == 'COMPLETE';})) {
+            if (plates.every((p) => {return p.status == 'COMPLETE';})) {
                 processingState = 'TERMINATED';
-            } else if (uploadStates.some((s) => {return s == 'UPLOADING';})) {
-                processingState = 'RUNNING';
-            } else {
+            } else if (plates.every((p) => {return p.status == 'WAITING';})) {
                 processingState = 'NEW';
+            } else if (!inAcquisitionView) {
+                // The upload must have been stopped when the user left
+                // the acquisition view.
+                processingState = 'STOPPED';
+            } else {
+                // TODO
+                processingState = 'RUNNING';
             }
             uploadStatus = new JobCollectionStatus({
                 failed: uploadFailed,
                 state: processingState,
                 percent_done: uploadProgress,
                 done: uploadProgress == 100,
-                subtasks: [],  // TODO: monitor each acquisition individually
+                subtasks: [],
                 name: 'upload',
                 live: uploadProgress < 100,
                 memory: null,
