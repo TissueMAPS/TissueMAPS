@@ -40,6 +40,7 @@ class Acquisition {
         this._uploader = $injector.get<any>('Upload');
         this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 20000000});
         this._uploader.defaults.blobUrlsMaxQueueSize = 10;  // default: 200
+        this._uploader.defaults.blobUrlsMaxMemory = 20000000;
     }
 
     fetchExistingFiles(): ng.IPromise<MicroscopeFile[]> {
@@ -79,13 +80,12 @@ class Acquisition {
                 evt.config.file.progress = progressPercentage;
                 evt.config.file.status = 'UPLOADING';
             }).success((data, status, headers, config) => {
+                // console.log('upload of file complete: ', config.file.name)
                 config.file.progress = 100;
                 config.file.status = 'COMPLETE';
-                this.files.push(<MicroscopeFile>{
-                    name: config.file.name, upload_status: 'COMPLETE'
-                });
                 fileDef.resolve(config.file);
             }).error((data, status, headers, config) => {
+                console.log('upload of file failed: ', config.file.name)
                 config.file.status = 'FAILED';
                 this.status = 'FAILED';
                 fileDef.resolve(config.file);
