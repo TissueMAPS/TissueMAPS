@@ -292,7 +292,7 @@ def delete_experiment(experiment):
 @jwt_required()
 @extract_model_from_path(Plate, check_ownership=True)
 def get_plate(plate):
-    return jsonify(data=plate.as_dict())
+    return jsonify(data=plate)
 
 
 @api.route('/plates', methods=['GET'])
@@ -332,7 +332,7 @@ def get_plates():
     if not experiment.belongs_to(current_identity):
         raise NotAuthorizedError()
 
-    return jsonify(data=[p.as_dict() for p in experiment.plates])
+    return jsonify(data=experiment.plates)
 
 
 @api.route('/plates/<plate_id>', methods=['DELETE'])
@@ -381,7 +381,7 @@ def create_plate(experiment):
     db.session.add(pl)
     db.session.commit()
 
-    return jsonify(data=pl.as_dict())
+    return jsonify(data=pl)
 
 
 @api.route('/acquisitions', methods=['POST'])

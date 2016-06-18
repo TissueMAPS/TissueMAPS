@@ -56,7 +56,8 @@ def encode_plate(obj, encoder):
         'name': obj.name,
         'description': obj.description,
         'experiment_id': encode_pk(obj.experiment_id),
-        'acquisitions': map(encoder.default, obj.acquisitions)
+        'acquisitions': map(encoder.default, obj.acquisitions),
+        'status': obj.status
     }
 
 
