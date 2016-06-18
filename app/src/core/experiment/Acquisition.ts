@@ -51,8 +51,12 @@ class Acquisition {
             imageFiles: $http.get('/api/acquisitions/' + this.id + '/image_files'),
             metaDataFiles: $http.get('/api/acquisitions/' + this.id + '/metadata_files')
         }).then((responses: any) => {
-            var imageFiles = responses.imageFiles.data.data
-            var metaDataFiles = responses.metaDataFiles.data.data
+            var imageFiles = responses.imageFiles.data.data.filter((f) => {
+                return f.upload_status == 'COMPLETE';
+            });
+            var metaDataFiles = responses.metaDataFiles.data.data.filter((f) => {
+                return f.upload_status == 'COMPLETE';
+            });
             var files = Array.prototype.concat(imageFiles, metaDataFiles)
             this.files = files;
             return files;
@@ -68,31 +72,40 @@ class Acquisition {
         var $q = $injector.get<ng.IQService>('$q');
         var $window = $injector.get<ng.IWindowService>('$window');
         this.status = 'UPLOADING';
-        var filePromises = newFiles.map((f) => {
+        var namesUploadedFiles = this.files.map(function(f) {
+            return f.name;
+        });
+        var filePromises = newFiles.map((newFile) => {
             var fileDef = $q.defer();
-            var filenames = this.files.map(function(f) {return f.name;});
-            f.upload = this._uploader.upload({
-                url: url,
-                header: {'Authorization': 'JWT ' + $window.sessionStorage['token']},
-                file: f,
-            }).progress((evt) => {
-                var progressPercentage = Math.round(100.0 * evt.loaded / evt.total);
-                evt.config.file.progress = progressPercentage;
-                evt.config.file.status = 'UPLOADING';
-            }).success((data, status, headers, config) => {
-                // console.log('upload of file complete: ', config.file.name)
-                config.file.progress = 100;
-                config.file.status = 'COMPLETE';
-                this.files.push(<MicroscopeFile>{
-                    name: config.file.name, upload_status: 'COMPLETE'
+            if (namesUploadedFiles.indexOf(newFile.name) != -1) {
+                // Skip files that were already uploaded.
+                newFile.progress = 100;
+                newFile.status = 'COMPLETE';
+                fileDef.resolve(newFile);
+            } else {
+                newFile.upload = this._uploader.upload({
+                    url: url,
+                    header: {'Authorization': 'JWT ' + $window.sessionStorage['token']},
+                    file: newFile,
+                }).progress((evt) => {
+                    var progressPercentage = Math.round(100.0 * evt.loaded / evt.total);
+                    evt.config.file.progress = progressPercentage;
+                    evt.config.file.status = 'UPLOADING';
+                }).success((data, status, headers, config) => {
+                    // console.log('upload of file complete: ', config.file.name)
+                    config.file.progress = 100;
+                    config.file.status = 'COMPLETE';
+                    this.files.push(<MicroscopeFile>{
+                        name: config.file.name, upload_status: 'COMPLETE'
+                    });
+                    fileDef.resolve(config.file);
+                }).error((data, status, headers, config) => {
+                    console.log('upload of file failed: ', config.file.name)
+                    config.file.status = 'FAILED';
+                    this.status = 'FAILED';
+                    fileDef.resolve(config.file);
                 });
-                fileDef.resolve(config.file);
-            }).error((data, status, headers, config) => {
-                console.log('upload of file failed: ', config.file.name)
-                config.file.status = 'FAILED';
-                this.status = 'FAILED';
-                fileDef.resolve(config.file);
-            });
+            }
             return fileDef.promise;
         });
         return filePromises;
@@ -105,6 +118,11 @@ class Acquisition {
         this.files.splice(0, this.files.length);
     }
 
+    countCompleted() {
+        return this.files.filter((f) => {
+            return f.upload_status == 'COMPLETE';
+        }).length
+    }
     /**
      * Register files to be uploaded. This will create server-side
      * objects for all the files. Only files that were registered can be 
