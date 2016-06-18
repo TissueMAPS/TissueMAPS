@@ -7,7 +7,6 @@ from flask import jsonify, send_file, current_app, request
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
-import tmlib.workflow.registry
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.tmaps.api import WorkflowManager

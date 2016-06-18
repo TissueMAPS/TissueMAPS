@@ -20,7 +20,7 @@ from tmaps.extensions import db
 import tmlib.models as tm
 from tmlib.models import Experiment
 from tmlib.utils import flatten
-from tmlib.workflow.registry import get_step_args
+from tmlib.workflow import get_step_args
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import RunJobCollection
 import tmlib.workflow.utils as cluster_utils
