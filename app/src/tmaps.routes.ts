@@ -126,23 +126,17 @@ angular.module('tmaps.ui')
         controllerAs: 'setupCtrl',
         resolve: {
             experiment: getExperiment,
-            plates: ['$http', 'experiment', '$state', '$q',
-                     ($http, experiment, $state, $q) => {
-                var def = $q.defer();
-                (new PlateDAO()).getAll({
-                    experiment_id: experiment.id
-                }).then((plates) => {
-                    def.resolve(plates);
-                })
-                .catch((error) => {
-                    $state.go('userpanel');
-                    def.reject(error);
-                })
-                return def.promise;
+            plates: ['workflowService', 'experiment',
+                        (workflowService, experiment) => {
+                return workflowService.getPlates(experiment)
+                .then((plates) => {
+                    // console.log(plates)
+                    return plates;
+                });
             }],
-            workflow: ['workflowService', 'experiment', 'plates',
-                        (workflowService, experiment, plates) => {
-                return workflowService.get(experiment)
+            workflow: ['workflowService', 'experiment',
+                        (workflowService, experiment) => {
+                return workflowService.getWorkflow(experiment)
                 .then((workflow) => {
                     // console.log(workflow)
                     return workflow;
@@ -166,7 +160,7 @@ angular.module('tmaps.ui')
         resolve: {
             workflow: ['workflowService', 'experiment', 'plates',
                         (workflowService, experiment, plates) => {
-                return workflowService.get(experiment)
+                return workflowService.getWorkflow(experiment)
                 .then((workflow) => {
                     // console.log(workflow)
                     return workflow;
@@ -188,7 +182,7 @@ angular.module('tmaps.ui')
         resolve: {
             workflow: ['workflowService', 'experiment', 'plates',
                         (workflowService, experiment, plates) => {
-                return workflowService.get(experiment)
+                return workflowService.getWorkflow(experiment)
                 .then((workflow) => {
                     // console.log(workflow)
                     return workflow;

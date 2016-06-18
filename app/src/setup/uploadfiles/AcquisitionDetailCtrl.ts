@@ -12,7 +12,7 @@ class AcquisitionDetailCtrl {
     }
 
     filterValidFiles(files: {name: string;}[]) {
-        return this._$http.post('/api/acquisitions/' + this.acquisition.id + '/file-validity-check', {
+        return this._$http.post('/api/acquisitions/' + this.acquisition.id + '/upload/validity-check', {
             files: files.map((f) => {
                 return {name: f.name};
             })

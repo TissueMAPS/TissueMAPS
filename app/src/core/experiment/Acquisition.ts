@@ -68,7 +68,7 @@ class Acquisition {
      * have been registered, i.e. created server-side.
      */
     private _uploadRegisteredFiles(newFiles) {
-        var url = '/api/acquisitions/' + this.id + '/upload-file';
+        var url = '/api/acquisitions/' + this.id + '/upload/upload-file';
         var $q = $injector.get<ng.IQService>('$q');
         var $window = $injector.get<ng.IWindowService>('$window');
         this.status = 'UPLOADING';
@@ -130,7 +130,7 @@ class Acquisition {
      */
     private _registerUpload(newFiles) {
         var fileNames = _(newFiles).pluck('name');
-        var url = '/api/acquisitions/' + this.id + '/register-upload';
+        var url = '/api/acquisitions/' + this.id + '/upload/register';
         this.status = 'WAITING';
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');

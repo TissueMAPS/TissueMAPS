@@ -27,8 +27,10 @@
 
       <div class="col-md-9">
         <ul class="stage-indicators">
-          <li class="stage-indicator" ng-repeat="stage in setupCtrl.workflow.stages" ng-class="{active: setupCtrl.isInStage(stage)}"
-            ng-click="setupCtrl.goToStage(stage)" ng-disabled="!stage.check()">
+          <li class="stage-indicator"
+            ng-repeat="stage in setupCtrl.workflow.stages"
+            ng-class="{active: setupCtrl.isInStage(stage)}"
+            ng-click="setupCtrl.goToStage(stage)">
             <i class="fa fa-check-circle" aria-hidden="true"
                ng-show="!stage.status.failed && stage.status.done" style="color: green;">
             </i>

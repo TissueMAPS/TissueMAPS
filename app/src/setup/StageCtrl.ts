@@ -45,7 +45,7 @@ class StageCtrl {
     goToStep(step: WorkflowStep) {
         var idx = this.currentStageIndex;
         this.currentStepIndex = this.workflow.stages[idx].steps.indexOf(step);
-        // console.log('go to step: ', step)
+        console.log('go to step: ', step)
         this._$state.go('setup.step', {
             stepName: step.name
         });

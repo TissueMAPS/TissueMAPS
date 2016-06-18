@@ -1,5 +1,6 @@
 class WorkflowService {
     workflow: Workflow;
+    plates: any;  // TypeScript doesn't like Plate[] here ???
 
     private _$http: ng.IHttpService;
     private _$q: ng.IQService;
@@ -22,51 +23,88 @@ class WorkflowService {
         });
     }
 
+    getPlates(experiment: Experiment): ng.IPromise<any> {
+        return (new PlateDAO()).getAll({
+            experiment_id: experiment.id
+        }).then((plates) => {
+            // console.log(plates)
+            this.plates = plates;
+            return plates;
+        })
+        .catch((error) => {
+            return this._$q.reject(error);
+        });
+    }
+
     private _getUploadStatus(plates: Plate[]) {
-        // TODO: this could be done server side based on the database entries
-        // and included in the workflow status
-        var uploadFailed = false;
-        var processingState = '';
-        var uploadStates = [];
-        var uploadProgress = 0;
-        var doneCount = 0;
-        var totalCount = 0;
-        plates.map((plt) => {
-            plt.acquisitions.map((acq) => {
-                totalCount++;
-                uploadStates.push(acq.status);
-                if (acq.status == 'FAILED') {
-                    uploadFailed = true;
-                    doneCount++;
-                } else if (acq.status == 'COMPLETE') {
-                    doneCount++;
-                }
+        var uploadStatus;
+        // console.log(plates)
+        var noPlates = plates.length == 0;
+        var noAcquisitions = plates.every((p) => {
+            return p.acquisitions.length == 0;
+        });
+        if (noPlates || noAcquisitions) {
+            uploadStatus = new JobCollectionStatus({
+                failed: false,
+                state: '',
+                done: false,
+                percent_done: 0,
+                subtasks: [],
+                name: 'upload',
+                live: false,
+                memory: null,
+                type: null,
+                exitcode: null,
+                id: null,
+                submission_id: null,
+                time: null,
+                cpu_time: null
             });
-        });
-        uploadProgress = doneCount / totalCount * 100;
-        if (uploadStates.every((s) => {return s == 'COMPLETE';})) {
-            processingState = 'TERMINATED';
-        } else if (uploadStates.some((s) => {return s == 'UPLOADING';})) {
-            processingState = 'RUNNING';
         } else {
-            processingState = 'NEW';
+            var uploadFailed = false;
+            var processingState = '';
+            var uploadStates = [];
+            var uploadProgress = 0;
+            var doneCount = 0;
+            var totalCount = 0;
+            plates.map((plt) => {
+                plt.acquisitions.map((acq) => {
+                    totalCount++;
+                    uploadStates.push(acq.status);
+                    if (acq.status == 'FAILED') {
+                        uploadFailed = true;
+                        doneCount++;
+                    } else if (acq.status == 'COMPLETE') {
+                        doneCount++;
+                    }
+                });
+            });
+            uploadProgress = doneCount / totalCount * 100;
+            if (uploadStates.every((s) => {return s == 'COMPLETE';})) {
+                processingState = 'TERMINATED';
+            } else if (uploadStates.some((s) => {return s == 'UPLOADING';})) {
+                processingState = 'RUNNING';
+            } else {
+                processingState = 'NEW';
+            }
+            uploadStatus = new JobCollectionStatus({
+                failed: uploadFailed,
+                state: processingState,
+                percent_done: uploadProgress,
+                done: uploadProgress == 100,
+                subtasks: [],  // TODO: monitor each acquisition individually
+                name: 'upload',
+                live: uploadProgress < 100,
+                memory: null,
+                type: null,
+                exitcode: null,
+                id: null,
+                submission_id: null,
+                time: null,
+                cpu_time: null
+            });
         }
-        return new JobCollectionStatus({
-            failed: uploadFailed,
-            state: processingState,
-            percent_done: uploadProgress,
-            done: uploadProgress == 100,
-            subtasks: [],  // TODO: monitor each acquisition individually
-            name: 'fileupload',
-            live: uploadProgress < 100,
-            memory: null,
-            type: null,
-            exitcode: null,
-            id: null,
-            submission_id: null,
-            time: null,
-            cpu_time: null
-        });
+        return uploadStatus;
     }
 
     private _getWorkflowStatus(experiment: Experiment): ng.IPromise<any> {
@@ -92,8 +130,14 @@ class WorkflowService {
             this.workflow.stages.map((stage, stageIndex) => {
                 if (stageIndex == 0 && stage.name == 'upload') {
                     // hack around "upload" stage
-                    stage.status = this._getUploadStatus(plates);
+                    this.getPlates(experiment)
+                    .then((plates) => {
+                        stage.status = this._getUploadStatus(plates);
+                    })
                 } else {
+                    if (workflowStatus == null) {
+                        return this.workflow;
+                    }
                     var workflowStageDescription = description.stages[stageIndex - 1];
                     if (stageIndex - 1 < workflowStatus.subtasks.length) {
                         stage.status = new JobCollectionStatus(
@@ -134,7 +178,7 @@ class WorkflowService {
         return this.workflow;
     }
 
-    get(experiment: Experiment): ng.IPromise<any> {
+    getWorkflow(experiment: Experiment): ng.IPromise<any> {
         var def = this._$q.defer();
         if (this.workflow) {
             def.resolve(this.workflow);

@@ -14,17 +14,26 @@ class SetupCtrl {
     }
 
     goToStage(stage: WorkflowStage) {
-        this.currentStageIndex = this.workflow.stages.indexOf(stage);
-        this._$scope.$watch('setupCtrl.currentStageIndex')
         // console.log('go to stage: ', stage)
-        if (stage.name === 'upload') {
+        if (!this.uploadComplete() && stage.name != 'upload') {
+            this._dialogService.error(
+                'Processing not yet possible! ' +
+                'Upload incomplete.'
+            )
             this._$state.go('plate', {
-                stageName: stage.name
+                stageName: 'upload'
             });
         } else {
-            this._$state.go('setup.stage', {
-                stageName: stage.name
-            });
+            this.currentStageIndex = this.workflow.stages.indexOf(stage);
+            if (stage.name === 'upload') {
+                this._$state.go('plate', {
+                    stageName: stage.name
+                });
+            } else {
+                this._$state.go('setup.stage', {
+                    stageName: stage.name
+                });
+            }
         }
     }
 
@@ -34,6 +43,12 @@ class SetupCtrl {
         }
         var idx = this.currentStageIndex;
         return idx === this.workflow.stages.length - 1;
+    }
+
+    uploadComplete() {
+        return this.plates.every((plate) => {
+            return plate.status == 'COMPLETE';
+        });
     }
 
     canProceedToNextStage(stage: WorkflowStage): boolean {
@@ -429,7 +444,7 @@ class SetupCtrl {
     }
 
     update() {
-        this._workflowService.get(this.experiment);
+        this._workflowService.getWorkflow(this.experiment);
     }
 
     getStatus() {
@@ -516,7 +531,10 @@ class SetupCtrl {
                 private _$scope,
                 private _$uibModal: ng.ui.bootstrap.IModalService) {
         // console.log(this.workflow)
+        // We need to keep up to date with chages of the workflow status
+        // (including the status of plates for the "upload" stage)
         this.workflow = this._workflowService.workflow;
+        this.plates = this._workflowService.plates;
         var stageName = this._$state.params.stageName;
         this.workflow.stages.map((stage, stageIndex) => {
             if (stage.name == stageName) {
