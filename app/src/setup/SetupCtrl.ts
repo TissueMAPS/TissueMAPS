@@ -58,8 +58,15 @@ class SetupCtrl {
                 this._dialogService.warning('Do you really want to resume the workflow?')
                 .then((resumeForReal) => {
                     if (resumeForReal) {
+                        var restartAt;
+                        for (var i = 1; i < this.workflow.stages.length; i++) {
+                            if (!this.workflow.stages[i].status.done) {
+                                restartAt = i;
+                                break;
+                            }
+                        }
                         result = this._workflowService.resubmit(
-                            this.experiment, idx, idx - 1
+                            this.experiment, idx, restartAt
                         )
                         .then((res) => {
                             return {

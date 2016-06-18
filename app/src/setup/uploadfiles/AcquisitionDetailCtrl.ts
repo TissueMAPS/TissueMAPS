@@ -1,12 +1,14 @@
 class AcquisitionDetailCtrl {
 
     newFiles: MicroscopeFile[] = [];
+    filesDropped: boolean;
 
     static $inject = ['acquisition', '$state', '$http', '$q'];
 
     constructor(public acquisition: Acquisition, private _$state,
                 private _$http, private _$q) {
         acquisition.fetchExistingFiles();
+        this.filesDropped = false;
     }
 
     filterValidFiles(files: {name: string;}[]) {
@@ -31,7 +33,15 @@ class AcquisitionDetailCtrl {
     }
 
     dropFiles(files) {
-        this.filterValidFiles(files)
+        console.log(files.length + ' files dropped')
+        this.filesDropped = true;
+        var newFileNames = this.newFiles.map((f) => {
+            return f.name;
+        });
+        var filteredFiles = files.filter((f) => {
+            return newFileNames.indexOf(f.name) == -1;
+        });
+        this.filterValidFiles(filteredFiles)
         .then((validFiles) => {
             validFiles.forEach((f) => {
                 f.status = 'WAITING';
@@ -56,6 +66,7 @@ class AcquisitionDetailCtrl {
 
     clearFiles() {
         this.newFiles.splice(0, this.newFiles.length);
+        this.filesDropped = false;
     }
 
 }

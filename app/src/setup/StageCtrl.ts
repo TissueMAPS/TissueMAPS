@@ -10,23 +10,30 @@ class StageCtrl {
                 private _$scope) {
         // console.log(this.workflow)
         this.workflow = this._workflowService.workflow;
-        // this._$scope.$watch('stageCtrl.workflow', (updatedWorkflow) => {
-        //     console.log(updatedWorkflow.status)
-        // }, true);
-        // TODO: stageName incorrect when reloading
         var stageName = this._$state.params.stageName;
+        var stepName = this._$state.params.stepName;
         this.workflow.stages.map((stage, stageIndex) => {
             if (stage.name == stageName) {
                 this.currentStageIndex = stageIndex;
             }
         })
-        // this._$scope.$watch('setupCtrl.currentStage');
-        var idx = this.currentStageIndex;
-        if (this.workflow.stages[idx] == undefined) {
+        var stageIdx = this.currentStageIndex;
+        if (this.workflow.stages[stageIdx] == undefined) {
             // TODO: different plates instead of steps?
             this._$state.go('plate');
         } else {
-            this.goToStep(this.workflow.stages[idx].steps[0]);
+            var selectedStage = this.workflow.stages[stageIdx];
+            var stepIdx;
+            this.workflow.stages[stageIdx].steps.map((step, stepIndex) => {
+                if (step.name == stepName) {
+                    stepIdx = stepIndex;
+                }
+            });
+            if (this.workflow.stages[stageIdx].steps[stepIdx] != undefined) {
+                this.goToStep(this.workflow.stages[stageIdx].steps[stepIdx]);
+            } else {
+                this.goToStep(this.workflow.stages[stageIdx].steps[0]);
+            }
         }
     }
 
@@ -38,7 +45,6 @@ class StageCtrl {
     goToStep(step: WorkflowStep) {
         var idx = this.currentStageIndex;
         this.currentStepIndex = this.workflow.stages[idx].steps.indexOf(step);
-        this._$scope.$watch('stageCtrl.currentStepIndex')
         // console.log('go to step: ', step)
         this._$state.go('setup.step', {
             stepName: step.name

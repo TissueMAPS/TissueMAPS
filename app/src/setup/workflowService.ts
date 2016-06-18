@@ -95,23 +95,23 @@ class WorkflowService {
                     stage.status = this._getUploadStatus(plates);
                 } else {
                     var workflowStageDescription = description.stages[stageIndex - 1];
-                    var workflowStageStatus = null;
                     if (stageIndex - 1 < workflowStatus.subtasks.length) {
-                        var workflowStageStatus = workflowStatus.subtasks[stageIndex - 1];
-                        stage.status = new JobCollectionStatus(workflowStageStatus);
+                        stage.status = new JobCollectionStatus(
+                            workflowStatus.subtasks[stageIndex - 1]
+                        );
                     }
                     // NOTE: The list of jobs within a step is subject to change,
                     // since steps are build dynamically upon processing.
                     // Therefore, we recreate the whole step, rather than just
                     // updating its status.
                     stage.steps.map((step, stepIndex) => {
-                        if (workflowStageStatus != null) {
+                        if (workflowStatus.subtasks[stageIndex - 1] != null) {
                             var workflowStepDescription = workflowStageDescription.steps[stepIndex];
-                            var workflowStepStatus = workflowStageStatus.subtasks[stepIndex];
-                            step.status = new JobCollectionStatus(workflowStepStatus);
-                            // TODO:
+                            step.status = new JobCollectionStatus(
+                                workflowStatus.subtasks[stageIndex - 1]
+                            );
                             step.jobs = [];
-                            workflowStepStatus.subtasks.map((phase, index) => {
+                            workflowStatus.subtasks[stageIndex - 1].subtasks.map((phase, index) => {
                                 if (phase.subtasks.length > 0) {
                                     phase.subtasks.map((subphase, index) => {
                                         if (subphase.subtasks.length > 0) {

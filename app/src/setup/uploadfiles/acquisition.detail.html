@@ -12,16 +12,28 @@
         ngf-drag-over-class="file-drop-zone-hover"
         ngf-multiple="true"
         ngf-allow-dir="true"
-        ngf-keep="'distinct'"
+        ngf-keep="false"
         ngf-accept="'*'">
+<!-- TODO: indicate drop/validation ongoing -->
 
         <div ng-show="!acquisitionDetailCtrl.newFiles.length">
-          <p>Drag your files here</p>
-          <i class="fa fa-file-o"></i>
+          <div ng-show="!acquisitionDetailCtrl.filesDropped">
+            <p>Drag your files here</p>
+            <i class="fa fa-file-o"></i>
+          </div>
+          <div ng-show="acquisitionDetailCtrl.filesDropped">
+            <i class="fa fa-spinner fa-spin"></i>
+          </div>
         </div>
-        <div ng-show="acquisitionDetailCtrl.newFiles.length">
-          <p>You have added {{acquisitionDetailCtrl.newFiles.length}} files to the upload queue.</p>
-          <p>You can add additional files by dragging them onto this area.</p>
+        <div ng-show="acquisitionDetailCtrl.filesDropped && acquisitionDetailCtrl.newFiles.length">
+          <p>
+            You have added {{acquisitionDetailCtrl.newFiles.length}} files
+            to the upload queue.
+          </p>
+          <p>
+            You can add additional files by dragging them onto this area
+            (duplicates will be ignored).
+          </p>
         </div>
       </div>
       <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
@@ -29,11 +41,21 @@
       <button class="btn btn-primary"
         ng-click="acquisitionDetailCtrl.uploadFiles()"
         ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
+        <i class="fa fa-cloud-upload" aria-hidden="true"></i>
         Upload files
+      </button>
+      <button class="btn btn-primary"
+        ngf-select="acquisitionDetailCtrl.dropFiles($files)"
+        ngf-multiple="true"
+        ngf-keep="false"
+        ngf-accept="'*'">
+        <i class="fa fa-folder-open-o" aria-hidden="true"></i>
+        Select files
       </button>
       <button class="btn"
         ng-click="acquisitionDetailCtrl.clearFiles()"
         ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
+        <i class="fa fa-trash-o" aria-hidden="true"></i>
         Clear files
       </button>
     </div>
