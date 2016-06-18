@@ -14,7 +14,6 @@
         ngf-allow-dir="true"
         ngf-keep="false"
         ngf-accept="'*'">
-<!-- TODO: indicate drop/validation ongoing -->
 
         <div ng-show="!acquisitionDetailCtrl.newFiles.length">
           <div ng-show="!acquisitionDetailCtrl.filesDropped">
@@ -60,7 +59,7 @@
       </button>
     </div>
     <div class="col-md-6 already-added-files-container">
-      Successfully uploaded files:
+      Successfully uploaded {{aq.files.length}} files:
 
       <div class="already-added-files" perfect-scrollbar>
         <ul>
