@@ -83,6 +83,9 @@ class Acquisition {
                 // console.log('upload of file complete: ', config.file.name)
                 config.file.progress = 100;
                 config.file.status = 'COMPLETE';
+                this.files.push(<MicroscopeFile>{
+                    name: config.file.name, upload_status: 'COMPLETE'
+                });
                 fileDef.resolve(config.file);
             }).error((data, status, headers, config) => {
                 console.log('upload of file failed: ', config.file.name)
