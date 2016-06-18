@@ -4,6 +4,7 @@ interface SerializedPlate {
     description: string;
     experiment_id: string;
     acquisitions: SerializedAcquisition[];
+    status: string;
 }
 
 class PlateDAO extends HTTPDataAccessObject<Plate> {
@@ -22,7 +23,8 @@ class PlateDAO extends HTTPDataAccessObject<Plate> {
             description: data.description,
             acquisitions: data.acquisitions.map((acq) => {
                 return (new AcquisitionDAO()).fromJSON(acq);
-            })
+            }),
+            status: data.status
         });
     }
 }

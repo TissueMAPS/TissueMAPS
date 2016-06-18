@@ -3,13 +3,14 @@ interface PlateArgs {
     name: string;
     description: string;
     acquisitions: Acquisition[];
+    status: string;
 }
 
 class Plate {
     id: string;
     name: string;
     description: string;
-    status: any;
+    status: string;
     acquisitions: Acquisition[];
 
     /**
@@ -25,6 +26,7 @@ class Plate {
         this.name = args.name;
         this.description = args.description;
         this.acquisitions = args.acquisitions;
+        this.status = args.status;
     }
 
     get isReadyForProcessing() {
