@@ -30,7 +30,7 @@ from tmaps.error import *
 logger = logging.getLogger(__name__)
 
 
-@api.route('/acquisitions/<acquisition_id>/register-upload',
+@api.route('/acquisitions/<acquisition_id>/upload/register',
                  methods=['PUT'])
 @jwt_required()
 @extract_model_from_path(Acquisition, check_ownership=True)
@@ -90,7 +90,7 @@ def register_upload(acquisition):
     return jsonify(message='Upload registered')
 
 
-@api.route('/acquisitions/<acquisition_id>/file-validity-check', methods=['POST'])
+@api.route('/acquisitions/<acquisition_id>/upload/validity-check', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Acquisition, check_ownership=True)
 def file_validity_check(acquisition):
@@ -118,7 +118,7 @@ def file_validity_check(acquisition):
     })
 
 
-@api.route('/acquisitions/<acquisition_id>/upload-file', methods=['POST'])
+@api.route('/acquisitions/<acquisition_id>/upload/upload-file', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Acquisition, check_ownership=True)
 def upload_file(acquisition):
