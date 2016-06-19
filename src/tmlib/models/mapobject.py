@@ -199,57 +199,60 @@ class MapobjectType(Model, DateMixIn):
         Tuple[int]
             minimal and maximal zoom level
         '''
-        session = Session.object_session(self)
+        # session = Session.object_session(self)
 
-        n_points_in_tile_per_z = dict()
-        for z in range(maxzoom_level, -1, -1):
-            tilesize = 256 * 2 ** (6 - z)
+        # n_points_in_tile_per_z = dict()
+        # for z in range(maxzoom_level, -1, -1):
+            # tilesize = 256 * 2 ** (6 - z)
 
-            rand_xs = [random.randrange(0, 2**z) for _ in range(n_sample)]
-            rand_ys = [random.randrange(0, 2**z) for _ in range(n_sample)]
+            # rand_xs = [random.randrange(0, 2**z) for _ in range(n_sample)]
+            # rand_ys = [random.randrange(0, 2**z) for _ in range(n_sample)]
 
-            n_points_in_tile_samples = []
-            for x, y in zip(rand_xs, rand_ys):
-                x0 = x * tilesize
-                y0 = -y * tilesize
+            # n_points_in_tile_samples = []
+            # for x, y in zip(rand_xs, rand_ys):
+            #     x0 = x * tilesize
+            #     y0 = -y * tilesize
 
-                minx = x0
-                maxx = x0 + tilesize
-                miny = y0 - tilesize
-                maxy = y0
+            #     minx = x0
+            #     maxx = x0 + tilesize
+            #     miny = y0 - tilesize
+            #     maxy = y0
 
-                tile = (
-                    'LINESTRING({maxx} {maxy},{minx} {maxy}, {minx} {miny}, '
-                    '{maxx} {miny}, {maxx} {maxy})'.format(
-                            minx=minx, maxx=maxx, miny=miny, maxy=maxy
-                        )
-                )
+            #     tile = (
+            #         'LINESTRING({maxx} {maxy},{minx} {maxy}, {minx} {miny}, '
+            #         '{maxx} {miny}, {maxx} {maxy})'.format(
+            #                 minx=minx, maxx=maxx, miny=miny, maxy=maxy
+            #             )
+            #     )
 
-                n_points_in_tile = session.query(
-                        func.sum(MapobjectOutline.geom_poly.ST_NPoints())
-                    ).\
-                    filter(
-                        MapobjectOutline.id.in_(mapobject_outline_ids),
-                        MapobjectOutline.geom_poly.intersects(tile)
-                    ).\
-                    scalar()
+            #     n_points_in_tile = session.query(
+            #             func.sum(MapobjectOutline.geom_poly.ST_NPoints())
+            #         ).\
+            #         filter(
+            #             MapobjectOutline.id.in_(mapobject_outline_ids),
+            #             MapobjectOutline.geom_poly.intersects(tile)
+            #         ).\
+            #         scalar()
 
-                if n_points_in_tile is not None:
-                    n_points_in_tile_samples.append(n_points_in_tile)
-                else:
-                    n_points_in_tile_samples.append(0)
+            #     if n_points_in_tile is not None:
+            #         n_points_in_tile_samples.append(n_points_in_tile)
+            #     else:
+            #         n_points_in_tile_samples.append(0)
 
-            n_points_in_tile_per_z[z] = int(
-                float(sum(n_points_in_tile_samples)) /
-                len(n_points_in_tile_samples)
-            )
+            # n_points_in_tile_per_z[z] = int(
+            #     float(sum(n_points_in_tile_samples)) /
+            #     len(n_points_in_tile_samples)
+            # )
 
-        min_poly_zoom = min([
-            z for z, n in n_points_in_tile_per_z.items()
-            if n <= n_points_per_tile_limit
-        ])
+        # min_poly_zoom = min([
+            # z for z, n in n_points_in_tile_per_z.items()
+            # if n <= n_points_per_tile_limit
+        # ])
         # TODO: calculate the optimal zoom level
-        max_poly_zoom = 0
+        min_poly_zoom = maxzoom_level - 4
+        min_poly_zoom = 0 if min_poly_zoom < 0 else min_poly_zoom
+        max_poly_zoom = min_poly_zoom - 3
+        max_poly_zoom = 0 if max_poly_zoom < 0 else max_poly_zoom
         return (min_poly_zoom, max_poly_zoom)
 
     def get_feature_value_matrix(self, feature_names): 
