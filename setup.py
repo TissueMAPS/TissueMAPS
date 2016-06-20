@@ -131,19 +131,23 @@ def readme():
 
 
 def get_version():
-    src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                            'jtlib')
+    src_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'python'
+    )
     sys.path = [src_path] + sys.path
-    import jtlib.version
-    return jtlib.version.__version__
+    import jtlib
+    return jtlib.__version__
 
 
 def get_requirements():
     import platform
     system_name = platform.system()
-    requirements_path = os.path.abspath(os.path.dirname(__file__))
-    files = glob.glob(os.path.join(requirements_path,
-                      'requirements-[0-9].txt'))
+    requirements_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'python', 'requirements'
+    )
+    files = glob.glob(
+        os.path.join(requirements_path, 'requirements-[0-9].txt')
+    )
     # Include all files of form requirements-<platform>-[0-9].txt,
     # where platform is {Windows, Linux, Darwin}
     files += glob.glob(os.path.join(requirements_path,
@@ -187,9 +191,9 @@ if scripts is None:
 setuptools.setup(
     name='jtlib',
     version=get_version(),
-    description='Jterator library.',
+    description='Jterator library. Modules for Jterator.',
     author='Markus D. Herrmann and Robin Hafen',
-    author_email='markusdherrmann at gmail dot com',
+    author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/jtlibrary',
     platforms=['Linux', 'OS-X'],
     classifiers=[
@@ -205,7 +209,7 @@ setuptools.setup(
     ],
     scripts=[],
     packages=packages,
-    # package_dir={'': 'jtlib'},
+    package_dir={'': 'python'},
     package_data={'': ['*.rst']},
     # package_data=package_data,
     include_package_data=True,
