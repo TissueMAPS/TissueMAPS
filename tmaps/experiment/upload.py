@@ -68,7 +68,7 @@ def register_upload(acquisition):
             name=secure_filename(f), acquisition_id=acquisition.id
         )
         for f in data['files']
-        if imgfile_regex.match(f) and f not in img_filenames
+        if imgfile_regex.search(f) and f not in img_filenames
     ]
     meta_filenames = [f.name for f in acquisition.microscope_metadata_files]
     meta_files = [
@@ -76,7 +76,7 @@ def register_upload(acquisition):
             name=secure_filename(f), acquisition_id=acquisition.id
         )
         for f in data['files']
-        if metadata_regex.match(f) and f not in meta_filenames
+        if metadata_regex.search(f) and f not in meta_filenames
     ]
 
     db.session.add_all(img_files + meta_files)
@@ -109,9 +109,7 @@ def file_validity_check(acquisition):
         return is_metadata_file or is_imgfile
 
     # TODO: check if metadata files are missing
-    data = json.loads(request.data)
-    filenames = [f['name'] for f in data['files']]
-    is_valid = map(check_file, filenames)
+    is_valid = [check_file(f['name']) for f in data['files']]
 
     return jsonify({
         'is_valid': is_valid
