@@ -2,9 +2,9 @@ import json
 
 from flask import request, jsonify
 
-from tmaps.user import User
-from tmaps.api import api
-from tmaps.extensions import db
+from tmserver.user import User
+from tmserver.api import api
+from tmserver.extensions import db
 
 
 @api.route('/register', methods=['POST'])

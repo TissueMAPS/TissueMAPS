@@ -1,6 +1,6 @@
 import numpy as np
 
-from tmaps.tool import register_tool, Tool
+from tmserver.tool import register_tool, Tool
 
 
 @register_tool('CellStats')

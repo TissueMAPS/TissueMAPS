@@ -1,7 +1,7 @@
 # import mock
 # import json
 # import pytest
-# from tmaps.models import PlateSource, PlateAcquisition
+# from tmserver.models import PlateSource, PlateAcquisition
 
 
 # def test_get_plate_sources_without_login(client, platesource):
@@ -30,7 +30,7 @@
 # def test_create_plate_source(authclient, testexp, monkeypatch):
 #     # Monkeypatch the PlateSource object on the api module, not on tmaps,
 #     # since it was already imported.
-#     import tmaps.api.sources
+#     import tmserver.api.sources
 #     pls_cls = mock.Mock(wraps=PlateSource)
 #     monkeypatch.setattr(tmaps.api.sources, 'PlateSource', pls_cls)
 

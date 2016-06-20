@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 import mock
 import json
-import tmaps
+import tmserver
 from tmlib.models import Experiment, Feature, MapobjectType
 
 #

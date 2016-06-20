@@ -1,7 +1,7 @@
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import Integer, ForeignKey, Column, String
 
-from tmaps.model import Model
+from tmserver.model import Model
 
 
 class ToolSession(Model):

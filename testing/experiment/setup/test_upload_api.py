@@ -8,7 +8,7 @@
 
 # @pytest.fixture
 # def redis_store(monkeypatch):
-#     import tmaps.api.upload
+#     import tmserver.api.upload
 #     redis = fakeredis.FakeRedis()
 #     # Important: the object needs to be replaced on the api module
 #     # directly, not on in the module where it is originally defined!

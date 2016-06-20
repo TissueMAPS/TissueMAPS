@@ -18,7 +18,7 @@ import os
 import logging
 from werkzeug.contrib.profiler import ProfilerMiddleware
 import flask
-from tmaps.appfactory import create_app
+from tmserver.appfactory import create_app
 from tmlib.logging_utils import configure_logging
 
 logo = """
@@ -35,6 +35,8 @@ print logo
 configure_logging(logging.INFO)
 tmlib_logger = logging.getLogger('tmlib')
 tmlib_logger.setLevel(logging.INFO)
+tmserver_logger = logging.getLogger('tmserver')
+tmserver_logger.setLevel(logging.INFO)
 
 app = create_app()
 
@@ -44,9 +46,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--port', action='store', type=int, default=5002,
         help='the port on which the server should listen')
-    parser.add_argument(
-        '--threaded', action='store_true', default=False,
-        help='if the dev server should run in multi-threaded mode')
+    # parser.add_argument(
+    #     '--threaded', action='store_true', default=False,
+    #     help='if the dev server should run in multi-threaded mode')
     parser.add_argument(
         '--gevent', action='store_true', default=False,
         help='if the dev server should run in gevent mode')
@@ -60,6 +62,6 @@ if __name__ == '__main__':
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
 
     if args.gevent:
-        app.run(port=args.port, debug=True, gevent=100, threaded=args.threaded)
+        app.run(port=args.port, debug=True)
     else:
-        app.run(port=args.port, debug=True, threaded=args.threaded)
+        app.run(port=args.port, debug=True, threaded=True)

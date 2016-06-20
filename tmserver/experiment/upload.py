@@ -18,14 +18,14 @@ from tmlib.models import (
 from tmlib.models.status import FileUploadStatus
 from tmlib.workflow.metaconfig import get_microscope_type_regex
 
-from tmaps.extensions import redis_store
-from tmaps.api import api
-from tmaps.extensions import db
-from tmaps.util import (
+from tmserver.extensions import redis_store
+from tmserver.api import api
+from tmserver.extensions import db
+from tmserver.util import (
     extract_model_from_path,
     extract_model_from_body
 )
-from tmaps.error import *
+from tmserver.error import *
 
 logger = logging.getLogger(__name__)
 

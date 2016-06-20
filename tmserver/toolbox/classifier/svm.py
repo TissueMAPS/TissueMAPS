@@ -3,8 +3,8 @@ import time
 from sklearn.grid_search import GridSearchCV
 from sklearn import svm, cross_validation
 
-from tmaps.extensions import spark
-from tools.classifier import SupervisedClassifier
+from tmserver.extensions import spark
+from toolbox.classifier import SupervisedClassifier
 
 
 class SVM(SupervisedClassifier):

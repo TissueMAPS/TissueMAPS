@@ -4,10 +4,10 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 from tmlib.models import Feature, FeatureValue, MapobjectType
-from tmaps.serialize import json_encoder
-from tmaps.model import Model
-from tmaps.extensions import spark
-from tmaps.extensions import db
+from tmserver.serialize import json_encoder
+from tmserver.model import Model
+from tmserver.extensions import spark
+from tmserver.extensions import db
 
 
 class Tool(Model):

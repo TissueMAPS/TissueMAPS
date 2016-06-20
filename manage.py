@@ -11,8 +11,8 @@ from flask.ext.script import Manager, Server
 from flask.ext.migrate import Migrate, MigrateCommand
 
 from tmlib.models import Model
-from tmaps.appfactory import create_app
-from tmaps.extensions import db
+from tmserver.appfactory import create_app
+from tmserver.extensions import db
 
 cfg = flask.Config(p.realpath(p.dirname(__file__)))
 cfg.from_envvar('TMAPS_SETTINGS')

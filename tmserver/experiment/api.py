@@ -13,15 +13,15 @@ from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.models import (
     Experiment, ChannelLayer, Plate, Acquisition, Feature, PyramidTileFile
 )
-from tmaps.util import (
+from tmserver.util import (
     extract_model_from_path,
     extract_model_from_body
 )
-from tmaps.model import decode_pk
-from tmaps.extensions import db
-from tmaps.extensions import gc3pie
-from tmaps.api import api
-from tmaps.error import (
+from tmserver.model import decode_pk
+from tmserver.extensions import db
+from tmserver.extensions import gc3pie
+from tmserver.api import api
+from tmserver.error import (
     MalformedRequestError,
     MissingGETParameterError,
     MissingPOSTParameterError,

@@ -3,8 +3,8 @@ import functools
 from flask import request, current_app
 from flask.ext.jwt import current_identity
 
-from tmaps.extensions import db
-from tmaps.error import (
+from tmserver.extensions import db
+from tmserver.error import (
     MalformedRequestError,
     ResourceNotFoundError,
     NotAuthorizedError

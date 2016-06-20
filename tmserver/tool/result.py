@@ -4,9 +4,9 @@ from sqlalchemy import Integer, ForeignKey, Column, String
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.dialects.postgresql import JSON
 
-from tmaps.serialize import json_encoder
-from tmaps.model import Model
-from tmaps.extensions import db
+from tmserver.serialize import json_encoder
+from tmserver.model import Model
+from tmserver.extensions import db
 
 from tmlib.models import FeatureValue
 
@@ -152,7 +152,9 @@ class LabelLayer(Model):
         not stored in "label_layer_labels".
 
         """
+        logger.info('get labels from database table')
         if self.type == 'HeatmapLabelLayer':
+            print self.attributes['feature_id']
             return dict(
                 db.session.query(
                     FeatureValue.mapobject_id, FeatureValue.value

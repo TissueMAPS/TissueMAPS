@@ -1,4 +1,4 @@
-from tmaps.tool import register_tool, Tool
+from tmserver.tool import register_tool, Tool
 import numpy as np
 
 

@@ -1,6 +1,3 @@
-from flask.ext.redis import FlaskRedis
-redis_store = FlaskRedis()
-
 from flask.ext.sqlalchemy import SQLAlchemy
 db = SQLAlchemy()
 
@@ -14,3 +11,8 @@ gc3pie = GC3Pie()
 
 from flask.ext.uwsgi_websocket import GeventWebSocket
 websocket = GeventWebSocket()
+
+from flask.ext.redis import FlaskRedis
+redis_store = FlaskRedis()
+
+

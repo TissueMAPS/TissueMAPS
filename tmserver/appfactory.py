@@ -6,11 +6,11 @@ import logging
 from flask import Flask
 import gc3libs
 
-from tmaps import defaultconfig
-from tmaps.extensions import db
-from tmaps.extensions import jwt
-from tmaps.extensions import redis_store
-from tmaps.serialize import TmJSONEncoder
+from tmserver import defaultconfig
+from tmserver.extensions import db
+from tmserver.extensions import jwt
+from tmserver.extensions import redis_store
+from tmserver.serialize import TmJSONEncoder
 
 
 def create_app(config_overrides={}):
@@ -106,10 +106,10 @@ def create_app(config_overrides={}):
     redis_store.init_app(app)
 
     if app.config.get('USE_SPARK', False):
-        from tmaps.extensions import spark
+        from tmserver.extensions import spark
         spark.init_app(app)
 
-    from tmaps.extensions import gc3pie
+    from tmserver.extensions import gc3pie
     gc3pie.init_app(app)
 
     ## Import and register blueprints
@@ -117,7 +117,7 @@ def create_app(config_overrides={}):
     app.register_blueprint(api, url_prefix='/api')
 
     from jtui.api import jtui
-    # from tmaps.extensions import websocket
+    # from tmserver.extensions import websocket
     # websocket.init_app(app)
     app.register_blueprint(jtui, url_prefix='/jtui')
 

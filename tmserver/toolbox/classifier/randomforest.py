@@ -2,7 +2,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.grid_search import GridSearchCV
 from sklearn import cross_validation
 
-from tools.classifier import SupervisedClassifier
+from tmserver.toolbox.classifier import SupervisedClassifier
 
 
 class RandomForest(SupervisedClassifier):

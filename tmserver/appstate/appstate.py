@@ -1,4 +1,4 @@
-from tmaps.model import Model
+from tmserver.model import Model
 
 from sqlalchemy import Integer, ForeignKey, Column, Text, String
 from sqlalchemy.dialects.postgresql import JSON

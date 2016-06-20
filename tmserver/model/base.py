@@ -1,1 +1,1 @@
-from tmaps.extensions import db
+from tmserver.extensions import db

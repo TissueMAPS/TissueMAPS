@@ -6,10 +6,10 @@ import json
 import flask
 import pytest
 
-import tmaps
-from tmaps.appfactory import create_app
-from tmaps.extensions import db as _db
-from tmaps.model import Model
+import tmserver
+from tmserver.appfactory import create_app
+from tmserver.extensions import db as _db
+from tmserver.model import Model
 
 
 @pytest.yield_fixture(scope='session', autouse=True)

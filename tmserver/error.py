@@ -1,7 +1,7 @@
 import sqlalchemy
 from flask import jsonify, current_app
 
-from tmaps.serialize import json_encoder
+from tmserver.serialize import json_encoder
 from api import api
 
 

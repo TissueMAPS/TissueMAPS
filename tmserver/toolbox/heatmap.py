@@ -3,9 +3,9 @@ import pandas as pd
 import logging
 
 from tmlib.models import Feature, FeatureValue, MapobjectType
-from tmaps.extensions import db
-from tmaps.tool import HeatmapLabelLayer, Result
-from tmaps.tool import ToolRequestHandler
+from tmserver.extensions import db
+from tmserver.tool import HeatmapLabelLayer, Result
+from tmserver.tool import ToolRequestHandler
 
 logger = logging.getLogger(__name__)
 

@@ -4,16 +4,16 @@ from flask import jsonify, request, current_app
 from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
 
-from tmaps.extensions import db
-from tmaps.tool import Tool, ToolSession, LabelLayer, LabelLayerLabel
-from tmaps.api import api
-from tmaps.experiment import Experiment
-from tmaps.error import (
+from tmserver.extensions import db
+from tmserver.tool import Tool, ToolSession, LabelLayer, LabelLayerLabel
+from tmserver.api import api
+from tmserver.experiment import Experiment
+from tmserver.error import (
     MalformedRequestError,
     ResourceNotFoundError,
     NotAuthorizedError
 )
-from tmaps.util import (
+from tmserver.util import (
     extract_model_from_path,
     extract_model_from_body
 )
@@ -144,8 +144,6 @@ def get_result_labels(label_layer):
     else:
         x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
 
-    # TODO: how can we get mapobject type for HeatmapLabelLayer???
-    # mapobject_type = label_layer.labels[0].mapobject.mapobject_type
     mapobject_type = db.session.query(MapobjectType).\
         get(label_layer.mapobject_type_id)
     query_res = mapobject_type.get_mapobject_outlines_within_tile(

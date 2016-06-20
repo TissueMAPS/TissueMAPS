@@ -4,11 +4,11 @@ from flask import jsonify, request
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
-from tmaps.appstate import Appstate
-from tmaps.user import User
-from tmaps.extensions import db
-from tmaps.api import api
-from tmaps.model import decode_pk
+from tmserver.appstate import Appstate
+from tmserver.user import User
+from tmserver.extensions import db
+from tmserver.api import api
+from tmserver.model import decode_pk
 
 
 # @api.route('/appstates/<appstate_id>', methods=['GET'])

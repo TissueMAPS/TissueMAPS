@@ -2,8 +2,8 @@ from tmlib.models import (
     Experiment, Channel, ChannelLayer, Plate, Acquisition,
     Feature, MapobjectType
 )
-from tmaps.serialize import json_encoder
-from tmaps.model import encode_pk
+from tmserver.serialize import json_encoder
+from tmserver.model import encode_pk
 from tmlib.workflow.description import WorkflowDescription
 
 

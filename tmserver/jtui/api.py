@@ -12,10 +12,10 @@ from natsort import natsorted
 from flask import send_file, jsonify, request, Blueprint, current_app
 from flask.ext.jwt import jwt_required
 
-from tmaps.extensions import websocket
-from tmaps.util import extract_model_from_path
-from tmaps.extensions import gc3pie
-from tmaps.extensions import db
+from tmserver.extensions import websocket
+from tmserver.util import extract_model_from_path
+from tmserver.extensions import gc3pie
+from tmserver.extensions import db
 
 import tmlib.models as tm
 from tmlib.models import Experiment

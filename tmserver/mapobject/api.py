@@ -7,11 +7,11 @@ from flask.ext.jwt import jwt_required
 from flask import jsonify, request
 from sqlalchemy.sql import text
 
-from tmaps.api import api
-from tmaps.extensions import db
+from tmserver.api import api
+from tmserver.extensions import db
 
-from tmaps.mapobject import MapobjectOutline, MapobjectType
-from tmaps.experiment import Experiment
+from tmserver.mapobject import MapobjectOutline, MapobjectType
+from tmserver.experiment import Experiment
 
 
 @api.route('/experiments/<experiment_id>/mapobjects/<object_name>', methods=['GET'])

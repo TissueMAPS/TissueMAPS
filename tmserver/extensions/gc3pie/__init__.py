@@ -5,8 +5,8 @@ import collections
 from sqlalchemy import func
 from flask import current_app
 
-from tmaps.extensions import db
-from tmaps.extensions.gc3pie.engine import BgEngine
+from tmserver.extensions import db
+from tmserver.extensions.gc3pie.engine import BgEngine
 
 import tmlib.models as tm
 from tmlib.workflow.utils import create_gc3pie_sql_store
@@ -61,7 +61,10 @@ class GC3Pie(object):
         logger.info('create GC3Pie engine')
         store = create_gc3pie_sql_store()
         engine = create_gc3pie_engine(store)
-        scheduler = 'gevent'
+        # NOTE: gevent scheduler is not available on localhost when app is
+        # started debug mode via run_simple()
+        app.config.setdefault('SCHEDULER', 'gevent')
+        scheduler = app.config.get('SCHEDULER')
         bgengine = BgEngine(scheduler, engine)
         logger.info(
             'start GC3Pie engine in the background using "%s" scheduler',

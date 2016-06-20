@@ -4,12 +4,12 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 from tmlib.models import FeatureValue, Feature, MapobjectType
-from tmaps.extensions import db
-from tmaps.extensions import spark
-from tmaps.tool import Result
-from tmaps.tool import ScalarLabelLayer
-from tmaps.tool import SupervisedClassifierLabelLayer
-from tmaps.tool import ToolRequestHandler
+from tmserver.extensions import db
+from tmserver.extensions import spark
+from tmserver.tool import Result
+from tmserver.tool import ScalarLabelLayer
+from tmserver.tool import SupervisedClassifierLabelLayer
+from tmserver.tool import ToolRequestHandler
 
 
 class Classifier(ToolRequestHandler):
