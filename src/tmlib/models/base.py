@@ -56,7 +56,7 @@ class Model(_Base):
     __abstract__ = True
 
     # Table columns
-    id = Column(Integer, primary_key=True, unique=True)
+    id = Column(Integer, primary_key=True)
 
     @property
     def hash(self):
