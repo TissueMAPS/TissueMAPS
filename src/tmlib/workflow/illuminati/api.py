@@ -273,6 +273,7 @@ class PyramidBuilder(ClusterRoutines):
                                 'illumcorr': args.illumcorr,
                                 'clip': args.clip,
                                 'clip_value': args.clip_value,
+                                'clip_percent': args.clip_percent
                             })
                         job_descriptions['run'].append(description)
 
@@ -304,7 +305,8 @@ class PyramidBuilder(ClusterRoutines):
                             'layer_id': layer.id,
                             'level': level,
                             'index': index,
-                            'clip_value': None
+                            'clip_value': None,
+                            'clip_percent': None
                         })
         job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
         return job_descriptions
@@ -432,17 +434,28 @@ class PyramidBuilder(ClusterRoutines):
 
             if batch['clip']:
                 logger.info('clip intensity values')
+                # NOTE: assumes channel images are 16-bit
                 if batch['clip_value'] is None:
-                    clip_above = stats.percentiles[99.999]
+                    # TODO: anity check; if pixel values are too for the channel,
+                    # it means that the channel is probably "empty"
+                    # (for example because the staining didn't work)
+                    # In this case we want to prevent that too extreme
+                    # rescaling is applied, which wouldn't appear nice.
+                    clip_above = stats.get_closest_percentile(
+                        batch['clip_percent']
+                    )
+                    if clip_above < 200:
+                        clip_above = 1000
                     logger.info('using default clip value: %d', clip_above)
                 else:
                     clip_above = batch['clip_value']
                     logger.info('using provided clip value: %d', clip_above)
-                clip_below = stats.percentiles[0.001]
+                clip_below = stats.get_closest_percentile(0.001)
             else:
-                clip_above = 2**16 - 1 # channel images are 16-bit
+                clip_above = 2**16 - 1
                 clip_below = 0
 
+            import ipdb; ipdb.set_trace()
             if batch['illumcorr']:
                 logger.info('correcting images for illumination artifacts')
             if batch['align']:

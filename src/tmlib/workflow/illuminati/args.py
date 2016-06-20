@@ -31,10 +31,17 @@ class IlluminatiBatchArguments(BatchArguments):
     clip_value = Argument(
         type=int,
         help='''threshold value at which image intensities should be clipped
-            (defaults to 99.999th percentile)
+            (defaults to 99.99th percentile; the set value overwrites
+            calculated percentile)
         '''
     )
 
+    clip_percent = Argument(
+        type=float,
+        help='''threshold percentile at which image intensities should be clipped
+        ''',
+        default=99.99
+    )
 
 @register_submission_args('illuminati')
 class IlluminatiSubmissionArguments(SubmissionArguments):
