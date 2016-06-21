@@ -7,6 +7,7 @@ import tmlib.models
 from tmlib.workflow import register_api
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
+from tmlib.errors import MetadataError
 from tmlib.workflow.api import ClusterRoutines
 
 logger = logging.getLogger(__name__)
@@ -144,7 +145,7 @@ class MetadataExtractor(ClusterRoutines):
                 )
                 stdout, stderr = p.communicate()
                 if p.returncode != 0 or not stdout:
-                    raise subprocess.CalledProcessError(
+                    raise MetadataError(
                         'Extraction of OMEXML failed! Error message:\n%s'
                         % stderr
                     )
