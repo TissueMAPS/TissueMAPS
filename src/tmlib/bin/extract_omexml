@@ -74,7 +74,7 @@ do
     fi
     echo "extract OMEXML metadata from image file: ${arrINPUT[$i]}"
     echo "write extracted OMEXML metadata to file: ${arrOUTPUT[$i]}"
-    ( showinf -omexml-only -nopix -novalid -no-upgrade ${arrINPUT[$i]} ) > ${arrOUTPUT[$i]}
+    ( showinf -omexml-only -nopix -novalid -no-sas -no-upgrade ${arrINPUT[$i]} ) > ${arrOUTPUT[$i]}
 done
 
 exit 0
