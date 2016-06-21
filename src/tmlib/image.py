@@ -800,3 +800,21 @@ class IllumstatsContainer(object):
         self.std.pixels = self.std.smooth(sigma).pixels
         self.std.metadata.is_smoothed = True
         return self
+
+    def get_closest_percentile(self, value):
+        '''Obtains the value for the percentile closest to a given value.
+
+        Parameters
+        ----------
+        value: int or float
+            approximate percentile value
+
+        Returns
+        -------
+        int
+        '''
+        keys = np.array(self.percentiles.keys())
+        idx = np.abs(keys - value).argmin()
+        return self.percentiles[keys[idx]]
+
+
