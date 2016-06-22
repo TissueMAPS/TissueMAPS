@@ -89,7 +89,7 @@ def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
 
     output = {'smoothed_image': smoothed_image.astype(input_dtype)}
     if plot:
-        from .. import plotting
+        from jtlib import plotting
 
         clip_value = np.percentile(image, 99.99)
         data = [

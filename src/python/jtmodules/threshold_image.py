@@ -69,7 +69,7 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
     outputs = {'mask': thresh_image}
 
     if plot:
-        from .. import plotting
+        from jtlib import plotting
 
         plots = [
             plotting.create_overlay_image_plot(image, thresh_image, 'ul'),

@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from .. import utils
+from jtlib import utils
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def main(mask, plot=False):
 
     output = {'label_image': label_image}
     if plot:
-        from .. import plotting
+        from jtlib import plotting
 
         plots = [
             plotting.create_mask_image_plot(mask, 'ul'),

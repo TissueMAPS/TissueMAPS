@@ -1,6 +1,6 @@
 import skimage.measure
 import numpy as np
-from .. import utils
+from jtlib import utils
 
 VERSION = '0.0.1'
 
@@ -59,7 +59,7 @@ def main(label_image, feature, threshold, remove, relabel, plot):
 
     output = {'filtered_image': filtered_image}
     if plot:
-        from .. import plotting
+        from jtlib import plotting
 
         plots = [
             plotting.create_mask_image_plot(label_image, 'ul'),

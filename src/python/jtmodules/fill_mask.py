@@ -23,7 +23,7 @@ def main(mask, plot=False):
 
     output = {'filled_mask': filled_mask}
     if plot:
-        from .. import plotting
+        from jtlib import plotting
 
         plots = [
             plotting.create_mask_image_plot(mask, 'ul'),
