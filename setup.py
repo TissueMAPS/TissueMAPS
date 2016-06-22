@@ -165,10 +165,7 @@ def get_requirements():
 
 scripts = []
 
-packages = [
-    'jtlib',
-    'jtlib.modules'
-]
+packages = ['jtlib']
 
 package_data = {'': ['*.html', '*.svg', '*.js']}
 
@@ -191,7 +188,7 @@ if scripts is None:
 setuptools.setup(
     name='jtlib',
     version=get_version(),
-    description='Jterator library. Modules for Jterator.',
+    description='Jterator library.',
     author='Markus D. Herrmann and Robin Hafen',
     author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/jtlibrary',
