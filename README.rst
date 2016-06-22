@@ -190,7 +190,7 @@ The module named ``my_m_module`` (residing in a file called ``my_m_module.m``) c
     import jtmodules.my_m_module;
     
     img = (10, 10);
-    jtlib.modules.my_m_module.main(img)
+    jtmodules.my_m_module.main(img)
 
 
 .. Note::
