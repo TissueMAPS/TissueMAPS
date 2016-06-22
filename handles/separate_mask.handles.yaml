@@ -1,0 +1,115 @@
+---
+input:
+
+  - name: input_mask
+    type: BinaryImage
+    key: 
+    help: Binary image in which clumps should be separated.
+
+  - name: input_image
+    type: IntensityImage
+    key: 
+    help: Grayscale image that should be used find optimal cut lines.
+
+  - name: cutting_passes
+    type: Numeric
+    value: 2
+    help: Number of cutting rounds that should be applied.
+
+  - name: min_cut_area
+    type: Numeric
+    value: 2000
+    help: >
+      Minimal area of a cut fragment that should be tolerated, cuts that would
+      result in a smaller fragment will not be performed. 
+
+  - name: max_solidity
+    type: Numeric
+    value: 0.92
+    help: >
+      Maximal solidity value for a continuous pixel region
+      to be considered a clump.
+
+  - name: min_formfactor
+    type: Numeric
+    value: 0.30
+    help: >
+      Minimal (negative) form factor value for a continuous pixel region
+      to be considered a clump.
+
+  - name: min_area
+    type: Numeric
+    value: 5000
+    help: >
+      Minimal area value for a continuous pixel region
+      to be considered a clump.
+
+  - name: max_area
+    type: Numeric
+    value: 50000
+    help: >
+      Maximal area value for a continuous pixel region
+      to be considered a clump.
+
+  - name: selection_test_mode
+    type: Boolean
+    value: false
+    options:
+      - false
+      - true
+    help: >
+      Whether selected clumps should be plotted in order to empirically determine 
+      optimal values for `max_solidity`, `min_formfactor`, `min_area` and
+      and `max_area` (results will be shown for the last cutting pass).
+
+  - name: filter_size
+    type: Numeric
+    value: 2
+    help: >
+      Size of the smoothing filter that is applied to the mask prior to
+      perimeter analysis.
+
+  - name: sliding_window_size
+    type: Numeric
+    value: 9
+    help: Size of the sliding window used for perimeter analysis.
+
+  - name: min_angle
+    type: Numeric
+    value: 6
+    help: Minimal equivalent angle of the concave region.
+
+  - name: min_radius
+    type: Numeric
+    value: 30
+    help: Maximal radius of the circle fitting into concave regions.
+
+  - name: perimeter_test_mode
+    type: Boolean
+    value: false
+    options:
+      - false
+      - true
+    help: >
+      Whether result of the perimeter analysis should be plotted in order to
+      empirically determine optimal values for `min_angle` and `max_radius`
+      (results will be shown for the last cutting pass).
+
+  - name: plot
+    type: Plot
+    value:
+    help: Should a figure be created?
+
+output:
+
+  - name: output_mask
+    type: BinaryImage
+    key: separate_objects.output_mask
+    help: Binary output image.
+
+  - name: fig
+    type: Figure
+
+
+
+

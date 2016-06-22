@@ -1,0 +1,27 @@
+---
+input:
+
+    - name: mask
+      type: BinaryImage
+      key: 
+      help: Binary image that should be labeled.
+
+    - name: plot
+      type: Plot
+      value:
+      help: Should a figure be created?
+
+output:
+
+    - name: label_image
+      type: LabelImage
+      key: label_mask.label_image
+      help: >
+        Labeled image with pixels of each connected component
+        having a unique non-zero value.
+
+    - name: figure
+      type: Figure
+      help: Comparison of <i>mask</i> and <i>label_image</i>.
+
+
