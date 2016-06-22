@@ -133,7 +133,7 @@ def readme():
 def get_version():
     src_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
-        'modules', 'python'
+        'src', 'python'
     )
     sys.path = [src_path] + sys.path
     import jtmodules
@@ -145,7 +145,7 @@ def get_requirements():
     system_name = platform.system()
     requirements_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
-        'modules', 'python', 'requirements'
+        'src', 'python', 'requirements'
     )
     files = glob.glob(
         os.path.join(requirements_path, 'requirements-[0-9].txt')
@@ -208,7 +208,7 @@ setuptools.setup(
     ],
     scripts=[],
     packages=packages,
-    package_dir={'': 'modules/python'},
+    package_dir={'': 'src/python'},
     package_data={'': ['*.rst']},
     include_package_data=True,
     install_requires=get_requirements()
