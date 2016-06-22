@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 class CaptureOutput(dict):
-    '''Class for capturing standard output and error of function calls
-    and redirecting the STDOUT and STDERR strings to a dictionary.
+    '''Class for capturing standard output and error and storing the strings
+    in dictionary.
 
     Examples
     --------
@@ -163,29 +163,33 @@ class ImageAnalysisModule(object):
         return determine_language(self.source_file)
 
     def _exec_m_module(self, engine):
-        logger.debug('adding module to Matlab path: "%s"' % self.source_file)
+        logger.debug(
+            'adding module source file to Matlab path: "%s"',self.source_file
+        )
         # engine.eval('addpath(\'{0}\');'.format(os.path.dirname(self.source_file)))
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
         engine.eval('import \'jtlib.modules.{0}\''.format(module_name))
-        function_name = os.path.splitext(os.path.basename(self.source_file))[0]
         function_call_format_string = \
-            '[{outputs}] = jtlib.modules.{name}({inputs})'
+            '[{outputs}] = jtlib.modules.{name}.main({inputs})'
         kwargs = self.keyword_arguments
-        logger.debug('evaluating Matlab function with INPUTS: "%s"',
-                     '", "'.join(kwargs.keys()))
+        logger.debug(
+            'evaluating Matlab function with INPUTS: "%s"',
+            '", "'.join(kwargs.keys())
+        )
         output_names = [handle.name for handle in self.handles['output']]
         func_call_string = function_call_format_string.format(
-                                    outputs=', '.join(output_names),
-                                    name=function_name,
-                                    inputs=', '.join(kwargs.keys()))
+            outputs=', '.join(output_names),
+            name=module_name,
+            inputs=', '.join(kwargs.keys())
+        )
         # Add arguments as variable in Matlab session
         for name, value in kwargs.iteritems():
             engine.put(name, value)
         # Evaluate the function call
         # Unfortunately, the matlab_wrapper engine doesn't return
-        # standard output and error (errors are caught, though).
-        # "evalc" allows a dirty hack, but standard output is not returned
-        # in case of an error :(
+        # standard output and error (exceptions are caught, though).
+        # Use of "evalc" is a dirty hack. Note, however, standard output is not
+        # not returned in case of an error :(
         engine.eval("stdout = evalc('{0};')".format(func_call_string))
         stdout = engine.get('stdout')
         stdout = re.sub(r'\n$', '', stdout)  # naicify string
@@ -203,10 +207,15 @@ class ImageAnalysisModule(object):
         return self.handles['output']
 
     def _exec_py_module(self):
-        logger.debug('importing module: "%s"' % self.source_file)
+        logger.debug('importing Python module: "%s"' % self.source_file)
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
         module = importlib.import_module('jtlib.modules.%s' % module_name)
-        func = getattr(module, module_name)
+        func = getattr(module, 'main', None)
+        if func is None:
+            raise PipelineRunError(
+                'Module source file "%s" must contain a "main" function.'
+                % module_name
+            )
         kwargs = self.keyword_arguments
         logger.debug(
             'evaluating Python function with INPUTS: "%s"',
@@ -234,8 +243,8 @@ class ImageAnalysisModule(object):
         rpy2.robjects.r('source("{0}")'.format(self.source_file))
         rpy2.robjects.numpy2ri.activate()   # enables use of numpy arrays
         rpy2.robjects.pandas2ri.activate()  # enable use of pandas data frames
-        function_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        func = rpy2.robjects.globalenv['{0}'.format(function_name)]
+        module_name = os.path.splitext(os.path.basename(self.source_file))[0]
+        func = rpy2.robjects.globalenv['main']
         kwargs = self.keyword_arguments
         logger.debug(
             'evaluating R function with INPUTS: "%s"',
