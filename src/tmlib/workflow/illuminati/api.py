@@ -455,7 +455,6 @@ class PyramidBuilder(ClusterRoutines):
                 clip_above = 2**16 - 1
                 clip_below = 0
 
-            import ipdb; ipdb.set_trace()
             if batch['illumcorr']:
                 logger.info('correcting images for illumination artifacts')
             if batch['align']:
