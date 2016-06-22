@@ -26,10 +26,10 @@ This makes it easy to combine algorithms from different libraries into an image 
 Main ideas
 ==========
 
-- *Simple module development and testing*: A module represents a file that contains a function with the same name as the file.
-- *Short list of dependencies*: Writing a module only requires the `NumPy <http://www.numpy.org/>`_ package.
-- *Independence of individual processing steps*: Module arguments are either `NumPy` arrays, scalars (integer and floating point numbers and strings), or a sequence of scalars. Modules don't perform IO. They are therefore unit testable.
-- *Separation of GUI handling from the actual image processing*: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be visualized in a browser.
+- *Simple development and testing*: A module is simply a file containing a ``main`` function. Since Python is an interpreted language, the code can be skriped and debugged conveniently before running it within a the pipeline.
+- *Short list of dependencies*: A module only requires the `NumPy <http://www.numpy.org/>`_ package.
+- *Independence of individual processing steps*: Module arguments are either `NumPy` arrays, scalars (integer/floating point numbers or strings), or a sequence of scalars. Modules don't perform IO. They are unit testable.
+- *Separation of GUI handling from the actual image processing*: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be embedded in a website interactively visualized in a browser.
 - *Cross-language compatibility*: Restricting module input/output to `NumPy` arrays and build-in Python types facilitates interfaces to other languages.
 
 
