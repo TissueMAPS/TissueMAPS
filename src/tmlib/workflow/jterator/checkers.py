@@ -138,33 +138,31 @@ class PipelineChecker(object):
         lib_path = self.pipe_description.get('lib', None)
         if lib_path:
             self.libpath = self.pipe_description['lib']
-            self.libpath = complete_path(
-                            self.libpath, self.step_location)
+            self.libpath = complete_path(self.libpath, self.step_location)
         else:
-            if 'JTLIB' in os.environ:
-                self.libpath = os.environ['JTLIB']
+            if 'TMAPS_JTMODULES' in os.environ:
+                self.libpath = os.environ['TMAPS_JTMODULES']
             else:
-                raise ValueError('JTLIB environment variable not set.')
+                raise ValueError('TMAPS_JTMODULES environment variable not set.')
 
         for i, module in enumerate(self.pipe_description['pipeline']):
             # Check whether executable files exist
-            source_path = get_module_path(
-                            module['source'], self.libpath)
+            source_path = get_module_path(module['source'], self.libpath)
             if not exists(source_path):
                 raise PipelineDescriptionError(
-                            'Source file "%s" does not exist.'
-                            % source_path)
+                    'Source file "%s" does not exist.' % source_path
+                )
 
             # Check whether descriptor files exist
-            handles_path = complete_path(
-                            module['handles'], self.step_location)
+            handles_path = complete_path(module['handles'], self.step_location)
 
             if not self.handles_descriptions:
                 # A description could also be provided from the user interface.
                 # In this case .handles files may not exist.
                 if not exists(handles_path):
                     raise PipelineDescriptionError(
-                            'Handles file "%s" does not exist.' % handles_path)
+                        'Handles file "%s" does not exist.' % handles_path
+                    )
 
                 # The user interface requires that all handles files
                 # have the certain suffix and are stored in a folder called

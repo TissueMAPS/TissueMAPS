@@ -16,9 +16,9 @@ def get_module_directories(repo_dir):
         repository directory
     '''
     dirs = {
-        'Python': 'python/jtlib/modules',
-        'Matlab': 'matlab/+jtlib/+modules',
-        'R': 'r/jtlib/modules',  # TODO: package layout in R???
+        'Python': 'src/python/jtmodules',
+        'Matlab': 'src/matlab/+jtmodules',
+        'R': 'src/r/jtmodules'
     }
     return {k: os.path.join(repo_dir, v) for k, v in dirs.iteritems()}
 

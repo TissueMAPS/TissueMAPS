@@ -8,7 +8,8 @@ import importlib
 import traceback
 import numpy as np
 import rpy2.robjects
-import rpy2.robjects.numpy2ri
+from rpy2.robjects import numpy2ri
+from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from cStringIO import StringIO
 
@@ -168,9 +169,9 @@ class ImageAnalysisModule(object):
         )
         # engine.eval('addpath(\'{0}\');'.format(os.path.dirname(self.source_file)))
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        engine.eval('import \'jtlib.modules.{0}\''.format(module_name))
+        engine.eval('import \'jtmodules.{0}\''.format(module_name))
         function_call_format_string = \
-            '[{outputs}] = jtlib.modules.{name}.main({inputs})'
+            '[{outputs}] = jtmodules.{name}.main({inputs})'
         kwargs = self.keyword_arguments
         logger.debug(
             'evaluating Matlab function with INPUTS: "%s"',
@@ -209,7 +210,19 @@ class ImageAnalysisModule(object):
     def _exec_py_module(self):
         logger.debug('importing Python module: "%s"' % self.source_file)
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        module = importlib.import_module('jtlib.modules.%s' % module_name)
+        try:
+            import jtmodules
+        except ImportError:
+            raise ImportError(
+                'Package "jtmodules" is not installed. '
+                'See https://github.com/TissueMAPS/JtModules'
+            )
+        try:
+            module = importlib.import_module('jtmodules.%s' % module_name)
+        except ImportError as err:
+            raise ImportError(
+                'Import of module "%s" failed:\n%s' % (module_name, str(err))
+            )
         func = getattr(module, 'main', None)
         if func is None:
             raise PipelineRunError(
@@ -240,11 +253,14 @@ class ImageAnalysisModule(object):
 
     def _exec_r_module(self):
         logger.debug('sourcing module: "%s"' % self.source_file)
-        rpy2.robjects.r('source("{0}")'.format(self.source_file))
-        rpy2.robjects.numpy2ri.activate()   # enables use of numpy arrays
-        rpy2.robjects.pandas2ri.activate()  # enable use of pandas data frames
+        # rpy2.robjects.r('source("{0}")'.format(self.source_file))
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        func = rpy2.robjects.globalenv['main']
+        rpackage = importr('jtmodules')
+        module = getattr(rpackage, module_name)
+        func = module.get('main')
+        numpy2ri.activate()   # enables use of numpy arrays
+        pandas2ri.activate()  # enable use of pandas data frames
+        # func = rpy2.robjects.globalenv['main']
         kwargs = self.keyword_arguments
         logger.debug(
             'evaluating R function with INPUTS: "%s"',
