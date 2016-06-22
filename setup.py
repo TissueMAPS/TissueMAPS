@@ -132,7 +132,8 @@ def readme():
 
 def get_version():
     src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'python'
+        os.path.abspath(os.path.dirname(__file__)),
+        'src', 'python'
     )
     sys.path = [src_path] + sys.path
     import jtlib
@@ -143,7 +144,8 @@ def get_requirements():
     import platform
     system_name = platform.system()
     requirements_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'python', 'requirements'
+        os.path.abspath(os.path.dirname(__file__)),
+        'src', 'python', 'requirements'
     )
     files = glob.glob(
         os.path.join(requirements_path, 'requirements-[0-9].txt')
@@ -206,7 +208,7 @@ setuptools.setup(
     ],
     scripts=[],
     packages=packages,
-    package_dir={'': 'python'},
+    package_dir={'': 'src/python'},
     package_data={'': ['*.rst']},
     # package_data=package_data,
     include_package_data=True,
