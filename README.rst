@@ -109,15 +109,19 @@ Figures are generated using the `plotly <https://plot.ly/api/>`_ library and ret
 Module examples
 ---------------
 
-Shown here are minimalistic examples of modules that simply return their input implemented in different languages:
+Shown here are minimalistic examples of modules that simply return their input implemented in different languages.
+A Python module encapsulates code and provides a separate scope and a namespace. They can be regarded as a class with attributes (constants) and static methods (functions). For compatibility we use a similar implementation for non-Python languages (Matlab, R, ...).
+Each *module* must define a constant ``VERSION`` and a function ``main``. The ``main`` function is the main entry point of the module and will be called when executed in the pipeline. You can add additional "private" methods to the module. Note, however, that code that should be reused across modules, should be placed in the `jtlib <https://github.com/TissueMAPS/JtLibrary>`_ package or any other installable package.
 
 **Python example**:     
 
 .. code:: python
 
     import jtlib
+    
+    VERSION = '0.0.1'
 
-    def my_python_module(input_image, plot=False):
+    def main(input_image, plot=False):
 
         output = dict()
         output['output_image'] = input_image
@@ -129,6 +133,15 @@ Shown here are minimalistic examples of modules that simply return their input i
 
         return output
 
+The module named ``my_py_module`` (residing in a file called ``my_py_module.py``) can be imported and called as follows:
+
+.. code:: python
+    
+    import numpy as np
+    import jtmodules.my_py_module
+    
+    img = np.zeros((10,10))
+    jtmodules.my_py_module.main(img)
 
 .. Note::
 
@@ -140,21 +153,44 @@ Shown here are minimalistic examples of modules that simply return their input i
 
     import jtlib.*;
     
-    function [output_image, figure] = my_m_module(input_image, plot)
-
-        if nargin < 2
-            plot = false;
+    classdef my_m_module
+    
+        properties (Constant)
+        
+            VERSION = '0.0.1'
+            
         end
+        
+        methods (Static)
+    
+            function [output_image, figure] = main(input_image, plot)
 
-        if plot
-            figure = jtlib.plotting.create_figure();
-        else
-            figure = '';
+                if nargin < 2
+                    plot = false;
+                end
+
+                if plot
+                    figure = jtlib.plotting.create_figure();
+                else
+                    figure = '';
+                end
+
+                output_image = input_image;
+
+            end
+        
         end
-
-        output_image = input_image;
-
     end
+    
+    
+The module named ``my_m_module`` (residing in a file called ``my_m_module.m``) can be imported and called as follows:
+
+.. code:: matlab
+    
+    import jtmodules.my_m_module;
+    
+    img = (10, 10);
+    jtmodules.my_m_module.main(img)
 
 
 .. Note::
@@ -170,8 +206,12 @@ Shown here are minimalistic examples of modules that simply return their input i
 .. code-block:: R
 
     library(jtlib)
+    
+    my_r_module <- new.env()
 
-    my_r_module <- function(input_image, plot=FALSE){
+    my_r_module$VERSION <- '0.0.1'
+    
+    my_r_module$main <- function(input_image, plot=FALSE){
 
         output <- list()
         output[['output_image']] <- input_image
@@ -184,6 +224,15 @@ Shown here are minimalistic examples of modules that simply return their input i
 
         return(output)
     }
+    
+The module named ``my_r_module`` (residing in a file called ``my_r_module.r``) can be imported and called as follows:
+
+.. code:: r
+    
+    library(jtmodules)
+    
+    img <- matrix(0, 10, 10)
+    jtmodules::my_r_module$main(img)
 
 
 .. Note::
