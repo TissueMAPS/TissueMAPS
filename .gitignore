@@ -1,0 +1,15 @@
+*.py[cod]
+
+client/node_modules
+client/app/src/toolwindow/index.html
+config/*.py
+!config/*.template
+venv/*
+issuemaps.log
+
+# Build directores (sphinx, grunt etc.)
+_build
+_prod
+.tmp
+
+# Other dirs
