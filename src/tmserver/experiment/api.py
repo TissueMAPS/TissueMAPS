@@ -258,7 +258,7 @@ def create_experiment():
         user_id=current_identity.id,
         microscope_type=microscope_type,
         plate_format=plate_format,
-        root_directory=current_app.config['TMAPS_STORAGE'],
+        root_directory=current_app.config['TMAPS_STORAGE_HOME'],
         plate_acquisition_mode=plate_acquisition_mode
     )
     db.session.add(e)

@@ -96,9 +96,11 @@ def create_app(config_overrides={}):
             'TESTING' if app.config['TESTING'] else 'PRODUCTION'
         )))
 
-    if 'TMAPS_STORAGE' in app.config:
-        os.environ['TMAPS_STORAGE'] = app.config['TMAPS_STORAGE']
-        app.logger.info('Setting TMAPS_STORAGE to: %s' % app.config['TMAPS_STORAGE'])
+    if 'TMAPS_STORAGE_HOME' in app.config:
+        os.environ['TMAPS_STORAGE_HOME'] = app.config['TMAPS_STORAGE_HOME']
+        app.logger.info(
+            'Setting TMAPS_STORAGE_HOME to: %s' % app.config['TMAPS_STORAGE_HOME']
+        )
 
     ## Initialize Plugins
     jwt.init_app(app)
