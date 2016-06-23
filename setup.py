@@ -222,7 +222,7 @@ setuptools.setup(
     ],
     scripts=[],
     packages=packages,
-    # package_dir={'': ''},
+    package_dir={'': 'src'},
     package_data={'': ['*.rst']},
     # package_data=package_data,
     include_package_data=True,
