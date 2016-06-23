@@ -144,16 +144,18 @@ def get_requirements():
     import platform
     system_name = platform.system()
     requirements_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)),
-        'src', 'python', 'requirements'
+        os.path.abspath(os.path.dirname(__file__)), 'requirements'
     )
     files = glob.glob(
         os.path.join(requirements_path, 'requirements-[0-9].txt')
     )
     # Include all files of form requirements-<platform>-[0-9].txt,
     # where platform is {Windows, Linux, Darwin}
-    files += glob.glob(os.path.join(requirements_path,
-                       'requirements-%s-[0-9].txt' % system_name))
+    files += glob.glob(
+        os.path.join(
+            requirements_path, 'requirements-%s-[0-9].txt' % system_name
+        )
+    )
     if len(files) == 0:
         raise Exception('Failed to find any requirements-[0-9].txt files')
     files = sorted(files)
