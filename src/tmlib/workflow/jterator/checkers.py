@@ -140,10 +140,10 @@ class PipelineChecker(object):
             self.libpath = self.pipe_description['lib']
             self.libpath = complete_path(self.libpath, self.step_location)
         else:
-            if 'TMAPS_JTMODULES' in os.environ:
-                self.libpath = os.environ['TMAPS_JTMODULES']
+            if 'TMAPS_MODULES_HOME' in os.environ:
+                self.libpath = os.environ['TMAPS_MODULES_HOME']
             else:
-                raise ValueError('TMAPS_JTMODULES environment variable not set.')
+                raise ValueError('TMAPS_MODULES_HOME environment variable not set.')
 
         for i, module in enumerate(self.pipe_description['pipeline']):
             # Check whether executable files exist

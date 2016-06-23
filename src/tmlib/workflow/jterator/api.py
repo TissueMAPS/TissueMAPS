@@ -132,17 +132,17 @@ class ImageAnalysisPipeline(ClusterRoutines):
         tmlib.errors.PipelineDescriptionError
             when information in *pipe* description is missing or incorrect
         OSError
-            when environment variable "TMAPS_JTMODULES" would be required but doesn't
+            when environment variable "TMAPS_MODULES_HOME" would be required but doesn't
             exist
         '''
         libpath = self.project.pipe['description'].get('lib', None)
         if not libpath:
-            if 'TMAPS_JTMODULES' in os.environ:
+            if 'TMAPS_MODULES_HOME' in os.environ:
                 libpath = os.path.expandvars(
-                    os.path.expanduser(os.environ['TMAPS_JTMODULES'])
+                    os.path.expanduser(os.environ['TMAPS_MODULES_HOME'])
                 )
             else:
-                raise OSError('TMAPS_JTMODULES environment variable not set.')
+                raise OSError('TMAPS_MODULES_HOME environment variable not set.')
         libpath = complete_path(libpath, self.step_location)
         pipeline = list()
         for i, element in enumerate(self.project.pipe['description']['pipeline']):
