@@ -28,11 +28,11 @@ This makes it easy to combine algorithms implemented in different libraries into
 Main ideas
 ==========
 
-- *Simple development and testing*: A module is simply a file that defines a function. This makes it easy for non-hardcore developers to get started.
-- *Short list of dependencies*: A module only requires the `NumPy <http://www.numpy.org/>`_ package.
-- *Independence of individual processing steps*: Module arguments are either `NumPy` arrays, scalars (integer/floating point numbers or strings), or a sequence of scalars. Modules don't perform IO. They are unit testable.
-- *Separation of GUI handling from actual processing*: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be embedded in a website for interactive visualization in a browser.
-- *Cross-language compatibility*: Restricting module input/output to `NumPy` arrays and build-in Python types facilitates interfaces to other languages.
+- Simple development and testing: A module is simply a file that defines a function. This makes it easy for non-hardcore developers to get started.
+- Short list of dependencies: A module only requires the `NumPy <http://www.numpy.org/>`_ package.
+- Independence of individual processing steps: Module arguments are either `NumPy` arrays, scalars (integer/floating point numbers or strings), or a sequence of scalars. Modules don't perform IO. They are unit testable.
+- Separation of GUI handling from actual processing: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be embedded in a website for interactive visualization in a browser.
+- Cross-language compatibility: Restricting module input/output to `NumPy` arrays and build-in Python types facilitates interfaces to other languages.
 
 
 .. _pipeline:
