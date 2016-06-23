@@ -1,2 +1,0 @@
-git+https://github.com/TissueMAPS/TmLibrary.git@master#egg=tmlib
-git+https://github.com/cellprofiler/centrosome

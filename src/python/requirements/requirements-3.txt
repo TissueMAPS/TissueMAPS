@@ -1,6 +1,0 @@
- scikit-image>=0.11.3
- mahotas>=1.4.0
- centrosome>=1.0.3
- plotly>=1.9.5
- pyasn1>=0.1.9
- ndg-httpsclient>=0.4.0
