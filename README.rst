@@ -1,20 +1,22 @@
+################
+Jterator Modules
+################
+
 .. _introduction:
 
 Introduction
 ============
 
-Jterator is a **cross-language pipeline engine** for scientific computing and image analysis.
+`Jterator` is a **cross-language pipeline engine** for scientific computing and image analysis. The program uses `Python <https://www.python.org/>`_ as a glue language, but can plug in **modules** written in different languages. It makes use of easily human readable and modifiable `YAML <http://yaml.org/>`_ files to define pipeline logic and module input/output.
 
-The program itself is written in `Python <https://www.python.org/>`_, but it can process data across different languages. It makes use of easily human readable and modifiable `YAML <http://yaml.org/>`_ files to define pipeline logic and module input/output.
-
-Python was chosen as programming language because it represents a good trade-off between development time and performance. In combination with the `NumPy <http://www.numpy.org/>`_ package, it provides an ideal framework for scientific computing and image analysis. In addition, there are numerous powerful image processing libraries with Python bindings that use NumPy arrays as data container:   
+Python was chosen as programming language because it represents a good trade-off between development time and performance. The language is relatively easy to learn and its interpreted nature facilitates scripting and testing. The powerful `NumPy <http://www.numpy.org/>`_ package provides an optimal framework for scientific compututing and n-dimensional array operations. In addition, there are numerous established C/C++ image processing libraries with Python bindings that use `NumPy arrays <http://docs.scipy.org/doc/numpy/reference/arrays.html>`_ as data container:   
 
 - `scikit-image <http://scikit-image.org/docs/dev/auto_examples/>`_   
 - `simpleITK <http://www.simpleitk.org/>`_
 - `openCV <http://opencv.org/>`_
 - `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
 
-This makes it easy to combine algorithms from different libraries into an image analysis workflow. Jterator further provides integration of code written in other programming languages frequently used for image processing and statistical data analysis, such as   
+This makes it easy to combine algorithms implemented in different libraries into an image analysis workflow. Jterator further provides integration of code written in other programming languages frequently used for image processing and statistical data analysis, such as   
 
 - Matlab: `matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_ 
 - R: `rpy2 <http://rpy.sourceforge.net/>`_
@@ -26,11 +28,11 @@ This makes it easy to combine algorithms from different libraries into an image 
 Main ideas
 ==========
 
-- *Simple development and testing*: A module is simply a file containing a ``main`` function. Since Python is an interpreted language, the code can be skriped and debugged conveniently before running it within a the pipeline.
-- *Short list of dependencies*: A module only requires the `NumPy <http://www.numpy.org/>`_ package.
-- *Independence of individual processing steps*: Module arguments are either `NumPy` arrays, scalars (integer/floating point numbers or strings), or a sequence of scalars. Modules don't perform IO. They are unit testable.
-- *Separation of GUI handling from the actual image processing*: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be embedded in a website interactively visualized in a browser.
-- *Cross-language compatibility*: Restricting module input/output to `NumPy` arrays and build-in Python types facilitates interfaces to other languages.
+- Simple development and testing: A module is simply a file that defines a function. This makes it easy for non-hardcore developers to get started.
+- Short list of dependencies: A module only requires the `NumPy <http://www.numpy.org/>`_ package.
+- Independence of individual processing steps: Module arguments are either `NumPy` arrays, scalars (integer/floating point numbers or strings), or a sequence of scalars. Modules don't perform IO. They are unit testable.
+- Separation of GUI handling from actual processing: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be embedded in a website for interactive visualization in a browser.
+- Cross-language compatibility: Restricting module input/output to `NumPy` arrays and build-in Python types facilitates interfaces to other languages.
 
 
 .. _pipeline:
@@ -38,8 +40,8 @@ Main ideas
 Pipeline
 ========
 
-A pipeline is a sequence of connected modules that collectively represents a computational task, i.e. a unit of execution that runs on a single machine.
-The sequence and structure of your pipeline is defined in a *pipe* YAML `pipeline descriptor file`_. The input/output settings for each module are provided by additional *handles* YAML `module IO descriptor files`_.
+A *pipeline* is a sequence of connected modules that collectively represents a computational task (somewhat similar to a UNIX-world pipeline), i.e. a unit of execution that runs in memory on a single machine (or a single CPU).
+The sequence and structure of the pipeline is defined in a *pipe* YAML `pipeline descriptor file`_. The input/output settings for each module are provided by additional *handles* YAML `module IO descriptor files`_.
 
 
 .. _pipeline-descriptor-file:
@@ -47,13 +49,13 @@ The sequence and structure of your pipeline is defined in a *pipe* YAML `pipelin
 Pipeline descriptor file
 ------------------------
 
-Jterator allows only very simplistic types of work-flow -  *pipeline* (somewhat similar to a UNIX-world pipeline). 
-
 Example of a *.pipe.yaml* YAML descriptor file:
 
 .. code-block:: yaml
 
     description: An example project that does nothing.
+    
+    version: '0.0.1'
 
     input:
 
@@ -249,6 +251,8 @@ Input and output of modules is described in module-specific *handles* files:
 
 .. code-block:: yaml
 
+    version: 0.0.1
+
     input:
 
         - name: string_example
@@ -262,7 +266,7 @@ Input and output of modules is described in module-specific *handles* files:
             - 1
             - 2
 
-        - name: pipeline_input_example
+        - name: piped_image_input_example
           type: IntensityImage
           key: a.unique.string
 
@@ -283,7 +287,7 @@ Input and output of modules is described in module-specific *handles* files:
 
     output:
 
-        - name: pipeline_output_example
+        - name: piped_image_output_example
           type: LabelImage
           key: another.unique.string
 
@@ -291,11 +295,11 @@ Input and output of modules is described in module-specific *handles* files:
           type: Figure
 
 
-Each item (*handle*) in the array of inputs describes an argument that is passed to the module function and each item in the array of outputs describes a key-value pair of the mapping that should be returned by the function.
+Each item (*handle*) in the array of inputs describes an argument that is passed to the module function and each item in the array of outputs describes a key-value pair of the mapping that should be returned by the function (return value).
 
-The *type* of a handle descriped in the YAML file is mirrored by a Python class. Constant input arguments have a "value" key, which represents the actual argument. Images can be piped between modules and have a "key" key, which serves as a lookup for the actual value, i.e. the image, in an in-memory key-value store. The value for that YAML key must be a hashable, i.e. a string that's unique within the pipeline. Since the names of handles files are unique, best practice is to use handle filenames as a namespace and combine them with the name of the output handle to create a unique hashable identifier (e.g. for the above Python example the key would be `"my_python_module.output_image"`).
+The *type* of a handle descriped in the YAML file is mirrored by a Python class, which checks data types and handles input/output. Constant input arguments have a "value" key, which represents the actual argument. Images can be piped between modules and the corresponding input arguments have a "key" key. It serves as a lookup for the actual value, i.e. the pixels array, which is stored an an in-memory key-value store. The value corresponding to the key in the YAML description must be a hashable, i.e. a string that's unique within the entire pipeline. Since names of handles files are unique, best practice is to use the handle filename as a namespace and combine them with the name of the output handle to create a unique hashable identifier (e.g. for the above Python example the key would be `"my_py_module.output_image"`).
 
-The following handle *types* are available:
+The following handle *types* are implemented:
 
 * Constant input handles: parameters that specify the actual argument value
     - **Numeric**: number (``int`` or ``float``)
