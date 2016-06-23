@@ -129,8 +129,7 @@ def upload_file(acquisition):
     if not f:
         raise MalformedRequestError('Missing file entry in this request.')
 
-    # filename = secure_filename(f.filename)
-    filename = f.filename
+    filename = secure_filename(f.filename)
     imgfile = db.session.query(MicroscopeImageFile).\
         filter_by(name=filename, acquisition_id=acquisition.id).\
         one_or_none()
