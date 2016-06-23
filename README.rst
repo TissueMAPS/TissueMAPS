@@ -1,13 +1,15 @@
+################
+Jterator Modules
+################
+
 .. _introduction:
 
 Introduction
 ============
 
-Jterator is a **cross-language pipeline engine** for scientific computing and image analysis.
+`Jterator` is a **cross-language pipeline engine** for scientific computing and image analysis. The program uses `Python <https://www.python.org/>`_ as a glue language, but can plug in **modules** written in different languages. It makes use of easily human readable and modifiable `YAML <http://yaml.org/>`_ files to define pipeline logic and module input/output.
 
-The program itself is written in `Python <https://www.python.org/>`_, but it can process data across different languages. It makes use of easily human readable and modifiable `YAML <http://yaml.org/>`_ files to define pipeline logic and module input/output.
-
-Python was chosen as programming language because it represents a good trade-off between development time and performance. In combination with the `NumPy <http://www.numpy.org/>`_ package, it provides an ideal framework for scientific computing and image analysis. In addition, there are numerous powerful image processing libraries with Python bindings that use NumPy arrays as data container:   
+Python was chosen as programming language because it represents a good trade-off between development time and performance. The language is relatively easy to learn and its interpreted nature facilitates scripting and testing. The powerful `NumPy <http://www.numpy.org/>`_ package provides an optimal framework for numeric computations and multi-dimensional array operations. In addition, there are numerous established image processing libraries with Python bindings that use `NumPy arrays <http://docs.scipy.org/doc/numpy/reference/arrays.html>`_ as data container:   
 
 - `scikit-image <http://scikit-image.org/docs/dev/auto_examples/>`_   
 - `simpleITK <http://www.simpleitk.org/>`_
@@ -26,7 +28,7 @@ This makes it easy to combine algorithms from different libraries into an image 
 Main ideas
 ==========
 
-- *Simple development and testing*: A module is simply a file containing a ``main`` function. Since Python is an interpreted language, the code can be skriped and debugged conveniently before running it within a the pipeline.
+- *Simple development and testing*: A module is simply a file that defines a function. This makes it easy for non-hardcore developers to get started.
 - *Short list of dependencies*: A module only requires the `NumPy <http://www.numpy.org/>`_ package.
 - *Independence of individual processing steps*: Module arguments are either `NumPy` arrays, scalars (integer/floating point numbers or strings), or a sequence of scalars. Modules don't perform IO. They are unit testable.
 - *Separation of GUI handling from the actual image processing*: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be embedded in a website interactively visualized in a browser.
