@@ -281,10 +281,10 @@ def get_available_jtmodules():
             }
 
     '''
-    repo_location = current_app.config.get('JTLIB_HOME')
+    repo_location = current_app.config.get('TMAPS_MODULES_HOME')
     if repo_location is None:
         raise Exception(
-            'You have to set the config `JTLIB_HOME` to the '
+            'You have to set the config `TMAPS_MODULES_HOME` to the '
             ' location of the Jterator modules.'
         )
     modules = AvailableModules(repo_location)
@@ -303,9 +303,12 @@ def get_available_jtpipelines():
         JSON string with "jtpipelines" key. The corresponding value is an
         array of strings.
     '''
+    pipes_location = os.path.join(
+        current_app.config.get('TMAPS_MODULES_HOME'), 'pipes'
+    )
     pipes = [
         os.path.basename(p)
-        for p in list_projects(os.path.join(current_app.config.get('JTLIB_HOME'), 'pipes'))
+        for p in list_projects(pipes_location)
     ]
     pipes = []
     return jsonify(jtpipelines=pipes)
@@ -348,7 +351,7 @@ def get_module_source_code(module_filename):
     str
        content of the module source code file
     '''
-    modules = AvailableModules(current_app.config.get('JTLIB_HOME'))
+    modules = AvailableModules(current_app.config.get('TMAPS_MODULES_HOME'))
     files = [
         f for i, f in enumerate(modules.module_files)
         if os.path.basename(f) == module_filename
@@ -565,11 +568,13 @@ def create_jtproject(experiment):
     # handles subfolder with .handles files
     if data.get('template', None):
         skel_dir = os.path.join(
-            current_app.config.get('JTLIB_HOME'), 'pipes', data['template']
+            current_app.config.get('TMAPS_MODULES_HOME'),
+            'pipes', data['template']
         )
     else:
         skel_dir = None
-    jt.project.create(repo_dir=current_app.config.get('JTLIB_HOME'), skel_dir=skel_dir)
+    repo_dir = current_app.config.get('TMAPS_MODULES_HOME')
+    jt.project.create(repo_dir=repo_dir, skel_dir=skel_dir)
     serialized_jtproject = yaml.safe_dump(jt.project.as_dict())
     return jsonify(jtproject=serialized_jtproject)
 
