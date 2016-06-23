@@ -104,7 +104,7 @@ class Experiment(Model, DateMixIn):
 
     def __init__(self, name, microscope_type, plate_format,
                  plate_acquisition_mode, user_id,
-                 root_directory='$TMAPS_STORAGE', description='',
+                 root_directory='$TMAPS_STORAGE_HOME', description='',
                  zoom_factor=2, well_spacer_size=500,
                  vertical_site_displacement=0, horizontal_site_displacement=0):
         '''
