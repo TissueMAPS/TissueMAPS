@@ -6,8 +6,8 @@ import argparse
 import paramiko
 import sqlalchemy.orm.exc
 
-import tmlib.models
-from tmlib.models.status import FileUploadStatus
+import tmlib.models as tm
+from tm.status import FileUploadStatus
 from tmlib.workflow.metaconfig import import_microscope_type_module
 
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
         description='''
-            Add new microscope files to an existing acquisition
+            Add microscope files to an existing acquisition
             in the TissueMAPS database.
         '''
     )
@@ -74,15 +74,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    with tmlib.models.utils.Session() as session:
+    with tm.utils.Session() as session:
 
         try:
-            acquisition = session.query(tmlib.models.Acquisition).\
-                join(tmlib.models.Plate).\
-                join(tmlib.models.Experiment).\
-                filter(tmlib.models.Experiment.name == args.experiment_name).\
-                filter(tmlib.models.Plate.name == args.plate_name).\
-                filter(tmlib.models.Acquisition.name == args.acquisition_name).\
+            acquisition = session.query(tm.Acquisition).\
+                join(tm.Plate).\
+                join(tm.Experiment).\
+                filter(tm.Experiment.name == args.experiment_name).\
+                filter(tm.Plate.name == args.plate_name).\
+                filter(tm.Acquisition.name == args.acquisition_name).\
                 one()
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(
@@ -100,9 +100,7 @@ if __name__ == '__main__':
                 'Source directory does not exist: %s' % args.source_directory
             )
         microscope_type = acquisition.plate.experiment.microscope_type
-        module = import_microscope_type_module(microscope_type)
-        r_image = re.compile(module.IMAGE_FILE_REGEX_PATTERN)
-        r_metadata = re.compile(module.METADATA_FILE_REGEX_PATTERN)
+        r_image, r_metadata= get_microscope_type_regex(microscope_type)
         image_file_names = [
             f.name for f in acquisition.microscope_image_files
         ]
@@ -116,14 +114,14 @@ if __name__ == '__main__':
                 if name not in image_file_names:
                     print 'register image file "%s"' % name
                     file = session.get_or_create(
-                        tmlib.models.MicroscopeImageFile,
+                        tm.MicroscopeImageFile,
                         name=name, acquisition_id=acquisition.id
                     )
             elif r_metadata.search(f):
                 name = os.path.basename(f)
                 if name not in metdata_file_names:
                     print 'register metadata file "%s"' % name
-                    file = tmlib.models.MicroscopeMetadataFile(
+                    file = tm.MicroscopeMetadataFile(
                         name=name, acquisition_id=acquisition.id
                     )
                     session.add(file)
@@ -131,31 +129,31 @@ if __name__ == '__main__':
 
         session.commit()
 
-        with LocalFileCopy() as c:
+        # with LocalFileCopy() as c:
 
-            # Copy ("upload") the files and update their upload_status.
-            for f in acquisition.microscope_image_files:
-                if f.upload_status != FileUploadStatus.COMPLETE:
-                    print 'copy image file "%s"' % f.name
-                    src = os.path.join(args.source_directory, f.name)
-                    dst = f.location
-                    f.upload_status = FileUploadStatus.UPLOADING
-                    session.add(f)
-                    session.commit()
-                    c.copy(src, dst)
-                    f.upload_status = FileUploadStatus.COMPLETE
-                    session.add(f)
-                    session.commit()
+        #     # Copy ("upload") the files and update their upload_status.
+        #     for f in acquisition.microscope_image_files:
+        #         if f.upload_status != FileUploadStatus.COMPLETE:
+        #             print 'copy image file "%s"' % f.name
+        #             src = os.path.join(args.source_directory, f.name)
+        #             dst = f.location
+        #             f.upload_status = FileUploadStatus.UPLOADING
+        #             session.add(f)
+        #             session.commit()
+        #             c.copy(src, dst)
+        #             f.upload_status = FileUploadStatus.COMPLETE
+        #             session.add(f)
+        #             session.commit()
 
-            for f in acquisition.microscope_metadata_files:
-                if f.upload_status != FileUploadStatus.COMPLETE:
-                    print 'copy metadata file "%s"' % f.name
-                    src = os.path.join(args.source_directory, f.name)
-                    dst = f.location
-                    f.upload_status = FileUploadStatus.UPLOADING
-                    session.add(f)
-                    session.commit()
-                    c.copy(src, dst)
-                    f.upload_status = FileUploadStatus.COMPLETE
-                    session.add(f)
-                    session.commit()
+        #     for f in acquisition.microscope_metadata_files:
+        #         if f.upload_status != FileUploadStatus.COMPLETE:
+        #             print 'copy metadata file "%s"' % f.name
+        #             src = os.path.join(args.source_directory, f.name)
+        #             dst = f.location
+        #             f.upload_status = FileUploadStatus.UPLOADING
+        #             session.add(f)
+        #             session.commit()
+        #             c.copy(src, dst)
+        #             f.upload_status = FileUploadStatus.COMPLETE
+        #             session.add(f)
+        #             session.commit()
