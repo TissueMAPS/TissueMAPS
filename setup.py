@@ -58,7 +58,24 @@ except ImportError:
 
 
 import setuptools
-from setuptools.command.install import install as install_
+from setuptools.command.install import install as _install
+from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
+
+class install(_install):
+
+    def do_egg_install(self):
+        import pip
+        print('install')
+        for f in get_requirements_files():
+            print(f)
+            pip.main(['install', r])
+        _install.do_egg_install(self)
+
+
+class bdist_egg(_bdist_egg):
+    def run(self):
+        print('install')
+        _bdist_egg.run(self)
 
 
 def find_scripts():
@@ -140,7 +157,7 @@ def get_version():
     return jtmodules.__version__
 
 
-def get_requirements():
+def get_requirement_files():
     import platform
     system_name = platform.system()
     requirements_path = os.path.join(
@@ -158,7 +175,11 @@ def get_requirements():
     )
     if len(files) == 0:
         raise Exception('Failed to find any requirements-[0-9].txt files')
-    files = sorted(files)
+    return sorted(files)
+
+
+def get_requirements():
+    files = get_requirement_files()
     requirements = list()
     for filename in files:
         requirements += [line.strip() for line in open(filename)]
@@ -213,5 +234,8 @@ setuptools.setup(
     package_dir={'': 'src/python'},
     package_data={'': ['*.rst']},
     include_package_data=True,
+    cmdclass={},
+    # cmdclass={'bdist_egg': bdist_egg},
+    # cmdclass={'install': install},
     install_requires=get_requirements()
 )
