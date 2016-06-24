@@ -59,7 +59,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--microscope_type', type=str, default='cellvoyager',
         choices={'cellvoyager', 'visiview'},
-        help='microscope type (default: cellvoyager'
+        help='microscope type (default: cellvoyager)'
     )
     parser.add_argument(
         '--plate_acquisition_mode', type=str, default='multiplexing',
