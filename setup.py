@@ -102,9 +102,13 @@ def pip_install_requirements():
         requirements = read_requirement_file(f)
         for r in requirements:
             logger.info('install requirement "%s"', r)
-            return_value = pip.main(['install', '--user', r])
-            if return_value != 0:
-                pip.main(['install', r])
+            args_list = ['install']
+            if '--user' in sys.argv:
+                args_list.append('--user')
+            if '-e' in sys.argv or '--editable' in sys.argv:
+                args_list.append('-e')
+            args_list.append(r)
+            pip.main(args_list)
 
 
 class install(_install):
