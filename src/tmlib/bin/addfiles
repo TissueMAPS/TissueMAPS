@@ -8,7 +8,7 @@ import sqlalchemy.orm.exc
 
 import tmlib.models as tm
 from tmlib.models.status import FileUploadStatus
-from tmlib.workflow.metaconfig import import_microscope_type_module
+from tmlib.workflow.metaconfig import get_microscope_type_regex
 
 
 class RemoteFileCopy(object):
