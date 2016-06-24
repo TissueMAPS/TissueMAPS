@@ -7,7 +7,7 @@ import paramiko
 import sqlalchemy.orm.exc
 
 import tmlib.models as tm
-from tmlib.models..status import FileUploadStatus
+from tmlib.models.status import FileUploadStatus
 from tmlib.workflow.metaconfig import import_microscope_type_module
 
 
