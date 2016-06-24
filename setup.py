@@ -102,7 +102,9 @@ def pip_install_requirements():
         requirements = read_requirement_file(f)
         for r in requirements:
             logger.info('install requirement "%s"', r)
-            pip.main(['install', r])
+            return_value = pip.main(['install', '--user', r])
+            if return_value != 0:
+                pip.main(['install', r])
 
 
 class install(_install):
