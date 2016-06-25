@@ -374,7 +374,7 @@ def get_workflow_dependencies(name):
 
 
 def get_steps():
-    '''Lists the implemented workflow steps.
+    '''Lists implemented workflow steps.
 
     Returns
     -------
@@ -382,10 +382,19 @@ def get_steps():
         names of steps
     '''
     root = os.path.dirname(__file__)
-    def is_package(d):
+    def _is_package(d):
+        # A step is defined as a subpackage that implements the following
+        # modules: api, cli, args
         d = os.path.join(root, d)
-        return os.path.isdir(d) and glob.glob(os.path.join(d, '__init__.py*'))
-    return filter(is_package, os.listdir(root))
+        return(
+            os.path.isdir(d) and
+            glob.glob(os.path.join(d, '__init__.py')) and
+            glob.glob(os.path.join(d, 'api.py')) and
+            glob.glob(os.path.join(d, 'cli.py')) and
+            glob.glob(os.path.join(d, 'args.py'))
+        )
+
+    return filter(_is_package, os.listdir(root))
 
 
 from workflow import Workflow
