@@ -200,10 +200,11 @@ def readme():
 
 
 def get_version():
-    src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'src')
+    src_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'tmlib')
     sys.path = [src_path] + sys.path
-    import tmlib
-    return tmlib.__version__
+    import version
+    return version.__version__
 
 
 def get_requirements():
