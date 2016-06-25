@@ -1,9 +1,0 @@
-#!/bin/bash
-
-echo "drop existing \"tissuemaps\" database"
-dropdb tissuemaps
-echo "create new \"tissuemaps\" database"
-createdb tissuemaps
-echo "CREATE EXTENSION postgis;" | psql -d tissuemaps
-echo "create database tables"
-createtables

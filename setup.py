@@ -17,6 +17,7 @@ packages = None
 package_name = None
 package_data = None
 scripts = None
+console_scripts = None
 # ---------------------
 
 
@@ -131,8 +132,37 @@ class bdist_egg(_bdist_egg):
         pip_install_requirements()
         _install.do_egg_install(self)
 
+
 def find_scripts():
-    return setuptools.findall('src/bin')
+    bin_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'bin'
+    )
+    scripts = list()
+    for f in os.listdir(bin_path):
+        if not f.endswith('pyc'):
+            script_path = os.path.relpath(
+                os.path.join(bin_path, f),
+                os.path.abspath(os.path.dirname(__file__))
+            )
+            scripts.append(script_path)
+    return scripts
+
+
+def build_console_scripts():
+    src_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'src'
+    )
+    sys.path = [src_path] + sys.path
+    import tmlib.workflow
+    steps = tmlib.workflow.get_steps()
+    cli_tools = list()
+    for s in steps:
+        cli_tools.append(
+            '{name} = tmlib.workflow.{name}.cli:{cls}.main'.format(
+                name=s, cls=s.capitalize()
+            )
+        )
+    return cli_tools
 
 
 def package_to_path(package):
@@ -231,25 +261,10 @@ def get_requirements():
 
 # ----------- Override defaults here ----------------
 
-scripts = []
-
-packages = [
-    'tmlib',
-    'tmlib.models',
-    'tmlib.workflow.imextract',
-    'tmlib.workflow.jterator',
-    'tmlib.workflow.metaextract',
-    'tmlib.workflow.illuminati',
-    'tmlib.workflow.corilla',
-    'tmlib.workflow.metaconfig',
-    'tmlib.workflow.tmaps',
-    'tmlib.workflow.align',
-]
-
 package_data = {'': ['*.html', '*.svg', '*.js']}
 
 if packages is None:
-    packages = setuptools.find_packages('tmlib')
+    packages = setuptools.find_packages('src')
 
 if len(packages) == 0:
     raise Exception("No valid packages found")
@@ -263,6 +278,8 @@ if package_data is None:
 if scripts is None:
     scripts = find_scripts()
 
+if console_scripts is None:
+    console_scripts = build_console_scripts()
 
 setuptools.setup(
     name='tmlib',
@@ -286,6 +303,9 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=scripts,
+    entry_points={
+        'console_scripts': console_scripts
+    },
     packages=packages,
     package_dir={'': 'src'},
     package_data={'': ['*.rst']},
