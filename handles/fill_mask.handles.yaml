@@ -3,7 +3,7 @@ input:
 
     - name: mask
       type: BinaryImage
-      key: 
+      key:
       help: >
         Binary image in which holes of connected components should be filled.
 

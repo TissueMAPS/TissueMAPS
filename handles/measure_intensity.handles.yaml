@@ -10,7 +10,7 @@ input:
 
     - name: intensity_image
       type: IntensityImage
-      key: 
+      key:
       help: >
         Greyscale image whose pixel values should be used for the measurement.
 

@@ -2,7 +2,7 @@
 input:
 
     - name: label_image
-      type: SegmenetedObjects
+      type: SegmentedObjects
       key:
       help: >
         Labeled image containing the objects
@@ -10,7 +10,7 @@ input:
 
     - name: intensity_image
       type: IntensityImage
-      key: 
+      key:
       help: >
         Greyscale image whose pixel values should be used for the measurement.
 
