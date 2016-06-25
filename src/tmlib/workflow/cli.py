@@ -214,6 +214,10 @@ class CommandLineInterface(SubmissionManager):
         -------
         Don't do any other logging configuration anywhere else!
         '''
+        # NOTE: This hack is required to ensure correct UTF8 encoding.
+        import sys
+        reload(sys)
+        sys.setdefaultencoding('utf-8')
         arguments = cls._parser.parse_args()
 
         configure_logging(logging.CRITICAL)
