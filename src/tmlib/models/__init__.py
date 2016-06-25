@@ -1,6 +1,6 @@
 '''`TissueMAPS` database models.'''
 
-from base import Model, DateMixIn, File
+from tmlib.models.base import Model, DateMixIn, File
 
 import logging
 import inspect
@@ -8,8 +8,8 @@ import collections
 from sqlalchemy import create_engine
 from sqlalchemy.sql.schema import Table
 
-from utils import DATABASE_URI
-from utils import Session
+from tmlib.models.utils import DATABASE_URI
+from tmlib.models.utils import Session
 
 _postgresxl_register = collections.defaultdict(dict)
 
@@ -89,19 +89,19 @@ class PostgresXl(object):
         self._sql += create_table + ';' + '\n'
 
 
-from user import User
-from experiment import Experiment
-from well import Well
-from channel import Channel
-from layer import ChannelLayer
-from mapobject import MapobjectType, Mapobject, MapobjectOutline, MapobjectSegmentation, MapobjectType
-from feature import Feature, FeatureValue
-from plate import Plate
-from acquisition import Acquisition, ImageFileMapping
-from cycle import Cycle
-from submission import Submission, Task
-from site import Site
-from alignment import SiteShift, SiteIntersection
-from file import MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile, ProbabilityImageFile, IllumstatsFile, PyramidTileFile
+from tmlib.models.user import User
+from tmlib.models.experiment import Experiment
+from tmlib.models.well import Well
+from tmlib.models.channel import Channel
+from tmlib.models.layer import ChannelLayer
+from tmlib.models.mapobject import MapobjectType, Mapobject, MapobjectOutline, MapobjectSegmentation, MapobjectType
+from tmlib.models.feature import Feature, FeatureValue
+from tmlib.models.plate import Plate
+from tmlib.models.acquisition import Acquisition, ImageFileMapping
+from tmlib.models.cycle import Cycle
+from tmlib.models.submission import Submission, Task
+from tmlib.models.site import Site
+from tmlib.models.alignment import SiteShift, SiteIntersection
+from tmlib.models.file import MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile, ProbabilityImageFile, IllumstatsFile, PyramidTileFile
 
 

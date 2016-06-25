@@ -1,1 +1,2 @@
-from version import __version__
+from tmlib.version import __version__
+
