@@ -67,7 +67,7 @@ from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
 
 def get_requirement_files():
     import platform
-    system_name = platform.system()
+    sys_name = platform.system()
     requirements_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), 'requirements'
     )
@@ -77,10 +77,12 @@ def get_requirement_files():
     # Include all files of form requirements-<platform>-[0-9].txt,
     # where platform is {Windows, Linux, Darwin}
     files += glob.glob(
-        os.path.join(
-            requirements_path, 'requirements-%s-[0-9].txt' % system_name
-        )
+        os.path.join(requirements_path, 'requirements-%s-[0-9].txt' % sys_name)
     )
+    files += glob.glog(
+        os.path.join(requirements_path, 'requirements-git.txt')
+    )
+    # TODO: private git repositories
     if len(files) == 0:
         raise Exception('Failed to find any requirements-[0-9].txt files')
     return sorted(files)
