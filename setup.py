@@ -133,7 +133,7 @@ class bdist_egg(_bdist_egg):
 
 
 def find_scripts():
-    return [s for s in setuptools.findall('bin/')
+    return [s for s in setuptools.findall('scripts/')
             if os.path.splitext(s)[1] != '.pyc']
 
 
@@ -211,55 +211,19 @@ def get_version():
 
 
 def get_requirements():
-    import platform
-    system_name = platform.system()
-    requirements_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), 'requirements')
-    )
-    files = glob.glob(
-        os.path.join(requirements_path, 'requirements-[0-9].txt')
-    )
-    # Include all files of form requirements-<platform>-[0-9].txt,
-    # where platform is {Windows, Linux, Darwin}
-    files += glob.glob(
-        os.path.join(
-            requirements_path,
-            'requirements-%s-[0-9].txt' % system_name
-        )
-    )
-    if len(files) == 0:
-        raise Exception('Failed to find any requirements-[0-9].txt files')
-    files = sorted(files)
     requirements = list()
-    for filename in files:
-        requirements += [line.strip() for line in open(filename)]
-    return [line for line in requirements
-            if line != '' and not line.startswith('#')]
+    for f in get_requirement_files():
+        logger.info('install requirements in file: %s', f)
+        requirements += read_requirement_file(f)
+    return requirements
+
 
 # ----------- Override defaults here ----------------
-
-scripts = []
-
-packages = [
-    'tmserver',
-    'tmserver.appstate',
-    'tmserver.experiment',
-    'tmserver.extensions',
-    'tmserver.extensions.spark',
-    'tmserver.extensions.gc3pie',
-    'tmserver.jtui',
-    'tmserver.mapobject',
-    'tmserver.model',
-    'tmserver.tool',
-    'tmserver.toolbox',
-    'tmserver.toolbox.classifier',
-    'tmserver.user',
-]
 
 package_data = {'': ['*.html', '*.svg', '*.js']}
 
 if packages is None:
-    packages = setuptools.find_packages('tmserver')
+    packages = setuptools.find_packages('src')
 
 if len(packages) == 0:
     raise Exception("No valid packages found")
@@ -293,7 +257,7 @@ setuptools.setup(
         'Operating System :: POSIX :: Linux',
         'Operating System :: MacOS'
     ],
-    scripts=[],
+    scripts=scripts,
     packages=packages,
     package_dir={'': 'src'},
     package_data={'': ['*.rst']},
