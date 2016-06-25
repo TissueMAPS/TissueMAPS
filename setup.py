@@ -9,6 +9,7 @@ import glob
 import logging
 import shutil
 
+logger = logging.getLogger(__name__)
 # ----- overrides -----
 
 # set these to anything but None to override the automatic defaults
