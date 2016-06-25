@@ -132,8 +132,7 @@ class bdist_egg(_bdist_egg):
         _install.do_egg_install(self)
 
 def find_scripts():
-    return [s for s in setuptools.findall('bin/')
-            if os.path.splitext(s)[1] != '.pyc']
+    return setuptools.findall('src/bin')
 
 
 def package_to_path(package):
@@ -250,19 +249,19 @@ packages = [
 package_data = {'': ['*.html', '*.svg', '*.js']}
 
 if packages is None:
-        packages = setuptools.find_packages('tmlib')
+    packages = setuptools.find_packages('tmlib')
 
 if len(packages) == 0:
-        raise Exception("No valid packages found")
+    raise Exception("No valid packages found")
 
 if package_name is None:
-        package_name = packages[0]
+    package_name = packages[0]
 
 if package_data is None:
-        package_data = find_package_data(packages)
+    package_data = find_package_data(packages)
 
 if scripts is None:
-        scripts = find_scripts()
+    scripts = find_scripts()
 
 
 setuptools.setup(
@@ -286,7 +285,7 @@ setuptools.setup(
         'Operating System :: POSIX :: Linux',
         'Operating System :: MacOS'
     ],
-    scripts=[],
+    scripts=scripts,
     packages=packages,
     package_dir={'': 'src'},
     package_data={'': ['*.rst']},
