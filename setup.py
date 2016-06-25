@@ -9,6 +9,7 @@ import glob
 import logging
 import shutil
 
+logger = logging.getLogger(__name__)
 # ----- overrides -----
 
 # set these to anything but None to override the automatic defaults
@@ -34,14 +35,16 @@ debug = True
 
 if debug:
     logging.basicConfig(level=logging.DEBUG)
+else:
+    logging.basicConfig(level=logging.INFO)
 
 # distribute import and testing
 try:
     import distribute_setup
     distribute_setup.use_setuptools()
-    logging.debug("distribute_setup.py imported and used")
+    logger.info("distribute_setup.py imported and used")
 except ImportError:
-    # fallback to setuptools?
+    # falback to setuptools?
     # distribute_setup.py was not in this directory
     if not (setup_tools_fallback):
         import setuptools
@@ -50,15 +53,83 @@ except ImportError:
             raise ImportError("distribute was not found and fallback to "
                               "setuptools was not allowed")
         else:
-            logging.debug("distribute_setup.py not found, defaulted to "
+            logger.debug("distribute_setup.py not found, defaulted to "
                           "system distribute")
     else:
-        logging.debug("distribute_setup.py not found, defaulting to system "
+        logger.debug("distribute_setup.py not found, defaulting to system "
                       "setuptools")
 
 
 import setuptools
-from setuptools.command.install import install as install_
+from setuptools.command.install import install as _install
+from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
+
+def get_requirement_files():
+    import platform
+    system_name = platform.system()
+    requirements_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'requirements'
+    )
+    files = glob.glob(
+        os.path.join(requirements_path, 'requirements-[0-9].txt')
+    )
+    # Include all files of form requirements-<platform>-[0-9].txt,
+    # where platform is {Windows, Linux, Darwin}
+    files += glob.glob(
+        os.path.join(
+            requirements_path, 'requirements-%s-[0-9].txt' % system_name
+        )
+    )
+    if len(files) == 0:
+        raise Exception('Failed to find any requirements-[0-9].txt files')
+    return sorted(files)
+
+
+def read_requirement_file(filename):
+    requirements = list()
+    with open(filename, 'r') as f:
+        for line in f:
+            if line != '' and not line.startswith('#'):
+                requirements.append(line.strip())
+    return requirements
+
+
+def pip_install_requirements():
+    import pip
+    for f in get_requirement_files():
+        logger.info('install requirements in file: %s', f)
+        requirements = read_requirement_file(f)
+        for r in requirements:
+            logger.info('install requirement "%s"', r)
+            args_list = ['install']
+            if '--user' in sys.argv:
+                args_list.append('--user')
+            if '-e' in sys.argv or '--editable' in sys.argv:
+                args_list.append('-e')
+            args_list.append(r)
+            pip.main(args_list)
+
+
+class install(_install):
+
+    def run(self):
+        pip_install_requirements()
+        _install.run(self)
+
+    def do_egg_install(self):
+        pip_install_requirements()
+        _install.do_egg_install(self)
+
+
+class bdist_egg(_bdist_egg):
+
+    def run(self):
+        pip_install_requirements()
+        _bdist_egg.run(self)
+
+    def do_egg_install(self):
+        pip_install_requirements()
+        _install.do_egg_install(self)
 
 
 def find_scripts():
@@ -131,10 +202,12 @@ def readme():
 
 
 def get_version():
-    src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)))
+    src_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'tmserver'
+    )
     sys.path = [src_path] + sys.path
-    import tmserver
-    return tmserver.__version__
+    import version
+    return version.__version__
 
 
 def get_requirements():
@@ -224,8 +297,11 @@ setuptools.setup(
     packages=packages,
     package_dir={'': 'src'},
     package_data={'': ['*.rst']},
-    # package_data=package_data,
+    cmdclass={
+        'install': install,
+        'bdist_egg': bdist_egg
+    },
     include_package_data=True,
-    install_requires=get_requirements()
+    # install_requires=get_requirements()
 )
 
