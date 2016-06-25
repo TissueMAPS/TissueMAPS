@@ -5,6 +5,7 @@ import datetime
 import re
 import os
 import inspect
+from decorator import decorator
 from types import *
 import logging
 
@@ -300,76 +301,72 @@ def assert_type(**expected):
     example.test('blabla')
     example.test('blabla', '2')  # raises TypeError
     '''
-    def decorator(func):
 
-        def wrapper(*args, **kwargs):
-            inputs = inspect.getargspec(func)
-            for expected_name, expected_type in expected.iteritems():
-                if expected_name not in inputs.args:
-                    raise ValueError('Unknown argument "%s"' % expected_name)
-                index = inputs.args.index(expected_name)
-                if index >= len(args):
-                    continue
-                if isinstance(expected_type, str):
-                    et_strings = [expected_type]
-                elif isinstance(expected_type, list):
-                    et_strings = expected_type
-                else:
-                    raise TypeError(
-                        'Expected types for function "%s" have to provided as '
-                        'either a string of a list of strings.'
-                        % func.__name__
-                    )
+    @decorator
+    def wrapper(func, *args, **kwargs):
+        inputs = inspect.getargspec(func)
+        for expected_name, expected_type in expected.iteritems():
+            if expected_name not in inputs.args:
+                raise ValueError('Unknown argument "%s"' % expected_name)
+            index = inputs.args.index(expected_name)
+            if index >= len(args):
+                continue
+            if isinstance(expected_type, str):
+                et_strings = [expected_type]
+            elif isinstance(expected_type, list):
+                et_strings = expected_type
+            else:
+                raise TypeError(
+                    'Expected types for function "%s" have to provided as '
+                    'either a string of a list of strings.'
+                    % func.__name__
+                )
 
-                # Users provide the types as strings. The advantage is that
-                # the corresponding object doesn't have to be imported by the
-                # user. But we have to convert the strings into types and
-                # import custom type objects in order to be able to check their
-                # type.
-                et_types = list()
-                for ets in et_strings:
+            # Users provide the types as strings. The advantage is that
+            # the corresponding object doesn't have to be imported by the
+            # user. But we have to convert the strings into types and
+            # import custom type objects in order to be able to check their
+            # type.
+            et_types = list()
+            for ets in et_strings:
+                try:
+                    # First, let's deal with built-in types
+                    ett = eval(ets)
+                except NameError:
                     try:
-                        # First, let's deal with built-in types
-                        ett = eval(ets)
-                    except NameError:
+                        # It's not a built-in type. So we may deal with a
+                        # custom type.
+                        # Let's import the corresponding module and get
+                        # the object for which we want to check the type.
+                        path_parts = ets.split('.')
+                        fullname = '.'.join(path_parts[:-1])
+                        module = importlib.import_module(fullname)
                         try:
-                            # It's not a built-in type. So we may deal with a
-                            # custom type.
-                            # Let's import the corresponding module and get
-                            # the object for which we want to check the type.
-                            path_parts = ets.split('.')
-                            fullname = '.'.join(path_parts[:-1])
-                            module = importlib.import_module(fullname)
-                            try:
-                                ett = getattr(module, path_parts[-1])
-                            except AttributeError:
-                                raise AttributeError(
-                                    'Custom type %s does not exist.' % fullname
-                                )
-                        except ImportError:
-                            raise ImportError(
-                                'Import of custom type "%s" failed.' % ets
+                            ett = getattr(module, path_parts[-1])
+                        except AttributeError:
+                            raise AttributeError(
+                                'Custom type %s does not exist.' % fullname
                             )
-                    if not isinstance(ett, type):
-                        raise TypeError(
-                            'Type of "%s" could not be determined' % ett
+                    except ImportError:
+                        raise ImportError(
+                            'Import of custom type "%s" failed.' % ets
                         )
-                    et_types.append(ett)
-
-                # No we have a type object that we can use for the check
-                if not any([isinstance(args[index], ett) for ett in et_types]):
-                    options = ' or '.join([ets for ets in et_strings])
+                if not isinstance(ett, type):
                     raise TypeError(
-                        'Argument "%s" must have type %s.'
-                        % (expected_name, options)
+                        'Type of "%s" could not be determined' % ett
                     )
-            return func(*args, **kwargs)
+                et_types.append(ett)
 
-        wrapper.__name__ = func.__name__
-        wrapper.__doc__ = func.__doc__
-        return wrapper
+            # No we have a type object that we can use for the check
+            if not any([isinstance(args[index], ett) for ett in et_types]):
+                options = ' or '.join([ets for ets in et_strings])
+                raise TypeError(
+                    'Argument "%s" must have type %s.'
+                    % (expected_name, options)
+                )
+        return func(*args, **kwargs)
 
-    return decorator
+    return wrapper
 
 
 def assert_path_exists(*expected):
@@ -403,32 +400,27 @@ def assert_path_exists(*expected):
     example.test('/tmp')
     example.test('/blabla')  # raises OSError
     '''
-    def decorator(func):
+    @decorator
+    def wrapper(func, *args, **kwargs):
         inputs = inspect.getargspec(func)
+        for expected_name in expected:
+            if expected_name not in inputs.args:
+                raise ValueError('Unknown argument "%s"' % expected_name)
+            index = inputs.args.index(expected_name)
+            if index >= len(args):
+                continue
+            location = args[index]
+            if not os.path.exists(location):
+                raise OSError('Location specified by argument "%s" '
+                              'does\'t exist: "%s"' %
+                              (expected_name, location))
+            elif os.access(os.path.dirname(location), os.W_OK):
+                raise OSError('Location specified by argument "%s" '
+                              'doesn\'t have write permissions: "%s"' %
+                              (expected_name, location))
+        return func(*args, **kwargs)
 
-        def wrapper(*args, **kwargs):
-            for expected_name in expected:
-                if expected_name not in inputs.args:
-                    raise ValueError('Unknown argument "%s"' % expected_name)
-                index = inputs.args.index(expected_name)
-                if index >= len(args):
-                    continue
-                location = args[index]
-                if not os.path.exists(location):
-                    raise OSError('Location specified by argument "%s" '
-                                  'does\'t exist: "%s"' %
-                                  (expected_name, location))
-                elif os.access(os.path.dirname(location), os.W_OK):
-                    raise OSError('Location specified by argument "%s" '
-                                  'doesn\'t have write permissions: "%s"' %
-                                  (expected_name, location))
-            return func(*args, **kwargs)
-
-        wrapper.__name__ = func.__name__
-        wrapper.__doc__ = func.__doc__
-        return wrapper
-
-    return decorator
+    return wrapper
 
 
 class autocreate_directory_property(object):
@@ -450,7 +442,7 @@ class autocreate_directory_property(object):
     Examples
     --------
     from tmlib.utils import autocreate_directory_property
-    
+
     class Foo(object):
 
         @autocreate_directory_property
@@ -501,11 +493,11 @@ def same_docstring_as(ref_func):
         reference function from which the docstring should be copied
     '''
 
-    def decorator(func):
+    def wrapper(func):
         func.__doc__ = ref_func.__doc__
         return func
 
-    return decorator
+    return wrapper
 
 
 def notimplemented(func):
