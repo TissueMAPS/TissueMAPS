@@ -79,7 +79,7 @@ def get_requirement_files():
     files += glob.glob(
         os.path.join(requirements_path, 'requirements-%s-[0-9].txt' % sys_name)
     )
-    files += glob.glog(
+    files += glob.glob(
         os.path.join(requirements_path, 'requirements-git.txt')
     )
     # TODO: private git repositories
