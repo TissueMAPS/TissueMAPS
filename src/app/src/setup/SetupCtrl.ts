@@ -88,7 +88,7 @@ class SetupCtrl {
                         var restartAt;
                         for (var i = 1; i < this.workflow.stages.length; i++) {
                             if (!this.workflow.stages[i].status.done) {
-                                restartAt = i;
+                                restartAt = i - 1;
                                 break;
                             }
                         }
