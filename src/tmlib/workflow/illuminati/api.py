@@ -452,6 +452,7 @@ class PyramidBuilder(ClusterRoutines):
                     logger.info('using provided clip value: %d', clip_above)
                 clip_below = stats.get_closest_percentile(0.001)
             else:
+                # NOTE: assumes that images are 16-bit!
                 clip_above = 2**16 - 1
                 clip_below = 0
 
@@ -475,8 +476,10 @@ class PyramidBuilder(ClusterRoutines):
                     image = image.correct(stats)
                 if batch['align']:
                     image = image.align(crop=False)
-                image = image.clip(clip_below, clip_above)
-                image = image.scale(clip_below, clip_above)
+                if not image.is_uint8:
+                    # No need to clip and scale when already 8-bit
+                    image = image.clip(clip_below, clip_above)
+                    image = image.scale(clip_below, clip_above)
                 image_store[file.name] = image
                 for t in mapped_tiles:
                     name = layer.build_tile_file_name(
