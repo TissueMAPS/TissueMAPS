@@ -88,30 +88,36 @@ class Image(object):
         return self.pixels.dtype
 
     @property
+    def is_int(self):
+        '''bool: whether pixel array has integer data type
+        '''
+        return self.pixels.dtype == np.int
+
+    @property
     def is_float(self):
         '''bool: whether pixel array has float data type
         '''
-        return self.dtype == np.float
+        return self.pixels.dtype == np.float
 
     @property
     def is_uint(self):
         '''bool: whether pixel array has unsigned integer data type'''
-        return self.dtype == np.uint16 or self.dtype == np.uint8
+        return self.pixels.dtype == np.uint16 or self.pixels.dtype == np.uint8
 
     @property
     def is_uint8(self):
         '''bool: whether pixel array has 8-bit unsigned integer data type'''
-        return self.dtype == np.uint8
+        return self.pixels.dtype == np.uint8
 
     @property
     def is_uint16(self):
         '''bool: whether pixel array has 16-bit unsigned integer data type'''
-        return self.dtype == np.uint16
+        return self.pixels.dtype == np.uint16
 
     @property
     def is_binary(self):
         '''bool: whether pixel array has boolean data type'''
-        return self.dtype == np.bool
+        return self.pixels.dtype == np.bool
 
     def extract(self, y_offset, x_offset, height, width):
         '''Extract a continuous, rectangular area of pixels from the image.
