@@ -155,13 +155,13 @@ def build_console_scripts():
         os.path.abspath(os.path.dirname(__file__)), 'src'
     )
     sys.path = [src_path] + sys.path
-    import tmlib.workflow
-    steps = tmlib.workflow.get_steps()
+    import tmlib
+    names = tmlib.get_cli_tools()
     cli_tools = list()
-    for s in steps:
+    for name in names:
         cli_tools.append(
             '{name} = tmlib.workflow.{name}.cli:{cls}.main'.format(
-                name=s, cls=s.capitalize()
+                name=name, cls=name.capitalize()
             )
         )
     return cli_tools
