@@ -161,11 +161,12 @@ class WorkflowService {
                         if (workflowStatus.subtasks[stageIndex - 1] != null) {
                             var workflowStepDescription = workflowStageDescription.steps[stepIndex];
                             step.status = new JobCollectionStatus(
-                                workflowStatus.subtasks[stageIndex - 1]
+                                workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex]
                             );
                             step.jobs = [];
-                            workflowStatus.subtasks[stageIndex - 1].subtasks.map((phase, index) => {
+                            workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex].subtasks.map((phase, index) => {
                                 if (phase.subtasks.length > 0) {
+                                    // run jobs
                                     phase.subtasks.map((subphase, index) => {
                                         if (subphase.subtasks.length > 0) {
                                             subphase.subtasks.map((job) => {
@@ -176,6 +177,7 @@ class WorkflowService {
                                         }
                                     });
                                 } else {
+                                    // collect job
                                     step.jobs.push(new Job(phase));
                                 }
                             });
@@ -213,6 +215,7 @@ class WorkflowService {
 
     private _saveWorkflowDescription(experiment: Experiment) {
         var index = this.workflow.stages.length - 1;
+        console.log(this.workflow.getDescription(index))
         var data = {
             description: this.workflow.getDescription(index)
         };

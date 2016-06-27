@@ -81,13 +81,13 @@ class SetupCtrl {
             var areStagesOk = this.workflow.check(idx);
             var result;
             if (areStagesOk) {
-                var desc = this.workflow.getDescription(idx);
                 this._dialogService.warning('Do you really want to resume the workflow?')
                 .then((resumeForReal) => {
                     if (resumeForReal) {
                         var restartAt;
                         for (var i = 1; i < this.workflow.stages.length; i++) {
                             if (!this.workflow.stages[i].status.done) {
+                                // account for first stage "upload"
                                 restartAt = i - 1;
                                 break;
                             }

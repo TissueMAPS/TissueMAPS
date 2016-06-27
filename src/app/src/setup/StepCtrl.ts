@@ -25,11 +25,6 @@ class StepCtrl {
         });
     }
 
-    goToJobStatus() {
-        // console.log('go to job status')
-        this._$state.go('setup.jobs', {});
-    }
-
     hasExtraArgs() {
         var stageIdx = this.currentStageIndex;
         var stepIdx = this.currentStepIndex;
