@@ -162,6 +162,9 @@ class Argument(object):
                     'Argument "%s" must have type %s.'
                     % (self.name, self.type.__name__)
                 )
+        if self.type == float:
+            # Workaround decimal Javascript issue
+            value = float(value)
         setattr(instance, self._attr_name, value)
 
     def add_to_argparser(self, parser):
