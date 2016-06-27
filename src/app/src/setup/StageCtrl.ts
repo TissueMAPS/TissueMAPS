@@ -75,8 +75,10 @@ angular.module('tmaps.ui').directive('tmArgumentInput', function() {
                 widgetType = 'checkbox';
             } else if (hasChoices && argumentType !== 'bool') {
                 widgetType = 'dropdown';
-            } else if (!hasChoices && (argumentType === 'int' || argumentType === 'float')) {
-                widgetType = 'numberInput';
+            } else if (!hasChoices && argumentType === 'float') {
+                widgetType = 'floatInput';
+            } else if (!hasChoices && argumentType === 'int') {
+                widgetType = 'integerInput';
             } else if (!hasChoices && argumentType == 'str') {
                 widgetType = 'textInput';
             }

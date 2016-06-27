@@ -2,7 +2,8 @@
     <label>{{:: arg.name }}</label>
     <span ng-hide="{{ arg.required }}">(optional)</span>
     <input ng-if="widgetType == 'textInput'" type="text" ng-model="arg.value">
-    <input ng-if="widgetType == 'numberInput'" type="number" ng-model="arg.value">
+    <input ng-if="widgetType == 'integerInput'" type="number" ng-model="arg.value">
+    <input ng-if="widgetType == 'floatInput'" type="number" step="0.01" ng-model="arg.value">
     <input ng-if="widgetType == 'checkbox'" type="checkbox" ng-model="arg.value">
     <div ng-if="widgetType == 'dropdown'">
         <select ng-model="arg.value">
