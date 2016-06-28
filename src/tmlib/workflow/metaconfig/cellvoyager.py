@@ -106,26 +106,19 @@ class CellvoyagerMetadataReader(MetadataReader):
         )
         mlf_ns = mlf_root.nsmap['bts']
 
-        metadata.image_count = len(mlf_elements)
+        metadata.image_count = len([
+            e for e in mlf_elements
+            if e.attrib['{%s}Type' % mlf_ns] != 'ERR'
+        ])
         lookup = defaultdict(list)
         r = re.compile(CellvoyagerMetadataHandler.IMAGE_FILE_REGEX_PATTERN)
 
         for i, e in enumerate(mlf_elements):
-            img = metadata.image(i)
-            # A name has to be set as a flag for the handler to update
-            # the metadata
-            img.Name = e.text
             # Translate positional information into well identifier string
             well_row = utils.map_number_to_letter(
                 int(e.attrib['{%s}Row' % mlf_ns]))
             well_col = int(e.attrib['{%s}Column' % mlf_ns])
             well_id = '%s%.2d' % (well_row, well_col)
-            img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
-            # Image files always contain only a single plane
-            img.Pixels.SizeT = 1
-            img.Pixels.SizeC = 1
-            img.Pixels.SizeZ = 1
-            img.Pixels.plane_count = 1
             if e.attrib['{%s}Type' % mlf_ns] == 'ERR':
                 field_index = int(e.attrib['{%s}FieldIndex' % mlf_ns])
                 logger.error(
@@ -134,6 +127,16 @@ class CellvoyagerMetadataReader(MetadataReader):
                     % (well_id, field_index)
                 )
                 continue
+            img = metadata.image(i)
+            img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
+            # Image files always contain only a single plane
+            img.Pixels.SizeT = 1
+            img.Pixels.SizeC = 1
+            img.Pixels.SizeZ = 1
+            img.Pixels.plane_count = 1
+            # A name has to be set as a flag for the handler to update
+            # the metadata
+            img.Name = e.text
             img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
             img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
