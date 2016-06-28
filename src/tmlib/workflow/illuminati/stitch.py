@@ -115,8 +115,7 @@ def calc_stitch_layout(stitch_dims, stage_positions):
 
 
 def calc_grid_coordinates_from_layout(stitch_dims, stitch_layout):
-    '''
-    Determine the position of each image in the stitched mosaic image.
+    '''Determines the position of each image in the stitched mosaic image.
 
     Parameters
     ----------
