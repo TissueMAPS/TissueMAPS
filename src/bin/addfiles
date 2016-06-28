@@ -5,6 +5,7 @@ import shutil
 import argparse
 import paramiko
 import sqlalchemy.orm.exc
+from werkzeug.utils import secure_filename
 
 import tmlib.models as tm
 from tmlib.models.status import FileUploadStatus
@@ -71,7 +72,10 @@ if __name__ == '__main__':
         '-s', '--source_directory', required=True,
         help='path to directory that contains the microscope files'
     )
-
+    parser.add_argument(
+        '-c', '--copy', action='store_true',
+        help='copy files from source directory'
+    )
     args = parser.parse_args()
 
     with tm.utils.Session() as session:
@@ -109,7 +113,7 @@ if __name__ == '__main__':
         ]
         for f in os.listdir(args.source_directory):
             if r_image.search(f):
-                name = os.path.basename(f)
+                name = secure_filename(f)
                 # Skip already inserted files.
                 if name not in image_file_names:
                     print 'register image file "%s"' % name
@@ -118,7 +122,7 @@ if __name__ == '__main__':
                         name=name, acquisition_id=acquisition.id
                     )
             elif r_metadata.search(f):
-                name = os.path.basename(f)
+                name = secure_filename(os.path.basename(f))
                 if name not in metdata_file_names:
                     print 'register metadata file "%s"' % name
                     file = tm.MicroscopeMetadataFile(
@@ -129,31 +133,43 @@ if __name__ == '__main__':
 
         session.commit()
 
-        # with LocalFileCopy() as c:
+        if args.copy:
+            with LocalFileCopy() as c:
 
-        #     # Copy ("upload") the files and update their upload_status.
-        #     for f in acquisition.microscope_image_files:
-        #         if f.upload_status != FileUploadStatus.COMPLETE:
-        #             print 'copy image file "%s"' % f.name
-        #             src = os.path.join(args.source_directory, f.name)
-        #             dst = f.location
-        #             f.upload_status = FileUploadStatus.UPLOADING
-        #             session.add(f)
-        #             session.commit()
-        #             c.copy(src, dst)
-        #             f.upload_status = FileUploadStatus.COMPLETE
-        #             session.add(f)
-        #             session.commit()
+                # Copy ("upload") the files and update their upload_status.
+                for f in os.listdir(args.source_directory):
+                    name = secure_filename(f)
 
-        #     for f in acquisition.microscope_metadata_files:
-        #         if f.upload_status != FileUploadStatus.COMPLETE:
-        #             print 'copy metadata file "%s"' % f.name
-        #             src = os.path.join(args.source_directory, f.name)
-        #             dst = f.location
-        #             f.upload_status = FileUploadStatus.UPLOADING
-        #             session.add(f)
-        #             session.commit()
-        #             c.copy(src, dst)
-        #             f.upload_status = FileUploadStatus.COMPLETE
-        #             session.add(f)
-        #             session.commit()
+                    # in case it's an image file
+                    file = session.query(tm.MicroscopeImageFile).\
+                        filter_by(name=name, acquisition_id=acquisition.id).\
+                        one_or_none()
+                    if file is not None:
+                        if file.upload_status != FileUploadStatus.COMPLETE:
+                            print 'copy image file "%s"' % f
+                            src = os.path.join(args.source_directory, f)
+                            dst = file.location
+                            file.upload_status = FileUploadStatus.UPLOADING
+                            session.add(file)
+                            session.commit()
+                            c.copy(src, dst)
+                            file.upload_status = FileUploadStatus.COMPLETE
+                            session.add(file)
+                            session.commit()
+
+                    # in case it's a metadata file
+                    file = session.query(tm.MicroscopeMetadataFile).\
+                        filter_by(name=name, acquisition_id=acquisition.id).\
+                        one_or_none()
+                    if file is not None:
+                        if file.upload_status != FileUploadStatus.COMPLETE:
+                            print 'copy metadata file "%s"' % f.name
+                            src = os.path.join(args.source_directory, f)
+                            dst = file.location
+                            file.upload_status = FileUploadStatus.UPLOADING
+                            session.add(file)
+                            session.commit()
+                            c.copy(src, dst)
+                            file.upload_status = FileUploadStatus.COMPLETE
+                            session.add(file)
+                            session.commit()
