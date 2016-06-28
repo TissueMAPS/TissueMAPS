@@ -4,28 +4,42 @@ HTTP client to upload acquisition files.
 
 pip install requests
 
+http://babun.tissuemaps.org/api/acquisitions/dG1hcHM4Ng==/image_files
+http://babun.tissuemaps.org/api/acquisitions/dG1hcHM4Ng==/metadata_files
+
 '''
 import os
 import re
 import yaml
+import base64
 import shutil
 import logging
 import argparse
 import urllib
 import requests
 
+
 logger = logging.getLogger(__name__)
 
+
 BASE_URL = 'http://babun.tissuemaps.org/'
-DEFAULT_PARAMS = {
-    'experiment_id': 'dG1hcHM1OQ==',
-}
-STATUS_URL = '/api/experiments/{{}}/workflow/status'
+EXPERIMENT_ID = 'dG1hcHM1OQ=='
+ACQUISITION_ID = 'dG1hcHM4Nw=='
+DEFAULT_PARAMS = {}
+LOCAL_ACQ_FILES = os.path.expanduser('~/dev/tmaps/TmTestdata/'
+                                     '150820-Testset-CV/acquisition_1')
 
 USER_CREDENTIALS = {
     'username': 'test',
     'password': 'pass',
 }
+
+
+def base64url_decode(input):
+    rem = len(input) % 4
+    if rem > 0:
+        input += b'=' * (4 - rem)
+    return base64.urlsafe_b64decode(input)
 
 
 class TmapsHttpClient(object):
@@ -55,6 +69,15 @@ class TmapsHttpClient(object):
             return url
         return '%s?%s' % (url, urllib.urlencode(params))
 
+    def handle_error(self, result):
+        if result.status_code != 200:
+            error_message = 'Error %s: ' % result.status_code
+            json = result.json()
+            error_message += str(json['error'])
+            if 'description' in json:
+                error_message += json['description']
+            raise Exception(error_message)
+
     def login(self):
         logger.debug('Login in as: "%s, xxxxxxx"' % self.username)
         url = self.get_url('/auth')
@@ -63,12 +86,44 @@ class TmapsHttpClient(object):
             'password': self.password,
         }
         res = self.session.post(url, json=payload)
-        assert res.status_code == 200
+        self.handle_error(res)
         self._access_token = res.json()['access_token']
+        self.session.headers.update({'Authorization': 'JWT %s' %
+                                    self._access_token})
 
-    def get_status():
-        return
+    def get_image_files(self):
+        url = self.get_url('/api/acquisitions/' + ACQUISITION_ID +
+                           '/image_files')
+        res = self.session.get(url)
+        self.handle_error(res)
+        return res.json()['data']
 
+    def get_metadata_files(self):
+        url = self.get_url('/api/acquisitions/' + ACQUISITION_ID +
+                           '/metadata_files')
+        res = self.session.get(url)
+        self.handle_error(res)
+        return res.json()['data']
+
+    def _upload_register(self, filename):
+        url = self.get_url('/api/acquisitions/' + ACQUISITION_ID +
+                           '/upload/register')
+        payload = {'files': [filename]}
+        res = self.session.put(url, json=payload)
+        self.handle_error(res)
+        # print res.json()
+
+    def _upload_file(self, filepath):
+        url = self.get_url('/api/acquisitions/' + ACQUISITION_ID +
+                           '/upload/upload-file')
+        files = {'file': open(filepath, 'rb')}
+        res = self.session.post(url, files=files)
+        self.handle_error(res)
+        print res.json()
+
+    def upload_file(self, filepath):
+        self._upload_register(os.path.basename(filepath))
+        self._upload_file(filepath)
 
 if __name__ == '__main__':
     # parser = argparse.ArgumentParser(
@@ -80,5 +135,10 @@ if __name__ == '__main__':
     # args = parser.parse_args()
     client = TmapsHttpClient(BASE_URL)
     client.login()
-    client.get_status()
-    # client.upload(filename)
+    # image_files = client.get_image_files()
+    # print image_files
+    for filename in os.listdir(LOCAL_ACQ_FILES):
+        filepath = os.path.join(LOCAL_ACQ_FILES, filename)
+        print 'Uploading: %s' % filepath
+        client.upload_file(filepath)
+        # exit()
