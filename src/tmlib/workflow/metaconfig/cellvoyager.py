@@ -120,34 +120,30 @@ class CellvoyagerMetadataReader(MetadataReader):
                 int(e.attrib['{%s}Row' % mlf_ns]))
             well_col = int(e.attrib['{%s}Column' % mlf_ns])
             well_id = '%s%.2d' % (well_row, well_col)
-            # TODO: there is a bug that prevents setting the date for
-            # images with index > 0
             img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
             # Image files always contain only a single plane
             img.Pixels.SizeT = 1
             img.Pixels.SizeC = 1
             img.Pixels.SizeZ = 1
             img.Pixels.plane_count = 1
-            if e.attrib['{%s}Type' % mlf_ns] == 'IMG':
-                img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
-                img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
-            else:
-                field_index = e.attrib['{%s}FieldIndex' % mlf_ns]
+            if e.attrib['{%s}Type' % mlf_ns] == 'ERR':
+                field_index = int(e.attrib['{%s}FieldIndex' % mlf_ns])
                 logger.error(
                     'erroneous acquisition - no channel and z-position '
                     'information available at well %s field %d'
                     % (well_id, field_index)
                 )
-                img.Pixels.Channel(0).Name = None
-                img.Pixels.Plane(0).PositionZ = None
+                continue
+            img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
+            img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
             matches = r.search(img.Name)
             # NOTE: We use a dictionary as reference, which is not serializable
-            # into XML. The problem is that the reference is ment to be within
-            # the same XML file, which is not the case here.
-            # TODO: Fuck the whole OMEXML bullshit and simply put everything
-            # in a pandas data frame.
+            # into XML. The problem is that the reference ID is not globally
+            # unique when metadata for each image file is extracted separately.
+            # TODO: Fuck the whole OMEXML approach and simply put everything
+            # into a pandas data frame.
             captures = matches.groupdict()
             lookup[well_id].append(captures)
 
