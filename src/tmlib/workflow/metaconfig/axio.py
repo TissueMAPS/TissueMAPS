@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 IMAGE_FILE_REGEX_PATTERN = r'.+_p(?P<s>\d+)(?P<c>[A-Za-z0-9]+)\.'
 
 #: Supported extensions for metadata files
-METADATA_FILE_REGEX_PATTERN = r''
+METADATA_FILE_REGEX_PATTERN = r'(?!.*)'
 
 
 class AxioMetadataHandler(MetadataHandler):
