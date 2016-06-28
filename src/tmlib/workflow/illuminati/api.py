@@ -278,36 +278,38 @@ class PyramidBuilder(ClusterRoutines):
                         job_descriptions['run'].append(description)
 
                     if level == layer.maxzoom_level_index:
-                        coordinates = layer.get_empty_base_tile_coordinates()
                         # Creation of empty base tiles that don't map to images
-                        # TODO: split over multiple jobs if there are many
-                        # empty tiles
-                        job_count += 1
-                        job_descriptions['run'].append({
-                            'id': job_count,
-                            'inputs': {},
-                            'outputs': {
-                                'image_files': [
-                                    os.path.join(
-                                        layer.location,
-                                        layer.build_tile_group_name(
-                                            layer.tile_coordinate_group_map[
-                                                level, c[0], c[1]
-                                            ]
-                                        ),
-                                        layer.build_tile_file_name(
-                                            level, c[0], c[1]
+                        coordinates = layer.get_empty_base_tile_coordinates()
+                        batches = self._create_batches(
+                            list(coordinates), args.batch_size
+                        )
+                        for batch in batches:
+                            job_count += 1
+                            job_descriptions['run'].append({
+                                'id': job_count,
+                                'inputs': {},
+                                'outputs': {
+                                    'image_files': [
+                                        os.path.join(
+                                            layer.location,
+                                            layer.build_tile_group_name(
+                                                layer.tile_coordinate_group_map[
+                                                    level, y, x
+                                                ]
+                                            ),
+                                            layer.build_tile_file_name(
+                                                level, y, x
+                                            )
                                         )
-                                    )
-                                    for c in coordinates
-                                ]
-                            },
-                            'layer_id': layer.id,
-                            'level': level,
-                            'index': index,
-                            'clip_value': None,
-                            'clip_percent': None
-                        })
+                                        for y, x in batch
+                                    ]
+                                },
+                                'layer_id': layer.id,
+                                'level': level,
+                                'index': index,
+                                'clip_value': None,
+                                'clip_percent': None
+                            })
         job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
         return job_descriptions
 
