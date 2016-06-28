@@ -585,8 +585,7 @@ class PyramidBuilder(ClusterRoutines):
     def _create_empty_maxzoom_level_tiles(self, batch):
         with tm.utils.Session() as session:
 
-            layer = session.query(tm.ChannelLayer).\
-                get(batch['layer_id'])
+            layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
 
             logger.info(
                 'processing layer: channel %d, time point %d, z-plane %d',

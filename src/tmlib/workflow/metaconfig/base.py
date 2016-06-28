@@ -521,7 +521,8 @@ class MetadataHandler(object):
 
             ix = np.where(md.well_name == well_name)[0]
             positions = zip(
-                md.loc[ix, 'stage_position_y'], md.loc[ix, 'stage_position_x'])
+                md.loc[ix, 'stage_position_y'], md.loc[ix, 'stage_position_x']
+            )
 
             coordinates = self._calculate_coordinates(positions)
 
