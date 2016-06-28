@@ -231,6 +231,7 @@ class Plate(Model, DateMixIn):
         if not(len(np.unique(well_dims[:, 0])) == 1 and
                 len(np.unique(well_dims[:, 1])) == 1):
             logger.warning('wells don\'t have equal sizes')
+            logger.info('use size of largest well')
         well_size = (np.max(well_dims[:, 0]), np.max(well_dims[:, 1]))
         rows = len(self.nonempty_rows)
         cols = len(self.nonempty_columns)
