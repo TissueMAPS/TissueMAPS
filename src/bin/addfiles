@@ -163,7 +163,7 @@ if __name__ == '__main__':
                         one_or_none()
                     if file is not None:
                         if file.upload_status != FileUploadStatus.COMPLETE:
-                            print 'copy metadata file "%s"' % f.name
+                            print 'copy metadata file "%s"' % f
                             src = os.path.join(args.source_directory, f)
                             dst = file.location
                             file.upload_status = FileUploadStatus.UPLOADING
