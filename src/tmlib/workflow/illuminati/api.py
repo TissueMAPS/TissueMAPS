@@ -82,18 +82,6 @@ class PyramidBuilder(ClusterRoutines):
         '''
         logger.info('performing data integrity tests')
         with tm.utils.Session() as session:
-            sites_per_well = session.query(
-                    func.count(tm.Site.id)
-                ).\
-                join(tm.Well).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id).\
-                group_by(tm.Well.id).\
-                all()
-            if len(set(sites_per_well)) > 1:
-                raise DataIntegrityError(
-                    'The number of sites must be the same for each well!'
-                )
             images_per_site = session.query(
                     func.count(tm.ChannelImageFile.id)
                 ).\
@@ -117,7 +105,6 @@ class PyramidBuilder(ClusterRoutines):
                 raise DataIntegrityError(
                     'The number of wells must be the same for each plate!'
                 )
-            # TODO: are these restrictions still required?
 
         logger.info('create job descriptions')
         logger.debug('create descriptions for "run" jobs')
@@ -438,8 +425,8 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('clip intensity values')
                 # NOTE: assumes channel images are 16-bit
                 if batch['clip_value'] is None:
-                    # TODO: anity check; if pixel values are too for the channel,
-                    # it means that the channel is probably "empty"
+                    # TODO: sanity check; if pixel values are too low for the
+                    # channel, the channel is probably "empty"
                     # (for example because the staining didn't work)
                     # In this case we want to prevent that too extreme
                     # rescaling is applied, which wouldn't appear nice.
@@ -482,6 +469,7 @@ class PyramidBuilder(ClusterRoutines):
                     # No need to clip and scale when already 8-bit
                     image = image.clip(clip_below, clip_above)
                     image = image.scale(clip_below, clip_above)
+
                 image_store[file.name] = image
                 for t in mapped_tiles:
                     name = layer.build_tile_file_name(
@@ -501,6 +489,9 @@ class PyramidBuilder(ClusterRoutines):
                         image_store[file.name], t['y_offset'], t['x_offset']
                     )
 
+                    # Determine files that contain overlapping pixels,
+                    # i.e. pixels falling into the currently processed tile
+                    # that are not contained by the file.
                     file_coordinate = np.array((file.site.y, file.site.x))
                     # TODO: calculate this only for the local neighborhood
                     # of the file rather than for all files!
@@ -524,6 +515,7 @@ class PyramidBuilder(ClusterRoutines):
                         extra_file_coordinate = np.array((
                             extra_file.site.y, extra_file.site.x
                         ))
+
                         condition = file_coordinate > extra_file_coordinate
                         # TODO: handle cases of missing/omitted images
                         # Each batch only processes the overlapping tiles
