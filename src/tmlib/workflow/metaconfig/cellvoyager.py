@@ -139,9 +139,9 @@ class CellvoyagerMetadataReader(MetadataReader):
             # the metadata
             img.Name = e.text
             img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
-            img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
+            img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
             matches = r.search(img.Name)
             # NOTE: We use a dictionary as reference, which is not serializable
             # into XML. The problem is that the reference ID is not globally
