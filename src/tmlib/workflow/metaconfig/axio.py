@@ -54,3 +54,4 @@ class AxioMetadataReader(MetadataReader):
 
     @notimplemented
     def read(self, microscope_metadata_files, microscope_image_files):
+        '''Not implemented'''
