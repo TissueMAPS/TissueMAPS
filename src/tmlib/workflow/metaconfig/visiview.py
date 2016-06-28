@@ -1,3 +1,8 @@
+'''Implementation of classes for reading microscope image and metadata files
+provided in a format specific to the Nikon equipped
+with Visitron VisiView software
+'''
+
 import os
 import re
 import logging
