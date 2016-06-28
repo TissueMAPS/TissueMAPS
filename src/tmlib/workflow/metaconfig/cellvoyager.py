@@ -115,6 +115,11 @@ class CellvoyagerMetadataReader(MetadataReader):
             # A name has to be set as a flag for the handler to update
             # the metadata
             img.Name = e.text
+            # Translate positional information into well identifier string
+            well_row = utils.map_number_to_letter(
+                int(e.attrib['{%s}Row' % mlf_ns]))
+            well_col = int(e.attrib['{%s}Column' % mlf_ns])
+            well_id = '%s%.2d' % (well_row, well_col)
             # TODO: there is a bug that prevents setting the date for
             # images with index > 0
             img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
@@ -125,15 +130,18 @@ class CellvoyagerMetadataReader(MetadataReader):
             img.Pixels.plane_count = 1
             if e.attrib['{%s}Type' % mlf_ns] == 'IMG':
                 img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
+                img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
             else:
+                field_index = e.attrib['{%s}FieldIndex' % mlf_ns]
                 logger.error(
-                    'erroneous acquisition - no channel information '
-                    'available for image "%s"', img.Name
+                    'erroneous acquisition - no channel and z-position '
+                    'information available at well %s field %d'
+                    % (well_id, field_index)
                 )
                 img.Pixels.Channel(0).Name = None
+                img.Pixels.Plane(0).PositionZ = None
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
-            img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
             matches = r.search(img.Name)
             # NOTE: We use a dictionary as reference, which is not serializable
             # into XML. The problem is that the reference is ment to be within
@@ -141,10 +149,6 @@ class CellvoyagerMetadataReader(MetadataReader):
             # TODO: Fuck the whole OMEXML bullshit and simply put everything
             # in a pandas data frame.
             captures = matches.groupdict()
-            well_row = utils.map_number_to_letter(
-                int(e.attrib['{%s}Row' % mlf_ns]))
-            well_col = int(e.attrib['{%s}Column' % mlf_ns])
-            well_id = '%s%.2d' % (well_row, well_col)
             lookup[well_id].append(captures)
 
         # Obtain the general experiment information and well plate format
