@@ -286,13 +286,29 @@ class MetadataHandler(object):
         # total number of planes.
         n_images = self.omexml_metadata.image_count
         if not n_images == self.metadata.shape[0]:
-            raise MetadataError('Incorrect number of images.')
+            logger.warning(
+                'number of images specified in metadata doesn\'t match the '
+                'number of available images'
+            )
+            # raise MetadataError('Incorrect number of images.')
 
         md = self.metadata
 
         lookup = dict()
         r = re.compile(regex)
         for i in xrange(n_images):
+            # Only consider image elements for which the value of the *Name*
+            # attribute matches.
+            image = self.omexml_metadata.image(i)
+            pixels = image.Pixels
+            name = image.Name
+            matched_md = md[md.name == name]
+            if matched_md.empty:
+                # TODO: do we need to keep track of missing images, e.g.
+                # for pyramid creation
+                logger.warning('image "%s" is missing', name)
+            else:
+                matched_indices = matched_md.index
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
             # regular expression, which is supposed to match a pattern in the
@@ -300,7 +316,7 @@ class MetadataHandler(object):
             # Here we create a lookup table with a mapping of captured matches
             # to the index of the corresponding image element.
             if len(self._file_mapper_list[i].files) > 1:
-                raise ValueError('There should only be a single filename.')
+                raise MetadataError('There should only be a single filename.')
             filename = os.path.basename(self._file_mapper_list[i].files[0])
             match = r.search(filename)
             if not match:
@@ -317,13 +333,6 @@ class MetadataHandler(object):
             index = sorted(captures.keys())
             key = tuple([captures[ix] for ix in index])
             lookup[key] = i
-
-            # Only consider image elements for which the value of the *Name*
-            # attribute matches.
-            image = self.omexml_metadata.image(i)
-            pixels = image.Pixels
-            name = image.Name
-            matched_indices = md[md.name == name].index
 
             if pixels.channel_count > 1:
                 raise NotSupportedError(

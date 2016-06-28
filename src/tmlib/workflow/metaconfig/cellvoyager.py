@@ -1,3 +1,6 @@
+'''Implementation of classes for reading microscope image and metadata files
+provided in a format specfic to the Yokogawa CellVoyager 7000 microscope.
+'''
 import re
 import logging
 import bioformats
@@ -13,7 +16,7 @@ from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
 logger = logging.getLogger(__name__)
 
 #: Regular expression pattern to identify image files
-IMAGE_FILE_REGEX_PATTERN = '[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.'
+IMAGE_FILE_REGEX_PATTERN = r'[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.'
 
 #: Supported extensions for metadata files
 METADATA_FILE_REGEX_PATTERN = r'.*\.(mlf|mrf)$'

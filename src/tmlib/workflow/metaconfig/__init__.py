@@ -18,7 +18,7 @@ __logo__ = '''
 '''.format(name=__name__, version=__version__, fullname=__fullname__)
 
 
-SUPPORTED_MICROSCOPE_TYPES = {'visiview', 'cellvoyager', 'default'}
+SUPPORTED_MICROSCOPE_TYPES = {'visiview', 'cellvoyager', 'axio', 'default'}
 
 
 def import_microscope_type_module(microscope_type):
