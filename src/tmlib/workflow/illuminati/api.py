@@ -6,6 +6,7 @@ import itertools
 import shapely.geometry
 import sqlalchemy.orm
 from sqlalchemy import func
+from sqlalchemy.orm.exc import NoResultFound
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
@@ -412,14 +413,19 @@ class PyramidBuilder(ClusterRoutines):
                 batch['level']
             )
 
-            if batch['illumcorr'] or (batch['clip'] and not batch['clip_value']):
+            try:
                 illumstats_file = session.query(tm.IllumstatsFile).\
                     filter_by(
                         channel_id=layer.channel_id,
                         cycle_id=layer.channel.image_files[0].cycle_id
                     ).\
                     one()
-                stats = illumstats_file.get()
+            except NoResultsFound:
+                raise WorkflowError(
+                    'No illumination statistics file found for channel %d'
+                    % layer.channel_id
+                )
+            stats = illumstats_file.get()
 
             if batch['clip']:
                 logger.info('clip intensity values')
