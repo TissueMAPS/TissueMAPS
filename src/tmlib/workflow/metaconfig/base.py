@@ -443,20 +443,27 @@ class MetadataHandler(object):
         if not regex:
             raise RegexError('No regular expression provided.')
 
-        provided_names = re.findall(r'\(\?P\<(\w+)\>', regex)
-        required_names = {'w', 'c', 'z', 's', 't'}
-        for name in provided_names:
-            if name not in required_names:
+        provided_fields = re.findall(r'\(\?P\<(\w+)\>', regex)
+        possible_fields = {'w', 'c', 'z', 's', 't'}
+        required_fields = {'c', 's'}
+        defaults = {'w': 'A01', 'z': 0, 't': 0}
+        for name in provided_fields:
+            if name not in possible_fields:
                 raise RegexError(
-                    '"%s" is not a supported group name.\n'
+                    '"%s" is not a supported regular expression field.\n'
                     'Supported are "%s"'
-                    % (name, '", "'.join(required_names))
+                    % (name, '", "'.join(required_fields))
+                )
+            if name not in required_fields:
+                logger.warning(
+                    'regular expression field "%s" not provided, defaults to %s',
+                    str(defaults[name])
                 )
 
-        for name in required_names:
-            if name not in provided_names:
+        for name in required_fields:
+            if name not in provided_fields:
                 raise RegexError(
-                    'Expression must contain group name "%s"', name
+                    'Regular expression must contain field "%s"', name
                 )
 
         logger.info('retrieve metadata from filenames via regular expression')
@@ -472,12 +479,13 @@ class MetadataHandler(object):
                     'Metadata could not be retrieved from filename "%s" '
                     'using regular expression "%s"' % (f, regex)
                 )
+            # Not every microscope provides all the information in the filename.
             capture = match.groupdict()
             md.at[i, 'channel_name'] = str(capture['c'])
-            md.at[i, 'zplane'] = int(capture['z'])
-            md.at[i, 'tpoint'] = int(capture['t'])
-            md.at[i, 'well_name'] = str(capture['w'])
             md.at[i, 'site'] = int(capture['s'])
+            md.at[i, 'zplane'] = int(capture.get('z', defaults['z']))
+            md.at[i, 'tpoint'] = int(capture.get('t', defaults['t']))
+            md.at[i, 'well_name'] = str(capture.get('w', defaults['w']))
 
         return self.metadata
 
