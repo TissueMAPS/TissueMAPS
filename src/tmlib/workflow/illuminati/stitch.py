@@ -17,16 +17,37 @@ def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
     -------
     Tuple[int]
         number of rows and columns of the stitched mosaic image
+
+    Raises
+    ------
+    ValueError
+        when value of `stitch_major_axis` is neither ``"horizontal"`` nor
+        ``"vertical"``
+    IndexError
+        when dimensions cannot be determined
     '''
     if stitch_major_axis == 'vertical':
         decent = True
-    else:
+    elif stitch_major_axis == 'horizontal':
         decent = False
+    else:
+        raise ValueError(
+            'Argument "stitch_major_axis" must be either "vertical" or '
+            '"horizontal".'
+        )
 
-    tmpI = np.arange((int(np.sqrt(n_sites)) - 5),
-                     (int(np.sqrt(n_sites)) + 5))
+    # TODO: this could be further generalized
+    if n_sites > 100:
+        n = 10
+    else:
+        n = 5
+    tmpI = np.arange((int(np.sqrt(n_sites)) - n), (int(np.sqrt(n_sites)) + n))
     tmpII = np.matrix(tmpI).conj().T * np.matrix(tmpI)
     (a, b) = np.where(np.triu(tmpII) == n_sites)
+    if len(a) == 0 and len(b) == 0:
+        raise IndexError(
+            'Dimensions of stitched overview could not be determined.'
+        )
     stitch_dims = sorted([abs(tmpI[a[0]]), abs(tmpI[b[0]])], reverse=decent)
     return (stitch_dims[0], stitch_dims[1])
 
