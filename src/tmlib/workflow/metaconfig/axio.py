@@ -50,8 +50,26 @@ class AxioMetadataReader(MetadataReader):
 
     '''Class for reading metadata from files formats specific to the Zeiss
     AxioImager M2 with Axiovision software.
+
+    Note
+    ----
+    The microscope doens't provide any metadata files, when images are saved
+    in `TIFF` files.
     '''
 
-    @notimplemented
     def read(self, microscope_metadata_files, microscope_image_files):
-        '''Not implemented'''
+        '''Provides an empty OMEXML.
+
+        Parameters
+        ----------
+        microscope_metadata_files: List[str]
+            absolute path to the microscope metadata files
+        microscope_image_files: List[str]
+            absolute path to the microscope image files
+
+        Returns
+        -------
+        bioformats.omexml.OMEXML
+            OMEXML image metadata
+        '''
+        return bioformats.OMEXML(XML_DECLARATION)
