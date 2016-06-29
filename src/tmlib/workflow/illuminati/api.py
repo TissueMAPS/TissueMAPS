@@ -521,7 +521,7 @@ class PyramidBuilder(ClusterRoutines):
                         # Each batch only processes the overlapping tiles
                         # at the upper and/or left border of images.
                         if all(condition):
-                            logger.debug('insert pixels from top left image')
+                            logger.info('insert pixels from top left image')
                             y = file.site.image_size[0] - abs(t['y_offset'])
                             x = file.site.image_size[1] - abs(t['x_offset'])
                             height = abs(t['y_offset'])
@@ -533,7 +533,7 @@ class PyramidBuilder(ClusterRoutines):
                             )
                             tile.insert(subtile, 0, 0)
                         elif condition[0] and not condition[1]:
-                            logger.debug('insert pixels from top image')
+                            logger.info('insert pixels from top image')
                             y = file.site.image_size[0] - abs(t['y_offset'])
                             height = abs(t['y_offset'])
                             if t['x_offset'] < 0:
@@ -551,7 +551,7 @@ class PyramidBuilder(ClusterRoutines):
                             )
                             tile.insert(subtile, 0, x_offset)
                         elif not condition[0] and condition[1]:
-                            logger.debug('insert pixels from left image')
+                            logger.info('insert pixels from left image')
                             x = file.site.image_size[1] - abs(t['x_offset'])
                             width = abs(t['x_offset'])
                             if t['y_offset'] < 0:

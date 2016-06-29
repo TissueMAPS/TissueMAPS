@@ -263,8 +263,8 @@ class ChannelLayer(Model):
         -------
         List[Dict[str, Tuple[int]]]
             array of mappings with "row" and "column" coordinate as well as
-            "y_offset" and "x_offset" for each tile whose pixels are part of
-            `image_file`
+            "y_offset" and "x_offset" relative to `image_file` for each tile
+            whose pixels are part of `image_file`
 
         Note
         ----
