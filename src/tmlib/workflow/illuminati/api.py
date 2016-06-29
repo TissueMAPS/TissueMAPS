@@ -470,8 +470,9 @@ class PyramidBuilder(ClusterRoutines):
                     image = image.correct(stats)
                 if batch['align']:
                     image = image.align(crop=False)
-                if image.is_uint8 and clip_value > 255:
-                    clip_value = 255
+                if image.is_uint8:
+                    clip_below = 0
+                    clip_above = 255
                 image = image.clip(clip_below, clip_above)
                 image = image.scale(clip_below, clip_above)
 
