@@ -106,21 +106,21 @@ def calc_stitch_layout(stitch_dims, stage_positions):
     row_1_increasing = row_positions[0] < row_positions[n_cols-1]
     row_2_increasing = row_positions[n_cols] < row_positions[(2*n_cols)-1]
 
-    column_1_constant = col_positions[0] == col_positions[n_rows-1]
-    column_1_increasing = row_positions[0] < row_positions[n_rows-1]
-    column_2_increasing = row_positions[n_rows] < row_positions[(2*n_rows)-1]
+    col_1_constant = col_positions[0] == col_positions[n_rows-1]
+    col_1_increasing = col_positions[0] < col_positions[n_rows-1]
+    col_2_increasing = col_positions[n_rows] < col_positions[(2*n_rows)-1]
 
     if row_1_constant:
         fill_order = 'horizontal'
-    elif column_1_constant:
+    elif col_1_constant:
         fill_order = 'vertical'
     else:
         raise ValueError('Stitch layout could not be determined.')
 
     if fill_order == 'horizontal':
-        if column_1_increasing and column_2_increasing:
+        if col_1_increasing and col_2_increasing:
             layout = 'horizontal'
-        elif column_1_increasing or column_2_increasing:
+        elif col_1_increasing or col_2_increasing:
             layout = 'zigzag_horizontal'
         else:
             raise ValueError('Stitch layout could not be determined.')
