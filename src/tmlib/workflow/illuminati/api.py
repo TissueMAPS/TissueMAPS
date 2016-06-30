@@ -595,15 +595,11 @@ class PyramidBuilder(ClusterRoutines):
                 'creating empty tiles at maximum zoom level %d', batch['level']
             )
 
-            missing_tile_coords = layer.get_empty_base_tile_coordinates()
-            # TODO: add to batches!!!
-            for t in missing_tile_coords:
-                name = layer.build_tile_file_name(
-                    batch['level'], t[0], t[1]
-                )
-                group = layer.tile_coordinate_group_map[
-                    batch['level'], t[0], t[1]
-                ]
+            for name in batch['outputs']
+                level, row, column = layer.get_coordinate_from_name(name)
+                if level != batch['level']:
+                    raise ValueError('Level doesn\'t match!')
+                group = layer.tile_coordinate_group_map[level, row, column]
                 tile_file = session.get_or_create(
                     tm.PyramidTileFile,
                     name=name, group=group, row=t[0],
