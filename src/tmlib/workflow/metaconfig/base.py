@@ -297,27 +297,33 @@ class MetadataHandler(object):
         lookup = dict()
         r = re.compile(regex)
         for i in xrange(n_images):
+
             # Only consider image elements for which the value of the *Name*
             # attribute matches.
             image = self.omexml_metadata.image(i)
             pixels = image.Pixels
             name = image.Name
-            matched_md = md[md.name == name]
-            if matched_md.empty:
+            matched_names = [
+                n for n in md.name
+                if r.search(n).groupdict() == r.search(name).groupdict()
+            ]
+            if len(matched_names) > 1:
+                raise MetadataError('Incorrect reference to image file.')
+            elif len(matched_names) == 0:
                 # TODO: do we need to keep track of missing images, e.g.
                 # for pyramid creation
-                logger.warning('image "%s" is missing', name)
-            else:
-                matched_indices = matched_md.index
+                logger.warning('image #%d "%s" is missing', i, name)
+                continue
+            idx = md[md.name == matched_names[0]].index[0]
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
             # regular expression, which is supposed to match a pattern in the
             # image filename and is able to extract the required information.
             # Here we create a lookup table with a mapping of captured matches
             # to the index of the corresponding image element.
-            if len(self._file_mapper_list[i].files) > 1:
+            if len(self._file_mapper_list[idx].files) > 1:
                 raise MetadataError('There should only be a single filename.')
-            filename = os.path.basename(self._file_mapper_list[i].files[0])
+            filename = os.path.basename(self._file_mapper_list[idx].files[0])
             match = r.search(filename)
             if not match:
                 raise RegexError(
@@ -325,11 +331,11 @@ class MetadataHandler(object):
                 )
             captures = match.groupdict()
             if 'z' not in captures.keys():
-                captures['z'] = md.at[i, 'zplane']
+                captures['z'] = md.at[idx, 'zplane']
             else:
                 # NOTE: quick and dirty hack for CellVoyager microscope,
                 # which doesn't write the z index into the image file
-                md.at[i, 'zplane'] = captures['z']
+                md.at[idx, 'zplane'] = captures['z']
             index = sorted(captures.keys())
             key = tuple([captures[ix] for ix in index])
             lookup[key] = i
@@ -339,18 +345,16 @@ class MetadataHandler(object):
                     'Only image elements with one channel are supported.'
                 )
 
-            for ix in matched_indices:
+            if hasattr(image, 'AcquisitionDate'):
+                md.at[idx, 'date'] = image.AcquisitionDate
 
-                if hasattr(image, 'AcquisitionDate'):
-                    md.at[ix, 'date'] = image.AcquisitionDate
+            if hasattr(pixels.Channel(0), 'Name'):
+                md.at[idx, 'channel_name'] = pixels.Channel(0).Name
 
-                if hasattr(pixels.Channel(0), 'Name'):
-                    md.at[ix, 'channel_name'] = pixels.Channel(0).Name
-
-                if (hasattr(pixels.Plane(0), 'PositionX') and
-                        hasattr(pixels.Plane(0), 'PositionY')):
-                    md.at[ix, 'stage_position_x'] = pixels.Plane(0).PositionX
-                    md.at[ix, 'stage_position_y'] = pixels.Plane(0).PositionY
+            if (hasattr(pixels.Plane(0), 'PositionX') and
+                    hasattr(pixels.Plane(0), 'PositionY')):
+                md.at[idx, 'stage_position_x'] = pixels.Plane(0).PositionX
+                md.at[idx, 'stage_position_y'] = pixels.Plane(0).PositionY
 
 
         # NOTE: Plate information is usually not readily available from images
