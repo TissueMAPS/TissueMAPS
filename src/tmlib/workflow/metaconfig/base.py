@@ -296,6 +296,10 @@ class MetadataHandler(object):
 
         lookup = dict()
         r = re.compile(regex)
+        matches = {
+            tuple(r.search(name).groupdict().values()): name
+            for name in md.name
+        }
         for i in xrange(n_images):
 
             # Only consider image elements for which the value of the *Name*
@@ -303,18 +307,12 @@ class MetadataHandler(object):
             image = self.omexml_metadata.image(i)
             pixels = image.Pixels
             name = image.Name
-            matched_names = [
-                n for n in md.name
-                if r.search(n).groupdict() == r.search(name).groupdict()
-            ]
-            if len(matched_names) > 1:
-                raise MetadataError('Incorrect reference to image file.')
-            elif len(matched_names) == 0:
-                # TODO: do we need to keep track of missing images, e.g.
-                # for pyramid creation
+            try:
+                matched_name = matches[tuple(r.search(name).groupdict().values())]
+            except KeyError:
                 logger.warning('image #%d "%s" is missing', i, name)
                 continue
-            idx = md[md.name == matched_names[0]].index[0]
+            idx = md[md.name == matched_name].index[0]
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
             # regular expression, which is supposed to match a pattern in the
