@@ -250,7 +250,7 @@ class MapobjectType(Model, DateMixIn):
         # ])
         # TODO: calculate the optimal zoom level
         if self.is_static:
-            min_poly_zoom = maxzoom_level
+            min_poly_zoom = 0
             max_poly_zoom = 0
         else:
             min_poly_zoom = maxzoom_level - 4
