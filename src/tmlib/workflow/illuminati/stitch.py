@@ -53,8 +53,7 @@ def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
 
 
 def calc_stitch_dimensions(stage_positions):
-    '''
-    Determine stitch dimensions from stage positions.
+    '''Determines stitch dimensions from stage positions.
 
     Parameters
     ----------
@@ -74,8 +73,7 @@ def calc_stitch_dimensions(stage_positions):
 
 
 def calc_stitch_layout(stitch_dims, stage_positions):
-    '''
-    Determine the stitch layout of the mosaic image, i.e. in which order
+    '''Determines the stitch layout of the mosaic image, i.e. in which order
     individual images need to be stitched together.
 
     Parameters
