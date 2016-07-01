@@ -27,7 +27,7 @@ input:
 
   - name: plot
     type: Plot
-    value:
+    value: false
     options: [true, false]
     help: Should a figure be created?
 
