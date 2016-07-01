@@ -60,7 +60,7 @@ class GC3Pie(object):
         logger.info('initialize GC3Pie extension')
         logger.info('create GC3Pie engine')
         store = create_gc3pie_sql_store()
-        engine = create_gc3pie_engine(store)
+        engine = create_gc3pie_engine(store, forget=True)
         # NOTE: gevent scheduler is not available on localhost when app is
         # started debug mode via run_simple()
         app.config.setdefault('SCHEDULER', 'gevent')
@@ -110,11 +110,11 @@ class GC3Pie(object):
         :py:class:`tmlib.models.Task`
         """
         logger.debug('insert jobs into tasks table')
-        self._store.save(jobs)
+        persistent_id = self._store.save(jobs)
         logger.debug('update submissions table')
         submission = db.session.query(tm.Submission).\
             get(jobs.submission_id)
-        submission.top_task_id = jobs.persistent_id
+        submission.top_task_id = persistent_id
         db.session.add(submission)
         db.session.commit()
 
