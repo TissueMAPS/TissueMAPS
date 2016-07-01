@@ -160,7 +160,8 @@ class MapobjectType(Model, DateMixIn):
         else:
             select_stmt = session.query(
                 MapobjectOutline.mapobject_id,
-                MapobjectOutline.geom_poly.ST_AsGeoJSON())
+                MapobjectOutline.geom_poly.ST_AsGeoJSON()
+            )
 
         outlines = select_stmt.\
             join(MapobjectOutline.mapobject).\
