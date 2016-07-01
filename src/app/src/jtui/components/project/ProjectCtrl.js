@@ -2,10 +2,10 @@ angular.module('jtui.project')
 .controller('ProjectCtrl', ['$scope', '$state', '$stateParams', '$interval', 'project', 'channels', 'projectService', 'runnerService', '$uibModal', 'hotkeys',
             function ($scope, $state, $stateParams, $interval, project, channels, projectService, runnerService, $uibModal, hotkeys) {
 
-    console.log('project: ', project)
+    // console.log('project: ', project)
     $scope.project = project;
 
-    console.log('channels: ', channels)
+    // console.log('channels: ', channels)
     $scope.channels = channels;
 
     $scope.project.viewProps = {
@@ -23,7 +23,7 @@ angular.module('jtui.project')
     var checkIsOpen = false;
     $scope.checkProject = function() {
         if (checkIsOpen) return;
-        console.log('check project:', $scope.project)
+        // console.log('check project:', $scope.project)
         var modalInst = $uibModal.open({
             templateUrl: 'src/setup/modals/result.html',
             controller: 'SetupResultCtrl',
@@ -57,7 +57,7 @@ angular.module('jtui.project')
     var saveIsOpen = false;
     $scope.saveProject = function() {
         if (saveIsOpen) return;
-        console.log('save project:', $scope.project)
+        // console.log('save project:', $scope.project)
         var modalInst = $uibModal.open({
             templateUrl: 'src/setup/modals/result.html',
             controller: 'SetupResultCtrl',
@@ -91,7 +91,7 @@ angular.module('jtui.project')
     var runIsOpen = false;
     $scope.run = function(project) {
         if (runIsOpen) return;
-        console.log('run project:', $scope.project);
+        // console.log('run project:', $scope.project);
         var modalInst = $uibModal.open({
             templateUrl: 'src/jtui/components/project/modals/run.html',
             controller: 'RunCtrl'
@@ -101,7 +101,7 @@ angular.module('jtui.project')
 
         modalInst.result.then(function () {
 
-            console.log('job ids:', $scope.subJobId.map(Number))
+            // console.log('job ids:', $scope.subJobId.map(Number))
             if ($scope.subJobId.length > 10) {
                 console.log('too many jobs');
                 return
@@ -110,25 +110,25 @@ angular.module('jtui.project')
                 var check = false;
                 // First save the pipeline and return potential errors
                 projectService.saveProject($scope.project).then(function (result) {
-                    console.log('save result: ', result);
+                    // console.log('save result: ', result);
                     if (!result.success) {
-                        console.log('pipeline could not be saved');
+                        // console.log('pipeline could not be saved');
                         // Show the error
                         $scope.saveProject();
                     } else {
                         // Then check the pipeline and return potential errors
                         projectService.checkProject($scope.project).then(function (result) {
-                            console.log('check result: ', result);
+                            // console.log('check result: ', result);
                             if (!result.success) {
-                                console.log('pipeline check failed');
+                                // console.log('pipeline check failed');
                                 // Show the error
                                 $scope.checkProject();
                             } else {
-                                console.log('pipeline check successful');
+                                // console.log('pipeline check successful');
                                 // Submit pipeline for processing
-                                console.log('submit pipeline');
+                                // console.log('submit pipeline');
                                 runnerService.run($scope.subJobId, $scope.project);
-                                console.log('---START MONITORING SUBMISSION STATUS---')
+                                // console.log('---START MONITORING SUBMISSION STATUS---')
                                 $scope.startMonitoring();
                         }
                         });
@@ -180,7 +180,6 @@ angular.module('jtui.project')
             resolve: {
                 joblist: ['projectService', function(projectService){
                     return projectService.createJoblist($scope.project).then(function (data) {
-                        console.log(data.joblist)
                         return data.joblist;
                     });
                 }]
@@ -261,18 +260,18 @@ angular.module('jtui.project')
 
     function getStatus() {
         runnerService.getStatus($scope.project).then(function (result) {
-            console.log('status: ', result.status)
+            // console.log('status: ', result.status)
             if (result.status == null || _.isEmpty(result.status)) {
                 $scope.outputAvailable = false;
                 $scope.submission = {
-                    is_done: false,
+                    done: false,
                     state: '',
                     percent_done: 0,
                     failed: false
                 }
             } else {
                 $scope.submission = result.status;
-                if (result.status.is_done) {
+                if (result.status.done) {
                     if (! $scope.outputAvailable) {
                         getOutput();
                         $scope.outputAvailable = true;
@@ -286,7 +285,7 @@ angular.module('jtui.project')
 
     function getOutput() {
         runnerService.getOutput($scope.project).then(function (result) {
-            console.log('output: ', result.output)
+            // console.log('output: ', result.output)
             $scope.jobs.output = [];
             if (result.output) {
                 result.output.forEach(function(r) {
@@ -365,28 +364,28 @@ angular.module('jtui.project')
 
     $scope.activateModule = function(index, $event) {
         if ($event.shiftKey) {
-            console.log('click ignored')
+            // console.log('click ignored')
         } else {
             $scope.project.pipe.description.pipeline[index].active = true;
             var mod = $scope.project.pipe.description.pipeline[index].name;
-            console.log('activate module: ', mod)
+            // console.log('activate module: ', mod)
         }
     }
 
     $scope.deactivateModule = function(index, $event) {
         if ($event.shiftKey) {
-            console.log('click ignored')
+            // console.log('click ignored')
         } else {
             $scope.project.pipe.description.pipeline[index].active = false;
             var mod = $scope.project.pipe.description.pipeline[index].name;
-            console.log('deactivate module: ', mod)
+            // console.log('deactivate module: ', mod)
         }
     }
 
     $scope.storeModuleName = function(oldModuleName, newModuleName) {
-        console.log('old module name in pipe: ', oldModuleName)
+        // console.log('old module name in pipe: ', oldModuleName)
         $scope.oldModuleName = oldModuleName;
-        console.log('new module name: ', newModuleName)
+        // console.log('new module name: ', newModuleName)
         var ixPipe = $scope.project.pipe.description.pipeline.map(function(e) { 
                 return e.name;
             }).indexOf(newModuleName);
@@ -403,10 +402,10 @@ angular.module('jtui.project')
 
     $scope.removeModule = function(module, $parent, $event) {
         if ($event.shiftKey) {
-            console.log('click ignored');
+            // console.log('click ignored');
         } else {
             var mod = module.name;
-            console.log(mod);
+            // console.log(mod);
             var ixHandles = $scope.project.handles.map(function(e) { 
                     return e.name;
                 }).indexOf(mod);
@@ -416,7 +415,7 @@ angular.module('jtui.project')
             var ixAdded = $scope.addedModuleNames.indexOf(mod);
             if (ixHandles > -1) {
                 var currentProject = $scope.project;
-                console.log('remove module \"' + mod + '\"');
+                // console.log('remove module \"' + mod + '\"');
                 // Remove the module from the pipeline
                 currentProject.handles.splice(ixHandles, 1);
                 currentProject.pipe.description.pipeline.splice(ixPipe, 1);
@@ -425,40 +424,40 @@ angular.module('jtui.project')
                 ixSelected = $scope.selectedModules.indexOf(mod.name);
                 $scope.selectedModules.splice(ixSelected, 1);
                 $scope.addedModuleNames.splice(ixAdded, 1);
-                console.log('update project:', currentProject);
+                // console.log('update project:', currentProject);
                 $scope.project = currentProject;
 
                 // Change the view in case the module is currently active
                 if ($scope.project.pipe.description.pipeline.length == 0) {
-                    console.log('go back to parent state')
+                    // console.log('go back to parent state')
                     $state.go('project');
                 } else if ($stateParams.moduleName == mod) {
                     // TODO: why is "moduleName" not in $stateParams?
-                    console.log('switch module');
+                    // console.log('switch module');
                     $state.go('project.module', {
                         moduleName: $scope.project.handles[ixHandles - 1].name
                     });
                 }
             } else {
-                console.log('removal of module \"' + mod + '\" failed');
+                // console.log('removal of module \"' + mod + '\" failed');
             }
         }
     }
 
     $scope.editModuleName = function(ixPipe, newModuleName) {
-        console.log('new module name in pipe: ', newModuleName)
+        // console.log('new module name in pipe: ', newModuleName)
         var oldModuleName = $scope.oldModuleName;
         // We have to edit the related descriptions as well
-        console.log('rename corresponding handles description')
+        // console.log('rename corresponding handles description')
         $scope.oldModuleName = [];
         var ixHandles = $scope.project.handles.map(function(e) { 
                 return e.name;
             }).indexOf(oldModuleName);
         $scope.project.handles[ixHandles].name = newModuleName;
-        console.log('rename handles in pipeline description')
+        // console.log('rename handles in pipeline description')
         var oldHandlesFile = $scope.project.pipe.description.pipeline[ixPipe].handles
         var newHandlesFile = oldHandlesFile.replace(oldModuleName, newModuleName);
-        console.log('handles file: ', newHandlesFile)
+        // console.log('handles file: ', newHandlesFile)
         $scope.project.pipe.description.pipeline[ixPipe].handles = newHandlesFile;
         $scope.project.pipe.description.pipeline[ixPipe].name = newModuleName;
         ixSelected = $scope.selectedModules.indexOf(oldModuleName);
@@ -475,13 +474,13 @@ angular.module('jtui.project')
             correct: true
         };
         $scope.project.pipe.description.input.channels.push(newChannel);
-        console.log('added new channel')
+        // console.log('added new channel')
     };
 
     $scope.removeChannel = function() {
         // Remove last pattern in list
         $scope.project.pipe.description.input.channels.pop();
-        console.log('removed last channel')
+        // console.log('removed last channel')
     };
 
     $scope.addedModuleNames = [];
@@ -492,12 +491,12 @@ angular.module('jtui.project')
                     return e.name;
                 }).indexOf(addedModule.name);
             if (ixHandles == -1) {
-                console.log('add module \"' + addedModule.name + '\"')
+                // console.log('add module \"' + addedModule.name + '\"')
                 // If module doesn't yet exist in pipeline simply add it
                 var newName = addedModule.name;
 
             } else {
-                console.log('\"' + addedModule.name + '\" already exists. Rename it.')
+                // console.log('\"' + addedModule.name + '\" already exists. Rename it.')
                 // If a module with the same name already exists in the pipeline rename
                 // the newly added module to assert that each handles filename is unique
                 var re = new RegExp(addedModule.name + '_(\\d+)$', 'i');
@@ -512,7 +511,7 @@ angular.module('jtui.project')
                             previousNumbers.push(parseInt(e.match(re)[1]));
                         }
                     }
-                    console.log('previous numbers: ', previousNumbers)
+                    // console.log('previous numbers: ', previousNumbers)
                     if (previousNumbers.length > 0) {
                         var newNumber = Math.max.apply(Math, previousNumbers) + 1;
                         var newName = addedModule.name + '_' + newNumber.toString();
@@ -534,7 +533,7 @@ angular.module('jtui.project')
                         name: newName,
                         description: angular.copy(addedModule.description)
             };
-            console.log('handles object of added module:', newHandlesObject)
+            // console.log('handles object of added module:', newHandlesObject)
             $scope.project.handles.push(newHandlesObject);
             var defaultName = addedModule.pipeline.handles;
             var newHandlesFilename = defaultName.replace(addedModule.name, newName);
@@ -544,7 +543,7 @@ angular.module('jtui.project')
                         source: addedModule.pipeline.source,
                         active: addedModule.pipeline.active
             };
-            console.log('pipeline description of added module:', newDescription)
+            // console.log('pipeline description of added module:', newDescription)
             $scope.project.pipe.description.pipeline.push(newDescription);
             $scope.$apply();
         }
@@ -552,7 +551,7 @@ angular.module('jtui.project')
 
 
     $scope.getHelpForPipeline = function() {
-        console.log('get help for pipeline')
+        // console.log('get help for pipeline')
 
         var modalInst = $uibModal.open({
             templateUrl: 'src/jtui/components/project/modals/pipeHelp.html',
