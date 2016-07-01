@@ -1,4 +1,4 @@
-classdef identify_secondary_objects_iw
+classdef identify_secondary_objects_iw < handle
 
     properties (Constant)
 

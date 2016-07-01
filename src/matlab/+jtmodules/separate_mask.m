@@ -1,4 +1,4 @@
-classdef separate_mask
+classdef separate_mask < handle
 
     properties (Constant)
 
