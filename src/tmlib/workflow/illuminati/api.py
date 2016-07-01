@@ -600,7 +600,7 @@ class PyramidBuilder(ClusterRoutines):
             )
 
             for filename in batch['outputs']['image_files']:
-                name = os.path.basename(name)
+                name = os.path.basename(filename)
                 level, row, column = layer.get_coordinate_from_name(name)
                 if level != batch['level']:
                     raise ValueError('Level doesn\'t match!')
