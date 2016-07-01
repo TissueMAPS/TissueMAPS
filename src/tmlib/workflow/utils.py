@@ -89,13 +89,17 @@ def create_gc3pie_session(location, store):
     return Session(location, store=store)
 
 
-def create_gc3pie_engine(store):
+def create_gc3pie_engine(store, forget=False):
     '''Creates an `Engine` instance for submitting jobs for parallel
     processing.
 
     Parameters
     ----------
     store: gc3libs.persistence.store.Store
+        GC3Pie store object
+    forget: bool, optional
+        whether tasks in state ``TERMINATED`` should be automatically
+        removed from the engine
 
     Returns
     -------
@@ -106,7 +110,7 @@ def create_gc3pie_engine(store):
     n = 1000  # NOTE: match with number of db connections!!!
     logger.debug('set maximum number of submitted jobs to %d', n)
     engine = gc3libs.create_engine(
-        store=store, max_in_flight=n, max_submitted=n
+        store=store, max_in_flight=n, max_submitted=n, forget_terminated=forget
     )
     # Put all output files in the same directory
     logger.debug('store stdout/stderr in common output directory')
