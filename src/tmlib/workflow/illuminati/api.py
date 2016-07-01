@@ -467,8 +467,10 @@ class PyramidBuilder(ClusterRoutines):
                 image_store = dict()
                 image = file.get()
                 if batch['illumcorr']:
+                    logger.info('correct image')
                     image = image.correct(stats)
                 if batch['align']:
+                    logger.info('align image')
                     image = image.align(crop=False)
                 if image.is_uint8:
                     clip_below = 0
@@ -486,8 +488,8 @@ class PyramidBuilder(ClusterRoutines):
                     ]
                     tile_file = session.get_or_create(
                         tm.PyramidTileFile,
-                        name=name, group=group, row=t['row'],
-                        column=t['column'], level=batch['level'],
+                        name=name, group=group,
+                        row=t['row'], column=t['column'], level=batch['level'],
                         channel_layer_id=layer.id
                     )
                     logger.info('creating tile: %s', tile_file.name)
@@ -511,8 +513,10 @@ class PyramidBuilder(ClusterRoutines):
                         if extra_file.name not in image_store:
                             image = extra_file.get()
                             if batch['illumcorr']:
+                                logger.info('correct image')
                                 image = image.correct(stats)
                             if batch['align']:
+                                logger.info('align image')
                                 image = image.align(crop=False)
                             image = image.clip(clip_below, clip_above)
                             image = image.scale(clip_below, clip_above)
@@ -595,7 +599,8 @@ class PyramidBuilder(ClusterRoutines):
                 'creating empty tiles at maximum zoom level %d', batch['level']
             )
 
-            for name in batch['outputs']['image_files']:
+            for filename in batch['outputs']['image_files']:
+                name = os.path.basename(name)
                 level, row, column = layer.get_coordinate_from_name(name)
                 if level != batch['level']:
                     raise ValueError('Level doesn\'t match!')
