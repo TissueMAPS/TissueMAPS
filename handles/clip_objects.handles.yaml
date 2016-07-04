@@ -20,7 +20,7 @@ output:
 
     - name: clipped_mask
       type: LabelImage
-      key: fill_mask.filled_mask
+      key: clip_objects.clipped_mask
       help: Clipped mask.
 
     - name: figure
