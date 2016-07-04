@@ -16,8 +16,7 @@ SUPPORTED_IMAGE_FILE_EXTENSIONS = {'.png', '.tif', '.tiff', '.jpg', '.jpeg'}
 
 
 def is_image_file(filename):
-    '''
-    Check if filename ends with a supported file extension.
+    '''Checks if file represents an image based on the file extension.
 
     Parameters
     ----------
@@ -39,7 +38,7 @@ def is_image_file(filename):
 class Image(object):
 
     '''
-    Abstract base class for an image, which represents a 2D pixels array.
+    Abstract base class for an image. An image is defined as a 2D pixels array.
 
     2D means that there is only one *z* resolution.
     However, the pixels array may still have more than 2 dimensions.
@@ -466,7 +465,7 @@ class ChannelImage(Image):
 
         Parameters
         ----------
-        stats: tmlib.image.IllumstatsImages
+        stats: tmlib.image.IllumstatsContainer
             mean and standard deviation statistics at each pixel position
             calculated over all images of the same channel
 

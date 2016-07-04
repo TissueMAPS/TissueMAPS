@@ -182,9 +182,9 @@ class YamlReader(Reader):
         return load_yaml(self._stream.read())
 
 
-class TablesReader(Reader):
+class DatatableReader(Reader):
 
-    '''Class for reading datasets and attributes from HDF5 files
+    '''Class for reading data from a HDF5 file
     using the `pytables <http://www.pytables.org/>`_ library.
     '''
 
@@ -238,7 +238,7 @@ class TablesReader(Reader):
 
 class DatasetReader(Reader):
 
-    '''Class for reading datasets and attributes from HDF5 files
+    '''Class for reading data from a HDF5 file
     using the `h5py <http://docs.h5py.org/en/latest/>`_ library.
     '''
 
@@ -287,7 +287,7 @@ class DatasetReader(Reader):
             return True
 
     def list_datasets(self, path):
-        '''List datasets within a given group.
+        '''Lists datasets within a given group.
 
         Parameters
         ----------
@@ -316,7 +316,7 @@ class DatasetReader(Reader):
         return names
 
     def list_groups(self, path):
-        '''List groups within a given group.
+        '''Lists groups within a given group.
 
         Parameters
         ----------
@@ -400,17 +400,20 @@ class DatasetReader(Reader):
         if row_index and not column_index:
             if len(dset.shape) == 1:
                 raise IndexError(
-                    'Dataset dimensions do not allow row-wise indexing')
+                    'Dataset dimensions do not allow row-wise indexing'
+                )
             return dset[row_index, :]
         elif not row_index and column_index:
             if len(dset.shape) == 1:
                 raise IndexError(
-                    'Dataset dimensions do not allow column-wise indexing')
+                    'Dataset dimensions do not allow column-wise indexing'
+                )
             return dset[:, column_index]
         elif row_index and column_index:
             if len(dset.shape) == 1:
                 raise IndexError(
-                    'Dataset dimensions do not allow row/column-wise indexing')
+                    'Dataset dimensions do not allow row/column-wise indexing'
+                )
             return dset[row_index, column_index]
         elif index is not None:
             return dset[index]
