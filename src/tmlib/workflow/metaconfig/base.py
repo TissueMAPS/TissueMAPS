@@ -336,7 +336,7 @@ class MetadataHandler(object):
                 md.at[idx, 'zplane'] = captures['z']
             index = sorted(captures.keys())
             key = tuple([captures[ix] for ix in index])
-            lookup[key] = i
+            lookup[key] = idx
 
             if pixels.channel_count > 1:
                 raise NotSupportedError(
