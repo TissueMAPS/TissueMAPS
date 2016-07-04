@@ -26,7 +26,7 @@ def main(outer_mask, inner_mask, plot=False):
     clipped_mask
     clipped_mask[inner_mask > 0] = 0
     outputs = dict()
-    outputs['clipped_masks'] = clipped_mask
+    outputs['clipped_mask'] = clipped_mask
     outputs['figure'] = str()
     if plot:
         outputs['figure'] = str()
