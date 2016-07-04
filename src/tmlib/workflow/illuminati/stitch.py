@@ -17,23 +17,43 @@ def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
     -------
     Tuple[int]
         number of rows and columns of the stitched mosaic image
+
+    Raises
+    ------
+    ValueError
+        when value of `stitch_major_axis` is neither ``"horizontal"`` nor
+        ``"vertical"``
+    IndexError
+        when dimensions cannot be determined
     '''
     if stitch_major_axis == 'vertical':
         decent = True
-    else:
+    elif stitch_major_axis == 'horizontal':
         decent = False
+    else:
+        raise ValueError(
+            'Argument "stitch_major_axis" must be either "vertical" or '
+            '"horizontal".'
+        )
 
-    tmpI = np.arange((int(np.sqrt(n_sites)) - 5),
-                     (int(np.sqrt(n_sites)) + 5))
+    # TODO: this could be further generalized
+    if n_sites > 100:
+        n = 10
+    else:
+        n = 5
+    tmpI = np.arange((int(np.sqrt(n_sites)) - n), (int(np.sqrt(n_sites)) + n))
     tmpII = np.matrix(tmpI).conj().T * np.matrix(tmpI)
     (a, b) = np.where(np.triu(tmpII) == n_sites)
+    if len(a) == 0 and len(b) == 0:
+        raise IndexError(
+            'Dimensions of stitched overview could not be determined.'
+        )
     stitch_dims = sorted([abs(tmpI[a[0]]), abs(tmpI[b[0]])], reverse=decent)
     return (stitch_dims[0], stitch_dims[1])
 
 
 def calc_stitch_dimensions(stage_positions):
-    '''
-    Determine stitch dimensions from stage positions.
+    '''Determines stitch dimensions from stage positions.
 
     Parameters
     ----------
@@ -53,8 +73,7 @@ def calc_stitch_dimensions(stage_positions):
 
 
 def calc_stitch_layout(stitch_dims, stage_positions):
-    '''
-    Determine the stitch layout of the mosaic image, i.e. in which order
+    '''Determines the stitch layout of the mosaic image, i.e. in which order
     individual images need to be stitched together.
 
     Parameters
@@ -85,21 +104,21 @@ def calc_stitch_layout(stitch_dims, stage_positions):
     row_1_increasing = row_positions[0] < row_positions[n_cols-1]
     row_2_increasing = row_positions[n_cols] < row_positions[(2*n_cols)-1]
 
-    column_1_constant = col_positions[0] == col_positions[n_rows-1]
-    column_1_increasing = row_positions[0] < row_positions[n_rows-1]
-    column_2_increasing = row_positions[n_rows] < row_positions[(2*n_rows)-1]
+    col_1_constant = col_positions[0] == col_positions[n_rows-1]
+    col_1_increasing = col_positions[0] < col_positions[n_rows-1]
+    col_2_increasing = col_positions[n_rows] < col_positions[(2*n_rows)-1]
 
     if row_1_constant:
         fill_order = 'horizontal'
-    elif column_1_constant:
+    elif col_1_constant:
         fill_order = 'vertical'
     else:
         raise ValueError('Stitch layout could not be determined.')
 
     if fill_order == 'horizontal':
-        if column_1_increasing and column_2_increasing:
+        if col_1_increasing and col_2_increasing:
             layout = 'horizontal'
-        elif column_1_increasing or column_2_increasing:
+        elif col_1_increasing or col_2_increasing:
             layout = 'zigzag_horizontal'
         else:
             raise ValueError('Stitch layout could not be determined.')
@@ -115,8 +134,7 @@ def calc_stitch_layout(stitch_dims, stage_positions):
 
 
 def calc_grid_coordinates_from_layout(stitch_dims, stitch_layout):
-    '''
-    Determine the position of each image in the stitched mosaic image.
+    '''Determines the position of each image in the stitched mosaic image.
 
     Parameters
     ----------

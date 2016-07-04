@@ -6,6 +6,7 @@ import itertools
 import shapely.geometry
 import sqlalchemy.orm
 from sqlalchemy import func
+from sqlalchemy.orm.exc import NoResultFound
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
@@ -82,18 +83,6 @@ class PyramidBuilder(ClusterRoutines):
         '''
         logger.info('performing data integrity tests')
         with tm.utils.Session() as session:
-            sites_per_well = session.query(
-                    func.count(tm.Site.id)
-                ).\
-                join(tm.Well).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id).\
-                group_by(tm.Well.id).\
-                all()
-            if len(set(sites_per_well)) > 1:
-                raise DataIntegrityError(
-                    'The number of sites must be the same for each well!'
-                )
             images_per_site = session.query(
                     func.count(tm.ChannelImageFile.id)
                 ).\
@@ -117,7 +106,6 @@ class PyramidBuilder(ClusterRoutines):
                 raise DataIntegrityError(
                     'The number of wells must be the same for each plate!'
                 )
-            # TODO: are these restrictions still required?
 
         logger.info('create job descriptions')
         logger.debug('create descriptions for "run" jobs')
@@ -278,36 +266,38 @@ class PyramidBuilder(ClusterRoutines):
                         job_descriptions['run'].append(description)
 
                     if level == layer.maxzoom_level_index:
-                        coordinates = layer.get_empty_base_tile_coordinates()
                         # Creation of empty base tiles that don't map to images
-                        # TODO: split over multiple jobs if there are many
-                        # empty tiles
-                        job_count += 1
-                        job_descriptions['run'].append({
-                            'id': job_count,
-                            'inputs': {},
-                            'outputs': {
-                                'image_files': [
-                                    os.path.join(
-                                        layer.location,
-                                        layer.build_tile_group_name(
-                                            layer.tile_coordinate_group_map[
-                                                level, c[0], c[1]
-                                            ]
-                                        ),
-                                        layer.build_tile_file_name(
-                                            level, c[0], c[1]
+                        coordinates = layer.get_empty_base_tile_coordinates()
+                        batches = self._create_batches(
+                            list(coordinates), args.batch_size
+                        )
+                        for batch in batches:
+                            job_count += 1
+                            job_descriptions['run'].append({
+                                'id': job_count,
+                                'inputs': {},
+                                'outputs': {
+                                    'image_files': [
+                                        os.path.join(
+                                            layer.location,
+                                            layer.build_tile_group_name(
+                                                layer.tile_coordinate_group_map[
+                                                    level, y, x
+                                                ]
+                                            ),
+                                            layer.build_tile_file_name(
+                                                level, y, x
+                                            )
                                         )
-                                    )
-                                    for c in coordinates
-                                ]
-                            },
-                            'layer_id': layer.id,
-                            'level': level,
-                            'index': index,
-                            'clip_value': None,
-                            'clip_percent': None
-                        })
+                                        for y, x in batch
+                                    ]
+                                },
+                                'layer_id': layer.id,
+                                'level': level,
+                                'index': index,
+                                'clip_value': None,
+                                'clip_percent': None
+                            })
         job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
         return job_descriptions
 
@@ -423,21 +413,26 @@ class PyramidBuilder(ClusterRoutines):
                 batch['level']
             )
 
-            if batch['illumcorr'] or (batch['clip'] and not batch['clip_value']):
+            try:
                 illumstats_file = session.query(tm.IllumstatsFile).\
                     filter_by(
                         channel_id=layer.channel_id,
                         cycle_id=layer.channel.image_files[0].cycle_id
                     ).\
                     one()
-                stats = illumstats_file.get()
+            except NoResultsFound:
+                raise WorkflowError(
+                    'No illumination statistics file found for channel %d'
+                    % layer.channel_id
+                )
+            stats = illumstats_file.get()
 
             if batch['clip']:
                 logger.info('clip intensity values')
                 # NOTE: assumes channel images are 16-bit
                 if batch['clip_value'] is None:
-                    # TODO: anity check; if pixel values are too for the channel,
-                    # it means that the channel is probably "empty"
+                    # TODO: sanity check; if pixel values are too low for the
+                    # channel, the channel is probably "empty"
                     # (for example because the staining didn't work)
                     # In this case we want to prevent that too extreme
                     # rescaling is applied, which wouldn't appear nice.
@@ -452,9 +447,8 @@ class PyramidBuilder(ClusterRoutines):
                     logger.info('using provided clip value: %d', clip_above)
                 clip_below = stats.get_closest_percentile(0.001)
             else:
-                # NOTE: assumes that images are 16-bit!
-                clip_above = 2**16 - 1
-                clip_below = 0
+                clip_above = stats.get_closest_percentile(100)
+                clip_below = stats.get_closest_percentile(0)
 
             if batch['illumcorr']:
                 logger.info('correcting images for illumination artifacts')
@@ -473,13 +467,17 @@ class PyramidBuilder(ClusterRoutines):
                 image_store = dict()
                 image = file.get()
                 if batch['illumcorr']:
+                    logger.info('correct image')
                     image = image.correct(stats)
                 if batch['align']:
+                    logger.info('align image')
                     image = image.align(crop=False)
-                if not image.is_uint8:
-                    # No need to clip and scale when already 8-bit
-                    image = image.clip(clip_below, clip_above)
-                    image = image.scale(clip_below, clip_above)
+                if image.is_uint8:
+                    clip_below = 0
+                    clip_above = 255
+                image = image.clip(clip_below, clip_above)
+                image = image.scale(clip_below, clip_above)
+
                 image_store[file.name] = image
                 for t in mapped_tiles:
                     name = layer.build_tile_file_name(
@@ -490,15 +488,18 @@ class PyramidBuilder(ClusterRoutines):
                     ]
                     tile_file = session.get_or_create(
                         tm.PyramidTileFile,
-                        name=name, group=group, row=t['row'],
-                        column=t['column'], level=batch['level'],
+                        name=name, group=group,
+                        row=t['row'], column=t['column'], level=batch['level'],
                         channel_layer_id=layer.id
                     )
-                    logger.debug('creating tile: %s', tile_file.name)
+                    logger.info('creating tile: %s', tile_file.name)
                     tile = layer.extract_tile_from_image(
                         image_store[file.name], t['y_offset'], t['x_offset']
                     )
 
+                    # Determine files that contain overlapping pixels,
+                    # i.e. pixels falling into the currently processed tile
+                    # that are not contained by the file.
                     file_coordinate = np.array((file.site.y, file.site.x))
                     # TODO: calculate this only for the local neighborhood
                     # of the file rather than for all files!
@@ -512,8 +513,10 @@ class PyramidBuilder(ClusterRoutines):
                         if extra_file.name not in image_store:
                             image = extra_file.get()
                             if batch['illumcorr']:
+                                logger.info('correct image')
                                 image = image.correct(stats)
                             if batch['align']:
+                                logger.info('align image')
                                 image = image.align(crop=False)
                             image = image.clip(clip_below, clip_above)
                             image = image.scale(clip_below, clip_above)
@@ -522,12 +525,13 @@ class PyramidBuilder(ClusterRoutines):
                         extra_file_coordinate = np.array((
                             extra_file.site.y, extra_file.site.x
                         ))
+
                         condition = file_coordinate > extra_file_coordinate
                         # TODO: handle cases of missing/omitted images
                         # Each batch only processes the overlapping tiles
                         # at the upper and/or left border of images.
                         if all(condition):
-                            logger.debug('insert pixels from top left image')
+                            logger.info('insert pixels from top left image')
                             y = file.site.image_size[0] - abs(t['y_offset'])
                             x = file.site.image_size[1] - abs(t['x_offset'])
                             height = abs(t['y_offset'])
@@ -539,7 +543,7 @@ class PyramidBuilder(ClusterRoutines):
                             )
                             tile.insert(subtile, 0, 0)
                         elif condition[0] and not condition[1]:
-                            logger.debug('insert pixels from top image')
+                            logger.info('insert pixels from top image')
                             y = file.site.image_size[0] - abs(t['y_offset'])
                             height = abs(t['y_offset'])
                             if t['x_offset'] < 0:
@@ -557,7 +561,7 @@ class PyramidBuilder(ClusterRoutines):
                             )
                             tile.insert(subtile, 0, x_offset)
                         elif not condition[0] and condition[1]:
-                            logger.debug('insert pixels from left image')
+                            logger.info('insert pixels from left image')
                             x = file.site.image_size[1] - abs(t['x_offset'])
                             width = abs(t['x_offset'])
                             if t['y_offset'] < 0:
@@ -585,8 +589,7 @@ class PyramidBuilder(ClusterRoutines):
     def _create_empty_maxzoom_level_tiles(self, batch):
         with tm.utils.Session() as session:
 
-            layer = session.query(tm.ChannelLayer).\
-                get(batch['layer_id'])
+            layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
 
             logger.info(
                 'processing layer: channel %d, time point %d, z-plane %d',
@@ -596,22 +599,19 @@ class PyramidBuilder(ClusterRoutines):
                 'creating empty tiles at maximum zoom level %d', batch['level']
             )
 
-            missing_tile_coords = layer.get_empty_base_tile_coordinates()
-            # TODO: add to batches!!!
-            for t in missing_tile_coords:
-                name = layer.build_tile_file_name(
-                    batch['level'], t[0], t[1]
-                )
-                group = layer.tile_coordinate_group_map[
-                    batch['level'], t[0], t[1]
-                ]
+            for filename in batch['outputs']['image_files']:
+                name = os.path.basename(filename)
+                level, row, column = layer.get_coordinate_from_name(name)
+                if level != batch['level']:
+                    raise ValueError('Level doesn\'t match!')
+                group = layer.tile_coordinate_group_map[level, row, column]
                 tile_file = session.get_or_create(
                     tm.PyramidTileFile,
-                    name=name, group=group, row=t[0],
-                    column=t[1], level=batch['level'],
+                    name=name, group=group, row=row,
+                    column=column, level=batch['level'],
                     channel_layer_id=layer.id
                 )
-                logger.debug('creating tile: %s', tile_file.name)
+                logger.info('creating tile: %s', tile_file.name)
                 tile = PyramidTile.create_as_background()
                 tile_file.put(tile)
 

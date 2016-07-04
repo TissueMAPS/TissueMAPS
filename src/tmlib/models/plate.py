@@ -215,28 +215,31 @@ class Plate(Model, DateMixIn):
         return nonempty_rows
 
     @cached_property
+    def well_image_size(self):
+        '''Tuple[int]: number of pixels along the vertical and horizontal axis
+        of the largest well in the plate
+        '''
+        well_dims = np.array([w.image_size for w in self.wells])
+        if not(len(np.unique(well_dims[:, 0])) == 1 and
+                len(np.unique(well_dims[:, 1])) == 1):
+            logger.warning('wells don\'t have equal sizes')
+            logger.info('use size of largest well')
+        return (np.max(well_dims[:, 0]), np.max(well_dims[:, 1]))
+
+    @cached_property
     def image_size(self):
         '''Tuple[int]: number of pixels along the vertical and horizontal axis
-
-        Warning
-        -------
-        It's assumed that all wells have the same size.
         '''
         if len(self.wells) == 0:
             return None
         offset = self.experiment.well_spacer_size
         if len(self.wells) == 0:
             return None
-        well_dims = np.array([w.image_size for w in self.wells])
-        if not(len(np.unique(well_dims[:, 0])) == 1 and
-                len(np.unique(well_dims[:, 1])) == 1):
-            logger.warning('wells don\'t have equal sizes')
-        well_size = (np.max(well_dims[:, 0]), np.max(well_dims[:, 1]))
         rows = len(self.nonempty_rows)
         cols = len(self.nonempty_columns)
         return (
-            rows * well_size[0] + offset * (rows - 1),
-            cols * well_size[1] + offset * (cols - 1)
+            rows * self.well_image_size[0] + offset * (rows - 1),
+            cols * self.well_image_size[1] + offset * (cols - 1)
         )
 
     @cached_property

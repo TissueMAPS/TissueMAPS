@@ -58,7 +58,7 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--microscope_type', type=str, default='cellvoyager',
-        choices={'cellvoyager', 'visiview'},
+        choices={'cellvoyager', 'visiview', 'axio'},
         help='microscope type (default: cellvoyager)'
     )
     parser.add_argument(

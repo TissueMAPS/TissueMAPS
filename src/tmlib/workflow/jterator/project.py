@@ -473,14 +473,7 @@ class AvailableModules(object):
 
     @property
     def module_names(self):
-        '''
-        Names are determined from the module files, they are the
-        basenames without the suffix.
-
-        Returns
-        -------
-        List[str]
-            names of the modules
+        '''List[str]: names of the modules (determined from file names)
         '''
         return [
             os.path.splitext(os.path.basename(f))[0]
@@ -489,13 +482,7 @@ class AvailableModules(object):
 
     @property
     def module_languages(self):
-        '''
-        Languages are determined from the module file suffixes.
-
-        Returns
-        -------
-        List[str]
-            languages of the modules
+        '''List[str]: languages of the modules (determined from file suffixes)
         '''
         mapping = {
             '.py': 'python',

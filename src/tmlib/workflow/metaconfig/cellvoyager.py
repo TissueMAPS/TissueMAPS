@@ -1,3 +1,6 @@
+'''Implementation of classes for reading microscope image and metadata files
+provided in a format specfic to the Yokogawa CellVoyager 7000 microscope.
+'''
 import re
 import logging
 import bioformats
@@ -13,7 +16,7 @@ from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
 logger = logging.getLogger(__name__)
 
 #: Regular expression pattern to identify image files
-IMAGE_FILE_REGEX_PATTERN = '[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.'
+IMAGE_FILE_REGEX_PATTERN = r'[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C(?P<c>\d+)\.'
 
 #: Supported extensions for metadata files
 METADATA_FILE_REGEX_PATTERN = r'.*\.(mlf|mrf)$'
@@ -103,46 +106,51 @@ class CellvoyagerMetadataReader(MetadataReader):
         )
         mlf_ns = mlf_root.nsmap['bts']
 
-        metadata.image_count = len(mlf_elements)
+        metadata.image_count = len([
+            e for e in mlf_elements
+            if e.attrib['{%s}Type' % mlf_ns] != 'ERR'
+        ])
         lookup = defaultdict(list)
         r = re.compile(CellvoyagerMetadataHandler.IMAGE_FILE_REGEX_PATTERN)
 
-        for i, e in enumerate(mlf_elements):
-            img = metadata.image(i)
-            # A name has to be set as a flag for the handler to update
-            # the metadata
-            img.Name = e.text
-            # TODO: there is a bug that prevents setting the date for
-            # images with index > 0
+        count = 0
+        for e in mlf_elements:
+            # Translate positional information into well identifier string
+            well_row = utils.map_number_to_letter(
+                int(e.attrib['{%s}Row' % mlf_ns]))
+            well_col = int(e.attrib['{%s}Column' % mlf_ns])
+            well_id = '%s%.2d' % (well_row, well_col)
+            if e.attrib['{%s}Type' % mlf_ns] == 'ERR':
+                field_index = int(e.attrib['{%s}FieldIndex' % mlf_ns])
+                logger.error(
+                    'erroneous acquisition - no channel and z-position '
+                    'information available at well %s field %d'
+                    % (well_id, field_index)
+                )
+                continue
+            img = metadata.image(count)
             img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
             # Image files always contain only a single plane
             img.Pixels.SizeT = 1
             img.Pixels.SizeC = 1
             img.Pixels.SizeZ = 1
             img.Pixels.plane_count = 1
-            if e.attrib['{%s}Type' % mlf_ns] == 'IMG':
-                img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
-            else:
-                logger.error(
-                    'erroneous acquisition - no channel information '
-                    'available for image "%s"', img.Name
-                )
-                img.Pixels.Channel(0).Name = None
+            # A name has to be set as a flag for the handler to update
+            # the metadata
+            img.Name = e.text
+            img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
             img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
             matches = r.search(img.Name)
             # NOTE: We use a dictionary as reference, which is not serializable
-            # into XML. The problem is that the reference is ment to be within
-            # the same XML file, which is not the case here.
-            # TODO: Fuck the whole OMEXML bullshit and simply put everything
-            # in a pandas data frame.
+            # into XML. The problem is that the reference ID is not globally
+            # unique when metadata for each image file is extracted separately.
+            # TODO: Fuck the whole OMEXML approach and simply put everything
+            # into a pandas data frame.
             captures = matches.groupdict()
-            well_row = utils.map_number_to_letter(
-                int(e.attrib['{%s}Row' % mlf_ns]))
-            well_col = int(e.attrib['{%s}Column' % mlf_ns])
-            well_id = '%s%.2d' % (well_row, well_col)
             lookup[well_id].append(captures)
+            count += 1
 
         # Obtain the general experiment information and well plate format
         # specifications from the ".mrf" file:

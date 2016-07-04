@@ -170,9 +170,13 @@ class Well(Model, DateMixIn):
         n_rows = plate.nonempty_rows.index(self.y)
         n_columns = plate.nonempty_columns.index(self.x)
         experiment = plate.experiment
+        # NOTE: Since wells are allowed to have different sizes,
+        # we cannot use the size of individual wells to caluculate the offset,
+        # but rather have to use the same size for all wells
+        # (determined at the plate level)
         y_offset = (
             # Wells in the plate above the well
-            n_rows * self.image_size[0] +
+            n_rows * plate.well_image_size[0] +
             # Gaps introduced between wells
             n_rows * experiment.well_spacer_size +
             # Plates above the plate
@@ -180,7 +184,7 @@ class Well(Model, DateMixIn):
         )
         x_offset = (
             # Wells in the plate left of the well
-            n_columns * self.image_size[1] +
+            n_columns * plate.well_image_size[1] +
             # Gaps introduced between wells
             n_columns * experiment.well_spacer_size +
             # Plates left of the plate

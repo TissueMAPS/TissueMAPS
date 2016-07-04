@@ -6,6 +6,7 @@ from tmlib.image_utils import mip
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.errors import NotSupportedError
+from tmlib.errors import JobDescriptionError
 from tmlib.workflow.align import registration as reg
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow import register_api
@@ -64,6 +65,11 @@ class ImageRegistrator(ClusterRoutines):
                         'Alignment requires more than one cycle.'
                     )
 
+                if args.ref_cycle >= len(plate.cycles):
+                    raise JobDescriptionError(
+                        'Cycle index must not exceed total number of cycles.'
+                    )
+
                 site_ids = session.query(tm.Site.id).\
                     join(tm.Well).\
                     join(tm.Plate).\
@@ -82,11 +88,24 @@ class ImageRegistrator(ClusterRoutines):
 
                     for cycle in plate.cycles:
 
+                        n = session.query(tm.ChannelImageFile).\
+                            join(tm.Cycle).\
+                            join(tm.Channel).\
+                            filter(tm.Cycle.id == cycle.id).\
+                            filter(tm.Channel.wavelength == args.ref_wavelength).\
+                            filter(~tm.ChannelImageFile.omitted).\
+                            count()
+
+                        if n == 0:
+                            raise ValueError(
+                                'No image files found for cycle %d and '
+                                'wavelength "%s"'
+                                % (cycle.id, args.ref_wavelength)
+                            )
+
                         for s in batch:
 
-                            files = session.query(
-                                    tm.ChannelImageFile
-                                ).\
+                            files = session.query(tm.ChannelImageFile).\
                                 join(tm.Site).\
                                 join(tm.Cycle).\
                                 join(tm.Channel).\
@@ -97,6 +116,10 @@ class ImageRegistrator(ClusterRoutines):
                                 all()
 
                             if not files:
+                                # We don't raise an Execption here, because
+                                # there may be situations were an aquisition
+                                # failed at a given site in one cycle, but was
+                                # is present in the other cycles.
                                 logger.warning(
                                     'no files for site %d and cycle %d',
                                     s, cycle.id
@@ -153,7 +176,7 @@ class ImageRegistrator(ClusterRoutines):
                     delete()
 
     def run_job(self, batch):
-        '''Calculate shift and overhang values for the given sites.
+        '''Calculates shift and overhang values for the given sites.
 
         Parameters
         ----------

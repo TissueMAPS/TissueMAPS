@@ -191,7 +191,8 @@ class PixelsWriter(Writer):
 
 class DataTableWriter(Writer):
 
-    '''Class for writing data tables to a persistent store.'''
+    '''Class for writing data to a HDF5 file using the 
+    `pytables <http://www.pytables.org/>`_ library.'''
 
     def __init__(self, filename, truncate=False):
         '''
@@ -258,7 +259,9 @@ class DataTableWriter(Writer):
 
 class DatasetWriter(Writer):
 
-    '''Class for writing data sets to a persistent store.'''
+    '''Class for writing data to a HDF5 file using the
+    `h5py <http://docs.h5py.org/en/latest/index.html>`_ library.
+    '''
 
     def __init__(self, filename, truncate=False):
         '''
@@ -298,7 +301,7 @@ class DatasetWriter(Writer):
         else:
             return False
 
-    def write(self, path, data):
+    def write(self, path, data, compression=None):
         '''Create a dataset and write data to it.
 
         Parameters
@@ -307,11 +310,16 @@ class DatasetWriter(Writer):
             absolute path to the dataset within the file
         data:
             dataset; will be put through ``numpy.array(data)``
+        compression: str, optional
+            compression filter, either ``"lzf"`` or ``"zip"``
+            (default: ``None``)
 
         Raises
         ------
         IOError
             when `path` already exists
+        ValueError
+            when `compression` is unknown
 
         Note
         ----
@@ -346,7 +354,22 @@ class DatasetWriter(Writer):
             self._write_vlen(path, data)
         else:
             logger.debug('write dataset "%s"', path)
-            self._stream.create_dataset(path, data=data)
+            if compression is None:
+                self._stream.create_dataset(path, data=data)
+            else:
+                if compression == 'lzf':
+                    self._stream.create_dataset(
+                        path, data=data, compression='lzf'
+                    )
+                elif compression == 'zip':
+                    self._stream.create_dataset(
+                        path, data=data, compression='gzip'
+                    )
+                else:
+                    raise ValueError(
+                        'Unknown compression filter "%s"' % compression
+                    )
+
 
     def write_subset(self, path, data,
                      index=None, row_index=None, column_index=None):

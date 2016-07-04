@@ -286,22 +286,42 @@ class MetadataHandler(object):
         # total number of planes.
         n_images = self.omexml_metadata.image_count
         if not n_images == self.metadata.shape[0]:
-            raise MetadataError('Incorrect number of images.')
+            logger.warning(
+                'number of images specified in metadata doesn\'t match the '
+                'number of available images'
+            )
+            # raise MetadataError('Incorrect number of images.')
 
         md = self.metadata
 
         lookup = dict()
         r = re.compile(regex)
+        matches = {
+            tuple(r.search(name).groupdict().values()): name
+            for name in md.name
+        }
         for i in xrange(n_images):
+
+            # Only consider image elements for which the value of the *Name*
+            # attribute matches.
+            image = self.omexml_metadata.image(i)
+            pixels = image.Pixels
+            name = image.Name
+            try:
+                matched_name = matches[tuple(r.search(name).groupdict().values())]
+            except KeyError:
+                logger.warning('image #%d "%s" is missing', i, name)
+                continue
+            idx = md[md.name == matched_name].index[0]
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
             # regular expression, which is supposed to match a pattern in the
             # image filename and is able to extract the required information.
             # Here we create a lookup table with a mapping of captured matches
             # to the index of the corresponding image element.
-            if len(self._file_mapper_list[i].files) > 1:
-                raise ValueError('There should only be a single filename.')
-            filename = os.path.basename(self._file_mapper_list[i].files[0])
+            if len(self._file_mapper_list[idx].files) > 1:
+                raise MetadataError('There should only be a single filename.')
+            filename = os.path.basename(self._file_mapper_list[idx].files[0])
             match = r.search(filename)
             if not match:
                 raise RegexError(
@@ -309,39 +329,30 @@ class MetadataHandler(object):
                 )
             captures = match.groupdict()
             if 'z' not in captures.keys():
-                captures['z'] = md.at[i, 'zplane']
+                captures['z'] = md.at[idx, 'zplane']
             else:
                 # NOTE: quick and dirty hack for CellVoyager microscope,
                 # which doesn't write the z index into the image file
-                md.at[i, 'zplane'] = captures['z']
+                md.at[idx, 'zplane'] = captures['z']
             index = sorted(captures.keys())
             key = tuple([captures[ix] for ix in index])
-            lookup[key] = i
-
-            # Only consider image elements for which the value of the *Name*
-            # attribute matches.
-            image = self.omexml_metadata.image(i)
-            pixels = image.Pixels
-            name = image.Name
-            matched_indices = md[md.name == name].index
+            lookup[key] = idx
 
             if pixels.channel_count > 1:
                 raise NotSupportedError(
                     'Only image elements with one channel are supported.'
                 )
 
-            for ix in matched_indices:
+            if hasattr(image, 'AcquisitionDate'):
+                md.at[idx, 'date'] = image.AcquisitionDate
 
-                if hasattr(image, 'AcquisitionDate'):
-                    md.at[ix, 'date'] = image.AcquisitionDate
+            if hasattr(pixels.Channel(0), 'Name'):
+                md.at[idx, 'channel_name'] = pixels.Channel(0).Name
 
-                if hasattr(pixels.Channel(0), 'Name'):
-                    md.at[ix, 'channel_name'] = pixels.Channel(0).Name
-
-                if (hasattr(pixels.Plane(0), 'PositionX') and
-                        hasattr(pixels.Plane(0), 'PositionY')):
-                    md.at[ix, 'stage_position_x'] = pixels.Plane(0).PositionX
-                    md.at[ix, 'stage_position_y'] = pixels.Plane(0).PositionY
+            if (hasattr(pixels.Plane(0), 'PositionX') and
+                    hasattr(pixels.Plane(0), 'PositionY')):
+                md.at[idx, 'stage_position_x'] = pixels.Plane(0).PositionX
+                md.at[idx, 'stage_position_y'] = pixels.Plane(0).PositionY
 
 
         # NOTE: Plate information is usually not readily available from images
@@ -434,20 +445,27 @@ class MetadataHandler(object):
         if not regex:
             raise RegexError('No regular expression provided.')
 
-        provided_names = re.findall(r'\(\?P\<(\w+)\>', regex)
-        required_names = {'w', 'c', 'z', 's', 't'}
-        for name in provided_names:
-            if name not in required_names:
+        provided_fields = re.findall(r'\(\?P\<(\w+)\>', regex)
+        possible_fields = {'w', 'c', 'z', 's', 't'}
+        required_fields = {'c', 's'}
+        defaults = {'w': 'A01', 'z': 0, 't': 0}
+        for name in provided_fields:
+            if name not in possible_fields:
                 raise RegexError(
-                    '"%s" is not a supported group name.\n'
+                    '"%s" is not a supported regular expression field.\n'
                     'Supported are "%s"'
-                    % (name, '", "'.join(required_names))
+                    % (name, '", "'.join(required_fields))
+                )
+            if name not in required_fields:
+                logger.warning(
+                    'regular expression field "%s" not provided, defaults to %s',
+                    str(defaults[name])
                 )
 
-        for name in required_names:
-            if name not in provided_names:
+        for name in required_fields:
+            if name not in provided_fields:
                 raise RegexError(
-                    'Expression must contain group name "%s"', name
+                    'Regular expression must contain field "%s"', name
                 )
 
         logger.info('retrieve metadata from filenames via regular expression')
@@ -463,12 +481,13 @@ class MetadataHandler(object):
                     'Metadata could not be retrieved from filename "%s" '
                     'using regular expression "%s"' % (f, regex)
                 )
+            # Not every microscope provides all the information in the filename.
             capture = match.groupdict()
             md.at[i, 'channel_name'] = str(capture['c'])
-            md.at[i, 'zplane'] = int(capture['z'])
-            md.at[i, 'tpoint'] = int(capture['t'])
-            md.at[i, 'well_name'] = str(capture['w'])
             md.at[i, 'site'] = int(capture['s'])
+            md.at[i, 'zplane'] = int(capture.get('z', defaults['z']))
+            md.at[i, 'tpoint'] = int(capture.get('t', defaults['t']))
+            md.at[i, 'well_name'] = str(capture.get('w', defaults['w']))
 
         return self.metadata
 
@@ -512,7 +531,8 @@ class MetadataHandler(object):
 
             ix = np.where(md.well_name == well_name)[0]
             positions = zip(
-                md.loc[ix, 'stage_position_y'], md.loc[ix, 'stage_position_x'])
+                md.loc[ix, 'stage_position_y'], md.loc[ix, 'stage_position_x']
+            )
 
             coordinates = self._calculate_coordinates(positions)
 

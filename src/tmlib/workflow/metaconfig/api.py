@@ -164,9 +164,7 @@ class MetadataConfigurator(ClusterRoutines):
         :py:mod:`tmlib.workflow.metaconfig.cellvoyager`
         :py:mod:`tmlib.workflow.metaconfig.visiview`
         '''
-        reader_class = metadata_reader_factory(
-            batch['microscope_type']
-        )
+        MetadataReader = metadata_reader_factory(batch['microscope_type'])
 
         with tm.utils.Session() as session:
             acquisition = session.query(tm.Acquisition).\
@@ -179,16 +177,13 @@ class MetadataConfigurator(ClusterRoutines):
                 for f in acquisition.microscope_image_files
             }
 
-        with reader_class() as reader:
-            omexml_metadata = reader.read(
+        with MetadataReader() as mdreader:
+            omexml_metadata = mdreader.read(
                 metadata_filenames, omexml_images.keys()
             )
 
-        handler_class = metadata_handler_factory(
-            batch['microscope_type']
-        )
-
-        mdhandler = handler_class(omexml_images, omexml_metadata)
+        MetadataHandler = metadata_handler_factory(batch['microscope_type'])
+        mdhandler = MetadataHandler(omexml_images, omexml_metadata)
         mdhandler.configure_omexml_from_image_files()
         mdhandler.configure_omexml_from_metadata_files(batch['regex'])
         missing = mdhandler.determine_missing_metadata()

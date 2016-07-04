@@ -69,8 +69,7 @@ def get_module_path(module_file, repo_dir):
 
 
 def determine_language(filename):
-    '''
-    Determine language form module filename suffix.
+    '''Determines language form module filename suffix.
 
     Parameters
     ----------

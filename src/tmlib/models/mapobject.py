@@ -160,7 +160,8 @@ class MapobjectType(Model, DateMixIn):
         else:
             select_stmt = session.query(
                 MapobjectOutline.mapobject_id,
-                MapobjectOutline.geom_poly.ST_AsGeoJSON())
+                MapobjectOutline.geom_poly.ST_AsGeoJSON()
+            )
 
         outlines = select_stmt.\
             join(MapobjectOutline.mapobject).\
@@ -249,10 +250,14 @@ class MapobjectType(Model, DateMixIn):
             # if n <= n_points_per_tile_limit
         # ])
         # TODO: calculate the optimal zoom level
-        min_poly_zoom = maxzoom_level - 4
-        min_poly_zoom = 0 if min_poly_zoom < 0 else min_poly_zoom
-        max_poly_zoom = min_poly_zoom - 3
-        max_poly_zoom = 0 if max_poly_zoom < 0 else max_poly_zoom
+        if self.is_static:
+            min_poly_zoom = 0
+            max_poly_zoom = 0
+        else:
+            min_poly_zoom = maxzoom_level - 4
+            min_poly_zoom = 0 if min_poly_zoom < 0 else min_poly_zoom
+            max_poly_zoom = min_poly_zoom - 3
+            max_poly_zoom = 0 if max_poly_zoom < 0 else max_poly_zoom
         return (min_poly_zoom, max_poly_zoom)
 
     def get_feature_value_matrix(self, feature_names): 

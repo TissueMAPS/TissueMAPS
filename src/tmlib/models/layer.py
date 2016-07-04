@@ -7,10 +7,13 @@ import lxml
 from xml.dom import minidom
 import collections
 from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.orm import Session
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 from cached_property import cached_property
 
+from tmlib.models.file import ChannelImageFile
+from tmlib.models.site import Site
 from tmlib.models.base import Model
 from tmlib.models import distribute_by
 from tmlib.utils import autocreate_directory_property
@@ -260,8 +263,8 @@ class ChannelLayer(Model):
         -------
         List[Dict[str, Tuple[int]]]
             array of mappings with "row" and "column" coordinate as well as
-            "y_offset" and "x_offset" for each tile whose pixels are part of
-            `image_file`
+            "y_offset" and "x_offset" relative to `image_file` for each tile
+            whose pixels are part of `image_file`
 
         Note
         ----
@@ -289,18 +292,55 @@ class ChannelLayer(Model):
         # Images at the lower and/or right border of the total overview, wells,
         # or plates represent an exception because in these cases there is
         # no neighboring image to create the tile instead, but an empty spacer.
-        # TODO: include also if neighboring image is missing or omitted
+        # The same is true in case of missing neighboring images.
+        session = Session.object_session(self)
+        lower_neighbor = session.query(ChannelImageFile).\
+            join(Site).\
+            filter(
+                Site.y == site.y + 1, Site.x == site.x,
+                Site.well_id == site.well_id,
+                ChannelImageFile.channel_id == self.channel_id
+            ).\
+            one_or_none()
+        lower_right_neighbor = session.query(ChannelImageFile).\
+            join(Site).\
+            filter(
+                Site.y == site.y + 1, Site.x == site.x + 1,
+                Site.well_id == site.well_id,
+                ChannelImageFile.channel_id == self.channel_id
+            ).\
+            one_or_none()
+        right_neighbor = session.query(ChannelImageFile).\
+            join(Site).\
+            filter(
+                Site.y == site.y, Site.x == site.x + 1,
+                Site.well_id == site.well_id,
+                ChannelImageFile.channel_id == self.channel_id
+            ).\
+            one_or_none()
+        has_lower_neighbor = lower_neighbor is not None
+        has_right_neighbor = right_neighbor is not None
         for i, row in enumerate(row_info['indices']):
             y_offset = row_info['offsets'][i]
-            if (y_offset + self.tile_size) > site.image_size[0]:
-                if ((row + 1) != self.dimensions[-1][0] and
-                        (site.y + 1) != well.dimensions[0]):
+            is_overhanging_vertically = (
+                (y_offset + self.tile_size) > site.image_size[0]
+            )
+            is_not_lower_plate_border = (row + 1) != self.dimensions[-1][0]
+            is_not_lower_well_border = (site.y + 1) != well.dimensions[0]
+            if is_overhanging_vertically and has_lower_neighbor:
+                if (is_not_lower_plate_border and
+                        is_not_lower_well_border):
                     continue
             for j, col in enumerate(col_info['indices']):
                 x_offset = col_info['offsets'][j]
-                if (x_offset + self.tile_size) > site.image_size[1]:
-                    if ((col + 1) != self.dimensions[-1][1] and
-                            (site.x + 1) != well.dimensions[1]):
+                is_overhanging_horizontally = (
+                    (x_offset + self.tile_size) > site.image_size[1]
+                )
+                is_not_right_plate_border = (col + 1) != self.dimensions[-1][1]
+                is_not_right_well_border = (site.x + 1) != well.dimensions[1]
+                if is_overhanging_horizontally and has_right_neighbor:
+                    if (is_not_right_plate_border and
+                            is_not_right_well_border):
                         continue
                 mappings.append({
                     'row': row,
@@ -373,20 +413,20 @@ class ChannelLayer(Model):
             f for f in self.channel.image_files
             if f.tpoint == self.tpoint and f.zplane == self.zplane
         ]
-        for file in image_files:
-            if file.omitted:
+        for f in image_files:
+            if f.omitted:
                 continue
-            y_offset_site, x_offset_site = file.site.offset
+            y_offset_site, x_offset_site = f.site.offset
             row_indices = self._calc_tile_indices(
-                y_offset_site, file.site.image_size[0],
+                y_offset_site, f.site.image_size[0],
                 experiment.vertical_site_displacement
             )
             col_indices = self._calc_tile_indices(
-                x_offset_site, file.site.image_size[1],
+                x_offset_site, f.site.image_size[1],
                 experiment.horizontal_site_displacement
             )
             for row, col in itertools.product(row_indices, col_indices):
-                mapping[(row, col)].append(file)
+                mapping[(row, col)].append(f)
         return mapping
 
     def calc_coordinates_of_next_higher_level(self, level, row, column):
