@@ -39,9 +39,8 @@ def encode_channel_layer(obj, encoder):
     image_height, image_width = obj.image_size[-1]
     return {
         'id': encode_pk(obj.id),
-        'zplane': obj.zplane,
-        'tpoint': obj.tpoint,
         'max_zoom': obj.maxzoom_level_index,
+        'zplane': obj.zplane,
         'image_size': {
             'width': image_width,
             'height': image_height
