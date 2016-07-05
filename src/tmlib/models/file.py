@@ -202,16 +202,12 @@ class ChannelImageFile(File, DateMixIn):
 
     '''A *channel image file* holds a single 2D pixels plane that was extracted
     from a microscope image file. It represents a unique combination of
-    time point, site, channel, and z-plane.
+    time point, site, and channel.
 
     Attributes
     ----------
     tpoint: int
         zero-based time point index in the time series
-    zplane: int
-        zero-based z-plane index of the focal plane within the three
-        dimensional stack (projected images have only a single z-plane
-        with index zero)
     omitted: bool
         whether the image file is considered empty, i.e. consisting only of
         background pixels without having biologically relevant information
@@ -227,23 +223,24 @@ class ChannelImageFile(File, DateMixIn):
         ID of the parent channel
     channel: tmlib.models.Channel
         parent channel to which the image file belongs
+    n_planes: int
+        number of z-resolution levels
     '''
 
     #: str: name of the corresponding database table
     __tablename__ = 'channel_image_files'
 
     __table_args__ = (
-        UniqueConstraint(
-            'tpoint', 'zplane', 'site_id', 'cycle_id', 'channel_id'
-        ),
+        UniqueConstraint('tpoint', 'site_id', 'cycle_id', 'channel_id'),
     )
 
     # Table columns
     _name = Column('name', String, index=True)
     name = Column(String, index=True)
     tpoint = Column(Integer, index=True)
-    zplane = Column(Integer, index=True)
     omitted = Column(Boolean, index=True)
+    _n_planes = Column('n_planes', Integer, index=True)
+    n_planes = Column(Integer, index=True)
     cycle_id = Column(
         Integer,
         ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE')
@@ -272,19 +269,14 @@ class ChannelImageFile(File, DateMixIn):
     )
 
     #: Format string for filenames
-    FILENAME_FORMAT = 'channel_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}_z{z:0>3}.tif'
+    FILENAME_FORMAT = 'channel_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}.h5'
 
-    def __init__(self, tpoint, zplane, site_id, cycle_id, channel_id,
-                 omitted=False):
+    def __init__(self, tpoint, site_id, cycle_id, channel_id, omitted=False):
         '''
         Parameters
         ----------
         tpoint: int
             zero-based time point index in the time series
-        zplane: int
-            zero-based z-plane index of the focal plane within the three
-            dimensional stack (projected images have only a single z-plane
-            with index zero)
         site_id: int
             ID of the parent site
         cycle_id: int
@@ -295,22 +287,23 @@ class ChannelImageFile(File, DateMixIn):
             whether the image file is considered empty, i.e. consisting only of
             background pixels without having biologically relevant information
             (default: ``False``)
-
-        Note
-        ----
-        The relationship to `channel_layer` and `cycle` may not be known upon
-        initialization of the object. The corresponding attributes may
-        therefore be set later.
+        n_planes: int
+            number of pixels planes in the image
         '''
         self.tpoint = tpoint
-        self.zplane = zplane
         self.site_id = site_id
         self.omitted = omitted
         self.cycle_id = cycle_id
         self.channel_id = channel_id
+        self._n_planes = 0
 
-    def get(self):
-        '''Get image from store.
+    def get(self, z=None):
+        '''Gets stored image.
+
+        Parameters
+        ----------
+        z: int, optional
+            zero-based z index of an individual pixel plane (default: ``None``)
 
         Returns
         -------
@@ -318,12 +311,9 @@ class ChannelImageFile(File, DateMixIn):
             image stored in the file
         '''
         logger.debug('get data from channel image file: %s', self.name)
-        with PixelsReader(self.location) as f:
-            pixels = f.read()
         metadata = ChannelImageMetadata(
             name=self.name,
             tpoint=self.tpoint,
-            zplane=self.zplane,
             channel=self.channel.index,
             plate=self.site.well.plate.name,
             well=self.site.well.name,
@@ -331,6 +321,17 @@ class ChannelImageFile(File, DateMixIn):
             x=self.site.x,
             cycle=self.cycle.index
         )
+        if z is not None:
+            with DatasetReader(self.location) as f:
+                array = f.read(str(z))
+            metadata.zplane = z
+        else:
+            pixels = list()
+            with DatasetReader(self.location) as f:
+                zplanes = f.list_datasets('/', pattern='\d+')
+                for z in zplanes:
+                    pixels.append(f.read(z))
+            array = np.dstack(pixels)
         if self.site.intersection is not None:
             metadata.upper_overhang = self.site.intersection.upper_overhang
             metadata.lower_overhang = self.site.intersection.lower_overhang
@@ -341,30 +342,56 @@ class ChannelImageFile(File, DateMixIn):
             ][0]
             metadata.x_shift = shift.x
             metadata.y_shift = shift.y
-        return ChannelImage(pixels, metadata)
+        return ChannelImage(array, metadata)
 
-    @assert_type(data='tmlib.image.ChannelImage')
-    def put(self, data):
-        '''Put image to store.
+    @assert_type(image='tmlib.image.ChannelImage')
+    def put(self, image, z=None):
+        '''Puts image to storage.
 
         Parameters
         ----------
-        data: tmlib.image.ChannelImage
-            data that should be stored in the image file
+        image: tmlib.image.ChannelImage
+            pixels/voxels data that should be stored in the image file
+        z: int, optional
+            zero-based z index of an individual pixel plane (default: ``None``)
+
+        Note
+        ----
+        When no `z` index is provided, the file will be truncated and all
+        planes replaced.
         '''
         logger.debug('put data to channel image file: %s', self.name)
-        with PixelsWriter(self.location) as f:
-            f.write(data.pixels)
+        if z is not None:
+            if image.dimensions[2] > 1:
+                raise ValueError('Image must be a 2D pixels plane.')
+            with DatasetWriter(self.location) as f:
+                f.write(str(z), image.array)
+            self.n_planes += 1
+        else:
+            with DatasetWriter(self.location, truncate=True) as f:
+                for index, array in image.iter_planes():
+                    f.write(str(index), array)
+            self.n_planes = image.dimensions[2]
 
     @hybrid_property
     def name(self):
         '''str: name of the file'''
         if self._name is None:
             self._name = self.FILENAME_FORMAT.format(
-                t=self.tpoint, w=self.site.well.name, y=self.site.y, x=self.site.x,
-                c=self.channel.index, z=self.zplane
+                t=self.tpoint, w=self.site.well.name,
+                y=self.site.y, x=self.site.x,
+                c=self.channel.index
             )
         return self._name
+
+    @hybrid_property
+    def n_planes(self):
+        '''int: number of planes stored in the file'''
+        return self._n_planes
+
+    @n_planes.setter
+    def n_planes(self, value):
+        self._n_planes = value
 
     @property
     def location(self):
@@ -374,10 +401,10 @@ class ChannelImageFile(File, DateMixIn):
     def __repr__(self):
         return (
             '<ChannelImageFile('
-                'id=%r, tpoint=%r, well=%r, y=%r, x=%r, channel=%r, zplane=%r'
+                'id=%r, tpoint=%r, well=%r, y=%r, x=%r, channel=%r'
             ')>'
             % (self.id, self.tpoint, self.site.well.name, self.site.y,
-               self.site.x, self.channel.index, self.zplane)
+               self.site.x, self.channel.index)
         )
 
 
@@ -394,10 +421,6 @@ class ProbabilityImageFile(File, DateMixIn):
         name of the file
     tpoint: int
         zero-based time point index in the time series
-    zplane: int
-        zero-based z-plane index of the focal plane within the three
-        dimensional stack (projected images have only a single z-plane
-        with index zero)
     site_id: int
         ID of the parent site
     site: tmlib.models.Site
@@ -412,13 +435,12 @@ class ProbabilityImageFile(File, DateMixIn):
     __tablename__ = 'probability_image_files'
 
     __table_args__ = (
-        UniqueConstraint('tpoint', 'zplane', 'site_id', 'mapobject_type_id'),
+        UniqueConstraint('tpoint', 'site_id', 'mapobject_type_id'),
     )
 
     # Table columns
     name = Column(String, index=True)
     tpoint = Column(Integer, index=True)
-    zplane = Column(Integer, index=True)
     site_id = Column(Integer, ForeignKey('sites.id'))
     mapobject_type_id = Column(
         Integer,
@@ -439,18 +461,14 @@ class ProbabilityImageFile(File, DateMixIn):
         )
     )
 
-    FILENAME_FORMAT = 'probability_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_m{m:0>3}_z{z:0>3}.tif'
+    FILENAME_FORMAT = 'probability_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_m{m:0>3}.tif'
 
-    def __init__(self, tpoint, zplane, site_id, mapobject_type_id):
+    def __init__(self, tpoint, site_id, mapobject_type_id):
         '''
         Parameters
         ----------
         tpoint: int
             zero-based time point index in the time series
-        zplane: int
-            zero-based z-plane index of the focal plane within the three
-            dimensional stack (projected images have only a single z-plane
-            with index zero)
         site_id: int
             ID of the parent site
         site: tmlib.models.Site
@@ -459,12 +477,11 @@ class ProbabilityImageFile(File, DateMixIn):
             ID of the parent mapobject type
         '''
         self.tpoint = tpoint
-        self.zplane = zplane
         self.site_id = site_id
         self.mapobject_type_id = mapobject_type_id
         self.name = self.FILENAME_FORMAT.format(
             t=self.tpoint, w=self.site.well, y=self.site.y, x=self.site.x,
-            m=self.mapobject_type_id, z=self.zplane
+            m=self.mapobject_type_id
         )
 
     def get(self):
@@ -475,6 +492,7 @@ class ProbabilityImageFile(File, DateMixIn):
         tmlib.image.ProbabilityImage
             image stored in the file
         '''
+        # TODO
         logger.debug('get data from probability image file: %s', self.name)
         with PixelsReader(self.location) as f:
             pixels = f.read()
@@ -488,18 +506,18 @@ class ProbabilityImageFile(File, DateMixIn):
         metadata = None
         return ProbabilityImage(pixels, metadata)
 
-    @assert_type(data='tmlib.image.ProbabilityImage')
-    def put(self, data):
+    @assert_type(image='tmlib.image.ProbabilityImage')
+    def put(self, image):
         '''Put image to store.
 
         Parameters
         ----------
-        data: tmlib.image.ProbabilityImage
+        image: tmlib.image.ProbabilityImage
             data that should be stored in the image file
         '''
         logger.debug('put data to probability image file: %s', self.name)
         with PixelsWriter(self.location) as f:
-            f.write(data.pixels)
+            f.write(image.array)
 
     @property
     def location(self):
@@ -509,10 +527,9 @@ class ProbabilityImageFile(File, DateMixIn):
     def __repr__(self):
         return (
             '<ProbabilityImageFile('
-                'id=%r, tpoint=%r, zplane=%r, mapobject_type=%r, '
-                'well=%r, y=%r, x=%r'
+                'id=%r, tpoint=%r, mapobject_type=%r, well=%r, y=%r, x=%r'
             ')>'
-            % (self.id, self.tpoint, self.zplane, self.mapobject_type.name,
+            % (self.id, self.tpoint, self.mapobject_type.name,
                self.site.well, self.site.y, self.site.x)
         )
 
@@ -537,16 +554,18 @@ class PyramidTileFile(File):
     column: int
         zero-based column index of the tile at given zoom `level`
     channel_layer_id: int
-        ID of the parent channel layer
-    channel_layer: tmlib.models.ChannelLayer
-        parent channel layer to which the tile belongs
+        ID of the parent channel pyramid
+    channel_pyramid: tmlib.models.ChannelLayer
+        parent channel pyramid to which the tile belongs
     '''
 
     #: str: name of the corresponding database table
     __tablename__ = 'pyramid_tile_files'
 
     __table_args__ = (
-        UniqueConstraint('level', 'row', 'column', 'channel_layer_id'),
+        UniqueConstraint(
+            'level', 'row', 'column', 'channel_layer_id'
+        ),
     )
 
     # Table columns
@@ -581,7 +600,7 @@ class PyramidTileFile(File):
         column: int
             zero-based column index of the tile at given zoom `level`
         channel_layer_id: int
-            ID of the parent channel layer
+            ID of the parent channel pyramid
         '''
         self.name = name
         self.group = group
@@ -591,7 +610,7 @@ class PyramidTileFile(File):
         self.channel_layer_id = channel_layer_id
 
     def get(self):
-        '''Get tile from store.
+        '''Gets a stored tile.
 
         Returns
         -------
@@ -607,23 +626,22 @@ class PyramidTileFile(File):
             level=self.level,
             row=self.row,
             column=self.column,
-            tpoint=self.channel_layer.tpoint,
             zplane=self.channel_layer.zplane
         )
         return PyramidTile(pixels, metadata)
 
-    @assert_type(data='tmlib.image.PyramidTile')
-    def put(self, data):
-        '''Put tile to store.
+    @assert_type(image='tmlib.image.PyramidTile')
+    def put(self, image):
+        '''Puts a tile to storage.
 
         Parameters
         ----------
-        data: tmlib.image.PyramidTile
-            data that should be stored in the file
+        image: tmlib.image.PyramidTile
+            pixels data that should be stored in the file
         '''
         logger.debug('put data to pyramid tile file: %s', self.name)
         with PixelsWriter(self.location) as f:
-            f.write(data.pixels)
+            f.write(image.array)
 
     @property
     def location(self):
@@ -634,13 +652,11 @@ class PyramidTileFile(File):
 
     def __repr__(self):
         return (
-            '<PyramidTile('
-                'id=%r, channel=%r, tpoint=%r, zplane=%r, '
-                'row=%r, column=%r, level=%r'
+            '<PyramidTileFile('
+                'id=%r, channel=%r, zplane=%r, row=%r, column=%r, level=%r'
             ')>'
             % (self.id, self.channel_layer.channel.index,
-               self.channel_layer.tpoint, self.channel_layer.zplane,
-               self.row, self.column, self.level)
+               self.channel_layer.zplane, self.row, self.column, self.level)
         )
 
 
@@ -750,8 +766,8 @@ class IllumstatsFile(File, DateMixIn):
         '''
         logger.debug('put data to illumination statistics file: %s', self.name)
         with DatasetWriter(self.location, truncate=True) as f:
-            f.write('mean', data.mean.pixels)
-            f.write('std', data.std.pixels)
+            f.write('mean', data.mean.array)
+            f.write('std', data.std.array)
             f.write('/percentiles/keys', data.percentiles.keys())
             f.write('/percentiles/values', data.percentiles.values())
 

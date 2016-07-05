@@ -772,12 +772,13 @@ class MetadataHandler(object):
             # In this case individual focal planes that should be projected
             # to the final 2D plane are distributed across several files.
             # These files have to be loaded on the same node in order to be
-            # able to perform the projection.
+            # able to perform the projection. In addition, all z-planes will
+            # be stored in the same file. In case they wouldn't end up on the
+            # same node, this would create problems with parallel file access.
             for i in xrange(md.shape[0]):
                 ref_index = self._file_mapper_list[i].ref_index
                 element = ImageFileMapping()
                 element.ref_index = ref_index
-                # element.ref_file = md.at[ref_ix, 'name']
                 element.files = self._file_mapper_list[i].files
                 element.series = self._file_mapper_list[i].series
                 element.planes = self._file_mapper_list[i].planes

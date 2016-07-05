@@ -246,6 +246,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
             for ch in self.project.pipe['description']['input']['channels']
         ]
 
+        # TODO: parallelize over sub-regions in the image
+        # region = self.project.pipe['description']['input']['region']
+        # overlap = self.project.pipe['description']['input']['overlap']
+
         with tm.utils.Session() as session:
 
             sites = session.query(tm.Site).\
@@ -256,9 +260,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
             if job_ids is None:
                 job_ids = set(range(1, len(sites)+1))
 
-            for j, site in enumerate(sites):
+            for i, site in enumerate(sites):
 
-                job_id = j+1  # job IDs are one-based!
+                job_id = i+1  # job IDs are one-based!
 
                 if job_id not in job_ids:
                     continue
@@ -279,9 +283,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     image_file_paths[ch_name] = [
                         f.location for f in image_files
                     ]
-                    # image_file_ids[ch_name] = [
-                    #     f.id for f in image_files
-                    # ]
 
                 job_descriptions['run'].append({
                     'id': job_id,
@@ -304,7 +305,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             for module in self.pipeline
                         ])
                     },
-                    # 'image_file_ids': image_file_ids,
                     'site_id': site.id,
                     'plot': args.plot
                 })

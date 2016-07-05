@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import scipy.ndimage as ndi
+import skimage.filters
 import skimage.measure
 import skimage.color
 from abc import ABCMeta
@@ -38,277 +39,354 @@ def is_image_file(filename):
 class Image(object):
 
     '''
-    Abstract base class for an image. An image is defined as a 2D pixels array.
+    Abstract base class for an image. An image is defined as a 2D pixels or
+    3D voxels array.
 
-    2D means that there is only one *z* resolution.
-    However, the pixels array may still have more than 2 dimensions.
-    The 3rd dimension represents color and is referred to as "bands".
-
-    The class provides the pixel array as well as associated metadata.
-    It makes use of lazy loading so that image objects can be created and their
-    metadata attribute accessed without the pixels arrays being immediately
-    loaded into memory.
+    Note
+    ----
+    The first two dimensions are the y, x axes of individual pixel planes.
+    The optional third dimension represents either z resolution and is referred
+    to as *zlevels* or color, which is referred to as *bands*.
     '''
-
-    # TODO: make methods more general to work with 3D arrays to handle multiple
-    # bands
 
     __metaclass__ = ABCMeta
 
-    @assert_type(pixels='numpy.ndarray')
-    def __init__(self, pixels, metadata=None):
+    @assert_type(array='numpy.ndarray')
+    def __init__(self, array, metadata=None):
         '''
         Parameters
         ----------
-        pixels: numpy.ndarray
-            pixels array
+        array: numpy.ndarray
+            2D pixels or 3D voxels array
         metadata: tmlib.metadata.ImageMetadata, optional
             image metadata (default: ``None``)
         '''
-        self.pixels = pixels
+        self.array = array
         self.metadata = metadata
 
     @property
-    def dimensions(self):
-        '''Tuple[int]: y, x dimensions of the pixel array'''
-        return self.pixels.shape[0:2]
+    def array(self):
+        '''numpy.ndarray: pixels/voxels array'''
+        return np.squeeze(self._array)
+
+    @array.setter
+    def array(self, value):
+        if len(value.shape) == 2:
+            self._array = np.reshape(value, value.shape + (1,))
+        elif len(value.shape) == 3:
+            self._array = value
 
     @property
-    def bands(self):
-        '''int: number of colors encoded in the pixels array'''
-        if len(self.pixels.shape) > 2:
-            return self.pixels.shape[2]
-        else:
-            return 1
+    def dimensions(self):
+        '''Tuple[int]: y, x, z/c dimensions of the pixels/voxels array'''
+        return self._array.shape
 
     @property
     def dtype(self):
-        '''str: data type of the pixel array elements'''
-        return self.pixels.dtype
+        '''str: data type of voxels array elements'''
+        return self.array.dtype
 
     @property
     def is_int(self):
-        '''bool: whether pixel array has integer data type
+        '''bool: whether voxels array has integer data type
         '''
-        return self.pixels.dtype == np.int
+        return self.array.dtype == np.int
 
     @property
     def is_float(self):
-        '''bool: whether pixel array has float data type
+        '''bool: whether voxels array has float data type
         '''
-        return self.pixels.dtype == np.float
+        return self.array.dtype == np.float
 
     @property
     def is_uint(self):
-        '''bool: whether pixel array has unsigned integer data type'''
-        return self.pixels.dtype == np.uint16 or self.pixels.dtype == np.uint8
+        '''bool: whether voxels array has unsigned integer data type'''
+        return self.array.dtype == np.uint16 or self.array.dtype == np.uint8
 
     @property
     def is_uint8(self):
-        '''bool: whether pixel array has 8-bit unsigned integer data type'''
-        return self.pixels.dtype == np.uint8
+        '''bool: whether voxels array has 8-bit unsigned integer data type'''
+        return self.array.dtype == np.uint8
 
     @property
     def is_uint16(self):
-        '''bool: whether pixel array has 16-bit unsigned integer data type'''
-        return self.pixels.dtype == np.uint16
+        '''bool: whether voxels array has 16-bit unsigned integer data type'''
+        return self.array.dtype == np.uint16
 
     @property
     def is_binary(self):
-        '''bool: whether pixel array has boolean data type'''
-        return self.pixels.dtype == np.bool
+        '''bool: whether voxels array has boolean data type'''
+        return self.array.dtype == np.bool
 
-    def extract(self, y_offset, x_offset, height, width):
-        '''Extract a continuous, rectangular area of pixels from the image.
+    def iter_planes(self):
+        '''Iterates over pixel planes of the image.
+
+        Returns
+        -------
+        generator
+
+        Examples
+        --------
+        >>>arr = numpy.zeros((3, 10, 10), dtype=np.uint8)
+        >>>img = Image(arr)
+        >>>for level, plane in img.iter_planes():
+        ...    print zplane
+        '''
+        for z in range(self.dimensions[2]):
+            yield (z, self.__class__(self._array[:, :, z, ...], self.metadata))
+
+    def get_plane(self, index):
+        '''Gets an individual pixel plane of the image.
 
         Parameters
         ----------
-        y_offset: int
-            index of the top, left point of the rectangle on the *y* axis
-        x_offset: int
-            index of the top, left point of the rectangle on the *x* axis
-        height: int
-            height of the rectangle, i.e. length of the rectangle along the
-            *y* axis
-        width: int
-            width of the rectangle, i.e. length of the rectangle along the
-            *x* axis
+        index: int
+            zero-based z-resolution or color band index
 
         Returns
         -------
         tmlib.image.Image
-            extracted pixels with dimensions `height` x `width`
         '''
-        pxls = self.pixels[
-            y_offset:(y_offset+height), x_offset:(x_offset+width)
+        return self.__class__(self._array[:, :, index, ...], self.metadata)
+
+    def extract(self, y_offset, height, x_offset, width, z_offset=0, depth=1):
+        '''Extracts a continuous, hyperrectangular volumne of voxels
+        from the image.
+
+        Parameters
+        ----------
+        y_offset: int
+            index of the top, left point of the hyperrectangle on the *y* axis
+        height: int
+            height of the hyperrectangle, i.e. length of the hyperrectangle
+            along the *y* axis
+        x_offset: int
+            index of the top, left point of the hyperrectangle on the *x* axis
+        width: int
+            width of the hyperrectangle, i.e. length of the hyperrectangle along
+            the *x* axis
+        z_offset: int, optional
+            index of the top, left point of the hyperrectangle on the *z* axis
+            (default: ``0``)
+        width: int
+            depth of the hyperrectangle, i.e. length of the hyperrectangle
+            along the *z* axis (default: ``1``)
+
+        Returns
+        -------
+        tmlib.image.Image
+            extracted image with dimensions `height` x `width` x `depth`
+        '''
+        arr = self._array[
+                y_offset:(y_offset+height),
+                x_offset:(x_offset+width),
+                z_offset:(z_offset+depth),
+                ...
         ]
-        return self.__class__(pxls, self.metadata)
+        return self.__class__(arr, self.metadata)
 
     @assert_type(image='tmlib.image.Image')
-    def insert(self, image, y_offset, x_offset, inplace=True):
-        '''Insert a continuous, rectangular area of pixels into an image.
+    def insert(self, image, y_offset, x_offset, z_offset=0, inplace=True):
+        '''Inserts a continuous, hyperrectangular volume of voxels into
+        an image.
 
         Parameters
         ----------
         image: tmlib.image.Image
-            image whose pixels should be inserted
+            image whose voxels should be inserted
         y_offset: int
-            index of the top, left point of the rectangle on the *y* axis
+            index of the top, left point of the hyperrectangle on the *y* axis
         x_offset: int
-            index of the top, left point of the rectangle on the *x* axis
+            index of the top, left point of the hyperrectangle on the *x* axis
+        z_offset: int, optional
+            index of the top, left point of the hyperrectangle on the *z* axis
+            (default: ``0``)
         inplace: bool, optional
-            insert pixels into the existing image rather than into a copy
+            insert voxels into the existing image rather than into a copy
             (default: ``True``)
 
         Returns
         -------
         tmlib.image.Image
-            image with inserted pixels
+            modified image
         '''
         if (image.dimensions[0] + y_offset > self.dimensions[0] or
-                image.dimensions[1] + x_offset > self.dimensions[1]):
+                image.dimensions[1] + x_offset > self.dimensions[1] or
+                image.dimensions[2] + z_offset > self.dimensions[2]):
             raise ValueError('Image doesn\'t fit.')
         if inplace:
-            pxls = self.pixels
+            arr = self._array
         else:
-            pxls = self.pixels.copy()
-        h, w = image.dimensions
-        pxls[y_offset:(y_offset+h), x_offset:(x_offset+w)] = image.pixels
+            arr = self._array.copy()
+        height, width, depth = image.dimensions
+        arr[
+            y_offset:(y_offset+height),
+            x_offset:(x_offset+width),
+            z_offset:(z_offset+depth),
+            ...
+        ] = image._array
         if inplace:
             return self
         else:
-            return self.__class__(pxls, self.metadata)
+            return self.__class__(arr, self.metadata)
 
     @assert_type(image='tmlib.image.Image')
-    def merge(self, image, direction, offset, inplace=True):
-        '''Merge pixels arrays of two images into one.
+    def merge(self, image, axis, offset, inplace=True):
+        '''Merges pixels/voxels arrays of two images into one.
 
         Parameters
         ----------
         image: tmlib.image.Image
-            image object whose pixels should used for merging
-        direction: str
-            direction along which the two pixels arrays should be merged,
-            either ``"horizontal"`` or ``"vertical"``
+            image object whose values should used for merging
+        axis: str
+            axis along which the two images should be merged,
+            either ``"x"``, ``"y"``, or ``"z"``
         offset: int
             offset for `image` in the existing object
         inplace: bool, optional
-            merge pixels into the existing image rather than into a copy
+            merge values into the existing image rather than into a copy
             (default: ``True``)
 
         Parameters
         ----------
         tmlib.image.Image
-            image with rescaled pixels
+            rescaled image
         '''
         if inplace:
-            pxls = self.pixels
+            arr = self._array
         else:
-            pxls = self.pixels.copy()
-        if direction == 'vertical':
-            pxls[offset:, :] = image.pixels[offset:, :]
-        elif direction == 'horizontal':
-            pxls[:, offset:] = image.pixels[:, offset:]
+            arr = self._array.copy()
+        if axis == 'y':
+            arr[offset:, :, :, ...] = image._array[offset:, :, :, ...]
+        elif axis == 'x':
+            arr[:, offset:, :, ...] = image._array[:, offset:, :, ...]
+        elif axis == 'z':
+            arr[:, :, offset:, ...] = image._array[:, :, offset:, ...]
         else:
-            raise ValueError(
-                'Argument "direction" must be either '
-                '"horizontal" or "vertical"'
-            )
+            raise ValueError('Unknown axis.')
         if inplace:
             return self
         else:
-            return self.__class__(pxls, self.metadata)
+            return self.__class__(arr, self.metadata)
 
     @assert_type(image='tmlib.image.Image')
-    def join(self, image, direction):
-        '''Join two pixels arrays.
+    def join(self, image, axis):
+        '''Joins two pixels/voxels arrays.
 
         Parameters
         ----------
         image: tmlib.image.Image
-            image object whose pixels should used for joining
-        direction: str
-            direction along which the two pixels arrays should be joined,
-            either ``"horizontal"`` or ``"vertical"``
+            image object whose values should be joined
+        axis: str
+            axis along which the two images should be merged,
+            either ``"x"``, ``"y"``, or ``"z"``
 
         Returns
         -------
         tmlib.image.Image
-            image with joined pixels
+            joined image
         '''
-        if direction == 'vertical':
-            pxls = np.vstack([self.pixels, image.pixels])
-        elif direction == 'horizontal':
-            pxls = np.hstack([self.pixels, image.pixels])
+        # Numpy's nomenclature is different, it would stack the "z" dimension
+        # along the first axis. This would make indexing harder in case the
+        # image has only two dimensions. There could result in worse
+        # performance, though.
+        if axis == 'y':
+            arr = np.vstack([self._array, image._array])
+        elif axis == 'x':
+            arr = np.hstack([self._array, image._array])
+        elif axis == 'z':
+            arr = np.dstack([self._array, image._array])
         else:
-            raise ValueError(
-                'Argument "direction" must be either '
-                '"horizontal" or "vertical"'
-            )
-        return self.__class__(pxls, self.metadata)
+            raise ValueError('Unknown axis.')
+        return self.__class__(arr, self.metadata)
 
     def pad_with_background(self, n, side):
-        '''Pad one side of the pixels array with zero value pixels.
+        '''Pads one side of the pixels/voxels array with zero values.
 
         Parameters
         ----------
         n: int
-            number of pixels that should be added along the given axis
+            number of pixels/voxels that should be added along the given axis
         side: str
-            side of the array that should be padded;
-            either ``"top"``, ``"bottom"``, ``"left"``, or ``"right"``
+            side of the array that should be padded relative to the y, x axis
+            of an individual plane; either ``"top"``, ``"bottom"``, ``"left"``,
+            ``"right"``, ``"front"`` or ``"back"``
 
         Returns
         -------
         tmlib.image.Image
-            image with clipped pixels
+            padded image
         '''
+        if self.dimensions[2] > 1:
+            raise ValueError('Not supported for color images.')
+        height, width, depth = self.dimensions
         if side == 'top':
-            pxls = np.zeros((n, self.dimensions[1]), dtype=self.dtype)
-            pxls = np.vstack([pxls, self.pixels])
+            arr = np.zeros((n, width, depth), dtype=self.dtype)
+            arr = np.vstack([arr, self._array])
         elif side == 'bottom':
-            pxls = np.zeros((n, self.dimensions[1]), dtype=self.dtype)
-            pxls = np.vstack([self.pixels, pxls])
+            arr = np.zeros((n, width, depth), dtype=self.dtype)
+            arr = np.vstack([self._array, arr])
         elif side == 'left':
-            pxls = np.zeros((self.dimensions[0], n), dtype=self.dtype)
-            pxls = np.hstack([pxls, self.pixels])
+            arr = np.zeros((height, n, depth), dtype=self.dtype)
+            arr = np.hstack([arr, self._array])
         elif side == 'right':
-            pxls = np.zeros((self.dimensions[0], n), dtype=self.dtype)
-            pxls = np.hstack([self.pixels, pxls])
+            arr = np.zeros((height, n, depth), dtype=self.dtype)
+            arr = np.hstack([self._array, arr])
+        elif side == 'front':
+            arr = np.zeros((height, width, n), dtype=self.dtype)
+            arr = np.dstack([self._array, arr])
+        elif side == 'back':
+            arr = np.zeros((height, width, n), dtype=self.dtype)
+            arr = np.dstack([self._array, arr])
         else:
-            raise ValueError(
-                'Argument "side" must be one of the following: '
-                '"top", "bottom", "left", "right"'
-            )
-        return self.__class__(pxls, self.metadata)
+            raise ValueError('Unknown side.')
+        return self.__class__(arr, self.metadata)
+
+    def smooth(self, sigma):
+        '''Applies a Gaussian smoothing filter to the pixels/voxels array.
+
+        Parameters
+        ----------
+        sigma: int
+            size of the standard deviation of the Gaussian kernel
+
+        Returns
+        -------
+        tmlib.image.Image
+            smoothed image
+        '''
+        arr = skimage.filters.gaussian(self._array, sigma)
+        return self.__class__(arr, self.metadata)
 
     def shrink(self, factor):
-        '''Reduce the size of the pixels array.
+        '''Reduces the size of the pixels/voxels array.
 
         Parameters
         ----------
         factor: int
-            factor by which the size of the pixels array should be reduced
+            factor by which the size of the image should be reduced along
+            each axis
 
         Returns
         -------
         tmlib.image.Image
-            image with shrunken pixels
+            shrunken image
         '''
-        pxls = skimage.measure.block_reduce(
-            self.pixels, (factor, factor), func=np.mean
+        factor = (factor,) * 3 + (1,) * (len(self.dimensions) - 3)
+        arr = skimage.measure.block_reduce(
+            self._array, factor, func=np.mean
         ).astype(self.dtype)
-        return self.__class__(pxls, self.metadata)
+        return self.__class__(arr, self.metadata)
 
     def align(self, crop=True):
-        '''Align, i.e. shift and crop, an image based on pre-calculated shift
-        and overhang values.
+        '''Aligns, i.e. shifts and optionally crops, an image based on
+        pre-calculated shift and overhang values.
 
         Parameters
         ----------
         crop: bool, optional
-            whether images should cropped or rather padded
-            with zero valued pixels (default: ``True``)
+            whether image should be cropped or rather padded
+            with zero values (default: ``True``)
 
         Returns
         -------
@@ -325,44 +403,43 @@ class Image(object):
                 'Image requires attribute "metadata" for alignment.'
             )
         md = self.metadata
-        pxls = image_utils.shift_and_crop(
-            self.pixels, y=md.y_shift, x=md.x_shift,
-            bottom=md.upper_overhang, top=md.lower_overhang,
-            right=md.left_overhang, left=md.right_overhang, crop=crop
-        )
-        new_object = self.__class__(pxls, self.metadata)
+        arr = np.zeros(self.dimensions, self.dtype)
+        for z, pixels in self.iter_planes():
+            arr[:, :, z, ...] = image_utils.shift_and_crop(
+                pixels._array, y=md.y_shift, x=md.x_shift,
+                bottom=md.upper_overhang, top=md.lower_overhang,
+                right=md.left_overhang, left=md.right_overhang, crop=crop
+            )
+        new_object = self.__class__(arr, self.metadata)
         new_object.metadata.is_aligned = True
         return new_object
 
 
 class ChannelImage(Image):
 
-    '''Class for a channel image: a 2D greyscale image with a single band.
-    '''
+    '''Class for a channel image: a grayscale image with a single band.'''
 
     @assert_type(metadata=['tmlib.metadata.ChannelImageMetadata', 'types.NoneType'])
-    def __init__(self, pixels, metadata=None):
+    def __init__(self, array, metadata=None):
         '''
         Parameters
         ----------
-        pixels: numpy.ndarray[uint16]
-            pixels array
+        array: numpy.ndarray[uint16]
+            pixels/voxels array
         metadata: tmlib.metadata.ChannelImageMetadata, optional
             image metadata (default: ``None``)
         '''
-        super(ChannelImage, self).__init__(pixels, metadata)
+        super(ChannelImage, self).__init__(array, metadata)
         if not self.is_uint:
-            raise TypeError(
-                'Argument "pixels" must have unsigned integer type.'
-            )
-        if self.bands != 1:
-            raise ValueError('Argument "pixels" must be grayscale.')
+            raise TypeError('Image must have unsigned integer type.')
+        if self.dimensions[2] != 1:
+            raise ValueError('Image must be grayscale.')
 
-    @staticmethod
-    def create_as_background(y_dimension, x_dimension,
+    @classmethod
+    def create_as_background(cls, y_dimension, x_dimension, z_dimension,
                              metadata=None, add_noise=False,
                              mu=None, sigma=None):
-        '''Create an image with background pixels. By default background will
+        '''Creates an image with background voxels. By default background will
         be zero values. Optionally, Gaussian noise can be added to simulate
         camera background.
 
@@ -372,6 +449,8 @@ class ChannelImage(Image):
             length of the array along the y-axis
         x_dimension: int
             length of the array along the x-axis
+        z_dimension: int
+            length of the array along the z-axis
         metadata: tmlib.metadata.ImageMetadata, optional
             image metadata (default: ``None``)
         add_noise: bool, optional
@@ -384,23 +463,39 @@ class ChannelImage(Image):
         Returns
         -------
         tmlib.image.ChannelImage
-            image with background pixels
+            image with background values
         '''
+        dims = (z_dimension, y_dimension, x_dimension)
         if add_noise:
             if mu is None or sigma is None:
                 raise ValueError(
                     'Arguments "mu" and "sigma" are required '
                     'when argument "add_noise" is set to True.'
                 )
-            pxls = np.random.normal(
-                mu, sigma, y_dimension * x_dimension
-            ).astype(np.uint16)
+            arr = np.random.normal(mu, sigma, np.prod(dims)).astype(np.uint16)
         else:
-            pxls = np.zeros((y_dimension, x_dimension), dtype=np.uint16)
-        return ChannelImage(pxls, metadata)
+            arr = np.zeros(dims, dtype=np.uint16)
+        return cls(arr, self.metadata)
+
+    def project(self, func=np.max, axis='z'):
+        '''Performs a projection of the array along a given `axis` and using
+        a given function.
+
+        Parameters
+        ----------
+        func: function, optional
+            function that should be used for the projection
+            (default: ``numpy.max``)
+        axis: str, optional
+            axis along which the image array should be projected
+            (default: ``"z"``)
+        '''
+        axis_map = {'y': 0, 'x': 1, 'z': 2}
+        arr = func(self._array, axis=axis_map[axis])
+        return self.__class__(arr, self.metadata)
 
     def scale(self, lower, upper):
-        '''Scale pixel values to 8-bit such that the range [`lower`, `upper`]
+        '''Scales values to 8-bit such that the range [`lower`, `upper`]
         will be mapped to the range [0, 255].
 
         Parameters
@@ -413,20 +508,20 @@ class ChannelImage(Image):
         Returns
         -------
         tmlib.image.Image
-            image with rescaled pixels
+            image with rescaled voxels
         '''
         if self.is_uint16:
-            pxls = image_utils.map_to_uint8(self.pixels, lower, upper)
-            return self.__class__(pxls, self.metadata)
+            arr = image_utils.map_to_uint8(self._array, lower, upper)
+            return self.__class__(arr, self.metadata)
         elif self.is_uint8:
             return self
         else:
             TypeError(
-                'Only pixels with unsigned integer type can be scaled.'
+                'Only voxels with unsigned integer type can be scaled.'
             )
 
     def clip(self, lower, upper):
-        '''Clip intensity values below `lower` and above `upper`, i.e. set all
+        '''Clips intensity values below `lower` and above `upper`, i.e. set all
         pixel values below `lower` to `lower` and all above `upper` to `upper`.
 
         Parameters
@@ -439,29 +534,13 @@ class ChannelImage(Image):
         Returns
         -------
         tmlib.image.ChannelImage
-            image with clipped pixels
+            image with clipped voxels
         '''
-        pxls = np.clip(self.pixels, lower, upper)
-        return ChannelImage(pxls, self.metadata)
-
-    def smooth(self, sigma):
-        '''Apply a Gaussian smoothing filter to the pixels array.
-
-        Parameters
-        ----------
-        sigma: int
-            size of the standard deviation of the Gaussian kernel
-
-        Returns
-        -------
-        tmlib.image.ChannelImage
-            image with smoothed pixels
-        '''
-        pxls = ndi.filters.gaussian_filter(self.pixels, sigma)
-        return ChannelImage(pxls, self.metadata)
+        arr = np.clip(self._array, lower, upper)
+        return ChannelImage(arr, self.metadata)
 
     def correct(self, stats):
-        '''Correct image for illumination artifacts.
+        '''Corrects the image for illumination artifacts.
 
         Parameters
         ----------
@@ -472,7 +551,7 @@ class ChannelImage(Image):
         Returns
         -------
         tmlib.image.ChannelImage
-            image with pixels corrected for illumination
+            image with voxels corrected for illumination
 
         Raises
         ------
@@ -480,16 +559,17 @@ class ChannelImage(Image):
             when channel doesn't match between illumination statistics and
             image
         '''
-        if self.metadata is not None:
-            if (stats.mean.metadata.channel != self.metadata.channel or
-                    stats.std.metadata.channel != self.metadata.channel):
-                raise ValueError('Channel indices must match.')
-        else:
-            logger.warn('no image metadata provided')
-        pxls = image_utils.correct_illumination(
-            self.pixels, stats.mean.pixels, stats.std.pixels
-        )
-        new_object = ChannelImage(pxls, self.metadata)
+        if self.metadata is None:
+            raise ValueError('Illumination correction requires image metadata.')
+        if (stats.mean.metadata.channel != self.metadata.channel or
+                stats.std.metadata.channel != self.metadata.channel):
+            raise ValueError('Channel indices must match.')
+        arr = np.zeros(self.dimensions, dtype=self.dtype)
+        for z, pixels in self.iter_planes():
+            arr[:, :, z, ...] = image_utils.correct_illumination(
+                pixels._array, stats.mean.array, stats.std.array
+            )
+        new_object = ChannelImage(arr, self.metadata)
         if self.metadata is not None:
             new_object.metadata.is_corrected = True
         return new_object
@@ -497,35 +577,40 @@ class ChannelImage(Image):
 
 class PyramidTile(Image):
 
-    '''Class for a pyramid tile: a 2D image with maximal dimensions 256x256.
+    '''Class for a pyramid tile: an image with a single z-level and
+    y, x dimensions of 256 x 256 voxels.
     '''
+
+    TILE_SIZE = 256
 
     @assert_type(
         metadata=['tmlib.metadata.PyramidTileMetadata', 'types.NoneType']
     )
-    def __init__(self, pixels, metadata=None):
+    def __init__(self, array, metadata=None):
         '''
         Parameters
         ----------
-        pixels: numpy.ndarray[uint8]
-            pixels array
+        array: numpy.ndarray[uint8]
+            2D pixel plane
         metadata: tmlib.metadata.PyramidTileMetadata, optional
             image metadata (default: ``None``)
         '''
-        super(PyramidTile, self).__init__(pixels, metadata)
+        super(PyramidTile, self).__init__(array, metadata)
+        if self.dimensions[2] > 1:
+            raise ValueError('Image must be two-dimensional.')
         if not self.is_uint8:
             raise TypeError(
-                'Pixels must have 8-bit unsigned integer data type.'
+                'Image must have 8-bit unsigned integer data type.'
             )
-        if any([d > 256 for d in self.dimensions]):
+        if any([d > self.TILE_SIZE or d == 0 for d in self.array.shape]):
             raise ValueError(
-                'Length of "pixels" axis can be maximally 256 pixels.'
+                'Height and width of image must be greater than zero and '
+                'maximally %d pixels.' % self.TILE_SIZE
             )
 
-    @staticmethod
-    def create_as_background(metadata=None, add_noise=False,
-                             mu=None, sigma=None):
-        '''Create an image with background pixels. By default background will
+    @classmethod
+    def create_as_background(cls, metadata=None, add_noise=False, mu=None, sigma=None):
+        '''Create an image with background voxels. By default background will
         be zero values. Optionally, Gaussian noise can be added to simulate
         camera background.
 
@@ -543,7 +628,7 @@ class PyramidTile(Image):
         Returns
         -------
         tmlib.image.PyramidTile
-            image with background pixels
+            image with background pixel values
         '''
         if add_noise:
             if mu is None or sigma is None:
@@ -551,79 +636,16 @@ class PyramidTile(Image):
                     'Arguments "mu" and "sigma" are required '
                     'when argument "add_noise" is set to True.'
                 )
-            pxls = np.random.normal(mu, sigma, 256 * 256).astype(np.uint8)
+            arr = np.random.normal(mu, sigma, self._tile_size**2).astype(np.uint8)
         else:
-            pxls = np.zeros((256, 256), dtype=np.uint8)
-        return PyramidTile(pxls, metadata)
-
-
-class LabelImage(Image):
-
-    '''Class for a labeled image: a 2D grayscale image with one band where
-    pixels of each connected component (segmented object) have a unique integer
-    value.
-    '''
-
-    def __init__(self, pixels, metadata=None):
-        '''
-        Parameters
-        ----------
-        pixels: numpy.ndarray[int32]
-            pixels array
-        metadata: tmlib.metadata.ImageMetadata, optional
-            image metadata (default: ``None``)
-        '''
-        super(LabelImage, self).__init__(pixels, metadata)
-        if self.dtype != 'int32':
-            raise TypeError(
-                    'Argument "pixels" must have data type int32.')
-        if self.bands != 1:
-            raise ValueError('Argument "pixels" must be grayscale.')
-
-    def get_outlines(self, keep_ids=False):
-        '''Obtain the outlines of objects (labeled connected components) in the
-        image.
-
-        Parameters
-        ----------
-        keep_ids: bool, optional
-            whether the ids (pixel values) of objects should be preserved;
-            returns unsigned integer type if ``True`` and binary type otherwise
-            (default: ``False``)
-
-        Returns
-        -------
-        numpy.ndarray
-            pixels array
-        '''
-        return image_utils.compute_outlines(self.pixels, keep_ids)
-
-    @property
-    def n_objects(self):
-        '''int: number of objects (labeled connected components) in the image
-        '''
-        return len(np.unique(self.pixels[self.pixels > 0]))
-
-    def remove_objects(self, ids):
-        '''Remove certain objects from the image.
-
-        Parameters
-        ----------
-        ids: List[int]
-            IDs of objects that should be removed
-
-        Returns
-        -------
-        numpy.ndarray
-            pixels array
-        '''
-        return image_utils.remove_objects(self.pixels, ids)
+            arr = np.zeros((cls.TILE_SIZE,) * 2, dtype=np.uint8)
+        return PyramidTile(arr, metadata)
 
 
 class BrightfieldImage(Image):
 
-    '''Class for a brightfield image: a 2D RGB image with three bands
-    and pixels with 8-bit unsigned integer type.
+    '''Class for a brightfield image: a 3D RGB image with three bands
+    and voxels with 8-bit unsigned integer type.
     '''
 
     def __init__(self, pixels, metadata=None):
@@ -631,20 +653,17 @@ class BrightfieldImage(Image):
         Parameters
         ----------
         pixels: numpy.ndarray[uint8]
-            pixels array
+            pixel plane
         metadata: tmlib.metadata.ImageMetadata, optional
             image metadata (default: ``None``)
         '''
-        super(BrightfieldImage, self).__init__(pixels, metadata)
-        if pixels is not None:
-            if self.dtype != np.uint8:
-                raise TypeError(
-                        'Argument "pixels" must have 8-bit unsigned integer '
-                        'data type.')
-            if self.bands != 3:
-                raise ValueError(
-                        'Argument "pixels" must be a three-dimensional array '
-                        'with 3 bands.')
+        super(BrightfieldImage, self).__init__(pixel, metadata, is_color=True)
+        if self.dtype != np.uint8:
+            raise TypeError(
+                'Image must have 8-bit unsigned integer data type.'
+            )
+        if self.dimensions[2] != 3:
+            raise ValueError('Image must be RGB.')
 
     def split_bands(self, separation_mat=skimage.color.hed_from_rgb):
         '''Split different colors of a immunohistochemistry stain
@@ -667,45 +686,45 @@ class BrightfieldImage(Image):
 
         References
         ----------
-        .. _[1]: Ruifrok AC, Johnston DA. Quantification of histochemical staining by color deconvolution. Anal Quant Cytol Histol 23: 291-299, 2001 
+        .. _[1]: Ruifrok AC, Johnston DA. Quantification of histochemical staining by color deconvolution. Anal Quant Cytol Histol 23: 291-299, 2001
         '''
         # TODO: metadata for brightfield images
-        pxls = skimage.color.separate_stains(self.pixels, separation_mat)
-        channel_img_1 = ChannelImage(pxls[:, :, 1], self.metadata)
-        channel_img_2 = ChannelImage(pxls[:, :, 2], self.metadata)
-        channel_img_3 = ChannelImage(pxls[:, :, 3], self.metadata)
+        arr = skimage.color.separate_stains(self.array, separation_mat)
+        channel_img_1 = ChannelImage(arr[:, :, 1], self.metadata)
+        channel_img_2 = ChannelImage(arr[:, :, 2], self.metadata)
+        channel_img_3 = ChannelImage(arr[:, :, 3], self.metadata)
         return (channel_img_1, channel_img_2, channel_img_3)
 
 
 class ProbabilityImage(Image):
 
-    '''Class for a probability image: a 2D greyscale image with a single band.
+    '''Class for a probability image: a greyscale image with a single band.
 
     Note
     ----
     Despite its name, pixel values are represented by 16-bit unsigned integers
-    rather than floats in the range [0, 1]. 
+    rather than floats in the range [0, 1].
     '''
 
     @assert_type(
         metadata=['tmlib.metadata.ProbabilityImageMetadata', 'types.NoneType']
     )
-    def __init__(self, pixels, metadata=None):
+    def __init__(self, array, metadata=None):
         '''
         Parameters
         ----------
-        pixels: numpy.ndarray[uint16]
-            pixels array
+        array: numpy.ndarray[uint16]
+            pixels/voxels array
         metadata: tmlib.metadata.ProbabilityImageMetadata, optional
             image metadata (default: ``None``)
         '''
-        super(ChannelImage, self).__init__(pixels, metadata)
+        super(ChannelImage, self).__init__(array, metadata)
         if not self.is_uint16:
             raise TypeError(
-                'Argument "pixels" must have 16-bit unsigned integer type.'
+                'Image must have 16-bit unsigned integer type.'
             )
-        if self.bands != 1:
-            raise ValueError('Argument "pixels" must be grayscale.')
+        if self.dimensions[2] != 1:
+            raise ValueError('Image must be grayscale.')
 
 
 class IllumstatsImage(Image):
@@ -717,40 +736,20 @@ class IllumstatsImage(Image):
     @assert_type(
         metadata=['tmlib.metadata.IllumstatsImageMetadata', 'types.NoneType']
     )
-    def __init__(self, pixels, metadata=None):
+    def __init__(self, array, metadata=None):
         '''
         Parameters
         ----------
-        pixels: numpy.ndarray[float]
-            pixels array
+        array: numpy.ndarray[float]
+            2D pixels array
         metadata: tmlib.metadata.IllumstatsImageMetadata
             metadata (default: ``None``)
         '''
-        super(IllumstatsImage, self).__init__(pixels, metadata)
-        if self.bands != 1:
-            raise ValueError(
-                'Argument "pixels" must have a single band.'
-            )
+        super(IllumstatsImage, self).__init__(array, metadata)
+        if self.dimensions[2] != 1:
+            raise ValueError('Image must be two-dimensional.')
         if not self.is_float:
-            raise TypeError(
-                'Argument "pixels" must have data type float.'
-            )
-
-    def smooth(self, sigma):
-        '''Apply a Gaussian smoothing filter to the pixels array.
-
-        Parameters
-        ----------
-        sigma: int
-            size of the standard deviation of the Gaussian kernel
-
-        Returns
-        -------
-        tmlib.image.IllumstatsImage
-            image with smoothed pixels
-        '''
-        pxls = ndi.filters.gaussian_filter(self.pixels, sigma)
-        return IllumstatsImage(pxls, self.metadata)
+            raise TypeError('Image must have data type float.')
 
 
 class IllumstatsContainer(object):
@@ -787,7 +786,7 @@ class IllumstatsContainer(object):
 
     def smooth(self, sigma=5):
         '''Smooth mean and standard deviation statistic matrices with a
-        Gaussian filter. This is useful to prevent outliers pixels with
+        Gaussian filter. This is useful to prevent outliers voxels with
         extreme values to introduce artifacts into the image upon correction.
 
         Parameters
@@ -800,9 +799,9 @@ class IllumstatsContainer(object):
         ----
         `mean` and `std` are modified in place.
         '''
-        self.mean.pixels = self.mean.smooth(sigma).pixels
+        self.mean.array = self.mean.smooth(sigma).array
         self.mean.metadata.is_smoothed = True
-        self.std.pixels = self.std.smooth(sigma).pixels
+        self.std.array = self.std.smooth(sigma).array
         self.std.metadata.is_smoothed = True
         return self
 

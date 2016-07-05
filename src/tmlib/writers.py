@@ -347,28 +347,39 @@ class DatasetWriter(Writer):
             else:
                 data = np.array(data)
 
-        if self.exists(path):
-            raise IOError('Dataset already exists: %s' % path)
         if isinstance(data, np.ndarray) and data.dtype == 'O':
             logger.debug('write dataset "%s" as variable length', path)
             self._write_vlen(path, data)
         else:
             logger.debug('write dataset "%s"', path)
-            if compression is None:
-                self._stream.create_dataset(path, data=data)
+            if self.exists(path):
+                logger.warning(
+                    'dataset "%s" in file "%s" will be overwritten',
+                    path, self.filename
+                )
+                try:
+                    self._stream[path][...] = data
+                except:
+                    raise IOError(
+                        'Dataset "%s" in file "%s" could not be overwritten.'
+                        % (path, self.filename)
+                    )
             else:
-                if compression == 'lzf':
-                    self._stream.create_dataset(
-                        path, data=data, compression='lzf'
-                    )
-                elif compression == 'zip':
-                    self._stream.create_dataset(
-                        path, data=data, compression='gzip'
-                    )
+                if compression is None:
+                    self._stream.create_dataset(path, data=data)
                 else:
-                    raise ValueError(
-                        'Unknown compression filter "%s"' % compression
-                    )
+                    if compression == 'lzf':
+                        self._stream.create_dataset(
+                            path, data=data, compression='lzf'
+                        )
+                    elif compression == 'zip':
+                        self._stream.create_dataset(
+                            path, data=data, compression='gzip'
+                        )
+                    else:
+                        raise ValueError(
+                            'Unknown compression filter "%s"' % compression
+                        )
 
 
     def write_subset(self, path, data,

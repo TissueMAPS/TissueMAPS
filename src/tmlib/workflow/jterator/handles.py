@@ -160,7 +160,7 @@ class Image(PipeHandle):
 class IntensityImage(Image):
 
     '''Class for an intensity image handle, where image pixel values encode
-    a quantity.
+    intensity.
     '''
 
     def __init__(self, name, key, help=''):

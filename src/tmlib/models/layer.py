@@ -33,13 +33,11 @@ CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 class ChannelLayer(Model):
 
     '''A *channel layer* represents a multi-resolution overview of all images
-    belonging to a given *channel*, *time point*, and *z-plane*
+    belonging to a given *channel* and *z-plane*
     as a pyramid in `Zoomify <http://www.zoomify.com/>`_ format.
 
     Attributes
     ----------
-    tpoint: int
-        time point index
     zplane: int
         z-plane index
     channel_id: int
@@ -51,10 +49,9 @@ class ChannelLayer(Model):
     #: str: name of the corresponding database table
     __tablename__ = 'channel_layers'
 
-    __table_args__ = (UniqueConstraint('tpoint', 'zplane', 'channel_id'), )
+    __table_args__ = (UniqueConstraint('zplane', 'channel_id'), )
 
     # Table columns
-    tpoint = Column(Integer)
     zplane = Column(Integer)
     channel_id = Column(
         Integer,
@@ -67,18 +64,15 @@ class ChannelLayer(Model):
         backref=backref('layers', cascade='all, delete-orphan')
     )
 
-    def __init__(self, tpoint, zplane, channel_id):
+    def __init__(self, zplane, channel_id):
         '''
         Parameters
         ----------
-        tpoint: int
-            time point index
         zplane: int
             z-plane index
         channel_id: int
             ID of the parent channel
         '''
-        self.tpoint = tpoint
         self.zplane = zplane
         self.channel_id = channel_id
 
@@ -409,11 +403,7 @@ class ChannelLayer(Model):
         '''
         mapping = collections.defaultdict(list)
         experiment = self.channel.experiment
-        image_files = [
-            f for f in self.channel.image_files
-            if f.tpoint == self.tpoint and f.zplane == self.zplane
-        ]
-        for f in image_files:
+        for f in self.channel.image_files:
             if f.omitted:
                 continue
             y_offset_site, x_offset_site = f.site.offset
@@ -644,8 +634,8 @@ class ChannelLayer(Model):
             n_right = self.tile_size - (image.dimensions[1] - x_offset)
 
         extracted_pixels = image.extract(
-            y_offset, x_offset, y_end-y_offset, x_end-x_offset
-        ).pixels
+            y_offset, y_end-y_offset, x_offset, x_end-x_offset
+        ).array
         tile = PyramidTile(extracted_pixels)
         if n_top is not None:
             tile = tile.pad_with_background(n_top, 'top')
@@ -669,7 +659,6 @@ class ChannelLayer(Model):
         return {
             'id': self.hash,
             'zplane': self.zplane,
-            'tpoint': self.tpoint,
             'image_size': {
                 'width': image_width,
                 'height': image_height
@@ -678,6 +667,6 @@ class ChannelLayer(Model):
 
     def __repr__(self):
         return (
-            '<ChannelLayer(id=%r, channel=%r, tpoint=%r, zplane=%r)>'
-            % (self.id, self.channel.name, self.tpoint, self.zplane)
+            '<ChannelLayer(id=%r, channel=%r, zplane=%r)>'
+            % (self.id, self.channel.name, self.zplane)
         )
