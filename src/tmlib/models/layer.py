@@ -294,32 +294,24 @@ class ChannelLayer(Model):
         # no neighboring image to create the tile instead, but an empty spacer.
         # The same is true in case of missing neighboring images.
         session = Session.object_session(self)
-        lower_neighbor = session.query(ChannelImageFile).\
+        lower_neighbor_count = session.query(ChannelImageFile.id).\
             join(Site).\
             filter(
                 Site.y == site.y + 1, Site.x == site.x,
                 Site.well_id == site.well_id,
                 ChannelImageFile.channel_id == self.channel_id
             ).\
-            one_or_none()
-        lower_right_neighbor = session.query(ChannelImageFile).\
-            join(Site).\
-            filter(
-                Site.y == site.y + 1, Site.x == site.x + 1,
-                Site.well_id == site.well_id,
-                ChannelImageFile.channel_id == self.channel_id
-            ).\
-            one_or_none()
-        right_neighbor = session.query(ChannelImageFile).\
+            count()
+        right_neighbor_count = session.query(ChannelImageFile.id).\
             join(Site).\
             filter(
                 Site.y == site.y, Site.x == site.x + 1,
                 Site.well_id == site.well_id,
                 ChannelImageFile.channel_id == self.channel_id
             ).\
-            one_or_none()
-        has_lower_neighbor = lower_neighbor is not None
-        has_right_neighbor = right_neighbor is not None
+            count()
+        has_lower_neighbor = lower_neighbor_count > 0
+        has_right_neighbor = right_neighbor_count > 0
         for i, row in enumerate(row_info['indices']):
             y_offset = row_info['offsets'][i]
             is_overhanging_vertically = (
