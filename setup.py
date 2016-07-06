@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 packages = None
 package_name = None
 package_data = None
-scripts = None
 # ---------------------
 
 
@@ -67,7 +66,7 @@ from setuptools.command.bdist_egg import bdist_egg as _bdist_egg
 
 def get_requirement_files():
     import platform
-    system_name = platform.system()
+    sys_name = platform.system()
     requirements_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), 'requirements'
     )
@@ -77,9 +76,10 @@ def get_requirement_files():
     # Include all files of form requirements-<platform>-[0-9].txt,
     # where platform is {Windows, Linux, Darwin}
     files += glob.glob(
-        os.path.join(
-            requirements_path, 'requirements-%s-[0-9].txt' % system_name
-        )
+        os.path.join(requirements_path, 'requirements-%s-[0-9].txt' % sys_name)
+    )
+    files += glob.glob(
+        os.path.join(requirements_path, 'requirements-git.txt')
     )
     if len(files) == 0:
         raise Exception('Failed to find any requirements-[0-9].txt files')
@@ -212,40 +212,18 @@ def get_version():
 
 
 def get_requirements():
-    import platform
-    system_name = platform.system()
-    requirements_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'requirements'
-    )
-    files = glob.glob(
-        os.path.join(requirements_path, 'requirements-[0-9].txt')
-    )
-    # Include all files of form requirements-<platform>-[0-9].txt,
-    # where platform is {Windows, Linux, Darwin}
-    files += glob.glob(
-        os.path.join(
-            requirements_path, 'requirements-%s-[0-9].txt' % system_name
-        )
-    )
-    if len(files) == 0:
-        raise Exception('Failed to find any requirements-[0-9].txt files')
-    files = sorted(files)
     requirements = list()
-    for filename in files:
-        requirements += [line.strip() for line in open(filename)]
-    return [line for line in requirements
-            if line != '' and not line.startswith('#')]
+    for f in get_requirement_files():
+        logger.info('install requirements in file: %s', f)
+        requirements += read_requirement_file(f)
+    return requirements
 
 # ----------- Override defaults here ----------------
-
-scripts = []
-
-packages = ['jtlib']
 
 package_data = {'': ['*.html', '*.svg', '*.js']}
 
 if packages is None:
-    packages = setuptools.find_packages('jtlib')
+    packages = setuptools.find_packages(os.path.join('src', 'python'))
 
 if len(packages) == 0:
     raise Exception("No valid packages found")
@@ -255,9 +233,6 @@ if package_name is None:
 
 if package_data is None:
     package_data = find_package_data(packages)
-
-if scripts is None:
-    scripts = find_scripts()
 
 
 setuptools.setup(
