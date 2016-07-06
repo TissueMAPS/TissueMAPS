@@ -4,7 +4,7 @@ input:
   - name: input_label_image
     type: LabelImage
     key: 
-    help: Binary image with primary objects that will be used as seeds.
+    help: Labeled image with primary objects that will be used as seeds.
 
   - name: intensity_image
     type: IntensityImage
