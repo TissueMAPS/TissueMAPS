@@ -602,6 +602,7 @@ class PyramidTileFile(File):
         channel_layer_id: int
             ID of the parent channel pyramid
         '''
+        # TODO: set name based on format string
         self.name = name
         self.group = group
         self.row = row

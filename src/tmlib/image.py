@@ -639,8 +639,30 @@ class PyramidTile(Image):
             arr = np.random.normal(mu, sigma, self._tile_size**2).astype(np.uint8)
         else:
             arr = np.zeros((cls.TILE_SIZE,) * 2, dtype=np.uint8)
-        return PyramidTile(arr, metadata)
+        return cls(arr, metadata)
 
+    def jpeg_encode(self, quality=95):
+        '''Encodes the image as a JPEG buffer object.
+
+        Parameters
+        ----------
+        quality: int, optional
+            JPEG quality from 0 to 100 (default: ``95``)
+
+        Returns
+        -------
+        numpy.ndarray
+
+        Examples
+        --------
+        >>>img = PyramidTile.create_as_background()
+        >>>buf = img.jpeg_encode()
+        >>>with open('myfile.jpeg', 'w') as f:
+        >>>    f.write(buf)
+        '''
+        return cv2.imencode(
+            '.jpeg', self.array, [cv2.IMWRITE_JPEG_QUALITY, quality]
+        )
 
 class BrightfieldImage(Image):
 

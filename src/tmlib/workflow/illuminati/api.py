@@ -124,17 +124,22 @@ class PyramidBuilder(ClusterRoutines):
                     filter_by(channel_id=cid).\
                     first()[0]
 
-                image_files = session.query(tm.ChannelImageFile).\
-                    filter(
-                        tm.ChannelImageFile.channel_id==cid,
-                        ~tm.ChannelImageFile.omitted
-                    ).\
-                    order_by(tm.ChannelImageFile.site_id).\
-                    all()
+                tpoints = session.query(tm.ChannelImageFile.tpoint).\
+                    filter_by(channel_id=cid).\
+                    distinct()
 
-                for zplane in xrange(n_zplanes):
+                for t, z in itertools.product(tpoints, range(n_zplanes):
+                    image_files = session.query(tm.ChannelImageFile).\
+                        filter(
+                            tm.ChannelImageFile.channel_id==cid,
+                            tm.ChannelImageFile.tpoint==t,
+                            ~tm.ChannelImageFile.omitted
+                        ).\
+                        order_by(tm.ChannelImageFile.site_id).\
+                        all()
+
                     layer = session.get_or_create(
-                        tm.ChannelLayer, channel_id=cid, zplane=zplane
+                        tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
                     )
 
                     for index, level in enumerate(reversed(range(layer.n_levels))):

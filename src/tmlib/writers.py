@@ -165,7 +165,7 @@ class PixelsWriter(Writer):
         super(PixelsWriter, self).__init__(filename)
 
     def write(self, data):
-        '''Write pixels data to image file.
+        '''Writes pixels array data to image file.
 
         The format depends on the file extension:
             - *.png for PNG (8-bit and 16-bit)
@@ -174,7 +174,7 @@ class PixelsWriter(Writer):
 
         Parameters
         ----------
-        data: numpy.ndarray 
+        data: numpy.ndarray
             pixels that should be saved
 
         Raises

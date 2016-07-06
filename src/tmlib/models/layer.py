@@ -33,13 +33,15 @@ CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 class ChannelLayer(Model):
 
     '''A *channel layer* represents a multi-resolution overview of all images
-    belonging to a given *channel* and *z-plane*
+    belonging to a given *channel*, *z-plane* and *time point*.
     as a pyramid in `Zoomify <http://www.zoomify.com/>`_ format.
 
     Attributes
     ----------
+    tpoint: int
+        zero-based time series index
     zplane: int
-        z-plane index
+        zero-based z-resolution index
     channel_id: int
         ID of the parent channel
     channel: tmlib.models.Channel
@@ -49,10 +51,11 @@ class ChannelLayer(Model):
     #: str: name of the corresponding database table
     __tablename__ = 'channel_layers'
 
-    __table_args__ = (UniqueConstraint('zplane', 'channel_id'), )
+    __table_args__ = (UniqueConstraint('zplane', 'tpoint', 'channel_id'), )
 
     # Table columns
     zplane = Column(Integer)
+    tpoint = Column(Integer)
     channel_id = Column(
         Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
@@ -64,15 +67,18 @@ class ChannelLayer(Model):
         backref=backref('layers', cascade='all, delete-orphan')
     )
 
-    def __init__(self, zplane, channel_id):
+    def __init__(self, tpoint, zplane, channel_id):
         '''
         Parameters
         ----------
+        tpoint: int
+            zero-based time series index
         zplane: int
-            z-plane index
+            zero-based z-resolution index
         channel_id: int
             ID of the parent channel
         '''
+        self.tpoint = tpoint
         self.zplane = zplane
         self.channel_id = channel_id
 
@@ -288,32 +294,26 @@ class ChannelLayer(Model):
         # no neighboring image to create the tile instead, but an empty spacer.
         # The same is true in case of missing neighboring images.
         session = Session.object_session(self)
-        lower_neighbor = session.query(ChannelImageFile).\
+        lower_neighbor_count = session.query(ChannelImageFile).\
             join(Site).\
             filter(
                 Site.y == site.y + 1, Site.x == site.x,
                 Site.well_id == site.well_id,
-                ChannelImageFile.channel_id == self.channel_id
+                ChannelImageFile.channel_id == self.channel_id,
+                ChannelImageFile.tpoint == self.tpoint
             ).\
-            one_or_none()
-        lower_right_neighbor = session.query(ChannelImageFile).\
-            join(Site).\
-            filter(
-                Site.y == site.y + 1, Site.x == site.x + 1,
-                Site.well_id == site.well_id,
-                ChannelImageFile.channel_id == self.channel_id
-            ).\
-            one_or_none()
-        right_neighbor = session.query(ChannelImageFile).\
+            count()
+        right_neighbor_count = session.query(ChannelImageFile).\
             join(Site).\
             filter(
                 Site.y == site.y, Site.x == site.x + 1,
                 Site.well_id == site.well_id,
-                ChannelImageFile.channel_id == self.channel_id
+                ChannelImageFile.channel_id == self.channel_id,
+                ChannelImageFile.tpoint == self.tpoint
             ).\
-            one_or_none()
-        has_lower_neighbor = lower_neighbor is not None
-        has_right_neighbor = right_neighbor is not None
+            count()
+        has_lower_neighbor = lower_neighbor_count > 0
+        has_right_neighbor = right_neighbor_count > 0
         for i, row in enumerate(row_info['indices']):
             y_offset = row_info['offsets'][i]
             is_overhanging_vertically = (
@@ -403,7 +403,10 @@ class ChannelLayer(Model):
         '''
         mapping = collections.defaultdict(list)
         experiment = self.channel.experiment
-        for f in self.channel.image_files:
+        image_files = [
+            f for f in self.channel.image_files if f.tpoint == self.tpoint
+        ]
+        for f in image_files:
             if f.omitted:
                 continue
             y_offset_site, x_offset_site = f.site.offset
@@ -658,6 +661,7 @@ class ChannelLayer(Model):
         image_height, image_width = self.image_size[-1]
         return {
             'id': self.hash,
+            'tpoint': self.tpoint,
             'zplane': self.zplane,
             'image_size': {
                 'width': image_width,
@@ -667,6 +671,7 @@ class ChannelLayer(Model):
 
     def __repr__(self):
         return (
-            '<ChannelLayer(id=%r, channel=%r, zplane=%r)>'
-            % (self.id, self.channel.name, self.zplane)
+            '<%s(id=%r, channel=%r, tpoint=%r, zplane=%r)>'
+            % (self.__class__.__name__, self.id, self.channel.name,
+                self.tpoint, self.zplane)
         )
