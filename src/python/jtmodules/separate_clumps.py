@@ -2,6 +2,8 @@ import numpy as np
 import cv2
 # import scipy as sp
 # import PIL
+import heapq
+import pandas as pd
 import itertools
 import collections
 import mahotas as mh
@@ -94,9 +96,13 @@ def find_watershed_lines(mask, img, ksize):
     watershed_regions[~mask] = 0
     # "subpixel" mode provides a valid skeleton, but it doubles the size of
     # the image -> watershed_regions.shape[i] is equal to 2 * lines.shape[i] - 1
-    lines= ski.segmentation.find_boundaries(watershed_regions, mode='thick')
-    outer_lines= ski.segmentation.find_boundaries(mask, mode='thick')
+    lines = ski.segmentation.find_boundaries(watershed_regions, mode='thick')
+    outer_lines = ski.segmentation.find_boundaries(mask, mode='thick')
     lines[outer_lines] = 0
+    labeled_lines = mh.label(lines)[0]
+    sizes = mh.labeled.labeled_size(labeled_lines)
+    too_small = np.where(sizes < 10)
+    lines = mh.labeled.remove_regions(labeled_lines, too_small) > 0
     lines = mh.thin(lines)
     return lines
 
@@ -119,8 +125,6 @@ def find_branch_points(skeleton):
     Fast implementation in C++ using
     `mahotas library <http://mahotas.readthedocs.io/en/latest/>`_.
     '''
-    # TODO: globals?
-    # skeleton = skeleton.astype(int)
     x0  = np.array([[1, 0, 1], [0, 1, 0], [1, 0, 1]])
     x1 = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
     t0 = np.array([[0, 0, 0], [1, 1, 1], [0, 1, 0]])
@@ -148,13 +152,42 @@ def find_branch_points(skeleton):
     return mh.label(nodes)[0]
 
 
+def find_border_points(skeleton, mask):
+    '''Finds points of `skeleton` that intersect with the border (contour)
+    of an object defined by `mask`.
+
+    Parameters
+    ----------
+    skeleton: numpy.ndarray[numpy.bool]
+        image of skeleton lines
+    mask: numpy.ndarray[numpy.bool]
+        mask image
+
+    Returns
+    -------
+    numpy.ndarray[numpy.int32]
+        labeled border points
+
+    Note
+    ----
+    Fast implementation in C++ using
+    `mahotas library <http://mahotas.readthedocs.io/en/latest/>`_.
+    '''
+    points = (
+        skeleton +
+        mh.morph.erode(mask)*2 +
+        (skeleton != mh.morph.erode(mh.morph.erode(mask)))*3
+    ) == 6
+    return mh.label(points)[0]
+
+
 def find_end_points(skeleton):
     '''Finds end points of a skeleton.
 
     Parameters
     ----------
     skeleton: numpy.ndarray[numpy.bool]
-        array with skeleton lines
+        image of skeleton lines
 
     Returns
     -------
@@ -191,16 +224,18 @@ def find_end_points(skeleton):
     return mh.label(nodes)[0]
 
 
-def get_line_segments(skeleton, branch_points):
+def get_line_segments(skeleton, branch_points, end_points):
     '''Gets all individual line segments of a `skeleton` separated at
     `branch_points`.
 
     Parameters
     ----------
     skeleton: numpy.ndarray[numpy.bool]
-        line skeletons
+        image of skeleton
     branch_points: numpy.ndarray[numpy.bool]
-        branch points
+        image of branch points
+    end_points: numpy.ndarray[numpy.bool]
+        image of end points
 
     Returns
     -------
@@ -212,7 +247,22 @@ def get_line_segments(skeleton, branch_points):
     Fast implementation in C++ using
     `mahotas library <http://mahotas.readthedocs.io/en/latest/>`_.
     '''
-    return mh.label((skeleton > 0) - (branch_points > 0))[0]
+    segments = mh.label((skeleton > 0) - (branch_points > 0))[0]
+    sizes = mh.labeled.labeled_size(segments)
+    too_small = np.where(sizes < 3)
+    if too_small[0].size > 0:
+        check_points = mh.label((branch_points + end_points) > 0)[0]
+        remove = list()
+        for s in too_small[0]:
+            index = mh.morph.dilate(segments == s)
+            if len(np.unique(check_points[index])) < 3:
+                remove.append(s)
+        remove = np.array(remove)
+    else:
+        remove = too_small[0]
+    if remove.size > 0:
+        segments = mh.labeled.remove_regions(segments, remove) > 0
+    return mh.label(segments > 0)[0]
 
 
 def map_nodes_to_edges(nodes, edges):
@@ -247,11 +297,13 @@ def map_nodes_to_edges(nodes, edges):
     return (node_to_egdes_map, edge_to_nodes_map)
 
 
-def build_graph(node_map, edge_map):
+def build_graph(edges, node_map, edge_map):
     '''Builds a graph.
 
     Parameters
     ----------
+    edges: numpy.ndarray[numpy.int32]
+        labeled line segments
     node_map: Dict[int, Set[int]]
         mapping of nodes to connecting edges
     edge_map: Dict[int, Set[int]]
@@ -259,55 +311,30 @@ def build_graph(node_map, edge_map):
 
     Returns
     -------
-    Dict[int, Set[int]]
-        graph
+    Dict[int, Dict[int]]
+        graph, i.e. mapping of parent nodes to child nodes
     '''
-    graph = collections.defaultdict(set)
+    graph = dict()
     for n, edge_ids in node_map.iteritems():
+        graph[n] = dict()
         for e in edge_ids:
-            graph[n].update(edge_map[e])
-        graph[n].remove(n)
+            for nn in edge_map[e]:
+                if nn == n:
+                    continue
+                graph[n].update({
+                    nn: np.sum(edges[edges == e])
+                })
     return graph
 
 
-def find_all_paths(graph, start, end, path=[]):
-    '''Finds all paths in `graph` from given `start` to `end` node.
+def find_shortest_path(graph, start, end):
+    '''Finds shortest path in `graph` from given `start` to `end` node
+    using Dijkstra's algorithm.
 
     Parameters
     ----------
     graph: Dict[int, List[int]]
-        nodes and connected edges
-    start: int
-        start node
-    end: int
-        end node
-
-    Returns
-    -------
-    List[List[int]]
-        all paths
-    '''
-    path = path + [start]
-    if start == end:
-        return [path]
-    if not graph.has_key(start):
-        return []
-    paths = []
-    for node in graph[start]:
-        if node not in path:
-            newpaths = find_all_paths(graph, node, end, path)
-            for newpath in newpaths:
-                paths.append(newpath)
-    return paths
-
-
-def find_shortest_path(graph, start, end, path=[]):
-    '''Finds shortest path in `graph` from given `start` to `end` node.
-
-    Parameters
-    ----------
-    graph: Dict[int, List[int]]
-        nodes and connected edges
+        mapping of parent nodes to child nodes
     start: int
         start node
     end: int
@@ -316,24 +343,43 @@ def find_shortest_path(graph, start, end, path=[]):
     Returns
     -------
     List[int]
-        shorted paths
+        sequence of nodes along the shortest path
     '''
-    path = path + [start]
-    if start == end:
-        return path
-    if not graph.has_key(start):
-        return None
-    shortest = None
-    for node in graph[start]:
-        if node not in path:
-            newpath = find_shortest_path(graph, node, end, path)
-            if newpath:
-                if not shortest or len(newpath) < len(shortest):
-                    shortest = newpath
-    return shortest
+    queue = [(0, start, [])]
+    seen = set()
+    while True:
+        try:
+            (cost, v, path) = heapq.heappop(queue)
+        except IndexError:
+            print 'Incomplete line'
+            print path
+            return []
+        except:
+            raise
+        if v not in seen:
+            path = path + [v]
+            seen.add(v)
+            if v == end:
+                return path
+            for (next, c) in graph[v].iteritems():
+                heapq.heappush(queue, (cost + c, next, path))
 
 
 def find_line_segments_along_path(path, node_map):
+    '''Finds the line segments connecting nodes lying on `path`.
+
+    Parameters
+    ----------
+    path: List[int]
+        sequence of nodes in a graph
+    node_map: Dict[int, Set[int]]
+        mapping of nodes to lines connected to the nodes
+
+    Returns
+    -------
+    List[int]
+        sequence of line segments that connect nodes in `path`
+    '''
     segments = list()
     for i, n in enumerate(path):
         if i == len(path) - 1:
@@ -344,28 +390,144 @@ def find_line_segments_along_path(path, node_map):
     return segments
 
 
-def get_individual_lines(labeled_skeleton, branch_points, end_points):
-    lines = list()
-    skel_ids = np.unique(labeled_skeleton[labeled_skeleton > 0])
-    for i in skel_ids:
-        skel = labeled_skeleton == i
-        bpts = branch_points == i
-        epts = end_points == i
-        segments, n = mh.label(skel - pts)
-        segment_ids = np.arange(n)
-        for j in segment_ids:
-            coords = np.array(np.where(segments == j)).T
-            line = asLineString(coords)
-        # NOTE: shapely works with x, y coordinates, we leave them
-        # in y, x order to make indexing to facilitate indexing into
-        # numpy arrays
-        # coords = zip(*np.fliplr(coords))
-        # line = MultiLineString(coords)
-        lines.append(line)
+def build_lines_from_segments(line_segments, nodes, graph, end_nodes, node_map):
+    '''Builds lines by combining `line_segments` that connect pairs of
+    `target_nodes` along all possible paths in `graph`.
+
+    Parameters
+    ----------
+    line_segments: numpy.ndarray[numpy.int32]
+        labeled image with line segments
+    nodes: numpy.ndarray[numpy.int32]
+        labeled image with nodes
+    graph: Dict[int, Set[int]]
+        mapping of parent nodes to child nodes
+    end_nodes: List[Tuple[int]]
+        end nodes of the `path` that should be connected
+    node_map: Dict[int, Set[int]]
+        mapping of nodes to connecting lines
+
+    Returns
+    -------
+    Dict[Tuple[int], numpy.ndarray[numpy.bool]]
+        shortest line connecting each pair of `end_nodes` provided a separate
+        mask image for each line
+    '''
+    # Find lines that connect start and end points (all combinations)
+    lines = dict()
+    for start, end in itertools.combinations(set(end_nodes), 2):
+        print start, end
+        p = find_shortest_path(graph, start, end)
+        line_ids = find_line_segments_along_path(p, node_map)
+        line = np.zeros(line_segments.shape, bool)
+        for lid in line_ids:
+            line[line_segments == lid] = True
+        for nid in p:
+            line[nodes == nid] = True
+        # Shapely line approach?
+        # coords = np.array(np.where(line)).T
+        # line = shapely.geometry.asLineString(coords)
+        if np.count_nonzero(line) == 0:
+            continue
+        # We need to dilate the line a bit to ensure that it will actually
+        # cut the entire object.
+        lines[(start, end)] = mh.morph.dilate(line)
+    return lines
 
 
-def main(label_image, intensity_image):
+def find_nodes_closest_to_concave_regions(concave_region_points, end_points, nodes):
+    '''Finds end points within shortest distance to each concave region.
 
+    Parameters
+    ----------
+    concave_region_points: numpy.ndarray[numpy.int32]
+        labeled points marking concave regions on the object contour
+    end_points: numpy.ndarray[numpy.int32]
+        labeled points marking intersection points between lines and the
+        object contour
+    nodes: numpy.ndarray[numpy.int32]
+        all labeled points
+
+    Returns
+    -------
+    Dict[int, int]
+        mapping of concave region points to closest end points
+    '''
+    concave_region_point_node_map = dict()
+    concave_region_point_ids = np.unique(concave_region_points)[1:]
+    end_point_ids = np.unique(end_points)[1:]
+    for cid in concave_region_point_ids:
+        cpt = np.array(np.where(concave_region_points == cid)).T[0, :]
+        dists = dict()
+        for eid in end_point_ids:
+            ept = np.array(np.where(end_points == eid)).T[0, :]
+            # We use end point id to retrieve the correct coordinate,
+            # we want to track the point by node id
+            nid = nodes[tuple(ept)]
+            dists[nid] = np.linalg.norm(cpt - ept)
+        if not dists:
+            return dict()
+        min_dist = np.min(dists.values())
+        concave_region_point_node_map.update({
+            cid: nid for nid, d in dists.iteritems() if d == min_dist
+        })
+    return concave_region_point_node_map
+
+
+def calc_shape_features(mask):
+    '''Calcuates simple shape features `area`, `form factor` and `solidity`.
+
+    Parameters
+    ----------
+    mask: numpy.ndarray[numpy.bool]
+
+    Returns
+    -------
+    Tuple[int]
+    '''
+    mask = mask > 0
+    area = np.count_nonzero(mask)
+    perimeter = mh.labeled.perimeter(mask)
+    form_factor = (4.0 * np.pi * area) / (perimeter**2)
+    area_convex_hull = np.count_nonzero(mh.polygon.fill_convexhull(mask))
+    solidity = float(area) / area_convex_hull
+    return (area, form_factor, solidity)
+
+
+def create_feature_images(label_image):
+    '''Creates label images, where each object is color coded according to
+    `area`, `form factor` and `solidity` values, respectively.
+
+    Parameters
+    ----------
+    label_image: numpy.ndarray[numpy.int32]
+        labeled image
+
+    Returns
+    -------
+    Tuple[numpy.ndarray[numpy.int64 or numpy.float64]]
+        heatmap images
+    '''
+    label_image = mh.label(label_image > 0)[0]
+    bboxes = mh.labeled.bbox(label_image)
+    object_ids = np.unique(label_image)[1:]
+    area_image = np.zeros(label_image.shape, int)
+    formfactor_image = np.zeros(label_image.shape, float)
+    solidity_image = np.zeros(label_image.shape, float)
+    for i in object_ids:
+        mask = jtlib.utils.bbox_image(label_image, bboxes[i], pad=True)
+        mask = mask == i
+        area, form_factor, solidity = calc_shape_features(mask)
+        area_image[label_image == i] = area
+        formfactor_image[label_image == i] = form_factor
+        solidity_image[label_image == i] = solidity
+    return (area_image, formfactor_image, solidity_image)
+
+
+def main(label_image, intensity_image, area_min_thresh, area_max_thresh,
+        solidity_max_thresh=0.93, form_factor_max_thresh=0.7):
+
+    # TODO: use them as parameters
     ksize_regions = 5
     ksize_lines = 10
 
@@ -376,14 +538,23 @@ def main(label_image, intensity_image):
         # If there are no objects to cut we can simply return an empty cut mask
         return cut_mask
 
-    props = ski.measure.regionprops(label_image)
-    for i, oid in enumerate(object_ids):
-        obj_img = jtlib.utils.crop_image(label_image, props[i].bbox, pad=True)
-        obj_img = obj_img == oid
-        int_img = jtlib.utils.crop_image(intensity_image, props[i].bbox, pad=True)
+    bboxes = mh.labeled.bbox(label_image)
+    for oid in object_ids:
+        print 'object #%d' % oid
+        mask = jtlib.utils.bbox_image(label_image, bboxes[oid], pad=True)
+        mask = mask == oid
+        img = jtlib.utils.bbox_image(intensity_image, bboxes[oid], pad=True)
+
+        area, form_factor, solidity = calc_shape_features(mask)
+        if area > area_max_thresh or area < area_min_thresh:
+            continue
+        if form_factor > form_factor_max_thresh:
+            continue
+        if solidity > solidity_max_thresh:
+            continue
 
         concave_region_points, n_concave_regions = find_concave_regions(
-            obj_img, ksize_regions
+            mask, ksize_regions
         )
         concave_region_points = mh.label(concave_region_points)[0]
         concave_region_point_ids = np.unique(concave_region_points)[1:]
@@ -391,453 +562,118 @@ def main(label_image, intensity_image):
             # Cut requires at least two concave regions
             continue
 
-        skeleton = find_watershed_lines(obj_img, int_img, ksize_lines)
+        skeleton = find_watershed_lines(mask, img, ksize_lines)
         branch_points = find_branch_points(skeleton)
-        end_points = find_end_points(skeleton)
+        end_points = find_border_points(skeleton, mask)
+        end_points += find_end_points(skeleton)
+        # Re-label 8-connected to ensure that neighboring end points get
+        # assigned the same label
+        end_points = mh.label(end_points > 0, np.ones((3, 3), bool))[0]
         end_point_ids = np.unique(end_points)[1:]
-        line_segments = get_line_segments(skeleton, branch_points)
-        nodes, n_nodes = mh.label((branch_points + end_points) > 0)
-        node_ids = np.unique(nodes)[1:]
-        node_edge_map, edge_note_map = map_nodes_to_edges(nodes, line_segments)
+        line_segments = get_line_segments(skeleton, branch_points, end_points)
+        node_points, n_nodes = mh.label((branch_points + end_points) > 0)
+        node_ids = np.unique(node_points)[1:]
+        if n_nodes == 0:
+            continue
 
         # Find the nodes that lie closest to concave regions.
         # These will be the start and end points of the cut lines
-        concave_region_point_node_map = dict()
-        for cid in concave_region_point_ids:
-            cpt = np.array(np.where(concave_region_points == cid)).T[0, :]
-            dists = dict()
-            for eid in end_point_ids:
-                ept = np.array(np.where(end_points == eid)).T[0, :]
-                # We use end point id to retrieve the correct coordinate,
-                # we want to track the point by node id
-                nid = nodes[tuple(ept)]
-                dists[nid] = np.linalg.norm(cpt - ept)
-
-            min_dist = np.min(dists.values())
-            concave_region_point_node_map.update({
-                cid: nid for nid, d in dists.iteritems() if d == min_dist
-            })
+        node_edge_map, edge_note_map = map_nodes_to_edges(
+            node_points, line_segments
+        )
+        # TODO: limit distance to prevent ending up outside of concave region
+        concave_region_point_node_map = find_nodes_closest_to_concave_regions(
+            concave_region_points, end_points, node_points
+        )
 
         # Build a graph, where end and branch points are nodes
-        # and line segments are edges
-        graph = build_graph(node_edge_map, edge_note_map)
+        # and line segments are the edges that connect nodes
+        graph = build_graph(line_segments, node_edge_map, edge_note_map)
         target_nodes = concave_region_point_node_map.values()
-        # Find lines that connect start and end points (all combinations)
-        lines = collections.defaultdict(list)
-        for start, end in itertools.combinations(target_nodes, 2):
-            # path = find_shortest_path(graph, start, end)
-            paths = find_all_paths(graph, start, end)
-            for p in paths:
-                line_ids = find_line_segments_along_path(p, node_edge_map)
-                # TODO: consider building shapely line sting
-                line = np.zeros(line_segments.shape, bool)
-                for lid in line_ids:
-                    line[line_segments == lid] = 1
-                for nid in p:
-                    line[nodes == nid] = 1
-                lines[(start, end)].append(line)
 
-        # TODO: measure intensity along line
+        # Build all lines that connect nodes in the graph
+        lines = build_lines_from_segments(
+            line_segments, node_points, graph, target_nodes, node_edge_map
+        )
+        if len(lines) == 0:
+            continue
 
-        # Padding introduces artifacts for tophat filter
-        # TODO: opencv for speed?
-        # k= np.ones((ksize_regions, ksize_regions))
-        # bth_img = cv2.morphologyEx(mh.stretch(int_img), cv2.MORPH_BLACKHAT, k)
-        bth_img = ski.morphology.black_tophat(int_img)
-        wth_img = ski.morphology.white_tophat(int_img)
-        ma_img, dist_img = ski.morphology.medial_axis(obj_img, return_distance=True)
-        import ipdb; ipdb.set_trace()
+        kernel = np.ones((50, 50))
+        blackhat_img = cv2.morphologyEx(
+            mh.stretch(img), cv2.MORPH_BLACKHAT, kernel
+        )
+
+        features = list()
+        for (start, end), line in lines.iteritems():
+            test_cut_mask = mask.copy()
+            test_cut_mask[line] = False
+            test_cut_mask = mh.morph.open(test_cut_mask)
+            subobjects, n_subobjects = mh.label(test_cut_mask)
+            sizes = mh.labeled.labeled_size(subobjects)
+            smaller_id = np.where(sizes == np.min(sizes))[0]
+            smaller_object = subobjects == smaller_id
+            area, form_factor, solidity = calc_shape_features(smaller_object)
+            intensity = img[line]
+            blackness = blackhat_img[line]
+            start_coord = np.array(np.where(node_points == start)).T[0, :]
+            end_coord = np.array(np.where(node_points == end)).T[0, :]
+            totally_straight = np.linalg.norm(start_coord - end_coord)
+            length = np.count_nonzero(line),
+            straightness = length / totally_straight
+            f = {
+                'n_objects': n_subobjects,
+                'object_area': area,
+                'object_form_factor': form_factor,
+                'object_solidity': solidity,
+                'total_intensity': np.sum(intensity),
+                'min_intensity': np.min(intensity),
+                'mean_intensity': np.mean(intensity),
+                'median_intensity': np.median(intensity),
+                'max_intensity': np.max(intensity),
+                'length': length,
+                'straightness': straightness,
+                'total_blackness': np.sum(blackness),
+                'min_blackness': np.min(blackness),
+                'mean_blackness': np.mean(blackness),
+                'median_blackness': np.median(blackness),
+                'max_blackness': np.max(blackness),
+            }
+            features.append(f)
+        features = pd.DataFrame(features)
+        features.index = pd.MultiIndex.from_tuples(
+            lines.keys(), names=['start', 'end']
+        )
+
+        potential_line_index = (
+            (features.n_objects == 2) &
+            (features.object_form_factor > form_factor_max_thresh) &
+            (features.object_solidity > solidity_max_thresh) &
+            (features.object_area < area_max_thresh) &
+            (features.object_area > area_min_thresh)
+        )
+        if not any(potential_line_index):
+            continue
+
+        # TODO: Create a cost function to select the optimal line based on
+        # intensity profile, length and straightness
+        # TODO: Find criteria to not perform any cut.
+        potential_lines = [
+            lines[idx]
+            for idx in features.ix[potential_line_index].index.values
+        ]
+        plt.imshow((np.sum(potential_lines, axis=0) > 0) + mask * 2);
+        plt.show()
+
+        # TODO: cut
 
 
+if __name__ == '__main__':
 
-        # concave_regions = label(current_preim_props)
-        # num_concave = np.unique(concave_regions)
-        # props_concave_region = np.zeros(num_concave)
-        # pixelsconcave_regions = list(num_concave)
+    import os
+    folder = '/Users/mdh/testdata/experiments/experiment_1/plates/plate_1/acquisitions/acquisition_1/microscope_images' 
+    filename = '150820-Testset-CV-1_D03_T0001F001L01A02Z01C01.tif'
+    img = cv2.imread(os.path.join(folder, filename), cv2.IMREAD_UNCHANGED)
+    mask = cv2.imread('/Users/mdh/mask.tif', cv2.IMREAD_UNCHANGED)
 
-        # for j in num_concave:
-        #     props_current_region = current_preim_props[concave_regions == j,:]
-        #     normal_vectors = props_current_region[:,3:4]
-        #     norm_curvature = props_current_region[:,9]
-# #                props_concave_region[j] = np.max(norm_curvature)
-# #                props_concave_region[j] = np.mean(norm_curvature)
-        #     maxima_indices = (norm_curvature == np.max(norm_curvature))
-            
-        #     props_concave_region[j,3:4] = np.mean(
-        #                                   normal_vectors[maxima_indices,:],1)
-            
-        #     props_concave_region[j,5:6] = np.mean(normal_vectors,1)
-        #     first_maximum_index = maxima_indices(1)
-        #     last_maximum_index = maxima_indices(-1)
-        #     mean_maximum_index = np.round(
-        #                       (last_maximum_index + first_maximum_index)/2)
-            
-        #     props_concave_region[j,7:8] = props_current_region[
-        #                                     mean_maximum_index,1:2]
-                                            
-        #     props_concave_region[j,9:10] = props_current_region[np.round(
-        #                                   (np.shape(
-        #                                   props_current_region)[0]+1)/2),1:2]
-            
-        #     props_concave_region[j,11] = np.sum(norm_curvature)
-        #     props_concave_region[j,12] = len(norm_curvature)/np.sum(
-        #                                                     norm_curvature)
-        #     props_concave_region[j,13] = j
-        #     pixelsconcave_regions[j] = props_current_region[:,1:2]
-            
-        # if np.shape(props_concave_region)[0] > num_region_threshold:
-        #     raise ValueError(
-        #     "object skipped because it has too many concave regions \\n")
-        #     continue
-        
-        # qualifying_regions_mask = (props_concave_region[:,11] >= min_eqiv_angle) \
-        #                 and (props_concave_region[:,12] <= max_eqiv_radius)
-        
-        # selected_regions = props_concave_region[qualifying_regions_mask,:]
-        # cut_coord_list = selected_regions[:,[7,8]]
-        # region_index = (np.arange(len(cut_coord_list))).T
-        # if np.shape(cut_coord_list)[0] > 1:
-        #     rcut = cut_coord_list[:,1] + 1 - north1[i]
-        #     ccut = cut_coord_list[:,2] + 1 - west1[i]
-        #     minicut_coord_list = np.array([rcut,ccut])
-        #     immini = label_image[north1[i]:south1[i],west1[i]:east1[i]]
-        #     imbwmini = immini == i
-        #     imintmini = intensity_image[north1[i]:south1[i],west1[i]:east1[i]]
-        #     imintmini[~imbwmini] = 0
-        #     padsize = np.array([1,1])
-        #     padbw = np.pad(imbwmini,padsize)
-        #     padint = np.pad(imintmini,padsize)
-        #     padws = cv2.watershed(PIL.imageops.invert(padint))
-        #     padws[np.logical_not(padbw)] = 0
-        #     imcurrentprelines = np.zeros(np.shape(padint))
-        #     imcurrentprelines[~padws] = padbw[~padws]
-        #     imcurrentprelines[~padbw] = 0
-        #     imcurrentprelines2 = imcurrentprelines
-        #     imcurrentprelines2[~padbw] = 5
-            
-        #     f = np.array([[0,1,0],[1,0,1],[0,1,0]])
-        #     imcurrentlinesandnodes = sp.misc.imfilter(imcurrentprelines2,f)
-        #     imcurrentlinesandnodes[~imcurrentprelines2] = 0
-        #     imcurrentlinesandnodes[~padbw] = 0
-        #     imcurrentlines = label(imcurrentlinesandnodes < 3 
-        #                      and imcurrentlinesandnodes > 0,4)
-        #     lineprops = regionprops(imcurrentlines)
-        #     lineareas = lineprops.area
-        #     lineids = np.unique(imcurrentlines[:])
-        #     lineids[lineids == 0] = []
-        #     imcurrentnodes = label(imcurrentlinesandnodes > 2,4)
-        #     nodesprops = regionprops(imcurrentnodes)
-        #     nodescentroids = nodesprops.centroid
-        #     nodesids = np.unique(imcurrentnodes[:])
-        #     nodesids = nodesids[2:-1].T
-        #     f = [[[0,1,0],[0,0,0],[0,0,0]],[[0,0,0],[1,0,0],[0,0,0]], \
-        #          [[0,0,0],[0,0,1],[0,0,0]],[[0,0,0],[0,0,0],[0,1,0]]]
-                 
-        #     displacedlines = sp.misc.imfilter(imcurrentlines,f)
-        #     displacedlines = np.concatenate(3,displacedlines[:])
-        #     nodeType = np.zeros(np.shape(nodesids))
-        #     matnodeslines = np.zeros(len(nodesids),len(lineareas))
-        #     for inode in len(nodesids):
-        #         tmpid = nodesids[inode]
-        #         tmpix = imcurrentnodes == tmpid
-        #         temptype = np.unique(imcurrentlinesandnodes[tmpix])
-        #         nodeType[inode] = np.max(temptype) > 5
-        #         tmpix = np.tile(tmpix,(4,1))
-        #         templineids = np.unique(displacedlines[tmpix])
-        #         templineids[templineids == 0] = []
-        #         matnodeslines[inode,templineids.T] = templineids.T
-        #     matnodesnodes = np.zeros(len(nodesids))
-        #     matnodesnodeslabel = np.zeros(len(nodesids))
-        #     for inode in len(nodesids):
-        #         tmplines = np.unique(matnodeslines[inode,:])
-        #         tmplines[tmplines == 0] = []
-        #         for l in tmplines.reshape(-1):
-        #             tmpnodes = matnodeslines[:,l] > 0
-        #             matnodesnodes[inode,tmpnodes] = lineareas[l]
-        #             matnodesnodeslabel[inode,tmpnodes] = l
-                    
-        #     matnodesnodes[np.ravel_multi_index((nodesids,nodesids), 
-        #                 dims=(len(nodesids),len(nodesids)), order='C')] = 0
-        #     matnodesnodeslabel[np.ravel_multi_index((nodesids,nodesids), 
-        #                 dims=(len(nodesids),len(nodesids)), order='C')] = 0
-# #                matnodesnodeslabel[np.ravel_multi_index(
-# #                    [len(nodesids),len(nodesids)],(nodesids,nodesids))] = 0
-            
-        #     node_to_test = nodesids[(nodeType>0)]
-            
-        #     if kwargs['debug']:
-        #         i,j1 = np.transpose(
-        #                         filter(lambda a: a !=  0, imcurrentlines))
-        #         #i,j1 = np.transpose(np.nonzero(imcurrentlines))
-        #         plt.imshow(padint)
-        #         plt.title(['object #'+ i])
-        #         plt.hold(True)
-        #         plt.scatter(j1,i,150)
-        #         plt.scatter(nodescentroids[node_to_test,1],
-        #                     nodescentroids[node_to_test,2],2000)
-        #         plt.hold(False)
-                
-        #     potentialnodescoordinates = nodescentroids[node_to_test,:]
-        #     potentialnodescoordinates = np.round(potentialnodescoordinates)
-        #     nodecoordlist = np.zeros(np.shape(potentialnodescoordinates))
-        #     if len(potentialnodescoordinates) > 0  \
-        #         and len(minicut_coord_list) >0:
-                    
-        #         alllines = list()
-        #         nodecoordlist[:,1] = potentialnodescoordinates[:,2]
-        #         nodecoordlist[:,2] = potentialnodescoordinates[:,1]
-        #         __,closestnodesindex = np.linalg.norm(
-        #                                nodecoordlist,minicut_coord_list)
-        #         closestnodesindex = np.unique(closestnodesindex[:])
-                
-        #         if kwargs['debug']:
-        #             plt.imshow(padint)
-        #             plt.title(['object #'+ i])
-        #             plt.hold(True)
-        #             plt.scatter(
-        #             minicut_coord_list[:,2],minicut_coord_list[:,1],2000)
-        #             plt.hold(False)
-        #             selectednodecoordlist = nodecoordlist[closestnodesindex,:]
-        #             plt.imshow(padint)
-        #             plt.title(['object #'+ i])
-        #             plt.hold(True)
-        #             plt.scatter(
-        #             selectednodecoordlist[:,2],
-        #             selectednodecoordlist[:,1],2000)
-        #             plt.hold(False)
-                    
-        #         if len(closestnodesindex) > 0:
-        #             closestnodesids = node_to_test[closestnodesindex]
-        #             nodeixs = np.tile(closestnodesids,[len(closestnodesids),1])
-        #             nodeixt = np.tile(closestnodesids,[1,len(closestnodesids)])
-        #             nodeixs = nodeixs[:]
-        #             nodeixt = nodeixt[:]
-                    
-        #             dist,path = jtlib.dijkstra(matnodesnodes > 0,
-        #                                        matnodesnodes,
-        #                                        closestnodesids,
-        #                                        closestnodesids,nargout=2)
-                    
-        #             dist = dist[:].T
-        #             dist = filter(lambda a: a != 0, dist) and \
-        #                    filter(lambda a: a != np.inf, dist)
-                           
-        #             quantile_distance = np.quantile(dist)
-        #             thrix = filter(lambda a: a != 0, dist)  and \
-        #                     filter(lambda a: a < quantile_distance, dist)
-                            
-        #             nodeixs2 = nodeixs[thrix]
-        #             nodeixt2 = nodeixt[thrix]
-        #             nodescoordlist = nodescentroids[nodeixs2,:]
-        #             nodescoordlist = np.round(nodescoordlist)
-        #             nodetcoordlist = nodescentroids[nodeixt2,:]
-        #             nodetcoordlist = np.round(nodetcoordlist)
-        #             __,closestcutpointssindex = np.linalg.norm(
-        #                                         minicut_coord_list,
-        #                                         np.fliplr(nodescoordlist))
-                    
-        #             closestcutpointssindex = closestcutpointssindex[:]
-        #             __,closestcutpointstindex = np.linalg.norm(
-        #                                         minicut_coord_list,
-        #                                         np.fliplr(nodetcoordlist))
-        #             closestcutpointstindex = closestcutpointstindex[:]
-        #             alllines = list()
-        #             for n in len(nodeixt2):
-        #                 tmppath = path[closestnodesids == nodeixs2[n], 
-        #                             closestnodesids == nodeixt2[n]]
-                                    
-        #                 tmpimage = np.zeros(np.shape(imcurrentnodes))
-        #                 t1 = ismember.ismember(imcurrentnodes,tmppath)
-        #                 tmpimage[t1] = 1
-        #                 for j in len(tmppath):
-        #                     tmpimage[imcurrentlines == 
-        #                                     matnodesnodeslabel[
-        #                                     tmppath[j],tmppath[j+1]]] = 1
-        #                 tmpsegmentation = padbw
-        #                 tmpsegmentation[tmpimage > 0] = 0
-        #                 tmpsubsegmentation = label(tmpsegmentation > 0)
-        #                 tmpnumobjects = np.unique(tmpsubsegmentation)
-                        
-        #                 tmpsubareas = list(tmpsubsegmentation.pixelidxlist)
-        #                 if tmpnumobjects == 2 and np.min(
-        #                                     tmpsubareas) > objsize_thres:
-                            
-        #                     [tmpsubareas, tmpsubsolidity, tmpsub_formfactor] = \
-        #                     calculate_object_features(tmpsegmentation)
-                            
-        #                     alllines[n].areasobj = tmpsubareas
-        #                     alllines[n].solobj = tmpsubsolidity
-        #                     alllines[n].formobj = tmpsub_formfactor
-        #                     alllines[n].lineimage = tmpimage
-        #                     alllines[n].segmimage = tmpsegmentation
-        #                     tmpintimage = tmpimage > 0
-        #                     tmpmaxint = np.max(padint[tmpintimage])
-        #                     tmpmeanint = np.mean(padint[tmpintimage])
-        #                     tmpstdint = np.std(padint[tmpintimage])
-        #                     tmpquantint = np.quantile(padint[tmpintimage],0.75)
-        #                     tmplength = np.sum(tmpintimage[:])
-        #                     alllines[n].maxint = tmpmaxint
-        #                     alllines[n].meanint = tmpmeanint
-        #                     alllines[n].quantint = tmpquantint
-        #                     alllines[n].stdint = tmpstdint
-        #                     alllines[n].length = tmplength
-        #                     tmpcentroid1 = np.round(
-        #                             nodescentroids[closestnodesids
-        #                             [closestnodesids == nodeixs2[n]],:])
-                            
-        #                     tmpcentroid2 = np.round(
-        #                             nodescentroids[closestnodesids
-        #                             [closestnodesids == nodeixt2[n]],:])
-                            
-        #                     temp1 = (tmpcentroid1[2] - tmpcentroid2[2])
-        #                     temp2 = (tmpcentroid1[1] - tmpcentroid2[1])
-                            
-        #                     m =  temp1 / temp2
-                            
-        #                     x = list(range(np.min(
-        #                         [tmpcentroid1[1],tmpcentroid2[1]]),np.max(
-        #                         [tmpcentroid1[1],tmpcentroid2[1]])))
-        #                     if m != -np.inf and m != np.inf and ~np.isnan(m):
-        #                         y = list(range(np.min(
-        #                         [tmpcentroid1[2],tmpcentroid2[2]]),
-        #                         np.max([tmpcentroid1[2],tmpcentroid2[2]])))
-                                
-        #                         c = tmpcentroid1[2] - m * tmpcentroid1[1]
-        #                         py = np.round(m.dot(x) + c)
-        #                         px = np.round((y - c) / m)
-        #                         if np.max(
-        #                             np.shape(tmpimage)[0])>np.max(
-        #                             [y,py]) and np.max(
-        #                             np.shape(tmpimage)[1]) > np.max([px,x]):
-                                        
-        #                             straigtlineix = np.ravel_multi_index(
-        #                                     np.shape(tmpimage),[y,py],[px,x])
-        #                         else:
-        #                             straigtlineix = np.nan
-        #                     else:
-        #                         straigtlineix = np.nan
-        #                     tmprim = tmpimage
-        #                     tmprim[straigtlineix[not np.isnan(
-        #                                             straigtlineix)]] = 1
-        #                     tmprim = ndi.binary_fill_holes(tmprim)
-        #                     tmpRatio = np.sum(tmprim[:]) / len(np.unique(
-        #                                                 straigtlineix))
-        #                     alllines[n].straightness = tmpRatio
-        #                     currentsourcenode = region_index[
-        #                                         closestcutpointssindex[n]]
-        #                     currentTargetnode = region_index[
-        #                                         closestcutpointstindex[n]]
-                                                
-        #                     regiona = current_preim_props[concave_regions 
-        #                             == selected_regions
-        #                             [currentsourcenode,13],[1,2,3,4]]
-                                    
-        #                     regionb = current_preim_props[concave_regions 
-        #                             == selected_regions
-        #                             [currentTargetnode,13],[1,2,3,4]]
-        #                     allangles = np.zeros(np.shape(regiona)[0]
-        #                                             ,np.shape(regionb)[0])
-        #                     for l in np.shape(regiona)[0]:
-        #                         for m in np.shape(regionb)[0]:
-        #                             connectingVectorab = regionb[m,1:2] - \
-        #                                                     regiona[l,1:2]
-                                    
-        #                             t1 = connectingVectorab/np.linalg.norm(  
-        #                                                  connectingVectorab)
-        #                             connectingVectorab = t1
-                                                        
-        #                             connectingVectorba = -connectingVectorab
-        #                             angledeviationa = math.acos(math.dot(
-        #                                               regiona[l,3:4],
-        #                                               connectingVectorab))
-        #                             angledeviationb = math.acos(math.dot(
-        #                                               regionb[m,3:4],
-        #                                               connectingVectorba))
-                                    
-        #                             t1 = (angledeviationa+angledeviationb)/2
-# #                                        meanangledeviation = t1
-        #                             allangles[l,m] = np.pi - t1
-        #                     allangles = np.real(allangles)
-        #                     tmpangle = np.max(allangles[:])
-        #                     alllines[n].angle = tmpangle
-        #     else:
-        #         alllines = list()
-                
-        #     if len(alllines[:]) > 0:
-        #         alllines = filter(None, alllines) 
-        #         if len(alllines) == 1:
-        #             bestlinesindex = 1
-        #         else:
-        #             if kwargs['debug']:
-        #                 alllinesimage = np.zeros(np.shape(padint))
-        #                 for d in len(alllines):
-        #                     alllinesimage[alllines[d].lineimage > 0] = 1
-        #                 i,j1 = np.transpose(filter(
-        #                                 lambda a: a != 0, alllinesimage))
-        #                 #i,j1 = np.transpose(np.nonzero(alllinesimage))
-        #                 plt.imshow(padint)
-        #                 plt.title(['object #'+ i])
-        #                 plt.hold(True)
-        #                 plt.scatter(j1,i,150)
-        #                 plt.scatter(
-        #                     selectednodecoordlist[:,2],
-        #                     selectednodecoordlist[:,1],3000)
-        #                 plt.hold(False)
-        #             optfunc = lambda a,b,c,d,e,f,g,h: \
-        #                 a - 2 * b - c - d - e + 2 * f - g - 2 * h
-        #             linemaxint = alllines.maxint
-        #             linemeanint = alllines.meanint
-        #             linestraight = alllines.straightness
-        #             lineangle = alllines.angle
-        #             linelength = alllines.length
-        #             linequantint = alllines.quantint
-        #             solobjs = alllines.solobj
-        #             formobjs = alllines.formobj
-        #             smallindex = np.min((alllines.areasobj),[],2,nargout=2)
-        #             solobj = np.zeros(np.shape(solobjs)[0])
-        #             formobj = np.zeros(np.shape(formobjs)[0])
-        #             for k in np.shape(solobjs)[0]:
-        #                 solobj[k,1] = solobjs[k,smallindex[k]]
-        #                 formobj[k,1] = formobjs[k,smallindex[k]]
-                        
-        #             bestlines = optfunc[solobj,formobj,linemeanint.dot(100),
-        #                             linemaxint.dot(10),linequantint.dot(10),
-        #                             lineangle,linestraight/10,linelength/10]
-                                        
-        #             bestlinesindex = sorted(bestlines, reverse=True)
-        #         if kwargs['debug']:
-        #             bestlineimage = np.zeros(np.shape(padint))
-        #             bestlineimage[alllines[
-        #                             bestlinesindex[1]].lineimage > 0] = 1
-        #             i,j1 = np.transpose(
-        #                             filter(lambda a: a != 0, bestlineimage))
-        #             #i,j1 = np.transpose(np.nonzero(bestlineimage))
-        #             plt.imshow(padint)
-        #             plt.title(['object #'+ i])
-        #             plt.hold(True)
-        #             plt.scatter(j1,i,150)
-        #         if len(bestlinesindex) > len(alllines):
-        #             raise ValueError(
-        #                     "Failed to find a more optimal cut for object")
-        #         else:
-        #             imbestline = alllines[bestlinesindex[1]].lineimage
-        #             if np.max(imbestline[:]) > 0:
-        #                 imbestline = imbestline[(padsize[1]+1):
-        #                             (-1 - padsize[1]),
-        #                             (padsize[2] + 1):(-1 - padsize[2])]
-                                    
-        #                 rmini,cmini = np.transpose(
-        #                                 filter(lambda a: a != 0, imbwmini))
-        #                 #rmini,cmini = np.transpose(np.nonzero(imbwmini))
-        #                 wmini = np.ravel_multi_index(
-        #                         np.shape(imbwmini),(rmini,cmini))
-        #                 r = rmini - 1 + north1[i]
-        #                 c = cmini - 1 + west1[i]
-        #                 w = np.ravel_multi_index(np.shape(cut_mask),(r,c))
-        #                 cut_mask[w] = imbestline[wmini]
-
-    # cut_mask = cut_mask > 0
-    # kernel = np.ones((3,3),np.uint8)
-    # opening = cv2.morphology(cut_mask,cv2.morph_open,kernel, iterations = 2)
-    # cut_mask = cv2.dilate(opening,kernel,iterations=3)
-    # return cut_mask
+    # area, formfactor, solidity = create_feature_images(mh.label(mask)[0])
+    main(mask, img, 500, 50000)
