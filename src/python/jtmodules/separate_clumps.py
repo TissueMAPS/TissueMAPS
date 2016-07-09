@@ -1,7 +1,8 @@
+'''Jterator module for separation of clumps in a binary image,
+where a `clump` is a connected component with certain size and shape.
+'''
 import numpy as np
 import cv2
-# import scipy as sp
-# import PIL
 import heapq
 import pandas as pd
 import itertools
@@ -15,13 +16,9 @@ import skimage.segmentation
 from shapely.geometry import asLineString
 # from shapely.geometry import LineString
 from matplotlib import pyplot as plt
-# import jtlib as jtlib
 from scipy import ndimage as ndi
 import math 
 import jtlib.utils
-# from tmlib.image_utils import map_to_uint8
-# import calculate_object_selection_features as calculate_object_features
-# import ismember as ismember
 
 
 def find_concave_regions(mask, size):
@@ -94,16 +91,14 @@ def find_watershed_lines(mask, img, ksize):
     seeds = mh.label(peaks, Bc=strel)[0]
     watershed_regions = mh.cwatershed(np.invert(dist), seeds)
     watershed_regions[~mask] = 0
-    # "subpixel" mode provides a valid skeleton, but it doubles the size of
-    # the image -> watershed_regions.shape[i] is equal to 2 * lines.shape[i] - 1
-    lines = ski.segmentation.find_boundaries(watershed_regions, mode='thick')
-    outer_lines = ski.segmentation.find_boundaries(mask, mode='thick')
+    lines = mh.labeled.borders(watershed_regions)
+    outer_lines = mh.labeled.borders(mask)
     lines[outer_lines] = 0
+    lines = mh.thin(lines)
     labeled_lines = mh.label(lines)[0]
     sizes = mh.labeled.labeled_size(labeled_lines)
     too_small = np.where(sizes < 10)
     lines = mh.labeled.remove_regions(labeled_lines, too_small) > 0
-    lines = mh.thin(lines)
     return lines
 
 
@@ -416,7 +411,6 @@ def build_lines_from_segments(line_segments, nodes, graph, end_nodes, node_map):
     # Find lines that connect start and end points (all combinations)
     lines = dict()
     for start, end in itertools.combinations(set(end_nodes), 2):
-        print start, end
         p = find_shortest_path(graph, start, end)
         line_ids = find_line_segments_along_path(p, node_map)
         line = np.zeros(line_segments.shape, bool)
@@ -474,29 +468,53 @@ def find_nodes_closest_to_concave_regions(concave_region_points, end_points, nod
     return concave_region_point_node_map
 
 
-def calc_shape_features(mask):
-    '''Calcuates simple shape features `area`, `form factor` and `solidity`.
+def calc_area_shape_features(mask):
+    '''Calcuates `area` and shape features `form factor` and `solidity`
+    for the given object.
 
     Parameters
     ----------
     mask: numpy.ndarray[numpy.bool]
+        bounding box image representing the object
 
     Returns
     -------
-    Tuple[int]
+    numpy.ndarray[numpy.float64]
+        area, form factor and solidity
     '''
     mask = mask > 0
-    area = np.count_nonzero(mask)
+    area = np.float64(np.count_nonzero(mask))
     perimeter = mh.labeled.perimeter(mask)
     form_factor = (4.0 * np.pi * area) / (perimeter**2)
     area_convex_hull = np.count_nonzero(mh.polygon.fill_convexhull(mask))
-    solidity = float(area) / area_convex_hull
-    return (area, form_factor, solidity)
+    solidity = area / area_convex_hull
+    return np.array([area, form_factor, solidity])
 
 
-def create_feature_images(label_image):
+# def calc_shape_features(mask):
+#     '''Calculates shape features that are helpful for identification of clumps.
+
+#     Parameters
+#     ----------
+#     mask: numpy.ndarray[numpy.bool]
+#         bounding box image containing the object where ``True`` is foreground
+#         and ``False`` background
+
+#     Returns
+#     -------
+#     numpy.ndarray[numpy.float64]
+#         2 descriptive shape features
+#     '''
+#     index = [6, 12]
+#     # NOTE: radius is chosen based on visual inspection and totally arbitrary.
+#     # For correct calculation of Zernike moments images should have unit size!
+#     features = mh.features.zernike_moments(mask, radius=mask.size/100)
+#     return features[index]
+
+
+def create_area_shape_feature_images(label_image):
     '''Creates label images, where each object is color coded according to
-    `area`, `form factor` and `solidity` values, respectively.
+    its shape.
 
     Parameters
     ----------
@@ -505,56 +523,147 @@ def create_feature_images(label_image):
 
     Returns
     -------
-    Tuple[numpy.ndarray[numpy.int64 or numpy.float64]]
+    Tuple[numpy.ndarray[numpy.float64]]
         heatmap images
     '''
     label_image = mh.label(label_image > 0)[0]
     bboxes = mh.labeled.bbox(label_image)
     object_ids = np.unique(label_image)[1:]
-    area_image = np.zeros(label_image.shape, int)
-    formfactor_image = np.zeros(label_image.shape, float)
-    solidity_image = np.zeros(label_image.shape, float)
+    images = [np.zeros(label_image.shape, np.float64)] * 2
+    # TODO: might be faster by mapping the image through a lookup table
     for i in object_ids:
-        mask = jtlib.utils.bbox_image(label_image, bboxes[i], pad=True)
+        mask = jtlib.utils.extract_bbox_image(label_image, bboxes[i], pad=PAD)
         mask = mask == i
-        area, form_factor, solidity = calc_shape_features(mask)
-        area_image[label_image == i] = area
-        formfactor_image[label_image == i] = form_factor
-        solidity_image[label_image == i] = solidity
-    return (area_image, formfactor_image, solidity_image)
+        shape_features = calc_shape_features(mask)
+        for j, f in enumerate(shape_features):
+            images[j][label_image == i] = f
+    return tuple(images)
 
 
-def main(label_image, intensity_image, area_min_thresh, area_max_thresh,
-        solidity_max_thresh=0.93, form_factor_max_thresh=0.7):
+def is_clump(features, thresholds, directionality):
+    '''Decides whether an object should be classified as a `clump` based on
+    its shape features.
 
-    # TODO: use them as parameters
-    ksize_regions = 5
-    ksize_lines = 10
+    Parameters
+    ----------
+    features: numpy.ndarray[numpy.float64]
+        morphological features that describe size and shape of the object
+    thresholds: List[float]
+        threshold value for each feature
+    directionality: List[str]
+        whether values above or below threshold should be considered "clumpy"
+        (choices: ``{"<", ">"}``)
 
+    Returns
+    -------
+    bool
+        ``True`` when object should be selected given the provided criteria
+        and ``False`` otherwise
+    '''
+    if len(directionality) != len(features):
+        raise ValueError('Incorrect number of directionality values.')
+    if len(thresholds) != len(features):
+        raise ValueError('Incorrect number of threshold values.')
+    operators = []
+    for d in directionality:
+        if d == '<':
+            operators.append('__lt__')
+        elif d == '>':
+            operators.append('__gt__')
+        else:
+            raise ValueError('Directionality must be either "<" or ">".')
+    decision = False
+    for i, f in enumerate(features):
+        if getattr(f, operators[i])(thresholds[i]):
+            decision = True
+    return decision
+
+
+def main(mask_image, intensity_image, min_area_clump, max_area_clump,
+        min_area_cut, max_form_factor, max_solidity, region_detection_sensitivity,
+        line_detection_sensitivity):
+    '''Detects clumps in `mask_image` and cuts them along watershed lines
+    connecting two points within concave regions on their contour.
+
+    Parameters
+    ----------
+    mask_image: numpy.ndarray[numpy.bool]
+        image with potential clumps
+    intensity_image: numpy.ndarray[numpy.unit16 or numpy.uint8]
+        image used for detection of watershed lines
+    min_area_clump: int
+        minimal area an object must have to be considered a clump
+    max_area_clump: int
+        maximal area an object must have to be considered a clump
+    min_area_cut: int
+        minimal area a cut object can have
+        (useful to limit size of cut objects)
+    max_solidity: float
+        maximal solidity an object must have to be considerd a clump
+    max_form_factor: float
+        maximal form factor an object must have to be considerd a clump
+    region_detection_sensitivity: int
+        sensitivity of detecting concave regions along the contour of clumps
+        (distance between the farthest contour point and the convex hull
+        of clumps)
+    line_detection_sensitivity: int
+        sensitivity of detecting potential cut lines within clumps
+        (size of the kernel that's used to morphologically open the
+        regional intensity peaks within clumps, which are used as seeds
+        for the watershed transform)
+    '''
+
+    PAD = 1
+    # Sensitivity of concave region detection (larger less regions)
+    region_detection_sensitivity = 5
+    # Sensitivity of line detection (larger less lines)
+    line_detection_sensitivity = 10
+
+    label_image = mh.label(mask_image)[0]
     object_ids = np.unique(label_image[label_image > 0])
-
-    cut_mask = np.zeros(label_image.shape, dtype=label_image.dtype)
     if len(object_ids) == 0:
         # If there are no objects to cut we can simply return an empty cut mask
         return cut_mask
 
+    cut_mask = np.zeros(label_image.shape, bool)
+
+    kernel = np.ones((100, 100))
+    blackhat_image = cv2.morphologyEx(
+        mh.stretch(intensity_image), cv2.MORPH_BLACKHAT, kernel
+    )
+
     bboxes = mh.labeled.bbox(label_image)
     for oid in object_ids:
         print 'object #%d' % oid
-        mask = jtlib.utils.bbox_image(label_image, bboxes[oid], pad=True)
+        # TODO: use numpy masked array
+        # http://docs.scipy.org/doc/numpy/reference/maskedarray.generic.html#rationale
+        mask = jtlib.utils.extract_bbox_image(
+            label_image, bboxes[oid], pad=PAD
+        )
         mask = mask == oid
-        img = jtlib.utils.bbox_image(intensity_image, bboxes[oid], pad=True)
+        img = jtlib.utils.extract_bbox_image(
+            intensity_image, bboxes[oid], pad=PAD
+        )
+        bhat = jtlib.utils.extract_bbox_image(
+            blackhat_image, bboxes[oid], pad=PAD
+        )
 
-        area, form_factor, solidity = calc_shape_features(mask)
-        if area > area_max_thresh or area < area_min_thresh:
+        area, form_factor, solidity = calc_area_shape_features(mask)
+        if area < min_area_clump or area > max_area_clump:
+            print 'no clump -- outside area range'
             continue
-        if form_factor > form_factor_max_thresh:
+        if form_factor > max_form_factor:
+            print 'no clump -- above form factor threshold'
             continue
-        if solidity > solidity_max_thresh:
+        if solidity > max_solidity:
+            print 'no clump -- above solidity threshold'
             continue
+        # features = calc_area_shape_features(mask)
+        # if not is_clump(features, thresholds, directionality):
+        #     continue
 
         concave_region_points, n_concave_regions = find_concave_regions(
-            mask, ksize_regions
+            mask, region_detection_sensitivity
         )
         concave_region_points = mh.label(concave_region_points)[0]
         concave_region_point_ids = np.unique(concave_region_points)[1:]
@@ -562,7 +671,7 @@ def main(label_image, intensity_image, area_min_thresh, area_max_thresh,
             # Cut requires at least two concave regions
             continue
 
-        skeleton = find_watershed_lines(mask, img, ksize_lines)
+        skeleton = find_watershed_lines(mask, img, line_detection_sensitivity)
         branch_points = find_branch_points(skeleton)
         end_points = find_border_points(skeleton, mask)
         end_points += find_end_points(skeleton)
@@ -598,11 +707,6 @@ def main(label_image, intensity_image, area_min_thresh, area_max_thresh,
         if len(lines) == 0:
             continue
 
-        kernel = np.ones((50, 50))
-        blackhat_img = cv2.morphologyEx(
-            mh.stretch(img), cv2.MORPH_BLACKHAT, kernel
-        )
-
         features = list()
         for (start, end), line in lines.iteritems():
             test_cut_mask = mask.copy()
@@ -612,27 +716,25 @@ def main(label_image, intensity_image, area_min_thresh, area_max_thresh,
             sizes = mh.labeled.labeled_size(subobjects)
             smaller_id = np.where(sizes == np.min(sizes))[0]
             smaller_object = subobjects == smaller_id
-            area, form_factor, solidity = calc_shape_features(smaller_object)
+            area, form_factor, solidity = calc_area_shape_features(smaller_object)
             intensity = img[line]
-            blackness = blackhat_img[line]
+            blackness = bhat[line]
             start_coord = np.array(np.where(node_points == start)).T[0, :]
             end_coord = np.array(np.where(node_points == end)).T[0, :]
             totally_straight = np.linalg.norm(start_coord - end_coord)
-            length = np.count_nonzero(line),
-            straightness = length / totally_straight
+            length = np.count_nonzero(line)
+            straightness = totally_straight / length
             f = {
                 'n_objects': n_subobjects,
-                'object_area': area,
-                'object_form_factor': form_factor,
-                'object_solidity': solidity,
-                'total_intensity': np.sum(intensity),
+                'cut_object_solidity': solidity,
+                'cut_object_form_factor': form_factor,
+                'cut_object_area': area,
                 'min_intensity': np.min(intensity),
                 'mean_intensity': np.mean(intensity),
                 'median_intensity': np.median(intensity),
                 'max_intensity': np.max(intensity),
                 'length': length,
                 'straightness': straightness,
-                'total_blackness': np.sum(blackness),
                 'min_blackness': np.min(blackness),
                 'mean_blackness': np.mean(blackness),
                 'median_blackness': np.median(blackness),
@@ -646,34 +748,41 @@ def main(label_image, intensity_image, area_min_thresh, area_max_thresh,
 
         potential_line_index = (
             (features.n_objects == 2) &
-            (features.object_form_factor > form_factor_max_thresh) &
-            (features.object_solidity > solidity_max_thresh) &
-            (features.object_area < area_max_thresh) &
-            (features.object_area > area_min_thresh)
+            (features.cut_object_solidity > max_solidity) &
+            (features.cut_object_form_factor > max_form_factor) &
+            (features.cut_object_area > min_area_cut)
         )
         if not any(potential_line_index):
             continue
 
-        # TODO: Create a cost function to select the optimal line based on
-        # intensity profile, length and straightness
-        # TODO: Find criteria to not perform any cut.
-        potential_lines = [
-            lines[idx]
-            for idx in features.ix[potential_line_index].index.values
+        # potential_lines = [
+        #     lines[idx]
+        #     for idx in features.ix[potential_line_index].index.values
+        # ]
+        # plt.imshow((np.sum(potential_lines, axis=0) > 0) + mask * 2);
+        # plt.show()
+
+        # Select the "optimal" line based on its intensity profile, length
+        # and straightness
+        selected_features = features.loc[
+            potential_line_index,
+            ['median_intensity', 'median_blackness', 'length', 'straightness']
         ]
-        plt.imshow((np.sum(potential_lines, axis=0) > 0) + mask * 2);
-        plt.show()
+        # TODO: optimize feature selection and weights
+        weights = np.array([1, 1, 1, 1])
+        costs = selected_features.dot(weights)
+        idx = costs[costs == np.min(costs)].index.values[0]
 
-        # TODO: cut
+        # plt.imshow(mask + lines[idx]*2)
+        # plt.show()
 
+        # Update cut mask
+        y, x = np.where(lines[idx])
+        y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
+        y += y_offset
+        x += x_offset
+        cut_mask[y, x] = True
 
-if __name__ == '__main__':
+    mask_image[cut_mask] = 0
+    return mask_image
 
-    import os
-    folder = '/Users/mdh/testdata/experiments/experiment_1/plates/plate_1/acquisitions/acquisition_1/microscope_images' 
-    filename = '150820-Testset-CV-1_D03_T0001F001L01A02Z01C01.tif'
-    img = cv2.imread(os.path.join(folder, filename), cv2.IMREAD_UNCHANGED)
-    mask = cv2.imread('/Users/mdh/mask.tif', cv2.IMREAD_UNCHANGED)
-
-    # area, formfactor, solidity = create_feature_images(mh.label(mask)[0])
-    main(mask, img, 500, 50000)
