@@ -580,8 +580,8 @@ def is_clump(features, thresholds, directionality):
 
 
 def main(mask_image, intensity_image, min_area_clump, max_area_clump,
-        min_area_cut, max_form_factor, max_solidity, region_detection_sensitivity,
-        line_detection_sensitivity):
+        min_area_cut, max_form_factor, max_solidity,
+        region_detection_sensitivity, line_detection_sensitivity, plot=False):
     '''Detects clumps in `mask_image` and cuts them along watershed lines
     connecting two points within concave regions on their contour.
 
@@ -611,6 +611,14 @@ def main(mask_image, intensity_image, min_area_clump, max_area_clump,
         (size of the kernel that's used to morphologically open the
         regional intensity peaks within clumps, which are used as seeds
         for the watershed transform)
+    plot: bool, optional
+        whether a plot should be generated
+
+    Returns
+    -------
+    Dict[str, numpy.ndarray[numpy.bool] or str]
+        * "separated_image": image with cut clumped objects
+        * "figure": JSON figure representation
     '''
 
     PAD = 1
@@ -625,7 +633,8 @@ def main(mask_image, intensity_image, min_area_clump, max_area_clump,
         # If there are no objects to cut we can simply return an empty cut mask
         return cut_mask
 
-    cut_mask = np.zeros(label_image.shape, bool)
+    cut_mask = np.zeros(mask_image.shape, bool)
+    separated_image = mask_image.copy()
 
     kernel = np.ones((100, 100))
     blackhat_image = cv2.morphologyEx(
@@ -783,6 +792,9 @@ def main(mask_image, intensity_image, min_area_clump, max_area_clump,
         x += x_offset
         cut_mask[y, x] = True
 
-    mask_image[cut_mask] = 0
-    return mask_image
+    separated_image[cut_mask] = 0
 
+    output = dict()
+    output['separated_image'] = separated_image
+    output['figure'] = str()
+    return output
