@@ -13,14 +13,12 @@
       <div ng-repeat="inarg in module.description.input">
 
         <form class="form-horizontal">
-          <!-- <div ng-hide="inarg.type=='Plot'" class="form-group"> -->
+          <div class="form-group">
 
             <div class="col-sm-12">
-              <b>{{ inarg.name }}: </b>
-              {{ inarg.help }}
-            </div>
+              <label>{{ inarg.name }}</label>
+              <p class="help-block">{{inarg.help}}<p>
 
-            <div class="col-sm-12">
 
               <span ng-hide="isPipeline(inarg.name)">
 
@@ -36,7 +34,7 @@
                 </span>
 
                 <span ng-hide="hasOptions(inarg.name) || isBoolean(inarg.name)">
-                  <input class="form-control" id="inputArg" ng-model="inarg.value" uib-popover="{{ inarg.type }}" popover-trigger="focus" popover-placement="top">
+                  <input class="form-control" id="inputArg" ng-model="inarg.value">
                 </span>
 
               </span>
@@ -50,8 +48,8 @@
                 </select>
 
               </span>
-          
-            <!-- </div> -->
+
+            </div>
 
           </div>
 
@@ -77,11 +75,8 @@
             <div ng-hide="outarg.type=='Figure'" class="form-group">
 
               <div class="col-sm-12" >
-                <b>{{ outarg.name }}: </b>
-                {{ outarg.help }}
-              </div>
-
-              <div class="col-sm-12">
+                <label>{{ outarg.name }}</label>
+                <p class="help-block">{{outarg.help}}<p>
 
                 <input  class="form-control"
                         ng-class="{'error-input': duplicate}"
