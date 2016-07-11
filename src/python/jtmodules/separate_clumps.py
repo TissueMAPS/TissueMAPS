@@ -554,7 +554,7 @@ def create_area_shape_feature_images(label_image):
 
 
 def main(input_mask, input_image, min_area, max_area,
-        min_cut_area, max_form_factor, max_solidity,
+        min_cut_area, max_cut_intensity, max_form_factor, max_solidity,
         region_sensitivity, line_sensitivity, cutting_passes, plot=False):
     '''Detects clumps in `input_mask` and cuts them along watershed lines
     connecting two points falling into concave regions on their contour.
@@ -572,6 +572,8 @@ def main(input_mask, input_image, min_area, max_area,
     min_cut_area: int
         minimal area a cut object can have
         (useful to limit size of cut objects)
+    max_cut_intensity: int
+        percentile for calculation of a intensity cutoff value
     max_solidity: float
         maximal solidity an object must have to be considerd a clump
     max_form_factor: float
@@ -605,7 +607,9 @@ def main(input_mask, input_image, min_area, max_area,
     output_mask = input_mask.copy()
     cut_mask = np.zeros(output_mask.shape, bool)
     clumps_mask = np.zeros(output_mask.shape, bool)
-    intensity_cutoff = int(np.percentile(input_image[input_mask], 75))
+    intensity_cutoff = int(np.percentile(
+        input_image[input_mask], max_cut_intensity)
+    )
     for n in range(cutting_passes):
         logger.info('cutting pass #%d', n+1)
         label_image = mh.label(output_mask)[0]
