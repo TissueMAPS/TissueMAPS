@@ -128,7 +128,7 @@ class PyramidBuilder(ClusterRoutines):
                     filter_by(channel_id=cid).\
                     distinct()
 
-                for t, z in itertools.product(tpoints, range(n_zplanes):
+                for t, z in itertools.product(tpoints, range(n_zplanes)):
                     image_files = session.query(tm.ChannelImageFile).\
                         filter(
                             tm.ChannelImageFile.channel_id==cid,
