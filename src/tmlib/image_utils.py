@@ -1,5 +1,6 @@
 '''Utility functions for common image processing routines.'''
 
+import mahotas as mh
 import numpy as np
 import logging
 
@@ -7,42 +8,37 @@ logger = logging.getLogger(__name__)
 
 
 def remove_border_objects(img):
-    '''Given a matrix of a site image, set all pixels with
-    ids belonging to border objects to zero.
+    '''Set all pixels of objects (connected components) at the border
+    of the image to zero.
 
     Parameters
     ----------
-    img: numpy.ndarray[int32]
-        labeled pixels array were objects (connected components) are encoded
-        with unique integers
+    img: numpy.ndarray[numpy.int32]
+        labeled image
 
     Returns
     -------
-    numpy.ndarray[int32]
-        modified pixel array with values of border objects set to 0
+    numpy.ndarray[numpy.int32]
+        image without border objects
     '''
-    is_border_object = find_border_objects(img)
-    mat = img.copy()  # Copy since we don't update in place
-    mat[is_border_object] = 0
-    return mat
+    return mh.labeled.remove_bordering(img)
 
 
 def remove_objects(img, ids):
-    '''Given a matrix of a site image, set all pixels whose values
-    are in "ids" to zero.
+    '''Sets all pixels of objects (connected components) whose labels are in
+    `ids` to zero.
 
     Parameters
     ----------
-    img: numpy.ndarray[int32]
-        labeled pixels array were objects (connected components) are encoded
-        with unique integers
+    img: numpy.ndarray[numpy.int32]
+        labeled image
     ids: List[int]
-        unique object ids
+        unique ids of objects that should be removed
 
     Returns
     -------
-    numpy.ndarray[int32]
-        modified pixels array with pixel values in `ids` set to 0
+    numpy.ndarray[numpy.int32]
+        image without specified objects
     '''
     mat = img.copy()  # Copy since we don't update in place
     remove_ix = np.in1d(mat, ids).reshape(mat.shape)
@@ -50,102 +46,52 @@ def remove_objects(img, ids):
     return mat
 
 
-def compute_outlines(img, keep_ids=False):
-    '''Given a labeled pixels array, return an array of the outlines of encoded
-    objects.
-    If `keep_ids` is True, the outlines will still consist of their cell's id,
-    otherwise the outlines will be ``True`` and all other pixels ``False``.
-    Note that in the case of keeping the ids,
-    the output matrix will have the original bit depth!
-
-    If a pixel is not zero and has at least one neighbor with a mat
-    value, then it is part of the outline.
+def compute_outlines(img):
+    '''Sets all pixels that don't lie on the contour of objects to zero.
+    Note that the returned image will have the original data type.
 
     Parameters
     ----------
-    img: numpy.ndarray[int32]
-        labeled pixels array were objects (connected components) are encoded
-        with unique integers
+    img: numpy.ndarray[numpy.int32 or numpy.bool]
+        labeled or binary image
 
-    Note
-    ----
-    Code adapted from
-    `CellProfiler <https://github.com/CellProfiler/CellProfiler/blob/master/cellprofiler/cpmath/outline.py>`_.
+    Returns
+    -------
+    numpy.ndarray[numpy.int32 or numpy.bool]
+        outlines
     '''
-    lr_mat = img[1:, :] != img[:-1, :]
-    ud_mat = img[:, 1:] != img[:, :-1]
-    d1_mat = img[1:, 1:] != img[:-1, :-1]
-    d2_mat = img[1:, :-1] != img[:-1, 1:]
-    mat = np.zeros(img.shape, bool)
-    mat[1:, :][lr_mat] = True
-    mat[:-1, :][lr_mat] = True
-    mat[:, 1:][ud_mat] = True
-    mat[:, :-1][ud_mat] = True
-    mat[1:, 1:][d1_mat] = True
-    mat[:-1, :-1][d1_mat] = True
-    mat[1:, :-1][d2_mat] = True
-    mat[:-1, 1:][d2_mat] = True
+    dilated_img = mh.morph.dilate(img)
+    return dilated_img - img
+    # lr_mat = img[1:, :] != img[:-1, :]
+    # ud_mat = img[:, 1:] != img[:, :-1]
+    # d1_mat = img[1:, 1:] != img[:-1, :-1]
+    # d2_mat = img[1:, :-1] != img[:-1, 1:]
+    # mat = np.zeros(img.shape, bool)
+    # mat[1:, :][lr_mat] = True
+    # mat[:-1, :][lr_mat] = True
+    # mat[:, 1:][ud_mat] = True
+    # mat[:, :-1][ud_mat] = True
+    # mat[1:, 1:][d1_mat] = True
+    # mat[:-1, :-1][d1_mat] = True
+    # mat[1:, :-1][d2_mat] = True
+    # mat[:-1, 1:][d2_mat] = True
 
-    mat[0, :] = False
-    mat[:, 0] = False
-    mat[-1, :] = False
-    mat[:, -1] = False
+    # mat[0, :] = False
+    # mat[:, 0] = False
+    # mat[-1, :] = False
+    # mat[:, -1] = False
 
-    if keep_ids:
-        return mat * img
-    else:
-        output = np.zeros(img.shape, np.bool)
-        output[mat] = True
-        return output
-
-
-# def convert_to_uint8(img, min_value=None, max_value=None):
-#     '''
-#     Scale an image to 8-bit by linearly scaling from a given range
-#     to 0-255. The lower and upper values of the range can be set. If not set
-#     they default to the minimum and maximum intensity value of `img`.
-    
-#     This can be useful for displaying an image in a figure, for example.
-
-#     Parameters
-#     ----------
-#     img: numpy.ndarray
-#         image that should be rescaled
-#     min_value: int, optional
-#         lower intensity value of rescaling range (default: `None`)
-#     max_value: int, optional
-#         upper intensity value of rescaling range (default: `None`)
-
-#     Returns
-#     -------
-#     numpy.ndarray[uint8]
-
-#     Note
-#     ----
-#     When no `min_value` or `max_value` is provided the result is equivalent to
-#     the corresponding method in ImageJ: Image > Type > 8-bit.
-#     '''
-#     if min_value is not None:
-#         if not isinstance(min_value, int):
-#             raise TypeError('Argument "min_value" must have type int.')
-#         min_value = min_value
-#     else:
-#         min_value = np.min(img)
-#     if max_value is not None:
-#         if not isinstance(max_value, int):
-#             raise TypeError('Argument "max_value" must have type int.')
-#         max_value = max_value
-#     else:
-#         max_value = np.max(img)
-#     in_range = (min_value, max_value)
-#     img_rescaled = rescale_intensity(
-#                     img, out_range='uint8', in_range=in_range).astype(np.uint8)
-#     return img_rescaled
+    # if keep_ids:
+    #     return mat * img
+    # else:
+    #     output = np.zeros(img.shape, np.bool)
+    #     output[mat] = True
+    #     return output
 
 
 def map_to_uint8(img, lower_bound=None, upper_bound=None):
     '''Maps a 16-bit image trough a lookup table to convert it to 8-bit.
-    
+
     Parameters
     ----------
     img: numpy.ndarray[np.uint16]
@@ -158,7 +104,7 @@ def map_to_uint8(img, lower_bound=None, upper_bound=None):
         upper bound of the range that should be mapped to ``[0, 255]``,
         value must be in the range ``[0, 65535]``
         (defaults to ``numpy.max(img)``)
-    
+
     Returns
     -------
     numpy.ndarray[uint8]
