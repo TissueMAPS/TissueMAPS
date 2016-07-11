@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import mahotas as mh
 import plotly
 import skimage
 from matplotlib import cm
@@ -50,9 +51,10 @@ def _check_position_argument(position):
         raise TypeError('Argument "position" must have type basestring.')
     if position not in supported_positions:
         raise ValueError(
-                'A figure is a 2x2 grid of plots. '
-                'Values of argument "position" must be either "%s"'
-                % '", "'.join(supported_positions))
+            'A figure is a 2x2 grid of plots. '
+            'Values of argument "position" must be either "%s"'
+            % '", "'.join(supported_positions)
+        )
 
 
 def create_histogram_plot(data, position, color='grey'):
@@ -75,13 +77,11 @@ def create_histogram_plot(data, position, color='grey'):
     '''
     _check_position_argument(position)
     return plotly.graph_objs.Histogram(
-                x=data,
-                marker=dict(
-                    color=color
-                ),
-                showlegend=False,
-                yaxis=PLOT_POSITION_MAPPING[position][0],
-                xaxis=PLOT_POSITION_MAPPING[position][1],
+        x=data,
+        marker=dict(color=color),
+        showlegend=False,
+        yaxis=PLOT_POSITION_MAPPING[position][0],
+        xaxis=PLOT_POSITION_MAPPING[position][1],
     )
 
 
@@ -110,15 +110,11 @@ def create_scatter_plot(y_data, x_data, position, color='grey', marker_size=4):
     '''
     _check_position_argument(position)
     return plotly.graph_objs.Scatter(
-                y=y_data,
-                x=x_data,
-                marker=dict(
-                    size=marker_size,
-                    color=color,
-                ),
-                showlegend=False,
-                yaxis=PLOT_POSITION_MAPPING[position][0],
-                xaxis=PLOT_POSITION_MAPPING[position][1],
+        y=y_data, x=x_data,
+        marker=dict(size=marker_size, color=color),
+        showlegend=False,
+        yaxis=PLOT_POSITION_MAPPING[position][0],
+        xaxis=PLOT_POSITION_MAPPING[position][1],
     )
 
 
@@ -146,18 +142,12 @@ def create_line_plot(y_data, x_data, position, color='grey', line_width=4):
     '''
     _check_position_argument(position)
     return plotly.graph_objs.Scatter(
-                y=y_data,
-                x=x_data,
-                marker=dict(
-                    size=0,
-                ),
-                line=dict(
-                    color=color,
-                    width=line_width,
-                ),
-                showlegend=False,
-                yaxis=PLOT_POSITION_MAPPING[position][0],
-                xaxis=PLOT_POSITION_MAPPING[position][1],
+        y=y_data, x=x_data,
+        marker=dict(size=0),
+        line=dict(color=color, width=line_width),
+        showlegend=False,
+        yaxis=PLOT_POSITION_MAPPING[position][0],
+        xaxis=PLOT_POSITION_MAPPING[position][1],
     )
 
 
@@ -192,10 +182,13 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
     '''
 
     _check_position_argument(position)
+    if not str(image.dtype).startswith('uint'):
+        raise TypeError('Argument "image" must have unsigned integer type.')
 
     block = (IMAGE_RESIZE_FACTOR, IMAGE_RESIZE_FACTOR)
     ds_img = skimage.measure.block_reduce(
-                            image, block, func=np.mean).astype(int)
+        image, block, func=np.mean
+    ).astype(int)
 
     if clip:
         if clip_value is None:
@@ -204,26 +197,27 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
         clip_value = np.max(image)
 
     return plotly.graph_objs.Heatmap(
-                z=ds_img,
-                # Only show pixel intensities upon mouse hover.
-                hoverinfo='z',
-                # Background should be black and pixel intensities encode
-                # as grey values.
-                colorscale='Greys',
-                # Rescale pixel intensity values for display.
-                zmax=clip_value,
-                zmin=0,
-                zauto=False,
-                colorbar=dict(
-                    thickness=10,
-                    yanchor='bottom',
-                    y=COLORBAR_POSITION_MAPPING[position][0],
-                    x=COLORBAR_POSITION_MAPPING[position][1],
-                    len=PLOT_HEIGHT),
-                y=np.linspace(0, image.shape[0], ds_img.shape[0]),
-                x=np.linspace(0, image.shape[1], ds_img.shape[1]),
-                yaxis=PLOT_POSITION_MAPPING[position][0],
-                xaxis=PLOT_POSITION_MAPPING[position][1],
+        z=ds_img,
+        # Only show pixel intensities upon mouse hover.
+        hoverinfo='z',
+        # Background should be black and pixel intensities encode
+        # as grey values.
+        colorscale='Greys',
+        # Rescale pixel intensity values for display.
+        zmax=clip_value,
+        zmin=0,
+        zauto=False,
+        colorbar=dict(
+            thickness=10,
+            yanchor='bottom',
+            y=COLORBAR_POSITION_MAPPING[position][0],
+            x=COLORBAR_POSITION_MAPPING[position][1],
+            len=PLOT_HEIGHT
+        ),
+        y=np.linspace(0, image.shape[0], ds_img.shape[0]),
+        x=np.linspace(0, image.shape[1], ds_img.shape[1]),
+        yaxis=PLOT_POSITION_MAPPING[position][0],
+        xaxis=PLOT_POSITION_MAPPING[position][1],
     )
 
 
@@ -252,13 +246,16 @@ def create_mask_image_plot(mask, position, colorscale=None):
     See also
     --------
     :py:function:`jtlib.plotting.create_intensity_image_plot`
-    :py:function:`jtlib.plotting.create_overlay_image_plot`
+    :py:function:`jtlib.plotting.create_intensity_overlay_image_plot`
     '''
     _check_position_argument(position)
+    # if not mask.dtype == np.bool or not mask.dtype == np.int32:
+    #     raise TypeError('Argument "mask" must be binary.')
 
     block = (IMAGE_RESIZE_FACTOR, IMAGE_RESIZE_FACTOR)
     ds_mask = skimage.measure.block_reduce(
-                            mask, block, func=np.max).astype(int)
+        mask, block, func=np.max
+    ).astype(int)
 
     n_objects = len(np.unique(mask[mask > 0]))
     if colorscale is None:
@@ -269,36 +266,32 @@ def create_mask_image_plot(mask, position, colorscale=None):
             colorscale[0] = [0, 'rgb(0,0,0)']
 
     plot = plotly.graph_objs.Heatmap(
-                z=ds_mask,
-                colorscale=colorscale,
-                hoverinfo='z',
-                colorbar=dict(
-                    thickness=10,
-                    yanchor='bottom',
-                    y=COLORBAR_POSITION_MAPPING[position][0],
-                    x=COLORBAR_POSITION_MAPPING[position][1],
-                    len=PLOT_HEIGHT
-                ),
-                y=np.linspace(0, mask.shape[0], ds_mask.shape[0]),
-                x=np.linspace(0, mask.shape[1], ds_mask.shape[1]),
-                yaxis=PLOT_POSITION_MAPPING[position][0],
-                xaxis=PLOT_POSITION_MAPPING[position][1],
+        z=ds_mask,
+        colorscale=colorscale,
+        hoverinfo='z',
+        colorbar=dict(
+            thickness=10,
+            yanchor='bottom',
+            y=COLORBAR_POSITION_MAPPING[position][0],
+            x=COLORBAR_POSITION_MAPPING[position][1],
+            len=PLOT_HEIGHT
+        ),
+        y=np.linspace(0, mask.shape[0], ds_mask.shape[0]),
+        x=np.linspace(0, mask.shape[1], ds_mask.shape[1]),
+        yaxis=PLOT_POSITION_MAPPING[position][0],
+        xaxis=PLOT_POSITION_MAPPING[position][1],
     )
 
     if n_objects == 1:
-        plot['colorbar'].update(
-                tickmode='array',
-                tickvals=[0, 1],
-        )
+        plot['colorbar'].update(tickmode='array', tickvals=[0, 1])
 
     return plot
 
 
-def create_overlay_image_plot(image, mask, position,
-                              clip=True, clip_value=None, color=None):
-    '''
-    Create an intensity image plot and overlay the outlines of a mask
-    in color on top of the greyscale plot.
+def create_intensity_overlay_image_plot(image, mask, position,
+        clip=True, clip_value=None, color=None):
+    '''Creates an intensity image plot and overlays colorized mask outlines
+    on top of the greyscale image.
 
     Parameters
     ----------
@@ -316,8 +309,8 @@ def create_overlay_image_plot(image, mask, position,
         is provided; will only be considered when `clip` is ``True``
         (default: ``None``)
     color: str, optional
-        color of the mask outline;
-        :py:attribute:`jtlib.plotting.OBJECT_COLOR` will be used in case no color
+        color of the mask outline; defaults to
+        :py:attribute:`jtlib.plotting.OBJECT_COLOR` in case no color
         is specified (default: ``None``)
 
     Returns
@@ -331,26 +324,27 @@ def create_overlay_image_plot(image, mask, position,
     '''
 
     _check_position_argument(position)
+    if not mask.dtype == bool:
+        raise TypeError('Argument "mask" must be binary.')
+    if not str(image.dtype).startswith('uint'):
+        raise TypeError('Argument "image" must have unsigned integer type.')
+
     block = (IMAGE_RESIZE_FACTOR, IMAGE_RESIZE_FACTOR)
     ds_mask = skimage.measure.block_reduce(
-                            mask, block, func=np.max).astype(int)
+        mask, block, func=np.max
+    )
     # We add 1 to each pixel value to make sure that there are no zeros
     # in the image. This is important because we will later consider all
     # zero pixels as outlines and colorize them accordingly (see below).
     ds_img = skimage.measure.block_reduce(
-                            image, block, func=np.mean).astype(int) + 1
+        image, block, func=np.mean
+    ).astype(int) + 1
 
-    # Create the outline image for overlay of segmentation results
-    outlines = skimage.measure.find_contours(
-                        ds_mask, 0.5, fully_connected='high')
-    for coords in outlines:
-        y = coords[:, 0].astype(int)
-        x = coords[:, 1].astype(int)
-        # Set outline pixel values to zero. We make sure that images
-        # don't contain any zeros (see above).
-        # Sweet! A nice side effect of this approach is that the outline color
-        # will not be visible in the colorbar.
-        ds_img[y, x] = 0
+    # Set outline pixel values to zero. We make sure that images
+    # don't contain any zeros (see above).
+    # Sweet! A nice side effect of this approach is that the outline color
+    # will not be visible in the colorbar.
+    ds_img[ds_mask] = 0
 
     if clip:
         if clip_value is None:
@@ -368,32 +362,104 @@ def create_overlay_image_plot(image, mask, position,
         colorscale[-1][1] = color
 
     return plotly.graph_objs.Heatmap(
-                z=ds_img,
-                # Only show pixel intensities upon mouse hover.
-                hoverinfo='z',
-                colorscale=colorscale,
-                reversescale=True,
-                # Rescale pixel intensity values for display.
-                zmax=clip_value,
-                zmin=0,
-                zauto=False,
-                colorbar=dict(
-                    thickness=10,
-                    yanchor='bottom',
-                    y=COLORBAR_POSITION_MAPPING[position][0],
-                    x=COLORBAR_POSITION_MAPPING[position][1],
-                    len=PLOT_HEIGHT),
-                y=np.linspace(0, image.shape[0], ds_img.shape[0]),
-                x=np.linspace(0, image.shape[1], ds_img.shape[1]),
-                yaxis=PLOT_POSITION_MAPPING[position][0],
-                xaxis=PLOT_POSITION_MAPPING[position][1],
+        z=ds_img,
+        # Only show pixel intensities upon mouse hover.
+        hoverinfo='z',
+        colorscale=colorscale,
+        reversescale=True,
+        # Rescale pixel intensity values for display.
+        zmax=clip_value,
+        zmin=0,
+        zauto=False,
+        colorbar=dict(
+            thickness=10,
+            yanchor='bottom',
+            y=COLORBAR_POSITION_MAPPING[position][0],
+            x=COLORBAR_POSITION_MAPPING[position][1],
+            len=PLOT_HEIGHT
+        ),
+        y=np.linspace(0, image.shape[0], ds_img.shape[0]),
+        x=np.linspace(0, image.shape[1], ds_img.shape[1]),
+        yaxis=PLOT_POSITION_MAPPING[position][0],
+        xaxis=PLOT_POSITION_MAPPING[position][1],
+    )
+
+
+def create_mask_overlay_image_plot(mask, mask2, position, color=None):
+    '''Creates an mask image plot and overlays colorized mask outlines
+    on top of the binary image.
+
+    Parameters
+    ----------
+    mask: numpy.ndarray[numpy.bool]
+        2D mask image
+    outlines: numpy.ndarray[numpy.bool]
+        2D mask image that should be overlayed
+    position: str
+        one-based figure coordinate that defines the relative position of the
+        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
+        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+    color: str, optional
+        color of the mask outline; defaults to
+        :py:attribute:`jtlib.plotting.OBJECT_COLOR` in case no color
+        is specified (default: ``None``)
+
+    Returns
+    -------
+    plotly.graph_objs.graph_objs.Heatmap
+
+    See also
+    --------
+    :py:function:`jtlib.plotting.create_mask_image_plot`
+    '''
+
+    _check_position_argument(position)
+    if not mask.dtype == bool:
+        raise TypeError('Argument "mask" must be binary.')
+    if not mask2.dtype == bool:
+        raise TypeError('Argument "mask2" must be binary.')
+
+    block = (IMAGE_RESIZE_FACTOR, IMAGE_RESIZE_FACTOR)
+    ds_mask = skimage.measure.block_reduce(
+        mask, block, func=np.max
+    ).astype(int)
+    ds_mask2 = skimage.measure.block_reduce(
+        mask2, block, func=np.max
+    )
+    ds_mask[ds_mask2] = 3
+
+    colorscale = [
+        [0, 'rgb(0,0,0)'],
+        [0.5, 'rgb(255, 255, 255)'],
+        [1, OBJECT_COLOR]
+    ]
+    # Insert the color for the outlines into the colorscale. We insert it
+    # at the end, but later reverse the scale for display, so zero values
+    # in the image will be labeled with that color.
+    if color:
+        colorscale[-1][1] = color
+
+    return plotly.graph_objs.Heatmap(
+        z=ds_mask,
+        colorscale=colorscale,
+        zauto=False,
+        colorbar=dict(
+            thickness=10,
+            yanchor='bottom',
+            y=COLORBAR_POSITION_MAPPING[position][0],
+            x=COLORBAR_POSITION_MAPPING[position][1],
+            len=PLOT_HEIGHT
+        ),
+        y=np.linspace(0, mask.shape[0], ds_mask.shape[0]),
+        x=np.linspace(0, mask.shape[1], ds_mask.shape[1]),
+        yaxis=PLOT_POSITION_MAPPING[position][0],
+        xaxis=PLOT_POSITION_MAPPING[position][1],
     )
 
 
 def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
                   plot_is_image=[True, True, True, True], title=''):
-    '''
-    Create a figure based on one or more subplots. Plots will be arranged as
+    '''Creates a figure based on one or more subplots. Plots will be arranged as
     a 2x2 grid.
 
     Parameters
@@ -418,7 +484,7 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
     Returns
     -------
     str
-        figure as JSON string
+        JSON string representation of the figure
 
     Raises
     ------
@@ -428,76 +494,54 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
         when length of `plot`, `plot_positions`, or `plot_is_image` is larger
         than 4
     '''
-
     args_to_check = [plots, plot_positions, plot_is_image]
     if not all([isinstance(arg, list) for arg in args_to_check]):
         raise TypeError(
-                'Arguments "%s" must have type list.'
-                % '", "'.join(args_to_check))
+            'Arguments "%s" must have type list.'
+            % '", "'.join(args_to_check)
+        )
     if any([len(arg) > 4 for arg in args_to_check]) == 1:
         raise ValueError(
-                'Arguments "%s" can have maximally length 4.'
-                % '", "'.join(args_to_check))
+            'Arguments "%s" can have maximally length 4.'
+            % '", "'.join(args_to_check)
+        )
 
     data = list()
     layout = plotly.graph_objs.Layout(title=title)
     for i, p in enumerate(plots):
         if plot_positions[i] == 'ul':
             layout.update(
-                xaxis1=dict(
-                    domain=[0, PLOT_WIDTH],
-                    anchor='y1',
-                ),
-                yaxis1=dict(
-                    domain=[1-PLOT_HEIGHT, 1],
-                    anchor='x1',
-                )
+                xaxis1=dict(domain=[0, PLOT_WIDTH], anchor='y1'),
+                yaxis1=dict(domain=[1-PLOT_HEIGHT, 1], anchor='x1')
             )
             if plot_is_image[i]:
                 layout['yaxis1']['autorange'] = 'reversed'
         elif plot_positions[i] == 'ur':
             layout.update(
-                xaxis2=dict(
-                    domain=[1-PLOT_WIDTH, 1],
-                    anchor='y2',
-                ),
-                yaxis2=dict(
-                    domain=[1-PLOT_HEIGHT, 1],
-                    anchor='x2',
-                )
+                xaxis2=dict(domain=[1-PLOT_WIDTH, 1], anchor='y2'),
+                yaxis2=dict(domain=[1-PLOT_HEIGHT, 1], anchor='x2')
             )
             if plot_is_image[i]:
                 layout['yaxis2']['autorange'] = 'reversed'
         elif plot_positions[i] == 'll':
             layout.update(
-                xaxis3=dict(
-                    domain=[0, PLOT_WIDTH],
-                    anchor='y3',
-                ),
-                yaxis3=dict(
-                    domain=[0, PLOT_HEIGHT],
-                    anchor='x3',
-                )
+                xaxis3=dict(domain=[0, PLOT_WIDTH], anchor='y3'),
+                yaxis3=dict(domain=[0, PLOT_HEIGHT], anchor='x3')
             )
             if plot_is_image[i]:
                 layout['yaxis3']['autorange'] = 'reversed'
         elif plot_positions[i] == 'lr':
             layout.update(
-                xaxis4=dict(
-                    domain=[1-PLOT_WIDTH, 1],
-                    anchor='y4',
-                ),
-                yaxis4=dict(
-                    domain=[0, PLOT_HEIGHT],
-                    anchor='x4',
-                )
+                xaxis4=dict(domain=[1-PLOT_WIDTH, 1], anchor='y4'),
+                yaxis4=dict(domain=[0, PLOT_HEIGHT], anchor='x4')
             )
             if plot_is_image[i]:
                 layout['yaxis4']['autorange'] = 'reversed'
         else:
             raise ValueError(
-                    'Options for values of argument "plot_positions" are: %s'
-                    % ', '.join(map(str, ['ul', 'ur', 'll', 'lr'])))
+                'Options for values of argument "plot_positions" are: %s'
+                % ', '.join(map(str, ['ul', 'ur', 'll', 'lr']))
+            )
 
         # Flatten potentially nested list
         if isinstance(p, list):
@@ -510,12 +554,6 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
     fig['layout']['height'] = FIGURE_HEIGHT
 
     return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-    # return plotly.offline.plot(
-    #         fig,
-    #         output_type='div',
-    #         include_plotlyjs=True,
-    #         show_link=False,
-    # )
 
 
 # def save_figure(fig, figure_file):
@@ -550,9 +588,8 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
 #     # plotly.plotly.image.save_as(fig, img_file)
 
 
-def create_colorscale(name, n=256):
-    '''
-    Create a color palette in the format required by
+def create_colorscale(name, n=256, permute=False, add_background=False):
+    '''Creates a color palette in the format required by
     `plotly <https://plot.ly/python/>`_ based on a
     `matplotlib colormap <http://matplotlib.org/users/colormaps.html>`_.
 
@@ -562,6 +599,10 @@ def create_colorscale(name, n=256):
         name of a matplotlib colormap, e.g. ``"Greys"``
     n: int
         number of colors (default: ``256``)
+    permute: bool, optional
+        whether colors should be randomly permuted (default: ``False``)
+    add_background: bool, optional
+        whether black should be prepended to the colorscale (default: ``False``)
 
     Returns
     -------
@@ -583,10 +624,17 @@ def create_colorscale(name, n=256):
     :py:attr:`reversescale` argument.
     '''
     cmap = cm.get_cmap(name)
+    if add_background:
+        n += 1
     indices = np.round(np.linspace(0, 255, n)).astype(int)
     vals = np.linspace(0, 1, n)
     rgb_values = (cmap(indices)[:, 0:3] * 255).astype(int)
-    return [
+    if permute:
+        rgb_values = np.random.permutation(rgb_values)
+    colors = [
         [vals[i], 'rgb(%d,%d,%d)' % tuple(v)]
         for i, v in enumerate(rgb_values)
     ]
+    if add_background:
+        colors[0] = [0, 'rgb(0,0,0)']
+    return colors
