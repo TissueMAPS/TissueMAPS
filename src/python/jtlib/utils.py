@@ -6,9 +6,8 @@ from skimage import measure, morphology
 
 
 def create_outline_image(im):
-    '''
-    Create an image representing the outlines of objects (connected components)
-    in a binary mask image.
+    '''Createe an image representing the outlines of objects
+    (connected components) in a binary mask image.
 
     Parameters
     ----------
@@ -30,9 +29,9 @@ def create_outline_image(im):
     return outlines
 
 
-def crop_image(im, bbox, pad=False):
-    '''
-    Crop image according to bounding box coordinates.
+def extract_bbox_image(im, bbox, pad=0):
+    '''Extracts a subset of pixels from a 2D image defined by a given
+    bounding box.
 
     Parameters
     ----------
@@ -40,24 +39,29 @@ def crop_image(im, bbox, pad=False):
         image
     bbox: List[int]
         bounding box coordinates
-    pad: bool, optional
-        pad cropped image with one line of zero values along each dimension
-        (default: ``False``)
+    pad: int, optional
+        pad extracted image with n lines of zero values along each dimension
+        (default: ``0``)
 
     Returns
     -------
     numpy.ndarray
-        cropped image
+        extracted pixels
+
+    Note
+    ----
+    The bounding box can be created by :py:meth:`mahotas.labeled.bbox`.
     '''
-    im = im[bbox[0]:bbox[2], bbox[1]:bbox[3]]
+    cropped_im = im[bbox[0]:bbox[1], bbox[2]:bbox[3]]
     if pad:
-        im = np.lib.pad(im, (1, 1), 'constant', constant_values=(0))
-    return im
+        cropped_im = np.lib.pad(
+            cropped_im, (pad, pad), 'constant', constant_values=(0)
+        )
+    return cropped_im
 
 
 def get_border_ids(im):
-    '''
-    Get the ids of objects that lie at the border of an image.
+    '''Determines the ids (labels) of objects at the border of an image.
 
     Parameters
     ----------
@@ -81,7 +85,7 @@ def get_border_ids(im):
 
 
 def label_image(im, n=8):
-    '''Label connected components in an image with a unique value.
+    '''Labels connected components in an image.
     For more information see
     `mahotas docs <http://mahotas.readthedocs.org/en/latest/labeled.html#labeling-images>`_.
 
@@ -89,8 +93,8 @@ def label_image(im, n=8):
     ----------
     im: numpy.ndarray[bool or int]
         binary image that should be labeled
-    neighborhood: int, optional
-        4 or 8 neighbourhood (default: ``8``)
+    n: int, optional
+        neighbourhood (default: ``8``, choices: ``{4, 8}``)
 
     Returns
     -------
@@ -111,8 +115,8 @@ def label_image(im, n=8):
     '''
     if not(all([e in {False, True, 0, 1} for e in np.unique(im)])):
         raise TypeError('Image must be binary.')
-    if not n in {4, 8}:
-        raise ValueError('Only 4 and 8 neighbourhood supported.')
+    if n not in {4, 8}:
+        raise ValueError('Neighbourhood must be 4 or 8.')
     if n == 8:
         strel = np.ones((3, 3), bool)
         labeled_image, n_objects = mh.label(im, strel)
@@ -151,8 +155,7 @@ def downsample_image(im, bins):
 
 
 def sort_coordinates_counter_clockwise(coordinates):
-    '''
-    Sort *y*, *x* coordinates values in counter clockwise order.
+    '''Sorts *y*, *x* coordinates values in counter clockwise order.
 
     Parameters
     ----------
@@ -177,8 +180,8 @@ def sort_coordinates_counter_clockwise(coordinates):
 
     angles = np.apply_along_axis(calc_angle, axis=1, arr=coordinates)
     sorted_coordinates = pd.DataFrame({
-                'y': coordinates[:, 0].astype(np.int64),
-                'x': coordinates[:, 1].astype(np.int64),
-                'order': angles
+        'y': coordinates[:, 0].astype(np.int64),
+        'x': coordinates[:, 1].astype(np.int64),
+        'order': angles
     }).sort_values(by='order')
     return sorted_coordinates[['y', 'x']].values

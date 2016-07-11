@@ -120,8 +120,8 @@ class Features(object):
         numpy.ndarray[bool]
             mask image for given object
         '''
-        obj = self.object_properties[object_id]
-        img = utils.crop_image(self.label_image, bbox=obj.bbox, pad=True)
+        bbox = self.bboxes[object_id]
+        img = utils.extract_bbox_image(self.label_image, bbox=bbox, pad=1)
         return img == obj.label
 
     def get_object_intensity_image(self, object_id):
@@ -133,8 +133,15 @@ class Features(object):
             intensity image for given object; the size of the image is
             determined by the bounding box of the object
         '''
-        obj = self.object_properties[object_id]
-        return utils.crop_image(self.intensity_image, bbox=obj.bbox, pad=True)
+        bbox = self.bboxes[object_id]
+        return utils.extract_bbox_image(self.intensity_image, bbox=bbox, pad=1)
+
+    @cached_property
+    def bboxes(self):
+        '''List[numpy.ndarray]: bounding boxes for each object in
+        :py:attr:`jtlib.features.Features.label_image`
+        '''
+        return mh.labeled.bbox(self.label_image)
 
     @cached_property
     def object_properties(self):
