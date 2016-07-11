@@ -108,18 +108,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         return os.path.join(self.step_location, 'figures')
 
-    @autocreate_directory_property
-    def module_log_location(self):
-        '''str: location where module log files (standard output and error)
-        are located
-        '''
-        return os.path.join(self.step_location, 'log_modules')
-
     def remove_previous_pipeline_output(self):
         '''Removes all figure and module log files.'''
-        shutil.rmtree(self.module_log_location)
         shutil.rmtree(self.figures_location)
-        os.mkdir(self.module_log_location)
         os.mkdir(self.figures_location)
 
     @cached_property

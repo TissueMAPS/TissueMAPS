@@ -78,30 +78,6 @@ class ImageAnalysisModule(object):
         self.outputs = dict()
         self.persistent_store = dict()
 
-    def build_log_filenames(self, log_location, job_id):
-        '''Builds names of log-files into which the module will write
-        standard output and error of the current job.
-
-        Parameters
-        ----------
-        log_location: str
-            path to directory for log output
-        job_id: int
-            one-based job index
-
-        Returns
-        -------
-        Tuple[str]
-            absolute path to files for standard output and error
-        '''
-        out_file = os.path.join(
-            log_location, '%s_%.5d.out' % (self.name, job_id)
-        )
-        err_file = os.path.join(
-            log_location, '%s_%.5d.err' % (self.name, job_id)
-        )
-        return (out_file, err_file)
-
     def build_figure_filename(self, figures_dir, job_id):
         '''Builds name of figure file into which module will write figure
         output of the current job.
@@ -129,34 +105,6 @@ class ImageAnalysisModule(object):
         for handle in self.handles['input']:
             kwargs[handle.name] = handle.value
         return kwargs
-
-    def build_error_message(self, stdout, stderr):
-        '''Builds a custom error massage that provides information about input
-        arguments as well as standard output and error of the executed module.
-
-        Parameters
-        ----------
-        stdout: str
-            standard output of the module execution
-        stderr: str
-            standard error of the module execution
-
-        Returns
-        -------
-        str
-            error message
-        '''
-        message = '\n\n\nExecution of module "{0}" failed:\n'.format(self.name)
-        message += '\n' + '---[ Module arguments ]---' \
-            .ljust(80, '-') + '\n'
-        for key, value in self.keyword_arguments.iteritems():
-            message += '"{k}":\n{v}\n\n'.format(k=key, v=value)
-        message += '\n' + '---[ Module standard output ]---' \
-            .ljust(80, '-') + '\n' + stdout
-        message += '\n' + '---[ Module standard error ]---' \
-            .ljust(80, '-') + '\n' + stderr
-        self.error_message = message
-        return self.error_message
 
     @property
     def language(self):
