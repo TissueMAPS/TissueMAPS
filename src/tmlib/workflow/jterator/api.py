@@ -288,15 +288,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 self.figures_location, job_id
                             )
                             for module in self.pipeline
-                        ],
-                        'log_files': flatten([
-                            list(
-                                module.build_log_filenames(
-                                    self.module_log_location, job_id
-                                )
-                            )
-                            for module in self.pipeline
-                        ])
+                        ]
                     },
                     'site_id': site.id,
                     'plot': args.plot
@@ -480,7 +472,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
         logger.info('run pipeline')
         for i, module in enumerate(self.pipeline):
             logger.info('run module "%s"', module.name)
-            module.update_handles(store, batch['plot'])
+            # When plotting is not deriberately activated it defaults to
+            # headless mode
+            headless = not batch.get('plot', False)
+            if not headless:
+                logger.warning('plotting mode active')
+            module.update_handles(store, headless=headless)
             module.run(self.engines[module.language])
             store = module.update_store(store)
 

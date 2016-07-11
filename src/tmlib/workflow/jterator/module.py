@@ -239,7 +239,7 @@ class ImageAnalysisModule(object):
 
         return self.handles['output']
 
-    def update_handles(self, store, plot):
+    def update_handles(self, store, headless=True):
         '''Updates values of handles that define the arguments of the
         module function.
 
@@ -247,8 +247,8 @@ class ImageAnalysisModule(object):
         ----------
         store: dict
             in-memory key-value store
-        plot: bool
-            whether plotting should be enabled
+        headless: bool, optional
+            whether plotting should be disabled (default: ``True``)
 
         Returns
         -------
@@ -271,9 +271,9 @@ class ImageAnalysisModule(object):
                     )
                 except Exception:
                     raise
-            elif isinstance(handle, hdls.Plot):
+            elif isinstance(handle, hdls.Plot) and headless:
                 # Overwrite to enforce headless mode if required.
-                handle.value = plot
+                handle.value = False
         return self.handles['input']
 
     def _get_reference_objects_name(self, handle):
