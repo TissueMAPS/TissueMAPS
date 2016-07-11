@@ -216,7 +216,7 @@ class Plate(Model, DateMixIn):
 
     @cached_property
     def _well_image_size(self):
-        well_dims = np.array([w.image_size for w in self.wells])
+        well_dims = np.array([w._image_size for w in self.wells])
         if not(len(np.unique(well_dims[:, 0])) == 1 and
                 len(np.unique(well_dims[:, 1])) == 1):
             logger.debug('wells don\'t have the same size')
