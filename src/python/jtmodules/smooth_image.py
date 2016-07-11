@@ -28,9 +28,6 @@ def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
         (options: ``{"avarage", "gaussian", "median", "median-bilateral", "gaussian-bilateral"}``)
     filter_size: int
         size (width/height) of the kernel (must be positive and odd)
-    sigma: int, optional
-        standard deviation of the Gaussian kernel - only relevant for
-        "gaussian" filter_name (default: ``0``)
     sigma_color: int, optional
         Gaussian component (filter_name sigma) applied in the intensity domain
         (color space) - only relevant for "bilateral" filter_name (default: ``0``)
@@ -64,15 +61,14 @@ def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
             image, (filter_size, filter_size)
         )
     elif filter_name == 'gaussian':
-        smoothed_image = cv2.GaussianBlur(
-            image, (filter_size, filter_size), sigma
+        smoothed_image = mh.gaussian_filter(
+            image, sigma=filter_size
         )
     elif filter_name == 'gaussian-bilateral':
         smoothed_image = cv2.bilateralFilter(
             image, filter_size, sigma_color, sigma_space
         )
     elif filter_name == 'median':
-        # NOTE: the OpenCV median filter can't handle 16-bit images
         smoothed_image = mh.median_filter(
             image, np.ones((filter_size, filter_size), dtype=image.dtype)
         )

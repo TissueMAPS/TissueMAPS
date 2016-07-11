@@ -1,33 +1,27 @@
 ---
 input:
 
-    - name: label_image
-      type: LabelImage
+    - name: input_mask
+      type: BinaryImage
       key: 
-      help: Labeled image in which objects should be filtered.
+      help: Binary image in which objects should be filtered.
 
     - name: feature
       type: Character
       value: 
       help: >
-        Name of the region property based on which <i>label_image</i> should be filtered.
+        Name of the region property based on which label_image should be filtered.
 
     - name: threshold
       type: Numeric
       value: 
-      help: Threshold level for values of <i>feature</i>.
+      help: Threshold level for values of feature.
 
     - name: remove
       type: Character
       value:
       options: [above, below]
-      help: Whether values "above" or "below" <i>threshold</i> should be removed.
-
-    - name: relabel
-      type: Boolean
-      value:
-      options: [true, false]
-      help: Whether objects should be relabeled after filtering.
+      help: Whether values "above" or "below" threshold should be removed.
 
     - name: plot
       type: Plot
@@ -36,11 +30,11 @@ input:
 
 output:
 
-    - name: filtered_image
-      type: LabelImage
-      key: filter_objects.filtered_image
-      help: Filtered label image.
+    - name: output_mask
+      type: BinaryImage
+      key: filter_objects.output_mask
+      help: Filtered mask image.
 
     - name: figure
       type: Figure
-      help: Comparison of "label_image" and "filtered_image".
+      help: Comparison of "input_mask" and "output_mask".

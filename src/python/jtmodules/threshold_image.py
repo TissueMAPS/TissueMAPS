@@ -9,11 +9,11 @@ VERSION = '0.0.1'
 
 def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  plot=False):
     '''Thresholds an image with Otsu's method.
-    For more information on the algorithmic implementation of the method see
-    `mahotas docs <http://mahotas.readthedocs.org/en/latest/api.html?highlight=otsu#mahotas.otsu>`_.
+    For more information on the algorithmic implementation see
+    :py:func:`mahotas.otsu`.
     Additional parameters allow correction of the calculated threshold level
     or restriction of it to a defined range. This may be useful to prevent
-    extreme levels when the `image` contains artifacts, for example.
+    extreme levels in case the `image` contains artifacts.
 
     Parameters
     ----------
@@ -33,7 +33,7 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
     -------
     Dict[str, numpy.ndarray[bool] or str]
         * "mask": thresholded mimage
-        * "figure": html string in case `plot` is ``True``
+        * "figure": JSON string representation of the figure
 
     Raises
     ------
@@ -70,25 +70,15 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
 
     if plot:
         from jtlib import plotting
-
+        outlines = mh.morph.dilate(mh.labeled.bwperim(thresh_image))
         plots = [
-            plotting.create_overlay_image_plot(image, thresh_image, 'ul'),
-            plotting.create_mask_image_plot(thresh_image, 'ur'),
-            [
-                plotting.create_histogram_plot(image.flatten(), 'll'),
-                plotting.create_line_plot(
-                        [0, np.prod(image.shape)/100],
-                        [corr_thresh, corr_thresh],
-                        'll',
-                        color=plotting.OBJECT_COLOR, line_width=4,
-                    )
-            ]
+            plotting.create_intensity_overlay_image_plot(
+                image, outlines, 'ul'
+            ),
+            plotting.create_mask_image_plot(thresh_image, 'ur')
         ]
-
         outputs['figure'] = plotting.create_figure(
-                        plots, plot_is_image=[True, True, False],
-                        title='''thresholded image at pixel value %s
-                        ''' % thresh
+            plots, title='image thresholded at %s' % thresh
         )
     else:
         outputs['figure'] = str()
