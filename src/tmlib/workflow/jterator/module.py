@@ -171,7 +171,7 @@ class ImageAnalysisModule(object):
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
         engine.eval('import \'jtmodules.{0}\''.format(module_name))
         function_call_format_string = \
-            '[{outputs}] = jtmodules.{name}.main({inputs})'
+            '[{outputs}] = jtmodules.{name}.main({inputs});'
         kwargs = self.keyword_arguments
         logger.debug(
             'evaluating Matlab function with INPUTS: "%s"',
@@ -187,15 +187,10 @@ class ImageAnalysisModule(object):
         for name, value in kwargs.iteritems():
             engine.put(name, value)
         # Evaluate the function call
-        # Unfortunately, the matlab_wrapper engine doesn't return
+        # NOTE: Unfortunately, the matlab_wrapper engine doesn't return
         # standard output and error (exceptions are caught, though).
-        # Use of "evalc" is a dirty hack. Note, however, standard output is not
-        # not returned in case of an error :(
-        engine.eval("stdout = evalc('{0};')".format(func_call_string))
-        stdout = engine.get('stdout')
-        stdout = re.sub(r'\n$', '', stdout)  # naicify string
-        if stdout:
-            print stdout
+        # TODO: log to file
+        engine.eval(func_call_string)
 
         for handle in self.handles['output']:
             val = engine.get('%s' % handle.name)
@@ -295,16 +290,6 @@ class ImageAnalysisModule(object):
                 handle.value = rpy2.robjects.numpy2ri(r_out.rx2(handle.name))
 
         return self.handles['output']
-
-    def _execute_module(self, engine):
-        if self.language == 'Python':
-            return self._exec_py_module()
-        elif self.language == 'Matlab':
-            return self._exec_m_module(engine)
-        elif self.language == 'R':
-            return self._exec_r_module()
-        else:
-            raise PipelineRunError('Language not supported.')
 
     def update_handles(self, store, plot):
         '''Updates values of handles that define the arguments of the
@@ -450,62 +435,26 @@ class ImageAnalysisModule(object):
 
         Parameters
         ----------
-        input_handles: List[tmlib.jterator.handles.Handle]
-            handles for arguments that are passed to the module function
-        output_handles: List[tmlib.jterator.handles.Handle]
-            handles for key-value pairs returned by the module function
         engine: matlab_wrapper.matlab_session.MatlabSession, optional
             engine for non-Python languages, such as Matlab (default: ``None``)
 
-        Returns
-        -------
-        dict
-            * "stdout": standard output
-            * "stderr": standard error
-            * "success": ``True`` when module completed successfully and
-              ``False`` otherwise
-            * "error_message": error message and traceback in case an
-              Exception was raised while running the module
-
-        Warning
-        -------
+        Note
+        ----
         Call :py:method:`tmlib.jterator.module.Module.update_handles` before
         calling this method and
         :py:method:`tmlib.jterator.module.Module.update_store` afterwards.
         '''
-        with CaptureOutput() as stream:
-            # TODO: the StringIO approach prevents debugging of modules -
-            # build custom logger
-            try:
-                self._execute_module(engine)
-                error = ''
-                success = True
-            except Exception as e:
-                error = str(e)
-                for tb in traceback.format_tb(sys.exc_info()[2]):
-                    error += '\n' + tb
-                success = False
-
-        stdout = stream['stdout']
-        stderr = stream['stderr']
-        stderr += error
-        sys.stdout.write(stdout)
-        sys.stderr.write(stderr)
-
-        if not success:
-            error_message = self.build_error_message(stdout, stderr)
+        if self.language == 'Python':
+            return self._exec_py_module()
+        elif self.language == 'Matlab':
+            return self._exec_m_module(engine)
+        elif self.language == 'R':
+            return self._exec_r_module()
         else:
-            error_message = None
-
-        return {
-            'stdout': stdout,
-            'stderr': stderr,
-            'success': success,
-            'error_message': error_message
-        }
+            raise PipelineRunError('Language not supported.')
 
     def __str__(self):
         return (
-            '<ImageAnalysisModule(name=%r, source=%r)>'
-            % (self.name, self.source_file)
+            '<%s(name=%r, source=%r)>'
+            % (self.__class__.__name__, self.name, self.source_file)
         )

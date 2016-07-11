@@ -217,9 +217,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     def _configure_loggers(self):
         # TODO: configure loggers for Python, Matlab, and R modules
-        jtlogger = logging.getLogger('jtlib')
         level = map_logging_verbosity(self.verbosity)
-        jtlogger.setLevel(level)
+        jtlib_logger = logging.getLogger('jtlib')
+        jtlib_logger.setLevel(level)
+        jtmodules_logger = logging.getLogger('jtmodules')
+        jtmodules_logger.setLevel(level)
 
     def create_batches(self, args, job_ids=None):
         '''Creates job descriptions for parallel computing.
@@ -403,17 +405,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         )
         mapobject_type_names = [mt['name'] for mt in mapobject_type_info]
         with tm.utils.Session() as session:
-            image_metadata = pd.DataFrame(
-                session.query(
-                    tm.ChannelImageFile.tpoint, tm.ChannelImageFile.zplane
-                ).
-                join(tm.Channel).
-                filter(tm.Channel.experiment_id == self.experiment_id).
-                distinct(
-                    tm.ChannelImageFile.tpoint, tm.ChannelImageFile.zplane
-                ).
-                all()
-            )
             for channel_name in channel_names:
                 logger.info('load images for channel "%s"', channel_name)
                 index = channel_names.index(channel_name)
@@ -451,12 +442,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         img = img.correct(stats)
                     logger.debug('align image "%s"', f.name)
                     img = img.align()  # shifted and cropped!
-                    images[f.tpoint].append(img.pixels)
+                    images[f.tpoint].append(img.array)
 
-                zstacks = list()
-                for zplanes in images.itervalues():
-                    zstacks.append(np.dstack(zplanes))
-                store['pipe'][channel_name] = np.stack(zstacks, axis=-1)
+                # zstacks = list()
+                # for zplanes in images.itervalues():
+                #     zstacks.append(np.dstack(zplanes))
+                store['pipe'][channel_name] = np.stack(images.values(), axis=-1)
 
             # Load outlins of mapobjects of the specified types and reconstruct
             # the label images required by modules.
@@ -499,20 +490,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         for i, module in enumerate(self.pipeline):
             logger.info('run module "%s"', module.name)
             module.update_handles(store, batch['plot'])
-            output = module.run(self.engines[module.language])
-
-            stdout_file, stderr_file = module.build_log_filenames(
-                self.module_log_location, job_id
-            )
-            logger.debug('write standard output and error to log files')
-            with TextWriter(stdout_file) as f:
-                f.write(output['stdout'])
-            with TextWriter(stderr_file) as f:
-                f.write(output['stderr'])
-
-            if not output['success']:
-                sys.exit(output['error_message'])
-
+            module.run(self.engines[module.language])
             store = module.update_store(store)
 
             if batch['plot']:
