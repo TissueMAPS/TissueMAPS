@@ -12,7 +12,6 @@ angular.module('jtui.runner')
         }
     }
     $scope.module = currentModule;
-    console.log('module: ', currentModule)
 
     $scope.goToPreviousModule = function () {
         console.log('current module: ', $scope.module.name)
@@ -137,8 +136,10 @@ angular.module('jtui.runner')
         if (figureIsOpen) return;
 
         var modalInst = $uibModal.open({
-            size: 'lg',
+            // size: 'lg',
             templateUrl: 'src/jtui/components/runner/modals/figure.html',
+            windowClass: 'figure-window',
+            // windowTopClass: 'figure-window',
             resolve: {
                 figure: ['projectService', function(projectService){
                             return projectService.getModuleFigure(
