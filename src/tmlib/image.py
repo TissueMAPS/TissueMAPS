@@ -403,13 +403,16 @@ class Image(object):
                 'Image requires attribute "metadata" for alignment.'
             )
         md = self.metadata
-        arr = np.zeros(self.dimensions, self.dtype)
+        # The shape of the arrays may change when cropped
+        arrays = list()
         for z, pixels in self.iter_planes():
-            arr[:, :, z, ...] = image_utils.shift_and_crop(
-                pixels._array, y=md.y_shift, x=md.x_shift,
+            arr = image_utils.shift_and_crop(
+                pixels.array, y=md.y_shift, x=md.x_shift,
                 bottom=md.upper_overhang, top=md.lower_overhang,
                 right=md.left_overhang, left=md.right_overhang, crop=crop
             )
+            arrays.append(arr)
+        arr = np.dstack(arrays)
         new_object = self.__class__(arr, self.metadata)
         new_object.metadata.is_aligned = True
         return new_object
@@ -567,7 +570,7 @@ class ChannelImage(Image):
         arr = np.zeros(self.dimensions, dtype=self.dtype)
         for z, pixels in self.iter_planes():
             arr[:, :, z, ...] = image_utils.correct_illumination(
-                pixels._array, stats.mean.array, stats.std.array
+                pixels.array, stats.mean.array, stats.std.array
             )
         new_object = ChannelImage(arr, self.metadata)
         if self.metadata is not None:
