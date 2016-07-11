@@ -13,6 +13,7 @@ from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.models import (
     Experiment, ChannelLayer, Plate, Acquisition, Feature, PyramidTileFile
 )
+from tmlib.image import PyramidTile
 from tmserver.util import (
     extract_model_from_path,
     extract_model_from_body
@@ -46,11 +47,22 @@ def get_image_tile(channel_layer):
         x = int(x)
         y = int(y)
         z = int(z)
+    logger.info('get image tile x: %d, y: %d, z: %d', x, y, z)
 
     tile_file = db.session.query(PyramidTileFile).filter_by(
         column=x, row=y, level=z, channel_layer_id=channel_layer.id
-    ).one()
-    return send_file(tile_file.location)
+    ).one_or_none()
+    if tile_file is not None:
+        return send_file(tile_file.location)
+    else:
+        logger.warn('file does not exist - send empty image')
+        from cStringIO import StringIO
+        f = StringIO()
+        img = PyramidTile.create_as_background()
+        buf = img.get_buffer()
+        f.write(buf.tostring)
+        f.seek(0)
+        send_file(f, mimetype='image/jpeg')
 
 @api.route('/features', methods=['GET'])
 @jwt_required()

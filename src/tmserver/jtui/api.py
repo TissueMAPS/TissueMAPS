@@ -607,7 +607,7 @@ def kill_jobs():
         return jsonify({'success': False, 'error': 'No jobs were specified.'})
 
 
-def _get_output(jobs, modules, log_location, fig_location):
+def _get_output(jobs, modules, fig_location):
     output = list()
     if jobs is None:
         return output
@@ -634,27 +634,6 @@ def _get_output(jobs, modules, log_location, fig_location):
                 log = '-- Job is still running --'
             else:
                 log = stdout + '\n' + stderr
-            module_output = list()
-            for m in modules:
-                stdout_file, stderr_file = m.build_log_filenames(log_location, j)
-                fig_file = m.build_figure_filename(fig_location, j)
-                # thumbnail_file = fig_file.replace('.json', '.png')
-                out = dict()
-                out['name'] = m.name
-                if os.path.exists(stdout_file):
-                    with open(stdout_file, 'r') as f:
-                        out['stdout'] = f.read()
-                    with open(stderr_file, 'r') as f:
-                        out['stderr'] = f.read()
-                else:
-                    out['stdout'] = None
-                    out['stderr'] = None
-                # if os.path.exists(thumbnail_file):
-                #     with open(thumbnail_file, 'r') as f:
-                #         out['thumbnail'] = base64.b64encode(f.read())
-                # else:
-                #     out['thumbnail'] = None
-                module_output.append(out)
 
             with tm.utils.Session() as session:
                 task_info = session.query(tm.Task).get(subtask.persistent_id)
@@ -666,7 +645,6 @@ def _get_output(jobs, modules, log_location, fig_location):
                 'submission_id': submission_id,
                 'name': subtask.jobname,
                 'log': log,
-                'modules': module_output,
                 'failed': failed
             })
     return output
@@ -745,9 +723,7 @@ def get_job_output(experiment):
             experiment=experiment,
             submitting_program='jtui-{project}'.format(project=jt.pipe_name)
         )
-        output = _get_output(
-            jobs, jt.pipeline, jt.module_log_location, jt.figures_location
-        )
+        output = _get_output(jobs, jt.pipeline, jt.figures_location)
         return jsonify(output=output)
     except IndexError:
         return jsonify(output=None)
@@ -790,9 +766,6 @@ def run_jobs(experiment):
         pipe=data['pipe'],
         handles=data['handles'],
     )
-    # Remove figure and module log files of previous run
-    # to prevent accumulation of data
-    # jt.delete_previous_job_output()
 
     # 1. Delete figures and logs from previous submission
     #    since they are not tracked per submission.
@@ -806,6 +779,7 @@ def run_jobs(experiment):
     # In "run" mode only a few selected jobs will be submitted
     job_descriptions = jt.create_batches(batch_args, job_ids)
 
+    # TODO: remove figure files of previous runs!!
     jt.write_batch_files(job_descriptions)
     submission = tm.Submission(
         experiment_id=experiment.id,
