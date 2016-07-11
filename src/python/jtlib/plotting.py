@@ -442,14 +442,7 @@ def create_mask_overlay_image_plot(mask, mask2, position, color=None):
     return plotly.graph_objs.Heatmap(
         z=ds_mask,
         colorscale=colorscale,
-        zauto=False,
-        colorbar=dict(
-            thickness=10,
-            yanchor='bottom',
-            y=COLORBAR_POSITION_MAPPING[position][0],
-            x=COLORBAR_POSITION_MAPPING[position][1],
-            len=PLOT_HEIGHT
-        ),
+        showscale=False,
         y=np.linspace(0, mask.shape[0], ds_mask.shape[0]),
         x=np.linspace(0, mask.shape[1], ds_mask.shape[1]),
         yaxis=PLOT_POSITION_MAPPING[position][0],
