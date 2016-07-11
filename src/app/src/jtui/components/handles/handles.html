@@ -1,105 +1,107 @@
 <!-- <div class="pane-subcontent" perfect-scrollbar> -->
 
-    <div class="panel panel-default">
+  <h4>Source: {{source}}</h4>
 
-      <div class="panel-heading">
-        Module Input
-      </div>
+  <div class="panel panel-default">
 
-      <div class="panel-body">
+    <div class="panel-heading">
+      Input
+    </div>
 
-        <div ng-repeat="inarg in module.description.input">
+    <div class="panel-body">
 
-          <form class="form-horizontal">
-            <!-- <div ng-hide="inarg.type=='Plot'" class="form-group"> -->
+      <div ng-repeat="inarg in module.description.input">
 
-              <div class="col-sm-12">
-                <b>{{ inarg.name }}: </b>
-                {{ inarg.help }}
-              </div>
+        <form class="form-horizontal">
+          <!-- <div ng-hide="inarg.type=='Plot'" class="form-group"> -->
 
-              <div class="col-sm-12">
-
-                <span ng-hide="isPipeline(inarg.name)">
-
-                  <!-- parameter -->
-                  <span ng-show="hasOptions(inarg.name) && !(isBoolean(inarg.name))" class="ng-hide">
-                    <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in inarg.options">
-                    </select>
-                  </span>
-
-                  <span ng-show="isBoolean(inarg.name)" class="ng-hide">
-                    <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in boolOptions">
-                    </select>
-                  </span>
-
-                  <span ng-hide="hasOptions(inarg.name) || isBoolean(inarg.name)">
-                    <input class="form-control" id="inputArg" ng-model="inarg.value" uib-popover="{{ inarg.type }}" popover-trigger="focus" popover-placement="top">
-                  </span>
-
-                </span>
-
-                <!-- pipeline -->
-                <span ng-show="isPipeline(inarg.name)" class="ng-hide">
-
-                  <select class="form-control" id="inputArg" ng-model="inarg.key" ng-options="a for a in getArgList()">
-                    <option key="">
-                    </option>
-                  </select>
-
-                </span>
-            
-              <!-- </div> -->
-
+            <div class="col-sm-12">
+              <b>{{ inarg.name }}: </b>
+              {{ inarg.help }}
             </div>
 
-          </form>
+            <div class="col-sm-12">
 
-        </div>
+              <span ng-hide="isPipeline(inarg.name)">
+
+                <!-- parameter -->
+                <span ng-show="hasOptions(inarg.name) && !(isBoolean(inarg.name))" class="ng-hide">
+                  <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in inarg.options">
+                  </select>
+                </span>
+
+                <span ng-show="isBoolean(inarg.name)" class="ng-hide">
+                  <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in boolOptions">
+                  </select>
+                </span>
+
+                <span ng-hide="hasOptions(inarg.name) || isBoolean(inarg.name)">
+                  <input class="form-control" id="inputArg" ng-model="inarg.value" uib-popover="{{ inarg.type }}" popover-trigger="focus" popover-placement="top">
+                </span>
+
+              </span>
+
+              <!-- pipeline -->
+              <span ng-show="isPipeline(inarg.name)" class="ng-hide">
+
+                <select class="form-control" id="inputArg" ng-model="inarg.key" ng-options="a for a in getArgList()">
+                  <option key="">
+                  </option>
+                </select>
+
+              </span>
+          
+            <!-- </div> -->
+
+          </div>
+
+        </form>
 
       </div>
 
     </div>
 
-    <div class="panel panel-default">
+  </div>
 
-      <div class="panel-heading">
-        Module Output
-      </div>
+  <div class="panel panel-default">
 
-      <div class="panel-body">
-    
-        <div ng-repeat="outarg in module.description.output">
+    <div class="panel-heading">
+      Output
+    </div>
 
-          <form class="form-horizontal">
-              <div ng-hide="outarg.type=='Figure'" class="form-group">
+    <div class="panel-body">
+  
+      <div ng-repeat="outarg in module.description.output">
 
-                <div class="col-sm-12" >
-                  <b>{{ outarg.name }}: </b>
-                  {{ outarg.help }}
-                </div>
+        <form class="form-horizontal">
+            <div ng-hide="outarg.type=='Figure'" class="form-group">
 
-                <div class="col-sm-12">
-
-                  <input  class="form-control"
-                          ng-class="{'error-input': duplicate}"
-                          type="text" id="outputArg"
-                          ng-model="outarg.key"
-                          ng-change="duplicate = isDuplicate(outarg)">
-
-                  <div ng-show="duplicate" class="error-text">
-                      Names of outputs must be unique!
-                  </div>
-
-                </div>
+              <div class="col-sm-12" >
+                <b>{{ outarg.name }}: </b>
+                {{ outarg.help }}
               </div>
 
-          </form>
+              <div class="col-sm-12">
 
-        </div>
+                <input  class="form-control"
+                        ng-class="{'error-input': duplicate}"
+                        type="text" id="outputArg"
+                        ng-model="outarg.key"
+                        ng-change="duplicate = isDuplicate(outarg)">
+
+                <div ng-show="duplicate" class="error-text">
+                    Names of outputs must be unique!
+                </div>
+
+              </div>
+            </div>
+
+        </form>
 
       </div>
 
     </div>
+
+  </div>
 
 <!-- </div> -->

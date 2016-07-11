@@ -8,11 +8,14 @@ angular.module('jtui.handles')
     // Get the current module
     for (i in $scope.project.handles) {
         if ($scope.project.handles[i].name == currentModuleName) {
-          var currentModule = $scope.project.handles[i];
+          // var currentModule = $scope.project.handles[i];
           var currentModuleIndex = i;
         }
     }
-    $scope.module = currentModule;
+    $scope.module = $scope.project.handles[currentModuleIndex];
+    $scope.source = $scope.project.pipe.description.pipeline[currentModuleIndex].source.substring(
+        0, $scope.project.pipe.description.pipeline[currentModuleIndex].source.lastIndexOf('.')
+    );
 
     $scope.viewProps = {
         open: {
@@ -30,7 +33,7 @@ angular.module('jtui.handles')
         var currentHandles = $scope.project.handles;
         for (var i in currentModuleList) {
             // Consider only modules upstream in the pipeline
-            if (currentModuleList[i].name == currentModule.name) { break; }
+            if (currentModuleList[i].name == $scope.module.name) { break; }
             // Make sure we're dealing with the correct handles object
             for (var ii in currentHandles) {
                 if (currentHandles[ii].name == currentModuleList[i].name) {
@@ -80,9 +83,9 @@ angular.module('jtui.handles')
 
     // Determine if input argument is of class `pipeline`
     $scope.isPipeline = function(input_arg_name) {
-        for (var i in currentModule.description.input) {
-            if (currentModule.description.input[i].name == input_arg_name) {
-                if ('key' in currentModule.description.input[i]){
+        for (var i in $scope.module.description.input) {
+            if ($scope.module.description.input[i].name == input_arg_name) {
+                if ('key' in $scope.module.description.input[i]){
                     return true;
                 } else {
                     return false;
@@ -93,9 +96,9 @@ angular.module('jtui.handles')
 
     // Determine if input argument has options
     $scope.hasOptions = function(input_arg_name) {
-        for (var i in currentModule.description.input) {
-            if (currentModule.description.input[i].name == input_arg_name) {
-                if ('options' in currentModule.description.input[i]) {
+        for (var i in $scope.module.description.input) {
+            if ($scope.module.description.input[i].name == input_arg_name) {
+                if ('options' in $scope.module.description.input[i]) {
                     return true;
                 } else {
                     return false;
@@ -106,10 +109,10 @@ angular.module('jtui.handles')
 
     // Determine if input argument is a boolean and if so provide true/false option
     $scope.isBoolean = function(input_arg_name) {
-        for (var i in currentModule.description.input) {
-            if (currentModule.description.input[i].name == input_arg_name) {
-                if (currentModule.description.input[i].type == "Boolean" ||
-                        currentModule.description.input[i].type == "Plot") {
+        for (var i in $scope.module.description.input) {
+            if ($scope.module.description.input[i].name == input_arg_name) {
+                if ($scope.module.description.input[i].type == "Boolean" ||
+                        $scope.module.description.input[i].type == "Plot") {
                     return true;
                 } else {
                     false;
