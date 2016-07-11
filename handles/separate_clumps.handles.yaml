@@ -1,0 +1,119 @@
+---
+input:
+
+  - name: input_mask
+    type: BinaryImage
+    key:
+    help: Binary image in which clumps should be separated.
+
+  - name: input_image
+    type: IntensityImage
+    key:
+    help: Grayscale image that should be used find optimal cut lines.
+
+  - name: cutting_passes
+    type: Numeric
+    value: 2
+    help: Number of cutting rounds that should be applied.
+
+  - name: min_cut_area
+    type: Numeric
+    value: 2000
+    help: >
+      Minimal area of a cut fragment, cuts that would
+      result in a smaller fragment will not be performed.
+
+  - name: max_cut_intensity
+    type: Numeric
+    value: 75
+    help: >
+      Percentile for calculation of a intensity cutoff value.
+      The mean intensity along a cut line must not exceed this cutoff, cuts
+      that would be made along a line whose mean intensity exceeds
+      the percentile value calculated over all foreground pixels will not be
+      performed.
+
+  - name: max_solidity
+    type: Numeric
+    value: 0.92
+    help: >
+      Maximal solidity of a connected pixel component
+      to be considered a clump.
+
+  - name: max_form_factor
+    type: Numeric
+    value: 0.60
+    help: >
+      Maximal form factor of a connected pixel component
+      to be considered a clump.
+
+  - name: min_area
+    type: Numeric
+    value: 5000
+    help: >
+      Minimal area of a connectd pixel component to be considered a clump.
+
+  - name: max_area
+    type: Numeric
+    value: 50000
+    help: >
+      Maximal area of a connected pixel component to be considered a clump.
+
+  - name: line_sensitivity
+    type: Numeric
+    value: 10
+    help: >
+        Sensitivity of detecting potential cut lines within clumps
+        (size of the kernel that's used to detect regional intensity peaks,
+        which are used as seeds for the watershed transform) - the larger
+        the value the less lines will be detected.
+
+  - name: region_sensitivity
+    type: Numeric
+    value: 5
+    help: >
+        Sensitivity of detecting concave regions along the contour of clumps
+        (distance between the farthest contour point and the convex hull) -
+        the larger the value the less regions will be detected.
+
+  # - name: selection_test_mode
+  #   type: Boolean
+  #   value: false
+  #   options:
+  #     - false
+  #     - true
+  #   help: >
+  #     Whether selected clumps should be plotted in order to empirically determine
+  #     optimal values for `max_solidity`, `min_formfactor`, `min_area` and
+  #     and `max_area` (results will be shown for the last cutting pass).
+
+  # - name: region_test_mode
+  #   type: Boolean
+  #   value: false
+  #   options:
+  #     - false
+  #     - true
+  #   help: >
+  #     Whether result of the perimeter analysis should be plotted in order to
+  #     empirically determine optimal values for `min_angle` and `max_radius`
+  #     (results will be shown for the last cutting pass).
+
+  - name: plot
+    type: Plot
+    value: false
+    help: Should a figure be created?
+
+output:
+
+  - name: output_mask
+    type: BinaryImage
+    key: separate_objects.output_mask
+    help: Binary output image.
+
+  - name: figure
+    type: Figure
+
+
+
+
+

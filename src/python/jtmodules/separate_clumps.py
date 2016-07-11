@@ -8,28 +8,25 @@ import pandas as pd
 import itertools
 import collections
 import mahotas as mh
-import skimage as ski
-import skimage.measure
 import skimage.morphology
-import skimage.filters
-import skimage.segmentation
-from shapely.geometry import asLineString
-# from shapely.geometry import LineString
-from matplotlib import pyplot as plt
-from scipy import ndimage as ndi
-import math 
+import logging
 import jtlib.utils
 
 
-def find_concave_regions(mask, size):
+logger = logging.getLogger(__name__)
+PAD = 1
+
+
+def find_concave_regions(mask, max_dist):
     '''Finds convace regions along the contour of `mask`.
 
     Parameters
     ----------
     mask: numpy.ndarray[numpy.bool]
         mask image
-    size: int
-        size of the kernel used to define concavity
+    max_dist: int
+        maximally tolerated distance between concave point on object contour
+        and the convex hull
 
     Note
     ----
@@ -38,8 +35,7 @@ def find_concave_regions(mask, size):
     contour_img = np.zeros(mask.shape, dtype=np.uint8)
     contour_img[mask] = 255
     contour_img, contours, _ = cv2.findContours(
-        contour_img,
-        mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE
+        contour_img, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE
     )
     concave_img = np.zeros(mask.shape, dtype=np.bool)
     for cnt in contours:
@@ -49,7 +45,7 @@ def find_concave_regions(mask, size):
             defect_pts = np.array([
                 cnt[defects[j, 0][2]][0]
                 for j in xrange(defects.shape[0])
-                if defects[j, 0][3]/float(256) > size
+                if defects[j, 0][3]/float(256) > max_dist
             ])
             if defect_pts.size != 0:
                 concave_img[defect_pts[:, 1], defect_pts[:, 0]] = True
@@ -69,8 +65,8 @@ def find_watershed_lines(mask, img, ksize):
     img: numpy.ndarray[numpy.uint8 or numpy.uint16]
         intensity image
     ksize: int
-        size of the kernel that's used to morphologically open the
-        generated seed mask
+        size of the kernel that's used to detect regional maxima in `img`
+        within `mask`
 
     Returns
     -------
@@ -82,14 +78,13 @@ def find_watershed_lines(mask, img, ksize):
     Fast implementation in C++ using
     `mahotas library <http://mahotas.readthedocs.io/en/latest/>`_.
     '''
-    smoothed = mh.gaussian_filter(img, 1).astype(img.dtype)
-    t = mh.otsu(smoothed[mask])
-    threshed = smoothed > t
-    dist = mh.stretch(mh.distance(threshed))
-    strel = ski.morphology.square(ksize)
-    peaks = mh.morph.regmax(dist, Bc=strel)
-    seeds = mh.label(peaks, Bc=strel)[0]
-    watershed_regions = mh.cwatershed(np.invert(dist), seeds)
+
+    if ksize < 2:
+        ksize = 2
+    se = skimage.morphology.square(ksize)
+    peaks = mh.morph.regmax(img, Bc=se)
+    seeds = mh.label(peaks)[0]
+    watershed_regions = mh.cwatershed(np.invert(img), seeds)
     watershed_regions[~mask] = 0
     lines = mh.labeled.borders(watershed_regions)
     outer_lines = mh.labeled.borders(mask)
@@ -244,17 +239,20 @@ def get_line_segments(skeleton, branch_points, end_points):
     '''
     segments = mh.label((skeleton > 0) - (branch_points > 0))[0]
     sizes = mh.labeled.labeled_size(segments)
-    too_small = np.where(sizes < 3)
-    if too_small[0].size > 0:
-        check_points = mh.label((branch_points + end_points) > 0)[0]
+    # Cutting the skeleton into segments may result in small spurs that are
+    # not connected to two nodes. We remove them here.
+    too_small = np.where(sizes < 10)[0]
+    se = np.ones((3, 3), bool)  # 8-connected!
+    if too_small.size > 0:
+        check_points = mh.label((branch_points + end_points) > 0, Bc=se)[0]
         remove = list()
-        for s in too_small[0]:
+        for s in too_small:
             index = mh.morph.dilate(segments == s)
             if len(np.unique(check_points[index])) < 3:
                 remove.append(s)
         remove = np.array(remove)
     else:
-        remove = too_small[0]
+        remove = too_small
     if remove.size > 0:
         segments = mh.labeled.remove_regions(segments, remove) > 0
     return mh.label(segments > 0)[0]
@@ -279,14 +277,20 @@ def map_nodes_to_edges(nodes, edges):
     edge_ids = np.unique(edges[edges > 0])
     node_to_egdes_map = dict()
     edge_to_nodes_map = dict()
+    se = np.ones((3, 3), bool)  # 8-connected!
     for n in node_ids:
-        node_index = mh.morph.dilate(nodes == n)
+        node_index = mh.morph.dilate(nodes == n, Bc=se)
         node_to_egdes_map[n] = set(np.unique(edges[node_index])[1:])
     for e in edge_ids:
-        # TODO: There seem to be nodes missing!
-        edge_index = mh.morph.dilate(edges == e)
+        edge_index = mh.morph.dilate(edges == e, Bc=se)
         connected_nodes = set(np.unique(nodes[edge_index])[1:])
         if len(connected_nodes) < 2:
+            # Sometimes there are small spurs that are only connected to
+            # a single node. We ignore them.
+            # logger.debug('edge doesn\'t connect two nodes')
+            # continue
+            from matplotlib import pyplot as plt
+            import ipdb; ipdb.set_trace()
             raise ValueError('Edge %d must connect two nodes.' % e)
         edge_to_nodes_map[e] = connected_nodes
     return (node_to_egdes_map, edge_to_nodes_map)
@@ -323,12 +327,12 @@ def build_graph(edges, node_map, edge_map):
 
 
 def find_shortest_path(graph, start, end):
-    '''Finds shortest path in `graph` from given `start` to `end` node
-    using Dijkstra's algorithm.
+    '''Finds shortest path between `start` and `end` node in `graph` using
+    `Dijkstra's algorithm <https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm>`_.
 
     Parameters
     ----------
-    graph: Dict[int, List[int]]
+    graph: Dict[int, Dict[int]]
         mapping of parent nodes to child nodes
     start: int
         start node
@@ -339,25 +343,30 @@ def find_shortest_path(graph, start, end):
     -------
     List[int]
         sequence of nodes along the shortest path
+
+    See also
+    --------
+    :py:func:`jtmodules.separate_clumps.build_graph`
     '''
     queue = [(0, start, [])]
-    seen = set()
+    been_there = set()
     while True:
         try:
-            (cost, v, path) = heapq.heappop(queue)
+            (distance, v, path) = heapq.heappop(queue)
         except IndexError:
-            print 'Incomplete line'
-            print path
+            # We end up here when no line can be found in graph that connects
+            # start and end nodes.
+            logger.debug('incomplete line: {0}'.format(path))
             return []
         except:
             raise
-        if v not in seen:
+        if v not in been_there:
             path = path + [v]
-            seen.add(v)
+            been_there.add(v)
             if v == end:
                 return path
-            for (next, c) in graph[v].iteritems():
-                heapq.heappush(queue, (cost + c, next, path))
+            for (next, d) in graph[v].iteritems():
+                heapq.heappush(queue, (distance + d, next, path))
 
 
 def find_line_segments_along_path(path, node_map):
@@ -486,13 +495,19 @@ def calc_area_shape_features(mask):
     area = np.float64(np.count_nonzero(mask))
     perimeter = mh.labeled.perimeter(mask)
     form_factor = (4.0 * np.pi * area) / (perimeter**2)
-    area_convex_hull = np.count_nonzero(mh.polygon.fill_convexhull(mask))
+    convex_hull = mh.polygon.fill_convexhull(mask)
+    area_convex_hull = np.count_nonzero(convex_hull)
     solidity = area / area_convex_hull
+    # eccentricity = mh.features.eccentricity(mask)
+    # roundness = mh.features.roundness(mask)
+    # major_axis, minor_axis = mh.features.ellipse_axes(mask)
+    # elongation = (major_axis - minor_axis) / major_axis
     return np.array([area, form_factor, solidity])
 
 
-# def calc_shape_features(mask):
-#     '''Calculates shape features that are helpful for identification of clumps.
+# def calc_complex_shape_features(mask):
+#     '''Calculates Zernike moments that describe the shape of the object
+#     in mask.
 
 #     Parameters
 #     ----------
@@ -503,18 +518,16 @@ def calc_area_shape_features(mask):
 #     Returns
 #     -------
 #     numpy.ndarray[numpy.float64]
-#         2 descriptive shape features
+#         shape features
 #     '''
-#     index = [6, 12]
-#     # NOTE: radius is chosen based on visual inspection and totally arbitrary.
-#     # For correct calculation of Zernike moments images should have unit size!
-#     features = mh.features.zernike_moments(mask, radius=mask.size/100)
-#     return features[index]
+#     radius = 100
+#     mask_rs = mh.imresize(mask, (radius, radius))
+#     return mh.features.zernike_moments(mask, degree= 12, radius=radius/2)
 
 
 def create_area_shape_feature_images(label_image):
     '''Creates label images, where each object is color coded according to
-    its shape.
+    area/shape features.
 
     Parameters
     ----------
@@ -524,277 +537,277 @@ def create_area_shape_feature_images(label_image):
     Returns
     -------
     Tuple[numpy.ndarray[numpy.float64]]
-        heatmap images
+        heatmap images for each feature
     '''
     label_image = mh.label(label_image > 0)[0]
     bboxes = mh.labeled.bbox(label_image)
     object_ids = np.unique(label_image)[1:]
-    images = [np.zeros(label_image.shape, np.float64)] * 2
+    images = [np.zeros(label_image.shape, np.float64) for x in range(3)]
     # TODO: might be faster by mapping the image through a lookup table
     for i in object_ids:
         mask = jtlib.utils.extract_bbox_image(label_image, bboxes[i], pad=PAD)
         mask = mask == i
-        shape_features = calc_shape_features(mask)
+        shape_features = calc_area_shape_features(mask)
         for j, f in enumerate(shape_features):
             images[j][label_image == i] = f
     return tuple(images)
 
 
-def is_clump(features, thresholds, directionality):
-    '''Decides whether an object should be classified as a `clump` based on
-    its shape features.
+def main(input_mask, input_image, min_area, max_area,
+        min_cut_area, max_form_factor, max_solidity,
+        region_sensitivity, line_sensitivity, cutting_passes, plot=False):
+    '''Detects clumps in `input_mask` and cuts them along watershed lines
+    connecting two points falling into concave regions on their contour.
 
     Parameters
     ----------
-    features: numpy.ndarray[numpy.float64]
-        morphological features that describe size and shape of the object
-    thresholds: List[float]
-        threshold value for each feature
-    directionality: List[str]
-        whether values above or below threshold should be considered "clumpy"
-        (choices: ``{"<", ">"}``)
-
-    Returns
-    -------
-    bool
-        ``True`` when object should be selected given the provided criteria
-        and ``False`` otherwise
-    '''
-    if len(directionality) != len(features):
-        raise ValueError('Incorrect number of directionality values.')
-    if len(thresholds) != len(features):
-        raise ValueError('Incorrect number of threshold values.')
-    operators = []
-    for d in directionality:
-        if d == '<':
-            operators.append('__lt__')
-        elif d == '>':
-            operators.append('__gt__')
-        else:
-            raise ValueError('Directionality must be either "<" or ">".')
-    decision = False
-    for i, f in enumerate(features):
-        if getattr(f, operators[i])(thresholds[i]):
-            decision = True
-    return decision
-
-
-def main(mask_image, intensity_image, min_area_clump, max_area_clump,
-        min_area_cut, max_form_factor, max_solidity,
-        region_detection_sensitivity, line_detection_sensitivity, plot=False):
-    '''Detects clumps in `mask_image` and cuts them along watershed lines
-    connecting two points within concave regions on their contour.
-
-    Parameters
-    ----------
-    mask_image: numpy.ndarray[numpy.bool]
+    input_mask: numpy.ndarray[numpy.bool]
         image with potential clumps
-    intensity_image: numpy.ndarray[numpy.unit16 or numpy.uint8]
+    input_image: numpy.ndarray[numpy.unit16 or numpy.uint8]
         image used for detection of watershed lines
-    min_area_clump: int
+    min_area: int
         minimal area an object must have to be considered a clump
-    max_area_clump: int
+    max_area: int
         maximal area an object must have to be considered a clump
-    min_area_cut: int
+    min_cut_area: int
         minimal area a cut object can have
         (useful to limit size of cut objects)
     max_solidity: float
         maximal solidity an object must have to be considerd a clump
     max_form_factor: float
         maximal form factor an object must have to be considerd a clump
-    region_detection_sensitivity: int
+    region_sensitivity: int
         sensitivity of detecting concave regions along the contour of clumps
-        (distance between the farthest contour point and the convex hull
-        of clumps)
-    line_detection_sensitivity: int
+        (distance between the farthest contour point and the convex hull)
+    line_sensitivity: int
         sensitivity of detecting potential cut lines within clumps
-        (size of the kernel that's used to morphologically open the
-        regional intensity peaks within clumps, which are used as seeds
-        for the watershed transform)
+        (size of the kernel that's used to morphologically open the mask of
+        regional intensity peaks, which are used as seeds for the watershed
+        transform)
+    cutting_passes: int
+        number of cutting cycles to separate clumps that consist of more than
+        two subobjects
     plot: bool, optional
         whether a plot should be generated
 
     Returns
     -------
     Dict[str, numpy.ndarray[numpy.bool] or str]
-        * "separated_image": image with cut clumped objects
+        * "output_mask": image with cut clumped objects
         * "figure": JSON figure representation
     '''
 
-    PAD = 1
-    # Sensitivity of concave region detection (larger less regions)
-    region_detection_sensitivity = 5
-    # Sensitivity of line detection (larger less lines)
-    line_detection_sensitivity = 10
-
-    label_image = mh.label(mask_image)[0]
-    object_ids = np.unique(label_image[label_image > 0])
-    if len(object_ids) == 0:
-        # If there are no objects to cut we can simply return an empty cut mask
-        return cut_mask
-
-    cut_mask = np.zeros(mask_image.shape, bool)
-    separated_image = mask_image.copy()
-
+    # TODO: test modes
     kernel = np.ones((100, 100))
     blackhat_image = cv2.morphologyEx(
-        mh.stretch(intensity_image), cv2.MORPH_BLACKHAT, kernel
+        mh.stretch(input_image), cv2.MORPH_BLACKHAT, kernel
     )
-
-    bboxes = mh.labeled.bbox(label_image)
-    for oid in object_ids:
-        print 'object #%d' % oid
-        # TODO: use numpy masked array
-        # http://docs.scipy.org/doc/numpy/reference/maskedarray.generic.html#rationale
-        mask = jtlib.utils.extract_bbox_image(
-            label_image, bboxes[oid], pad=PAD
-        )
-        mask = mask == oid
-        img = jtlib.utils.extract_bbox_image(
-            intensity_image, bboxes[oid], pad=PAD
-        )
-        bhat = jtlib.utils.extract_bbox_image(
-            blackhat_image, bboxes[oid], pad=PAD
-        )
-
-        area, form_factor, solidity = calc_area_shape_features(mask)
-        if area < min_area_clump or area > max_area_clump:
-            print 'no clump -- outside area range'
-            continue
-        if form_factor > max_form_factor:
-            print 'no clump -- above form factor threshold'
-            continue
-        if solidity > max_solidity:
-            print 'no clump -- above solidity threshold'
-            continue
-        # features = calc_area_shape_features(mask)
-        # if not is_clump(features, thresholds, directionality):
-        #     continue
-
-        concave_region_points, n_concave_regions = find_concave_regions(
-            mask, region_detection_sensitivity
-        )
-        concave_region_points = mh.label(concave_region_points)[0]
-        concave_region_point_ids = np.unique(concave_region_points)[1:]
-        if n_concave_regions < 2:
-            # Cut requires at least two concave regions
+    output_mask = input_mask.copy()
+    cut_mask = np.zeros(output_mask.shape, bool)
+    clumps_mask = np.zeros(output_mask.shape, bool)
+    intensity_cutoff = int(np.percentile(input_image[input_mask], 75))
+    for n in range(cutting_passes):
+        logger.info('cutting pass #%d', n+1)
+        label_image = mh.label(output_mask)[0]
+        object_ids = np.unique(label_image[label_image > 0])
+        if len(object_ids) == 0:
+            logger.debug('no objects')
             continue
 
-        skeleton = find_watershed_lines(mask, img, line_detection_sensitivity)
-        branch_points = find_branch_points(skeleton)
-        end_points = find_border_points(skeleton, mask)
-        end_points += find_end_points(skeleton)
-        # Re-label 8-connected to ensure that neighboring end points get
-        # assigned the same label
-        end_points = mh.label(end_points > 0, np.ones((3, 3), bool))[0]
-        end_point_ids = np.unique(end_points)[1:]
-        line_segments = get_line_segments(skeleton, branch_points, end_points)
-        node_points, n_nodes = mh.label((branch_points + end_points) > 0)
-        node_ids = np.unique(node_points)[1:]
-        if n_nodes == 0:
-            continue
+        bboxes = mh.labeled.bbox(label_image)
+        for oid in object_ids:
+            logger.debug('process object #%d', oid)
+            mask = jtlib.utils.extract_bbox_image(
+                label_image, bboxes[oid], pad=PAD
+            )
+            mask = mask == oid
+            img = jtlib.utils.extract_bbox_image(
+                input_image, bboxes[oid], pad=PAD
+            )
+            bhat = jtlib.utils.extract_bbox_image(
+                blackhat_image, bboxes[oid], pad=PAD
+            )
 
-        # Find the nodes that lie closest to concave regions.
-        # These will be the start and end points of the cut lines
-        node_edge_map, edge_note_map = map_nodes_to_edges(
-            node_points, line_segments
-        )
-        # TODO: limit distance to prevent ending up outside of concave region
-        concave_region_point_node_map = find_nodes_closest_to_concave_regions(
-            concave_region_points, end_points, node_points
-        )
+            area, form_factor, solidity = calc_area_shape_features(mask)
+            if area < min_area or area > max_area:
+                logger.debug('not a clump - outside area range')
+                continue
+            if form_factor > max_form_factor:
+                logger.debug('not a clump - above form factor threshold')
+                continue
+            if solidity > max_solidity:
+                logger.debug('not a clump - above solidity threshold')
+                continue
 
-        # Build a graph, where end and branch points are nodes
-        # and line segments are the edges that connect nodes
-        graph = build_graph(line_segments, node_edge_map, edge_note_map)
-        target_nodes = concave_region_point_node_map.values()
+            y, x = np.where(mask)
+            y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
+            y += y_offset
+            x += x_offset
+            clumps_mask[y, x] = True
 
-        # Build all lines that connect nodes in the graph
-        lines = build_lines_from_segments(
-            line_segments, node_points, graph, target_nodes, node_edge_map
-        )
-        if len(lines) == 0:
-            continue
+            concave_region_points, n_concave_regions = find_concave_regions(mask, region_sensitivity)
+            concave_region_points = mh.label(concave_region_points)[0]
+            concave_region_point_ids = np.unique(concave_region_points)[1:]
+            if n_concave_regions < 2:
+                logger.debug('no cut - not enough concave regions')
+                continue
 
-        features = list()
-        for (start, end), line in lines.iteritems():
-            test_cut_mask = mask.copy()
-            test_cut_mask[line] = False
-            test_cut_mask = mh.morph.open(test_cut_mask)
-            subobjects, n_subobjects = mh.label(test_cut_mask)
-            sizes = mh.labeled.labeled_size(subobjects)
-            smaller_id = np.where(sizes == np.min(sizes))[0]
-            smaller_object = subobjects == smaller_id
-            area, form_factor, solidity = calc_area_shape_features(smaller_object)
-            intensity = img[line]
-            blackness = bhat[line]
-            start_coord = np.array(np.where(node_points == start)).T[0, :]
-            end_coord = np.array(np.where(node_points == end)).T[0, :]
-            totally_straight = np.linalg.norm(start_coord - end_coord)
-            length = np.count_nonzero(line)
-            straightness = totally_straight / length
-            f = {
-                'n_objects': n_subobjects,
-                'cut_object_solidity': solidity,
-                'cut_object_form_factor': form_factor,
-                'cut_object_area': area,
-                'min_intensity': np.min(intensity),
-                'mean_intensity': np.mean(intensity),
-                'median_intensity': np.median(intensity),
-                'max_intensity': np.max(intensity),
-                'length': length,
-                'straightness': straightness,
-                'min_blackness': np.min(blackness),
-                'mean_blackness': np.mean(blackness),
-                'median_blackness': np.median(blackness),
-                'max_blackness': np.max(blackness),
-            }
-            features.append(f)
-        features = pd.DataFrame(features)
-        features.index = pd.MultiIndex.from_tuples(
-            lines.keys(), names=['start', 'end']
-        )
+            skeleton = find_watershed_lines(mask, img, line_sensitivity)
+            branch_points = find_branch_points(skeleton)
+            end_points = find_border_points(skeleton, mask)
+            end_points += find_end_points(skeleton)
+            # Re-label 8-connected to ensure that neighboring end points get
+            # assigned the same label
+            se = np.ones((3, 3), bool)  # 8-connected
+            end_points = mh.label(end_points > 0, Bc=se)[0]
+            end_point_ids = np.unique(end_points)[1:]
+            line_segments = get_line_segments(skeleton, branch_points, end_points)
+            node_points, n_nodes = mh.label((branch_points + end_points) > 0, Bc=se)
+            node_ids = np.unique(node_points)[1:]
+            if n_nodes == 0:
+                logger.debug(
+                    'no cut - no watershed lines connceting concave regions'
+                )
+                continue
 
-        potential_line_index = (
-            (features.n_objects == 2) &
-            (features.cut_object_solidity > max_solidity) &
-            (features.cut_object_form_factor > max_form_factor) &
-            (features.cut_object_area > min_area_cut)
-        )
-        if not any(potential_line_index):
-            continue
+            # Find the nodes that lie closest to concave regions.
+            # These will be the start and end points of the cut lines
+            node_edge_map, edge_note_map = map_nodes_to_edges(
+                node_points, line_segments
+            )
+            # TODO: limit distance to prevent ending up outside of concave region
+            concave_region_point_node_map = find_nodes_closest_to_concave_regions(
+                concave_region_points, end_points, node_points
+            )
 
-        # potential_lines = [
-        #     lines[idx]
-        #     for idx in features.ix[potential_line_index].index.values
-        # ]
-        # plt.imshow((np.sum(potential_lines, axis=0) > 0) + mask * 2);
-        # plt.show()
+            # Build a graph, where end and branch points are nodes
+            # and line segments are the edges that connect nodes
+            graph = build_graph(line_segments, node_edge_map, edge_note_map)
+            target_nodes = concave_region_point_node_map.values()
 
-        # Select the "optimal" line based on its intensity profile, length
-        # and straightness
-        selected_features = features.loc[
-            potential_line_index,
-            ['median_intensity', 'median_blackness', 'length', 'straightness']
-        ]
-        # TODO: optimize feature selection and weights
-        weights = np.array([1, 1, 1, 1])
-        costs = selected_features.dot(weights)
-        idx = costs[costs == np.min(costs)].index.values[0]
+            # Build all lines that connect nodes in the graph
+            lines = build_lines_from_segments(
+                line_segments, node_points, graph, target_nodes, node_edge_map
+            )
+            if len(lines) == 0:
+                logger.debug(
+                    'no cut - no watershed lines found between concave regions'
+                )
+                continue
 
-        # plt.imshow(mask + lines[idx]*2)
-        # plt.show()
+            features = list()
+            for (start, end), line in lines.iteritems():
+                test_cut_mask = mask.copy()
+                test_cut_mask[line] = False
+                test_cut_mask = mh.morph.open(test_cut_mask)
+                subobjects, n_subobjects = mh.label(test_cut_mask)
+                sizes = mh.labeled.labeled_size(subobjects)
+                smaller_id = np.where(sizes == np.min(sizes))[0]
+                smaller_object = subobjects == smaller_id
+                area, form_factor, solidity = calc_area_shape_features(smaller_object)
+                intensity = img[line]
+                blackness = bhat[line]
+                start_coord = np.array(np.where(node_points == start)).T[0, :]
+                end_coord = np.array(np.where(node_points == end)).T[0, :]
+                totally_straight = np.linalg.norm(start_coord - end_coord)
+                length = np.count_nonzero(line)
+                straightness = totally_straight / length
+                f = {
+                    'n_objects': n_subobjects,
+                    'cut_object_solidity': solidity,
+                    'cut_object_form_factor': form_factor,
+                    'cut_object_area': area,
+                    'min_intensity': np.min(intensity),
+                    'mean_intensity': np.mean(intensity),
+                    'median_intensity': np.median(intensity),
+                    'max_intensity': np.max(intensity),
+                    'length': length,
+                    'straightness': straightness,
+                    'min_blackness': np.min(blackness),
+                    'mean_blackness': np.mean(blackness),
+                    'median_blackness': np.median(blackness),
+                    'max_blackness': np.max(blackness),
+                }
+                features.append(f)
+            features = pd.DataFrame(features)
+            features.index = pd.MultiIndex.from_tuples(
+                lines.keys(), names=['start', 'end']
+            )
 
-        # Update cut mask
-        y, x = np.where(lines[idx])
-        y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
-        y += y_offset
-        x += x_offset
-        cut_mask[y, x] = True
+            # TODO: Additional intensity criteria to prevent "stupid" cuts
+            # e.g. only select line when intensity is below a certain global
+            # intensity threshold.
+            potential_line_index = (
+                (features.n_objects == 2) &
+                (features.cut_object_solidity > max_solidity) &
+                (features.cut_object_form_factor > max_form_factor) &
+                (features.cut_object_area > min_cut_area) &
+                (features.mean_intensity < intensity_cutoff)
+            )
+            if not any(potential_line_index):
+                logger.debug('no cut - no line passed tests')
+                continue
 
-    separated_image[cut_mask] = 0
+            # potential_lines = [
+            #     lines[idx]
+            #     for idx in features.ix[potential_line_index].index.values
+            # ]
+            # plt.imshow((np.sum(potential_lines, axis=0) > 0) + mask * 2);
+            # plt.show()
+
+            # Select the "optimal" line based on its intensity profile, length
+            # and straightness
+            selected_features = features.loc[
+                potential_line_index,
+                ['median_intensity', 'median_blackness', 'length', 'straightness',
+                    'cut_object_solidity', 'cut_object_form_factor']
+            ]
+            # TODO: optimize feature selection and weights
+            # The line should be short and straight, intensity along the line should
+            # be low and the cut object should be round.
+            weights = np.array([2, -2, 2, -2, -1, -1])
+            costs = selected_features.dot(weights)
+            idx = costs[costs == np.min(costs)].index.values[0]
+
+            # plt.imshow(mask + lines[idx]*2)
+            # plt.show()
+
+            # Update cut mask
+            y, x = np.where(lines[idx])
+            y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
+            y += y_offset
+            x += x_offset
+            cut_mask[y, x] = True
+
+        output_mask[cut_mask] = 0
 
     output = dict()
-    output['separated_image'] = separated_image
-    output['figure'] = str()
+    output['output_mask'] = output_mask
+    if plot:
+        from jtlib import plotting
+        labeled_output_mask, n_objects = mh.label(
+            output_mask, np.ones((3, 3), bool)
+        )
+        colorscale = plotting.create_colorscale(
+            'Spectral', n=n_objects, permute=True, add_background=True
+        )
+        outlines = mh.morph.dilate(mh.labeled.bwperim(output_mask))
+        cutlines = mh.morph.dilate(mh.labeled.bwperim(cut_mask))
+        plots = [
+            plotting.create_mask_image_plot(
+                labeled_output_mask, 'ul', colorscale=colorscale
+            ),
+            plotting.create_intensity_overlay_image_plot(
+                input_image, outlines, 'ur'
+            ),
+            plotting.create_mask_overlay_image_plot(
+                clumps_mask, cutlines, 'll'
+            )
+        ]
+        output['figure'] = plotting.create_figure(
+            plots, title='separated clumps'
+        )
+    else:
+        output['figure'] = str()
+
     return output
