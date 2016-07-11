@@ -27,15 +27,17 @@ def get_mapobjects_tile(experiment_id, object_name):
     # The coordinates of the requested tile
     x = request.args.get('x')
     y = request.args.get('y')
+    # "z" is the pyramid zoom level and "zlevel" the z-resolution of the
+    # acquired image
     z = request.args.get('z')
-    zlevel = request.args.get('zlevel')
+    zplane = request.args.get('zlevel')
     t = request.args.get('t')
 
     # Check arguments for validity and convert to integers
-    if any([var is None for var in [x, y, z, zlevel, t]]):
+    if any([var is None for var in [x, y, z, zplane, t]]):
         return MALFORMED_REQUEST_RESPONSE
     else:
-        x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
+        x, y, z, zplane, t = map(int, [x, y, z, zplane, t])
 
     if object_name == 'DEBUG_TILE':
         maxzoom = ex.channels[0].layers[0].maxzoom_level_index
@@ -58,17 +60,20 @@ def get_mapobjects_tile(experiment_id, object_name):
             }
         })
 
-    mapobject_type = \
-        db.session.query(MapobjectType).\
-        filter_by(name=object_name, experiment_id=ex.id).one()
+    mapobject_type = db.session.query(MapobjectType).\
+        filter_by(name=object_name, experiment_id=ex.id).\
+        one()
     query_res = mapobject_type.get_mapobject_outlines_within_tile(
-        x, y, z, t, zlevel)
+        x, y, z, t, zplane
+    )
 
     features = []
 
     if len(query_res) > 0:
         # Try to estimate how many points there are in total within
         # the polygons of this tile.
+        # TODO: Make this more light weight by sending binary coordinates
+        # without GEOJSON overhead. Requires a hack on the client side.
         for mapobject_id, geom_geojson_str in query_res:
             feature = {
                 "type": "Feature",
