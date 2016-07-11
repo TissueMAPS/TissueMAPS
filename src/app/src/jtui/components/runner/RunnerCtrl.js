@@ -44,40 +44,40 @@ angular.module('jtui.runner')
         }
     };
 
-    var outputIsOpen = false;
-    $scope.showOutput = function () {
-        if (outputIsOpen) return;
-        var jobIndex = $scope.jobs.output.map(function (e) {
-            return e.id;
-        }).indexOf($scope.jobs.currentId);
-        var modalInst = $uibModal.open({
-            templateUrl: 'src/jtui/components/runner/modals/output.html',
-            size: 'lg',
-            // windowClass: 'modal-window',
-            resolve: {
-                output: function () {
-                    for (j in $scope.jobs.output[jobIndex].modules) {
-                        if ($scope.jobs.output[jobIndex].modules[j].name == currentModuleName) {
-                            return $scope.jobs.output[jobIndex].modules[j]
-                        }
-                    }
-               },
-               name: function () {
-                    return $scope.module.name;
-               },
-               jobId: $scope.jobs.currentId
-            },
-            controller: 'OutputCtrl'
-        });
+    // var outputIsOpen = false;
+    // $scope.showOutput = function () {
+    //     if (outputIsOpen) return;
+    //     var jobIndex = $scope.jobs.output.map(function (e) {
+    //         return e.id;
+    //     }).indexOf($scope.jobs.currentId);
+    //     var modalInst = $uibModal.open({
+    //         templateUrl: 'src/jtui/components/runner/modals/output.html',
+    //         size: 'lg',
+    //         // windowClass: 'modal-window',
+    //         resolve: {
+    //             output: function () {
+    //                 for (j in $scope.jobs.output[jobIndex].modules) {
+    //                     if ($scope.jobs.output[jobIndex].modules[j].name == currentModuleName) {
+    //                         return $scope.jobs.output[jobIndex].modules[j]
+    //                     }
+    //                 }
+    //            },
+    //            name: function () {
+    //                 return $scope.module.name;
+    //            },
+    //            jobId: $scope.jobs.currentId
+    //         },
+    //         controller: 'OutputCtrl'
+    //     });
 
-        outputIsOpen = true;
+    //     outputIsOpen = true;
 
-        modalInst.result.then(function () {
-            outputIsOpen = false;
-        }, function () {
-            outputIsOpen = false;
-        });
-    };
+    //     modalInst.result.then(function () {
+    //         outputIsOpen = false;
+    //     }, function () {
+    //         outputIsOpen = false;
+    //     });
+    // };
 
     var logIsOpen = false;
     $scope.showJobLog = function () {
@@ -189,12 +189,7 @@ angular.module('jtui.runner')
     })
     .add({
       combo: 'o',
-      description: 'show output (stdout/stderr) of current module and job',
-      callback: $scope.showOutput
-    })
-    .add({
-      combo: 'space',
-      description: 'show log message of current job',
+      description: 'show log output of current job',
       callback: $scope.showJobLog
     })
     .add({
