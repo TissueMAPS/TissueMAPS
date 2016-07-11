@@ -55,6 +55,11 @@
         $httpProvider.interceptors.push('authInterceptor');
     }]);
 
+    jtui.run(function(editableOptions) {
+      // Use bootstrap3 theme
+      editableOptions.theme = 'bs3';
+    });
+
     jtui.config(['markedProvider', function(markedProvider) {
         markedProvider.setOptions({
           gfm: true,
