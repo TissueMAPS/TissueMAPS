@@ -287,10 +287,6 @@ def map_nodes_to_edges(nodes, edges):
         if len(connected_nodes) < 2:
             # Sometimes there are small spurs that are only connected to
             # a single node. We ignore them.
-            # logger.debug('edge doesn\'t connect two nodes')
-            # continue
-            from matplotlib import pyplot as plt
-            import ipdb; ipdb.set_trace()
             raise ValueError('Edge %d must connect two nodes.' % e)
         edge_to_nodes_map[e] = connected_nodes
     return (node_to_egdes_map, edge_to_nodes_map)
