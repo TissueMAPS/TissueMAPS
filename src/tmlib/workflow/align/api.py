@@ -2,7 +2,6 @@ import logging
 from collections import defaultdict
 
 import tmlib.models as tm
-from tmlib.image_utils import mip
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.errors import NotSupportedError
@@ -88,7 +87,7 @@ class ImageRegistrator(ClusterRoutines):
 
                     for cycle in plate.cycles:
 
-                        n = session.query(tm.ChannelImageFile).\
+                        n = session.query(tm.ChannelImageFile.id).\
                             join(tm.Cycle).\
                             join(tm.Channel).\
                             filter(tm.Cycle.id == cycle.id).\
@@ -128,8 +127,8 @@ class ImageRegistrator(ClusterRoutines):
 
                             ids = [f.id for f in files]
                             if cycle.index == args.ref_cycle:
-                                input_ids['reference_file_ids'].append(ids)
-                            input_ids['target_file_ids'][cycle.id].append(ids)
+                                input_ids['reference_file_ids'].extend(ids)
+                            input_ids['target_file_ids'][cycle.id].extend(ids)
 
                     job_descriptions['run'].append({
                         'id': job_count,
@@ -190,35 +189,28 @@ class ImageRegistrator(ClusterRoutines):
         '''
         reference_file_ids = batch['input_ids']['reference_file_ids']
         target_file_ids = batch['input_ids']['target_file_ids']
-        for i, reference_ids in enumerate(reference_file_ids):
+        for i, rid in enumerate(reference_file_ids):
             with tm.utils.Session() as session:
-                reference_files = [
-                    session.query(tm.ChannelImageFile).get(rid)
-                    for rid in reference_ids
-                ]
-                ref_img = mip([f.get().pixels for f in reference_files])
+                reference_file = session.query(tm.ChannelImageFile).get(rid)
+                reference_img = reference_file.get().project().array
                 logger.info(
-                    'register images at site %d', reference_files[0].site_id
+                    'register images at site %d', reference_file.site_id
                 )
                 y_shifts = list()
                 x_shifts = list()
-                for target_ids in target_file_ids.values():
-                    target_files = [
-                        session.query(tm.ChannelImageFile).get(tid)
-                        for tid in target_ids[i]
-                    ]
+                for tids in target_file_ids.values():
+                    target_file = session.query(tm.ChannelImageFile).get(tids[i])
                     logger.info(
-                        'calculate shifts for cycle %d',
-                        target_files[0].cycle_id
+                        'calculate shifts for cycle %d', target_file.cycle_id
                     )
-                    target_img = mip([f.get().pixels for f in target_files])
-                    y, x = reg.calculate_shift(target_img, ref_img)
+                    target_img = target_file.get().project().array
+                    y, x = reg.calculate_shift(target_img, reference_img)
 
                     session.get_or_create(
                         tm.SiteShift,
                         x=x, y=y,
-                        site_id=target_files[0].site_id,
-                        cycle_id=target_files[0].cycle_id
+                        site_id=target_file.site_id,
+                        cycle_id=target_file.cycle_id
                     )
 
                     y_shifts.append(y)
@@ -233,7 +225,7 @@ class ImageRegistrator(ClusterRoutines):
                     tm.SiteIntersection,
                     upper_overhang=top, lower_overhang=bottom,
                     right_overhang=right, left_overhang=left,
-                    site_id=reference_files[0].site_id
+                    site_id=reference_file.site_id
                 )
 
     @notimplemented

@@ -160,7 +160,7 @@ class Image(PipeHandle):
 class IntensityImage(Image):
 
     '''Class for an intensity image handle, where image pixel values encode
-    a quantity.
+    intensity.
     '''
 
     def __init__(self, name, key, help=''):
@@ -352,9 +352,14 @@ class SegmentedObjects(LabelImage):
                     # correct number of objects and that coordinates are in the
                     # correct order, i.e. sorted according to their label.
                     obj_im = image == label
+                    # TODO: use mahotas.labeled.borders() or
+                    # mahotas.labeled.bwperim()
                     contours = skimage.measure.find_contours(
                         obj_im, 0.5, fully_connected='high'
                     )
+                    # TODO: interior and exterior contours
+                    # OpenCV's findContours() with CV_RETR_CCOMP flag
+                    # and offset for potential shift due to alignment
                     if len(contours) > 1:
                         # It sometimes happens that more than one outline is
                         # identified per object, in particular when the object

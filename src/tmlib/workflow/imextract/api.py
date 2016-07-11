@@ -82,7 +82,7 @@ class ImageExtractor(ClusterRoutines):
                                     t=fmapping.tpoint,
                                     w=fmapping.site.well.name,
                                     y=fmapping.site.y, x=fmapping.site.x,
-                                    c=fmapping.wavelength, z=fmapping.zplane
+                                    c=fmapping.wavelength
                                 )
                             )
                             for fmapping in batch
@@ -143,12 +143,15 @@ class ImageExtractor(ClusterRoutines):
                     # Write plane (2D single-channel image) to file
                     image_file = session.get_or_create(
                         tm.ChannelImageFile,
-                        tpoint=fmapping.tpoint, zplane=fmapping.zplane,
+                        tpoint=fmapping.tpoint,
                         site_id=fmapping.site_id, cycle_id=fmapping.cycle_id,
                         channel_id=fmapping.channel_id
                     )
-                    logger.info('stored in image file: %s', image_file.name)
-                    image_file.put(img)
+                    logger.info(
+                        'store pixels plane #%d in image file: %s',
+                        fmapping.zplane, image_file.name
+                    )
+                    image_file.put(img, z=fmapping.zplane)
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class

@@ -33,15 +33,15 @@ CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 class ChannelLayer(Model):
 
     '''A *channel layer* represents a multi-resolution overview of all images
-    belonging to a given *channel*, *time point*, and *z-plane*
+    belonging to a given *channel*, *z-plane* and *time point*.
     as a pyramid in `Zoomify <http://www.zoomify.com/>`_ format.
 
     Attributes
     ----------
     tpoint: int
-        time point index
+        zero-based time series index
     zplane: int
-        z-plane index
+        zero-based z-resolution index
     channel_id: int
         ID of the parent channel
     channel: tmlib.models.Channel
@@ -51,11 +51,11 @@ class ChannelLayer(Model):
     #: str: name of the corresponding database table
     __tablename__ = 'channel_layers'
 
-    __table_args__ = (UniqueConstraint('tpoint', 'zplane', 'channel_id'), )
+    __table_args__ = (UniqueConstraint('zplane', 'tpoint', 'channel_id'), )
 
     # Table columns
-    tpoint = Column(Integer)
     zplane = Column(Integer)
+    tpoint = Column(Integer)
     channel_id = Column(
         Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
@@ -72,9 +72,9 @@ class ChannelLayer(Model):
         Parameters
         ----------
         tpoint: int
-            time point index
+            zero-based time series index
         zplane: int
-            z-plane index
+            zero-based z-resolution index
         channel_id: int
             ID of the parent channel
         '''
@@ -299,7 +299,8 @@ class ChannelLayer(Model):
             filter(
                 Site.y == site.y + 1, Site.x == site.x,
                 Site.well_id == site.well_id,
-                ChannelImageFile.channel_id == self.channel_id
+                ChannelImageFile.channel_id == self.channel_id,
+                ChannelImageFile.tpoint == self.tpoint
             ).\
             count()
         right_neighbor_count = session.query(ChannelImageFile.id).\
@@ -307,7 +308,8 @@ class ChannelLayer(Model):
             filter(
                 Site.y == site.y, Site.x == site.x + 1,
                 Site.well_id == site.well_id,
-                ChannelImageFile.channel_id == self.channel_id
+                ChannelImageFile.channel_id == self.channel_id,
+                ChannelImageFile.tpoint == self.tpoint
             ).\
             count()
         has_lower_neighbor = lower_neighbor_count > 0
@@ -402,8 +404,7 @@ class ChannelLayer(Model):
         mapping = collections.defaultdict(list)
         experiment = self.channel.experiment
         image_files = [
-            f for f in self.channel.image_files
-            if f.tpoint == self.tpoint and f.zplane == self.zplane
+            f for f in self.channel.image_files if f.tpoint == self.tpoint
         ]
         for f in image_files:
             if f.omitted:
@@ -636,8 +637,8 @@ class ChannelLayer(Model):
             n_right = self.tile_size - (image.dimensions[1] - x_offset)
 
         extracted_pixels = image.extract(
-            y_offset, x_offset, y_end-y_offset, x_end-x_offset
-        ).pixels
+            y_offset, y_end-y_offset, x_offset, x_end-x_offset
+        ).array
         tile = PyramidTile(extracted_pixels)
         if n_top is not None:
             tile = tile.pad_with_background(n_top, 'top')
@@ -660,8 +661,8 @@ class ChannelLayer(Model):
         image_height, image_width = self.image_size[-1]
         return {
             'id': self.hash,
-            'zplane': self.zplane,
             'tpoint': self.tpoint,
+            'zplane': self.zplane,
             'image_size': {
                 'width': image_width,
                 'height': image_height
@@ -670,6 +671,7 @@ class ChannelLayer(Model):
 
     def __repr__(self):
         return (
-            '<ChannelLayer(id=%r, channel=%r, tpoint=%r, zplane=%r)>'
-            % (self.id, self.channel.name, self.tpoint, self.zplane)
+            '<%s(id=%r, channel=%r, tpoint=%r, zplane=%r)>'
+            % (self.__class__.__name__, self.id, self.channel.name,
+                self.tpoint, self.zplane)
         )

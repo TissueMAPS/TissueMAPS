@@ -114,190 +114,191 @@ class PyramidBuilder(ClusterRoutines):
         job_count = 0
         with tm.utils.Session() as session:
 
-            metadata = session.query(
-                    tm.ChannelImageFile.tpoint,
-                    tm.ChannelImageFile.zplane,
-                    tm.ChannelImageFile.channel_id,
-                ).\
-                join(tm.Channel).\
+            channel_ids = session.query(tm.Channel.id).\
                 filter(tm.Channel.experiment_id == self.experiment_id).\
                 distinct()
 
-            for attributes in metadata:
+            for cid in channel_ids:
 
-                layer = session.get_or_create(
-                    tm.ChannelLayer,
-                    tpoint=attributes.tpoint, zplane=attributes.zplane,
-                    channel_id=attributes.channel_id
-                )
+                n_zplanes = session.query(tm.ChannelImageFile.n_planes).\
+                    filter_by(channel_id=cid).\
+                    first()[0]
 
-                image_files = session.query(tm.ChannelImageFile).\
-                    filter(
-                        tm.ChannelImageFile.tpoint==layer.tpoint,
-                        tm.ChannelImageFile.zplane==layer.zplane,
-                        tm.ChannelImageFile.channel_id==layer.channel_id,
-                        ~tm.ChannelImageFile.omitted
-                    ).\
-                    order_by(tm.ChannelImageFile.site_id).\
-                    all()
+                tpoints = session.query(tm.ChannelImageFile.tpoint).\
+                    filter_by(channel_id=cid).\
+                    distinct()
 
-                for index, level in enumerate(reversed(range(layer.n_levels))):
-                    # NOTE: The pyramid "level" increases from top to bottom.
-                    # We build the pyramid bottom-up, therefore, the "index"
-                    # decreases from top to bottom.
-                    if level == layer.maxzoom_level_index:
-                        layer.create_tile_groups()
-                        layer.create_image_properties_file()
-                        # For the base level, batches are composed of
-                        # image files, which will get chopped into tiles.
-                        batches = self._create_batches(
-                            np.arange(len(image_files)), args.batch_size
-                        )
-                    else:
-                        # For the subsequent levels, batches are composed of
-                        # tiles of the previous, next higher level.
-                        # Therefore, the batch size needs to be adjusted.
-                        batches = self._create_batches(
-                            np.arange(np.prod(layer.dimensions[level])),
-                            args.batch_size * 10 * level
-                        )
+                for t, z in itertools.product(tpoints, range(n_zplanes)):
+                    image_files = session.query(tm.ChannelImageFile).\
+                        filter(
+                            tm.ChannelImageFile.channel_id==cid,
+                            tm.ChannelImageFile.tpoint==t,
+                            ~tm.ChannelImageFile.omitted
+                        ).\
+                        order_by(tm.ChannelImageFile.site_id).\
+                        all()
 
-                    for batch in batches:
-                        job_count += 1
-                        # NOTE: For the highest resolution level, the inputs
-                        # are channel image files. For all other levels,
-                        # the inputs are the pyramid tiles of the next higher
-                        # resolution level (the ones created in the prior run).
-                        # For consistency, the paths to both types of image
-                        # files are provided relative to the root pyramid
-                        # directory.
+                    layer = session.get_or_create(
+                        tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
+                    )
+
+                    for index, level in enumerate(reversed(range(layer.n_levels))):
+                        # NOTE: The layer "level" increases from top to bottom.
+                        # We build the layer bottom-up, therefore, the "index"
+                        # decreases from top to bottom.
                         if level == layer.maxzoom_level_index:
-                            image_file_subset = np.array(image_files)[batch]
-                            input_files = list()
-                            output_files = list()
-                            for f in image_file_subset:
-                                input_files.append(f.location)
-                                tiles = layer.map_image_to_base_tiles(f)
-                                for t in tiles:
-                                    tile_file = layer.build_tile_file_name(
-                                        level, t['row'], t['column']
-                                    )
-                                    tile_group = layer.build_tile_group_name(
-                                        layer.tile_coordinate_group_map[
-                                            level, t['row'], t['column']
-                                        ]
-                                    )
-                                    output_files.append(
-                                        os.path.join(
-                                            layer.location,
-                                            tile_group, tile_file
-                                        )
-                                    )
+                            layer.create_tile_groups()
+                            layer.create_image_properties_file()
+                            # For the base level, batches are composed of
+                            # image files, which will get chopped into tiles.
+                            batches = self._create_batches(
+                                np.arange(len(image_files)), args.batch_size
+                            )
                         else:
-                            row_range = np.arange(layer.dimensions[level+1][0])
-                            col_range = np.arange(layer.dimensions[level+1][1])
-                            tile_coordinates = np.array(
-                                list(itertools.product(row_range, col_range))
-                            )[batch]
-                            input_files = [
-                                os.path.join(
-                                    layer.location,
-                                    layer.build_tile_group_name(
-                                        layer.tile_coordinate_group_map[
-                                            level+1, c[0], c[1]
-                                        ]
-                                    ),
-                                    layer.build_tile_file_name(
-                                        level+1, c[0], c[1]
-                                    )
-                                )
-                                for c in tile_coordinates
-                            ]
-                            row_range = np.arange(layer.dimensions[level][0])
-                            col_range = np.arange(layer.dimensions[level][1])
-                            tile_coordinates = np.array(
-                                list(itertools.product(row_range, col_range))
-                            )[batch]
-                            output_files = [
-                                os.path.join(
-                                    layer.location,
-                                    layer.build_tile_group_name(
-                                        layer.tile_coordinate_group_map[
-                                            level, c[0], c[1]
-                                        ]
-                                    ),
-                                    layer.build_tile_file_name(
-                                        level, c[0], c[1]
-                                    )
-                                )
-                                for c in tile_coordinates
-                            ]
+                            # For the subsequent levels, batches are composed of
+                            # tiles of the previous, next higher level.
+                            # Therefore, the batch size needs to be adjusted.
+                            batches = self._create_batches(
+                                np.arange(np.prod(layer.dimensions[level])),
+                                args.batch_size * 10 * level
+                            )
 
-                        # NOTE: Keeping track of inputs/outputs for each job
-                        # is problematic because the number of tiles increases
-                        # exponentially with the number of image files.
-
-                        description = {
-                            'id': job_count,
-                            'inputs': {
-                                'image_files': input_files
-                            },
-                            'outputs': {
-                                'image_files': output_files
-                            },
-                            'layer_id': layer.id,
-                            'level': level,
-                            'index': index
-                        }
-                        if level == layer.maxzoom_level_index:
-                            # Only base tiles need to be corrected for
-                            # illumination artifacts and aligned, this then
-                            # automatically translates to the subsequent levels
-                            description.update({
-                                'image_file_ids': [
-                                    f.id for f in image_file_subset
-                                ],
-                                'align': args.align,
-                                'illumcorr': args.illumcorr,
-                                'clip': args.clip,
-                                'clip_value': args.clip_value,
-                                'clip_percent': args.clip_percent
-                            })
-                        job_descriptions['run'].append(description)
-
-                    if level == layer.maxzoom_level_index:
-                        # Creation of empty base tiles that don't map to images
-                        coordinates = layer.get_empty_base_tile_coordinates()
-                        batches = self._create_batches(
-                            list(coordinates), args.batch_size
-                        )
                         for batch in batches:
                             job_count += 1
-                            job_descriptions['run'].append({
-                                'id': job_count,
-                                'inputs': {},
-                                'outputs': {
-                                    'image_files': [
-                                        os.path.join(
-                                            layer.location,
-                                            layer.build_tile_group_name(
-                                                layer.tile_coordinate_group_map[
-                                                    level, y, x
-                                                ]
-                                            ),
-                                            layer.build_tile_file_name(
-                                                level, y, x
+                            # NOTE: For the highest resolution level, the inputs
+                            # are channel image files. For all other levels,
+                            # the inputs are the layer tiles of the next higher
+                            # resolution level (the ones created in the prior run).
+                            # For consistency, the paths to both types of image
+                            # files are provided relative to the root layer
+                            # directory.
+                            if level == layer.maxzoom_level_index:
+                                image_file_subset = np.array(image_files)[batch]
+                                input_files = list()
+                                output_files = list()
+                                for f in image_file_subset:
+                                    input_files.append(f.location)
+                                    tiles = layer.map_image_to_base_tiles(f)
+                                    for t in tiles:
+                                        tile_file = layer.build_tile_file_name(
+                                            level, t['row'], t['column']
+                                        )
+                                        tile_group = layer.build_tile_group_name(
+                                            layer.tile_coordinate_group_map[
+                                                level, t['row'], t['column']
+                                            ]
+                                        )
+                                        output_files.append(
+                                            os.path.join(
+                                                layer.location,
+                                                tile_group, tile_file
                                             )
                                         )
-                                        for y, x in batch
-                                    ]
+                            else:
+                                row_range = np.arange(layer.dimensions[level+1][0])
+                                col_range = np.arange(layer.dimensions[level+1][1])
+                                tile_coordinates = np.array(
+                                    list(itertools.product(row_range, col_range))
+                                )[batch]
+                                input_files = [
+                                    os.path.join(
+                                        layer.location,
+                                        layer.build_tile_group_name(
+                                            layer.tile_coordinate_group_map[
+                                                level+1, c[0], c[1]
+                                            ]
+                                        ),
+                                        layer.build_tile_file_name(
+                                            level+1, c[0], c[1]
+                                        )
+                                    )
+                                    for c in tile_coordinates
+                                ]
+                                row_range = np.arange(layer.dimensions[level][0])
+                                col_range = np.arange(layer.dimensions[level][1])
+                                tile_coordinates = np.array(
+                                    list(itertools.product(row_range, col_range))
+                                )[batch]
+                                output_files = [
+                                    os.path.join(
+                                        layer.location,
+                                        layer.build_tile_group_name(
+                                            layer.tile_coordinate_group_map[
+                                                level, c[0], c[1]
+                                            ]
+                                        ),
+                                        layer.build_tile_file_name(
+                                            level, c[0], c[1]
+                                        )
+                                    )
+                                    for c in tile_coordinates
+                                ]
+
+                            # NOTE: Keeping track of inputs/outputs for each job
+                            # is problematic because the number of tiles increases
+                            # exponentially with the number of image files.
+
+                            description = {
+                                'id': job_count,
+                                'inputs': {
+                                    'image_files': input_files
+                                },
+                                'outputs': {
+                                    'image_files': output_files
                                 },
                                 'layer_id': layer.id,
                                 'level': level,
-                                'index': index,
-                                'clip_value': None,
-                                'clip_percent': None
-                            })
+                                'index': index
+                            }
+                            if level == layer.maxzoom_level_index:
+                                # Only base tiles need to be corrected for
+                                # illumination artifacts and aligned, this then
+                                # automatically translates to the subsequent levels
+                                description.update({
+                                    'image_file_ids': [
+                                        f.id for f in image_file_subset
+                                    ],
+                                    'align': args.align,
+                                    'illumcorr': args.illumcorr,
+                                    'clip': args.clip,
+                                    'clip_value': args.clip_value,
+                                    'clip_percent': args.clip_percent
+                                })
+                            job_descriptions['run'].append(description)
+
+                        if level == layer.maxzoom_level_index:
+                            # Creation of empty base tiles that don't map to images
+                            coordinates = layer.get_empty_base_tile_coordinates()
+                            batches = self._create_batches(
+                                list(coordinates), args.batch_size
+                            )
+                            for batch in batches:
+                                job_count += 1
+                                job_descriptions['run'].append({
+                                    'id': job_count,
+                                    'inputs': {},
+                                    'outputs': {
+                                        'image_files': [
+                                            os.path.join(
+                                                layer.location,
+                                                layer.build_tile_group_name(
+                                                    layer.tile_coordinate_group_map[
+                                                        level, y, x
+                                                    ]
+                                                ),
+                                                layer.build_tile_file_name(
+                                                    level, y, x
+                                                )
+                                            )
+                                            for y, x in batch
+                                        ]
+                                    },
+                                    'layer_id': layer.id,
+                                    'level': level,
+                                    'index': index,
+                                    'clip_value': None,
+                                    'clip_percent': None
+                                })
         job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
         return job_descriptions
 
@@ -402,11 +403,9 @@ class PyramidBuilder(ClusterRoutines):
 
     def _create_nonempty_maxzoom_level_tiles(self, batch):
         with tm.utils.Session() as session:
-            layer = session.query(tm.ChannelLayer).\
-                get(batch['layer_id'])
+            layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info(
-                'processing layer: channel %d, time point %d, z-plane %d',
-                layer.channel.index, layer.tpoint, layer.zplane
+                'processing layer: channel %d', layer.channel.index
             )
             logger.info(
                 'creating non-empty tiles at maximum zoom level %d',
@@ -458,14 +457,13 @@ class PyramidBuilder(ClusterRoutines):
         for fid in batch['image_file_ids']:
             with tm.utils.Session() as session:
 
-                layer = session.query(tm.ChannelLayer).\
-                    get(batch['layer_id'])
+                layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
 
                 file = session.query(tm.ChannelImageFile).get(fid)
                 logger.info('process image "%s"', file.name)
                 mapped_tiles = layer.map_image_to_base_tiles(file)
                 image_store = dict()
-                image = file.get()
+                image = file.get(z=layer.zplane)
                 if batch['illumcorr']:
                     logger.info('correct image')
                     image = image.correct(stats)
@@ -477,8 +475,8 @@ class PyramidBuilder(ClusterRoutines):
                     clip_above = 255
                 image = image.clip(clip_below, clip_above)
                 image = image.scale(clip_below, clip_above)
-
                 image_store[file.name] = image
+
                 for t in mapped_tiles:
                     name = layer.build_tile_file_name(
                         batch['level'], t['row'], t['column']
@@ -489,7 +487,8 @@ class PyramidBuilder(ClusterRoutines):
                     tile_file = session.get_or_create(
                         tm.PyramidTileFile,
                         name=name, group=group,
-                        row=t['row'], column=t['column'], level=batch['level'],
+                        row=t['row'], column=t['column'],
+                        level=batch['level'],
                         channel_layer_id=layer.id
                     )
                     logger.info('creating tile: %s', tile_file.name)
@@ -511,7 +510,7 @@ class PyramidBuilder(ClusterRoutines):
                         logger.info('tile overlaps multiple images')
                     for extra_file in extra_files:
                         if extra_file.name not in image_store:
-                            image = extra_file.get()
+                            image = extra_file.get(z=layer.zplane)
                             if batch['illumcorr']:
                                 logger.info('correct image')
                                 image = image.correct(stats)
@@ -527,9 +526,7 @@ class PyramidBuilder(ClusterRoutines):
                         ))
 
                         condition = file_coordinate > extra_file_coordinate
-                        # TODO: handle cases of missing/omitted images
-                        # Each batch only processes the overlapping tiles
-                        # at the upper and/or left border of images.
+                        pixels = image_store[extra_file.name]
                         if all(condition):
                             logger.info('insert pixels from top left image')
                             y = file.site.image_size[0] - abs(t['y_offset'])
@@ -537,9 +534,7 @@ class PyramidBuilder(ClusterRoutines):
                             height = abs(t['y_offset'])
                             width = abs(t['x_offset'])
                             subtile = PyramidTile(
-                                image_store[extra_file.name].extract(
-                                    y, x, height, width
-                                ).pixels
+                                pixels.extract(y, height, x, width).array
                             )
                             tile.insert(subtile, 0, 0)
                         elif condition[0] and not condition[1]:
@@ -555,9 +550,7 @@ class PyramidBuilder(ClusterRoutines):
                                 width = tile.dimensions[1]
                                 x_offset = 0
                             subtile = PyramidTile(
-                                image_store[extra_file.name].extract(
-                                    y, x, height, width
-                                ).pixels
+                                pixels.extract(y, height, x, width).array
                             )
                             tile.insert(subtile, 0, x_offset)
                         elif not condition[0] and condition[1]:
@@ -573,9 +566,7 @@ class PyramidBuilder(ClusterRoutines):
                                 height = tile.dimensions[0]
                                 y_offset = 0
                             subtile = PyramidTile(
-                                image_store[extra_file.name].extract(
-                                    y, x, height, width
-                                ).pixels
+                                pixels.extract(y, height, x, width).array
                             )
                             tile.insert(subtile, y_offset, 0)
                         else:
@@ -592,8 +583,7 @@ class PyramidBuilder(ClusterRoutines):
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
 
             logger.info(
-                'processing layer: channel %d, time point %d, z-plane %d',
-                layer.channel.index, layer.tpoint, layer.zplane
+                'processing layer: channel %d', layer.channel.index
             )
             logger.info(
                 'creating empty tiles at maximum zoom level %d', batch['level']
@@ -617,11 +607,9 @@ class PyramidBuilder(ClusterRoutines):
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.Session() as session:
-            layer = session.query(tm.ChannelLayer).\
-                get(batch['layer_id'])
+            layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info(
-                'processing layer: channel %d, time point %d, z-plane %d',
-                layer.channel.index, layer.tpoint, layer.zplane
+                'processing layer: channel %d', layer.channel.index
             )
             logger.info('creating tiles at zoom level %d', batch['level'])
 
@@ -645,7 +633,7 @@ class PyramidBuilder(ClusterRoutines):
                     column=column, level=level,
                     channel_layer_id=layer.id
                 )
-                logger.debug('creating tile: %s', tile_file.name)
+                logger.info('creating tile: %s', tile_file.name)
                 rows = np.unique([c[0] for c in coordinates])
                 cols = np.unique([c[1] for c in coordinates])
                 # Build the mosaic by loading required higher level tiles
@@ -671,23 +659,23 @@ class PyramidBuilder(ClusterRoutines):
                         # We have to temporally treat it as an "image",
                         # since a tile can per definition not be larger
                         # than 256x256 pixels.
-                        img = ChannelImage(pre_tile_file.get().pixels)
+                        img = ChannelImage(pre_tile_file.get().array)
                         if j == 0:
                             row_img = img
                         else:
-                            row_img = row_img.join(img, 'horizontal')
+                            row_img = row_img.join(img, 'x')
                     if i == 0:
                         mosaic_img = row_img
                     else:
-                        mosaic_img = mosaic_img.join(row_img, 'vertical')
+                        mosaic_img = mosaic_img.join(row_img, 'y')
                 # Create the tile at the current level by downsampling the
                 # mosaic image, which is composed of the 4 tiles of the next
                 # higher zoom level
-                tile = PyramidTile(mosaic_img.shrink(layer.zoom_factor).pixels)
+                tile = PyramidTile(mosaic_img.shrink(layer.zoom_factor).array)
                 tile_file.put(tile)
 
     def run_job(self, batch):
-        '''Creates 8-bit grayscale JPEG pyramid tiles.
+        '''Creates 8-bit grayscale JPEG layer tiles.
 
         Parameters
         ----------

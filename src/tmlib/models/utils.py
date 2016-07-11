@@ -254,7 +254,10 @@ class Session(object):
                 self._sqla_session.add(instance)
                 self._sqla_session.commit()
                 logger.debug('created new instance: %r', instance)
-            except sqlalchemy.exc.IntegrityError:
+            except sqlalchemy.exc.IntegrityError as err:
+                logger.error(
+                    'creation of instance %r failed:\n%s', instance, str(err)
+                )
                 self._sqla_session.rollback()
                 instance = self.query(model).filter_by(**kwargs).one()
                 logger.debug('found existing instance: %r', instance)

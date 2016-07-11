@@ -62,11 +62,11 @@ if __name__ == '__main__':
         help='microscope type (default: cellvoyager)'
     )
     parser.add_argument(
-        '--plate_acquisition_mode', type=str, default='multiplexing',
-        choices={'series', 'multiplexing'},
+        '--plate_acquisition_mode', type=str, default='basic',
+        choices={'basic', 'multiplexing'},
         help='''
             whether multiple acquisitions of the same plate are interpreted 
-            as time points or multiplexing iterations (default: multiplexing)
+            as time points or multiplexing iterations (default: basic)
         '''
     )
 

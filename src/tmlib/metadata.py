@@ -15,37 +15,38 @@ class ChannelImageMetadata(object):
     __metaclass__ = ABCMeta
 
     _SUPPORTED_KWARGS = {
-        'x_shift', 'y_shift',
+        'zplane', 'x_shift', 'y_shift',
         'upper_overhang', 'lower_overhang', 'right_overhang', 'left_overhang',
         'is_aligned', 'is_omitted', 'is_corrected'
     }
 
     # @assert_type()
-    def __init__(self, name, zplane, tpoint, plate, well, x, y, channel, cycle,
+    def __init__(self, name, tpoint, plate, well, x, y, channel, cycle,
                  **kwargs):
         '''
         Parameters
         ----------
         name: str
             name of the image (the same as that of the corresponding file)
+        tpoint: int
+            zero-based time series index
         plate: str
             name of the corresponding plate
         well: str
             name of the corresponding well
-        y: int
-            zero-based row index of the image within the corresponding well
         x: int
             zero-based column index of the image within the corresponding well
+        y: int
+            zero-based row index of the image within the corresponding well
+        channel: int
+            zero-based index of the corresponding channel
         cycle: int
             zero-based index of the corresponding cycle based on the order
             of acquisition
-        channel: int
-            zero-based index of the corresponding channel
         **kwargs: dict, optional
             additional keyword arguments
         '''
         self.name = name
-        self.zplane = zplane
         self.tpoint = tpoint
         self.plate = plate
         self.well = well
@@ -62,6 +63,7 @@ class ChannelImageMetadata(object):
         self.left_overhang = 0
         self.x_shift = 0
         self.y_shift = 0
+        self.zplane = None
         if kwargs:
             for key, value in kwargs.iteritems():
                 if key in self._SUPPORTED_KWARGS:

@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import h5py
 import logging
 import json
@@ -286,13 +287,15 @@ class DatasetReader(Reader):
         else:
             return True
 
-    def list_datasets(self, path):
+    def list_datasets(self, path, pattern='.*'):
         '''Lists datasets within a given group.
 
         Parameters
         ----------
         path: str
             absolute path to a group in the file
+        pattern: str, optional
+            regular expression pattern to filter datasets (default: ``".*"``)
 
         Returns
         -------
@@ -309,19 +312,21 @@ class DatasetReader(Reader):
         except KeyError:
             raise KeyError('Group does not exist: %s' % path)
         names = list()
+        r = re.compile(pattern)
         for name, value in group.iteritems():
-            if self._is_dataset(value):
+            if self._is_dataset(value) and r.search(name):
                 names.append(name)
-
         return names
 
-    def list_groups(self, path):
+    def list_groups(self, path, pattern='.*'):
         '''Lists groups within a given group.
 
         Parameters
         ----------
         path: str
             absolute path to a group in the file
+        pattern: str, optional
+            regular expression pattern to filter groups (default: ``".*"``)
 
         Returns
         -------
@@ -338,10 +343,10 @@ class DatasetReader(Reader):
         except KeyError:
             raise KeyError('Group does not exist: %s' % path)
         names = list()
+        r = re.compile(pattern)
         for name, value in group.iteritems():
-            if not self._is_dataset(value):
+            if not self._is_dataset(value) and r.search(name):
                 names.append(name)
-
         return names
 
     def read(self, path):

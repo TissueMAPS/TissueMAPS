@@ -120,8 +120,6 @@ class MapobjectType(Model, DateMixIn):
 
         Parameters
         ----------
-        session: sqlalchemy.orm.session.Session
-            database session
         x: int
             column map coordinate at the given `z` level
         y: int

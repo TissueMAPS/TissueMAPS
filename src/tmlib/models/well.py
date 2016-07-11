@@ -102,9 +102,7 @@ class Well(Model, DateMixIn):
         )
 
     @cached_property
-    def image_size(self):
-        '''Tuple[int]: number of pixels along the vertical and horizontal axis
-        '''
+    def _image_size(self):
         vertical_offset = self.plate.experiment.vertical_site_displacement
         horizontal_offset = self.plate.experiment.horizontal_site_displacement
         rows, cols = self.dimensions
@@ -113,6 +111,12 @@ class Well(Model, DateMixIn):
             rows * site_dims[0] + vertical_offset * (rows - 1),
             cols * site_dims[1] + horizontal_offset * (cols - 1)
         )
+
+    @cached_property
+    def image_size(self):
+        '''Tuple[int]: number of pixels along the vertical and horizontal axis
+        '''
+        return self.plate._well_image_size
 
     @staticmethod
     def map_name_to_coordinate(name):
@@ -176,7 +180,7 @@ class Well(Model, DateMixIn):
         # (determined at the plate level)
         y_offset = (
             # Wells in the plate above the well
-            n_rows * plate.well_image_size[0] +
+            n_rows * self.image_size[0] +
             # Gaps introduced between wells
             n_rows * experiment.well_spacer_size +
             # Plates above the plate
@@ -184,7 +188,7 @@ class Well(Model, DateMixIn):
         )
         x_offset = (
             # Wells in the plate left of the well
-            n_columns * plate.well_image_size[1] +
+            n_columns * self.image_size[1] +
             # Gaps introduced between wells
             n_columns * experiment.well_spacer_size +
             # Plates left of the plate

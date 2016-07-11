@@ -132,16 +132,16 @@ class IllumstatsCalculator(ClusterRoutines):
         file_ids = batch['channel_image_files_ids']
         logger.info('calculate illumination statistics')
         with tm.utils.Session() as session:
-            file = session.query(tm.ChannelImageFile).\
-                get(file_ids[0])
-            img = file.get()
-        stats = OnlineStatistics(image_dimensions=img.dimensions)
+            file = session.query(tm.ChannelImageFile).get(file_ids[0])
+            img = file.get(z=0)
+        stats = OnlineStatistics(image_dimensions=img.dimensions[0:2])
         for fid in file_ids:
             with tm.utils.Session() as session:
                 file = session.query(tm.ChannelImageFile).get(fid)
-                img = file.get()
                 logger.info('update statistics for image: %s', file.name)
-            stats.update(img)
+                for z in xrange(file.n_planes):
+                    img = file.get(z=z)
+                    stats.update(img)
 
         with tm.utils.Session() as session:
             stats_file = session.get_or_create(

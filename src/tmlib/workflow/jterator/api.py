@@ -108,18 +108,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         return os.path.join(self.step_location, 'figures')
 
-    @autocreate_directory_property
-    def module_log_location(self):
-        '''str: location where module log files (standard output and error)
-        are located
-        '''
-        return os.path.join(self.step_location, 'log_modules')
-
     def remove_previous_pipeline_output(self):
         '''Removes all figure and module log files.'''
-        shutil.rmtree(self.module_log_location)
         shutil.rmtree(self.figures_location)
-        os.mkdir(self.module_log_location)
         os.mkdir(self.figures_location)
 
     @cached_property
@@ -217,9 +208,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     def _configure_loggers(self):
         # TODO: configure loggers for Python, Matlab, and R modules
-        jtlogger = logging.getLogger('jtlib')
         level = map_logging_verbosity(self.verbosity)
-        jtlogger.setLevel(level)
+        jtlib_logger = logging.getLogger('jtlib')
+        jtlib_logger.setLevel(level)
+        jtmodules_logger = logging.getLogger('jtmodules')
+        jtmodules_logger.setLevel(level)
 
     def create_batches(self, args, job_ids=None):
         '''Creates job descriptions for parallel computing.
@@ -246,6 +239,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
             for ch in self.project.pipe['description']['input']['channels']
         ]
 
+        # TODO: parallelize over sub-regions in the image
+        # region = self.project.pipe['description']['input']['region']
+        # overlap = self.project.pipe['description']['input']['overlap']
+
         with tm.utils.Session() as session:
 
             sites = session.query(tm.Site).\
@@ -256,9 +253,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
             if job_ids is None:
                 job_ids = set(range(1, len(sites)+1))
 
-            for j, site in enumerate(sites):
+            for i, site in enumerate(sites):
 
-                job_id = j+1  # job IDs are one-based!
+                job_id = i+1  # job IDs are one-based!
 
                 if job_id not in job_ids:
                     continue
@@ -279,9 +276,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     image_file_paths[ch_name] = [
                         f.location for f in image_files
                     ]
-                    # image_file_ids[ch_name] = [
-                    #     f.id for f in image_files
-                    # ]
 
                 job_descriptions['run'].append({
                     'id': job_id,
@@ -294,17 +288,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 self.figures_location, job_id
                             )
                             for module in self.pipeline
-                        ],
-                        'log_files': flatten([
-                            list(
-                                module.build_log_filenames(
-                                    self.module_log_location, job_id
-                                )
-                            )
-                            for module in self.pipeline
-                        ])
+                        ]
                     },
-                    # 'image_file_ids': image_file_ids,
                     'site_id': site.id,
                     'plot': args.plot
                 })
@@ -403,17 +388,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         )
         mapobject_type_names = [mt['name'] for mt in mapobject_type_info]
         with tm.utils.Session() as session:
-            image_metadata = pd.DataFrame(
-                session.query(
-                    tm.ChannelImageFile.tpoint, tm.ChannelImageFile.zplane
-                ).
-                join(tm.Channel).
-                filter(tm.Channel.experiment_id == self.experiment_id).
-                distinct(
-                    tm.ChannelImageFile.tpoint, tm.ChannelImageFile.zplane
-                ).
-                all()
-            )
             for channel_name in channel_names:
                 logger.info('load images for channel "%s"', channel_name)
                 index = channel_names.index(channel_name)
@@ -451,12 +425,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         img = img.correct(stats)
                     logger.debug('align image "%s"', f.name)
                     img = img.align()  # shifted and cropped!
-                    images[f.tpoint].append(img.pixels)
+                    images[f.tpoint].append(img.array)
 
-                zstacks = list()
-                for zplanes in images.itervalues():
-                    zstacks.append(np.dstack(zplanes))
-                store['pipe'][channel_name] = np.stack(zstacks, axis=-1)
+                # zstacks = list()
+                # for zplanes in images.itervalues():
+                #     zstacks.append(np.dstack(zplanes))
+                store['pipe'][channel_name] = np.stack(images.values(), axis=-1)
 
             # Load outlins of mapobjects of the specified types and reconstruct
             # the label images required by modules.
@@ -498,21 +472,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
         logger.info('run pipeline')
         for i, module in enumerate(self.pipeline):
             logger.info('run module "%s"', module.name)
-            module.update_handles(store, batch['plot'])
-            output = module.run(self.engines[module.language])
-
-            stdout_file, stderr_file = module.build_log_filenames(
-                self.module_log_location, job_id
-            )
-            logger.debug('write standard output and error to log files')
-            with TextWriter(stdout_file) as f:
-                f.write(output['stdout'])
-            with TextWriter(stderr_file) as f:
-                f.write(output['stderr'])
-
-            if not output['success']:
-                sys.exit(output['error_message'])
-
+            # When plotting is not deriberately activated it defaults to
+            # headless mode
+            headless = not batch.get('plot', False)
+            if not headless:
+                logger.warning('plotting mode active')
+            module.update_handles(store, headless=headless)
+            module.run(self.engines[module.language])
             store = module.update_store(store)
 
             if batch['plot']:
