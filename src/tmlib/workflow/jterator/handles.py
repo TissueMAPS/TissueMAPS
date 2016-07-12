@@ -260,12 +260,12 @@ class BinaryImage(Image):
     def value(self, value):
         if not isinstance(value, np.ndarray):
             raise TypeError(
-                'Returned value for "%s" must have type numpy.ndarray.'
+                'Value of key "%s" must have type numpy.ndarray.'
                 % self.name
             )
         if value.dtype != np.bool:
             raise TypeError(
-                'Returned value for "%s" must have data type bool.'
+                'Value of key "%s" must have data type bool.'
                 % self.name
             )
         self._value = value
@@ -730,7 +730,7 @@ class Measurement(OutputHandle):
     def value(self, value):
         if not isinstance(value, list):
             raise TypeError(
-                'Returned value of "%s" must have type list.'
+                'Value of key "%s" must have type list.'
                 % self.name
             )
         if not all([isinstance(v, pd.DataFrame) for v in value]):
@@ -798,7 +798,7 @@ class Attribute(OutputHandle):
     def value(self, value):
         if not isinstance(value, pd.Series):
             raise TypeError(
-                'Returned value of "%s" must have type pandas.Series.'
+                'Value of key "%s" must have type pandas.Series.'
                 % self.name
             )
         if isinstance(value.name, basestring):
@@ -832,7 +832,7 @@ class Figure(OutputHandle):
             name of the item, which must match a parameter of the module
             function
         key: str
-            name that should be given to the objects 
+            name that should be given to the objects
         help: str, optional
             help message (default: ``""``)
         '''
@@ -847,8 +847,7 @@ class Figure(OutputHandle):
     def value(self, value):
         if not isinstance(value, basestring):
             raise TypeError(
-                'Returned value of "%s" must have type basestring.'
-                % self.name
+                'Value of key "%s" must have type basestring.' % self.name
             )
         if value:
             try:

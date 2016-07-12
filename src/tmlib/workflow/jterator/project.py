@@ -82,6 +82,12 @@ class Project(object):
 
     @handles.setter
     def handles(self, value):
+        # Ensure that the modules have the same order.
+        handles_names = [v['name'] for v in value]
+        handles = list()
+        for i, module in self.pipe['description']['pipeline']:
+            index = handles_names.index(module['name'])
+            handles.append(value[index])
         self._handles = value
 
     @property

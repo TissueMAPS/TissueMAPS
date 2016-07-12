@@ -130,7 +130,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Raises
         ------
-        :py:exc:`tmlib.errors.JobDescriptionError`
+        :py:exc:`IOError`
             when no job descriptor files are found
         '''
         batches = dict()
@@ -139,7 +139,7 @@ class ClusterRoutines(BasicClusterRoutines):
             os.path.join(self.batches_location, '*_run_*.batch.json')
         )
         if not run_job_files:
-            raise JobDescriptionError('No batch files found.')
+            raise IOError('No batch files found.')
         collect_job_files = glob.glob(
             os.path.join(self.batches_location, '*_collect.batch.json')
         )
