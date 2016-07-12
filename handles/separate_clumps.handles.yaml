@@ -25,13 +25,12 @@ input:
 
   - name: max_cut_intensity
     type: Numeric
-    value: 75
+    value: 0.5
     help: >
-      Percentile for calculation of a intensity cutoff value.
-      The mean intensity along a cut line must not exceed this cutoff, cuts
-      that would be made along a line whose mean intensity exceeds
-      the percentile value calculated over all foreground pixels will not be
-      performed.
+      Maximum intensity of the rescaled distance transform along a cut line.
+      Cuts that would be made along a line whose maximum intensity exceeds
+      this value will not be performed. Increasing this value will make cuts
+      through the middle of an object less likely.
 
   - name: max_solidity
     type: Numeric

@@ -12,6 +12,7 @@ import skimage.morphology
 import logging
 import jtlib.utils
 
+VERSION = '0.0.2'
 
 logger = logging.getLogger(__name__)
 PAD = 1
@@ -241,7 +242,8 @@ def get_line_segments(skeleton, branch_points, end_points):
     sizes = mh.labeled.labeled_size(segments)
     # Cutting the skeleton into segments may result in small spurs that are
     # not connected to two nodes. We remove them here.
-    too_small = np.where(sizes < 10)[0]
+    # NOTE: Cutoff of 100 is chosen totally arbitrary.
+    too_small = np.where(sizes < 100)[0]
     se = np.ones((3, 3), bool)  # 8-connected!
     if too_small.size > 0:
         check_points = mh.label((branch_points + end_points) > 0, Bc=se)[0]
@@ -568,7 +570,7 @@ def main(input_mask, input_image, min_area, max_area,
     min_cut_area: int
         minimal area a cut object can have
         (useful to limit size of cut objects)
-    max_cut_intensity: int
+    max_cut_intensity: float
         percentile for calculation of a intensity cutoff value
     max_solidity: float
         maximal solidity an object must have to be considerd a clump
@@ -596,10 +598,6 @@ def main(input_mask, input_image, min_area, max_area,
     '''
 
     # TODO: test modes
-    kernel = np.ones((100, 100))
-    blackhat_image = cv2.morphologyEx(
-        mh.stretch(input_image), cv2.MORPH_BLACKHAT, kernel
-    )
     output_mask = input_mask.copy()
     cut_mask = np.zeros(output_mask.shape, bool)
     clumps_mask = np.zeros(output_mask.shape, bool)
@@ -623,9 +621,6 @@ def main(input_mask, input_image, min_area, max_area,
             mask = mask == oid
             img = jtlib.utils.extract_bbox_image(
                 input_image, bboxes[oid], pad=PAD
-            )
-            bhat = jtlib.utils.extract_bbox_image(
-                blackhat_image, bboxes[oid], pad=PAD
             )
 
             area, form_factor, solidity = calc_area_shape_features(mask)
@@ -706,27 +701,31 @@ def main(input_mask, input_image, min_area, max_area,
                 smaller_object = subobjects == smaller_id
                 area, form_factor, solidity = calc_area_shape_features(smaller_object)
                 intensity = img[line]
-                blackness = bhat[line]
                 start_coord = np.array(np.where(node_points == start)).T[0, :]
                 end_coord = np.array(np.where(node_points == end)).T[0, :]
                 totally_straight = np.linalg.norm(start_coord - end_coord)
                 length = np.count_nonzero(line)
                 straightness = totally_straight / length
+                # TODO: compute distance map of (eroded) mask image
+                # and calculate intensity along line
+                dist = mh.distance(mh.morph.open(mask)).astype(int)
+                lut = np.linspace(0, 1, np.max(dist)+1)
+                dist_intensity = lut[dist][line]
                 f = {
                     'n_objects': n_subobjects,
                     'cut_object_solidity': solidity,
                     'cut_object_form_factor': form_factor,
                     'cut_object_area': area,
-                    'min_intensity': np.min(intensity),
-                    'mean_intensity': np.mean(intensity),
-                    'median_intensity': np.median(intensity),
-                    'max_intensity': np.max(intensity),
+                    'min_stain_intensity': np.min(intensity),
+                    'mean_stain_intensity': np.mean(intensity),
+                    'median_stain_intensity': np.median(intensity),
+                    'max_stain_intensity': np.max(intensity),
                     'length': length,
                     'straightness': straightness,
-                    'min_blackness': np.min(blackness),
-                    'mean_blackness': np.mean(blackness),
-                    'median_blackness': np.median(blackness),
-                    'max_blackness': np.max(blackness),
+                    'min_dist_intensity': np.min(dist_intensity),
+                    'mean_dist_intensity': np.mean(dist_intensity),
+                    'median_dist_intensity': np.median(dist_intensity),
+                    'max_dist_intensity': np.max(dist_intensity),
                 }
                 features.append(f)
             features = pd.DataFrame(features)
@@ -742,7 +741,7 @@ def main(input_mask, input_image, min_area, max_area,
                 (features.cut_object_solidity > max_solidity) &
                 (features.cut_object_form_factor > max_form_factor) &
                 (features.cut_object_area > min_cut_area) &
-                (features.mean_intensity < intensity_cutoff)
+                (features.max_dist_intensity < intensity_cutoff)
             )
             if not any(potential_line_index):
                 logger.debug('no cut - no line passed tests')
@@ -759,13 +758,14 @@ def main(input_mask, input_image, min_area, max_area,
             # and straightness
             selected_features = features.loc[
                 potential_line_index,
-                ['median_intensity', 'median_blackness', 'length', 'straightness',
+                ['mean_stain_intensity', 'mean_dist_intensity',
+                    'length', 'straightness',
                     'cut_object_solidity', 'cut_object_form_factor']
             ]
             # TODO: optimize feature selection and weights
             # The line should be short and straight, intensity along the line should
             # be low and the cut object should be round.
-            weights = np.array([2, -2, 2, -2, -1, -1])
+            weights = np.array([2, 4, 2, -2, -1, -1])
             costs = selected_features.dot(weights)
             idx = costs[costs == np.min(costs)].index.values[0]
 
@@ -773,7 +773,7 @@ def main(input_mask, input_image, min_area, max_area,
             # plt.show()
 
             # Update cut mask
-            y, x = np.where(lines[idx])
+            y, x = np.where(mh.morph.dilate(lines[idx]))
             y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
             y += y_offset
             x += x_offset
