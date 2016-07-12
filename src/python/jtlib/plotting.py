@@ -178,7 +178,7 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
     See also
     --------
     :py:function:`jtlib.plotting.create_intensity_image_plot`
-    :py:function:`jtlib.plotting.create_overlay_image_plot`
+    :py:function:`jtlib.plotting.create_intensity_overlay_image_plot`
     '''
 
     _check_position_argument(position)
@@ -339,27 +339,28 @@ def create_intensity_overlay_image_plot(image, mask, position,
     ds_img = skimage.measure.block_reduce(
         image, block, func=np.mean
     ).astype(int) + 1
-
-    # Set outline pixel values to zero. We make sure that images
-    # don't contain any zeros (see above).
-    # Sweet! A nice side effect of this approach is that the outline color
-    # will not be visible in the colorbar.
     ds_img[ds_mask] = 0
+
+    colorscale = create_colorscale('Greys', clip_value)
+    # Insert the color for the outlines into the colorscale. We insert it
+    # at the end, but later reverse the scale for display, so zero values
+    # in the image will be labeled with that color.
+    if np.any(ds_mask):
+        # Set outline pixel values to zero. We make sure that images
+        # don't contain any zeros (see above).
+        # Sweet! A nice side effect of this approach is that the outline color
+        # will not be visible in the colorbar.
+        if color is None:
+            colorscale[-1][1] = OBJECT_COLOR
+        else:
+            colorscale[-1][1] = color
+
 
     if clip:
         if clip_value is None:
             clip_value = round(np.percentile(image, 99.99))
     else:
         clip_value = round(np.max(image))
-
-    colorscale = create_colorscale('Greys', clip_value)
-    # Insert the color for the outlines into the colorscale. We insert it
-    # at the end, but later reverse the scale for display, so zero values
-    # in the image will be labeled with that color.
-    if color is None:
-        colorscale[-1][1] = OBJECT_COLOR
-    else:
-        colorscale[-1][1] = color
 
     return plotly.graph_objs.Heatmap(
         z=ds_img,
@@ -428,16 +429,24 @@ def create_mask_overlay_image_plot(mask, mask2, position, color=None):
     )
     ds_mask[ds_mask2] = 3
 
-    colorscale = [
-        [0, 'rgb(0,0,0)'],
-        [0.5, 'rgb(255, 255, 255)'],
-        [1, OBJECT_COLOR]
-    ]
-    # Insert the color for the outlines into the colorscale. We insert it
-    # at the end, but later reverse the scale for display, so zero values
-    # in the image will be labeled with that color.
-    if color:
-        colorscale[-1][1] = color
+    if not np.any(ds_mask2):
+        colorscale = [
+            [0, 'rgb(0,0,0)'],
+            [1, 'rgb(255, 255, 255)'],
+        ]
+    else:
+        colorscale = [
+            [0, 'rgb(0,0,0)'],
+            [0.5, 'rgb(255, 255, 255)'],
+            [1, OBJECT_COLOR]
+        ]
+        # Insert the color for the outlines into the colorscale. We insert it
+        # at the end, but later reverse the scale for display, so zero values
+        # in the image will be labeled with that color.
+        if color:
+            colorscale[-1][1] = color
+
+
 
     return plotly.graph_objs.Heatmap(
         z=ds_mask,
