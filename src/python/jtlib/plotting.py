@@ -341,6 +341,11 @@ def create_intensity_overlay_image_plot(image, mask, position,
     ).astype(int) + 1
     ds_img[ds_mask] = 0
 
+    if clip:
+        if clip_value is None:
+            clip_value = round(np.percentile(image, 99.99))
+    else:
+        clip_value = round(np.max(image))
     colorscale = create_colorscale('Greys', clip_value)
     # Insert the color for the outlines into the colorscale. We insert it
     # at the end, but later reverse the scale for display, so zero values
@@ -354,13 +359,6 @@ def create_intensity_overlay_image_plot(image, mask, position,
             colorscale[-1][1] = OBJECT_COLOR
         else:
             colorscale[-1][1] = color
-
-
-    if clip:
-        if clip_value is None:
-            clip_value = round(np.percentile(image, 99.99))
-    else:
-        clip_value = round(np.max(image))
 
     return plotly.graph_objs.Heatmap(
         z=ds_img,
