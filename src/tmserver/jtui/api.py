@@ -412,10 +412,6 @@ def create_joblist(experiment):
     '''Creates a list of jobs for the current project to give the user a
     possiblity to select a site of interest.
 
-    Returns
-    -------
-    str
-        JSON string with "joblist" key
     '''
     data = json.loads(request.data)
     data = yaml.load(data['jtproject'])
@@ -424,9 +420,13 @@ def create_joblist(experiment):
         verbosity=logging.INFO,
         pipeline=data['name']
     )
-    batch_args_cls, submit_args_cls, _ = get_step_args('jterator')
-    batch_args = batch_args_cls()
-    batches = jt.create_batches(batch_args)
+    try:
+        batches = jt.get_batches_from_files()
+    except IOError:
+        # NOTE: This may take quite some time for a large experiment.
+        batch_args_cls, submit_args_cls, _ = get_step_args('jterator')
+        batch_args = batch_args_cls()
+        batches = jt.create_batches(batch_args)
     metadata = list()
     try:
         with tm.utils.Session() as session:
@@ -435,9 +435,10 @@ def create_joblist(experiment):
                 f = session.query(tm.ChannelImageFile).\
                     filter_by(site_id=batch['site_id']).\
                     first()
+                # TODO: Include time point here?
+                # Depends on batching in Jterator.
                 metadata[batch['id']] = {
                     'tpoint': f.tpoint,
-                    'zplane': f.zplane,
                     'channel_name': f.channel.name,
                     'well': f.site.well.name,
                     'well_position': [f.site.y, f.site.x],
@@ -504,11 +505,6 @@ def check_jtproject(experiment):
 @extract_model_from_path(Experiment, check_ownership=True)
 def remove_jtproject(experiment):
     '''Removes `.pipe` and `.handles` files from a given Jterator project.
-
-    Returns
-    -------
-    str
-        JSON object with keys "success" and "error"
     '''
     data = json.loads(request.data)
     pipeline = yaml.load(data['pipeline'])
@@ -535,27 +531,6 @@ def create_jtproject(experiment):
     and a "handles" subfolder that doesn't yet contain any `.handles` files.
 
     Return a jtproject object from the newly created `.pipe` file.
-
-    Returns
-    -------
-    str
-        JSON string with "jtproject" key. The corresponding value is encoded
-        in YAML format:
-
-        .. code-block:: yaml
-
-                name: <project_name>
-                pipe:
-                    name: <pipeline>
-                    description:
-                        description: ''
-                        input:
-                            channels: []
-                        pipeline: []
-                    },
-                },
-                handles: []
-    }
     '''
     # experiment_dir = os.path.join(cfg.EXPDATA_DIR_LOCATION, experiment_id)
     data = json.loads(request.data)
@@ -583,11 +558,6 @@ def create_jtproject(experiment):
 @jwt_required()
 def kill_jobs():
     '''Kills submitted jobs.
-
-    Returns
-    -------
-    str
-        JSON object with keys "success" and "error"
     '''
     data = json.loads(request.data)
     persistent_id = data['taskId']
@@ -630,10 +600,6 @@ def _get_output(jobs, modules, fig_location):
                     stderr = f.read()
             else:
                 stderr = ''
-            if not stdout and not stderr:
-                log = '-- Job is still running --'
-            else:
-                log = stdout + '\n' + stderr
 
             with tm.utils.Session() as session:
                 task_info = session.query(tm.Task).get(subtask.persistent_id)
@@ -644,7 +610,8 @@ def _get_output(jobs, modules, fig_location):
                 'id': j,
                 'submission_id': submission_id,
                 'name': subtask.jobname,
-                'log': log,
+                'stdout': stdout,
+                'stderr': stderr,
                 'failed': failed
             })
     return output
@@ -692,22 +659,6 @@ def get_job_output(experiment):
     experiment: tmlib.models.Experiment
         processed experiment
 
-    Returns
-    -------
-    str
-        JSON string with "output" key. The corresponding value has the
-        following format:
-
-        .. code-block:: json
-
-            {
-                "id": "",
-                "submissionId": "",
-                "name": "",
-                "log": "",
-                "time": "",
-                "modules": []
-            }
     '''
     data = json.loads(request.data)
     data = yaml.load(data['jtproject'])
@@ -742,16 +693,12 @@ def run_jobs(experiment):
 
     This requires the pipeline and module descriptions to be saved to *pipe*
     and *handles* files, respectively.
-    Parameters
 
+    Parameters
     ----------
     experiment: tmlib.models.Experiment
         processed experiment
 
-    Returns
-    -------
-    int
-        submission ID
     '''
     data = json.loads(request.data)
     job_ids = map(int, data['jobIds'])
