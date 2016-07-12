@@ -1,102 +1,79 @@
-<!-- <div class="pane-subcontent" perfect-scrollbar> -->
+<h4>{{source}}</h4>
 
-  <h4>Source: {{source}}</h4>
+<div class="panel panel-default">
 
-  <div class="panel panel-default">
+  <div class="panel-heading">
+    Input
+  </div>
 
-    <div class="panel-heading">
-      Input
-    </div>
+  <div class="panel-body">
 
-    <div class="panel-body">
+    <div ng-repeat="inarg in module.description.input">
 
-      <div ng-repeat="inarg in module.description.input">
+      <div class="form-group">
 
-        <form class="form-horizontal">
-          <div class="form-group">
+        <span><b>{{inarg.name}}</b></span>
+        <span class="help-block">{{inarg.help}}</span>
 
-            <div class="col-sm-12">
-              <label>{{ inarg.name }}</label>
-              <p class="help-block">{{inarg.help}}<p>
+        <span ng-hide="isPipeline(inarg.name)">
 
+          <!-- constant -->
+          <span ng-show="hasOptions(inarg.name) && !(isBoolean(inarg.name))" class="ng-hide">
+            <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in inarg.options">
+            </select>
+          </span>
 
-              <span ng-hide="isPipeline(inarg.name)">
+          <span ng-show="isBoolean(inarg.name)" class="ng-hide">
+            <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in boolOptions">
+            </select>
+          </span>
 
-                <!-- parameter -->
-                <span ng-show="hasOptions(inarg.name) && !(isBoolean(inarg.name))" class="ng-hide">
-                  <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in inarg.options">
-                  </select>
-                </span>
+          <span ng-hide="hasOptions(inarg.name) || isBoolean(inarg.name)">
+            <input class="form-control" id="inputArg" ng-model="inarg.value">
+          </span>
 
-                <span ng-show="isBoolean(inarg.name)" class="ng-hide">
-                  <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in boolOptions">
-                  </select>
-                </span>
+        </span>
 
-                <span ng-hide="hasOptions(inarg.name) || isBoolean(inarg.name)">
-                  <input class="form-control" id="inputArg" ng-model="inarg.value">
-                </span>
+        <!-- piped -->
+        <span ng-show="isPipeline(inarg.name)" class="ng-hide">
 
-              </span>
+          <select class="form-control" id="inputArg" ng-model="inarg.key" ng-options="a for a in getArgList()">
+            <option key="">
+            </option>
+          </select>
 
-              <!-- pipeline -->
-              <span ng-show="isPipeline(inarg.name)" class="ng-hide">
-
-                <select class="form-control" id="inputArg" ng-model="inarg.key" ng-options="a for a in getArgList()">
-                  <option key="">
-                  </option>
-                </select>
-
-              </span>
-
-            </div>
-
-          </div>
-
-        </form>
+        </span>
 
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel panel-default">
+
+  <div class="panel-heading">
+    Output
+  </div>
+
+  <div class="panel-body">
+
+    <div ng-repeat="outarg in module.description.output">
+
+      <div ng-hide="outarg.type=='Figure'" class="form-group">
+
+        <span><b>{{outarg.name}}</b></span>
+        <span class="help-block">{{outarg.help}}</span>
+
+        <input  class="form-control"
+                ng-class="{'error-input': isDuplicate(outarg)}"
+                type="text" id="outputArg"
+                ng-model="outarg.key">
+
+        <div ng-show="isDuplicate(outarg)" class="error-text">
+            Names of outputs must be unique!
+        </div>
 
     </div>
 
   </div>
-
-  <div class="panel panel-default">
-
-    <div class="panel-heading">
-      Output
-    </div>
-
-    <div class="panel-body">
-  
-      <div ng-repeat="outarg in module.description.output">
-
-        <form class="form-horizontal">
-            <div ng-hide="outarg.type=='Figure'" class="form-group">
-
-              <div class="col-sm-12" >
-                <label>{{ outarg.name }}</label>
-                <p class="help-block">{{outarg.help}}<p>
-
-                <input  class="form-control"
-                        ng-class="{'error-input': duplicate}"
-                        type="text" id="outputArg"
-                        ng-model="outarg.key"
-                        ng-change="duplicate = isDuplicate(outarg)">
-
-                <div ng-show="duplicate" class="error-text">
-                    Names of outputs must be unique!
-                </div>
-
-              </div>
-            </div>
-
-        </form>
-
-      </div>
-
-    </div>
-
-  </div>
-
-<!-- </div> -->
+</div>

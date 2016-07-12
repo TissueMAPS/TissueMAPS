@@ -19,28 +19,16 @@
         <th>well</th>
         <th>well position</th>
         <th>time point</th>
-        <th>z plane</th>
       </tr>
     </thead>
 
     <tbody>
       <tr ng-repeat="(job_id, metadata) in joblist">
         <td>{{ job_id }}</td>
-        <td>
-            {{ metadata.plate }}
-        </td>
-        <td>
-            {{ metadata.well }}
-        </td>
-        <td>
-            ({{ metadata.well_position[0] }}, {{ metadata.well_position[1] }})
-        </td>
-        <td>
-            {{ metadata.tpoint }}
-        </td>
-        <td>
-            {{ metadata.zplane }}
-        </td>
+        <td>{{ metadata.plate }}</td>
+        <td>{{ metadata.well }}</td>
+        <td>({{ metadata.well_position[0] }}, {{ metadata.well_position[1] }})</td>
+        <td>{{ metadata.tpoint }}</td>
       </tr>
     </tbody>
     

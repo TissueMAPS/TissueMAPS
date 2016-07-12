@@ -1,4 +1,3 @@
 angular.module('jtui.main')
-.controller('MainCtrl',
-    ['$scope', function($scope) {
+.controller('MainCtrl', ['$scope', function($scope) {
 }]);

@@ -4,41 +4,12 @@
 
 .jtui {
 
-    .right-side-pane {
+    .result-pane {
         background: white;
-        margin-left: calc(~'@{left-side-pane-width} + @{left-pane-width} + @{right-pane-width}');
+        margin-left: calc(~'@{module-list-pane-width} + @{pipeline-pane-width} + @{module-settings-pane-width}');
         position: absolute;
-        width: @right-side-pane-width;
+        width: @results-pane-width;
         height: 100%;
-
-    .figure {
-      // width: 100%;
-      // height: 100%;
-      // cursor: pointer;
-
-      .svg {
-        width: 100%;
-        cursor: pointer;
-      }
-    }
-
-    :-webkit-full-screen .figure {
-      width: 100%;
-    }
-
-    :-moz-full-screen .figure {
-        width: 100%;
-    }
-
-
-    :-ms-full-screen .figure {
-        width: 100%;
-    }
-
-
-    :-o-full-screen .figure {
-        width: 100%;
-    }
 
     .logo {
       height: 15px;

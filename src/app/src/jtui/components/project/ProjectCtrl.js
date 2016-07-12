@@ -103,7 +103,7 @@ angular.module('jtui.project')
 
             // console.log('job ids:', $scope.subJobId.map(Number))
             if ($scope.subJobId.length > 10) {
-                console.log('too many jobs');
+                console.log('too many jobs - a maximum of 10 jobs can be submitted');
                 return
             }
             if ($scope.subJobId != null) {
@@ -141,6 +141,8 @@ angular.module('jtui.project')
             runIsOpen = false;
         });
     }
+
+    // TODO: modal for response
 
     var killIsOpen = false;
     $scope.kill = function() {
@@ -213,17 +215,8 @@ angular.module('jtui.project')
       description: 'run pipeline',
       callback: $scope.run
     })
-    .add({
-      combo: 'k',
-      description: 'kill submitted jobs',
-      callback: $scope.kill
-    })
-    .add({
-      combo: 'j',
-      description: 'list jobs',
-      callback: $scope.listJobs
-    })
-    
+
+
     $scope.getSelectableChannelNames = function(index) {
         selectableImageNames = [];
         selectedImageNames = [];
@@ -286,17 +279,11 @@ angular.module('jtui.project')
     function getOutput() {
         runnerService.getOutput($scope.project).then(function (result) {
             // console.log('output: ', result.output)
-            $scope.jobs.output = [];
+            $scope.jobs = [];
             if (result.output) {
                 result.output.forEach(function(r) {
-                    $scope.jobs.output.push(r);
+                    $scope.jobs.push(r);
                 });
-                if (result.output.length > 0) {
-                    $scope.jobs.currentId = result.output[0].id;
-                } else {
-                    $scope.jobs.currentId = null;
-                }
-                $scope.$watch('jobs.currentId');
                 $scope.outputAvailable = true;
             }
         });
@@ -339,10 +326,7 @@ angular.module('jtui.project')
     //     $scope.$apply();
     // });
 
-    $scope.jobs = {
-        output: [],
-        currentId: null
-    };
+    $scope.jobs = [];
     $scope.outputAvailable = false;
     // Start monitoring in case the website got disconnected.
     // This should automatically stop, once the jobs are TERMINATED
@@ -450,18 +434,19 @@ angular.module('jtui.project')
         // We have to edit the related descriptions as well
         // console.log('rename corresponding handles description')
         $scope.oldModuleName = [];
-        var ixHandles = $scope.project.handles.map(function(e) { 
+        var ixHandles = $scope.project.handles.map(function(e) {
                 return e.name;
             }).indexOf(oldModuleName);
         $scope.project.handles[ixHandles].name = newModuleName;
         // console.log('rename handles in pipeline description')
-        var oldHandlesFile = $scope.project.pipe.description.pipeline[ixPipe].handles
+        var oldHandlesFile = $scope.project.pipe.description.pipeline[ixPipe].handles;
         var newHandlesFile = oldHandlesFile.replace(oldModuleName, newModuleName);
         // console.log('handles file: ', newHandlesFile)
         $scope.project.pipe.description.pipeline[ixPipe].handles = newHandlesFile;
         $scope.project.pipe.description.pipeline[ixPipe].name = newModuleName;
         ixSelected = $scope.selectedModules.indexOf(oldModuleName);
         $scope.selectedModules[ixSelected] = newModuleName;
+        // TODO: we also have to rename keys in the handles!!!
     };
 
     $scope.showLayersInTmaps = function () {
@@ -530,18 +515,19 @@ angular.module('jtui.project')
             // $$hashKey element won't be updated, which would screw up the
             // ng-repeat directive
             var newHandlesObject = {
-                        name: newName,
-                        description: angular.copy(addedModule.description)
+                name: newName,
+                description: angular.copy(addedModule.description)
             };
             // console.log('handles object of added module:', newHandlesObject)
             $scope.project.handles.push(newHandlesObject);
-            var defaultName = addedModule.pipeline.handles;
-            var newHandlesFilename = defaultName.replace(addedModule.name, newName);
+            var defaultHandles = addedModule.pipeline.handles;
+            var newHandles = defaultHandles.replace(addedModule.name, newName);
+            newHandles.defaultName = addedModule.name;
             var newDescription = {
-                        name: newName,
-                        handles: newHandlesFilename,
-                        source: addedModule.pipeline.source,
-                        active: addedModule.pipeline.active
+                name: newName,
+                handles: newHandles,
+                source: addedModule.pipeline.source,
+                active: addedModule.pipeline.active
             };
             // console.log('pipeline description of added module:', newDescription)
             $scope.project.pipe.description.pipeline.push(newDescription);

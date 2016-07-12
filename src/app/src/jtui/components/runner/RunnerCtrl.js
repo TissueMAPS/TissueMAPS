@@ -43,58 +43,25 @@ angular.module('jtui.runner')
         }
     };
 
-    // var outputIsOpen = false;
-    // $scope.showOutput = function () {
-    //     if (outputIsOpen) return;
-    //     var jobIndex = $scope.jobs.output.map(function (e) {
-    //         return e.id;
-    //     }).indexOf($scope.jobs.currentId);
-    //     var modalInst = $uibModal.open({
-    //         templateUrl: 'src/jtui/components/runner/modals/output.html',
-    //         size: 'lg',
-    //         // windowClass: 'modal-window',
-    //         resolve: {
-    //             output: function () {
-    //                 for (j in $scope.jobs.output[jobIndex].modules) {
-    //                     if ($scope.jobs.output[jobIndex].modules[j].name == currentModuleName) {
-    //                         return $scope.jobs.output[jobIndex].modules[j]
-    //                     }
-    //                 }
-    //            },
-    //            name: function () {
-    //                 return $scope.module.name;
-    //            },
-    //            jobId: $scope.jobs.currentId
-    //         },
-    //         controller: 'OutputCtrl'
-    //     });
-
-    //     outputIsOpen = true;
-
-    //     modalInst.result.then(function () {
-    //         outputIsOpen = false;
-    //     }, function () {
-    //         outputIsOpen = false;
-    //     });
-    // };
-
     var logIsOpen = false;
-    $scope.showJobLog = function () {
+    $scope.showJobLog = function (jobIndex) {
         if (logIsOpen) return;
-        var jobIndex = $scope.jobs.output.map(function (e) {
-            return e.id;
-        }).indexOf($scope.jobs.currentId);
         var modalInst = $uibModal.open({
-            templateUrl: 'src/jtui/components/runner/modals/log.html',
+            templateUrl: 'src/setup/modals/output.html',
             size: 'lg',
-            // windowClass: 'modal-window',
             resolve: {
-                log: function () {
-                    return $scope.jobs.output[jobIndex].log;
+                title: function () {
+                    return 'Log output of job #' + $scope.jobs[jobIndex].id;
                 },
-                jobId: $scope.jobs.currentId
+                stdout: function () {
+                    return $scope.jobs[jobIndex].stdout;
+                },
+                stderr: function () {
+                    return $scope.jobs[jobIndex].stderr;
+                }
             },
-            controller: 'LogCtrl'
+            controller: 'SetupOutputCtrl',
+            controllerAs: 'output'
         });
 
         logIsOpen = true;
@@ -106,37 +73,13 @@ angular.module('jtui.runner')
         });
     };
 
-    $scope.goToNextJob = function () {
-        console.log('jobs: ', $scope.jobs)
-        var jobIndex = $scope.jobs.output.map(function (e) {
-            return e.id;
-        }).indexOf($scope.jobs.currentId);
-        var nextJobIndex = jobIndex + 1;
-        if (nextJobIndex >= 0 && $scope.jobs.output.length > nextJobIndex) {
-            console.log('go to next job: ', $scope.jobs.output[nextJobIndex].id)
-            $scope.jobs.currentId = $scope.jobs.output[nextJobIndex].id;
-        }
-    };
-
-    $scope.goToPreviousJob = function () {
-        var jobIndex = $scope.jobs.output.map(function (e) {
-            return e.id;
-        }).indexOf($scope.jobs.currentId);
-        var previousJobIndex = jobIndex - 1;
-        console.log('previous job index: ', previousJobIndex)
-        if (previousJobIndex >= 0 && $scope.jobs.output.length > previousJobIndex) {
-            console.log('go to previous job: ', $scope.jobs.output[previousJobIndex].id)
-            $scope.jobs.currentId = $scope.jobs.output[previousJobIndex].id;
-        }
-    };
-
     var figureIsOpen = false;
-    $scope.showFigure = function () {
+    $scope.showFigure = function (jobIndex) {
 
         if (figureIsOpen) return;
 
+        // TODO: show error dialog when no figure exists
         var modalInst = $uibModal.open({
-            // size: 'lg',
             templateUrl: 'src/jtui/components/runner/modals/figure.html',
             windowClass: 'figure-window',
             // windowTopClass: 'figure-window',
@@ -146,13 +89,13 @@ angular.module('jtui.runner')
                                     $stateParams.experimentid,
                                     $stateParams.projectName,
                                     $scope.module.name,
-                                    $scope.jobs.currentId
+                                    $scope.jobs[jobIndex].id
                                 );
                         }],
                 name: function () {
                     return $scope.module.name;
                 },
-                jobId: $scope.jobs.currentId
+                jobId: $scope.jobs[jobIndex].id
             },
             controller: 'FigureCtrl'
         });
@@ -169,16 +112,6 @@ angular.module('jtui.runner')
     // Define keyboard shortcuts
     hotkeys.bindTo($scope)
     .add({
-      combo: ['left', 'h'],
-      description: 'go to previous job',
-      callback: $scope.goToPreviousJob
-    })
-    .add({
-      combo: ['right', 'l'],
-      description: 'go to next job',
-      callback: $scope.goToNextJob
-    })
-    .add({
       combo: ['up', 'k'],
       description: 'go to previous module (upstream in the pipeline)',
       callback: $scope.goToPreviousModule
@@ -188,34 +121,34 @@ angular.module('jtui.runner')
       description: 'go to next module (downstream in the pipeline)',
       callback: $scope.goToNextModule
     })
-    .add({
-      combo: 'o',
-      description: 'show log output of current job',
-      callback: $scope.showJobLog
-    })
-    .add({
-      combo: 'f',
-      description: 'show figure of current module and job',
-      callback: $scope.showFigure
-    })
+    // .add({
+    //   combo: 'o',
+    //   description: 'show log output of current job',
+    //   callback: $scope.showJobLog
+    // })
+    // .add({
+    //   combo: 'f',
+    //   description: 'show figure of current module and job',
+    //   callback: $scope.showFigure
+    // })
 
-    $scope.showThumbnail = function () {
-        if ($scope.jobs.currentId) {
-            var jobIndex = $scope.jobs.output.map(function (e) {
-                return e.id;
-            }).indexOf($scope.jobs.currentId);
-            for (i in $scope.jobs.output) {
-                if (i == jobIndex) {
-                    for (j in $scope.jobs.output[jobIndex].modules) {
-                        if ($scope.jobs.output[jobIndex].modules[j].name == currentModuleName) {
-                            var thumbnail = $scope.jobs.output[jobIndex].modules[j].thumbnail;
-                            return thumbnail;
-                        }
-                    }
-                }
-            }
-        }   
-    };
+    // $scope.showThumbnail = function () {
+    //     if ($scope.jobs.currentId) {
+    //         var jobIndex = $scope.jobs.output.map(function (e) {
+    //             return e.id;
+    //         }).indexOf($scope.jobs.currentId);
+    //         for (i in $scope.jobs.output) {
+    //             if (i == jobIndex) {
+    //                 for (j in $scope.jobs.output[jobIndex].modules) {
+    //                     if ($scope.jobs.output[jobIndex].modules[j].name == currentModuleName) {
+    //                         var thumbnail = $scope.jobs.output[jobIndex].modules[j].thumbnail;
+    //                         return thumbnail;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }   
+    // };
 
     $scope.reportBug = function(){
         $window.open('https://github.com/TissueMAPS/JtLibrary/issues', '_blank');

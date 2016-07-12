@@ -19,6 +19,21 @@
 
 .jtui {
 
+    .header {
+        border-top: 1px solid #626262;
+        height: @setup-window-header-height;
+        background: #333;
+        border-bottom: 1px solid #222222;
+        color: @font-color-light;
+        padding-top: 5px;
+        padding-bottom: 5px;
+
+        h3 {
+            margin: 10px 0;
+        }
+
+    }
+
     .main-pane {
 
         .pane-header {
@@ -28,15 +43,16 @@
             position: relative;
             font-weight: bold;
             font-size: 14;
-            color: @font-color-light;
             font-size: 16px;
+            color: @font-color-light;
         }
 
         .pane-content {
             padding: 5px;
             position: relative;
             width: 100%;
-            height: calc(~'100% - @{top-container-height}');
+            // height: 100%;
+            height: calc(~'100% - @{top-container-height} - @{setup-window-header-height}');
             overflow: hidden;
         }
 
@@ -44,6 +60,7 @@
             position: relative;
             height: 100%;
             overflow: hidden;
+            color: black;
         }
 
         .glyphicon-none:before {

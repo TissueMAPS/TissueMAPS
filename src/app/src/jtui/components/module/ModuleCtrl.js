@@ -16,7 +16,6 @@ angular.module('jtui.module')
 
     var codeIsOpen = false;
     $scope.showSourceCode = function (module) {
-        console.log(module)
 
         if (codeIsOpen) return;
         var modalInst = $uibModal.open({

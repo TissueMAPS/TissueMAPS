@@ -1,44 +1,39 @@
-<div class="panel panel-default">
+<div ng-repeat="j in jobs">
 
-  <div class="panel-heading">
-      Module Result
+  <div ng-class="j.failed ? 'panel panel-danger' : 'panel panel-success'">
 
-      <span ng-show="outputAvailable">
-        (Job  {{ jobs.currentId }})
-      </span>
-
-  </div>
-
-  <div class="panel-body">
-
-    <div btn-group>
-      <span ng-show="outputAvailable">
-        <!-- TODO: type "danger" for module that failed -->
-          <button type="button"
-              class="btn btn-default"
-              ng-click="showFigure()">
-              <i class="fa fa-bar-chart" aria-hidden="true"></i>
-              Figure
-          </button>
-      </span>
+    <div class="panel-heading">
+        Job  {{ j.id }}
     </div>
 
-      <!-- <p></p> -->
+    <div class="panel-body">
 
-      <!-- <div ng-show="outputAvailable"> -->
+      <div btn-group>
 
-      <!--     <img data-ng-src="data:image/png;base64,{{showThumbnail()}}" -->
-      <!--         style="width: 100%; height: 100%;" -->
-      <!--         ng-click="showFigure()"> -->
-      <!--     </img> -->
+        <button type="button"
+            class="btn btn-default"
+            ng-click="showFigure($index)">
+            <i class="fa fa-bar-chart" aria-hidden="true"></i>
+            Figure
+        </button>
 
-      <!-- </div> -->
+        <button type="button"
+            class="btn btn-default"
+            ng-click="showJobLog($index)">
+            <i class="fa fa-terminal"></i>
+            Log
+        </button>
 
-      <!-- <div class="glyphicon glyphicon-none" -->
-      <!--      ng-hide="outputAvailable"> -->
-      <!-- </div> -->
+        <!-- <button type="button" -->
+        <!--     class="btn btn-default" -->
+        <!--     ng-click="showSourceCode(module)"> -->
+        <!--     <i class="fa fa-code" aria-hidden="true"></i> -->
+        <!--     Code -->
+        <!-- </button> -->
+
+      </div>
+
+    </div>
 
   </div>
-
 </div>
-

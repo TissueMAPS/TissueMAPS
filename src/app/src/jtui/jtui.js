@@ -1,11 +1,6 @@
 (function() {
-    angular.module('jtui.util', []);
     angular.module('jtui.main', [
-        'ngAnimate', 'ui.bootstrap'
-    ]);
-    angular.module('jtui.topbar', [
-        'ngAnimate', 'angular-loading-bar', 'jtui.project',
-        'ui.router', 'cfp.hotkeys', 'ui.bootstrap'
+        'ngAnimate', 'ui.bootstrap', 'perfect_scrollbar'
     ]);
     angular.module('jtui.handles', [
         'ngAnimate', 'angular-loading-bar', 'ui.router', 'ui.bootstrap',
@@ -14,7 +9,7 @@
     angular.module('jtui.project', [
         'ngAnimate', 'angular-loading-bar', 'ui.router', 'ui.bootstrap',
         'ui.sortable', 'ngDraggable', 'cfp.hotkeys', 'smart-table',
-        'checklist-model', 'xeditable', 'jtui.main', 'perfect_scrollbar'
+        'checklist-model', 'xeditable', 'perfect_scrollbar'  // 'jtui.main',
     ]);
     angular.module('jtui.module', [
         'ngAnimate', 'angular-loading-bar', 'ui.router', 'ui.bootstrap',
@@ -38,9 +33,7 @@
         'cfp.hotkeys',
         'checklist-model',
         'xeditable',
-        'jtui.util',
         'jtui.main',
-        'jtui.topbar',
         'jtui.project',
         'jtui.module',
         'jtui.handles',
@@ -54,11 +47,6 @@
     jtui.config(['$httpProvider', function($httpProvider) {
         $httpProvider.interceptors.push('authInterceptor');
     }]);
-
-    jtui.run(function(editableOptions) {
-      // Use bootstrap3 theme
-      editableOptions.theme = 'bs3';
-    });
 
     jtui.config(['markedProvider', function(markedProvider) {
         markedProvider.setOptions({
@@ -74,9 +62,10 @@
         });
     }]);
 
-    jtui.run(['$rootScope', '$state', '$stateParams',
-             function($rootScope, $state, $stateParams){
+    jtui.run(['$rootScope', '$state', '$stateParams', 'editableOptions',
+             function($rootScope, $state, $stateParams, editableOptions){
         $rootScope.$state = $state;
         $rootScope.$stateParams = $stateParams;
+        editableOptions.theme = 'bs3';
     }]);
 }());

@@ -71,10 +71,12 @@ angular.module('jtui.handles')
             }
         });
 
+        // Channels (pipline inputs) have to be considered as well, because
+        // they can also be piped.
         var isChannel = $scope.project.pipe.description.input.channels.some(
-                function(channel) {
-                    return channel.name == output_arg.key
-                }
+            function(channel) {
+                return channel.name == output_arg.key
+            }
         );
 
         return identicalOutputs.length > 1 || isChannel;

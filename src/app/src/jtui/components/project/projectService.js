@@ -102,7 +102,6 @@ angular.module('jtui.project')
                   '/' + pipelineName +
                   '/' + moduleName +
                   '/' + jobID;
-        console.log(url);
         $http.get(url).success(function (data) {
             figureDef.resolve(data)
         });
