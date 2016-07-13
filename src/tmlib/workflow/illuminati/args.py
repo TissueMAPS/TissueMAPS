@@ -40,7 +40,7 @@ class IlluminatiBatchArguments(BatchArguments):
         type=float,
         help='''threshold percentile at which image intensities should be clipped
         ''',
-        default=99.99
+        default=99.0
     )
 
 @register_submission_args('illuminati')

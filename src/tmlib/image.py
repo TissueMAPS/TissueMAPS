@@ -361,22 +361,25 @@ class Image(object):
         return self.__class__(arr, self.metadata)
 
     def shrink(self, factor):
-        '''Reduces the size of the pixels/voxels array.
+        '''Shrinks the first two dimensions of the pixels/voxels array
+        by `factor`. Pixels/voxels values of the aggregated array
+        are the mean of the neighbouring pixels/voxels, where the neighbourhood
+        is defined by `factor`.
 
         Parameters
         ----------
         factor: int
             factor by which the size of the image should be reduced along
-            each axis
+            the y and x axis
 
         Returns
         -------
         tmlib.image.Image
             shrunken image
         '''
-        factor = (factor,) * 3 + (1,) * (len(self.dimensions) - 3)
+        shrink_factors = (factor,) * 2 + (1,) * (self._array.ndim - 2)
         arr = skimage.measure.block_reduce(
-            self._array, factor, func=np.mean
+                self._array, shrink_factors, func=np.mean
         ).astype(self.dtype)
         return self.__class__(arr, self.metadata)
 

@@ -428,7 +428,6 @@ class PyramidBuilder(ClusterRoutines):
 
             if batch['clip']:
                 logger.info('clip intensity values')
-                # NOTE: assumes channel images are 16-bit
                 if batch['clip_value'] is None:
                     # TODO: sanity check; if pixel values are too low for the
                     # channel, the channel is probably "empty"
@@ -470,11 +469,9 @@ class PyramidBuilder(ClusterRoutines):
                 if batch['align']:
                     logger.info('align image')
                     image = image.align(crop=False)
-                if image.is_uint8:
-                    clip_below = 0
-                    clip_above = 255
-                image = image.clip(clip_below, clip_above)
-                image = image.scale(clip_below, clip_above)
+                if not image.is_uint8:
+                    image = image.clip(clip_below, clip_above)
+                    image = image.scale(clip_below, clip_above)
                 image_store[file.name] = image
 
                 for t in mapped_tiles:
@@ -517,8 +514,9 @@ class PyramidBuilder(ClusterRoutines):
                             if batch['align']:
                                 logger.info('align image')
                                 image = image.align(crop=False)
-                            image = image.clip(clip_below, clip_above)
-                            image = image.scale(clip_below, clip_above)
+                            if not image.is_uint8:
+                                image = image.clip(clip_below, clip_above)
+                                image = image.scale(clip_below, clip_above)
                             image_store[extra_file.name] = image
 
                         extra_file_coordinate = np.array((
@@ -574,6 +572,9 @@ class PyramidBuilder(ClusterRoutines):
                                 'Tile "%s" shouldn\'t be in this batch!'
                                 % tile_file.name
                             )
+
+                        # from matplotlib import pyplot as plt
+                        # plt.imshow(tile.array); plt.show()
 
                     tile_file.put(tile)
 
