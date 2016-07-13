@@ -697,17 +697,21 @@ def main(input_mask, input_image, min_area, max_area,
                 test_cut_mask = mh.morph.open(test_cut_mask)
                 subobjects, n_subobjects = mh.label(test_cut_mask)
                 sizes = mh.labeled.labeled_size(subobjects)
-                smaller_id = np.where(sizes == np.min(sizes))[0]
+                smaller_id = np.where(sizes == np.min(sizes))[0][0]
                 smaller_object = subobjects == smaller_id
                 area, form_factor, solidity = calc_area_shape_features(smaller_object)
                 intensity = img[line]
+                # Calculate the length of the line and its straightness.
                 start_coord = np.array(np.where(node_points == start)).T[0, :]
                 end_coord = np.array(np.where(node_points == end)).T[0, :]
+                # Straightness is defined as the length of the line relative
+                # to the length of a perfectly straight line
+                # (Eucledian distance between the two points).
                 totally_straight = np.linalg.norm(start_coord - end_coord)
                 length = np.count_nonzero(line)
                 straightness = totally_straight / length
-                # TODO: compute distance map of (eroded) mask image
-                # and calculate intensity along line
+                # Compute distance map of (morphologically opened) mask image
+                # and calculate intensity along line.
                 dist = mh.distance(mh.morph.open(mask)).astype(int)
                 lut = np.linspace(0, 1, np.max(dist)+1)
                 dist_intensity = lut[dist][line]
