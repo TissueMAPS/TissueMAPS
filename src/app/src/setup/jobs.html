@@ -18,10 +18,10 @@
     <tr ng-repeat="job in stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex].jobs">
       <td>
         <i class="fa fa-exclamation-circle" aria-hidden="true" style="color: red;"
-          ng-show="job.failed">
+          ng-show="job.status.failed">
         </i>
         <i class="fa fa-check-circle" aria-hidden="true" style="color: green;"
-          ng-hide="job.failed">
+          ng-hide="job.status.failed">
         </i>
       </td>
       <td>{{ job.phase }}</td>
