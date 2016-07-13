@@ -502,8 +502,6 @@ class MapobjectSegmentation(Model):
         time point index (default: ``None``)
     zplane: int, optional
         z-plane index (default: ``None``)
-    geom_poly: str, optional
-        EWKT polygon geometry (default: ``None``)
     site_id: int
         ID of the parent site
     site: tmlib.models.Site
@@ -527,7 +525,6 @@ class MapobjectSegmentation(Model):
     pipeline = Column(String, index=True)
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
-    geom_poly = Column(Geometry('POLYGON'))
     site_id = Column(
         Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -570,8 +567,6 @@ class MapobjectSegmentation(Model):
         is_border: bool
             whether the object touches at the border of a *site* and is
             therefore only partially represented on the corresponding image
-        geom_poly: str, optional
-            EWKT polygon geometry (default: ``None``)
         site_id: int
             ID of the parent site
         mapobject_id: int
@@ -581,13 +576,9 @@ class MapobjectSegmentation(Model):
         self.label = label
         self.tpoint = tpoint
         self.zplane = zplane
-        self.geom_poly = geom_poly
         self.site_id = site_id
         self.mapobject_id = mapobject_id
         self.is_border = is_border
-
-    # TODO: allow segmentations with point geometry as an alternative to
-    # polygons (may be useful for small objects)
 
     def __repr__(self):
         return (

@@ -93,20 +93,25 @@ class SiteShift(Model):
 class SiteIntersection(Model):
 
     '''When *sites* are shifted between *cycles*, they only have a subset
-    of pixels in common. In order to be able to overlay images of
-    different *cycles*, images need to be cropped such that the intersecting
-    pixels are aligned.
+    of pixels in common. In order to be able to overlay images acquired at the
+    same *site* but different *cycles*, images need to be cropped such that
+    the intersecting pixels get aligned.
+    Overhang values are relative to the reference site used for registration.
 
     Attributes
     ----------
     upper_overhang: int
-        overhanging pixels at the top
+        number of overhanging pixels at the top, which need to be cropped at
+        the bottom for overlay
     lower_overhang: int
-        overhanging pixels at the bottom
+        number of overhanging pixels at the bottom, which need to be cropped
+        at the top for overlay
     right_overhang: int
-        overhanging pixels at the right side
+        number of overhanging pixels at the right side, which need to be
+        cropped from the left for overlay
     left_overhang: int
-        overhanging pixels at the left side
+        number of overhanging pixels at the left side, which need to be cropped
+        at the right for overlay
     site_id: int
         ID of the parent site
     site: tmlib.models.Site

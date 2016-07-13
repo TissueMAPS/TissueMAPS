@@ -7,6 +7,8 @@ import subprocess
 import numpy as np
 import pandas as pd
 import collections
+import shapely.geometry
+import shapely.ops
 import matlab_wrapper as matlab
 from cached_property import cached_property
 from sqlalchemy.orm.exc import NoResultFound
@@ -435,9 +437,15 @@ class ImageAnalysisPipeline(ClusterRoutines):
             # Load outlins of mapobjects of the specified types and reconstruct
             # the label images required by modules.
             for mapobject_type_name in mapobject_type_names:
-                segmentations = session.query(tm.MapobjectSegmentation).\
+                segmentations = session.query(
+                        tm.MapobjectSegmentation.tpoint,
+                        tm.MapobjectSegmentation.zplane,
+                        tm.MapobjectSegmentation.label,
+                        tm.MapobjectOutline.geom_poly
+                    ).\
                     join(tm.Mapobject).\
                     join(tm.MapobjectType).\
+                    join(tm.Site).\
                     filter(
                         tm.MapobjectType.name == mapobject_type_name,
                         tm.MapobjectSegmentation.site_id == batch['site_id'],
@@ -454,12 +462,18 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     (s.tpoint, s.zplane, s.label): s.geom_poly
                     for s in segmentations
                 }
-                handle.from_polygons(polygons, dims)
+                # The polygon coordinates are global, i.e. relative to the
+                # map overview. Therefore we have to provide the offsets
+                # for each axis.
+                site = session.query(tm.Site).get(batch['site_id'])
+                y_offset, x_offset = site.offset
+                y_offset -= site.intersections.lower_overhang
+                x_offset -= site.intersections.right_overhang
+                handle.from_polygons(polygons, y_offset, x_offset, dims)
                 store['pipe'][handle.key] = handle.value
                 store['segmented_objects'][handle.key] = handle
 
-        # Remove single-dimensions from image arrays to make it easier to work
-        # with.
+        # Remove single-dimensions from image arrays.
         # NOTE: It would be more consistent to preserve shape, but most people
         # will work with 2D images and having to deal with additional dimensions
         # would be rather annoying I assume.
@@ -470,13 +484,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # ------------
 
         logger.info('run pipeline')
+        headless = not batch.get('plot', False)
+        if not headless:
+            logger.warn('plotting mode active')
         for i, module in enumerate(self.pipeline):
             logger.info('run module "%s"', module.name)
             # When plotting is not deriberately activated it defaults to
             # headless mode
-            headless = not batch.get('plot', False)
-            if not headless:
-                logger.warning('plotting mode active')
             module.update_handles(store, headless=headless)
             module.run(self.engines[module.language])
             store = module.update_store(store)
@@ -579,9 +593,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     mapobject_type.name
                 )
                 polygons = segm_objs.to_polygons(y_offset, x_offset)
-                for (t, z, label), (outline, segmentation) in polygons.iteritems():
+                for (t, z, label), outline in polygons.iteritems():
                     mapobject = session.query(tm.Mapobject).\
                         get(mapobject_ids[mapobject_type.name][label])
+
+                    if outline.is_empty:
+                        continue
 
                     logger.debug('add outlines for mapobject #%d', label)
                     mapobject_outlines.append(
@@ -599,7 +616,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             pipeline=self.pipe_name,
                             label=label,
                             tpoint=t, zplane=z,
-                            geom_poly=segmentation.wkt,
                             site_id=batch['site_id'],
                             mapobject_id=mapobject.id,
                             is_border=bool(segm_objs.is_border[t][label]),

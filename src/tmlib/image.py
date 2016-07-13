@@ -71,10 +71,12 @@ class Image(object):
 
     @array.setter
     def array(self, value):
-        if len(value.shape) == 2:
-            self._array = np.reshape(value, value.shape + (1,))
-        elif len(value.shape) == 3:
+        if value.ndim == 2:
+            self._array = value[..., np.newaxis]
+        elif value.ndim == 3:
             self._array = value
+        else:
+            raise ValueError('An image must be either a 2D or 3D array.')
 
     @property
     def dimensions(self):

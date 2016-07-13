@@ -13,6 +13,8 @@ import sys
 import json
 import numpy as np
 import pandas as pd
+import mahotas as mh
+import cv2
 import skimage
 import logging
 import collections
@@ -26,6 +28,7 @@ from abc import abstractmethod
 from tmlib.utils import same_docstring_as
 from tmlib.utils import assert_type
 from tmlib.image_utils import find_border_objects
+import jtlib.utils
 
 logger = logging.getLogger(__name__)
 
@@ -302,15 +305,16 @@ class SegmentedObjects(LabelImage):
         return map(int, np.unique(self.value[self.value > 0]))
 
     def to_polygons(self, y_offset, x_offset, tolerance=2):
-        '''Creates a polygon representation for each segmented object based
-        on the global map coordinates of its contour.
+        '''Creates a polygon representation for each segmented object.
+        The coordinates of the polygon contours are relative to the global map,
+        i.e. an offset is added to the image site specific coordinates.
 
         Parameters
         ----------
         y_offset: int
-            vertical offset that needs to be added to y-coordinates
+            global vertical offset that needs to be added to y-coordinates
         x_offset: int
-            horizontal offset that needs to be added to x-coordinates
+            global horizontal offset that needs to be added to x-coordinates
         tolerance: int
             accuracy of polygon approximation; tolerance distance in pixels of
             points on the contour of the appoximated polygon to the orginal
@@ -321,12 +325,14 @@ class SegmentedObjects(LabelImage):
 
         Returns
         -------
-        Dict[Tuple[int], Tuple[shapely.geometry.polygon.Polygon]]]
-            mapobject outline (simplified polygon with inverted y-axis
-            and global map coordinates) and segmentation
-            (original polygon with site-specific coordinates)
-            for each identified object hashable by time point, z-plane and
-            one-based label
+        Dict[Tuple[int], shapely.geometry.polygon.Polygon]]
+            mapobject outline (simplified polygon with global map *x*, *y*
+            coordinates) for each identified object hashable
+            by time point, z-plane and one-based, site-specific label
+
+        Note
+        ----
+        The *y*-axis of mapobject coordinates is inverted.
         '''
         logger.debug('calculate outlines for mapobject type "%s"', self.key)
 
@@ -340,62 +346,134 @@ class SegmentedObjects(LabelImage):
         polygons = dict()
         for t in range(array.shape[-1]):
             for z in range(array[..., t].shape[-1]):
-                image = array[:, :, z, t]
-                image[0, :] = 0
-                image[-1, :] = 0
-                image[:, 0] = 0
-                image[:, -1] = 0
+                # We set border pixels to zero to get closed contours for
+                # border objects. This may cause problems for very small objects
+                # at the border.
+                plane = array[:, :, z, t]
+                plane[0, :] = 0
+                plane[-1, :] = 0
+                plane[:, 0] = 0
+                plane[:, -1] = 0
 
+                bboxes = mh.labeled.bbox(plane)
                 for label in self.labels:
+                    bbox = bboxes[label]
+                    obj_im = jtlib.utils.extract_bbox_image(plane, bbox, pad=1)
+                    logger.debug('find contour for object #%d', label)
                     # We could do this for all objects at once, but doing it
                     # for each object individually ensures that we get the
                     # correct number of objects and that coordinates are in the
                     # correct order, i.e. sorted according to their label.
-                    obj_im = image == label
-                    # TODO: use mahotas.labeled.borders() or
-                    # mahotas.labeled.bwperim()
-                    contours = skimage.measure.find_contours(
-                        obj_im, 0.5, fully_connected='high'
+                    mask = obj_im == label
+                    # NOTE: OpenCV return x, y coordinates. That means that
+                    # for numpy indexing we need to flip the coordinates.
+                    _, contours, hierarchy = cv2.findContours(
+                        (mask).astype(np.uint8) * 255,
+                        cv2.RETR_CCOMP,  # two-level  hierarchy (holes)
+                        cv2.CHAIN_APPROX_SIMPLE  # TODO: OpenCV add offset?
                     )
-                    # TODO: interior and exterior contours
-                    # OpenCV's findContours() with CV_RETR_CCOMP flag
-                    # and offset for potential shift due to alignment
                     if len(contours) > 1:
-                        # It sometimes happens that more than one outline is
-                        # identified per object, in particular when the object
-                        # has a "weird" shape, i.e. many small protrusions.
-                        # NOTE: The OpenCV function as well is even worse.
-                        # TODO: Don't simply take the first element in case
-                        # multiple objects are identified, but measure some
-                        # properties and choose the one that makes the most
-                        # sense (i.e. testing their validity with shapely).
-                        logger.warn(
+                        # It may happens that more than one outline is
+                        # identified per object, for example if the object
+                        # has holes.
+                        logger.debug(
                             '%d contours identified for object #%d',
                             len(contours), label
                         )
-                    contour = contours[0].astype(np.int64)
-                    segm_poly = shapely.geometry.Polygon(np.fliplr(contour))
-                    # Add offset required due to alignment and
+                        holes = list()
+                        for i in range(len(contours)):
+                            child_idx = hierarchy[0][i][2]
+                            parent_idx = hierarchy[0][i][3]
+                            # There should only be two levels with one
+                            # contour each.
+                            # TODO: prevent creation of holes for objects
+                            # that are not supposed to have holes.
+                            if parent_idx >= 0:
+                                shell = np.squeeze(contours[parent_idx])
+                            elif child_idx >= 0:
+                                holes.append(np.squeeze(contours[child_idx]))
+                            else:
+                                # Same hierarchy level. This shouldn't happen.
+                                # Take only the largest one.
+                                lengths = [len(c) for c in contours]
+                                idx = lengths.index(np.max(lengths))
+                                shell = np.squeeze(contours[idx])
+                                break
+
+                    else:
+                        shell = np.squeeze(contours[0])
+                        holes = None
+                    # Add offset required due to alignment and cropping and
                     # invert the y-axis as required by Openlayers.
-                    contour[:, 0] = -1 * (contour[:, 0] + y_offset)
-                    contour[:, 1] = contour[:, 1] + x_offset
-                    outline_poly = shapely.geometry.Polygon(np.fliplr(contour))
-                    outline_poly = outline_poly.simplify(
+                    add_y = y_offset + bbox[0] - 1
+                    add_x = x_offset + bbox[2] - 1
+                    if shell.ndim < 2 or shell.shape[0] < 3:
+                        logger.warn('polygon doesn\'t have enough coordinates')
+                        # In case the contour cannot be represented as a
+                        # valid polygon we create a little square to not loose
+                        # the object.
+                        # TODO: objects that by default are only a single point
+                        y, x = np.array(mask.shape) / 2
+                        # Closed ring sorted counter-clockwise
+                        shell = np.array([
+                            [x-1, x+1, x+1, x-1, x-1],
+                            [y-1, y-1, y+1, y+1, y-1]
+                        ]).T
+                        shell[:, 0] = shell[:, 0] + add_x
+                        shell[:, 1] = -1 * (shell[:, 1] + add_y)
+                        holes = None
+                    else:
+                        shell[:, 0] = shell[:, 0] + add_x
+                        shell[:, 1] = -1 * (shell[:, 1] + add_y)
+                        if holes is not None:
+                            for i in range(len(holes)):
+                                holes[i][:, 0] = holes[i][:, 0] + add_x
+                                holes[i][:, 1] = -1 * (holes[i][:, 1] + add_y)
+                    poly = shapely.geometry.Polygon(shell, holes)
+                    poly = poly.simplify(
                         tolerance=tolerance, preserve_topology=True
                     )
-                    polygons[(t, z, label)] = (outline_poly, segm_poly)
+                    if not poly.is_valid:
+                        logger.warn(
+                            'invalid polygon for object #%d - trying to fix it',
+                            label
+                        )
+                        # In some cases there may be invalid intersections
+                        # that can be fixed with the buffer trick.
+                        poly = poly.buffer(0)
+                        if not poly.is_valid:
+                            raise ValueError(
+                                'Polygon of object #%d is invalid.' % label
+                            )
+                        if isinstance(poly, shapely.geometry.MultiPolygon):
+                            logger.warn(
+                                'object #%d has multiple polygons - '
+                                'take largest', label
+                            )
+                            # Repair may create multiple polygons.
+                            # We take the largest and discard the smaller ones.
+                            areas = [g.area for g in poly.geoms]
+                            index = areas.index(np.max(areas))
+                            poly = poly.geoms[index]
+                    polygons[(t, z, label)] = poly
         return polygons
 
 
-    def from_polygons(self, polygons, dimensions):
+    def from_polygons(self, polygons, y_offset, x_offset, dimensions):
         '''Creates a label image representation of segmented objects based
-        on site-specific coordinates of object contours.
+        on global map coordinates of object contours.
 
         Parameters
         ----------
         polygons: Dict[Tuple[int], shapely.geometry.polygon.Polygon]]
             polygon for each segmented object hashable by
             time point, z-plane and site-specific label
+        y_offset: int
+            global vertical offset that needs to be subtracted from
+            y-coordinates
+        x_offset: int
+            global horizontal offset that needs to be subtracted from
+            x-coordinates
         dimensions: Tuple[int]
             dimensions of the label image that should be created
 
@@ -403,16 +481,14 @@ class SegmentedObjects(LabelImage):
         -------
         numpy.ndarray[numpy.int32]
             label image
-
-        Note
-        ----
-        Coordinates are relative to aligned and cropped images.
         '''
         array = np.zeros(dimensions, dtype=np.int32)
         for (t, z, label), poly in polygons.iteritems():
             poly = to_shape(poly)
             coordinates = np.array(poly.exterior.coords).astype(int)
             x, y = np.split(coordinates, 2, axis=1)
+            x -= x_offset
+            y -= y_offset
             y, x = skimage.draw.polygon(y, x)
             array[y, x, z, t] = label
         self.value = np.squeeze(array)
