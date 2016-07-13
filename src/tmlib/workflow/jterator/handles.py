@@ -298,11 +298,22 @@ class SegmentedObjects(LabelImage):
         super(SegmentedObjects, self).__init__(name, key, help)
         self._features = collections.defaultdict(list)
         self._attributes = collections.defaultdict(list)
+        self._labels = None
 
     @property
     def labels(self):
         '''List[int]: unique object identifier labels'''
-        return map(int, np.unique(self.value[self.value > 0]))
+        if self._labels is not None:
+            return self._labels
+        else:
+            self._labels = np.unique(
+                self.value[self.value > 0]
+            ).astype(int).tolist()
+        return self._labels
+
+    @labels.setter
+    def labels(self, value):
+        self._labels = value
 
     def to_polygons(self, y_offset, x_offset, tolerance=2):
         '''Creates a polygon representation for each segmented object.
@@ -339,23 +350,24 @@ class SegmentedObjects(LabelImage):
         # Set border pixels to background to find complete contours of
         # objects at the border of the image
         array = self.value.copy()
-        if len(array.shape) == 2:
+        if array.ndim == 2:
             array = array[..., np.newaxis, np.newaxis]
-        elif len(array.shape) == 3:
+        elif array.shape == 3:
             array = array[..., np.newaxis]
         polygons = dict()
         for t in range(array.shape[-1]):
             for z in range(array[..., t].shape[-1]):
+                plane = array[:, :, z, t]
+                bboxes = mh.labeled.bbox(plane)
                 # We set border pixels to zero to get closed contours for
                 # border objects. This may cause problems for very small objects
-                # at the border.
-                plane = array[:, :, z, t]
+                # at the border, because they may get lost.
+                # We recreate them later on (see below).
                 plane[0, :] = 0
                 plane[-1, :] = 0
                 plane[:, 0] = 0
                 plane[:, -1] = 0
 
-                bboxes = mh.labeled.bbox(plane)
                 for label in self.labels:
                     bbox = bboxes[label]
                     obj_im = jtlib.utils.extract_bbox_image(plane, bbox, pad=1)
@@ -366,16 +378,31 @@ class SegmentedObjects(LabelImage):
                     # correct order, i.e. sorted according to their label.
                     mask = obj_im == label
                     # NOTE: OpenCV return x, y coordinates. That means that
-                    # for numpy indexing we need to flip the coordinates.
+                    # for numpy indexing one would need to flip the axes.
                     _, contours, hierarchy = cv2.findContours(
                         (mask).astype(np.uint8) * 255,
                         cv2.RETR_CCOMP,  # two-level  hierarchy (holes)
-                        cv2.CHAIN_APPROX_SIMPLE  # TODO: OpenCV add offset?
+                        cv2.CHAIN_APPROX_SIMPLE  # TODO: how to add offset?
                     )
-                    if len(contours) > 1:
-                        # It may happens that more than one outline is
+                    if len(contours) == 0:
+                        logger.warn(
+                            'no contours identified for object #%d', label
+                        )
+                        # This is most likely an object that does not extend
+                        # beyond the line of border pixels.
+                        # To ensure a correct number of objects we represent
+                        # it by a small polygon.
+                        coords = np.array(np.where(self.value == label)).T
+                        y, x = np.mean(coords, axis=0).astype(int)
+                        shell = np.array([
+                            [x-1, x+1, x+1, x-1, x-1],
+                            [y-1, y-1, y+1, y+1, y-1]
+                        ]).T
+                        holes = None
+                    elif len(contours) > 1:
+                        # It may happens that more than one contour is
                         # identified per object, for example if the object
-                        # has holes.
+                        # has holes, i.e. enclosed background pixels.
                         logger.debug(
                             '%d contours identified for object #%d',
                             len(contours), label
@@ -399,36 +426,33 @@ class SegmentedObjects(LabelImage):
                                 idx = lengths.index(np.max(lengths))
                                 shell = np.squeeze(contours[idx])
                                 break
-
                     else:
                         shell = np.squeeze(contours[0])
                         holes = None
-                    # Add offset required due to alignment and cropping and
-                    # invert the y-axis as required by Openlayers.
-                    add_y = y_offset + bbox[0] - 1
-                    add_x = x_offset + bbox[2] - 1
+
                     if shell.ndim < 2 or shell.shape[0] < 3:
                         logger.warn('polygon doesn\'t have enough coordinates')
                         # In case the contour cannot be represented as a
                         # valid polygon we create a little square to not loose
                         # the object.
-                        # TODO: objects that by default are only a single point
                         y, x = np.array(mask.shape) / 2
-                        # Closed ring sorted counter-clockwise
+                        # Create a closed ring with coordinates sorted
+                        # counter-clockwise
                         shell = np.array([
                             [x-1, x+1, x+1, x-1, x-1],
                             [y-1, y-1, y+1, y+1, y-1]
                         ]).T
-                        shell[:, 0] = shell[:, 0] + add_x
-                        shell[:, 1] = -1 * (shell[:, 1] + add_y)
-                        holes = None
-                    else:
-                        shell[:, 0] = shell[:, 0] + add_x
-                        shell[:, 1] = -1 * (shell[:, 1] + add_y)
-                        if holes is not None:
-                            for i in range(len(holes)):
-                                holes[i][:, 0] = holes[i][:, 0] + add_x
-                                holes[i][:, 1] = -1 * (holes[i][:, 1] + add_y)
+
+                    # Add offset required due to alignment and cropping and
+                    # invert the y-axis as required by Openlayers.
+                    add_y = y_offset + bbox[0] - 1
+                    add_x = x_offset + bbox[2] - 1
+                    shell[:, 0] = shell[:, 0] + add_x
+                    shell[:, 1] = -1 * (shell[:, 1] + add_y)
+                    if holes is not None:
+                        for i in range(len(holes)):
+                            holes[i][:, 0] = holes[i][:, 0] + add_x
+                            holes[i][:, 1] = -1 * (holes[i][:, 1] + add_y)
                     poly = shapely.geometry.Polygon(shell, holes)
                     poly = poly.simplify(
                         tolerance=tolerance, preserve_topology=True
