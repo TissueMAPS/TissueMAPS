@@ -92,21 +92,34 @@ classdef identify_secondary_objects_iw < handle
                 mapping(new_label) = obj;
             end
 
+            unique_input_labels = unique(input_label_image(input_label_image > 0));
+            unique_new_labels = unique(relabeled_image(relabeled_image > 0));
+            if setdiff(unique_input_labels, unique_new_labels)
+                error('Inconsistent number of labels: input: %d - new: %d', ...
+                    length(unique_input_labels), length(unique_new_labels))
+            end
+
             output_label_image = segmentSecondary(rescaled_input_image, relabeled_image, relabeled_image, ...
                                                   correction_factors, min_threshold, max_threshold);
 
-            % Make sure labels are correct
-            unique_input_labels = unique(input_label_image);
-            unique_output_labels = unique(output_label_image);
+            % Make sure labels are consistent
+            unique_output_labels = unique(output_label_image(output_label_image > 0));
             if setdiff(unique_input_labels, unique_output_labels)
-                error('Incorrect number of labels.')
+                warning('Inconsistent number of labels: input: %d - output: %d', ...
+                    length(unique_input_labels), length(unique_output_labels))
             end
 
             % Map object labels back.
+            % TODO: There are secondary objects without corresponding primary objects
             final_output_label_image = zeros(size(output_label_image));
-            for i = 1:length(mapping)
-                obj = mapping(i);
-                final_output_label_image(output_label_image == obj) = mapping(obj);
+            for i = 1:length(unique_new_labels)
+                oid = unique_new_labels(i);
+                index = output_label_image == oid;
+                if any(index)
+                    final_output_label_image(index) = mapping(oid);
+                else
+                    final_output_label_image(relabeled_image == mapping(oid)) = mapping(obj);
+                end
             end
 
             if plot
