@@ -59,7 +59,7 @@ class SetupCtrl {
 
     uploadComplete() {
         return this.plates.every((plate) => {
-            return plate.status == 'COMPLETE';
+            return this.workflow.stages[0].status.state == 'TERMINATED';
         });
     }
 
