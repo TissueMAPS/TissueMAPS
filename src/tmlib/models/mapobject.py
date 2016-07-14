@@ -151,31 +151,31 @@ class MapobjectType(Model, DateMixIn):
         do_nothing = z < self.max_poly_zoom
         if do_simplify:
             select_stmt = session.query(
-                MapobjectOutline.mapobject_id,
-                MapobjectOutline.geom_centroid.ST_AsGeoJSON())
+                MapobjectSegmentation.mapobject_id,
+                MapobjectSegmentation.geom_centroid.ST_AsGeoJSON())
         elif do_nothing:
             return list()
         else:
             select_stmt = session.query(
-                MapobjectOutline.mapobject_id,
-                MapobjectOutline.geom_poly.ST_AsGeoJSON()
+                MapobjectSegmentation.mapobject_id,
+                MapobjectSegmentation.geom_poly.ST_AsGeoJSON()
             )
 
         outlines = select_stmt.\
-            join(MapobjectOutline.mapobject).\
+            join(MapobjectSegmentation.mapobject).\
             join(MapobjectType).\
             filter(
                 (MapobjectType.id == self.id) &
                 ((MapobjectType.is_static) |
-                 (MapobjectOutline.tpoint == tpoint) &
-                 (MapobjectOutline.zplane == zplane)) &
-                (MapobjectOutline.intersection_filter(x, y, z, maxzoom))
+                 (MapobjectSegmentation.tpoint == tpoint) &
+                 (MapobjectSegmentation.zplane == zplane)) &
+                (MapobjectSegmentation.intersection_filter(x, y, z, maxzoom))
             ).\
             all()
 
         return outlines
 
-    def calculate_min_max_poly_zoom(self, maxzoom_level, mapobject_outline_ids,
+    def calculate_min_max_poly_zoom(self, maxzoom_level, segmentation_ids,
                                 n_sample=10, n_points_per_tile_limit=3000):
         '''Calculates the minimum zoom level above which mapobjects are
         represented on the map as polygons instead of centroids and the
@@ -185,8 +185,8 @@ class MapobjectType(Model, DateMixIn):
         ----------
         maxzoom_level: int
             maximum zoom level of the pyramid
-        mapobject_outline_ids: List[int]
-            IDs of instances of :py:class:`tmlib.models.MapobjectOutline`
+        segmentation_ids: List[int]
+            IDs of instances of :py:class:`tmlib.models.MapobjectSegmentation`
         n_sample: int, optional
             number of tiles that should be sampled (default: ``10``)
         n_points_per_tile_limit: int, optional
@@ -225,11 +225,11 @@ class MapobjectType(Model, DateMixIn):
             #     )
 
             #     n_points_in_tile = session.query(
-            #             func.sum(MapobjectOutline.geom_poly.ST_NPoints())
+            #             func.sum(MapobjectSegmentation.geom_poly.ST_NPoints())
             #         ).\
             #         filter(
-            #             MapobjectOutline.id.in_(mapobject_outline_ids),
-            #             MapobjectOutline.geom_poly.intersects(tile)
+            #             MapobjectSegmentation.id.in_(mapobject_outline_ids),
+            #             MapobjectSegmentation.geom_poly.intersects(tile)
             #         ).\
             #         scalar()
 
@@ -310,7 +310,7 @@ class Mapobject(Model):
         ID of the parent mapobject
     mapobject_type: tmlib.models.MapobjectType
         parent mapobject type to which the mapobject belongs
-    outlines: List[tmlib.models.MapobjectOutlines]
+    outlines: List[tmlib.models.MapobjectSegmentations]
         outlines that belong to the mapobject
     feature_values: List[tmlib.models.FeatureValues]
         feature values that belong to the mapobject
@@ -346,9 +346,11 @@ class Mapobject(Model):
 
 
 @distribute_by('id')
-class MapobjectOutline(Model):
+class MapobjectSegmentation(Model):
 
-    '''Outline of an individual *map object*.
+    '''A *mapobject segmentation* provides the geographic representation
+    of a *mapobject* and associates it with the corresponding image acquisition
+    *site* in which the object was identified.
 
     Attributes
     ----------
@@ -360,20 +362,45 @@ class MapobjectOutline(Model):
         EWKT polygon geometry
     geom_centroid: str
         EWKT point geometry
+    pipeline: str
+            name of the corresponding Jterator pipeline in which the objects
+            were segmented
+    site_id: int
+        ID of the parent site
+    site: tmlib.models.Site
+        site to which the segmentation belongs
+    is_border: bool
+        whether the object touches at the border of a *site* and is
+        therefore only partially represented on the corresponding image
+    label: int
+        one-based object identifier number which is unique per site
     mapobject_id: int
         ID of parent mapobject
     mapobject: tmlib.models.Mapobject
         parent mapobject to which the outline belongs
+
     '''
 
     #: str: name of the corresponding database table
-    __tablename__ = 'mapobject_outlines'
+    __tablename__ = 'mapobject_segmentations'
+
+    __table_args__ = (
+        UniqueConstraint('label', 'tpoint', 'zplane', 'site_id', 'mapobject_id'),
+    )
 
     # Table columns
+    is_border = Column(Boolean, index=True)
+    label = Column(Integer, index=True)
+    pipeline = Column(String, index=True)
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
     geom_poly = Column(Geometry('POLYGON'), index=True)
     geom_centroid = Column(Geometry('POINT'), index=True)
+    site_id = Column(
+        Integer,
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
     mapobject_id = Column(
         Integer,
         ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -381,35 +408,68 @@ class MapobjectOutline(Model):
     )
 
     # Relationships to other tables
-    mapobject = relationship(
+    site = relationship(
+        'Site',
+        backref=backref(
+            'mapobject_segmentations', cascade='all, delete-orphan'
+        )
+    )
+    mapobject= relationship(
         'Mapobject',
-        backref=backref('outlines', cascade='all, delete-orphan')
+        backref=backref(
+            'segmentation', cascade='all, delete-orphan', uselist=False
+        )
     )
 
-    def __init__(self, mapobject_id, geom_poly=None, geom_centroid=None,
-                 tpoint=None, zplane=None):
+    def __init__(self, geom_poly, geom_centroid, mapobject_id, label=None,
+            is_border=None, tpoint=None, zplane=None, pipeline=None, site_id=None):
         '''
         Parameters
         ----------
+        geom_poly: str
+            EWKT polygon geometry representing the outline of the mapobject
+        geom_centroid: str
+            EWKT point geometry representing the centriod of the mapobject
         mapobject_id: int
             ID of parent mapobject
+        label: int, optional
+            one-based object identifier number which is unique per site
+        is_border: bool, optional
+            whether the object touches at the border of a *site* and is
+            therefore only partially represented on the corresponding image
         tpoint: int, optional
-            time point index (default: ``None``)
+            time point index
         zplane: int, optional
-            z-plane index (default: ``None``)
-        geom_poly: str, optional
-            EWKT polygon geometry (default: ``None``)
-        geom_centroid: str, optional
-            EWKT point geometry (default: ``None``)
+            z-plane index
+        pipeline: str, optional
+            name of the corresponding Jterator pipeline that was used to
+            segment the mapobjects
+        site_id: int, optional
+            ID of the parent site
+
+        Note
+        ----
+        Static mapobjects (e.g. "Wells") are neither associated with a particular
+        image acquisition site (they actually enclose several sites) nor with
+        a time point or z-resolution level.
+
+        Warning
+        -------
+        The segmentation may be used to reconstruct the original label image,
+        but there might be a bias, depending on the level of simplification
+        applied upon generation of the outlines.
         '''
         self.tpoint = tpoint
         self.zplane = zplane
         self.mapobject_id = mapobject_id
         self.geom_poly = geom_poly
         self.geom_centroid = geom_centroid
+        self.is_border = is_border
+        self.pipeline = pipeline
+        self.site_id = site_id
 
     @staticmethod
-    def create_tile(x, y, z, maxzoom):
+    def bounding_box(x, y, z, maxzoom):
         """Calculates the bounding box of a tile.
 
         Parameters
@@ -422,6 +482,11 @@ class MapobjectOutline(Model):
             zoom level
         maxzoom: int
             maximal zoom level of layers belonging to the visualized experiment
+
+        Returns
+        -------
+        Tuple[int]
+            bounding box coordinates (x_top, y_top, x_bottom, y_bottom)
         """
         # The extent of a tile of the current zoom level in mapobject
         # coordinates (i.e. coordinates on the highest zoom level)
@@ -456,7 +521,8 @@ class MapobjectOutline(Model):
         -------
         ???
         '''
-        minx, miny, maxx, maxy = MapobjectOutline.create_tile(x, y, z, maxzoom)
+        minx, miny, maxx, maxy = MapobjectSegmentation.bounding_box(x, y, z, maxzoom)
+        # TODO: use shapely to create objects
         tile = 'POLYGON(({maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
             minx=minx, maxx=maxx, miny=miny, maxy=maxy)
         # The outlines should not lie on the top or left border since this
@@ -469,121 +535,23 @@ class MapobjectOutline(Model):
         left_border = 'LINESTRING({minx} {maxy}, {minx} {miny})'.format(
             minx=minx, maxy=maxy, miny=miny)
 
-        spatial_filter = (MapobjectOutline.geom_poly.ST_Intersects(tile))
+        spatial_filter = (MapobjectSegmentation.geom_poly.ST_Intersects(tile))
         if x != 0:
             spatial_filter = spatial_filter & \
-                not_(ST_ExteriorRing(MapobjectOutline.geom_poly).\
+                not_(ST_ExteriorRing(MapobjectSegmentation.geom_poly).\
                      ST_Intersects(left_border))
         if y != 0:
             spatial_filter = spatial_filter & \
-                not_(ST_ExteriorRing(MapobjectOutline.geom_poly).\
+                not_(ST_ExteriorRing(MapobjectSegmentation.geom_poly).\
                      ST_Intersects(top_border))
 
         return spatial_filter
 
-
-@distribute_by('id')
-class MapobjectSegmentation(Model):
-
-    '''A *mapobject segmentation* associates a *mapobject outline* with the
-    corresponding image acquisition *site* in which the object was identified.
-
-    Attributes
-    ----------
-    pipeline: str
-            name of the corresponding Jterator pipeline in which the objects
-            were segmented
-    is_border: bool
-        whether the object touches at the border of a *site* and is
-        therefore only partially represented on the corresponding image
-    label: int
-        one-based object identifier number which is unique per site
-    tpoint: int, optional
-        time point index (default: ``None``)
-    zplane: int, optional
-        z-plane index (default: ``None``)
-    site_id: int
-        ID of the parent site
-    site: tmlib.models.Site
-        site to which the segmentation belongs
-    mapobject_id: int
-        ID of the parent corresponding mapobject outline
-    mapobject: tmlib.models.Mapobject
-        mapobject to which the segmentation belongs
-    '''
-
-    #: str: name of the corresponding database table
-    __tablename__ = 'mapobject_segmentations'
-
-    __table_args__ = (
-        UniqueConstraint('label', 'tpoint', 'zplane', 'site_id', 'mapobject_id'),
-    )
-
-    # Table columns
-    is_border = Column(Boolean, index=True)
-    label = Column(Integer, index=True)
-    pipeline = Column(String, index=True)
-    tpoint = Column(Integer, index=True)
-    zplane = Column(Integer, index=True)
-    site_id = Column(
-        Integer,
-        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-    mapobject_id = Column(
-        Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    # Relationships to other tables
-    site = relationship(
-        'Site',
-        backref=backref(
-            'mapobject_segmentations', cascade='all, delete-orphan'
-        )
-    )
-    mapobject= relationship(
-        'Mapobject',
-        backref=backref(
-            'segmentation', cascade='all, delete-orphan', uselist=False
-        )
-    )
-
-    def __init__(self, pipeline, label, tpoint, zplane, is_border, geom_poly,
-            site_id, mapobject_id):
-        '''
-        Parameters
-        ----------
-        pipeline: str
-            name of the corresponding Jterator pipeline in which the objects
-            were segmented
-        label: int
-            one-based object identifier number which is unique per site
-        tpoint: int, optional
-            time point index (default: ``None``)
-        zplane: int, optional
-            z-plane index (default: ``None``)
-        is_border: bool
-            whether the object touches at the border of a *site* and is
-            therefore only partially represented on the corresponding image
-        site_id: int
-            ID of the parent site
-        mapobject_id: int
-            ID of the parent corresponding mapobject
-        '''
-        self.pipeline = pipeline
-        self.label = label
-        self.tpoint = tpoint
-        self.zplane = zplane
-        self.site_id = site_id
-        self.mapobject_id = mapobject_id
-        self.is_border = is_border
-
     def __repr__(self):
         return (
-            '<MapobjectSegmentation('
-                'id=%d, tlabel=%r, tpoint=%r, zplane=%r, site_id=%r, mapobject_id=%r'
+            '<%s('
+                'id=%d, label=%r, tpoint=%r, zplane=%r, site_id=%r, mapobject_id=%r'
             ')>'
-            % (self.id, self.label, self.tpoint, self.zplane, self.site_id, self.mapobject_id)
+            % (self.__class__.__name__, self.id, self.label, self.tpoint,
+                self.zplane, self.site_id, self.mapobject_id)
         )

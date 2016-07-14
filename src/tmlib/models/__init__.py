@@ -94,7 +94,7 @@ from tmlib.models.experiment import Experiment
 from tmlib.models.well import Well
 from tmlib.models.channel import Channel
 from tmlib.models.layer import ChannelLayer
-from tmlib.models.mapobject import MapobjectType, Mapobject, MapobjectOutline, MapobjectSegmentation, MapobjectType
+from tmlib.models.mapobject import MapobjectType, Mapobject, MapobjectSegmentation, MapobjectType
 from tmlib.models.feature import Feature, FeatureValue
 from tmlib.models.plate import Plate
 from tmlib.models.acquisition import Acquisition, ImageFileMapping

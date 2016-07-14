@@ -441,7 +441,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         tm.MapobjectSegmentation.tpoint,
                         tm.MapobjectSegmentation.zplane,
                         tm.MapobjectSegmentation.label,
-                        tm.MapobjectOutline.geom_poly
+                        tm.MapobjectSegmentation.geom_poly
                     ).\
                     join(tm.Mapobject).\
                     join(tm.MapobjectType).\
@@ -475,8 +475,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         # Remove single-dimensions from image arrays.
         # NOTE: It would be more consistent to preserve shape, but most people
-        # will work with 2D images and having to deal with additional dimensions
-        # would be rather annoying I assume.
+        # will work with 2D/3D images and having to deal with additional
+        # dimensions would be rather annoying I assume.
         for name, img in store['pipe'].iteritems():
             store['pipe'][name] = np.squeeze(img)
 
@@ -582,7 +582,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 y_offset += site.intersection.lower_overhang
                 x_offset += site.intersection.right_overhang
 
-            mapobject_outlines = list()
+            segmentations = list()
             mapobject_segmentations = list()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
                 mapobject_type = session.query(tm.MapobjectType).\
@@ -600,31 +600,20 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     if outline.is_empty:
                         continue
 
-                    logger.debug('add outlines for mapobject #%d', label)
-                    mapobject_outlines.append(
-                        dict(
-                            tpoint=t, zplane=z,
-                            mapobject_id=mapobject.id,
-                            geom_poly=outline.wkt,
-                            geom_centroid=outline.centroid.wkt
-                        )
-                    )
-
                     logger.debug('add segmentations for mapobject #%d', label)
                     mapobject_segmentations.append(
                         dict(
                             pipeline=self.pipe_name,
                             label=label,
                             tpoint=t, zplane=z,
+                            geom_poly=outline.wkt,
+                            geom_centroid=outline.centroid.wkt,
                             site_id=batch['site_id'],
                             mapobject_id=mapobject.id,
                             is_border=bool(segm_objs.is_border[t][label]),
                         )
                     )
 
-            session.bulk_insert_mappings(
-                tm.MapobjectOutline, mapobject_outlines
-            )
             session.bulk_insert_mappings(
                 tm.MapobjectSegmentation, mapobject_segmentations
             )
@@ -723,8 +712,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         logger.info('clean-up mapobjects with invalid geometry')
         with tm.utils.Session() as session:
             ids = session.query(tm.Mapobject.id).\
-                join(tm.MapobjectOutline).\
-                filter(~tm.MapobjectOutline.geom_poly.ST_IsValid()).\
+                join(tm.MapobjectSegmentation).\
+                filter(~tm.MapobjectSegmentation.geom_poly.ST_IsValid()).\
                 all()
             if ids:
                 session.query(tm.Mapobject).\
@@ -747,7 +736,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
             for mapobject_type in mapobject_types:
 
-                mapobject_outlines = session.query(tm.MapobjectOutline).\
+                segmentations = session.query(tm.MapobjectSegmentation).\
                     join(tm.Mapobject).\
                     filter(tm.Mapobject.mapobject_type_id == mapobject_type.id).\
                     all()
@@ -755,7 +744,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 min_poly_zoom, max_poly_zoom = \
                     mapobject_type.calculate_min_max_poly_zoom(
                         layer.maxzoom_level_index,
-                        mapobject_outline_ids=[o.id for o in mapobject_outlines]
+                        segmentation_ids=[s.id for s in segmentations]
                     )
 
                 logger.info(
@@ -861,11 +850,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 tm.FeatureValue.tpoint
                             ).
                             join(
-                                tm.Mapobject, tm.MapobjectOutline
+                                tm.Mapobject, tm.MapobjectSegmentation
                             ).
                             filter(
                                 tm.Mapobject.mapobject_type_id == child_type.id,
-                                tm.MapobjectOutline.geom_poly.ST_CoveredBy(
+                                tm.MapobjectSegmentation.geom_poly.ST_CoveredBy(
                                     parent.outlines[0].geom_poly
                                 )
                             ).

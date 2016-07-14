@@ -696,7 +696,7 @@ class PyramidBuilder(ClusterRoutines):
         for :py:class:`tm.Site`, :py:class:`tm.Well`,
         and :py:class:`tm.Plate` and creates for each instance an
         instance of :py:class:`tm.Mapobject` and the corresponding
-        :py:class:`tm.MapobjectOutline`.
+        :py:class:`tm.MapobjectSegmentation`.
 
         batch: dict
             job description
@@ -752,15 +752,17 @@ class PyramidBuilder(ClusterRoutines):
                     )
                     session.add(mapobject)
                     session.flush()
-                    # NOTE: first element: x axis; second element: inverted y axis
+                    # First element: x axis
+                    # Second element: inverted y axis
                     ul = (obj.offset[1], -1 * obj.offset[0])
                     ll = (ul[0] + obj.image_size[1], ul[1])
                     ur = (ul[0], ul[1] - obj.image_size[0])
                     lr = (ll[0], ul[1] - obj.image_size[0])
+                    # Closed circle with coordinates sorted counter-clockwise
                     contour = np.array([ur, ul, ll, lr, ur])
                     polygon = shapely.geometry.Polygon(contour)
                     mapobject_outlines.append(
-                        tm.MapobjectOutline(
+                        tm.MapobjectSegmentation(
                             mapobject_id=mapobject.id,
                             geom_poly=polygon.wkt,
                             geom_centroid=polygon.centroid.wkt
@@ -771,7 +773,7 @@ class PyramidBuilder(ClusterRoutines):
 
                 min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
                     layer.maxzoom_level_index,
-                    mapobject_outline_ids=[o.id for o in mapobject_outlines]
+                    segmentation_ids=[o.id for o in mapobject_outlines]
                 )
                 mapobject_type.min_poly_zoom = min_zoom
                 mapobject_type.max_poly_zoom = max_zoom
