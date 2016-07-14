@@ -1,6 +1,8 @@
 '''Implementation of classes for reading microscope image and metadata files
-provided in a format specific to the Nikon equipped
-with Visitron VisiView software
+provided in a format specific to microscopes equipped
+with
+`Visitron VisiView <http://www.visitron.de/Products/Software/VisiView/visiview.html>`_
+software.
 '''
 
 import os
@@ -148,8 +150,7 @@ def read_nd_file(filename):
 class VisiviewMetadataReader(MetadataReader):
 
     '''Class for reading metadata from files formats specific to microscopes
-    equipped with the
-    `VisiView software <http://www.visitron.de/Products/Software/VisiView/visiview.html>`_.
+    equipped with the VisiView software.
 
     Note
     ----

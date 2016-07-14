@@ -1,17 +1,17 @@
 '''Implementation of classes for reading microscope image and metadata files
-provided in a format specific to the Zeiss AxioImager M2 microscope equipped
+provided in a format specific to microscopes equipped
 with
-`Axiovision <https://www.micro-shop.zeiss.com/?p=uk&f=e&i=10221&sd=410130-2909-000>`_
+`Metamorph <https://www.moleculardevices.com/systems/metamorph-research-imaging/metamorph-microscopy-automation-and-image-analysis-software>`_
 software.
 '''
+
+import os
 import re
 import logging
 import bioformats
 from collections import defaultdict
-from lxml import etree
 
-from tmlib.utils import notimplemented
-from tmlib.workflow.illuminati import stitch
+from tmlib import utils
 from tmlib.workflow.metaconfig.base import MetadataReader
 from tmlib.workflow.metaconfig.base import MetadataHandler
 from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
@@ -19,16 +19,17 @@ from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
 logger = logging.getLogger(__name__)
 
 #: Regular expression pattern to identify image files
-IMAGE_FILE_REGEX_PATTERN = r'.+_p(?P<s>\d+)(?P<c>[A-Za-z0-9]+)\.'
+# TODO: how are time points encoded?
+IMAGE_FILE_REGEX_PATTERN = '.+_?(?P<w>[A-Z]\d{2})_s(?P<s>\d+)_w(?P<c>\d{1})'
 
 #: Supported extensions for metadata files
 METADATA_FILE_REGEX_PATTERN = r'(?!.*)'
 
 
-class AxioMetadataHandler(MetadataHandler):
+class MetamorphMetadataHandler(MetadataHandler):
 
-    '''Class for handling metadata specific to the Zeiss AxioImager M2
-    microsopce with Axiovision software.
+    '''Class for handling metadata specific to microscopes equipped with
+    Metamorph software.
     '''
 
     #: Regular expression pattern to identify image files
@@ -43,24 +44,24 @@ class AxioMetadataHandler(MetadataHandler):
         omexml_metadata: bioformats.omexml.OMEXML
             metadata extracted from microscope metadata files 
         '''
-        super(AxioMetadataHandler, self).__init__(
+        super(MetamorphMetadataHandler, self).__init__(
             omexml_images, omexml_metadata
         )
 
 
-class AxioMetadataReader(MetadataReader):
+class MetamorphMetadataReader(MetadataReader):
 
-    '''Class for reading metadata from files formats specific to the Zeiss
-    AxioImager M2 with Axiovision software.
+    '''Class for reading metadata from files formats specific to microscopes
+    equipped with MetaMorph software.
 
     Note
     ----
     The microscope doens't provide any metadata files, when images are saved
-    in `.TIFF` files.
+    in `.tif` files.
     '''
 
     def read(self, microscope_metadata_files, microscope_image_files):
-        '''Provides an empty OMEXML.
+        '''Read metadata from "nd" metadata file.
 
         Parameters
         ----------

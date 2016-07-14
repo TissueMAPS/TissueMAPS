@@ -1,5 +1,7 @@
 '''Implementation of classes for reading microscope image and metadata files
-provided in a format specfic to the Yokogawa CellVoyager 7000 microscope.
+provided in a format specfic to the
+`Yokogawa CellVoyager 7000 <http://www.yokogawa.com/solutions/products-platforms/life-science/high-throughput-cytological-discovery-system/cv7000s/>`_
+microscope.
 '''
 import re
 import logging
