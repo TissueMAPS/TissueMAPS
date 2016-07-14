@@ -1,1 +1,1 @@
-from tmlib.models import Mapobject, MapobjectOutline, MapobjectType, Feature, FeatureValue
+from tmlib.models import Mapobject, MapobjectSegmentation, MapobjectType, Feature, FeatureValue
