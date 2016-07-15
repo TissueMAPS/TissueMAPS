@@ -310,8 +310,10 @@ class Mapobject(Model):
         ID of the parent mapobject
     mapobject_type: tmlib.models.MapobjectType
         parent mapobject type to which the mapobject belongs
-    outlines: List[tmlib.models.MapobjectSegmentations]
-        outlines that belong to the mapobject
+    parent_id: int, optional
+        ID of the parent mapobject
+    segmentations: List[tmlib.models.MapobjectSegmentations]
+        segmentations that belong to the mapobject
     feature_values: List[tmlib.models.FeatureValues]
         feature values that belong to the mapobject
     '''
@@ -320,6 +322,7 @@ class Mapobject(Model):
     __tablename__ = 'mapobjects'
 
     # Table columns
+    parent_id = Column(Integer, index=True)
     mapobject_type_id = Column(
         Integer,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -332,17 +335,20 @@ class Mapobject(Model):
         backref=backref('mapobjects', cascade='all, delete-orphan')
     )
 
-    def __init__(self, mapobject_type_id):
+    def __init__(self, mapobject_type_id, parent_id=None):
         '''
         Parameters
         ----------
         mapobject_type_id: int
+            ID of the parent mapobject type
+        parent_id: int, optional
             ID of the parent mapobject
         '''
         self.mapobject_type_id = mapobject_type_id
+        self.parent_id = parent_id
 
     def __repr__(self):
-        return '<Mapobject(id=%d)>' % self.id
+        return '<Mapobject(id=%d, type=%s)>' % (self.id, mapobject_type.name)
 
 
 @distribute_by('id')
@@ -417,7 +423,7 @@ class MapobjectSegmentation(Model):
     mapobject= relationship(
         'Mapobject',
         backref=backref(
-            'segmentation', cascade='all, delete-orphan', uselist=False
+            'segmentations', cascade='all, delete-orphan'
         )
     )
 
