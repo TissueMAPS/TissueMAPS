@@ -184,6 +184,8 @@ class ImageFileMapping(Model):
         with index zero)
     wavelength: str
         name of the wavelength
+    bit_depth: int
+        number of bites used to indicate intensity
     map: dict
         maps an individual pixels plane to location(s) within microscope
         image files
@@ -215,6 +217,7 @@ class ImageFileMapping(Model):
 
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
+    bit_depth = Column(Integer)
     wavelength = Column(String, index=True)
     map = Column(JSONB)
     site_id = Column(
@@ -252,7 +255,7 @@ class ImageFileMapping(Model):
         backref=backref('image_file_mappings', cascade='all, delete-orphan')
     )
 
-    def __init__(self, tpoint, zplane, wavelength, map, site_id,
+    def __init__(self, tpoint, zplane, wavelength, bit_depth, map, site_id,
                  acquisition_id, cycle_id=None, channel_id=None):
         '''
         Parameters
@@ -265,6 +268,8 @@ class ImageFileMapping(Model):
             with index zero)
         wavelength: str
             name of the wavelength
+        bit_depth: int
+            number of bites used to indicate intensity
         map: dict
             maps an individual pixels plane to location(s) within microscope
             image files
@@ -280,6 +285,7 @@ class ImageFileMapping(Model):
         self.tpoint = tpoint
         self.zplane = zplane
         self.wavelength = wavelength
+        self.bit_depth = bit_depth
         self.map = map
         self.site_id = site_id
         self.acquisition_id = acquisition_id

@@ -448,6 +448,9 @@ class PyramidBuilder(ClusterRoutines):
                 clip_above = stats.get_closest_percentile(100)
                 clip_below = stats.get_closest_percentile(0)
 
+            layer.max_intensity = clip_above
+            layer.min_intensity = clip_below
+
             if batch['illumcorr']:
                 logger.info('correcting images for illumination artifacts')
             if batch['align']:

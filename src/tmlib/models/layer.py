@@ -42,6 +42,12 @@ class ChannelLayer(Model):
         zero-based time series index
     zplane: int
         zero-based z-resolution index
+    max_intensity: int
+        maximum intensity value at which channel images were clipped
+        at the original bit depth
+    min_intensity: int
+        minimum intensity value at which channel images were clipped at
+        original bit depth
     channel_id: int
         ID of the parent channel
     channel: tmlib.models.Channel
@@ -54,8 +60,10 @@ class ChannelLayer(Model):
     __table_args__ = (UniqueConstraint('zplane', 'tpoint', 'channel_id'), )
 
     # Table columns
-    zplane = Column(Integer)
-    tpoint = Column(Integer)
+    zplane = Column(Integer, index=True)
+    tpoint = Column(Integer, index=True)
+    max_intensity = Column(Integer)
+    min_intensity = Column(Integer)
     channel_id = Column(
         Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')

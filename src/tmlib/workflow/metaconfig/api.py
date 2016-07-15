@@ -278,6 +278,7 @@ class MetadataConfigurator(ClusterRoutines):
                             tpoint=i.tpoint, zplane=i.zplane,
                             site_id=site.id, map=fmap[index],
                             wavelength=i.channel_name,
+                            bit_depth=i.bit_depth,
                             acquisition_id=acquisition.id
                         )
 
@@ -313,7 +314,8 @@ class MetadataConfigurator(ClusterRoutines):
                     session.query(
                         tm.ImageFileMapping.tpoint,
                         tm.ImageFileMapping.wavelength,
-                        tm.ImageFileMapping.zplane
+                        tm.ImageFileMapping.zplane,
+                        tm.ImageFileMapping.bit_depth
                     ).
                     filter(tm.ImageFileMapping.acquisition_id == acq.id).
                     all()
@@ -335,6 +337,7 @@ class MetadataConfigurator(ClusterRoutines):
                         channel = session.get_or_create(
                             tm.Channel,
                             name=name, index=w_index, wavelength=w,
+                            bit_depth=16,
                             experiment_id=acq.plate.experiment_id
                         )
 

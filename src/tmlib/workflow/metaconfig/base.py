@@ -79,13 +79,17 @@ class MetadataHandler(object):
         stack_position = pixels.DimensionOrder.index('Z')
         time_position = pixels.DimensionOrder.index('T')
 
-        sorted_attributes = sorted([(channel_position, 'TheC'),
-                                    (stack_position, 'TheZ'),
-                                    (time_position, 'TheT')])
+        sorted_attributes = sorted([
+            (channel_position, 'TheC'),
+            (stack_position, 'TheZ'),
+            (time_position, 'TheT')
+        ])
 
-        sorted_counts = sorted([(channel_position, n_channels),
-                                (stack_position, n_stacks),
-                                (time_position, n_stacks)])
+        sorted_counts = sorted([
+            (channel_position, n_channels),
+            (stack_position, n_stacks),
+            (time_position, n_stacks)
+        ])
 
         count = 0
         for i in xrange(sorted_counts[0][1]):
@@ -132,11 +136,21 @@ class MetadataHandler(object):
         # NOTE: The order of files is important for some metadata information!
         filenames = natsorted(self.omexml_images.keys())
 
+        def get_bit_depth(pixel_type):
+            r = re.compile(r'(\d+)$')
+            m = r.search(pixel_type)
+            if not m:
+                raise RegexError(
+                    'Bit depth could not be determined from pixel type.'
+                )
+            return int(m.group(1))
+
         metadata = OrderedDict()
         metadata['name'] = list()
         metadata['channel_name'] = list()
         metadata['tpoint'] = list()
         metadata['zplane'] = list()
+        metadata['bit_depth'] = list()
         metadata['stage_position_y'] = list()
         metadata['stage_position_x'] = list()
         metadata['height'] = list()
@@ -159,6 +173,8 @@ class MetadataHandler(object):
                     pixels = self._create_channel_planes(pixels)
                     n_planes = pixels.plane_count  # update plane count
 
+                bit_depth = get_bit_depth(image.Pixels.PixelType)
+                metadata['bit_depth'].append(bit_depth)
                 # Each metadata element represents an image, which could
                 # correspond to an individual plane or a z-stack, i.e. a
                 # collection of several focal planes for the same channel

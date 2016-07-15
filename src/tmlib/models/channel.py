@@ -51,6 +51,7 @@ class Channel(Model, DateMixIn):
     name = Column(String, index=True)
     index = Column(Integer, index=True)
     wavelength = Column(String, index=True)
+    bit_depth = Column(Integer)
     experiment_id = Column(
         Integer,
         ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE')
@@ -62,7 +63,7 @@ class Channel(Model, DateMixIn):
         backref=backref('channels', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, index, wavelength, experiment_id):
+    def __init__(self, name, index, wavelength, bit_depth, experiment_id):
         '''
         Parameters
         ----------
@@ -72,12 +73,15 @@ class Channel(Model, DateMixIn):
             zero-based channel index
         wavelength: str
             name of the corresponding wavelength
+        bit_depth: int
+            number of bits used to indicate intensity of pixels
         experiment_id: int
             ID of the parent experiment
         '''
         self.name = name
         self.index = index
         self.wavelength = wavelength
+        self.bit_depth = bit_depth
         self.experiment_id = experiment_id
 
     @autocreate_directory_property

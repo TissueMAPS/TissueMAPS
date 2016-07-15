@@ -539,7 +539,7 @@ class ProbabilityImageFile(File, DateMixIn):
 class PyramidTileFile(File):
 
     '''A *pyramid tile file* is a component of an image pyramid. Each tile
-    holds a single, small 2D pixel plane.
+    holds a single, small 2D 8-bit pixel plane.
 
     Attributes
     ----------

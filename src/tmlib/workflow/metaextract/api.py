@@ -128,8 +128,8 @@ class MetadataExtractor(ClusterRoutines):
         subprocess.CalledProcessError
             when extraction failed
         '''
-        for fid in batch['microscope_image_file_ids']:
-            with tmlib.models.utils.Session() as session:
+        with tmlib.models.utils.Session() as session:
+            for fid in batch['microscope_image_file_ids']:
                 img_file = session.query(tmlib.models.MicroscopeImageFile).\
                     get(fid)
                 logger.info('process image "%s"' % img_file.name)
