@@ -29,6 +29,7 @@ def encode_channel(obj, encoder):
     return {
         'id': encode_pk(obj.id),
         'name': obj.name,
+        'bit_depth': obj.bit_depth,
         'layers': [encoder.default(ch) for ch in obj.layers]
     }
 
@@ -42,6 +43,8 @@ def encode_channel_layer(obj, encoder):
         'max_zoom': obj.maxzoom_level_index,
         'tpoint': obj.tpoint,
         'zplane': obj.zplane,
+        'max_intensity': obj.max_intensity,
+        'min_intensity': obj.min_intensity,
         'image_size': {
             'width': image_width,
             'height': image_height

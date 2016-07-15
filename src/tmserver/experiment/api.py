@@ -47,7 +47,11 @@ def get_image_tile(channel_layer):
         x = int(x)
         y = int(y)
         z = int(z)
-    logger.info('get image tile x: %d, y: %d, z: %d', x, y, z)
+
+    logger.debug(
+        'get image tile: x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
+        x, y, z, channel_layer.zplane, channel_layer.tpoint
+    )
 
     tile_file = db.session.query(PyramidTileFile).filter_by(
         column=x, row=y, level=z, channel_layer_id=channel_layer.id

@@ -1,5 +1,6 @@
 import os.path as p
 import json
+import logging
 
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
@@ -12,6 +13,8 @@ from tmserver.extensions import db
 
 from tmserver.mapobject import MapobjectSegmentation, MapobjectType
 from tmserver.experiment import Experiment
+
+logger = logging.getLogger(__name__)
 
 
 @api.route('/experiments/<experiment_id>/mapobjects/<object_name>', methods=['GET'])
@@ -30,14 +33,18 @@ def get_mapobjects_tile(experiment_id, object_name):
     # "z" is the pyramid zoom level and "zlevel" the z-resolution of the
     # acquired image
     z = request.args.get('z')
-    zplane = request.args.get('zlevel')
-    t = request.args.get('t')
-
+    zplane = request.args.get('zplane')
+    tpoint = request.args.get('tpoint')
     # Check arguments for validity and convert to integers
-    if any([var is None for var in [x, y, z, zplane, t]]):
+    if any([var is None for var in [x, y, z, zplane, tpoint]]):
         return MALFORMED_REQUEST_RESPONSE
     else:
-        x, y, z, zplane, t = map(int, [x, y, z, zplane, t])
+        x, y, z, zplane, tpoint = map(int, [x, y, z, zplane, tpoint])
+
+    logger.debug(
+        'get mapobject tile: x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
+        x, y, z, zplane, tpoint
+    )
 
     if object_name == 'DEBUG_TILE':
         maxzoom = ex.channels[0].layers[0].maxzoom_level_index
@@ -63,7 +70,7 @@ def get_mapobjects_tile(experiment_id, object_name):
         filter_by(name=object_name, experiment_id=ex.id).\
         one()
     query_res = mapobject_type.get_mapobject_outlines_within_tile(
-        x, y, z, t, zplane
+        x, y, z, tpoint, zplane
     )
 
     features = []
