@@ -137,7 +137,7 @@ class MetadataExtractor(ClusterRoutines):
                 # to standard output.
                 command = [
                     'showinf', '-omexml-only', '-nopix', '-novalid',
-                    '-no-upgrade', img_file.location
+                    '-no-upgrade', '-no-sas', img_file.location
                 ]
                 p = subprocess.Popen(
                     command,
@@ -149,7 +149,15 @@ class MetadataExtractor(ClusterRoutines):
                         'Extraction of OMEXML failed! Error message:\n%s'
                         % stderr
                     )
-                img_file.omexml = unicode(stdout)
+                try:
+                    omexml = re.search(
+                        r'<(\w+).*</\1>', stdout, flags=re.DOTALL
+                    ).group()
+                except:
+                    raise RegexError(
+                        'OMEXML metadata could not be extracted.'
+                    )
+                img_file.omexml = unicode(omexml)
 
     @notimplemented
     def collect_job_output(self, batch):
