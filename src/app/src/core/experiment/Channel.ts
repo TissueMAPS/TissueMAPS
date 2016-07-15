@@ -70,7 +70,7 @@ class Channel implements Layer {
             });
         });
         this._visible = isChannelVisible;
-        if (this._layers.length > 0) {
+        if (_.values(this._layers).length > 0) {
             this.maxIntensity = _.values(this._layers)[0].maxIntensity;
             this.minIntensity = _.values(this._layers)[0].minIntensity;
         } else {
