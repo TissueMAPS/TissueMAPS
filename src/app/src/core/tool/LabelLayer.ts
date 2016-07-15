@@ -8,8 +8,8 @@ interface LabelColorMapper {
 interface LabelLayerArgs {
     id: string;
     attributes: any;
-    t: number;
-    zlevel: number;
+    tpoint: number;
+    zplane: number;
     visible?: boolean;
 }
 
@@ -77,7 +77,7 @@ abstract class LabelLayer extends VectorTileLayer {
                 throw new Error('Unknown geometry type for feature');
             }
         };
-        var url = '/api/labellayers/' + args.id + '/tiles?x={x}&y={y}&z={z}&t=' + args.t + '&zlevel=' + args.zlevel;
+        var url = '/api/labellayers/' + args.id + '/tiles?x={x}&y={y}&z={z}' + '&zplane=' + args.zplane + '&tpoint=' + args.tpoint;
 
         var app = $injector.get<Application>('application');
         var size = app.activeViewer.viewport.mapSize;

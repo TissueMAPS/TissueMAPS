@@ -92,6 +92,10 @@ angular.module('tmaps.ui')
         }
     };
 
+    this.getActualChannelMin = function(channel) {
+        return Math.round(channel.min * (channel.maxIntensity - channel.minIntensity) + channel.minIntensity);
+    };
+
     this.setChannelMax = function(channel, val) {
         if (_(getSelectedChannels()).contains(channel)) {
             getSelectedChannels().forEach(function(l) {
@@ -100,6 +104,10 @@ angular.module('tmaps.ui')
         } else {
             channel.max = val;
         }
+    };
+
+    this.getActualChannelMax = function(channel) {
+        return Math.round(channel.max * (channel.maxIntensity - channel.minIntensity) + channel.minIntensity);
     };
 
     this.setChannelBrightness = function(channel, val) {

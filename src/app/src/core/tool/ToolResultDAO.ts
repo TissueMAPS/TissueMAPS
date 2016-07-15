@@ -42,8 +42,8 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
                 id: layer.id,
                 name: layer.name,
                 attributes: layer.attributes,
-                t: 0,
-                zlevel: 0
+                tpoint: 0,
+                zplane: 0
             });
         } else {
             throw new Error(

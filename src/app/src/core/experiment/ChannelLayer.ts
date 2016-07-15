@@ -4,6 +4,8 @@ interface SerializedChannelLayer {
     tpoint: number;
     zplane: number;
     max_zoom: number;
+    max_intensity: number;
+    min_intensity: number;
     image_size: {
         width: number;
         height: number;
@@ -15,6 +17,8 @@ interface ChannelLayerArgs {
     tpoint: number;
     zplane: number;
     maxZoom: number;
+    maxIntensity: number;
+    minIntensity: number;
     imageSize: Size;
     visible?: boolean;
 }
@@ -23,6 +27,8 @@ class ChannelLayer extends ImageTileLayer {
     id: string;
     tpoint: number;
     zplane: number;
+    maxIntensity: number;
+    minIntensity: number;
     maxZoom: number;
 
     constructor(args: ChannelLayerArgs) {
@@ -38,6 +44,8 @@ class ChannelLayer extends ImageTileLayer {
         this.id = args.id;
         this.tpoint = args.tpoint;
         this.zplane = args.zplane;
+        this.maxIntensity = args.maxIntensity;
+        this.minIntensity = args.minIntensity;
         this.maxZoom = args.maxZoom;
     }
 }

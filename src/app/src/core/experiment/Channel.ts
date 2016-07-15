@@ -1,21 +1,30 @@
 interface SerializedChannel {
     id: string;
     name: string;
+    bit_depth: number;
     layers: SerializedChannelLayer[];
 }
 
 /**
  * Channel constructor arguments.
  */
-interface ChannelArgs extends SerializedChannel {
+interface ChannelArgs {
+    id: string;
+    name: string;
+    layers: SerializedChannelLayer[];
+    bitDepth: number;
     visible?: boolean;
 }
 
 class Channel implements Layer {
     id: string;
     name: string;
+    bitDepth: number;
+    maxIntensity: number;
+    minIntensity: number;
 
-    private _layers: {[z: number]: ChannelLayer;} = {};
+    private _layers: {[index: string]: ChannelLayer;} = {};
+    private _currentTpoint = 0;
     private _currentZplane = 0;
     private _visible: boolean;
 
@@ -29,6 +38,7 @@ class Channel implements Layer {
      * @param {ChannelArgs} args - An argument object of type ChannelArgs.
      * @param {string} args.id - The id of this channel that was given by the server.
      * @param {string} args.name - A descriptive name for this channel (displayed in the UI).
+     * @param {number} args.bitDepth - Number of bits used to indicate intensity in the orginal images.
      * @param {Array.<ChannelLayer>} args.name - A descriptive name for this channel (displayed in the UI).
      * @param {boolean} args.visible - If the channel should be visible when it is added. Default is false.
      */
@@ -43,20 +53,25 @@ class Channel implements Layer {
          * @default Color.WHITE
          */
         this.id = args.id;
+        this.bitDepth = args.bitDepth;
 
         var isChannelVisible = args.visible !== undefined ? args.visible : true;
         args.layers.forEach((l) => {
-            var isBottomLayer = l.zplane === 0;
-            this._layers[l.zplane] = new ChannelLayer({
+            var isBottomLayer = l.zplane === 0; // TODO
+            this._layers[l.zplane + '-' + l.tpoint] = new ChannelLayer({
                 id: l.id,
                 tpoint: l.tpoint,
                 zplane: l.zplane,
                 maxZoom: l.max_zoom,
+                maxIntensity: l.max_intensity,
+                minIntensity: l.min_intensity,
                 imageSize: l.image_size,
                 visible: isChannelVisible && isBottomLayer
             });
         });
         this._visible = isChannelVisible;
+        this.maxIntensity = _.values(this._layers)[0].maxIntensity;
+        this.minIntensity = _.values(this._layers)[0].minIntensity;
     }
 
     /**
@@ -93,13 +108,15 @@ class Channel implements Layer {
      * Specify the z plane that should be visualized. This will hide all other
      * layers that belong to this channel.
      * @param {number} z - The new currently active z plane.
+     * @param {number} t - The new currently active time point.
      */
-    setZplane(z: number) {
-        if (z == this._currentZplane) {
+    setPlane(z: number, t: number) {
+        if (z == this._currentZplane && t == this._currentTpoint) {
             return;
         }
-        var prevLayer = this._layers[this._currentZplane];
-        var nextLayer = this._layers[z];
+        console.log(this._layers)
+        var prevLayer = this._layers[this._currentZplane + '-' + this._currentTpoint];
+        var nextLayer = this._layers[z + '-' + t];
         if (this._visible && prevLayer !== undefined) {
             prevLayer.visible = false;
         }
@@ -107,6 +124,7 @@ class Channel implements Layer {
             nextLayer.visible = true;
         }
         this._currentZplane = z;
+        this._currentTpoint = t;
     }
 
     /**
@@ -190,11 +208,40 @@ class Channel implements Layer {
     }
 
     set visible(val: boolean) {
-        var layer = this._layers[this._currentZplane];
+        var layer = this._layers[this._currentZplane + '-' + this._currentTpoint];
         if (layer !== undefined) {
             layer.visible = val;
         }
         this._visible = val;
+    }
+
+    private _getT(k: string) {
+        var n = k.indexOf('-');
+        return Number(k.substring(n+1));
+    }
+
+    private _getZ(k: string) {
+        var n = k.indexOf('-');
+        return Number(k.substring(0, n));
+    }
+    /**
+     * @property {number} maxT - The maximum z plane to which this channel can
+     * be visualized. Setting the value above this value has to effect.
+     */
+    get maxT(): number {
+        return Math.max.apply(this, _.keys(this._layers).map(this._getT));
+        // return Math.max.apply(this, _.keys(this._layers));
+    }
+
+    /**
+     * @property {number} minT - The minimum z plane to which this channel can
+     * be visualized. Setting the value below this value has to effect.
+     * Normally this value is set to 0.
+     * @default 50
+     */
+    get minT(): number {
+        return Math.min.apply(this, _.keys(this._layers).map(this._getT));
+        // return Math.min.apply(this, _.keys(this._layers));
     }
 
     /**
@@ -202,7 +249,8 @@ class Channel implements Layer {
      * be visualized. Setting the value above this value has to effect.
      */
     get maxZ(): number {
-        return Math.max.apply(this, _.keys(this._layers));
+        return Math.max.apply(this, _.keys(this._layers).map(this._getZ));
+        // return Math.max.apply(this, _.keys(this._layers));
     }
 
     /**
@@ -212,6 +260,7 @@ class Channel implements Layer {
      * @default 50
      */
     get minZ(): number {
-        return Math.min.apply(this, _.keys(this._layers));
+        return Math.min.apply(this, _.keys(this._layers).map(this._getZ));
+        // return Math.min.apply(this, _.keys(this._layers));
     }
 }

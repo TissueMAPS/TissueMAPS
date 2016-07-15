@@ -11,7 +11,7 @@
     <div class="corner"></div>
     <div class="bottombar">
       <span class="z-plane-indicator">
-        z plane
+        z
       </span>
       <div ui-slider
         min="{{viewerCtrl.minZ}}" max="{{viewerCtrl.maxZ}}"
@@ -20,8 +20,16 @@
       <span class="z-plane-indicator">
         {{ viewer.currentZplane | pad:3 }} 
       </span>
-      <!-- <div ui-slider min="0" max="255" ng-model="viewerCtrl.tPoint"></div> -->
-      <!-- time: {{ viewerCtrl.tPoint }} -->
+      <span class="z-plane-indicator">
+        t
+      </span>
+      <div ui-slider
+        min="{{viewerCtrl.minT}}" max="{{viewerCtrl.maxT}}"
+        step="{{viewerCtrl.tStep}}" ng-model="viewerCtrl.currentTpoint">
+      </div>
+      <span class="z-plane-indicator">
+        {{ viewer.currentTpoint | pad:3 }} 
+      </span>
     </div>
   </div>
 </div>

@@ -9,6 +9,9 @@ class Viewer {
     viewport: Viewport;
     _currentResult: ToolResult = null;
     savedResults: ToolResult[] = [];
+
+    // TODO: don't use zero as default but middle of z-stack
+    private _currentTpoint = 0;
     private _currentZplane = 0;
 
     private _element: JQuery = null;
@@ -42,9 +45,9 @@ class Viewer {
 
         //// DEBUG
         // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
-        //     t: 0,
+        //     tpoint: 0,
         //     experimentId: this.experiment.id,
-        //     zlevel: 0,
+        //     zplane: 0,
         //     size: this.viewport.mapSize,
         //     visible: true
         // });
@@ -94,13 +97,24 @@ class Viewer {
         this._currentResult = null;
     }
 
+    get currentTpoint() {
+        return this._currentTpoint;
+    }
+
+    set currentTpoint(t: number) {
+        this.experiment.channels.forEach((ch) => {
+            ch.setPlane(this._currentZplane, t);
+        });
+        this._currentTpoint = t;
+    }
+
     get currentZplane() {
         return this._currentZplane;
     }
 
     set currentZplane(z: number) {
         this.experiment.channels.forEach((ch) => {
-            ch.setZplane(z);
+            ch.setPlane(z, this._currentTpoint);
         });
         this._currentZplane = z;
     }

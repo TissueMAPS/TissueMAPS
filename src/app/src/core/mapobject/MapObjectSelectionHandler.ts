@@ -138,9 +138,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             this.activeMapObjectType = t;
         }
         var segmLayer = new SegmentationLayer(t, {
-            t: 0,
+            tpoint: 0,
             experimentId: this.viewer.experiment.id,
-            zlevel: 0,
+            zplane: 0,
             size: this.viewport.mapSize,
             visible: false
         });

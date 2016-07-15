@@ -6,9 +6,19 @@ interface ViewerScope extends ViewerWindowScope {
 class ViewerCtrl {
     static $inject = ['$scope'];
 
+    maxT: number;
+    minT: number;
+    tStep: number;
     maxZ: number;
     minZ: number;
     zStep: number;
+
+    get currentTpoint() {
+        return this.$scope.viewer.currentTpoint;
+    }
+    set currentTpoint(t) {
+        this.$scope.viewer.currentTpoint = Math.floor((t - this.tStep) / this.tStep);
+    }
 
     get currentZplane() {
         return this.$scope.viewer.currentZplane;
@@ -20,10 +30,13 @@ class ViewerCtrl {
     constructor(public $scope: ViewerScope) {
         $scope.viewer = $scope.viewer;
         this.zStep = 10;
-        // The slider won't be able to set currentZplane to 0 if
+        this.tStep = 10;
+        // The slider won't be able to set currentZplane/currentTpoint to 0 if
         // the knob is all the way to the left. Therefore
-        // we set 0 to be zStep and substract this value before
-        // settings the current zplane on the viewer.
+        // we set 0 to be zStep/tStep and substract this value before
+        // settings the current zplane/tpoint on the viewer.
+        this.maxT = $scope.viewer.experiment.maxT * this.tStep + this.tStep;
+        this.minT = this.tStep;
         this.maxZ = $scope.viewer.experiment.maxZ * this.zStep + this.zStep;
         this.minZ = this.zStep;
     }

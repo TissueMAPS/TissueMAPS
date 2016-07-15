@@ -49,9 +49,13 @@ class Experiment implements Model {
 
         args.channels.forEach((ch) => {
             var isFirstChannel = this.channels.length == 0;
-            var channel = new Channel(_.extend(ch, {
+            var channel = new Channel({
+                id: ch.id,
+                layers: ch.layers,
+                name: ch.name,
+                bitDepth: ch.bit_depth,
                 visible: isFirstChannel
-            }));
+            });
             this.channels.push(channel);
         });
     }
@@ -64,6 +68,28 @@ class Experiment implements Model {
      */
     get maxZoom(): number {
         return this.channels[0].layers[0].maxZoom;
+    }
+
+    /**
+     * The highest time point supported by this experiment.
+     * @type number
+     */
+    get maxT(): number {
+        var ts = this.channels.map((ch) => {
+            return ch.maxT;
+        });
+        return Math.max.apply(this, ts);
+    }
+
+    /**
+     * The lowest time point supported by this experiment.
+     * @type number
+     */
+    get minT(): number {
+        var ts = this.channels.map((ch) => {
+            return ch.minT;
+        });
+        return Math.min.apply(this, ts);
     }
 
     /**
