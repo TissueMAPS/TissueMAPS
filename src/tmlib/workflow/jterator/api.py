@@ -833,7 +833,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         join(tm.MapobjectType).\
                         filter(tm.MapobjectType.experiment_id == self.experiment_id).\
                         distinct().\
-                        all()[0]
+                        all()
+                    if tpoints:
+                        tpoints = tpoints[0]
                     # For each parent mapobject calculate statistics on
                     # features of children, i.e. mapobjects that are covered
                     # by the parent mapobject
@@ -856,7 +858,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             filter(
                                 tm.Mapobject.mapobject_type_id == child_type.id,
                                 tm.MapobjectSegmentation.geom_poly.ST_CoveredBy(
-                                    parent.outlines[0].geom_poly
+                                    parent.segmentations[0].geom_poly
                                 )
                             ).
                             all(),
