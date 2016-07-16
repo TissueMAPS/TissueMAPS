@@ -633,6 +633,19 @@ class ImageReader(Reader):
     def __init__(self, filename):
         super(ImageReader, self).__init__(filename)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, except_type, except_value, except_trace):
+        if except_value:
+            sys.stdout.write(
+                'The following error occurred while reading from file "%s":\n%s'
+                % (self.filename, str(except_value))
+            )
+            for tb in traceback.format_tb(except_trace):
+                sys.stdout.write(tb)
+            sys.exit(1)
+
     def read(self, dtype=np.uint16):
         '''Reads pixels data from image file.
 
@@ -647,5 +660,14 @@ class ImageReader(Reader):
             pixels data
         '''
         logger.debug('read from file: %s', self.filename)
-        arr = np.fromstring(self._stream.read(), dtype)
-        return cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+        # NOTE: The string approach fails for some PNG formats. It can be solved
+        #   arr = np.fromstring(self._stream.read(), dtype)
+        #   return cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+        # It can be solved by opening images with PIL and converting them to
+        # numpy arrays as follows:
+        #   from PIL import Image
+        #   content = Image.open(self.filename)
+        #   arr = np.array(content)
+        #   return cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+        # However, this is way slower than reading via OpenCV directly!
+        return cv2.imread(self.filename, cv2.IMREAD_UNCHANGED)
