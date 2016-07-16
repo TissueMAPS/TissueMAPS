@@ -57,7 +57,7 @@ class Channel implements Layer {
 
         var isChannelVisible = args.visible !== undefined ? args.visible : true;
         args.layers.forEach((l) => {
-            var isBottomLayer = l.zplane === 0; // TODO
+            var isBottomLayer = l.zplane === 0 && l.tpoint === 0;
             this._layers[l.zplane + '-' + l.tpoint] = new ChannelLayer({
                 id: l.id,
                 tpoint: l.tpoint,
@@ -110,7 +110,7 @@ class Channel implements Layer {
     }
 
     /**
-     * Specify the z plane that should be visualized. This will hide all other
+     * Specify the plane that should be visualized. This will hide all other
      * layers that belong to this channel.
      * @param {number} z - The new currently active z plane.
      * @param {number} t - The new currently active time point.
@@ -119,7 +119,18 @@ class Channel implements Layer {
         if (z == this._currentZplane && t == this._currentTpoint) {
             return;
         }
-        console.log(this._layers)
+        // TODO: Preload tiles for other z-resolutions or time points
+        // if (update == 'z') {
+        //     for (var key in this._layers) {
+        //         var currentZ = this._getZ(key);
+        //         this._layers[currentZ + '-' + t].preload = true;
+        //     }
+        // } else {
+        //     for (var key in this._layers) {
+        //         var currentT = this._getT(key);
+        //         this._layers[z + '-' + currentT].preload = true;
+        //     }
+        // }
         var prevLayer = this._layers[this._currentZplane + '-' + this._currentTpoint];
         var nextLayer = this._layers[z + '-' + t];
         if (this._visible && prevLayer !== undefined) {
@@ -235,18 +246,16 @@ class Channel implements Layer {
      */
     get maxT(): number {
         return Math.max.apply(this, _.keys(this._layers).map(this._getT));
-        // return Math.max.apply(this, _.keys(this._layers));
     }
 
     /**
-     * @property {number} minT - The minimum z plane to which this channel can
-     * be visualized. Setting the value below this value has to effect.
+     * @property {number} minT - The minimum tim point plane to which this
+     * channel can be visualized. Setting the value below this value has to effect.
      * Normally this value is set to 0.
      * @default 50
      */
     get minT(): number {
         return Math.min.apply(this, _.keys(this._layers).map(this._getT));
-        // return Math.min.apply(this, _.keys(this._layers));
     }
 
     /**
@@ -255,7 +264,6 @@ class Channel implements Layer {
      */
     get maxZ(): number {
         return Math.max.apply(this, _.keys(this._layers).map(this._getZ));
-        // return Math.max.apply(this, _.keys(this._layers));
     }
 
     /**
@@ -266,6 +274,5 @@ class Channel implements Layer {
      */
     get minZ(): number {
         return Math.min.apply(this, _.keys(this._layers).map(this._getZ));
-        // return Math.min.apply(this, _.keys(this._layers));
     }
 }
