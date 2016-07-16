@@ -475,7 +475,7 @@ class MetadataHandler(object):
             if name not in required_fields:
                 logger.warning(
                     'regular expression field "%s" not provided, defaults to %s',
-                    str(defaults[name])
+                    (name, str(defaults[name]))
                 )
 
         for name in required_fields:

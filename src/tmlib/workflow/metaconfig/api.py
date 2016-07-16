@@ -298,55 +298,65 @@ class MetadataConfigurator(ClusterRoutines):
         batch: dict
             description of the *collect* job
         '''
-        t_index = 0
-        w_index = 0
-        c_index = 0
         with tm.utils.Session() as session:
-            for acq in session.query(tm.Acquisition).\
-                    join(tm.Plate).\
-                    join(tm.Experiment).\
-                    filter(tm.Experiment.id == self.experiment_id):
-                is_time_series_experiment = \
-                    acq.plate.experiment.plate_acquisition_mode == 'basic'
-                is_multiplexing_experiment = \
-                    acq.plate.experiment.plate_acquisition_mode == 'multiplexing'
-                df = pd.DataFrame(
-                    session.query(
-                        tm.ImageFileMapping.tpoint,
-                        tm.ImageFileMapping.wavelength,
-                        tm.ImageFileMapping.zplane,
-                        tm.ImageFileMapping.bit_depth
-                    ).
-                    filter(tm.ImageFileMapping.acquisition_id == acq.id).
-                    all()
-                )
-                tpoints = np.unique(df.tpoint)
-                wavelengths = np.unique(df.wavelength)
-                zplanes = np.unique(df.zplane)
-                for t in tpoints:
-                    cycle = session.get_or_create(
-                        tm.Cycle,
-                        index=c_index, tpoint=t_index, plate_id=acq.plate.id
+            # We need to do this per plate to ensure correct indices
+            # TODO: check plates have similar channels, etc
+            plates = session.query(tm.Plate).\
+                filter_by(experiment_id=self.experiment_id)
+            for plt in plates:
+                t_index = 0
+                w_index = 0
+                c_index = 0
+                acquisitions = session.query(tm.Acquisition).\
+                    filter_by(plate_id=plt.id)
+                for acq in acquisitions:
+                    is_time_series_experiment = \
+                        acq.plate.experiment.plate_acquisition_mode == 'basic'
+                    is_multiplexing_experiment = \
+                        acq.plate.experiment.plate_acquisition_mode == 'multiplexing'
+                    df = pd.DataFrame(
+                        session.query(
+                            tm.ImageFileMapping.tpoint,
+                            tm.ImageFileMapping.wavelength,
+                            tm.ImageFileMapping.zplane,
+                            tm.ImageFileMapping.bit_depth
+                        ).
+                        filter(tm.ImageFileMapping.acquisition_id == acq.id).
+                        all()
                     )
-
-                    for w in wavelengths:
-                        if is_multiplexing_experiment:
-                            name = 'cycle-%d_wavelength-%s' % (c_index, w)
-                        else:
-                            name = 'wavelength-%s' % w
-                        channel = session.get_or_create(
-                            tm.Channel,
-                            name=name, index=w_index, wavelength=w,
-                            bit_depth=16,
-                            experiment_id=acq.plate.experiment_id
+                    tpoints = np.unique(df.tpoint)
+                    wavelengths = np.unique(df.wavelength)
+                    bit_depth = np.unique(df.bit_depth)
+                    if len(bit_depth) == 1:
+                        bit_depth = bit_depth[0]
+                    else:
+                        raise MetadataError(
+                            'Bit depth must be the same across experiment.'
+                        )
+                    for t in tpoints:
+                        cycle = session.get_or_create(
+                            tm.Cycle,
+                            index=c_index, tpoint=t_index, plate_id=acq.plate.id
                         )
 
-                        for z in zplanes:
+                        for w in wavelengths:
+                            w_index = np.where(wavelengths == w)[0][0]
+                            if is_multiplexing_experiment:
+                                name = 'cycle-%d_wavelength-%s' % (c_index, w)
+                            else:
+                                name = 'wavelength-%s' % w
+                            channel = session.get_or_create(
+                                tm.Channel,
+                                name=name, index=w_index, wavelength=w,
+                                bit_depth=bit_depth,
+                                experiment_id=acq.plate.experiment_id
+                            )
+
                             image_file_mappings = session.query(
                                 tm.ImageFileMapping
                                 ).\
                                 filter_by(
-                                    tpoint=t, zplane=z, wavelength=w,
+                                    tpoint=t, wavelength=w,
                                     acquisition_id=acq.id
                                 )
                             for ifm in image_file_mappings:
@@ -354,10 +364,7 @@ class MetadataConfigurator(ClusterRoutines):
                                 ifm.cycle_id = cycle.id
                                 ifm.channel_id = channel.id
 
-                        w_index += 1
+                        if is_time_series_experiment:
+                            t_index += 1
 
-                    if is_time_series_experiment:
-                        t_index += 1
-
-                    c_index += 1
-
+                        c_index += 1

@@ -46,20 +46,14 @@ def map_logging_verbosity(verbosity):
     return VERBOSITY_TO_LEVELS.get(verbosity, logging.NOTSET)
 
 
-def configure_logging(level):
-    '''
-    Configure the root logger for command line applications.
+def configure_logging():
+    '''Configures the root logger for command line applications.
 
     Two stream handlers will be added to the logger:
         * "out" that will direct INFO & DEBUG messages to the standard output
         stream
         * "err" that will direct WARN, WARNING, ERROR, & CRITICAL messages to
         the standard error stream
-
-    Parameters
-    ----------
-    level: int
-        logging level verbosity
 
     Note
     ----

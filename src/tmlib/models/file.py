@@ -16,9 +16,9 @@ from tmlib.metadata import ChannelImageMetadata
 from tmlib.metadata import PyramidTileMetadata
 from tmlib.metadata import IllumstatsImageMetadata
 from tmlib.readers import DatasetReader
-from tmlib.readers import PixelsReader
+from tmlib.readers import ImageReader
 from tmlib.writers import DatasetWriter
-from tmlib.writers import PixelsWriter
+from tmlib.writers import ImageWriter
 from tmlib.models import File, DateMixIn
 from tmlib.models.status import FileUploadStatus
 from tmlib.models.utils import remove_location_upon_delete
@@ -494,7 +494,7 @@ class ProbabilityImageFile(File, DateMixIn):
         '''
         # TODO
         logger.debug('get data from probability image file: %s', self.name)
-        with PixelsReader(self.location) as f:
+        with ImageReader(self.location) as f:
             pixels = f.read()
         # metadata = ProbabilityImageMetadata(
         #     name=self.name,
@@ -516,7 +516,7 @@ class ProbabilityImageFile(File, DateMixIn):
             data that should be stored in the image file
         '''
         logger.debug('put data to probability image file: %s', self.name)
-        with PixelsWriter(self.location) as f:
+        with ImageWriter(self.location) as f:
             f.write(image.array)
 
     @property
@@ -619,7 +619,7 @@ class PyramidTileFile(File):
             tile stored in the file
         '''
         logger.debug('get data from pyramid tile file: %s', self.name)
-        with PixelsReader(self.location) as f:
+        with ImageReader(self.location) as f:
             pixels = f.read(dtype=np.uint8)
         metadata = PyramidTileMetadata(
             name=self.name,
@@ -641,7 +641,7 @@ class PyramidTileFile(File):
             pixels data that should be stored in the file
         '''
         logger.debug('put data to pyramid tile file: %s', self.name)
-        with PixelsWriter(self.location) as f:
+        with ImageWriter(self.location) as f:
             f.write(image.array)
 
     @property

@@ -91,14 +91,18 @@ class CellvoyagerMetadataReader(MetadataReader):
         ValueError
             when `microscope_metadata_files` doesn't have length two
         '''
-        if len(microscope_metadata_files) != 2:
-            raise ValueError('Expected two microscope metadata files.')
+        metadata = bioformats.OMEXML(XML_DECLARATION)
+        if len(microscope_metadata_files) == 0:
+            logger.warn('no microscope metadata files found')
+            return metadata
+        elif len(microscope_metadata_files) != 2:
+            logger.warn('expected two microscope metadata files')
+            return metadata
         for f in microscope_metadata_files:
             if f.endswith('mlf'):
                 mlf_filename = f
             elif f.endswith('mrf'):
                 mrf_filename = f
-        metadata = bioformats.OMEXML(XML_DECLARATION)
         # Obtain the positional information for each image acquisition site
         # from the ".mlf" file:
         mlf_tree = etree.parse(mlf_filename)

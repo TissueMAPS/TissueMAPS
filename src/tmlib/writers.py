@@ -154,7 +154,7 @@ class YamlWriter(Writer):
         )
 
 
-class PixelsWriter(Writer):
+class ImageWriter(Writer):
 
     '''Class for writing :py:class:`numpy.ndarray` objects to image files
     using the `OpenCV <http://docs.opencv.org>`_ library.
@@ -162,7 +162,7 @@ class PixelsWriter(Writer):
 
     @same_docstring_as(Writer.__init__)
     def __init__(self, filename):
-        super(PixelsWriter, self).__init__(filename)
+        super(ImageWriter, self).__init__(filename)
 
     def write(self, data):
         '''Writes pixels array data to image file.
@@ -175,16 +175,20 @@ class PixelsWriter(Writer):
         Parameters
         ----------
         data: numpy.ndarray
-            pixels that should be saved
+            2D pixels plane that should be saved
 
         Raises
         ------
         TypeError
             when `data` is not of type numpy.ndarray
+        ValueError
+            when `data` has more than 2 dimensions
         '''
         logger.debug('write data to file: %s' % self.filename)
         if not isinstance(data, np.ndarray):
             raise TypeError('Data must have type numpy.ndarray.')
+        if data.ndim > 2:
+            raise ValueError('Only 2D arrays are supported.')
         binary = cv2.imencode(os.path.splitext(self.filename)[1], data)[1]
         self._stream.write(binary)
 

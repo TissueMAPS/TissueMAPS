@@ -7,6 +7,8 @@ import collections
 import tmlib.models as tm
 from tmlib.utils import notimplemented
 from tmlib.readers import BFImageReader
+from tmlib.readers import ImageReader
+from tmlib.readers import JavaBridge
 from tmlib.image import ChannelImage
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow import register_api
@@ -109,49 +111,67 @@ class ImageExtractor(ClusterRoutines):
         batch: dict
             job description
         '''
-        with BFImageReader() as reader:
-            file_mapping_ids = batch['image_file_mapping_ids']
-            for i, fid in enumerate(file_mapping_ids):
-                filenames = batch['inputs']['microscope_image_files'][i]
-                with tm.utils.Session() as session:
-                    fmapping = session.query(tm.ImageFileMapping).\
-                        get(fid)
-                    planes = list()
-                    for j, f in enumerate(filenames):
-                        logger.info(
-                            'extract image from file: %s', os.path.basename(f)
-                        )
-                        plane_ix = fmapping.map['planes'][j]
-                        series_ix = fmapping.map['series'][j]
-                        planes.append(
-                            reader.read_subset(
-                                f, plane=plane_ix, series=series_ix
+        file_mapping_ids = batch['image_file_mapping_ids']
+        with tm.utils.Session() as session:
+            fmappings = session.query(tm.ImageFileMapping.map).\
+                filter(tm.ImageFileMapping.id.in_(file_mapping_ids)).\
+                all()[0]
+            series = np.array([m['series'] for m in fmappings]).flatten()
+            planes = np.array([m['planes'] for m in fmappings]).flatten()
+            if len(np.unique(series)) > 1 or len(np.unique(planes)) > 1:
+                # Let's not use Java in case we don't have to!
+                logger.debug('use BioFormats image reader')
+                Reader = BFImageReader
+                subset = True
+            else:
+                logger.debug('use standard image reader')
+                Reader = ImageReader
+                subset = False
+            with JavaBridge(active=subset):
+                for i, fid in enumerate(file_mapping_ids):
+                    filenames = batch['inputs']['microscope_image_files'][i]
+                    with tm.utils.Session() as session:
+                        fmapping = session.query(tm.ImageFileMapping).get(fid)
+                        planes = list()
+                        for j, f in enumerate(filenames):
+                            logger.info(
+                                'extract image from file: %s',
+                                os.path.basename(f)
                             )
-                        )
+                            plane_ix = fmapping.map['planes'][j]
+                            series_ix = fmapping.map['series'][j]
+                            with Reader(f) as reader:
+                                if subset:
+                                    p = reader.read_subset(
+                                        plane=plane_ix, series=series_ix
+                                    )
+                                else:
+                                    p = reader.read()
+                            planes.append(p)
 
-                    dtype = planes[0].dtype
-                    dims = planes[0].shape
-                    stack = np.zeros(
-                        (len(planes), dims[0], dims[1]), dtype=dtype
-                    )
-                    # If intensity projection should be performed there will
-                    # be multiple planes per output filename and the stack will
-                    # be multi-dimensional, i.e. stack.shape[0] > 1
-                    for z in xrange(len(planes)):
-                        stack[z, :, :] = planes[z]
-                    img = ChannelImage(np.max(stack, axis=0))
-                    # Write plane (2D single-channel image) to file
-                    image_file = session.get_or_create(
-                        tm.ChannelImageFile,
-                        tpoint=fmapping.tpoint,
-                        site_id=fmapping.site_id, cycle_id=fmapping.cycle_id,
-                        channel_id=fmapping.channel_id
-                    )
-                    logger.info(
-                        'store pixels plane #%d in image file: %s',
-                        fmapping.zplane, image_file.name
-                    )
-                    image_file.put(img, z=fmapping.zplane)
+                        dtype = planes[0].dtype
+                        dims = planes[0].shape
+                        stack = np.zeros(
+                            (len(planes), dims[0], dims[1]), dtype=dtype
+                        )
+                        # If intensity projection should be performed there will
+                        # be multiple planes per output filename and the stack will
+                        # be multi-dimensional, i.e. stack.shape[0] > 1
+                        for z in xrange(len(planes)):
+                            stack[z, :, :] = planes[z]
+                        img = ChannelImage(np.max(stack, axis=0))
+                        # Write plane (2D single-channel image) to file
+                        image_file = session.get_or_create(
+                            tm.ChannelImageFile,
+                            tpoint=fmapping.tpoint,
+                            site_id=fmapping.site_id, cycle_id=fmapping.cycle_id,
+                            channel_id=fmapping.channel_id
+                        )
+                        logger.info(
+                            'store pixels plane #%d in image file: %s',
+                            fmapping.zplane, image_file.name
+                        )
+                        image_file.put(img, z=fmapping.zplane)
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class

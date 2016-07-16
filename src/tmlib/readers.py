@@ -506,6 +506,31 @@ class DatasetReader(Reader):
         return dtype
 
 
+class JavaBridge(object):
+
+    '''Class for using a Java Virtual Machine for `javabridge`.
+
+    Warning
+    -------
+    Once the JVM is killed it cannot be started again within the same Python
+    session.
+    '''
+
+    def __init__(self, active=True):
+        self.active = active
+
+    def __enter__(self):
+        # NOTE: updated "loci_tools.jar" file to latest schema:
+        # http://downloads.openmicroscopy.org/bio-formats/5.1.3
+        if self.active:
+            javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
+        return self
+
+    def __exit__(self, except_type, except_value, except_trace):
+        if self.active:
+            javabridge.kill_vm()
+
+
 class BFImageReader(object):
 
     '''Class for reading data from vendor-specific image file formats as
@@ -518,54 +543,39 @@ class BFImageReader(object):
     Requires a running Java Virtual Machine (VM). This is handled automatically
     via `javabridge <http://pythonhosted.org/javabridge/start_kill.html>`_.
 
-    Warning
-    -------
-    Once the VM is killed it cannot be started again within the same Python
-    session.
+    Note
+    ----
+    Requires a running Java Virtual Machine.
 
-    Examples
+    See also
     --------
-    >>> filename = '/path/to/image/file'
-    >>> with BFImageReader() as reader:
-    ...     img = reader.read(filename)
-    >>> type(img)
-    numpy.ndarray
+    :py:class:`tmlib.readers.JavaBridge`
     '''
+    # TODO: reimplement the whole BioFormats approach using Py4J
+    # I don't like the way python-bioformats is implemented!
 
     @same_docstring_as(Reader.__init__)
-    def __init__(self, directory=None):
-        self.directory = directory
+    def __init__(self, filename):
+        self.filename = filename
 
     def __enter__(self):
-        # NOTE: updated "loci_tools.jar" file to latest schema:
-        # http://downloads.openmicroscopy.org/bio-formats/5.1.3
-        javabridge.start_vm(class_path=bioformats.JARS, run_headless=True)
         return self
 
     def __exit__(self, except_type, except_value, except_trace):
-        javabridge.kill_vm()
         if except_type is javabridge.JavaException:
             raise NotSupportedError('File format is not supported.')
         if except_value:
-            sys.stdout.write('The following error occurred:\n%s'
-                             % str(except_value))
+            sys.stdout.write(
+                'The following error occurred:\n%s' % str(except_value)
+            )
             for tb in traceback.format_tb(except_trace):
                 sys.stdout.write(tb)
 
-    def read(self, filename):
+    def read(self):
         '''Reads an image from a file.
 
         For details on reading images via Bio-Format from Python, see
         `load_image() <http://pythonhosted.org/python-bioformats/#reading-images>`_.
-
-        Unfortunately, the documentation is very sparse and sometimes wrong.
-        If you need additional information, refer to the relevant
-        `source code <https://github.com/CellProfiler/python-bioformats/blob/master/bioformats/formatreader.py>`_.
-
-        Parameters
-        ----------
-        filename: str
-            absolute path to the image file
 
         Raises
         ------
@@ -579,21 +589,14 @@ class BFImageReader(object):
         numpy.ndarray
             pixel array
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        if not os.path.exists(filename):
-            raise OSError('Image file does not exist: %s' % filename)
-        logger.debug('read image pixels from file: %s', filename)
-        image = bioformats.load_image(filename, rescale=False)
-        return image
+        logger.debug('read image pixels from file: %s', self.filename)
+        return bioformats.load_image(self.filename, rescale=False)
 
-    def read_subset(self, filename, series=None, plane=None):
+    def read_subset(self, series=None, plane=None):
         '''Reads a subset of images from a file.
 
         Parameters
         ----------
-        filename: str
-            absolute path to the image file
         series: int, optional
             zero-based series index
             (only relevant if the file contains more than one *Image* elements)
@@ -614,17 +617,13 @@ class BFImageReader(object):
         NotSupportedError
             when the file format is not supported by the reader
         '''
-        if self.directory:
-            filename = os.path.join(self.directory, filename)
-        logger.debug('read data from file: %s' % filename)
-        if not os.path.exists(filename):
-            raise OSError('Image file does not exist: %s' % filename)
-        image = bioformats.load_image(filename, rescale=False,
-                                      series=series, index=plane)
-        return image
+        logger.debug('read data from file: %s' % self.filename)
+        return bioformats.load_image(
+            self.filename, rescale=False, series=series, index=plane
+        )
 
 
-class PixelsReader(Reader):
+class ImageReader(Reader):
 
     '''Class for reading pixel data from standard image file formats as
     :py:class:`numpy.ndarray` objects.
@@ -632,7 +631,7 @@ class PixelsReader(Reader):
 
     @same_docstring_as(Reader.__init__)
     def __init__(self, filename):
-        super(PixelsReader, self).__init__(filename)
+        super(ImageReader, self).__init__(filename)
 
     def read(self, dtype=np.uint16):
         '''Reads pixels data from image file.
@@ -650,4 +649,3 @@ class PixelsReader(Reader):
         logger.debug('read from file: %s', self.filename)
         arr = np.fromstring(self._stream.read(), dtype)
         return cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
-        # return cv2.imread(filename, cv2.IMREAD_UNCHANGED)

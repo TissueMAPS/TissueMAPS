@@ -220,7 +220,7 @@ class CommandLineInterface(SubmissionManager):
         sys.setdefaultencoding('utf-8')
         arguments = cls._parser.parse_args()
 
-        configure_logging(logging.CRITICAL)
+        configure_logging()
         logger = logging.getLogger('tmlib')
         level = map_logging_verbosity(arguments.verbosity)
         logger.setLevel(level)
