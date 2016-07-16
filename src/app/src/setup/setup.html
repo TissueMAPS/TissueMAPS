@@ -4,7 +4,7 @@
     <div class="row header">
 
       <div class="col-md-9">
-          <h3>Workflow</h3>
+        <h3>{{setupCtrl.experiment.name}}</h3>
       </div>
 
       <div class="col-md-3">
@@ -32,7 +32,7 @@
             ng-class="{active: setupCtrl.isInStage(stage)}"
             ng-click="setupCtrl.goToStage(stage)">
             <i class="fa fa-check-circle" aria-hidden="true"
-               ng-show="!stage.status.failed && stage.status.done" style="color: green;">
+               ng-show="!stage.status.failed" style="color: green;">
             </i>
             <i class="fa fa-exclamation-circle" aria-hidden="true"
                ng-show="stage.status.failed" style="color: red;">
