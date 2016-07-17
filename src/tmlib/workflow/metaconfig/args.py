@@ -8,10 +8,6 @@ from tmlib.workflow import register_submission_args
 @register_batch_args('metaconfig')
 class MetaconfigBatchArguments(BatchArguments):
 
-    keep_zplanes = Argument(
-        type=bool, default=False, help='keep individual focal planes', flag='z'
-    )
-
     regex = Argument(
         type=str,
         help='''named regular expression that defines group names

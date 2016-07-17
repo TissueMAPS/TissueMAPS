@@ -440,8 +440,6 @@ class ChannelImage(Image):
         super(ChannelImage, self).__init__(array, metadata)
         if not self.is_uint:
             raise TypeError('Image must have unsigned integer type.')
-        if self.dimensions[2] != 1:
-            raise ValueError('Image must be grayscale.')
 
     @classmethod
     def create_as_background(cls, y_dimension, x_dimension, z_dimension,
@@ -520,6 +518,7 @@ class ChannelImage(Image):
         '''
         if self.is_uint16:
             arr = image_utils.map_to_uint8(self._array, lower, upper)
+            self.metadata.is_rescaled = True
             return self.__class__(arr, self.metadata)
         elif self.is_uint8:
             return self

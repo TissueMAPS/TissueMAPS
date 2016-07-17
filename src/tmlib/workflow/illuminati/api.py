@@ -405,48 +405,57 @@ class PyramidBuilder(ClusterRoutines):
         with tm.utils.Session() as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info(
-                'processing layer: channel %d', layer.channel.index
+                'processing layer: channel=%d, zplane=%d, tpoint=%d',
+                layer.channel.index, layer.zplane, layer.tpoint
             )
             logger.info(
                 'creating non-empty tiles at maximum zoom level %d',
                 batch['level']
             )
 
-            try:
-                illumstats_file = session.query(tm.IllumstatsFile).\
-                    filter_by(
-                        channel_id=layer.channel_id,
-                        cycle_id=layer.channel.image_files[0].cycle_id
-                    ).\
-                    one()
-            except NoResultsFound:
-                raise WorkflowError(
-                    'No illumination statistics file found for channel %d'
-                    % layer.channel_id
-                )
-            stats = illumstats_file.get()
+            if ((batch['clip'] and batch['clip_value'] is None) or
+                    batch['illumcorr']):
+                try:
+                    illumstats_file = session.query(tm.IllumstatsFile).\
+                        filter_by(
+                            channel_id=layer.channel_id,
+                            cycle_id=layer.channel.image_files[0].cycle_id
+                        ).\
+                        one()
+                except NoResultFound:
+                    raise WorkflowError(
+                        'No illumination statistics file found for channel %d'
+                        % layer.channel_id
+                    )
+                stats = illumstats_file.get()
+            else:
+                stats = None
 
             if batch['clip']:
                 logger.info('clip intensity values')
                 if batch['clip_value'] is None:
-                    # TODO: sanity check; if pixel values are too low for the
-                    # channel, the channel is probably "empty"
-                    # (for example because the staining didn't work)
-                    # In this case we want to prevent that too extreme
-                    # rescaling is applied, which wouldn't appear nice.
                     clip_above = stats.get_closest_percentile(
                         batch['clip_percent']
                     )
+                    # If pixel values are too low for the channel,
+                    # the channel is probably "empty"
+                    # (for example because the staining didn't work).
+                    # In this case we want to prevent that too extreme
+                    # rescaling is applied, which would look shitty.
+                    # The choice of the threshold level is totally arbitrary.
                     if clip_above < 200:
                         clip_above = 1000
                     logger.info('using default clip value: %d', clip_above)
                 else:
                     clip_above = batch['clip_value']
                     logger.info('using provided clip value: %d', clip_above)
-                clip_below = stats.get_closest_percentile(0.001)
+                if stats is not None:
+                    clip_below = stats.get_closest_percentile(0.001)
+                else:
+                    clip_below = 0
             else:
-                clip_above = stats.get_closest_percentile(100)
-                clip_below = stats.get_closest_percentile(0)
+                clip_above = layer.channel.bit_depth - 1
+                clip_below = 0
 
             layer.max_intensity = clip_above
             layer.min_intensity = clip_below
@@ -576,9 +585,6 @@ class PyramidBuilder(ClusterRoutines):
                                 % tile_file.name
                             )
 
-                        # from matplotlib import pyplot as plt
-                        # plt.imshow(tile.array); plt.show()
-
                     tile_file.put(tile)
 
     def _create_empty_maxzoom_level_tiles(self, batch):
@@ -587,7 +593,8 @@ class PyramidBuilder(ClusterRoutines):
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
 
             logger.info(
-                'processing layer: channel %d', layer.channel.index
+                'processing layer: channel=%d, zplane=%d, tpoint=%d',
+                layer.channel.index, layer.zplane, layer.tpoint
             )
             logger.info(
                 'creating empty tiles at maximum zoom level %d', batch['level']

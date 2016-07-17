@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import h5py
 import cv2
 import numpy as np
@@ -388,7 +389,7 @@ class DatasetWriter(Writer):
 
     def write_subset(self, path, data,
                      index=None, row_index=None, column_index=None):
-        '''Write data to a subset of an existing dataset.
+        '''Writes data to a subset of an existing dataset.
 
         Parameters
         ----------
@@ -518,6 +519,75 @@ class DatasetWriter(Writer):
             else:
                 dset[index] = data
 
+    @staticmethod
+    def _is_dataset(element):
+        if isinstance(element.id, h5py.h5d.DatasetID):
+            return True
+        else:
+            return False
+
+    def list_datasets(self, path='/', pattern='.*'):
+        '''Lists datasets within a given group.
+
+        Parameters
+        ----------
+        path: str, optional
+            absolute path to a group in the file (default: ``"/"``)
+        pattern: str, optional
+            regular expression pattern to filter datasets (default: ``".*"``)
+
+        Returns
+        -------
+        List[str]
+            names of the datasets in `path`
+
+        Raises
+        ------
+        KeyError
+            when `path` does not exist
+        '''
+        try:
+            group = self._stream[path]
+        except KeyError:
+            raise KeyError('Group does not exist: %s' % path)
+        names = list()
+        r = re.compile(pattern)
+        for name, value in group.iteritems():
+            if self._is_dataset(value) and r.search(name):
+                names.append(name)
+        return names
+
+    def list_groups(self, path, pattern='.*'):
+        '''Lists groups within a given group.
+
+        Parameters
+        ----------
+        path: str
+            absolute path to a group in the file
+        pattern: str, optional
+            regular expression pattern to filter groups (default: ``".*"``)
+
+        Returns
+        -------
+        List[str]
+            names of the groups in `path`
+
+        Raises
+        ------
+        KeyError
+            when `path` does not exist
+        '''
+        try:
+            group = self._stream[path]
+        except KeyError:
+            raise KeyError('Group does not exist: %s' % path)
+        names = list()
+        r = re.compile(pattern)
+        for name, value in group.iteritems():
+            if not self._is_dataset(value) and r.search(name):
+                names.append(name)
+        return names
+
     def _write_vlen(self, path, data):
         data_type = np.unique([d.dtype for d in data])
         if len(data_type) == 0:
@@ -530,7 +600,7 @@ class DatasetWriter(Writer):
         return dset
 
     def create(self, path, dims, dtype, max_dims=None):
-        '''Create a dataset with a given size and data type without actually
+        '''Creates a dataset with a given size and data type without actually
         writing data to it.
 
         Parameters
@@ -564,7 +634,7 @@ class DatasetWriter(Writer):
                         path, shape=dims, dtype=dtype, maxshape=max_dims)
 
     def append(self, path, data):
-        '''Append data to an existing one-dimensional dataset.
+        '''Appends data to an existing one-dimensional dataset.
         The dataset needs to be created first using the
         :py:func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the vertical dimension needs to be
@@ -610,7 +680,7 @@ class DatasetWriter(Writer):
         # dset[start_index:] = data
 
     def vstack(self, path, data):
-        '''Vertically append data to an existing multi-dimensional dataset.
+        '''Vertically appends data to an existing multi-dimensional dataset.
         The dataset needs to be created first using the
         :py:func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the vertical dimension needs to be
@@ -668,7 +738,7 @@ class DatasetWriter(Writer):
         dset[start_index:, :] = data
 
     def hstack(self, path, data):
-        '''Horizontally append data to an existing multi-dimensional dataset.
+        '''Horizontally appends data to an existing multi-dimensional dataset.
         The dataset needs to be created first using the
         :py:func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the horizontal dimension needs to be
@@ -728,7 +798,7 @@ class DatasetWriter(Writer):
         dset[:, start_index:] = data
 
     def set_attribute(self, path, name, data):
-        '''Attach an attribute to a dataset.
+        '''Attachs an attribute to a dataset.
 
         Parameters
         ----------
@@ -749,7 +819,7 @@ class DatasetWriter(Writer):
         self._stream[path].attrs.create(name, data)
 
     def create_group(self, path):
-        '''Create a group.
+        '''Creates a group.
 
         Parameters
         ----------

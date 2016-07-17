@@ -323,14 +323,14 @@ class ChannelImageFile(File, DateMixIn):
         )
         if z is not None:
             with DatasetReader(self.location) as f:
-                array = f.read(str(z))
+                array = f.read('z_%d' % z)
             metadata.zplane = z
         else:
             pixels = list()
             with DatasetReader(self.location) as f:
-                zplanes = f.list_datasets('/', pattern='\d+')
+                zplanes = f.list_datasets(pattern='z_\d+')
                 for z in zplanes:
-                    pixels.append(f.read(z))
+                    pixels.append(f.read('z_%d' % z))
             array = np.dstack(pixels)
         if self.site.intersection is not None:
             metadata.upper_overhang = self.site.intersection.upper_overhang
@@ -365,12 +365,12 @@ class ChannelImageFile(File, DateMixIn):
             if image.dimensions[2] > 1:
                 raise ValueError('Image must be a 2D pixels plane.')
             with DatasetWriter(self.location) as f:
-                f.write(str(z), image.array)
-            self.n_planes += 1
+                f.write('z_%d' % z, image.array)
+                self.n_planes = len(f.list_datasets(pattern='z_\d+'))
         else:
             with DatasetWriter(self.location, truncate=True) as f:
-                for index, array in image.iter_planes():
-                    f.write(str(index), array)
+                for z, plane in image.iter_planes():
+                    f.write('z_%d' % z, plane.array)
             self.n_planes = image.dimensions[2]
 
     @hybrid_property

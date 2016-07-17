@@ -97,13 +97,14 @@ class ImageExtractor(ClusterRoutines):
                                     t=fmap.tpoint,
                                     w=fmap.site.well.name,
                                     y=fmap.site.y, x=fmap.site.x,
-                                    c=fmap.wavelength
+                                    c=fmap.channel.index
                                 )
                             )
                             for fmap in fmappings
                         ]
                     },
-                    'image_file_mapping_ids': ids
+                    'image_file_mapping_ids': ids,
+                    'mip': args.mip
                 })
 
             job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
@@ -143,7 +144,7 @@ class ImageExtractor(ClusterRoutines):
                         planes = list()
                         for j, f in enumerate(filenames):
                             logger.info(
-                                'extract image from file: %s',
+                                'extract pixel planes from file: %s',
                                 os.path.basename(f)
                             )
                             plane_ix = fmapping.map['planes'][j]
@@ -159,27 +160,21 @@ class ImageExtractor(ClusterRoutines):
 
                         dtype = planes[0].dtype
                         dims = planes[0].shape
-                        stack = np.zeros(
-                            (len(planes), dims[0], dims[1]), dtype=dtype
-                        )
-                        # If intensity projection should be performed there will
-                        # be multiple planes per output filename and the stack will
-                        # be multi-dimensional, i.e. stack.shape[0] > 1
-                        for z in xrange(len(planes)):
-                            stack[z, :, :] = planes[z]
-                        img = ChannelImage(np.max(stack, axis=0))
-                        # Write plane (2D single-channel image) to file
+                        stack = np.dstack(planes)
+                        if batch['mip']:
+                            logger.info('perform intensity projection')
+                            img = ChannelImage(np.max(stack, axis=2))
+                        else:
+                            img = ChannelImage(stack)
                         image_file = session.get_or_create(
                             tm.ChannelImageFile,
                             tpoint=fmapping.tpoint,
-                            site_id=fmapping.site_id, cycle_id=fmapping.cycle_id,
+                            site_id=fmapping.site_id,
+                            cycle_id=fmapping.cycle_id,
                             channel_id=fmapping.channel_id
                         )
-                        logger.info(
-                            'store pixels plane #%d in image file: %s',
-                            fmapping.zplane, image_file.name
-                        )
-                        image_file.put(img, z=fmapping.zplane)
+                        logger.info('store image file: %s', image_file.name)
+                        image_file.put(img)
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class

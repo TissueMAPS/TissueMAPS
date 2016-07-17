@@ -178,10 +178,6 @@ class ImageFileMapping(Model):
     ----------
     tpoint: int
         zero-based time point index in the time series
-    zplane: int
-        zero-based z-plane index of the focal plane within the three
-        dimensional stack (projected images have only a single z-plane
-        with index zero)
     wavelength: str
         name of the wavelength
     bit_depth: int
@@ -211,12 +207,11 @@ class ImageFileMapping(Model):
 
     __table_args__ = (
         UniqueConstraint(
-            'tpoint', 'zplane', 'site_id', 'cycle_id', 'wavelength'
+            'tpoint', 'site_id', 'cycle_id', 'wavelength'
         ),
     )
 
     tpoint = Column(Integer, index=True)
-    zplane = Column(Integer, index=True)
     bit_depth = Column(Integer)
     wavelength = Column(String, index=True)
     map = Column(JSONB)
@@ -255,17 +250,13 @@ class ImageFileMapping(Model):
         backref=backref('image_file_mappings', cascade='all, delete-orphan')
     )
 
-    def __init__(self, tpoint, zplane, wavelength, bit_depth, map, site_id,
+    def __init__(self, tpoint, wavelength, bit_depth, map, site_id,
                  acquisition_id, cycle_id=None, channel_id=None):
         '''
         Parameters
         ----------
         tpoint: int
             zero-based time point index in the time series
-        zplane: int
-            zero-based z-plane index of the focal plane within the three
-            dimensional stack (projected images have only a single z-plane
-            with index zero)
         wavelength: str
             name of the wavelength
         bit_depth: int
@@ -283,7 +274,6 @@ class ImageFileMapping(Model):
             ID of the parent channel (default: ``None``)
         '''
         self.tpoint = tpoint
-        self.zplane = zplane
         self.wavelength = wavelength
         self.bit_depth = bit_depth
         self.map = map

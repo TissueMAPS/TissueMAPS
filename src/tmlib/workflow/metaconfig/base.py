@@ -628,13 +628,10 @@ class MetadataHandler(object):
 
         return self.metadata
 
-    def reconfigure_ome_metadata_for_projection(self):
-        '''Reconfigures metadata in order to account for subsequent intensity
-        projection.
-        To this end, each z-stack (all focal planes acquired at
+    def group_metadata_per_zstack(self):
+        '''All focal planes belonging to one z-stack (i.e. that were acquired
         at different z resolutions but at the same microscope stage position,
-        at the "same" time point and in the same channel) is reduced to a
-        single 2D plane.
+        time point and channel) are grouped together.
 
         Returns
         -------
@@ -643,18 +640,17 @@ class MetadataHandler(object):
         '''
         md = self.metadata
 
-        logger.info('reconfigure metadata for intensity projection')
+        logger.info('group metadata per z-stack')
 
         # Remove all z-plane image entries except for the first
-        projected_md = md.drop_duplicates(subset=[
+        grouped_md = md.drop_duplicates(subset=[
             'well_name', 'well_position_x', 'well_position_y',
             'channel_name', 'tpoint'
         ]).copy()
-        projected_md.index = range(projected_md.shape[0])
-        # Update z-plane index for the projected image entries
-        projected_md.loc[:, 'zplane'] = 0
+        grouped_md.index = range(grouped_md.shape[0])
         # Names may no longer be accurate and will be updated separately
-        projected_md.loc[:, 'name'] = None
+        grouped_md.loc[:, 'name'] = None
+        # NOTE: z-planes will no only be tracked via the file mapping
 
         # Group metadata by focal planes (z-stacks)
         zstacks = md.groupby([
@@ -665,22 +661,24 @@ class MetadataHandler(object):
 
         # Map the locations of each plane with the original image files
         # in order to be able to perform the intensity projection later on
-        projected_file_mapper_list = list()
+        grouped_file_mapper_list = list()
         for i, indices in enumerate(sorted(zstacks.groups.values())):
             fm = ImageFileMapping()
             fm.files = list()
             fm.series = list()
             fm.planes = list()
+            fm.zlevels = list()
             for index in indices:
                 fm.ref_index = i  # new index
                 fm.files.extend(self._file_mapper_list[index].files)
                 fm.series.extend(self._file_mapper_list[index].series)
                 fm.planes.extend(self._file_mapper_list[index].planes)
-            projected_file_mapper_list.append(fm)
+                fm.zlevels.append(md.loc[index, 'zplane'])
+            grouped_file_mapper_list.append(fm)
 
         # Replace metadata and file mapper objects
-        self.metadata = projected_md
-        self._file_mapper_list = projected_file_mapper_list
+        self.metadata = grouped_md
+        self._file_mapper_list = grouped_file_mapper_list
 
         return self.metadata
 
@@ -777,7 +775,7 @@ class MetadataHandler(object):
 
         Returns
         -------
-        Dict[str, Dict[str, List[str]]]
+        Dict[int, Dict[str, List[str]]]
             a mapping of each plane to the corresponding microscope image files
             and the location within the files (*series* and *plane* index)
         '''
@@ -792,17 +790,12 @@ class MetadataHandler(object):
             # be stored in the same file. In case they wouldn't end up on the
             # same node, this would create problems with parallel file access.
             for i in xrange(md.shape[0]):
-                ref_index = self._file_mapper_list[i].ref_index
-                element = ImageFileMapping()
-                element.ref_index = ref_index
-                element.files = self._file_mapper_list[i].files
-                element.series = self._file_mapper_list[i].series
-                element.planes = self._file_mapper_list[i].planes
-                mapper[ref_index] = dict(element)
+                item = self._file_mapper_list[i]
+                mapper[item.ref_index] = item.as_dict()
         else:
             # In this case images files contain one or multiple planes
             for i, item in enumerate(self._file_mapper_list):
-                mapper[i] = dict(item)
+                mapper[i] = item.as_dict()
 
         return mapper
 

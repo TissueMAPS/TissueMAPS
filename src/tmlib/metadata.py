@@ -17,7 +17,7 @@ class ChannelImageMetadata(object):
     _SUPPORTED_KWARGS = {
         'zplane', 'x_shift', 'y_shift',
         'upper_overhang', 'lower_overhang', 'right_overhang', 'left_overhang',
-        'is_aligned', 'is_omitted', 'is_corrected'
+        'is_aligned', 'is_omitted', 'is_corrected', 'is_rescaled'
     }
 
     # @assert_type()
@@ -55,6 +55,7 @@ class ChannelImageMetadata(object):
         self.channel = channel
         self.cycle = cycle
         self.is_corrected = False
+        self.is_rescaled = False
         self.is_aligned = False
         self.is_omitted = False
         self.upper_overhang = 0
@@ -191,7 +192,7 @@ class ImageFileMapping(object):
     '''
 
     _SUPPORTED_ATTRS = {
-        'files', 'series', 'planes'
+        'files', 'series', 'planes', 'zlevels'
     }
 
     def __init__(self, **kwargs):
@@ -201,8 +202,8 @@ class ImageFileMapping(object):
         kwargs: dict, optional
             file mapping key-value pairs
         '''
-        if kwargs:
-            for key, value in kwargs.iteritems():
+        for key, value in kwargs.iteritems():
+            if key in self._SUPPORTED_ATTRS:
                 setattr(self, key, value)
 
     @property
@@ -249,6 +250,21 @@ class ImageFileMapping(object):
         self._planes = value
 
     @property
+    def zlevels(self):
+        '''int: zero-based position index of the required planes in the source
+        file
+        '''
+        return self._zlevels
+
+    @zlevels.setter
+    def zlevels(self, value):
+        if not isinstance(value, list):
+            raise TypeError('Attribute "zlevels" must have type list')
+        if not all([isinstance(v, int) for v in value]):
+            raise TypeError('Elements of "zlevels" must have type int')
+        self._zlevels = value
+
+    @property
     def ref_index(self):
         '''int: index of the image in the OMEXML *Series*'''
         return self._ref_index
@@ -259,28 +275,40 @@ class ImageFileMapping(object):
             raise TypeError('Attribute "ref_index" must have type int.')
         self._ref_index = value
 
-    def __iter__(self):
+    def as_dict(self):
         '''
         Returns
         -------
         dict
             key-value representation of the object
-            (only `_SUPPORTED_ATTRS` attributes)
 
         Examples
         --------
-        >>>obj = ImageFileMapping()
-        >>>obj.series = [0, 0]
-        >>>obj.planes = [0, 1]
-        >>>obj.files = ["a", "b"]
-        >>>dict(obj)
-        {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b']}
-        '''
-        for attr in dir(self):
-            if attr not in self._SUPPORTED_ATTRS:
-                continue
-            yield (attr, getattr(self, attr))
+        >>>ifm = ImageFileMapping()
+        >>>ifm.series = [0, 0]
+        >>>ifm.planes = [0, 1]
+        >>>ifm.files = ["a", "b"]
+        >>>ifm.zlevels = [0, 1]
+        >>>ifm.as_dict()
+        {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b'], 'zlevels': [0, 1]}
 
+        >>>ifm = ImageFileMapping(
+        ...    series=[0, 0],
+        ...    planes=[0, 1],
+        ...    files=["a", "b"],
+        ...    zlevels=[0, 1]
+        ...)
+        >>>ifm.as_dict()
+        {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b'], 'zlevels': [0, 1]}
+        '''
+        mapping = dict()
+        for attr in dir(self):
+            if attr in self._SUPPORTED_ATTRS:
+                mapping[attr] = getattr(self, attr)
+        return mapping
+
+    def __repr__(self):
+        return 'ImageFileMapping(ref_index=%r)' % self.ref_index
 
 class PyramidTileMetadata(object):
 

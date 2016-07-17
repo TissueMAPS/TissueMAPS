@@ -86,7 +86,6 @@ class MetadataConfigurator(ClusterRoutines):
                         f.id for f in acq.microscope_image_files
                     ],
                     'microscope_type': acq.plate.experiment.microscope_type,
-                    'keep_zplanes': args.keep_zplanes,
                     'regex': args.regex,
                     'acquisition_id': acq.id,
                     'stitch_major_axis': args.stitch_major_axis,
@@ -237,11 +236,7 @@ class MetadataConfigurator(ClusterRoutines):
                 stitch_dimensions=(batch['n_vertical'], batch['n_horizontal'])
             )
 
-        if not batch['keep_zplanes']:
-            logger.info('project focal planes to 2D')
-            mdhandler.reconfigure_ome_metadata_for_projection()
-        else:
-            logger.info('keep individual focal planes')
+        mdhandler.group_metadata_per_zstack()
 
         # Create consistent zero-based ids
         # (some microscopes use one-based indexing)
@@ -275,7 +270,7 @@ class MetadataConfigurator(ClusterRoutines):
                     for index, i in md.ix[s_index].iterrows():
                         session.get_or_create(
                             tm.ImageFileMapping,
-                            tpoint=i.tpoint, zplane=i.zplane,
+                            tpoint=i.tpoint,
                             site_id=site.id, map=fmap[index],
                             wavelength=i.channel_name,
                             bit_depth=i.bit_depth,
@@ -318,7 +313,6 @@ class MetadataConfigurator(ClusterRoutines):
                         session.query(
                             tm.ImageFileMapping.tpoint,
                             tm.ImageFileMapping.wavelength,
-                            tm.ImageFileMapping.zplane,
                             tm.ImageFileMapping.bit_depth
                         ).
                         filter(tm.ImageFileMapping.acquisition_id == acq.id).

@@ -255,7 +255,7 @@ class DatasetReader(Reader):
         return self
 
     def exists(self, path):
-        '''Check whether a `path` exists within the file.
+        '''Checks whether `path` exists within the file.
 
         Parameters
         ----------
@@ -287,13 +287,13 @@ class DatasetReader(Reader):
         else:
             return True
 
-    def list_datasets(self, path, pattern='.*'):
+    def list_datasets(self, path='/', pattern='.*'):
         '''Lists datasets within a given group.
 
         Parameters
         ----------
-        path: str
-            absolute path to a group in the file
+        path: str, optional
+            absolute path to a group in the file (default: ``"/"``)
         pattern: str, optional
             regular expression pattern to filter datasets (default: ``".*"``)
 
