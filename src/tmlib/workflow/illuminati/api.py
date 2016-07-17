@@ -454,7 +454,7 @@ class PyramidBuilder(ClusterRoutines):
                 else:
                     clip_below = 0
             else:
-                clip_above = layer.channel.bit_depth - 1
+                clip_above = 2**layer.channel.bit_depth - 1
                 clip_below = 0
 
             layer.max_intensity = clip_above
