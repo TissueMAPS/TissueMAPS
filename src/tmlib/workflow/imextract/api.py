@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import logging
 import collections
+from sqlalchemy import func
 
 import tmlib.models as tm
 from tmlib.utils import notimplemented
@@ -51,14 +52,27 @@ class ImageExtractor(ClusterRoutines):
         job_count = 0
         job_descriptions = collections.defaultdict(list)
         with tm.utils.Session() as session:
-            file_mappings = session.query(tm.ImageFileMapping).\
-                join(tm.Acquisition).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id).\
-                all()
-
-            batches = self._create_batches(file_mappings, args.batch_size)
+            # Group file mappings per site to ensure that all z-planes of
+            # one site end up on the same machine.
+            # They will be written into the same file and trying to access the
+            # same file from different machines will create problems with file
+            # locks.
+            file_mappings_per_site = dict(session.query(
+                    tm.ImageFileMapping.site_id,
+                    func.array_agg(tm.ImageFileMapping.id)
+                ).\
+                join(tm.Channel).\
+                filter(tm.Channel.experiment_id == self.experiment_id).\
+                group_by(tm.ImageFileMapping.site_id).\
+                all())
+            batches = self._create_batches(
+                file_mappings_per_site.values(), args.batch_size
+            )
             for batch in batches:
+                ids = list(np.array(batch).flat)
+                fmappings = session.query(tm.ImageFileMapping).\
+                    filter(tm.ImageFileMapping.id.in_(ids)).\
+                    all()
                 job_count += 1
                 job_descriptions['run'].append({
                     'id': job_count,
@@ -66,45 +80,39 @@ class ImageExtractor(ClusterRoutines):
                         'microscope_image_files': [
                             [
                                 os.path.join(
-                                    fmapping.acquisition.
+                                    fmap.acquisition.
                                     microscope_images_location,
                                     f
                                 )
-                                for f in fmapping.map['files']
+                                for f in fmap.map['files']
                             ]
-                            for fmapping in batch
+                            for fmap in fmappings
                         ]
                     },
                     'outputs': {
                         'channel_image_files': [
                             os.path.join(
-                                fmapping.cycle.channel_images_location,
-                                tm.ChannelImageFile.FILENAME_FORMAT.
-                                format(
-                                    t=fmapping.tpoint,
-                                    w=fmapping.site.well.name,
-                                    y=fmapping.site.y, x=fmapping.site.x,
-                                    c=fmapping.wavelength
+                                fmap.cycle.channel_images_location,
+                                tm.ChannelImageFile.FILENAME_FORMAT.format(
+                                    t=fmap.tpoint,
+                                    w=fmap.site.well.name,
+                                    y=fmap.site.y, x=fmap.site.x,
+                                    c=fmap.wavelength
                                 )
                             )
-                            for fmapping in batch
+                            for fmap in fmappings
                         ]
                     },
-                    'image_file_mapping_ids': [
-                        fmapping.id for fmapping in batch
-                    ]
+                    'image_file_mapping_ids': ids
                 })
 
-            job_descriptions['collect'] = {
-                'inputs': dict(),
-                'outputs': dict()
-            }
+            job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
 
         return job_descriptions
 
     def run_job(self, batch):
         '''Extracts individual planes from microscope image files and writes
-        each to a separate file.
+        them into HDF5 files.
 
         Parameters
         ----------

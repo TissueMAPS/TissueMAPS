@@ -288,7 +288,7 @@ class DatasetWriter(Writer):
         return self
 
     def exists(self, path):
-        '''Check whether a `path` exists within the file.
+        '''Checks whether `path` exists within the file.
 
         Parameters
         ----------
@@ -306,7 +306,7 @@ class DatasetWriter(Writer):
             return False
 
     def write(self, path, data, compression=None):
-        '''Create a dataset and write data to it.
+        '''Creates a dataset and writes data to it.
 
         Parameters
         ----------
