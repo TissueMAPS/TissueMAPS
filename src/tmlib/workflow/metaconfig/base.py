@@ -660,7 +660,6 @@ class MetadataHandler(object):
         # Map the locations of each plane with the original image files
         # in order to be able to perform the intensity projection later on
         grouped_file_mapper_list = list()
-        import ipdb; ipdb.set_trace()
         for i, indices in enumerate(sorted(zstacks.groups.values())):
             fm = ImageFileMapping()
             fm.files = list()
