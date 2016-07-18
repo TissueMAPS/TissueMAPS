@@ -15,6 +15,7 @@ from tmlib import utils
 from tmlib.image import PyramidTile
 from tmlib.image import ChannelImage
 from tmlib.errors import DataIntegrityError
+from tmlib.errors import WorkflowError
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
@@ -413,21 +414,25 @@ class PyramidBuilder(ClusterRoutines):
                 batch['level']
             )
 
-            if ((batch['clip'] and batch['clip_value'] is None) or
-                    batch['illumcorr']):
-                try:
-                    illumstats_file = session.query(tm.IllumstatsFile).\
-                        filter_by(
-                            channel_id=layer.channel_id,
-                            cycle_id=layer.channel.image_files[0].cycle_id
-                        ).\
-                        one()
-                except NoResultFound:
-                    raise WorkflowError(
-                        'No illumination statistics file found for channel %d'
-                        % layer.channel_id
-                    )
-                stats = illumstats_file.get()
+            if batch['clip'] or batch['illumcorr']:
+                # Illumination statistics may not have been calculated
+                # are are not required in case fixed clip value is provided.
+                if batch['clip_value'] is None or batch['illumcorr']:
+                    try:
+                        illumstats_file = session.query(tm.IllumstatsFile).\
+                            filter_by(
+                                channel_id=layer.channel_id,
+                                cycle_id=layer.channel.image_files[0].cycle_id
+                            ).\
+                            one()
+                    except NoResultFound:
+                        raise WorkflowError(
+                            'No illumination statistics file found for channel %d'
+                            % layer.channel_id
+                        )
+                    stats = illumstats_file.get()
+                else:
+                    stats = None
             else:
                 stats = None
 
@@ -472,7 +477,7 @@ class PyramidBuilder(ClusterRoutines):
 
                 file = session.query(tm.ChannelImageFile).get(fid)
                 logger.info('process image "%s"', file.name)
-                mapped_tiles = layer.map_image_to_base_tiles(file)
+                tiles = layer.map_image_to_base_tiles(file)
                 image_store = dict()
                 image = file.get(z=layer.zplane)
                 if batch['illumcorr']:
@@ -486,7 +491,7 @@ class PyramidBuilder(ClusterRoutines):
                     image = image.scale(clip_below, clip_above)
                 image_store[file.name] = image
 
-                for t in mapped_tiles:
+                for t in tiles:
                     name = layer.build_tile_file_name(
                         batch['level'], t['row'], t['column']
                     )

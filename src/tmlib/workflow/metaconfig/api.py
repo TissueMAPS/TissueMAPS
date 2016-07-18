@@ -250,14 +250,16 @@ class MetadataConfigurator(ClusterRoutines):
                 get(batch['acquisition_id'])
 
             for w in np.unique(md.well_name):
-                w_index = np.where(md.well_name == w)[0]
+                w_index = md.well_name == w
+                # w_index = np.where(md.well_name == w)[0]
                 well = session.get_or_create(
                     tm.Well,
                     plate_id=acquisition.plate.id, name=w
                 )
 
                 for s in np.unique(md.loc[w_index, 'site']):
-                    s_index = np.where(md.site == s)[0]
+                    s_index = md.site == s
+                    # s_index = np.where(md.site == s)[0]
                     y = md.loc[s_index, 'well_position_y'].values[0]
                     x = md.loc[s_index, 'well_position_x'].values[0]
                     height = md.loc[s_index, 'height'].values[0]

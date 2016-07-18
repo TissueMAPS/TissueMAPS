@@ -648,8 +648,6 @@ class MetadataHandler(object):
             'channel_name', 'tpoint'
         ]).copy()
         grouped_md.index = range(grouped_md.shape[0])
-        # Names may no longer be accurate and will be updated separately
-        grouped_md.loc[:, 'name'] = None
         # NOTE: z-planes will no only be tracked via the file mapping
 
         # Group metadata by focal planes (z-stacks)
@@ -662,6 +660,7 @@ class MetadataHandler(object):
         # Map the locations of each plane with the original image files
         # in order to be able to perform the intensity projection later on
         grouped_file_mapper_list = list()
+        import ipdb; ipdb.set_trace()
         for i, indices in enumerate(sorted(zstacks.groups.values())):
             fm = ImageFileMapping()
             fm.files = list()
@@ -676,7 +675,7 @@ class MetadataHandler(object):
                 fm.zlevels.append(md.loc[index, 'zplane'])
             grouped_file_mapper_list.append(fm)
 
-        # Replace metadata and file mapper objects
+        # Update metadata and file mapper objects
         self.metadata = grouped_md
         self._file_mapper_list = grouped_file_mapper_list
 
@@ -743,14 +742,11 @@ class MetadataHandler(object):
         '''
         logger.info('assign plate wide acquisition site indices')
         md = self.metadata
-        sites = md.groupby([
-            'well_name', 'well_position_x', 'well_position_y'
-        ])
+        sites = md.groupby(['well_name', 'well_position_x', 'well_position_y'])
         site_indices = sorted(sites.groups.values())
         for i, indices in enumerate(site_indices):
             md.loc[indices, 'site'] = i
         md.site = md.site.astype(int)
-
         return self.metadata
 
     def remove_redundant_columns(self):
@@ -775,28 +771,17 @@ class MetadataHandler(object):
 
         Returns
         -------
-        Dict[int, Dict[str, List[str]]]
-            a mapping of each plane to the corresponding microscope image files
-            and the location within the files (*series* and *plane* index)
+        Dict[int, Dict[str, List[str or int]]]
+            a mapping of configured images hashable by their index in `metadata`
+            to planes in the corresponding microscope image files
+            (*files* key) and their location within the files
+            (*series* and *plane* keys)
         '''
-        logger.info('build image file map')
+        logger.info('build image file mapping')
         md = self.metadata
         mapper = dict()
-        if len(self._file_mapper_list[0].files) > 1:
-            # In this case individual focal planes that should be projected
-            # to the final 2D plane are distributed across several files.
-            # These files have to be loaded on the same node in order to be
-            # able to perform the projection. In addition, all z-planes will
-            # be stored in the same file. In case they wouldn't end up on the
-            # same node, this would create problems with parallel file access.
-            for i in xrange(md.shape[0]):
-                item = self._file_mapper_list[i]
-                mapper[item.ref_index] = item.as_dict()
-        else:
-            # In this case images files contain one or multiple planes
-            for i, item in enumerate(self._file_mapper_list):
-                mapper[i] = item.as_dict()
-
+        for item in self._file_mapper_list:
+            mapper[item.ref_index] = item.as_dict()
         return mapper
 
 
