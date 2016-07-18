@@ -187,7 +187,10 @@ class MetadataConfigurator(ClusterRoutines):
         mdhandler.configure_omexml_from_metadata_files(batch['regex'])
         missing = mdhandler.determine_missing_metadata()
         if missing:
-            logger.warning('required metadata information is missing')
+            logger.warning(
+                'required metadata information is missing: %s',
+                '", "'.join(missing)
+            )
             logger.info(
                 'try to retrieve missing metadata from filenames '
                 'using regular expression'
@@ -202,10 +205,12 @@ class MetadataConfigurator(ClusterRoutines):
             if (batch['regex'] is None and
                     mdhandler.IMAGE_FILE_REGEX_PATTERN is None):
                 logger.warning(
-                    'The following metadata information is missing: "%s"'
-                    'You can provide a regular expression in order to '
-                    'retrieve the missing information from filenames.'
-                    % '", "'.join(missing)
+                    'required metadata information is still missing: "%s"',
+                    '", "'.join(missing)
+                )
+                logger.info(
+                    'you can provide a regular expression in order to '
+                    'retrieve the missing information from filenames'
                 )
         missing = mdhandler.determine_missing_metadata()
         if missing:
@@ -239,9 +244,7 @@ class MetadataConfigurator(ClusterRoutines):
         mdhandler.group_metadata_per_zstack()
 
         # Create consistent zero-based ids
-        # (some microscopes use one-based indexing)
         mdhandler.update_channel()
-        mdhandler.update_zplane()
         mdhandler.assign_acquisition_site_indices()
         md = mdhandler.remove_redundant_columns()
         fmap = mdhandler.create_image_file_mapping()
@@ -251,7 +254,6 @@ class MetadataConfigurator(ClusterRoutines):
 
             for w in np.unique(md.well_name):
                 w_index = md.well_name == w
-                # w_index = np.where(md.well_name == w)[0]
                 well = session.get_or_create(
                     tm.Well,
                     plate_id=acquisition.plate.id, name=w
@@ -259,7 +261,6 @@ class MetadataConfigurator(ClusterRoutines):
 
                 for s in np.unique(md.loc[w_index, 'site']):
                     s_index = md.site == s
-                    # s_index = np.where(md.site == s)[0]
                     y = md.loc[s_index, 'well_position_y'].values[0]
                     x = md.loc[s_index, 'well_position_x'].values[0]
                     height = md.loc[s_index, 'height'].values[0]

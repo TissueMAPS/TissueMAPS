@@ -457,6 +457,7 @@ class MetadataHandler(object):
             )
 
         if not regex:
+            logger.info('using default regular expression')
             regex = self.IMAGE_FILE_REGEX_PATTERN
         if not regex:
             raise RegexError('No regular expression provided.')
@@ -472,10 +473,12 @@ class MetadataHandler(object):
                     'Supported are "%s"'
                     % (name, '", "'.join(required_fields))
                 )
-            if name not in required_fields:
+
+        for name in possible_fields:
+            if name not in required_fields and name in defaults:
                 logger.warning(
                     'regular expression field "%s" not provided, defaults to %s',
-                    (name, str(defaults[name]))
+                    name, str(defaults[name])
                 )
 
         for name in required_fields:
@@ -702,33 +705,7 @@ class MetadataHandler(object):
         channels = np.unique(md.channel_name)
         for i, c in enumerate(channels):
             md.loc[(md.channel_name == c), 'channel'] = i
-
         md.channel = md.channel.astype(int)
-
-        return self.metadata
-
-    def update_zplane(self):
-        '''Creates for each focal plane a zero-based unique identifier number.
-
-        Returns
-        -------
-        pandas.DataFrame
-            metadata for each 2D *Plane* element
-
-        Note
-        ----
-        The id may not reflect the order in which the planes were acquired
-        on the microscope.
-
-        Warning
-        -------
-        Apply this method only at the end of the configuration process.
-        '''
-        logger.info('update z-plane index')
-        md = self.metadata
-        zplanes = np.unique(md.zplane)
-        for i, z in enumerate(zplanes):
-            md.loc[(md.zplane == z), 'zplane'] = i
         return self.metadata
 
     def assign_acquisition_site_indices(self):
