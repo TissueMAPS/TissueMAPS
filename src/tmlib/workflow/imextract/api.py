@@ -72,6 +72,7 @@ class ImageExtractor(ClusterRoutines):
                 ids = list(np.array(batch).flat)
                 fmappings = session.query(tm.ImageFileMapping).\
                     filter(tm.ImageFileMapping.id.in_(ids)).\
+                    order_by(tm.ImageFileMapping.id).\
                     all()
                 job_count += 1
                 job_descriptions['run'].append({
@@ -80,8 +81,7 @@ class ImageExtractor(ClusterRoutines):
                         'microscope_image_files': [
                             [
                                 os.path.join(
-                                    fmap.acquisition.
-                                    microscope_images_location,
+                                    fmap.acquisition.microscope_images_location,
                                     f
                                 )
                                 for f in fmap.map['files']
@@ -138,18 +138,20 @@ class ImageExtractor(ClusterRoutines):
                 subset = False
             with JavaBridge(active=subset):
                 for i, fid in enumerate(file_mapping_ids):
-                    filenames = batch['inputs']['microscope_image_files'][i]
                     with tm.utils.Session() as session:
                         fmapping = session.query(tm.ImageFileMapping).get(fid)
                         planes = list()
-                        for j, f in enumerate(filenames):
+                        for j, f in enumerate(fmapping.map['files']):
                             logger.info(
-                                'extract pixel planes from file: %s',
-                                os.path.basename(f)
+                                'extract pixel planes from file: %s', f
                             )
                             plane_ix = fmapping.map['planes'][j]
                             series_ix = fmapping.map['series'][j]
-                            with Reader(f) as reader:
+                            filename = os.path.join(
+                                fmapping.acquisition.microscope_images_location,
+                                f
+                            )
+                            with Reader(filename) as reader:
                                 if subset:
                                     p = reader.read_subset(
                                         plane=plane_ix, series=series_ix
