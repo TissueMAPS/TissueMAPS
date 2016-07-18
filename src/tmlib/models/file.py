@@ -328,9 +328,9 @@ class ChannelImageFile(File, DateMixIn):
         else:
             pixels = list()
             with DatasetReader(self.location) as f:
-                zplanes = f.list_datasets(pattern='z_\d+')
-                for z in zplanes:
-                    pixels.append(f.read('z_%d' % z))
+                datasets = f.list_datasets(pattern='z_\d+')
+                for z in datasets:
+                    pixels.append(f.read(z))
             array = np.dstack(pixels)
         if self.site.intersection is not None:
             metadata.upper_overhang = self.site.intersection.upper_overhang
