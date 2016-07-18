@@ -336,7 +336,6 @@ class MetadataConfigurator(ClusterRoutines):
                         )
 
                         for w in wavelengths:
-                            w_index = np.where(wavelengths == w)[0][0]
                             if is_multiplexing_experiment:
                                 name = 'cycle-%d_wavelength-%s' % (c_index, w)
                             else:
@@ -359,6 +358,8 @@ class MetadataConfigurator(ClusterRoutines):
                                 ifm.tpoint = t_index
                                 ifm.cycle_id = cycle.id
                                 ifm.channel_id = channel.id
+
+                            w_index += 1
 
                         if is_time_series_experiment:
                             t_index += 1
