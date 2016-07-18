@@ -218,7 +218,7 @@ class Tmaps(SubmissionManager):
 
         args = parser.parse_args()
 
-        configure_logging(logging.CRITICAL)
+        configure_logging()
         logger = logging.getLogger('tmlib')
         level = map_logging_verbosity(args.verbosity)
         logger.setLevel(level)
