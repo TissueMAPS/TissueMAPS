@@ -487,7 +487,7 @@ class SetupCtrl {
         // console.log('start monitoring status')
         this._monitoringPromise = this._$interval(() => {
                 this.getStatus()
-            }, 5000
+            }, 10000
         );
     }
     private _stopMonitoring() {
