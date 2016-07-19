@@ -3,7 +3,7 @@ import re
 import logging
 import subprocess
 
-import tmlib.models
+import tmlib.models as tm
 from tmlib.workflow import register_api
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
@@ -76,15 +76,15 @@ class MetadataExtractor(ClusterRoutines):
                 )
 
                 for files in batches:
-                    file_data = {f.id: f.location for f in files}
+                    file_map = {f.id: f.location for f in files}
                     count += 1
                     job_descriptions['run'].append({
                         'id': count,
                         'inputs': {
-                            'microscope_image_files': f.values()
+                            'microscope_image_files': file_map.values()
                         },
                         'outputs': dict(),
-                        'microscope_image_file_ids': f.keys()
+                        'microscope_image_file_ids': file_map.keys()
                     })
 
         return job_descriptions
