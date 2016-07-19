@@ -249,12 +249,7 @@ class Session(object):
 
         Note
         ----
-        Adds and pushes newly created instance.
-
-        Warning
-        -------
-        No commit is performed. The approach may not protect against concurrent
-        parallel insertions.
+        Adds and commits newly created instance.
         '''
         try:
             instance = self.query(model).filter_by(**kwargs).one()
@@ -265,10 +260,21 @@ class Session(object):
             for k, v in kwargs.iteritems():
                 setattr(instance, k, v)
         except sqlalchemy.orm.exc.NoResultFound:
-            instance = model(**kwargs)
-            logger.debug('created new instance: %r', instance)
-            self._sqla_session.add(instance)
-            self._sqla_session.push()
+            try:
+                instance = model(**kwargs)
+                logger.debug('created new instance: %r', instance)
+                self._sqla_session.add(instance)
+                self._sqla_session.commit()
+                logger.debug('added and committed new instance: %r', instance)
+            except sqlalchemy.exc.IntegrityError as err:
+                logger.error(
+                    'creation of instance %r failed:\n%s', instance, str(err)
+                )
+                self._sqla_session.rollback()
+                instance = self.query(model).filter_by(**kwargs).one()
+                logger.debug('found existing instance: %r', instance)
+            except:
+                raise
         except:
             raise
         return instance
