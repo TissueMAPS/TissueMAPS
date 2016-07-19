@@ -313,13 +313,22 @@ class MetadataConfigurator(ClusterRoutines):
             # We need to do this per plate to ensure correct indices
             # TODO: check plates have similar channels, etc
             experiment = session.query(tm.Experiment).get(self.experiment_id)
-            is_time_series = experiment.plate_acquisition_mode == 'basic'
-            is_multiplexing = experiment.plate_acquisition_mode == 'multiplexing'
+            acquisition_mode = experiment.plate_acquisition_mode 
+            logger.info('plates were acquired in mode "%s"', acquisition_mode)
+            is_time_series = acquisition_mode == 'basic'
+            if is_time_series:
+                logger.info('time points are interpreted as time series')
+            is_multiplexing = acquisition_mode == 'multiplexing'
+            if is_multiplexing:
+                logger.info('time points are interpreted as multiplexing cycles')
+
             for plate in experiment.plates:
+                logger.info('plate "%s"', plate.name)
                 t_index = 0
                 w_index = 0
                 c_index = 0
                 for acquisition in plate.acquisitions:
+                    logger.info('acquisition "%s"', acquisition.name)
                     df = pd.DataFrame(
                         session.query(
                             tm.ImageFileMapping.tpoint,
@@ -339,12 +348,14 @@ class MetadataConfigurator(ClusterRoutines):
                             'Bit depth must be the same for all images'
                         )
                     for t in tpoints:
+                        logger.debug('time point #%d', t)
                         cycle = session.get_or_create(
                             tm.Cycle,
                             index=c_index, tpoint=t_index, plate_id=plate.id
                         )
 
                         for w in wavelengths:
+                            logger.debug('wavelength "%s"', w)
                             if is_multiplexing:
                                 name = 'cycle-%d_wavelength-%s' % (c_index, w)
                             else:
@@ -361,6 +372,10 @@ class MetadataConfigurator(ClusterRoutines):
                                     tpoint=t, wavelength=w,
                                     acquisition_id=acquisition.id
                                 )
+                            logger.info(
+                                'update time point and channel metadata '
+                                'of file mappings'
+                            )
                             for fm in file_mappings:
                                 fm.tpoint = t_index
                                 fm.cycle_id = cycle.id

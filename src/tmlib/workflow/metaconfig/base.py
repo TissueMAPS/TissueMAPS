@@ -474,17 +474,17 @@ class MetadataHandler(object):
                     % (name, '", "'.join(required_fields))
                 )
 
-        for name in possible_fields:
-            if name not in required_fields and name in defaults:
-                logger.warning(
-                    'regular expression field "%s" not provided, defaults to %s',
-                    name, str(defaults[name])
-                )
-
         for name in required_fields:
             if name not in provided_fields:
                 raise RegexError(
-                    'Regular expression must contain field "%s"', name
+                    'Regular expression must contain field "%s".', name
+                )
+
+        for name in possible_fields:
+            if name not in provided_fields and name in defaults:
+                logger.warning(
+                    'regular expression field "%s" not provided, defaults to %s',
+                    name, str(defaults[name])
                 )
 
         logger.info('retrieve metadata from filenames via regular expression')
