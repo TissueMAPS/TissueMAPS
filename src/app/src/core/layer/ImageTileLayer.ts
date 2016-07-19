@@ -23,6 +23,7 @@ interface SerializedImageTileLayer extends Serialized<ImageTileLayer> {
       additiveBlend: boolean;
       visible: boolean;
       brightness: number;
+      preload: number;
       min: number;
       max: number;
       opacity: number;
@@ -37,6 +38,7 @@ interface ImageTileLayerArgs {
     color?: Color;
     brightness?: number;
     opacity?: number;
+    preload?: number;
     min?: number;
     max?: number;
 }
@@ -88,6 +90,7 @@ class ImageTileLayer extends BaseLayer<OlImageTileLayer> {
         var olLayerArgs = {
             brightness: args.brightness !== undefined ? args.brightness : 0,
             opacity: args.opacity !== undefined ? args.opacity : 1,
+            preload: args.preload !== undefined ? args.preload : 0,
             min: args.min !== undefined ? args.min : 0,
             max: args.max !== undefined ? args.max : 1,
             additiveBlend: args.additiveBlend !== undefined ? args.additiveBlend : false,
