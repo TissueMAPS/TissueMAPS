@@ -58,46 +58,44 @@ class MetadataExtractor(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         count = 0
-        with tmlib.models.utils.Session() as session:
-            for acq in session.query(tmlib.models.Acquisition).\
-                    join(tmlib.models.Plate).\
-                    join(tmlib.models.Experiment).\
-                    filter(tmlib.models.Experiment.id == self.experiment_id):
+        with tm.utils.Session() as session:
+            for acq in session.query(tm.Acquisition).\
+                    join(tm.Plate).\
+                    filter(tm.Plate.experiment_id == self.experiment_id):
 
-                if not acq.microscope_image_files:
+                n_files = session.query(tm.MicroscopeImageFile.id).\
+                    filter_by(acquisition_id=acq.id).\
+                    count()
+                if n_files == 0:
                     raise ValueError(
-                        'Experiment doesn\'t have any microscope image files'
+                        'Acquisition "%s" of plate "%s" doesn\'t have any '
+                        'microscope image files' % (acq.name, acq.plate.name)
                     )
                 batches = self._create_batches(
                     acq.microscope_image_files, args.batch_size
                 )
 
-                job_indices = list()
-                for j, files in enumerate(batches):
+                for files in batches:
+                    file_data = {f.id: f.location for f in files}
                     count += 1
-                    job_indices.append(count-1)
                     job_descriptions['run'].append({
                         'id': count,
                         'inputs': {
-                            'microscope_image_files': [
-                                f.location for f in files
-                            ]
+                            'microscope_image_files': f.values()
                         },
                         'outputs': dict(),
-                        'microscope_image_file_ids': [
-                            f.id for f in files
-                        ]
+                        'microscope_image_file_ids': f.keys()
                     })
 
         return job_descriptions
 
     @same_docstring_as(ClusterRoutines.delete_previous_job_output)
     def delete_previous_job_output(self):
-        with tmlib.models.utils.Session() as session:
-            files = session.query(tmlib.models.MicroscopeImageFile).\
-                join(tmlib.models.Acquisition).\
-                join(tmlib.models.Plate).\
-                filter(tmlib.models.Plate.experiment_id == self.experiment_id).\
+        with tm.utils.Session() as session:
+            files = session.query(tm.MicroscopeImageFile).\
+                join(tm.Acquisition).\
+                join(tm.Plate).\
+                filter(tm.Plate.experiment_id == self.experiment_id).\
                 all()
 
             # Set value in "omexml" column to NULL
@@ -128,9 +126,9 @@ class MetadataExtractor(ClusterRoutines):
         subprocess.CalledProcessError
             when extraction failed
         '''
-        with tmlib.models.utils.Session() as session:
+        with tm.utils.Session() as session:
             for fid in batch['microscope_image_file_ids']:
-                img_file = session.query(tmlib.models.MicroscopeImageFile).\
+                img_file = session.query(tm.MicroscopeImageFile).\
                     get(fid)
                 logger.info('process image "%s"' % img_file.name)
                 # The "showinf" command line tool writes the extracted OMEXML

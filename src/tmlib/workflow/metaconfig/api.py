@@ -248,37 +248,50 @@ class MetadataConfigurator(ClusterRoutines):
         mdhandler.assign_acquisition_site_indices()
         md = mdhandler.remove_redundant_columns()
         fmap = mdhandler.create_image_file_mapping()
-        with tm.utils.Session() as session:
-            acquisition = session.query(tm.Acquisition).\
-                get(batch['acquisition_id'])
 
-            for w in np.unique(md.well_name):
+        logger.info('create database entries')
+        for w in np.unique(md.well_name):
+            logger.info('create well "%s"', w)
+
+            with tm.utils.Session() as session:
+                acquisition = session.query(tm.Acquisition).\
+                    get(batch['acquisition_id'])
+
                 w_index = md.well_name == w
-                well = session.get_or_create(
+                well = session.update_or_create(
                     tm.Well,
                     plate_id=acquisition.plate.id, name=w
                 )
 
+                file_mappings = list()
                 for s in np.unique(md.loc[w_index, 'site']):
+                    logger.info('create site #%d', s)
                     s_index = md.site == s
                     y = md.loc[s_index, 'well_position_y'].values[0]
                     x = md.loc[s_index, 'well_position_x'].values[0]
                     height = md.loc[s_index, 'height'].values[0]
                     width = md.loc[s_index, 'width'].values[0]
-                    site = session.get_or_create(
+                    # We need the id because it's a foreign key on file mappings.
+                    # Therefore, we have to insert/update one by one.
+                    site = session.update_or_create(
                         tm.Site,
                         y=y, x=x, height=height, width=width, well_id=well.id
                     )
 
                     for index, i in md.ix[s_index].iterrows():
-                        session.get_or_create(
-                            tm.ImageFileMapping,
-                            tpoint=i.tpoint,
-                            site_id=site.id, map=fmap[index],
-                            wavelength=i.channel_name,
-                            bit_depth=i.bit_depth,
-                            acquisition_id=acquisition.id
+                        file_mappings.append(
+                            tm.ImageFileMapping(
+                                tpoint=i.tpoint,
+                                site_id=site.id, map=fmap[index],
+                                wavelength=i.channel_name,
+                                bit_depth=i.bit_depth,
+                                acquisition_id=acquisition.id
+                            )
                         )
+
+                # NOTE: bulk_save_objects() can handle inserts and updates and
+                # updates only rows that have changed.
+                session.bulk_save_objects(file_mappings)
 
     def collect_job_output(self, batch):
         '''Assigns registered image files from different acquisitions to
@@ -328,7 +341,8 @@ class MetadataConfigurator(ClusterRoutines):
                         bit_depth = bit_depth[0]
                     else:
                         raise MetadataError(
-                            'Bit depth must be the same across experiment.'
+                            'Bit depth must be the same for all images of an '
+                            'experiment.'
                         )
                     for t in tpoints:
                         cycle = session.get_or_create(

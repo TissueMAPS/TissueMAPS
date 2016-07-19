@@ -200,6 +200,10 @@ class Session(object):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.bulk_insert_mappings`'''
         return self._sqla_session.bulk_insert_mappings(*args, **kwargs)
 
+    def bulk_update_mappings(self, *args, **kwargs):
+        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.bulk_update_mappings`'''
+        return self._sqla_session.bulk_update_mappings(*args, **kwargs)
+
     def add_all(self, *args, **kwargs):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.add_all`'''
         return self._sqla_session.add_all(*args, **kwargs)
@@ -224,37 +228,92 @@ class Session(object):
         '''Delegates to :py:method:`sqlalchemy.orm.session.Session.scalar`'''
         return self._sqla_session.scalar(*args, **kwargs)
 
-    def get_or_create(self, model, **kwargs):
-        '''Get an instance of a model class if it already exists or
-        create it otherwise.
+    def update_or_create(self, model, **kwargs):
+        '''Updates an instance of a model class if it already exists or
+        creates it otherwise.
 
         Parameters
         ----------
         model: type
-            an implementation of the :py:class:`tmlib.models.Model`
+            an implementation of the :py:class:`tmlib.models.model`
             abstract base class
         **kwargs: dict
             keyword arguments for the instance that can be passed to the
             constructor of `model` or to
-            :py:method:`sqlalchemy.orm.query.Query.filter_by`
+            :py:method:`sqlalchemy.orm.query.query.filter_by`
 
         Returns
         -------
-        tmlib.models.Model
+        tmlib.models.model
             an instance of `model`
+
+        Note
+        ----
+        Adds and pushes the newly created instance.
+
+        Warning
+        -------
+        No commit is performed. The approach may not protect against concurrent
+        parallel insertions.
         '''
         try:
             instance = self.query(model).filter_by(**kwargs).one()
             logger.debug('found existing instance: %r', instance)
-        except sqlalchemy.orm.exc.NoResultFound:
+            logger.debug(
+                'update existings instance with parameters: {0}'.format(kwargs)
+            )
+            for k, v in kwargs.iteritems():
+                setattr(instance, k, v)
+        except sqlalchemy.orm.exc.noresultfound:
+            instance = model(**kwargs)
+            logger.debug('created new instance: %r', instance)
+            self._sqla_session.add(instance)
+            self._sqla_session.push()
+        except:
+            raise
+        return instance
+
+    def get_or_create(self, model, **kwargs):
+        '''Gets an instance of a model class if it already exists or
+        creates it otherwise.
+
+        Parameters
+        ----------
+        model: type
+            an implementation of the :py:class:`tmlib.models.model`
+            abstract base class
+        **kwargs: dict
+            keyword arguments for the instance that can be passed to the
+            constructor of `model` or to
+            :py:method:`sqlalchemy.orm.query.query.filter_by`
+
+        Returns
+        -------
+        tmlib.models.model
+            an instance of `model`
+
+        Note
+        ----
+        Adds and commits created instance. The approach can be useful when
+        different processes may try to insert an instance constructed with the
+        same arguments, but only one instance should be inserted and the other
+        processes should re-use the instance without creation a duplication.
+        The approach relies on uniqueness constraints of the corresponding table
+        to decide whether a new entry would be considred a duplication.
+        '''
+        try:
+            instance = self.query(model).filter_by(**kwargs).one()
+            logger.debug('found existing instance: %r', instance)
+        except sqlalchemy.orm.exc.noresultfound:
             # We have to protect against situations when several worker
             # nodes are trying to insert the same row simultaneously.
             try:
                 instance = model(**kwargs)
+                logger.debug('created new instance: %r', instance)
                 self._sqla_session.add(instance)
                 self._sqla_session.commit()
-                logger.debug('created new instance: %r', instance)
-            except sqlalchemy.exc.IntegrityError as err:
+                logger.debug('added and committed new instance: %r', instance)
+            except sqlalchemy.exc.integrityerror as err:
                 logger.error(
                     'creation of instance %r failed:\n%s', instance, str(err)
                 )

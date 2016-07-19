@@ -3,9 +3,9 @@ from tmlib import __version__
 
 __fullname__ = 'Extration of pixel data from image files'
 
-__description__ = '''Extraction of OMEXML pixel elements from heterogeneous
+__description__ = '''Extracts pixel elements from heterogeneous
     microscopy image file formats based on the configured image metadata
-    and storage of each 2D pixel plane in a separate standardized file format.
+    and stores them in a standardized file format.
 '''
 
 __logo__ = '''
