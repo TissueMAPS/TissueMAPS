@@ -22,9 +22,11 @@ class UserpanelWindowCtrl {
     }
 
     modifyExperiment(e: Experiment) {
+        // Enforce re-loading views when switching between experiments
         this._$state.go('plate', {
             stageName: 'upload',
-            experimentid: e.id
+            experimentid: e.id,
+            reload: true
         });
     }
 
@@ -38,7 +40,6 @@ class UserpanelWindowCtrl {
     }
 
     viewExperiment(e: Experiment) {
-        // this._viewerApp.viewExperiment(e);
         this._$state.go('viewer', {
             experimentid: e.id
         });
