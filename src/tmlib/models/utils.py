@@ -249,7 +249,7 @@ class Session(object):
 
         Note
         ----
-        Adds and pushes the newly created instance.
+        Adds and pushes newly created instance.
 
         Warning
         -------
@@ -264,7 +264,7 @@ class Session(object):
             )
             for k, v in kwargs.iteritems():
                 setattr(instance, k, v)
-        except sqlalchemy.orm.exc.noresultfound:
+        except sqlalchemy.orm.exc.NoResultFound:
             instance = model(**kwargs)
             logger.debug('created new instance: %r', instance)
             self._sqla_session.add(instance)
@@ -304,7 +304,7 @@ class Session(object):
         try:
             instance = self.query(model).filter_by(**kwargs).one()
             logger.debug('found existing instance: %r', instance)
-        except sqlalchemy.orm.exc.noresultfound:
+        except sqlalchemy.orm.exc.NoResultFound:
             # We have to protect against situations when several worker
             # nodes are trying to insert the same row simultaneously.
             try:
@@ -313,7 +313,7 @@ class Session(object):
                 self._sqla_session.add(instance)
                 self._sqla_session.commit()
                 logger.debug('added and committed new instance: %r', instance)
-            except sqlalchemy.exc.integrityerror as err:
+            except sqlalchemy.exc.IntegrityError as err:
                 logger.error(
                     'creation of instance %r failed:\n%s', instance, str(err)
                 )
