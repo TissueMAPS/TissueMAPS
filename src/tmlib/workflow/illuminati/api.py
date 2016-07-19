@@ -271,7 +271,7 @@ class PyramidBuilder(ClusterRoutines):
                             # Creation of empty base tiles that don't map to images
                             coordinates = layer.get_empty_base_tile_coordinates()
                             batches = self._create_batches(
-                                list(coordinates), args.batch_size
+                                list(coordinates), args.batch_size * 1000
                             )
                             for batch in batches:
                                 job_count += 1
