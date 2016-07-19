@@ -312,26 +312,21 @@ class MetadataConfigurator(ClusterRoutines):
         with tm.utils.Session() as session:
             # We need to do this per plate to ensure correct indices
             # TODO: check plates have similar channels, etc
-            plates = session.query(tm.Plate).\
-                filter_by(experiment_id=self.experiment_id)
-            for plt in plates:
+            experiment = session.query(tm.Experiment).get(self.experiment_id)
+            is_time_series = experiment.plate_acquisition_mode == 'basic'
+            is_multiplexing = experiment.plate_acquisition_mode == 'multiplexing'
+            for plate in experiment.plates:
                 t_index = 0
                 w_index = 0
                 c_index = 0
-                acquisitions = session.query(tm.Acquisition).\
-                    filter_by(plate_id=plt.id)
-                for acq in acquisitions:
-                    is_time_series_experiment = \
-                        acq.plate.experiment.plate_acquisition_mode == 'basic'
-                    is_multiplexing_experiment = \
-                        acq.plate.experiment.plate_acquisition_mode == 'multiplexing'
+                for acquisition in plate.acquisitions:
                     df = pd.DataFrame(
                         session.query(
                             tm.ImageFileMapping.tpoint,
                             tm.ImageFileMapping.wavelength,
                             tm.ImageFileMapping.bit_depth
                         ).
-                        filter(tm.ImageFileMapping.acquisition_id == acq.id).
+                        filter_by(acquisition_id=acquisition.id).
                         all()
                     )
                     tpoints = np.unique(df.tpoint)
@@ -341,17 +336,16 @@ class MetadataConfigurator(ClusterRoutines):
                         bit_depth = bit_depth[0]
                     else:
                         raise MetadataError(
-                            'Bit depth must be the same for all images of an '
-                            'experiment.'
+                            'Bit depth must be the same for all images'
                         )
                     for t in tpoints:
                         cycle = session.get_or_create(
                             tm.Cycle,
-                            index=c_index, tpoint=t_index, plate_id=acq.plate.id
+                            index=c_index, tpoint=t_index, plate_id=plate.id
                         )
 
                         for w in wavelengths:
-                            if is_multiplexing_experiment:
+                            if is_multiplexing:
                                 name = 'cycle-%d_wavelength-%s' % (c_index, w)
                             else:
                                 name = 'wavelength-%s' % w
@@ -359,24 +353,22 @@ class MetadataConfigurator(ClusterRoutines):
                                 tm.Channel,
                                 name=name, index=w_index, wavelength=w,
                                 bit_depth=bit_depth,
-                                experiment_id=acq.plate.experiment_id
+                                experiment_id=self.experiment_id
                             )
 
-                            image_file_mappings = session.query(
-                                tm.ImageFileMapping
-                                ).\
+                            file_mappings = session.query(tm.ImageFileMapping).\
                                 filter_by(
                                     tpoint=t, wavelength=w,
-                                    acquisition_id=acq.id
+                                    acquisition_id=acquisition.id
                                 )
-                            for ifm in image_file_mappings:
-                                ifm.tpoint = t_index
-                                ifm.cycle_id = cycle.id
-                                ifm.channel_id = channel.id
+                            for fm in file_mappings:
+                                fm.tpoint = t_index
+                                fm.cycle_id = cycle.id
+                                fm.channel_id = channel.id
 
                             w_index += 1
 
-                        if is_time_series_experiment:
+                        if is_time_series:
                             t_index += 1
 
                         c_index += 1
