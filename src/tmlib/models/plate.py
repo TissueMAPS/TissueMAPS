@@ -227,11 +227,7 @@ class Plate(Model, DateMixIn):
     def image_size(self):
         '''Tuple[int]: number of pixels along the vertical and horizontal axis
         '''
-        if len(self.wells) == 0:
-            return None
         offset = self.experiment.well_spacer_size
-        if len(self.wells) == 0:
-            return None
         rows = len(self.nonempty_rows)
         cols = len(self.nonempty_columns)
         return (
@@ -256,7 +252,7 @@ class Plate(Model, DateMixIn):
         )
         x_offset = (
             # Plates left of the plate
-            plate_coordinate[1] * self.image_size[0] +
+            plate_coordinate[1] * self.image_size[1] +
             # Gaps introduced between plates
             plate_coordinate[1] * experiment.plate_spacer_size
         )

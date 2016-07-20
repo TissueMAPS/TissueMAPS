@@ -292,19 +292,22 @@ class Experiment(Model, DateMixIn):
         image
         '''
         n = len(self.plates)
+        if n < 4:
+            grid = np.zeros((n, 1), dtype=int)
+            for i in range(n):
+                grid[i, 0] = self.plates[i].id
+            return grid
+
         if (n / np.ceil(np.sqrt(n))) % 2 == 0:
             dimensions = (
                 int(np.ceil(np.sqrt(n))), int(n / np.ceil(np.sqrt(n)))
             )
         else:
             dimensions = tuple(np.repeat(int(np.ceil(np.sqrt(n))), 2))
-        cooridinates = list(
-            itertools.product(
-                np.arange(dimensions[0]), np.arange(dimensions[1])
-            )
+        cooridinates = itertools.product(
+            range(dimensions[0]), range(dimensions[1])
         )
-        height, width = dimensions
-        grid = np.zeros((height, width), dtype=int)
+        grid = np.zeros(dimensions, dtype=int)
         for i, c in enumerate(cooridinates):
             if i >= n:
                 break
