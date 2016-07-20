@@ -135,15 +135,15 @@ Each *module* must define a constant ``VERSION`` and a function ``main``. The ``
 
         return output
 
-The module named ``my_py_module`` (residing in a file called ``my_py_module.py``) can be imported and called as follows:
+The module named ``python_module`` (residing in a file called ``python_module.py``) can be imported and called as follows:
 
 .. code:: python
     
     import numpy as np
-    import jtmodules.my_py_module
+    import jtmodules.python_module
     
     img = np.zeros((10,10))
-    jtmodules.my_py_module.main(img)
+    jtmodules.python_module.main(img)
 
 .. Note::
 
@@ -155,7 +155,7 @@ The module named ``my_py_module`` (residing in a file called ``my_py_module.py``
 
     import jtlib.*;
     
-    classdef my_m_module
+    classdef matlab_module
     
         properties (Constant)
         
@@ -185,14 +185,14 @@ The module named ``my_py_module`` (residing in a file called ``my_py_module.py``
     end
     
     
-The module named ``my_m_module`` (residing in a file called ``my_m_module.m``) can be imported and called as follows:
+The module named ``matlab_module`` (residing in a file called ``matlab_module.m``) can be imported and called as follows:
 
 .. code:: matlab
     
-    import jtmodules.my_m_module;
+    import jtmodules.matlab_module;
     
     img = (10, 10);
-    jtmodules.my_m_module.main(img)
+    jtmodules.matlab_module.main(img)
 
 
 .. Note::
@@ -209,11 +209,11 @@ The module named ``my_m_module`` (residing in a file called ``my_m_module.m``) c
 
     library(jtlib)
     
-    my_r_module <- new.env()
+    r_module <- new.env()
 
-    my_r_module$VERSION <- '0.0.1'
+    r_module$VERSION <- '0.0.1'
     
-    my_r_module$main <- function(input_image, plot=FALSE){
+    r_module$main <- function(input_image, plot=FALSE){
 
         output <- list()
         output[['output_image']] <- input_image
@@ -227,14 +227,14 @@ The module named ``my_m_module`` (residing in a file called ``my_m_module.m``) c
         return(output)
     }
     
-The module named ``my_r_module`` (residing in a file called ``my_r_module.r``) can be imported and called as follows:
+The module named ``r_module`` (residing in a file called ``r_module.r``) can be imported and called as follows:
 
 .. code:: r
     
     library(jtmodules)
     
     img <- matrix(0, 10, 10)
-    jtmodules::my_r_module$main(img)
+    jtmodules::r_module$main(img)
 
 
 .. Note::
