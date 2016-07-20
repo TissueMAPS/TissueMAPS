@@ -217,19 +217,23 @@ class ImageFileMapping(Model):
     map = Column(JSONB)
     site_id = Column(
         Integer,
-        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     cycle_id = Column(
         Integer,
-        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     acquisition_id = Column(
         Integer,
-        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     channel_id = Column(
         Integer,
-        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -239,15 +243,18 @@ class ImageFileMapping(Model):
     )
     acquisition = relationship(
         'Acquisition',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan')
+        backref=backref('image_file_mappings', cascade='all, delete-orphan'),
+        index=True
     )
     cycle = relationship(
         'Cycle',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan')
+        backref=backref('image_file_mappings', cascade='all, delete-orphan'),
+        index=True
     )
     channel = relationship(
         'Channel',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan')
+        backref=backref('image_file_mappings', cascade='all, delete-orphan'),
+        index=True
     )
 
     def __init__(self, tpoint, wavelength, bit_depth, map, site_id,

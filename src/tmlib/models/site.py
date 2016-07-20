@@ -54,7 +54,8 @@ class Site(Model, DateMixIn):
     width = Column(Integer, index=True)
     well_id = Column(
         Integer,
-        ForeignKey('wells.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('wells.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables

@@ -54,7 +54,8 @@ class Channel(Model, DateMixIn):
     bit_depth = Column(Integer)
     experiment_id = Column(
         Integer,
-        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables

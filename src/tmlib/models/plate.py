@@ -98,7 +98,8 @@ class Plate(Model, DateMixIn):
     experiment_id = Column(
         Integer, ForeignKey(
             'experiments.id', onupdate='CASCADE', ondelete='CASCADE'
-        )
+        ),
+        index=True
     )
 
     # Relationships to other tables
@@ -241,9 +242,7 @@ class Plate(Model, DateMixIn):
         relative to the layer overview at the maximum zoom level
         '''
         experiment = self.experiment
-        plate_coordinate = tuple(
-            [a[0] for a in np.where(experiment.plate_grid == self.id)]
-        )
+        plate_coordinate = zip(*np.where(experiment.plate_grid == self.id))[0]
         y_offset = (
             # Plates above the plate
             plate_coordinate[0] * self.image_size[0] +

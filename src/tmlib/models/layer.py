@@ -3,14 +3,13 @@ import re
 import numpy as np
 import logging
 import itertools
-import lxml
-from xml.dom import minidom
 import collections
+from cached_property import cached_property
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
-from cached_property import cached_property
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.file import ChannelImageFile
 from tmlib.models.site import Site
@@ -42,6 +41,10 @@ class ChannelLayer(Model):
         zero-based time series index
     zplane: int
         zero-based z-resolution index
+    height: int
+        number of pixels along the vertical axis
+    width: int
+        number of pixels along the horizontal axis
     max_intensity: int
         maximum intensity value at which channel images were clipped
         at the original bit depth
@@ -62,11 +65,16 @@ class ChannelLayer(Model):
     # Table columns
     zplane = Column(Integer, index=True)
     tpoint = Column(Integer, index=True)
+    height = Column('height', Integer)
+    _height = Column(Integer)
+    width = Column('width', Integer)
+    _width = Column(Integer)
     max_intensity = Column(Integer)
     min_intensity = Column(Integer)
     channel_id = Column(
         Integer,
-        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -89,6 +97,25 @@ class ChannelLayer(Model):
         self.tpoint = tpoint
         self.zplane = zplane
         self.channel_id = channel_id
+        self._height = None
+        self._width = None
+
+    @hybrid_property
+    def height(self):
+        '''int: number of pixels along vertical axis at highest resolution level
+        '''
+        if self._height is None:
+            self._height = self._maxzoom_image_size[0]
+        return self._height
+
+    @hybrid_property
+    def width(self):
+        '''int: number of pixels along horizontal axis at highest resolution
+        level
+        '''
+        if self._width is None:
+            self._width = self._maxzoom_image_size[1]
+        return self._width
 
     @property
     def tile_size(self):
@@ -154,6 +181,35 @@ class ChannelLayer(Model):
         return levels
 
     @cached_property
+    def _maxzoom_image_size(self):
+        '''Determines the size of the image at the highest resolution level,
+        i.e. at the base of the pyramid.
+        '''
+        experiment = self.channel.experiment
+        plate_sizes = np.array([p.image_size for p in experiment.plates])
+        # TODO: This can cause problems when wells were deleted (because
+        # metadata configuration was resubmitted), but channels still exist
+        if not(len(np.unique(plate_sizes[:, 0])) == 1 and
+                len(np.unique(plate_sizes[:, 1]) == 1)):
+            logger.warning('plates don\'t have equal sizes')
+        # Take the size of the plate which contains the most wells. The
+        # other plates should then be filled with empty tiles.
+        plate_size = (np.max(plate_sizes[:, 0]), np.max(plate_sizes[:, 1]))
+        # Introduce spacers between plates
+        row_spacer_height = (
+            (experiment.plate_grid.shape[0] - 1) *
+            experiment.plate_spacer_size
+        )
+        column_spacer_width = (
+            (experiment.plate_grid.shape[1] - 1) *
+            experiment.plate_spacer_size
+        )
+        return tuple(
+            np.array(plate_size) * experiment.plate_grid.shape +
+            np.array([row_spacer_height, column_spacer_width])
+        )
+
+    @cached_property
     def image_size(self):
         '''List[Tuple[int]]: number of pixels along the vertical and horizontal
         axis of the layer at each zoom level; levels are sorted such that the
@@ -161,50 +217,13 @@ class ChannelLayer(Model):
         level and the last element the highest resolution (maximally zoomed in)
         level
         '''
-        # Determine the size of the image at the highest resolution level,
-        # i.e. at the base of the pyramid
         experiment = self.channel.experiment
-        metainfo_file = os.path.join(self.location, 'ImageProperties.xml')
-        if not os.path.exists(metainfo_file):
-            logger.debug(
-                'image size needs to be calculated, '
-                'since pyramid has not yet been created'
-            )
-            sizes = dict()
-            plate_dims = np.array([p.image_size for p in experiment.plates])
-            if not(len(np.unique(plate_dims[:, 0])) == 1 and
-                    len(np.unique(plate_dims[:, 1]) == 1)):
-                logger.warning('plates don\'t have equal sizes')
-            # Take the size of the plate which contains the most wells. The
-            # other plates should then be filled with empty tiles.
-            plate_size = (np.max(plate_dims[:, 0]), np.max(plate_dims[:, 1]))
-            rows, cols = np.where(experiment.plate_grid)
-            for r, c in zip(rows, cols):
-                sizes[(r, c)] = plate_size
-            # Introduce spacers between plates
-            row_spacer_height = (
-                (experiment.plate_grid.shape[0] - 1) *
-                experiment.plate_spacer_size
-            )
-            column_spacer_width = (
-                (experiment.plate_grid.shape[1] - 1) *
-                experiment.plate_spacer_size
-            )
-            height, width = tuple(
-                np.sum(np.array(sizes.values()), axis=0) +
-                np.array([row_spacer_height, column_spacer_width])
-            )
-        else:
-            logger.debug('image size is determined from existing pyramid')
-            with open(metainfo_file, 'r') as f:
-                dom = minidom.parse(f)
-                height = int(dom.firstChild.getAttribute('HEIGHT'))
-                width = int(dom.firstChild.getAttribute('WIDTH'))
+        levels = list()
+        height, width = self.height, self.width
+        levels.append((height, width))
         # Determine the size of the images at lower resolution levels up to the
         # top of the pyramid
-        levels = list()
-        levels.append((height, width))
-        while height > self.tile_size or width > self.tile_size:
+        while height > self.tile_size or self.width > self.tile_size:
             height = int(np.ceil(np.float(height) / experiment.zoom_factor))
             width = int(np.ceil(np.float(width) / experiment.zoom_factor))
             levels.append((height, width))

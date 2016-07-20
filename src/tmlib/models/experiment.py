@@ -293,15 +293,13 @@ class Experiment(Model, DateMixIn):
         image
         '''
         n = len(self.plates)
-        dimensions = guess_stitch-dimensions(n)
+        dimensions = guess_stitch_dimensions(n)
         cooridinates = itertools.product(
             range(dimensions[0]), range(dimensions[1])
         )
         grid = np.zeros(dimensions, dtype=int)
-        for i, c in enumerate(cooridinates):
-            if i >= n:
-                break
-            grid[c[0], c[1]] = self.plates[i].id
+        for i, (y, x) in enumerate(cooridinates):
+            grid[y, x] = self.plates[i].id
         return grid
 
     def belongs_to(self, user):

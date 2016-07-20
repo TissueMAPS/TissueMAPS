@@ -11,8 +11,14 @@ logger = logging.getLogger(__name__)
 DATABASE_URI = os.environ['TMAPS_DB_URI']
 
 
-def create_db_engine():
-    '''Creates a database engine with a connection pool size of ``2``.
+def create_db_engine(db_uri=DATABASE_URI):
+    '''Creates a database engine with a connection pool size of ``5``
+    and maximal overflow of ``10``.
+
+    Parameters
+    ----------
+    db_uri: str, optional
+        database uri
 
     Returns
     -------
@@ -23,8 +29,7 @@ def create_db_engine():
     # e.g. sqlalchemy.pool.AssertionPool and/or changing settings, such as
     # pool_size or max_overflow.
     return sqlalchemy.create_engine(
-        DATABASE_URI,
-        poolclass=sqlalchemy.pool.QueuePool, pool_size=5, max_overflow=10
+        db_uri, poolclass=sqlalchemy.pool.QueuePool, pool_size=5, max_overflow=10
     )
 
 
@@ -125,12 +130,17 @@ class Session(object):
     All changes get automatically committed at the end of the interaction.
     In case of an error, a rollback is issued.
 
+    An instance of this class provides access to all methods and attributes of
+    :py:class:`sqlalchemy.orm.session.Session` (it simply delegates under the
+    hood).
+
     Examples
     --------
     from tmlib.models.utils import Session
+    from tmlib.models import Experiment
 
     with Session() as session:
-        session.query()
+        print session.query(Experiment).all()
 
     Note
     ----
@@ -144,9 +154,21 @@ class Session(object):
     _engine = None
     _session_factory = None
 
+    def __init__(self, db_uri=None):
+        '''
+        Parameters
+        ----------
+        db_uri: str, optional
+            database uri; defaults to the value of the environment variable
+            ``TMPAS_DB_URI`` (default: ``None``)
+        '''
+        if db_uri is None:
+            db_uri = DATABASE_URI
+        self.db_uri = db_uri
+
     def __enter__(self):
         if Session._engine is None:
-            Session._engine = create_db_engine()
+            Session._engine = create_db_engine(self.db_uri)
         if Session._session_factory is None:
             Session._session_factory = sqlalchemy.orm.scoped_session(
                 sqlalchemy.orm.sessionmaker(
@@ -180,104 +202,13 @@ class Session(object):
             delete_context.rowcount, delete_context.primary_table.name
         )
 
-    def query(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.query`'''
-        return self._sqla_session.query(*args, **kwargs)
-
-    def get(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.get`'''
-        return self._sqla_session.get(*args, **kwargs)
-
-    def add(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.add`'''
-        return self._sqla_session.add(*args, **kwargs)
-
-    def bulk_save_objects(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.bulk_save_objects`'''
-        return self._sqla_session.bulk_save_objects(*args, **kwargs)
-
-    def bulk_insert_mappings(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.bulk_insert_mappings`'''
-        return self._sqla_session.bulk_insert_mappings(*args, **kwargs)
-
-    def bulk_update_mappings(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.bulk_update_mappings`'''
-        return self._sqla_session.bulk_update_mappings(*args, **kwargs)
-
-    def add_all(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.add_all`'''
-        return self._sqla_session.add_all(*args, **kwargs)
-
-    def flush(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.flush`'''
-        return self._sqla_session.flush(*args, **kwargs)
-
-    def commit(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.commit`'''
-        return self._sqla_session.commit(*args, **kwargs)
-
-    def rollback(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.rollback`'''
-        return self._sqla_session.rollback(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.delete`'''
-        return self._sqla_session.delete(*args, **kwargs)
-
-    def scalar(self, *args, **kwargs):
-        '''Delegates to :py:method:`sqlalchemy.orm.session.Session.scalar`'''
-        return self._sqla_session.scalar(*args, **kwargs)
-
-    def update_or_create(self, model, **kwargs):
-        '''Updates an instance of a model class if it already exists or
-        creates it otherwise.
-
-        Parameters
-        ----------
-        model: type
-            an implementation of the :py:class:`tmlib.models.model`
-            abstract base class
-        **kwargs: dict
-            keyword arguments for the instance that can be passed to the
-            constructor of `model` or to
-            :py:method:`sqlalchemy.orm.query.query.filter_by`
-
-        Returns
-        -------
-        tmlib.models.model
-            an instance of `model`
-
-        Note
-        ----
-        Adds and commits newly created instance.
+    def __getattr__(self, attr):
+        '''Delegates to :py:class:`sqlalchemy.orm.session.Session` when possible.
         '''
-        try:
-            instance = self.query(model).filter_by(**kwargs).one()
-            logger.debug('found existing instance: %r', instance)
-            logger.debug(
-                'update existings instance with parameters: {0}'.format(kwargs)
-            )
-            for k, v in kwargs.iteritems():
-                setattr(instance, k, v)
-        except sqlalchemy.orm.exc.NoResultFound:
-            try:
-                instance = model(**kwargs)
-                logger.debug('created new instance: %r', instance)
-                self._sqla_session.add(instance)
-                self._sqla_session.commit()
-                logger.debug('added and committed new instance: %r', instance)
-            except sqlalchemy.exc.IntegrityError as err:
-                logger.error(
-                    'creation of instance %r failed:\n%s', instance, str(err)
-                )
-                self._sqla_session.rollback()
-                instance = self.query(model).filter_by(**kwargs).one()
-                logger.debug('found existing instance: %r', instance)
-            except:
-                raise
-        except:
-            raise
-        return instance
+        if hasattr(self._sqla_session, attr):
+            return getattr(self._sqla_session, attr)
+        else:
+            return getattr(self, attr)
 
     def get_or_create(self, model, **kwargs):
         '''Gets an instance of a model class if it already exists or

@@ -50,7 +50,8 @@ class Cycle(Model, DateMixIn):
     index = Column(Integer, index=True)
     plate_id = Column(
         Integer,
-        ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
