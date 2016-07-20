@@ -14,6 +14,7 @@ from tmlib.writers import YamlWriter
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
+from tmlib.workflow.illuminati.stitch import guess_stitch_dimensions
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
 from tmlib.utils import autocreate_directory_property
@@ -292,18 +293,7 @@ class Experiment(Model, DateMixIn):
         image
         '''
         n = len(self.plates)
-        if n < 4:
-            grid = np.zeros((n, 1), dtype=int)
-            for i in range(n):
-                grid[i, 0] = self.plates[i].id
-            return grid
-
-        if (n / np.ceil(np.sqrt(n))) % 2 == 0:
-            dimensions = (
-                int(np.ceil(np.sqrt(n))), int(n / np.ceil(np.sqrt(n)))
-            )
-        else:
-            dimensions = tuple(np.repeat(int(np.ceil(np.sqrt(n))), 2))
+        dimensions = guess_stitch-dimensions(n)
         cooridinates = itertools.product(
             range(dimensions[0]), range(dimensions[1])
         )
