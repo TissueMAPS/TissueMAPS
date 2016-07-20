@@ -53,30 +53,30 @@ Example of a *.pipe.yaml* YAML descriptor file:
 
 .. code-block:: yaml
 
-    description: An example project that does nothing.
+    description: An example pipeline that does nothing.
     
     version: '0.0.1'
 
     input:
 
         channels:
-          - name: myExampleLayer1
+          - name: channel1
             correct: true
-          - name: myExampleLayer2
+          - name: channel2
             correct: true
 
     pipeline:
 
-        -   source: my_python_module.py
-            handles: handles/my_python_module.handle.yml
+        -   source: python_module.py
+            handles: handles/my_python_module.handle.yaml
             active: true
 
-        -   source: my_r_module.r
-            handles: handles/my_r_module.handle.yml
+        -   source: r_module.r
+            handles: handles/my_r_module.handle.yaml
             active: true
 
-        -   source: my_m_module.m
-            handles: handles/my_m_module.handle.yml
+        -   source: matlab_module.m
+            handles: handles/my_m_module.handle.yaml
             active: true
 
 
