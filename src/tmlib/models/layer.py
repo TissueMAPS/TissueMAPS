@@ -2,6 +2,7 @@ import os
 import re
 import numpy as np
 import logging
+import lxml
 import itertools
 import collections
 from cached_property import cached_property
@@ -170,6 +171,7 @@ class ChannelLayer(Model):
         level
         '''
         # NOTE: This could also be calculated based on maxzoom_level only
+        logger.debug('calculate layer dimensions')
         levels = list()
         for i, img_size in enumerate(self.image_size):
             height, width = img_size
@@ -183,6 +185,7 @@ class ChannelLayer(Model):
         '''Determines the size of the image at the highest resolution level,
         i.e. at the base of the pyramid.
         '''
+        logger.debug('calculate size of image at highest resolution level')
         experiment = self.channel.experiment
         plate_sizes = np.array([p.image_size for p in experiment.plates])
         # TODO: This can cause problems when wells were deleted (because
@@ -215,16 +218,19 @@ class ChannelLayer(Model):
         level and the last element the highest resolution (maximally zoomed in)
         level
         '''
+        logger.debug('calculate image size at each resolution level')
         experiment = self.channel.experiment
         levels = list()
         height, width = self.height, self.width
         levels.append((height, width))
         # Determine the size of the images at lower resolution levels up to the
         # top of the pyramid
-        while height > self.tile_size or self.width > self.tile_size:
+        while True:
             height = int(np.ceil(np.float(height) / experiment.zoom_factor))
             width = int(np.ceil(np.float(width) / experiment.zoom_factor))
             levels.append((height, width))
+            if height > self.tile_size or self.width > self.tile_size:
+                break
         # Sort zoom levels top-down, i.e. from lowest to highest resolution
         return list(reversed(levels))
 
@@ -379,6 +385,7 @@ class ChannelLayer(Model):
         Set[Tuple[int]]
             row, column coordinates
         '''
+        logger.debug('get coordinates of empty tiles at maxzoom level')
         tile_coords = self.base_tile_coordinate_to_image_file_map.keys()
         rows = range(self.dimensions[-1][0])
         cols = range(self.dimensions[-1][1])
@@ -697,6 +704,6 @@ class ChannelLayer(Model):
     def __repr__(self):
         return (
             '<%s(id=%r, channel=%r, tpoint=%r, zplane=%r)>'
-            % (self.__class__.__name__, self.id, self.channel.name,
+            % (self.__class__.__name__, self.id, self.channel.index,
                 self.tpoint, self.zplane)
         )
