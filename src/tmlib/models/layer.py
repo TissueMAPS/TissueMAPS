@@ -229,7 +229,7 @@ class ChannelLayer(Model):
             height = int(np.ceil(np.float(height) / experiment.zoom_factor))
             width = int(np.ceil(np.float(width) / experiment.zoom_factor))
             levels.append((height, width))
-            if height > self.tile_size or self.width > self.tile_size:
+            if height < self.tile_size or self.width < self.tile_size:
                 break
         # Sort zoom levels top-down, i.e. from lowest to highest resolution
         return list(reversed(levels))
