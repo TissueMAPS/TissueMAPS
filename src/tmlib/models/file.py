@@ -243,15 +243,18 @@ class ChannelImageFile(File, DateMixIn):
     n_planes = Column(Integer, index=True)
     cycle_id = Column(
         Integer,
-        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     site_id = Column(
         Integer,
-        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     channel_id = Column(
         Integer,
-        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -576,7 +579,8 @@ class PyramidTileFile(File):
     column = Column(Integer, index=True)
     channel_layer_id = Column(
         Integer,
-        ForeignKey('channel_layers.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('channel_layers.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -695,11 +699,13 @@ class IllumstatsFile(File, DateMixIn):
     name = Column(String, index=True)
     channel_id = Column(
         Integer,
-        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     cycle_id = Column(
         Integer,
-        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
