@@ -9,7 +9,7 @@ from tmlib.workflow import register_submission_args
 class IlluminatiBatchArguments(BatchArguments):
 
     batch_size = Argument(
-        type=int, default=10, flag='b',
+        type=int, default=100, flag='b',
         help='number of image files that should be processed per job'
     )
 
@@ -40,7 +40,7 @@ class IlluminatiBatchArguments(BatchArguments):
         type=float,
         help='''threshold percentile at which image intensities should be clipped
         ''',
-        default=99.99
+        default=99.90
     )
 
 @register_submission_args('illuminati')

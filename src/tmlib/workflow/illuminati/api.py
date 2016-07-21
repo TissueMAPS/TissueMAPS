@@ -84,26 +84,22 @@ class PyramidBuilder(ClusterRoutines):
         '''
         logger.info('performing data integrity tests')
         with tm.utils.Session() as session:
-            images_per_site = session.query(
-                    func.count(tm.ChannelImageFile.id)
-                ).\
+            n_images_per_site = session.query(func.count(tm.ChannelImageFile.id)).\
                 join(tm.Channel).\
                 filter(tm.Channel.experiment_id == self.experiment_id).\
                 group_by(tm.ChannelImageFile.site_id).\
                 all()
-            if len(set(images_per_site)) > 1:
+            if len(set(n_images_per_site)) > 1:
                 raise DataIntegrityError(
                     'The number of channel image files must be the same for '
                     'each site!'
                 )
-            wells_per_plate = session.query(
-                    func.count(tm.Well.id)
-                ).\
+            n_wells_per_plate = session.query(func.count(tm.Well.id)).\
                 join(tm.Plate).\
                 filter(tm.Plate.experiment_id == self.experiment_id).\
                 group_by(tm.Plate.id).\
                 all()
-            if len(set(wells_per_plate)) > 1:
+            if len(set(n_wells_per_plate)) > 1:
                 raise DataIntegrityError(
                     'The number of wells must be the same for each plate!'
                 )
@@ -752,8 +748,7 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('create mapobject type "%s"', name)
                 mapobject_type = session.get_or_create(
                     tm.MapobjectType,
-                    name=name, experiment_id=self.experiment_id,
-                    is_static=True
+                    name=name, experiment_id=self.experiment_id, is_static=True
                 )
                 session.add(mapobject_type)
                 session.flush()
@@ -762,9 +757,7 @@ class PyramidBuilder(ClusterRoutines):
                 mapobject_outlines = list()
                 for obj in query:
 
-                    mapobject = tm.Mapobject(
-                        mapobject_type_id=mapobject_type.id
-                    )
+                    mapobject = tm.Mapobject(mapobject_type_id=mapobject_type.id)
                     session.add(mapobject)
                     session.flush()
                     # First element: x axis
