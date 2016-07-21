@@ -89,7 +89,7 @@ class Experiment(Model, DateMixIn):
 
     # Table columns
     name = Column(String)
-    microscope_type = Column(String)
+    microscope_type = Column(String, index=True)
     plate_format = Column(Integer)
     plate_acquisition_mode = Column(String)
     description = Column(Text)

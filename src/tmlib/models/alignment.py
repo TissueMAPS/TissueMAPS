@@ -43,11 +43,13 @@ class SiteShift(Model):
     x = Column(Integer)
     site_id = Column(
         Integer,
-        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
     cycle_id = Column(
         Integer,
-        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -128,7 +130,8 @@ class SiteIntersection(Model):
     left_overhang = Column(Integer)
     site_id = Column(
         Integer,
-        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables

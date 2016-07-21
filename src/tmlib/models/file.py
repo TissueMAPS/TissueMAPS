@@ -57,7 +57,8 @@ class MicroscopeImageFile(File, DateMixIn):
     upload_status = Column(String, index=True)
     acquisition_id = Column(
         Integer,
-        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -139,7 +140,8 @@ class MicroscopeMetadataFile(File, DateMixIn):
     upload_status = Column(String, index=True)
     acquisition_id = Column(
         Integer,
-        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables

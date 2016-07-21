@@ -65,10 +65,8 @@ class ChannelLayer(Model):
     # Table columns
     zplane = Column(Integer, index=True)
     tpoint = Column(Integer, index=True)
-    height = Column('height', Integer)
-    _height = Column(Integer)
-    width = Column('width', Integer)
-    _width = Column(Integer)
+    _height = Column('height', Integer)
+    _width = Column('width', Integer)
     max_intensity = Column(Integer)
     min_intensity = Column(Integer)
     channel_id = Column(

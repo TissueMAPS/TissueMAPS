@@ -60,7 +60,8 @@ class Acquisition(Model, DateMixIn):
     description = Column(Text)
     plate_id = Column(
         Integer,
-        ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE')
+        ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
     )
 
     # Relationships to other tables
@@ -214,7 +215,7 @@ class ImageFileMapping(Model):
     tpoint = Column(Integer, index=True)
     bit_depth = Column(Integer)
     wavelength = Column(String, index=True)
-    map = Column(JSONB)
+    map = Column(JSONB, index=True)
     site_id = Column(
         Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -243,18 +244,15 @@ class ImageFileMapping(Model):
     )
     acquisition = relationship(
         'Acquisition',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan'),
-        index=True
+        backref=backref('image_file_mappings', cascade='all, delete-orphan')
     )
     cycle = relationship(
         'Cycle',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan'),
-        index=True
+        backref=backref('image_file_mappings', cascade='all, delete-orphan')
     )
     channel = relationship(
         'Channel',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan'),
-        index=True
+        backref=backref('image_file_mappings', cascade='all, delete-orphan')
     )
 
     def __init__(self, tpoint, wavelength, bit_depth, map, site_id,
