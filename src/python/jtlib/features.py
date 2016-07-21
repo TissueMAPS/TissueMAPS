@@ -122,7 +122,7 @@ class Features(object):
         '''
         bbox = self.bboxes[object_id]
         img = utils.extract_bbox_image(self.label_image, bbox=bbox, pad=1)
-        return img == obj.label
+        return img == object_id
 
     def get_object_intensity_image(self, object_id):
         '''Extracts the bounding box for a given object from `intensity_image`.
