@@ -4,7 +4,7 @@ from sklearn.grid_search import GridSearchCV
 from sklearn import svm, cross_validation
 
 from tmserver.extensions import spark
-from toolbox.classifier import SupervisedClassifier
+from tmserver.toolbox.classifier import SupervisedClassifier
 
 
 class SVM(SupervisedClassifier):
