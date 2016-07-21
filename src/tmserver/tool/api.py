@@ -133,7 +133,7 @@ def get_result_labels(label_layer):
     y = request.args.get('y')
     z = request.args.get('z')
     zplane = request.args.get('zplane')
-    t = request.args.get('tpoint')
+    tpoint = request.args.get('tpoint')
 
     # Check arguments for validity and convert to integers
     if any([var is None for var in [x, y, z, zplane, tpoint]]):
