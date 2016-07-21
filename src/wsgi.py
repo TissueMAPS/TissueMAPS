@@ -83,3 +83,5 @@ if __name__ == '__main__':
         app.run(port=args.port, debug=True)
     else:
         app.run(port=args.port, debug=True, threaded=True)
+else:
+    set_logging_level('INFO')

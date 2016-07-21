@@ -21,8 +21,8 @@ class Tool(Model):
     def get_class(self):
         def import_from_str(name):
             components = name.split('.')
-            mod = __import__(components[0])
-            for comp in components[1:]:
+            mod = __import__('.'.join(components[:2]))
+            for comp in components[2:]:
                 mod = getattr(mod, comp)
             return mod
         cls = import_from_str(self.full_class_path)
