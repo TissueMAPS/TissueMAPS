@@ -211,24 +211,29 @@ class ImageExtractor(ClusterRoutines):
         batch: dict
             job description
         '''
-        with tm.utils.Session() as session:
-            metadata = pd.DataFrame(
-                session.query(
-                    tm.ChannelImageFile.id,
-                    tm.ChannelImageFile.site_id,
-                    tm.ChannelImageFile.cycle_id
-                ).
-                join(tm.Channel).
-                filter(tm.Channel.experiment_id == self.experiment_id).
-                all()
-            )
-            cycle_ids = np.unique(metadata.cycle_id)
-            site_group = metadata.groupby('site_id')
-            for i, sg in site_group:
-                if len(np.setdiff1d(cycle_ids, sg.cycle_id.values)) > 0:
-                    sites_to_omit = session.query(tm.ChannelImageFile).\
-                        filter(tm.ChannelImageFile.id.in_(sg.id.values)).\
-                        all()
-                    for site in sites_to_omit:
-                        site.omitted = True
-                    session.add_all(sites_to_omit)
+        # TODO: this does not work for experiments with multiple plates
+        # with tm.utils.Session() as session:
+        #     metadata = pd.DataFrame(
+        #         session.query(
+        #             tm.ChannelImageFile.id,
+        #             tm.ChannelImageFile.site_id,
+        #             tm.ChannelImageFile.cycle_id,
+        #             tm.Cycle.plate_id
+        #         ).
+        #         join(tm.Cycle).\
+        #         join(tm.Plate).
+        #         filter(tm.Plate.experiment_id == self.experiment_id).
+        #         all()
+        #     )
+        #     cycle_ids = np.unique(metadata.cycle_id)
+        #     site_group = metadata.groupby('site_id')
+        #     for i, sg in site_group:
+        #         # If files don't exist
+        #         if (len(np.setdiff1d(cycle_ids, sg.cycle_id.values)) > 0 and
+        #                 len(np.unique(sg.plate_id)) == 1):
+        #             sites_to_omit = session.query(tm.ChannelImageFile).\
+        #                 filter(tm.ChannelImageFile.id.in_(sg.id.values)).\
+        #                 all()
+        #             for site in sites_to_omit:
+        #                 site.omitted = True
+        #             session.add_all(sites_to_omit)
