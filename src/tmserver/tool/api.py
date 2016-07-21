@@ -132,7 +132,7 @@ def get_result_labels(label_layer):
     x = request.args.get('x')
     y = request.args.get('y')
     z = request.args.get('z')
-    zlevel = request.args.get('zplane')
+    zplane = request.args.get('zplane')
     t = request.args.get('tpoint')
 
     # Check arguments for validity and convert to integers
