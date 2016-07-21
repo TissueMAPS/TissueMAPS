@@ -258,7 +258,7 @@ class MetadataConfigurator(ClusterRoutines):
                     get(batch['acquisition_id'])
 
                 w_index = md.well_name == w
-                well = session.update_or_create(
+                well = session.get_or_create(
                     tm.Well,
                     plate_id=acquisition.plate.id, name=w
                 )
@@ -273,7 +273,7 @@ class MetadataConfigurator(ClusterRoutines):
                     width = md.loc[s_index, 'width'].values[0]
                     # We need the id because it's a foreign key on file mappings.
                     # Therefore, we have to insert/update one by one.
-                    site = session.update_or_create(
+                    site = session.get_or_create(
                         tm.Site,
                         y=y, x=x, height=height, width=width, well_id=well.id
                     )
@@ -313,7 +313,7 @@ class MetadataConfigurator(ClusterRoutines):
             # We need to do this per plate to ensure correct indices
             # TODO: check plates have similar channels, etc
             experiment = session.query(tm.Experiment).get(self.experiment_id)
-            acquisition_mode = experiment.plate_acquisition_mode 
+            acquisition_mode = experiment.plate_acquisition_mode
             logger.info('plates were acquired in mode "%s"', acquisition_mode)
             is_time_series = acquisition_mode == 'basic'
             if is_time_series:
@@ -345,7 +345,7 @@ class MetadataConfigurator(ClusterRoutines):
                         bit_depth = bit_depth[0]
                     else:
                         raise MetadataError(
-                            'Bit depth must be the same for all images'
+                            'Bit depth must be the same for all images.'
                         )
                     for t in tpoints:
                         logger.debug('time point #%d', t)
@@ -374,8 +374,11 @@ class MetadataConfigurator(ClusterRoutines):
                                 )
                             logger.info(
                                 'update time point and channel metadata '
-                                'of file mappings'
+                                'of file mappings: tpoint=%d, channel=%d',
+                                t_index, channel.index
                             )
+                            # TODO: Consider bulk_update_mappings() for
+                            # performance
                             for fm in file_mappings:
                                 fm.tpoint = t_index
                                 fm.cycle_id = cycle.id
