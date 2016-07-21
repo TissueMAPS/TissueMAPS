@@ -58,7 +58,6 @@ class MapobjectType(Model, DateMixIn):
     # Table columns
     name = Column(String, index=True, nullable=False)
     is_static = Column(Boolean, index=True)
-    parent_id = Column(Integer, index=True)
     _max_poly_zoom = Column('max_poly_zoom', Integer)
     _min_poly_zoom = Column('min_poly_zoom', Integer)
     experiment_id = Column(
@@ -84,13 +83,10 @@ class MapobjectType(Model, DateMixIn):
         static: bool, optional
             whether map objects outlines are fixed across different time
             points and z-planes (default: ``False``)
-        parent_id: int, optional
-            ID of parent mapobject
         '''
         self.name = name
         self.experiment_id = experiment_id
         self.is_static = is_static
-        self.parent_id = parent_id
 
     @autocreate_directory_property
     def location(self):
