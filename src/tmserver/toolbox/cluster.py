@@ -1,7 +1,7 @@
 import logging
 from scipy.cluster.vq import kmeans, vq
 
-from tmtoolbox.toolbox.classifier import UnsupervisedClassifier
+from tmserver.toolbox.classifier import UnsupervisedClassifier
 
 logger = logging.getLogger(__name__)
 
