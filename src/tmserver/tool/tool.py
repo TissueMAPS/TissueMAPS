@@ -1,5 +1,6 @@
 import pandas as pd
 from sqlalchemy import Column, String, Text
+import importlib
 from abc import ABCMeta
 from abc import abstractmethod
 
@@ -21,10 +22,13 @@ class Tool(Model):
     def get_class(self):
         def import_from_str(name):
             components = name.split('.')
-            mod = __import__('.'.join(components[:2]))
-            for comp in components[2:]:
-                mod = getattr(mod, comp)
-            return mod
+            mod_name = '.'.join(components[:2])
+            mod = importlib.import_module(mod_name)
+            return getattr(mod, components[2])
+            # mod = __import__(components[0])
+            # for comp in components[1:]:
+            #     mod = getattr(mod, comp)
+            # return mod
         cls = import_from_str(self.full_class_path)
         return cls
 
