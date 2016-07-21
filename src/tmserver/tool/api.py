@@ -132,22 +132,22 @@ def get_result_labels(label_layer):
     x = request.args.get('x')
     y = request.args.get('y')
     z = request.args.get('z')
-    zlevel = request.args.get('zlevel')
-    t = request.args.get('t')
+    zlevel = request.args.get('zplane')
+    t = request.args.get('tpoint')
 
     # Check arguments for validity and convert to integers
-    if any([var is None for var in [x, y, z, zlevel, t]]):
+    if any([var is None for var in [x, y, z, zplane, tpoint]]):
         raise MalformedRequestError(
             'One of the following request arguments is missing: '
             'x, t, z, zlevel, t'
         )
     else:
-        x, y, z, zlevel, t = map(int, [x, y, z, zlevel, t])
+        x, y, z, zplane, tpoint = map(int, [x, y, z, zplane, tpoint])
 
     mapobject_type = db.session.query(MapobjectType).\
         get(label_layer.mapobject_type_id)
     query_res = mapobject_type.get_mapobject_outlines_within_tile(
-        x, y, z, zplane=zlevel, tpoint=t
+        x, y, z, zplane=zplane, tpoint=tpoint
     )
 
     features = []
