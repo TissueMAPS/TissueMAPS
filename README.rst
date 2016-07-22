@@ -16,11 +16,10 @@ Python was chosen as programming language because it represents a good trade-off
 - `openCV <http://opencv.org/>`_
 - `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
 
-This makes it easy to combine algorithms implemented in different libraries into an image analysis workflow. Jterator further provides integration of code written in other programming languages frequently used for image processing and statistical data analysis, such as   
+This makes it easy to combine algorithms implemented in different libraries into an image analysis workflow. Jterator further provides integration of code written in other programming languages frequently used for image processing and statistical data analysis. Already implemented are:  
 
 - Matlab: `matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_ 
 - R: `rpy2 <http://rpy.sourceforge.net/>`_
-- Java: `Py4J <https://www.py4j.org/>`_
 .. - Julia: `pyjulia <https://github.com/JuliaLang/pyjulia>`_
 
 .. _main-ideas:
@@ -28,10 +27,10 @@ This makes it easy to combine algorithms implemented in different libraries into
 Main ideas
 ==========
 
-- Simple development and testing: A module is simply a file that defines a function. This makes it easy for non-hardcore developers to get started.
+- Simple development and testing: A module is simply a file that defines a function and creates a namespace.
 - Short list of dependencies: A module only requires the `NumPy <http://www.numpy.org/>`_ package.
 - Independence of individual processing steps: Module arguments are either `NumPy` arrays, scalars (integer/floating point numbers or strings), or a sequence of scalars. Modules don't perform IO. They are unit testable.
-- Separation of GUI handling from actual processing: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be embedded in a website for interactive visualization in a browser.
+- Strict separation of GUI handling and IO from actual processing: Modules don't interact with a GUI or file system. Their main function receives images in form of arrays as input arguments and returns one or more arrays. They can generate and return a JSON representation of a figure which can be embedded in a website for interactive visualization.
 - Cross-language compatibility: Restricting module input/output to `NumPy` arrays and build-in Python types facilitates interfaces to other languages.
 
 
