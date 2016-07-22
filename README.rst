@@ -12,7 +12,7 @@ Introduction
 Python was chosen as programming language because it represents a good trade-off between development time and performance. The language is relatively easy to learn and its interpreted nature facilitates scripting and testing. The powerful `NumPy <http://www.numpy.org/>`_ package provides an optimal framework for scientific compututing and n-dimensional array operations. In addition, there are numerous established C/C++ image processing libraries with Python bindings that use `NumPy arrays <http://docs.scipy.org/doc/numpy/reference/arrays.html>`_ as data container:   
 
 - `scikit-image <http://scikit-image.org/docs/dev/auto_examples/>`_   
-- `simpleITK <http://www.simpleitk.org/>`_
+- `ITK <http://www.simpleitk.org/>`_
 - `openCV <http://opencv.org/>`_
 - `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
 
