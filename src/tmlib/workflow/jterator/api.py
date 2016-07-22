@@ -165,30 +165,27 @@ class ImageAnalysisPipeline(ClusterRoutines):
         Parameters
         ----------
         plot: bool
-            whether plots should be generated; when ``False`` Matlab will be
-            started with the ``"-nojvm"`` option, which will disable plotting
-            functionality
+            whether plots should be generated
 
         Note
         ----
         For Matlab, you need to set the MATLABPATH environment variable
         in order to add module dependencies to the Matlab path.
+
+        Warning
+        -------
+        Matlab will be started with the ``"-nojvm"`` option.
         '''
+        # TODO: JVM for java code
         languages = [m.language for m in self.pipeline]
         if 'Matlab' in languages:
             logger.info('start Matlab engine')
             # NOTE: It is absolutely necessary to specify these startup options
             # for use parallel processing on the cluster. Otherwise some jobs
             # hang up and get killed due to timeout.
-            startup_options = '-nosplash -singleCompThread'
-            if not plot:
-                # Option minimizes memory usage and improves initial startup
-                # speed, but disables plotting functionality, so we can only
-                # use it in headless mode.
-                startup_options += ' -nojvm'
-            logger.debug('Matlab startup options: %s', startup_options)
-            self.engines['Matlab'] = matlab.MatlabSession(
-                                        options=startup_options)
+            startup_ops = '-nosplash -singleCompThread -nojvm'
+            logger.debug('Matlab startup options: %s', startup_ops)
+            self.engines['Matlab'] = matlab.MatlabSession(options=startup_ops)
             # We have to make sure that code which may be called by a module,
             # are actually on the MATLAB path.
             # To this end, the MATLABPATH environment variable can be used.
