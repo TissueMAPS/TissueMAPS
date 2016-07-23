@@ -12,15 +12,14 @@ Introduction
 Python was chosen as programming language because it represents a good trade-off between development time and performance. The language is relatively easy to learn and its interpreted nature facilitates scripting and testing. The powerful `NumPy <http://www.numpy.org/>`_ package provides an optimal framework for scientific compututing and n-dimensional array operations. In addition, there are numerous established C/C++ image processing libraries with Python bindings that use `NumPy arrays <http://docs.scipy.org/doc/numpy/reference/arrays.html>`_ as data container:   
 
 - `scikit-image <http://scikit-image.org/docs/dev/auto_examples/>`_   
-- `simpleITK <http://www.simpleitk.org/>`_
+- `ITK <http://www.simpleitk.org/>`_
 - `openCV <http://opencv.org/>`_
 - `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
 
-This makes it easy to combine algorithms implemented in different libraries into an image analysis workflow. Jterator further provides integration of code written in other programming languages frequently used for image processing and statistical data analysis, such as   
+This makes it easy to combine algorithms implemented in different libraries into an image analysis workflow. Jterator further provides integration of code written in other programming languages frequently used for image processing and statistical data analysis. Already implemented are:  
 
 - Matlab: `matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_ 
 - R: `rpy2 <http://rpy.sourceforge.net/>`_
-- Java: `Py4J <https://www.py4j.org/>`_
 .. - Julia: `pyjulia <https://github.com/JuliaLang/pyjulia>`_
 
 .. _main-ideas:
@@ -28,10 +27,10 @@ This makes it easy to combine algorithms implemented in different libraries into
 Main ideas
 ==========
 
-- Simple development and testing: A module is simply a file that defines a function. This makes it easy for non-hardcore developers to get started.
+- Simple development and testing: A module is simply a file that defines a function and creates a namespace.
 - Short list of dependencies: A module only requires the `NumPy <http://www.numpy.org/>`_ package.
 - Independence of individual processing steps: Module arguments are either `NumPy` arrays, scalars (integer/floating point numbers or strings), or a sequence of scalars. Modules don't perform IO. They are unit testable.
-- Separation of GUI handling from actual processing: Modules don't interact with a GUI. They can, however, generate and return a JSON representation of a figure which can be embedded in a website for interactive visualization in a browser.
+- Strict separation of GUI handling and IO from actual processing: Modules don't interact with a GUI or file system. Their main function receives images in form of arrays as input arguments and returns one or more arrays. They can generate and return a JSON representation of a figure which can be embedded in a website for interactive visualization.
 - Cross-language compatibility: Restricting module input/output to `NumPy` arrays and build-in Python types facilitates interfaces to other languages.
 
 
@@ -53,30 +52,30 @@ Example of a *.pipe.yaml* YAML descriptor file:
 
 .. code-block:: yaml
 
-    description: An example project that does nothing.
+    description: An example pipeline that does nothing.
     
     version: '0.0.1'
 
     input:
 
         channels:
-          - name: myExampleLayer1
+          - name: channel1
             correct: true
-          - name: myExampleLayer2
+          - name: channel2
             correct: true
 
     pipeline:
 
-        -   source: my_python_module.py
-            handles: handles/my_python_module.handle.yml
+        -   source: python_module.py
+            handles: handles/my_python_module.handle.yaml
             active: true
 
-        -   source: my_r_module.r
-            handles: handles/my_r_module.handle.yml
+        -   source: r_module.r
+            handles: handles/my_r_module.handle.yaml
             active: true
 
-        -   source: my_m_module.m
-            handles: handles/my_m_module.handle.yml
+        -   source: matlab_module.m
+            handles: handles/my_m_module.handle.yaml
             active: true
 
 
@@ -135,15 +134,15 @@ Each *module* must define a constant ``VERSION`` and a function ``main``. The ``
 
         return output
 
-The module named ``my_py_module`` (residing in a file called ``my_py_module.py``) can be imported and called as follows:
+The module named ``python_module`` (residing in a file called ``python_module.py``) can be imported and called as follows:
 
 .. code:: python
     
     import numpy as np
-    import jtmodules.my_py_module
+    import jtmodules.python_module
     
     img = np.zeros((10,10))
-    jtmodules.my_py_module.main(img)
+    jtmodules.python_module.main(img)
 
 .. Note::
 
@@ -155,7 +154,7 @@ The module named ``my_py_module`` (residing in a file called ``my_py_module.py``
 
     import jtlib.*;
     
-    classdef my_m_module
+    classdef matlab_module
     
         properties (Constant)
         
@@ -185,14 +184,14 @@ The module named ``my_py_module`` (residing in a file called ``my_py_module.py``
     end
     
     
-The module named ``my_m_module`` (residing in a file called ``my_m_module.m``) can be imported and called as follows:
+The module named ``matlab_module`` (residing in a file called ``matlab_module.m``) can be imported and called as follows:
 
 .. code:: matlab
     
-    import jtmodules.my_m_module;
+    import jtmodules.matlab_module;
     
     img = (10, 10);
-    jtmodules.my_m_module.main(img)
+    jtmodules.matlab_module.main(img)
 
 
 .. Note::
@@ -209,11 +208,11 @@ The module named ``my_m_module`` (residing in a file called ``my_m_module.m``) c
 
     library(jtlib)
     
-    my_r_module <- new.env()
+    r_module <- new.env()
 
-    my_r_module$VERSION <- '0.0.1'
+    r_module$VERSION <- '0.0.1'
     
-    my_r_module$main <- function(input_image, plot=FALSE){
+    r_module$main <- function(input_image, plot=FALSE){
 
         output <- list()
         output[['output_image']] <- input_image
@@ -227,14 +226,14 @@ The module named ``my_m_module`` (residing in a file called ``my_m_module.m``) c
         return(output)
     }
     
-The module named ``my_r_module`` (residing in a file called ``my_r_module.r``) can be imported and called as follows:
+The module named ``r_module`` (residing in a file called ``r_module.r``) can be imported and called as follows:
 
 .. code:: r
     
     library(jtmodules)
     
     img <- matrix(0, 10, 10)
-    jtmodules::my_r_module$main(img)
+    jtmodules::r_module$main(img)
 
 
 .. Note::
