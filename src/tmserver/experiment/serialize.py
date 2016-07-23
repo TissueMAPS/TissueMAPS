@@ -36,8 +36,6 @@ def encode_channel(obj, encoder):
 
 @json_encoder(ChannelLayer)
 def encode_channel_layer(obj, encoder):
-    # Get the image size on the highest zoom level (last element in the list)
-    image_height, image_width = obj.image_size[-1]
     return {
         'id': encode_pk(obj.id),
         'max_zoom': obj.maxzoom_level_index,
@@ -46,8 +44,8 @@ def encode_channel_layer(obj, encoder):
         'max_intensity': obj.max_intensity,
         'min_intensity': obj.min_intensity,
         'image_size': {
-            'width': image_width,
-            'height': image_height
+            'width': obj.width,
+            'height': obj.height
         }
     }
 

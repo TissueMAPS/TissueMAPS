@@ -56,17 +56,19 @@ def get_image_tile(channel_layer):
     tile_file = db.session.query(PyramidTileFile).filter_by(
         column=x, row=y, level=z, channel_layer_id=channel_layer.id
     ).one_or_none()
-    if tile_file is not None:
-        return send_file(tile_file.location)
-    else:
-        logger.warn('file does not exist - send empty image')
-        from cStringIO import StringIO
-        f = StringIO()
-        img = PyramidTile.create_as_background()
-        buf = img.get_buffer()
-        f.write(buf.tostring)
-        f.seek(0)
-        send_file(f, mimetype='image/jpeg')
+    if tile_file is None:
+        raise ResourceNotFoundError(
+            'Tile not found: column=%d, row=%d, level=%d', x, y, z
+        )
+    return send_file(tile_file.location)
+    #     logger.warn('file does not exist - send empty image')
+    #     from cStringIO import StringIO
+    #     f = StringIO()
+    #     img = PyramidTile.create_as_background()
+    #     buf = img.array.get_buffer()
+    #     f.write(buf.tostring)
+    #     f.seek(0)
+    #     send_file(f, mimetype='image/jpeg')
 
 @api.route('/features', methods=['GET'])
 @jwt_required()
