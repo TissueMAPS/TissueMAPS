@@ -660,10 +660,9 @@ class PyramidTileFile(File):
     def __repr__(self):
         return (
             '<PyramidTileFile('
-                'id=%r, channel=%r, zplane=%r, row=%r, column=%r, level=%r'
+                'id=%r, row=%r, column=%r, level=%r'
             ')>'
-            % (self.id, self.channel_layer.channel.index,
-               self.channel_layer.zplane, self.row, self.column, self.level)
+            % (self.id, self.row, self.column, self.level)
         )
 
 
