@@ -72,6 +72,16 @@ class PostgresXl(object):
 
     '''Destribution of SQL tables declared via SQLAlchemy for use with
     PostgresXL database cluster.
+
+    For more information on table creation, see
+    `PostgresXL documentation <http://files.postgres-xl.org/documentation/sql-createtable.html>`_
+
+    Note
+    ----
+    Tables must be implementations of :py:class:`tmlib.models.base.Model` and
+    the model classes must be decorated by either
+    :py:function:`tmlib.models.distribute_by_hash` or
+    :py:function:`tmlib.models.distribute_by_replication`.
     '''
 
     def __init__(self, db_uri):
@@ -129,20 +139,36 @@ class PostgresXl(object):
             return
         table_name = sql.element.name
         logger.info('create sql statement for table "%s"', table_name)
-        create_table = str(sql.compile(dialect=self._engine.dialect)).rstrip()
         column_name = _postgresxl_register['hash'].get(table_name, None)
-        if column_name is not None and isinstance(sql.element, Table):
-            logger.info('distribute table "%s" by hash', table_name)
+        distribute_by_hash = (
+            column_name is not None and
+            isinstance(sql.element, Table)
+        )
+        distribute_by_replication = (
+            _postgresxl_register['replication'].get(table_name, False) and
+            isinstance(sql.element, Table)
+        )
+        # Force people to explicitly specify mode of replication.
+        # And by people I mean us :)
+        if distribute_by_replication and distribute_by_hash:
+            raise ValueError(
+                'Distribution can either be performed by "hash" or by '
+                '"replication".'
+            )
+        if ((not distribute_by_replication and not distribute_by_hash) and
+                isinstance(sql.element, Table)):
+            raise ValueError(
+                'Distribution has to be performed by "hash" or by '
+                '"replication".'
+            )
+        if distribute_by_hash:
+            logger.info(
+                'update constraints on distributed table "%s"', table_name
+            )
             primary_keys = [pk.name for pk in sql.element.primary_key]
             # The distributed column must be part of the UNIQUE and
             # PRIMARY KEY constraints
             for c in sql.element.constraints:
-                # if isinstance(c, UniqueContraint):
-                #     if column_name not in c.columns:
-                #         sql.element.columns[column_name].unique = True
-                # if isinstance(c, PrimaryKeyContraint):
-                #     if column_name not in c.columns:
-                #         sql.element.columns[column_name].primary_key = True
                 if (isinstance(c, PrimaryKeyConstraint) or
                         isinstance(c, UniqueConstraint)):
                     if column_name not in c.columns:
@@ -151,11 +177,16 @@ class PostgresXl(object):
             for i in sql.element.indexes:
                 if column_name not in i.columns:
                     i.columns.add(sql.element.columns[column_name])
+
+        create_table = str(sql.compile(dialect=self._engine.dialect)).rstrip()
+        if distribute_by_hash:
+            logger.info('distribute table "%s" by hash', table_name)
             create_table += ' DISTRIBUTE BY HASH(' + column_name + ')'
-        do_replicate = _postgresxl_register['replication'].get(table_name, False)
-        if do_replicate and isinstance(sql.element, Table):
+        elif distribute_by_replication:
             logger.info('distribute table "%s" by replication', table_name)
             create_table += ' DISTRIBUTE BY REPLICATION'
+        else:
+
         self._sql += create_table + ';' + '\n'
 
 
