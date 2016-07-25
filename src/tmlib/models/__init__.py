@@ -63,7 +63,7 @@ def distribute_by_replication(cls):
         raise TypeError(
             'Registered class must be derived from tmlib.models.Model'
         )
-    _postgresxl_register['replication'][cls.__tablename__] = column_name
+    _postgresxl_register['replication'][cls.__tablename__] = True
     return cls
 
 
