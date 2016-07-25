@@ -10,7 +10,6 @@ from sqlalchemy.sql.schema import Table
 from sqlalchemy.sql.schema import UniqueConstraint
 from sqlalchemy.sql.schema import PrimaryKeyConstraint
 
-from tmlib.models.utils import DATABASE_URI
 from tmlib.models.utils import Session
 
 _postgresxl_register = collections.defaultdict(dict)
@@ -75,11 +74,21 @@ class PostgresXl(object):
     PostgresXL database cluster.
     '''
 
-    def __init__(self):
+    def __init__(self, db_uri):
+        '''
+        Parameters
+        ----------
+        db_uri: str, optional
+            URI of the database; defaults to
+            :py:attribute:`tmlib.models.utils.DATABASE_URI`
+        '''
         # TODO: this approach is quite a hack, this should be implemented in
         # SQLAlchemy at some point (see http://docs.sqlalchemy.org/en/latest/core/ddl.html)
+        if db_uri is None:
+            from tmlib.models.utils import DATABASE_URI
+            db_uri = DATABASE_URI
         self._engine = create_engine(
-            DATABASE_URI, strategy='mock', executor=self._dump
+            db_uri, strategy='mock', executor=self._dump
         )
         self._sql = str()
 
@@ -125,7 +134,7 @@ class PostgresXl(object):
                 #     if column_name not in c.columns:
                 #         sql.element.columns[column_name].primary_key = True
                 if (isinstance(c, PrimaryKeyConstraint) or
-                        isinstance(c, UniqueContraint)):
+                        isinstance(c, UniqueConstraint)):
                     if column_name not in c.columns:
                         c.columns.add(sql.element.columns[column_name])
             # The distributed column must be part of any INDEX
