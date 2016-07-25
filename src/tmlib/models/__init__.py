@@ -7,6 +7,8 @@ import inspect
 import collections
 from sqlalchemy import create_engine
 from sqlalchemy.sql.schema import Table
+from sqlalchemy.sql.schema import UniqueConstraint
+from sqlalchemy.sql.schema import PrimaryKeyConstraint
 
 from tmlib.models.utils import DATABASE_URI
 from tmlib.models.utils import Session
@@ -110,13 +112,29 @@ class PostgresXl(object):
         logger.info('create sql statement for table "%s"', table_name)
         create_table = str(sql.compile(dialect=self._engine.dialect)).rstrip()
         column_name = _postgresxl_register['hash'].get(table_name, None)
-        import ipdb; ipdb.set_trace()
         if column_name is not None and isinstance(sql.element, Table):
             logger.info('distribute table "%s" by hash', table_name)
-            # TODO: update contstraints PRIMARY KEY, REFERENCES and UNIQUE TODO: update CREATE INDEX
+            primary_keys = [pk.name for pk in sql.element.primary_key]
+            # The distributed column must be part of the UNIQUE and
+            # PRIMARY KEY constraints
+            for c in sql.element.constraints:
+                # if isinstance(c, UniqueContraint):
+                #     if column_name not in c.columns:
+                #         sql.element.columns[column_name].unique = True
+                # if isinstance(c, PrimaryKeyContraint):
+                #     if column_name not in c.columns:
+                #         sql.element.columns[column_name].primary_key = True
+                if (isinstance(c, PrimaryKeyConstraint) or
+                        isinstance(c, UniqueContraint)):
+                    if column_name not in c.columns:
+                        c.columns.add(sql.element.columns[column_name])
+            # The distributed column must be part of any INDEX
+            for i in sql.element.indexes:
+                if column_name not in i.columns:
+                    i.columns.add(sql.element.columns[column_name])
             create_table += ' DISTRIBUTE BY HASH(' + column_name + ')'
-        column_name = _postgresxl_register['hash'].get(table_name, None)
-        if column_name is not None and isinstance(sql.element, Table):
+        do_replicate = _postgresxl_register['hash'].get(table_name, False)
+        if do_replicate and isinstance(sql.element, Table):
             logger.info('distribute table "%s" by replication', table_name)
             create_table += ' DISTRIBUTE BY REPLICATION'
         self._sql += create_table + ';' + '\n'
