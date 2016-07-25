@@ -571,7 +571,8 @@ def main(input_mask, input_image, min_area, max_area,
         minimal area a cut object can have
         (useful to limit size of cut objects)
     max_cut_intensity: float
-        percentile for calculation of a intensity cutoff value
+        maximal intensity along a cut line based on a distance transformation
+        of `input_mask` with values in the range [0, 1]
     max_solidity: float
         maximal solidity an object must have to be considerd a clump
     max_form_factor: float
@@ -601,9 +602,6 @@ def main(input_mask, input_image, min_area, max_area,
     output_mask = input_mask.copy()
     cut_mask = np.zeros(output_mask.shape, bool)
     clumps_mask = np.zeros(output_mask.shape, bool)
-    intensity_cutoff = int(np.percentile(
-        input_image[input_mask], max_cut_intensity)
-    )
     for n in range(cutting_passes):
         logger.info('cutting pass #%d', n+1)
         label_image = mh.label(output_mask)[0]
@@ -745,7 +743,7 @@ def main(input_mask, input_image, min_area, max_area,
                 (features.cut_object_solidity > max_solidity) &
                 (features.cut_object_form_factor > max_form_factor) &
                 (features.cut_object_area > min_cut_area) &
-                (features.max_dist_intensity < intensity_cutoff)
+                (features.max_dist_intensity < max_cut_intensity)
             )
             if not any(potential_line_index):
                 logger.debug('no cut - no line passed tests')
