@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship, backref
 
 from tmlib.models import Model, DateMixIn
 from tmlib.models import distribute_by_replication
+from tmlib.models import distribute_by_hash
 
 
 @distribute_by_replication
@@ -130,7 +131,7 @@ class Submission(Model, DateMixIn):
 #         )
 
 
-@distribute_by('id')
+@distribute_by_hash('id')
 class Task(Model):
 
     '''A *task* represents a computational job that can be submitted to a

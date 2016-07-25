@@ -23,6 +23,7 @@ from tmlib.models import File, DateMixIn
 from tmlib.models.status import FileUploadStatus
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.models import distribute_by_hash
+from tmlib.models import distribute_by_replication
 
 logger = logging.getLogger(__name__)
 

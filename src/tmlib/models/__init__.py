@@ -98,6 +98,7 @@ class PostgresXl(object):
         :py:class:`tmlib.models.Model`.
         '''
         sql = self.generate_create_table_statements()
+        print sql
         with Session() as session:
             session._engine.execute(sql)
 
@@ -109,6 +110,7 @@ class PostgresXl(object):
         logger.info('create sql statement for table "%s"', table_name)
         create_table = str(sql.compile(dialect=self._engine.dialect)).rstrip()
         column_name = _postgresxl_register['hash'].get(table_name, None)
+        import ipdb; ipdb.set_trace()
         if column_name is not None and isinstance(sql.element, Table):
             logger.info('distribute table "%s" by hash', table_name)
             # TODO: update contstraints PRIMARY KEY, REFERENCES and UNIQUE TODO: update CREATE INDEX
@@ -125,7 +127,7 @@ from tmlib.models.experiment import Experiment
 from tmlib.models.well import Well
 from tmlib.models.channel import Channel
 from tmlib.models.layer import ChannelLayer
-from tmlib.models.mapobject import MapobjectType, Mapobject, MapobjectSegmentation, MapobjectType
+from tmlib.models.mapobject import MapobjectType, Mapobject, MapobjectSegmentation
 from tmlib.models.feature import Feature, FeatureValue
 from tmlib.models.plate import Plate
 from tmlib.models.acquisition import Acquisition, ImageFileMapping
@@ -133,6 +135,9 @@ from tmlib.models.cycle import Cycle
 from tmlib.models.submission import Submission, Task
 from tmlib.models.site import Site
 from tmlib.models.alignment import SiteShift, SiteIntersection
-from tmlib.models.file import MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile, ProbabilityImageFile, IllumstatsFile, PyramidTileFile
+from tmlib.models.file import (
+    MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile,
+    IllumstatsFile, PyramidTileFile
+)
 
 
