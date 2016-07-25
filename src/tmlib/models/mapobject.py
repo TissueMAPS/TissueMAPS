@@ -352,7 +352,7 @@ class Mapobject(Model):
         return '<Mapobject(id=%d, type=%s)>' % (self.id, mapobject_type.name)
 
 
-@distribute_by_hash('id')
+@distribute_by_hash('mapobject_id')
 class MapobjectSegmentation(Model):
 
     '''A *mapobject segmentation* provides the geographic representation

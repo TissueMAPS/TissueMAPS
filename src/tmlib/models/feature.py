@@ -4,12 +4,13 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import distribute_by_hash
+from tmlib.models import distribute_by_replication
 from tmlib.models import Model
 
 logger = logging.getLogger(__name__)
 
 
-@distribute_by_hash('id')
+@distribute_by_replication
 class Feature(Model):
 
     '''A *feature* is a measurement that is associated with a particular
@@ -69,7 +70,7 @@ class Feature(Model):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
 
 
-@distribute_by_hash('feature_id')
+@distribute_by_hash('mapobject_id')
 class FeatureValue(Model):
 
     '''An individual value of a *feature* that was measured for a given
