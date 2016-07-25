@@ -42,14 +42,6 @@ def distribute_by_hash(column_name):
     return decorator
 
 
-# http://files.postgres-xl.org/documentation/ddl-constraints.html
-# - In Postgres-XL, in distributed tables, UNIQUE constraints must include the distribution column of the table.
-# - Please note that column with REFERENCES should be the distribution column. In this case, we cannot add PRIMARY KEY to order_id because PRIMARY KEY must be the distribution column as well.
-
-# http://files.postgres-xl.org/documentation/sql-createtable.html
-# - In Postgres-XL, if DISTRIBUTE BY REPLICATION is not specified, only the distribution key is allowed to have this constraint.
-# - In Postgres-XL, if DISTRIBUTE BY REPLICATION is not specified, the distribution key must be included in the set of primary key columns.
-
 def distribute_by_replication(cls):
     '''Registers a database model class for use with
     `PostgresXL <http://www.postgres-xl.org/>`_.
