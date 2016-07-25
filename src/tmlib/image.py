@@ -546,6 +546,7 @@ class ChannelImage(Image):
         arr = np.clip(self._array, lower, upper)
         return ChannelImage(arr, self.metadata)
 
+    @assert_type(stats='tmlib.image.IllumstatsContainer')
     def correct(self, stats):
         '''Corrects the image for illumination artifacts.
 
