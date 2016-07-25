@@ -2,10 +2,10 @@ from passlib.hash import sha256_crypt
 from sqlalchemy import Column, String
 
 from tmlib.models import Model, DateMixIn
-from tmlib.models import distribute_by
+from tmlib.models import distribute_by_replication
 
 
-@distribute_by('id')
+@distribute_by_replication
 class User(DateMixIn, Model):
 
     '''A *user*.

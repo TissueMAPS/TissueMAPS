@@ -5,7 +5,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
-from tmlib.models import distribute_by
+from tmlib.models import distribute_by_replication
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.utils import autocreate_directory_property
 
@@ -16,7 +16,7 @@ CHANNEL_LOCATION_FORMAT = 'channel_{id}'
 
 
 @remove_location_upon_delete
-@distribute_by('id')
+@distribute_by_replication
 class Channel(Model, DateMixIn):
 
     '''A *channel* represents all *images* across different time points and

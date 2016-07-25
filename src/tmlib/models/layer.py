@@ -15,7 +15,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from tmlib.models.file import ChannelImageFile
 from tmlib.models.site import Site
 from tmlib.models.base import Model
-from tmlib.models import distribute_by
+from tmlib.models import distribute_by_replication
 from tmlib.utils import autocreate_directory_property
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.writers import XmlWriter
@@ -29,7 +29,7 @@ CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 
 
 @remove_location_upon_delete
-@distribute_by('id')
+@distribute_by_replication
 class ChannelLayer(Model):
 
     '''A *channel layer* represents a multi-resolution overview of all images
@@ -173,11 +173,10 @@ class ChannelLayer(Model):
         # NOTE: This could also be calculated based on maxzoom_level only
         logger.debug('calculate layer dimensions')
         levels = list()
-        for i, img_size in enumerate(self.image_size):
-            height, width = img_size
-            rows = int(np.ceil(np.float(height) / np.float(self.tile_size)))
-            cols = int(np.ceil(np.float(width) / np.float(self.tile_size)))
-            levels.append((rows, cols))
+        for i, (height, width) in enumerate(self.image_size):
+            n_rows = int(np.ceil(np.float(height) / np.float(self.tile_size)))
+            n_cols = int(np.ceil(np.float(width) / np.float(self.tile_size)))
+            levels.append((n_rows, n_cols))
         return levels
 
     @cached_property
@@ -229,7 +228,7 @@ class ChannelLayer(Model):
             height = int(np.ceil(np.float(height) / experiment.zoom_factor))
             width = int(np.ceil(np.float(width) / experiment.zoom_factor))
             levels.append((height, width))
-            if height < self.tile_size and width < self.tile_size:
+            if height <= self.tile_size and width <= self.tile_size:
                 break
         # Sort zoom levels top-down, i.e. from lowest to highest resolution
         return list(reversed(levels))

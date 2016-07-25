@@ -8,13 +8,13 @@ from sqlalchemy import UniqueConstraint
 
 from .. import utils
 from tmlib.models import Model, DateMixIn
-from tmlib.models import distribute_by
+from tmlib.models import distribute_by_replication
 
 
 logger = logging.getLogger(__name__)
 
 
-@distribute_by('id')
+@distribute_by_replication
 class Well(Model, DateMixIn):
 
     '''A *well* is a reservoir for biological samples and multiple *wells* are

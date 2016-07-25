@@ -6,7 +6,8 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import Model, DateMixIn
-from tmlib.models import distribute_by
+from tmlib.models import distribute_by_hash
+from tmlib.models import distribute_by_replication
 from tmlib.models.status import FileUploadStatus as fus
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.utils import autocreate_directory_property
@@ -18,7 +19,7 @@ ACQUISITION_LOCATION_FORMAT = 'acquisition_{id}'
 
 
 @remove_location_upon_delete
-@distribute_by('id')
+@distribute_by_replication
 class Acquisition(Model, DateMixIn):
 
     '''An *acquisition* contains all files belonging to one microscope image
@@ -162,7 +163,7 @@ class Acquisition(Model, DateMixIn):
         return '<Acquisition(id=%r, name=%r)>' % (self.id, self.name)
 
 
-@distribute_by('id')
+@distribute_by_hash('id')
 class ImageFileMapping(Model):
 
     '''A mapping of an individual 2D pixels plane (a future channel image file)

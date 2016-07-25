@@ -44,7 +44,7 @@ class DateMixIn(object):
 class Model(_Base):
 
     '''Abstract base class for a `TissueMAPS` database model.
-    
+
     It maps Python classes to relational tables.
 
     Attributes

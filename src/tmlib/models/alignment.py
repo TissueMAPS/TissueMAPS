@@ -3,13 +3,13 @@ from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship, backref
 
 from tmlib.models import Model
-from tmlib.models import distribute_by
+from tmlib.models import distribute_by_hash
 
 
 logger = logging.getLogger(__name__)
 
 
-@distribute_by('id')
+@distribute_by_hash('id')
 class SiteShift(Model):
 
     '''A *site* may be shifted between different *cycles* and needs to be
@@ -91,7 +91,7 @@ class SiteShift(Model):
         )
 
 
-@distribute_by('id')
+@distribute_by_hash('id')
 class SiteIntersection(Model):
 
     '''When *sites* are shifted between *cycles*, they only have a subset

@@ -3,10 +3,10 @@ from sqlalchemy.dialects.postgres import JSONB
 from sqlalchemy.orm import relationship, backref
 
 from tmlib.models import Model, DateMixIn
-from tmlib.models import distribute_by
+from tmlib.models import distribute_by_replication
 
 
-@distribute_by('id')
+@distribute_by_replication
 class Submission(Model, DateMixIn):
 
     '''A *submission* handles the processing of a computational *task*
