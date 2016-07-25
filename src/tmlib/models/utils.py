@@ -255,8 +255,11 @@ class Session(object):
                     'creation of instance %r failed:\n%s', instance, str(err)
                 )
                 self._sqla_session.rollback()
-                instance = self.query(model).filter_by(**kwargs).one()
-                logger.debug('found existing instance: %r', instance)
+                try:
+                    instance = self.query(model).filter_by(**kwargs).one()
+                    logger.debug('found existing instance: %r', instance)
+                except:
+                    raise
             except:
                 raise
         except:
