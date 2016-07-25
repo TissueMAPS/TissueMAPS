@@ -185,8 +185,6 @@ class PostgresXl(object):
         elif distribute_by_replication:
             logger.info('distribute table "%s" by replication', table_name)
             create_table += ' DISTRIBUTE BY REPLICATION'
-        else:
-
         self._sql += create_table + ';' + '\n'
 
 
