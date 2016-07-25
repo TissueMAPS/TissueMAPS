@@ -164,7 +164,7 @@ def format_timestamp(elapsed_time):
     )
 
 
-def get_task_data_from_engine(task):
+def get_task_data_from_engine(task, recursion_depth=None):
     '''Provides the following data for each task and recursively for each
     subtask in form of a mapping:
 
@@ -185,14 +185,21 @@ def get_task_data_from_engine(task):
     ----------
     task: gc3libs.workflow.TaskCollection or gc3libs.Task
         submitted GC3Pie task that should be monitored
+    recursion_depth: int, optional
+        recursion depth for subtask querying; by default
+        data of all subtasks will be queried (default: ``None``)
 
     Returns
     -------
     dict
         information about each task and its subtasks
     '''
-    # TODO: Implement WAITING state for stages/steps that are not yet created
     def get_info(task_, i):
+        data = dict()
+        if recursion_depth is not None:
+            if i > recursion_depth:
+                return data
+
         live_states = {
             gc3libs.Run.State.SUBMITTED,
             gc3libs.Run.State.RUNNING,
@@ -295,7 +302,7 @@ def get_task_data_from_engine(task):
     return get_info(task, 0)
 
 
-def get_task_data_from_sql_store(task):
+def get_task_data_from_sql_store(task, recursion_depth=None):
     '''Provides the following data for each task and recursively for each
     subtask in form of a mapping:
 
@@ -317,7 +324,10 @@ def get_task_data_from_sql_store(task):
     Parameters
     ----------
     task: gc3libs.workflow.TaskCollection or gc3libs.Task
-        submitted GC3Pie task that should be monitored
+        submitted highest level GC3Pie task
+    recursion_depth: int, optional
+        recursion depth for subtask querying; by default
+        data of all subtasks will be queried (default: ``None``)
 
     Returns
     -------
@@ -325,12 +335,16 @@ def get_task_data_from_sql_store(task):
         information about each task and its subtasks
     '''
     def get_info(task_, i):
+        data = dict()
+        if recursion_depth is not None:
+            if i > recursion_depth:
+                return data
+
         live_states = {
             gc3libs.Run.State.SUBMITTED,
             gc3libs.Run.State.RUNNING,
             gc3libs.Run.State.STOPPED
         }
-        data = dict()
         with tm.utils.Session() as session:
             task_info = session.query(tm.Task).get(task_.persistent_id)
             failed = task_info.exitcode != 0 and task_info.exitcode is not None
