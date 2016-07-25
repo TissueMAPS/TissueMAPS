@@ -4,17 +4,20 @@ import argparse
 import tmlib.models
 
 
-def create_tables(xl=False):
-    '''Creates all tables defined by declarative classes in tmlib.models.
+def create_tables(db_uri=None, xl=False):
+    '''Creates all tables defined by declarative classes in
+    :py:package:`tmlib.models`.
 
     Parameters
     ----------
+    db_uri: str
+        URI of the database
     xl: bool, optional
         whether tables should be created for PostgresXL database
         (default: ``False``)
     '''
     if xl:
-        psxl = tmlib.models.PostgresXl()
+        psxl = tmlib.models.PostgresXl(db_uri)
         psxl.create_tables()
     else:
         engine = tmlib.models.utils.create_db_engine()
@@ -25,9 +28,12 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser('Create tables in TissueMAPS database.')
     parser.add_argument(
+        '--uri', destination='db_uri', help='database URI', default=None
+    )
+    parser.add_argument(
         '--xl', action='store_true', help='use PostgresXL database cluster'
     )
 
     args = parser.parse_args()
 
-    create_tables(args.xl)
+    create_tables(args.db_uri, args.xl)

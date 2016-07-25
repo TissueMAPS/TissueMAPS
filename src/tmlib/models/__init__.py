@@ -86,9 +86,11 @@ class PostgresXl(object):
         # SQLAlchemy at some point (see http://docs.sqlalchemy.org/en/latest/core/ddl.html)
         if db_uri is None:
             from tmlib.models.utils import DATABASE_URI
-            db_uri = DATABASE_URI
+            self.db_uri = DATABASE_URI
+        else:
+            self.db_uri = db_uri
         self._engine = create_engine(
-            db_uri, strategy='mock', executor=self._dump
+            'postgres://', strategy='mock', executor=self._dump
         )
         self._sql = str()
 
@@ -104,14 +106,22 @@ class PostgresXl(object):
         Model.metadata.create_all(self._engine, checkfirst=False)
         return self._sql
 
-    def create_tables(self):
+    def create_tables(self, print_only=False):
         '''Creates all tables declared by model classes derived from
         :py:class:`tmlib.models.Model`.
+
+        Parameters
+        ----------
+        print_only: bool, optional
+            whether the generated SQL should only be printed to console
+            but not executed
         '''
         sql = self.generate_create_table_statements()
-        print sql
-        with Session() as session:
-            session._engine.execute(sql)
+        if print_only:
+            self._engine.execute(sql)
+        else:
+            with Session(self.db_uri) as session:
+                session._engine.execute(sql)
 
     def _dump(self, sql, *multiparams, **params):
         if isinstance(sql, basestring):
@@ -142,7 +152,7 @@ class PostgresXl(object):
                 if column_name not in i.columns:
                     i.columns.add(sql.element.columns[column_name])
             create_table += ' DISTRIBUTE BY HASH(' + column_name + ')'
-        do_replicate = _postgresxl_register['hash'].get(table_name, False)
+        do_replicate = _postgresxl_register['replication'].get(table_name, False)
         if do_replicate and isinstance(sql.element, Table):
             logger.info('distribute table "%s" by replication', table_name)
             create_table += ' DISTRIBUTE BY REPLICATION'
