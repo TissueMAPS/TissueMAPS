@@ -140,6 +140,7 @@ class PyramidBuilder(ClusterRoutines):
                     )
 
                     for index, level in enumerate(reversed(range(layer.n_levels))):
+                        logger.debug('pyramid level %d', level)
                         # NOTE: The layer "level" increases from top to bottom.
                         # We build the layer bottom-up, therefore, the "index"
                         # decreases from top to bottom.
@@ -501,7 +502,7 @@ class PyramidBuilder(ClusterRoutines):
                         level=batch['level'],
                         channel_layer_id=layer.id
                     )
-                    logger.info('creating tile: %s', tile_file.name)
+                    logger.debug('creating tile: %s', tile_file.name)
                     tile = layer.extract_tile_from_image(
                         image_store[file.name], t['y_offset'], t['x_offset']
                     )
@@ -517,15 +518,15 @@ class PyramidBuilder(ClusterRoutines):
                     ]
                     extra_files.remove(file)  # remove the current file
                     if len(extra_files) > 0:
-                        logger.info('tile overlaps multiple images')
+                        logger.debug('tile overlaps multiple images')
                     for extra_file in extra_files:
                         if extra_file.name not in image_store:
                             image = extra_file.get(z=layer.zplane)
                             if batch['illumcorr']:
-                                logger.info('correct image')
+                                logger.debug('correct image')
                                 image = image.correct(stats)
                             if batch['align']:
-                                logger.info('align image')
+                                logger.debug('align image')
                                 image = image.align(crop=False)
                             if not image.is_uint8:
                                 image = image.clip(clip_below, clip_above)
@@ -539,7 +540,7 @@ class PyramidBuilder(ClusterRoutines):
                         condition = file_coordinate > extra_file_coordinate
                         pixels = image_store[extra_file.name]
                         if all(condition):
-                            logger.info('insert pixels from top left image')
+                            logger.debug('insert pixels from top left image')
                             y = file.site.image_size[0] - abs(t['y_offset'])
                             x = file.site.image_size[1] - abs(t['x_offset'])
                             height = abs(t['y_offset'])
@@ -549,7 +550,7 @@ class PyramidBuilder(ClusterRoutines):
                             )
                             tile.insert(subtile, 0, 0)
                         elif condition[0] and not condition[1]:
-                            logger.info('insert pixels from top image')
+                            logger.debug('insert pixels from top image')
                             y = file.site.image_size[0] - abs(t['y_offset'])
                             height = abs(t['y_offset'])
                             if t['x_offset'] < 0:
@@ -565,7 +566,7 @@ class PyramidBuilder(ClusterRoutines):
                             )
                             tile.insert(subtile, 0, x_offset)
                         elif not condition[0] and condition[1]:
-                            logger.info('insert pixels from left image')
+                            logger.debug('insert pixels from left image')
                             x = file.site.image_size[1] - abs(t['x_offset'])
                             width = abs(t['x_offset'])
                             if t['y_offset'] < 0:
@@ -613,7 +614,7 @@ class PyramidBuilder(ClusterRoutines):
                     column=column, level=batch['level'],
                     channel_layer_id=layer.id
                 )
-                logger.info('creating tile: %s', tile_file.name)
+                logger.debug('creating tile: %s', tile_file.name)
                 tile = PyramidTile.create_as_background()
                 tile_file.put(tile)
 
@@ -645,7 +646,7 @@ class PyramidBuilder(ClusterRoutines):
                     column=column, level=level,
                     channel_layer_id=layer.id
                 )
-                logger.info('creating tile: %s', tile_file.name)
+                logger.debug('creating tile: %s', tile_file.name)
                 rows = np.unique([c[0] for c in coordinates])
                 cols = np.unique([c[1] for c in coordinates])
                 # Build the mosaic by loading required higher level tiles
