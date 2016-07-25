@@ -183,7 +183,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             # NOTE: It is absolutely necessary to specify these startup options
             # for use parallel processing on the cluster. Otherwise some jobs
             # hang up and get killed due to timeout.
-            startup_ops = '-nosplash -singleCompThread -nojvm'
+            startup_ops = '-nosplash -singleCompThread -nojvm -nosoftwareopengl'
             logger.debug('Matlab startup options: %s', startup_ops)
             self.engines['Matlab'] = matlab.MatlabSession(options=startup_ops)
             # We have to make sure that code which may be called by a module,
@@ -198,6 +198,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             for p in matlab_path:
                 if not p:
                     continue
+                logger.debug('add "%s" to MATLABPATH', p)
                 self.engines['Matlab'].eval(
                     'addpath(genpath(\'{0}\'));'.format(p)
                 )
