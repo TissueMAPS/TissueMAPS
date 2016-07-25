@@ -41,7 +41,8 @@ class Tmaps(SubmissionManager):
     @property
     def name(self):
         '''str: name of the step (command line program)'''
-        return self.__class__.__name__.lower()
+        return 'workflow'
+        # return self.__class__.__name__.lower()
 
     def submit(self, monitoring_depth):
         '''Create workflow, submit it to the cluster and monitor its progress.
@@ -92,7 +93,7 @@ class Tmaps(SubmissionManager):
         store = create_gc3pie_sql_store()
         task_id = self.get_task_id_of_last_submission()
         workflow = store.load(task_id)
-        stage_names = [s.name for s in api.description.stages]
+        stage_names = [s.name for s in workflow.description.stages]
         try:
             start_index = stage_names.index(stage)
             workflow.update_stage(start_index)
