@@ -5,6 +5,9 @@ import argparse
 import sqlalchemy.orm.exc
 
 import tmlib.models
+from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
+from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
+from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
 
 # Don't trash the user with long tracebacks
 sys.tracebacklimit = 0
@@ -53,17 +56,17 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--plate_format', type=int, default=384,
-        choices={1, 96, 384},
+        choices=SUPPORTED_PLATE_FORMATS,
         help='well plate format (default: 384)'
     )
     parser.add_argument(
         '--microscope_type', type=str, default='cellvoyager',
-        choices={'cellvoyager', 'visiview', 'axio'},
+        choices=SUPPORTED_MICROSCOPE_TYPES,
         help='microscope type (default: cellvoyager)'
     )
     parser.add_argument(
         '--plate_acquisition_mode', type=str, default='basic',
-        choices={'basic', 'multiplexing'},
+        choices=SUPPORTED_PLATE_AQUISITION_MODES,
         help='''
             whether multiple acquisitions of the same plate are interpreted 
             as time points or multiplexing iterations (default: basic)
