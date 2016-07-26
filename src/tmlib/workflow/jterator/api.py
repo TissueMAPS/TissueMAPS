@@ -720,8 +720,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     delete()
 
         logger.info(
-            'calculate minimal zoom level for representation of '
-            'mapobjects as polygons'
+            'calculate minimal/maximal zoom level for representation of '
+            'mapobjects as polygons or points'
         )
         with tm.utils.Session() as session:
 
@@ -734,8 +734,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 filter_by(experiment_id=self.experiment_id, is_static=False)
 
             for mapobject_type in mapobject_types:
-
-                segmentations = session.query(tm.MapobjectSegmentation).\
+                logger.info('')
+                segmentation_ids = session.query(tm.MapobjectSegmentation.id).\
                     join(tm.Mapobject).\
                     filter(tm.Mapobject.mapobject_type_id == mapobject_type.id).\
                     all()
@@ -743,7 +743,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 min_poly_zoom, max_poly_zoom = \
                     mapobject_type.calculate_min_max_poly_zoom(
                         layer.maxzoom_level_index,
-                        segmentation_ids=[s.id for s in segmentations]
+                        segmentation_ids=segmentation_ids
                     )
 
                 logger.info(
