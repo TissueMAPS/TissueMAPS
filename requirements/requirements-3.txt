@@ -31,5 +31,6 @@ sphinxcontrib-autoprogram==0.1.2
 sphinxcontrib-matlabdomain==0.2.7
 sphinx-pyreverse==0.0.12
 sqlalchemy>=0.9
+sqlalchemy-utils>=0.32.9
 tables>=3.2.2
 ruamel.yaml>=0.10.11
