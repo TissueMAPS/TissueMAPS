@@ -46,7 +46,7 @@ class OnlineStatistics(object):
             raise ValueError('Argument "decimals" must lie in range [0, 3].')
         precision = 10**(decimals+2)
         self._q = np.linspace(0, 100, precision)
-        self._percentiles = np.empty((precision, ), dtype=np.float)
+        self._percentiles = np.zeros((precision, ), dtype=np.float)
         self._keys = [round(x, decimals) for x in self._q]
 
     @assert_type(image='tmlib.image.ChannelImage')
