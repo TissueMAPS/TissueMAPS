@@ -88,7 +88,7 @@ class Project(object):
         for i, module in self.pipe['description']['pipeline']:
             index = handles_names.index(module['name'])
             handles.append(value[index])
-        self._handles = value
+        self._handles = handles
 
     @property
     def _pipe_filename(self):

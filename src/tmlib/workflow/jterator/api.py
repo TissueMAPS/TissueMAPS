@@ -767,9 +767,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             # For now, calculate moments only for "static" mapobjects,
             # such as "Wells" or "Sites"
             parent_types = session.query(tm.MapobjectType).\
-                filter_by(
-                    experiment_id=self.experiment_id, is_static=True
-                )
+                filter_by(experiment_id=self.experiment_id, is_static=True)
 
             moments = {
                 'Mean': np.nanmean, 'Std': np.nanstd, 'Median': np.nanmedian
@@ -779,9 +777,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # Moments are computed only over "non-static" mapobjects,
                 # i.e. segmented objects within a pipeline
                 child_types = session.query(tm.MapobjectType).\
-                    filter_by(
-                        experiment_id=self.experiment_id, is_static=False
-                    )
+                    filter_by(experiment_id=self.experiment_id, is_static=False)
 
                 logger.info(
                     'add features for parent mapobjects of type "%s"',
@@ -832,8 +828,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         filter(tm.MapobjectType.experiment_id == self.experiment_id).\
                         distinct().\
                         all()
-                    if tpoints:
-                        tpoints = tpoints[0]
+                    tpoints = [t[0] for t in tpoints]
                     # For each parent mapobject calculate statistics on
                     # features of children, i.e. mapobjects that are covered
                     # by the parent mapobject
