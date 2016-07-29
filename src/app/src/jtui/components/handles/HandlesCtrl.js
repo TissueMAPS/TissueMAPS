@@ -17,44 +17,40 @@ angular.module('jtui.handles')
         0, $scope.project.pipe.description.pipeline[currentModuleIndex].source.lastIndexOf('.')
     );
 
-    $scope.viewProps = {
-        open: {
-            input: true,
-            output: true,
-            plot: true
-        }
-    };
-
     // Get list of upstream output values that are available as input
     // values in the current module
-    $scope.getArgList = function() {
+    $scope.getArgList = function(arg) {
         var availableArguments = [];
-        var currentModuleList = $scope.project.pipe.description.pipeline;
-        var currentHandles = $scope.project.handles;
-        for (var i in currentModuleList) {
+        var pipeline = $scope.project.pipe.description.pipeline;
+        var handles = $scope.project.handles;
+        var handleNames = handles.map(function(h) {return h.name});
+        for (var i in pipeline) {
+            var module = pipeline[i];
             // Consider only modules upstream in the pipeline
-            if (currentModuleList[i].name == $scope.module.name) { break; }
+            if (module.name == $scope.module.name) { break; }
             // Make sure we're dealing with the correct handles object
-            for (var ii in currentHandles) {
-                if (currentHandles[ii].name == currentModuleList[i].name) {
-                    for (var j in currentHandles[ii].description.output) {
-                        if ('key' in currentHandles[ii].description.output[j]) {
-                            if (currentHandles[ii].description.output[j].key != null) {
-                                availableArguments.push(currentHandles[ii].description.output[j].key);
-                            }
-                        }
+            var index = handleNames.indexOf(module.name);
+            var handle = handles[index];
+            for (var j in handle.description.output) {
+                var upstreamOutputHandle = handle.description.output[j];
+                if ('key' in upstreamOutputHandle) {
+                    // Only handles with matching type
+                    if (upstreamOutputHandle.key != null &&
+                            upstreamOutputHandle.type == arg.type) {
+                        availableArguments.push(
+                            handle.description.output[j].key
+                        );
                     }
-                 }
-             }
+                }
+            }
         }
-        // Also consider job patterns provided by Jterator
-        for (var i in $scope.project.pipe.description.input.channels) {
-            // skip patterns that are not yet defined, i.e. have an empty 'name'
-            // if ($scope.project.pipe.description.input.channels[i].name.length > 0) {
-            availableArguments.push($scope.project.pipe.description.input.channels[i].name);
-            // }
+        // Also consider pipeline inputs provided by Jterator
+        if (arg.type === 'IntensityImage') {
+            var channels = $scope.project.pipe.description.input.channels;
+            for (var i in channels) {
+                availableArguments.push(channels[i].name);
+            }
         }
-        // console.log('available upstream module inputs:', availableArguments)
         return availableArguments
     }
 
