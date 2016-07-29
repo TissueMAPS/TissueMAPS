@@ -64,13 +64,15 @@
         <span><b>{{outarg.name}}</b></span>
         <span class="help-block">{{outarg.help}}</span>
 
-        <input  class="form-control"
-                ng-class="{'error-input': isDuplicate(outarg)}"
-                type="text" id="outputArg"
-                ng-model="outarg.key">
+        <div ng-hide="!outarg.hasOwnProperty('key')">
+          <input  class="form-control"
+                  ng-class="{'error-input': isDuplicate(outarg)}"
+                  type="text" id="outputArg"
+                  ng-model="outarg.key">
 
-        <div ng-show="isDuplicate(outarg)" class="error-text">
-            Names of outputs must be unique!
+          <div ng-show="isDuplicate(outarg)" class="error-text">
+              Names of outputs must be unique!
+          </div>
         </div>
 
     </div>
