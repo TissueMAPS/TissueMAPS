@@ -84,6 +84,7 @@ if __name__ == '__main__':
                 filter_by(name=args.experiment_name).\
                 one()
             experiment_id = experiment.id
+            microscope_type = experiment.microscope_type
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(
                 'Experiment "%s" does not exist!' % args.experiment_name
@@ -113,7 +114,6 @@ if __name__ == '__main__':
             raise OSError(
                 'Source directory does not exist: %s' % args.source_directory
             )
-        microscope_type = acquisition.plate.experiment.microscope_type
         r_image, r_metadata= get_microscope_type_regex(microscope_type)
         image_file_names = [
             f.name for f in acquisition.microscope_image_files
