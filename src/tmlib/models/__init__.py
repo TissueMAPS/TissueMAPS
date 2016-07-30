@@ -1,6 +1,6 @@
 '''`TissueMAPS` database models.'''
 
-from tmlib.models.base import Model, DateMixIn, File
+from tmlib.models.base import MainModel, ExperimentModel, DateMixIn, File
 
 import logging
 import inspect
@@ -10,7 +10,7 @@ from sqlalchemy.sql.schema import Table
 from sqlalchemy.sql.schema import UniqueConstraint
 from sqlalchemy.sql.schema import PrimaryKeyConstraint
 
-from tmlib.models.utils import Session
+from tmlib.models.utils import MainSession
 
 _postgresxl_register = collections.defaultdict(dict)
 
@@ -30,12 +30,15 @@ def distribute_by_hash(column_name):
     ------
     TypeError
         when decorated class is not derived from
-        :py:class:`tmlib.models.Model`
+        :py:class:`tmlib.models.MainModel` or
+        :py:class:`tmlib.models.ExperimentModel`
     '''
     def decorator(cls):
-        if Model not in inspect.getmro(cls):
+        bases = inspect.getmro(cls)
+        if MainModel not in bases and ExperimentModel not in bases:
             raise TypeError(
-                'Registered class must be derived from tmlib.models.Model'
+                'Registered class must be derived from either '
+                'tmlib.models.MainModel or tmlib.models.ExperimentModel.'
             )
         _postgresxl_register['hash'][cls.__tablename__] = column_name
         return cls
@@ -58,11 +61,14 @@ def distribute_by_replication(cls):
     ------
     TypeError
         when decorated class is not derived from
-        :py:class:`tmlib.models.Model`
+        :py:class:`tmlib.models.MainModel` or
+        :py:class:`tmlib.models.ExperimentModel`
     '''
-    if Model not in inspect.getmro(cls):
+    bases = inspect.getmro(cls)
+    if MainModel not in bases and ExperimentModel not in bases:
         raise TypeError(
-            'Registered class must be derived from tmlib.models.Model'
+            'Registered class must be derived from either '
+            'tmlib.models.MainModel or tmlib.models.ExperimentModel.'
         )
     _postgresxl_register['replication'][cls.__tablename__] = True
     return cls
@@ -113,7 +119,7 @@ class PostgresXl(object):
         str
             SQL statement
         '''
-        Model.metadata.create_all(self._engine, checkfirst=False)
+        MainModel.metadata.create_all(self._engine, checkfirst=False)
         return self._sql
 
     def create_tables(self, print_only=False):
@@ -130,7 +136,7 @@ class PostgresXl(object):
         if print_only:
             self._engine.execute(sql)
         else:
-            with Session(self.db_uri) as session:
+            with MainSession(self.db_uri) as session:
                 session._engine.execute(sql)
 
     def _dump(self, sql, *multiparams, **params):
@@ -185,8 +191,6 @@ class PostgresXl(object):
         elif distribute_by_replication:
             logger.info('distribute table "%s" by replication', table_name)
             create_table += ' DISTRIBUTE BY REPLICATION'
-        else:
-
         self._sql += create_table + ';' + '\n'
 
 
@@ -207,5 +211,3 @@ from tmlib.models.file import (
     MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile,
     IllumstatsFile, PyramidTileFile
 )
-
-

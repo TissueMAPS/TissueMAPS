@@ -5,6 +5,7 @@ import pandas as pd
 import bioformats
 
 import tmlib.models as tm
+from tmlib.models.utils import delete_location
 from tmlib.workflow.metaconfig import metadata_handler_factory
 from tmlib.workflow.metaconfig import metadata_reader_factory
 from tmlib.workflow.api import ClusterRoutines
@@ -63,13 +64,8 @@ class MetadataConfigurator(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         job_count = 0
-        with tm.utils.Session() as session:
-            acquisitions = session.query(tm.Acquisition).\
-                join(tm.Plate).\
-                join(tm.Experiment).\
-                filter(tm.Experiment.id == self.experiment_id).\
-                all()
-            for acq in acquisitions:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            for acq in session.query(tm.Acquisition):
                 job_count += 1
                 description = {
                     'id': job_count,
@@ -107,33 +103,30 @@ class MetadataConfigurator(ClusterRoutines):
         :py:class:`tm.Well`, and :py:class:`tm.Channel` as
         well as all children for the processed experiment.
         '''
-        with tm.utils.Session() as session:
+        with tm.utils.MainSession() as session:
+            experiment = session.query(tm.Experiment).get(self.experiment_id)
+            channels_location = experiment.channels_location
 
-            plate_ids = session.query(tm.Plate.id).\
-                filter_by(experiment_id=self.experiment_id).\
-                all()
-            plate_ids = [p[0] for p in plate_ids]
+        logger.info('delete existing wells')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            tm.Well.__table__.drop(session.engine)
+            tm.Well.__table__.create(session.engine)
 
-        with tm.utils.Session() as session:
+        logger.info('delete existing cycles')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            plates = session.query(tm.Plate).all()
+            cycles_locations = [p.cycles_location for p in plates]
+            tm.Cycle.__table__.drop(session.engine)
+            tm.Cycle.__table__.create(session.engine)
+        for loc in cycles_locations:
+            delete_location(loc)
 
-            logger.info('delete existing cycles')
-            session.query(tm.Cycle).\
-                filter(tm.Cycle.plate_id.in_(plate_ids)).\
-                delete()
-
-        with tm.utils.Session() as session:
-
-            logger.info('delete existing wells')
-            session.query(tm.Well).\
-                filter(tm.Well.plate_id.in_(plate_ids)).\
-                delete()
-
-        with tm.utils.Session() as session:
-
-            logger.info('delete existing channels')
-            session.query(tm.Channel).\
-                filter(tm.Channel.experiment_id == self.experiment_id).\
-                delete()
+        logger.info('delete existing channels')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            tm.Channel.__table__.drop(session.engine)
+            tm.Channel.__table__.create(session.engine)
+        for loc in channels_locations:
+            delete_location(loc)
 
     def run_job(self, batch):
         '''Formats OMEXML metadata extracted from microscope image files and

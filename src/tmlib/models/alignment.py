@@ -2,7 +2,7 @@ import logging
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship, backref
 
-from tmlib.models import Model
+from tmlib.models import ExperimentModel
 from tmlib.models import distribute_by_hash
 
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 @distribute_by_hash('id')
-class SiteShift(Model):
+class SiteShift(ExperimentModel):
 
     '''A *site* may be shifted between different *cycles* and needs to be
     aligned between them.
@@ -92,7 +92,7 @@ class SiteShift(Model):
 
 
 @distribute_by_hash('id')
-class SiteIntersection(Model):
+class SiteIntersection(ExperimentModel):
 
     '''When *sites* are shifted between *cycles*, they only have a subset
     of pixels in common. In order to be able to overlay images acquired at the

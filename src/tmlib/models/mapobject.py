@@ -14,7 +14,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models.base import Model, DateMixIn
+from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models import distribute_by_replication
 from tmlib.models import distribute_by_hash
 from tmlib.utils import autocreate_directory_property
@@ -28,7 +28,7 @@ class ST_ExteriorRing(GenericFunction):
 
 
 @distribute_by_replication
-class MapobjectType(Model, DateMixIn):
+class MapobjectType(ExperimentModel, DateMixIn):
 
     '''A *map object type* represent a conceptual group of *map objects*
     (segmented objects) that reflect different biological entities,
@@ -43,10 +43,6 @@ class MapobjectType(Model, DateMixIn):
     min_poly_zoom: int
         zoom level where visualization should switch from centroids
         to outlines
-    experiment_id: int
-        ID of the parent experiment
-    experiment: tmlib.models.Experiment
-        parent experiment to which map objects belong
     mapobjects: List[tmlib.models.Mapobject]
         mapobjects that belong to the mapobject type
     '''
@@ -54,45 +50,26 @@ class MapobjectType(Model, DateMixIn):
     #: str: name of the corresponding database table
     __tablename__ = 'mapobject_types'
 
-    __table_args__ = (UniqueConstraint('name', 'experiment_id'), )
+    __table_args__ = (UniqueConstraint('name'), )
 
     # Table columns
     name = Column(String, index=True, nullable=False)
     is_static = Column(Boolean, index=True)
     _max_poly_zoom = Column('max_poly_zoom', Integer)
     _min_poly_zoom = Column('min_poly_zoom', Integer)
-    experiment_id = Column(
-        Integer,
-        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
 
-    #: Relationship to other tables
-    experiment = relationship(
-        'Experiment',
-        backref=backref('mapobject_types', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, name, experiment_id, is_static=False, parent_id=None):
+    def __init__(self, name, is_static=False, parent_id=None):
         '''
         Parameters
         ----------
         name: str
             name of the map objects type, e.g. "cells"
-        experiment_id: int
-            ID of the parent experiment
         static: bool, optional
             whether map objects outlines are fixed across different time
             points and z-planes (default: ``False``)
         '''
         self.name = name
-        self.experiment_id = experiment_id
         self.is_static = is_static
-
-    @autocreate_directory_property
-    def location(self):
-        '''str: location where data related to the mapobject type is stored'''
-        return os.path.join(self.experiment.mapobject_types_location, self.name)
 
     @hybrid_property
     def min_poly_zoom(self):
@@ -255,7 +232,7 @@ class MapobjectType(Model, DateMixIn):
         else:
             min_poly_zoom = maxzoom_level - 4
             min_poly_zoom = 0 if min_poly_zoom < 0 else min_poly_zoom
-            max_poly_zoom = min_poly_zoom - 3
+            max_poly_zoom = min_poly_zoom - 2
             max_poly_zoom = 0 if max_poly_zoom < 0 else max_poly_zoom
         return (min_poly_zoom, max_poly_zoom)
 
@@ -299,7 +276,7 @@ class MapobjectType(Model, DateMixIn):
 
 
 @distribute_by_hash('id')
-class Mapobject(Model):
+class Mapobject(ExperimentModel):
 
     '''A *map object* represents a connected pixel component in an
     image. It has outlines for drawing on the map and may also be associated
@@ -353,7 +330,7 @@ class Mapobject(Model):
 
 
 @distribute_by_hash('id')
-class MapobjectSegmentation(Model):
+class MapobjectSegmentation(ExperimentModel):
 
     '''A *mapobject segmentation* provides the geographic representation
     of a *mapobject* and associates it with the corresponding image acquisition

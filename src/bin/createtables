@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import argparse
 
-import tmlib.models
+import tmlib.models as tm
 
 
 def create_tables(db_uri=None, xl=False):
@@ -17,18 +17,18 @@ def create_tables(db_uri=None, xl=False):
         (default: ``False``)
     '''
     if xl:
-        psxl = tmlib.models.PostgresXl(db_uri)
+        psxl = tm.PostgresXl(db_uri)
         psxl.create_tables()
     else:
-        engine = tmlib.models.utils.create_db_engine()
-        tmlib.models.Model.metadata.create_all(engine)
+        engine = tm.utils.create_db_engine()
+        tm.MainModel.metadata.create_all(engine)
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser('Create tables in TissueMAPS database.')
     parser.add_argument(
-        '--uri', destination='db_uri', help='database URI', default=None
+        '--uri', dest='db_uri', help='database URI', default=None
     )
     parser.add_argument(
         '--xl', action='store_true', help='use PostgresXL database cluster'

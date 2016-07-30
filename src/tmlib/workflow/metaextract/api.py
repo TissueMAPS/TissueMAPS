@@ -58,11 +58,8 @@ class MetadataExtractor(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         count = 0
-        with tm.utils.Session() as session:
-            for acq in session.query(tm.Acquisition).\
-                    join(tm.Plate).\
-                    filter(tm.Plate.experiment_id == self.experiment_id):
-
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            for acq in session.query(tm.Acquisition)
                 n_files = session.query(tm.MicroscopeImageFile.id).\
                     filter_by(acquisition_id=acq.id).\
                     count()
@@ -91,21 +88,18 @@ class MetadataExtractor(ClusterRoutines):
 
     @same_docstring_as(ClusterRoutines.delete_previous_job_output)
     def delete_previous_job_output(self):
-        with tm.utils.Session() as session:
-            files = session.query(tm.MicroscopeImageFile).\
-                join(tm.Acquisition).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id).\
-                all()
-
-            # Set value in "omexml" column to NULL
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
             logger.debug(
                 'set attribute "omexml" of instances of class '
                 'tmlib.models.MicroscopeImageFile to None'
             )
-            for f in files:
-                f.omexml = None
-            session.add_all(files)
+            n_files = session.query(tm.MicroscopeImageFile.id).count()
+            session.bulk_update_mappings(
+                tm.MicroscopeImageFile,
+                [{'omexml': None} for _ in xrange(n_files)]
+            )
+            # for f in session.query(tm.MicroscopeImageFile):
+            #     f.omexml = None
 
     def run_job(self, batch):
         '''Extracts OMEXML from microscope image or metadata files.
@@ -126,10 +120,9 @@ class MetadataExtractor(ClusterRoutines):
         subprocess.CalledProcessError
             when extraction failed
         '''
-        with tm.utils.Session() as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
             for fid in batch['microscope_image_file_ids']:
-                img_file = session.query(tm.MicroscopeImageFile).\
-                    get(fid)
+                img_file = session.query(tm.MicroscopeImageFile).get(fid)
                 logger.info('process image "%s"' % img_file.name)
                 # The "showinf" command line tool writes the extracted OMEXML
                 # to standard output.
@@ -148,13 +141,13 @@ class MetadataExtractor(ClusterRoutines):
                         % stderr
                     )
                 try:
+                    # We only want the XML. This will remove potential
+                    # warnings and other stuff we don't want.
                     omexml = re.search(
                         r'<(\w+).*</\1>', stdout, flags=re.DOTALL
                     ).group()
                 except:
-                    raise RegexError(
-                        'OMEXML metadata could not be extracted.'
-                    )
+                    raise RegexError('OMEXML metadata could not be extracted.')
                 img_file.omexml = unicode(omexml)
 
     @notimplemented

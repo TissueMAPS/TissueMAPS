@@ -547,7 +547,7 @@ class Workflow(SequentialTaskCollection, State):
         for stage in description.stages:
             if stage.active:
                 steps_to_process = list()
-                for step in stage.steps: 
+                for step in stage.steps:
                     if step.active:
                         steps_to_process.append(step)
                     else:

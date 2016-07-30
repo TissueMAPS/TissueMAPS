@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import distribute_by_replication
-from tmlib.models.base import Model, DateMixIn
+from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.models.status import FileUploadStatus as fus
 from tmlib.utils import autocreate_directory_property
@@ -29,7 +29,7 @@ PLATE_LOCATION_FORMAT = 'plate_{id}'
 
 
 def determine_plate_dimensions(n_wells):
-    '''Determine the dimensions of a plate given its number of wells.
+    '''Determines the dimensions of a plate given its number of wells.
 
     Parameters
     ----------
@@ -51,14 +51,12 @@ def determine_plate_dimensions(n_wells):
 
 @remove_location_upon_delete
 @distribute_by_replication
-class Plate(Model, DateMixIn):
+class Plate(ExperimentModel, DateMixIn):
 
     '''A *plate* represents a container with reservoirs for biological
-    samples (*wells*).
-    It's assumed that the imaged area projected onto the x, y plane of the
-    *well* bottom is continuous and the same for all *wells* in the *plate*.
-    It's further assumed that all images of a *plate* were acquired with the
-    same microscope settings implying that each acquisition (*cycle*) has the
+    samples (referred to as *wells*).
+    It's assumed that all images of a *plate* were acquired with the
+    same microscope settings implying that each acquisition has the
     same number of *z-planes* and *channels*.
 
     The *format* of the plate is encode by the number of wells in the plate,
@@ -75,10 +73,8 @@ class Plate(Model, DateMixIn):
         name of the plate
     description: str, optional
         description of the plate
-    experiment_id: int
-        ID of the parent experiment
-    experiment: tmlib.experiment.Experiment
-        parent experiment to which the plate belongs
+    root_directory: str
+        absolute path to root directory where plate is located on disk
     cycles: List[tmlib.model.Cycle]
         cycles that belong to the plate
     acquisitions: List[tmlib.model.Acqusition]
@@ -90,50 +86,39 @@ class Plate(Model, DateMixIn):
     #: str: name of the corresponding database table
     __tablename__ = 'plates'
 
-    __table_args__ = (UniqueConstraint('name', 'experiment_id'), )
+    __table_args__ = (UniqueConstraint('name'), )
 
     # Table columns
     name = Column(String, index=True)
+    root_directory = Column(String)
     description = Column(Text)
-    experiment_id = Column(
-        Integer, ForeignKey(
-            'experiments.id', onupdate='CASCADE', ondelete='CASCADE'
-        ),
-        index=True
-    )
 
-    # Relationships to other tables
-    experiment = relationship(
-        'Experiment',
-        backref=backref('plates', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, name, experiment_id, description=''):
+    def __init__(self, name, root_directory, description=''):
         '''
         Parameters
         ----------
         name: str
             name of the plate
-        experiment_id: int
-            ID of the parent experiment
+        root_directory: str
+            absolute path to root directory on disk where plate should be
+            created in
         description: str, optional
             description of the plate
         '''
         self.name = name
+        self.root_directory = root_directory
         self.description = description
-        self.experiment_id = experiment_id
 
     @autocreate_directory_property
     def location(self):
-        '''str: location were the plate content is stored'''
+        '''str: location were the plate is stored'''
         if self.id is None:
             raise AttributeError(
                 'Plate "%s" doesn\'t have an entry in the database yet. '
                 'Therefore, its location cannot be determined.' % self.name
             )
         return os.path.join(
-            self.experiment.plates_location,
-            PLATE_LOCATION_FORMAT.format(id=self.id)
+            self.root_directory, PLATE_LOCATION_FORMAT.format(id=self.id)
         )
 
     @autocreate_directory_property
@@ -149,9 +134,7 @@ class Plate(Model, DateMixIn):
     @property
     def status(self):
         '''str: upload status based on the status of acquisitions'''
-        child_status = set([
-            f.status for f in self.acquisitions
-        ])
+        child_status = set([f.status for f in self.acquisitions])
         if fus.UPLOADING in child_status:
             return fus.UPLOADING
         elif len(child_status) == 1 and fus.COMPLETE in child_status:

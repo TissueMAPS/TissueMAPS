@@ -4,13 +4,13 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import distribute_by_hash
-from tmlib.models import Model
+from tmlib.models import ExperimentModel
 
 logger = logging.getLogger(__name__)
 
 
 @distribute_by_hash('id')
-class Feature(Model):
+class Feature(ExperimentModel):
 
     '''A *feature* is a measurement that is associated with a particular
     *map object type*. For example a *feature* named "Morphology_Area"
@@ -70,7 +70,7 @@ class Feature(Model):
 
 
 @distribute_by_hash('feature_id')
-class FeatureValue(Model):
+class FeatureValue(ExperimentModel):
 
     '''An individual value of a *feature* that was measured for a given
     *map object*.

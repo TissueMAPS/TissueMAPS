@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import Model, DateMixIn
+from tmlib.models import ExperimentModel, DateMixIn
 from tmlib.models import distribute_by_replication
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.utils import autocreate_directory_property
@@ -17,7 +17,7 @@ CHANNEL_LOCATION_FORMAT = 'channel_{id}'
 
 @remove_location_upon_delete
 @distribute_by_replication
-class Channel(Model, DateMixIn):
+class Channel(ExperimentModel, DateMixIn):
 
     '''A *channel* represents all *images* across different time points and
     spatial positions that were acquired with the same illumination and
@@ -27,10 +27,8 @@ class Channel(Model, DateMixIn):
     ----------
     name: str
         name of the plate
-    experiment_id: int
-        ID of the parent experiment
-    experiment: tmlib.models.Experiment
-        parent experiment to which the plate belongs
+    root_directory: str
+        absolute path to root directory where channel is located on disk
     wavelength: str
         name of the corresponding wavelength
     layers: List[tmlib.models.ChannelLayer]
@@ -42,29 +40,16 @@ class Channel(Model, DateMixIn):
     #: str: name of the corresponding database table
     __tablename__ = 'channels'
 
-    __table_args__ = (
-        UniqueConstraint('name', 'experiment_id'),
-        UniqueConstraint('index', 'experiment_id')
-    )
+    __table_args__ = (UniqueConstraint('name'), UniqueConstraint('index'))
 
     # Table columns
     name = Column(String, index=True)
     index = Column(Integer, index=True)
     wavelength = Column(String, index=True)
     bit_depth = Column(Integer)
-    experiment_id = Column(
-        Integer,
-        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
+    root_directory = Column(String)
 
-    # Relationships to other tables
-    experiment = relationship(
-        'Experiment',
-        backref=backref('channels', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, name, index, wavelength, bit_depth, experiment_id):
+    def __init__(self, name, index, wavelength, bit_depth, root_directory):
         '''
         Parameters
         ----------
@@ -76,26 +61,26 @@ class Channel(Model, DateMixIn):
             name of the corresponding wavelength
         bit_depth: int
             number of bits used to indicate intensity of pixels
-        experiment_id: int
-            ID of the parent experiment
+        root_directory: str
+            absolute path to root directory on disk where channel should
+            be created in
         '''
         self.name = name
         self.index = index
         self.wavelength = wavelength
         self.bit_depth = bit_depth
-        self.experiment_id = experiment_id
+        self.root_directory = root_directory
 
     @autocreate_directory_property
     def location(self):
-        '''str: location were the channel content is stored'''
+        '''str: location were the channel is stored'''
         if self.id is None:
             raise AttributeError(
                 'Channel "%s" doesn\'t have an entry in the database yet. '
                 'Therefore, its location cannot be determined.' % self.name
             )
         return os.path.join(
-            self.experiment.channels_location,
-            CHANNEL_LOCATION_FORMAT.format(id=self.id)
+            self.root_directory, CHANNEL_LOCATION_FORMAT.format(id=self.id)
         )
 
     @autocreate_directory_property
