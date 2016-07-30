@@ -6,6 +6,7 @@ import collections
 from sqlalchemy import func
 
 import tmlib.models as tm
+from tmlib.models.utils import delete_location
 from tmlib.utils import notimplemented
 from tmlib.readers import BFImageReader
 from tmlib.readers import ImageReader
@@ -52,7 +53,7 @@ class ImageExtractor(ClusterRoutines):
         '''
         job_count = 0
         job_descriptions = collections.defaultdict(list)
-        with tm.utils.Session() as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
             # Group file mappings per site to ensure that all z-planes of
             # one site end up on the same machine.
             # They will be written into the same file and trying to access the
@@ -62,8 +63,6 @@ class ImageExtractor(ClusterRoutines):
                     tm.ImageFileMapping.site_id,
                     func.array_agg(tm.ImageFileMapping.id)
                 ).\
-                join(tm.Channel).\
-                filter(tm.Channel.experiment_id == self.experiment_id).\
                 group_by(tm.ImageFileMapping.site_id).\
                 all())
             batches = self._create_batches(
@@ -122,7 +121,7 @@ class ImageExtractor(ClusterRoutines):
             job description
         '''
         file_mapping_ids = batch['image_file_mapping_ids']
-        with tm.utils.Session() as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
             fmappings = session.query(tm.ImageFileMapping.map).\
                 filter(tm.ImageFileMapping.id.in_(file_mapping_ids)).\
                 all()
@@ -141,7 +140,7 @@ class ImageExtractor(ClusterRoutines):
                 subset = False
             with JavaBridge(active=subset):
                 for i, fid in enumerate(file_mapping_ids):
-                    with tm.utils.Session() as session:
+                    with tm.utils.ExperimentSession(self.experiment_id) as session:
                         fmapping = session.query(tm.ImageFileMapping).get(fid)
                         planes = list()
                         for j, f in enumerate(fmapping.map['files']):
@@ -194,22 +193,14 @@ class ImageExtractor(ClusterRoutines):
         :py:class:`tm.MapobjectsType` as well as all children for
         the processed experiment.
         '''
-        with tm.utils.Session() as session:
-
-            cycle_ids = session.query(tm.Cycle.id).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id).\
-                all()
-            cycle_ids = [p[0] for p in cycle_ids]
-
-        if cycle_ids:
-
-            with tm.utils.Session() as session:
-
-                logger.info('delete existing channel image files')
-                session.query(tm.ChannelImageFile).\
-                    filter(tm.ChannelImageFile.cycle_id.in_(cycle_ids)).\
-                    delete()
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            cycles = session.query(tm.Cycle).all()
+            images_locations = [c.images_locations for c in cycles]
+            logger.info('delete existing channel image files')
+            tm.ChannelImageFile.__table__.drop(session.engine)
+            tm.ChannelImageFile.__table__.create(session.engine)
+        for loc in images_locations:
+            delete_location(loc)
 
     def collect_job_output(self, batch):
         '''Omits channel image files that do not exist across all cycles.

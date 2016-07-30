@@ -82,11 +82,9 @@ class PyramidBuilder(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
-        logger.info('perform data integrity tests')
-        with tm.utils.Session() as session:
+        logger.info('performing data integrity tests')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
             n_images_per_site = session.query(func.count(tm.ChannelImageFile.id)).\
-                join(tm.Channel).\
-                filter(tm.Channel.experiment_id == self.experiment_id).\
                 group_by(tm.ChannelImageFile.site_id).\
                 all()
             if len(set(n_images_per_site)) > 1:
@@ -95,9 +93,7 @@ class PyramidBuilder(ClusterRoutines):
                     'each site!'
                 )
             n_wells_per_plate = session.query(func.count(tm.Well.id)).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id).\
-                group_by(tm.Plate.id).\
+                group_by(tm.Well.plate_id).\
                 all()
             # TODO: is this restraint still required?
             if len(set(n_wells_per_plate)) > 1:
@@ -110,13 +106,9 @@ class PyramidBuilder(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         job_count = 0
-        with tm.utils.Session() as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
 
-            channel_ids = session.query(tm.Channel.id).\
-                filter(tm.Channel.experiment_id == self.experiment_id).\
-                distinct()
-
-            for cid in channel_ids:
+            for cid in session.query(tm.Channel.id).distinct():
 
                 n_zplanes = session.query(tm.ChannelImageFile.n_planes).\
                     filter_by(channel_id=cid).\
@@ -263,21 +255,24 @@ class PyramidBuilder(ClusterRoutines):
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :py:class:`tm.ChannelLayer` and as well as all children
-        instances for the processed experiment.
+        :py:class:`tm.ChannelLayer` and instances of class
+        :py:class:`tm.MapobjectType` where ``is_static == True``
+        as well as all children instances for the processed experiment.
         '''
-        with tm.utils.Session() as session:
-            channel_ids = session.query(tm.Channel.id).\
-                filter_by(experiment_id=self.experiment_id).\
-                all()
-            channel_ids = [p[0] for p in channel_ids]
+        logger.debug('delete existing channel layers')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            channels = session.query(tm.Channel).all()
+            layers_locations = [c.layers_location for c in channels]
+            tm.ChannelLayer.__table__.drop(session.engine)
+            tm.ChannelLayer.__table__.create(session.engine)
+        for loc in layers_locations:
+            delete_location(loc)
 
-        if channel_ids:
-            with tm.utils.Session() as session:
-                logger.debug('delete existing channel layers')
-                session.query(tm.ChannelLayer).\
-                    filter(tm.ChannelLayer.channel_id.in_(channel_ids)).\
-                    delete()
+        logger.debug('delete existing static mapobject types')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            mapobject_types = session.query(tm.MapobjectType).\
+                filter_by(is_static=True).\
+                delete()
 
     def create_run_jobs(self, submission_id, user_name, batches,
             duration, memory, cores):
@@ -357,7 +352,7 @@ class PyramidBuilder(ClusterRoutines):
         return run_jobs
 
     def _create_maxzoom_level_tiles(self, batch):
-        with tm.utils.Session() as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info(
                 'process layer: channel=%d, zplane=%d, tpoint=%d',
@@ -425,7 +420,7 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('align images between cycles')
 
         for fid in batch['image_file_ids']:
-            with tm.utils.Session() as session:
+            with tm.utils.ExperimentSession(self.experiment_id) as session:
                 layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
 
                 file = session.query(tm.ChannelImageFile).get(fid)
@@ -546,7 +541,7 @@ class PyramidBuilder(ClusterRoutines):
                     tile_file.put(tile)
 
     def _create_lower_zoom_level_tiles(self, batch):
-        with tm.utils.Session() as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info(
                 'processing layer: channel %d', layer.channel.index
@@ -554,9 +549,8 @@ class PyramidBuilder(ClusterRoutines):
             logger.info('creating tiles at zoom level %d', batch['level'])
 
         for f in batch['outputs']['image_files']:
-            with tm.utils.Session() as session:
-                layer = session.query(tm.ChannelLayer).\
-                    get(batch['layer_id'])
+            with tm.utils.ExperimentSession(self.experiment_id) as session:
+                layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
                 name = os.path.basename(f)
                 level, row, column = layer.get_coordinate_from_name(name)
                 if level != batch['level']:
@@ -647,35 +641,24 @@ class PyramidBuilder(ClusterRoutines):
         batch: dict
             job description
         '''
-        with tm.utils.Session() as session:
-
-            mapobject_types = session.query(tm.MapobjectType).\
-                filter_by(experiment_id=self.experiment_id, is_static=True).\
+        logger.debug('delete existing mapobjects of static type')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            mapobject_ids = session.query(tm.Mapobject.id).\
+                join(tm.MapobjectType).\
+                filter(tm.MapobjectType.is_static=True).\
                 all()
-            for m in mapobject_types:
-                logger.debug('delete map object type: %r', m)
-                session.delete(m)
+            mapobject_ids = [m.id for m in mapobject_ids]
+            session.query(tm.Mapobject).\
+                filter(tm.Mapobject.id.in_(mapobject_ids)).\
+                delete()
 
-        with tm.utils.Session() as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
 
-            layer = session.query(tm.ChannelLayer).\
-                join(tm.Channel).\
-                filter(tm.Channel.experiment_id == self.experiment_id).\
-                first()
-
+            layer = session.query(tm.ChannelLayer).first()
             mapobjects = {
-                'Plate':
-                    session.query(tm.Plate).
-                    filter(tm.Plate.experiment_id == self.experiment_id),
-                'Wells':
-                    session.query(tm.Well).
-                    join(tm.Plate).
-                    filter(tm.Plate.experiment_id == self.experiment_id),
-                'Sites':
-                    session.query(tm.Site).
-                    join(tm.Well).
-                    join(tm.Plate).
-                    filter(tm.Plate.experiment_id == self.experiment_id)
+                'Plate': session.query(tm.Plate),
+                'Wells': session.query(tm.Well),
+                'Sites': session.query(tm.Site)
             }
 
             for name, query in mapobjects.iteritems():
@@ -685,16 +668,17 @@ class PyramidBuilder(ClusterRoutines):
                     tm.MapobjectType,
                     name=name, experiment_id=self.experiment_id, is_static=True
                 )
-                session.add(mapobject_type)
-                session.flush()
 
                 logger.info('create mapobjects of type "%s"', name)
                 mapobject_outlines = list()
                 for obj in query:
 
-                    mapobject = tm.Mapobject(mapobject_type_id=mapobject_type.id)
+                    mapobject = tm.Mapobject(
+                        mapobject_type_id=mapobject_type.id
+                    )
                     session.add(mapobject)
                     session.flush()
+
                     # First element: x axis
                     # Second element: inverted y axis
                     ul = (obj.offset[1], -1 * obj.offset[0])

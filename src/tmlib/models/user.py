@@ -1,12 +1,12 @@
 from passlib.hash import sha256_crypt
 from sqlalchemy import Column, String
 
-from tmlib.models import Model, DateMixIn
+from tmlib.models import MainModel, DateMixIn
 from tmlib.models import distribute_by_replication
 
 
 @distribute_by_replication
-class User(DateMixIn, Model):
+class User(MainModel, DateMixIn):
 
     '''A *user*.
 
@@ -44,4 +44,4 @@ class User(DateMixIn, Model):
         self.password = sha256_crypt.encrypt(password)
 
     def __repr__(self):
-        return '<User(id=%r, name=%r)' % (self.id, self.name)
+        return '<User(id=%r, name=%r)>' % (self.id, self.name)

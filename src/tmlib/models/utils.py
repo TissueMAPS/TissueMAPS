@@ -4,6 +4,11 @@ import logging
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.pool
+from tmlib.models import ExperimentModel
+from sqlalchemy_utils.functions import database_exists
+from sqlalchemy_utils.functions import create_database
+from sqlalchemy_utils.functions import drop_database
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +23,7 @@ def create_db_engine(db_uri=DATABASE_URI):
     Parameters
     ----------
     db_uri: str, optional
-        database uri
+        database uri; defaults to value of environment variable `TMAPS_DB_URI`
 
     Returns
     -------
@@ -29,7 +34,8 @@ def create_db_engine(db_uri=DATABASE_URI):
     # e.g. sqlalchemy.pool.AssertionPool and/or changing settings, such as
     # pool_size or max_overflow.
     return sqlalchemy.create_engine(
-        db_uri, poolclass=sqlalchemy.pool.QueuePool, pool_size=5, max_overflow=10
+        db_uri, poolclass=sqlalchemy.pool.QueuePool,
+        pool_size=5, max_overflow=10
     )
 
 
@@ -104,7 +110,7 @@ class Query(sqlalchemy.orm.query.Query):
 
         Note
         ----
-        Also removes locations of instances on the file system. 
+        Also removes locations of instances on the file system.
         '''
         instances = self.all()
         locations = [getattr(inst, 'location', None) for inst in instances]
@@ -124,96 +130,37 @@ class Query(sqlalchemy.orm.query.Query):
                     delete_location(loc)
 
 
-class Session(object):
+class SQLAlchemy_Session(object):
 
-    '''A session scope for interaction with the database.
-    All changes get automatically committed at the end of the interaction.
-    In case of an error, a rollback is issued.
-
-    An instance of this class provides access to all methods and attributes of
-    :py:class:`sqlalchemy.orm.session.Session` (it simply delegates under the
-    hood).
-
-    Examples
-    --------
-    from tmlib.models.utils import Session
-    from tmlib.models import Experiment
-
-    with Session() as session:
-        print session.query(Experiment).all()
-
-    Note
-    ----
-    The engine is cached and reused in case of a reconnection within the same
-    Python process.
-
-    Warning
-    -------
-    This is *not* thread-safe!
+    '''A wrapper around an instance of
+    :py:class:`sqlalchemy.orm.session.Session` that manages persistence of
+    database model objects.
     '''
-    _engine = None
-    _session_factory = None
 
-    def __init__(self, db_uri=None):
+    def __init__(self, session):
         '''
         Parameters
         ----------
-        db_uri: str, optional
-            database uri; defaults to the value of the environment variable
-            ``TMPAS_DB_URI`` (default: ``None``)
+        session: sqlalchemy.orm.session.Session
+            `SQLAlchemy` database session
         '''
-        if db_uri is None:
-            db_uri = DATABASE_URI
-        self.db_uri = db_uri
-
-    def __enter__(self):
-        if Session._engine is None:
-            Session._engine = create_db_engine(self.db_uri)
-        if Session._session_factory is None:
-            Session._session_factory = sqlalchemy.orm.scoped_session(
-                sqlalchemy.orm.sessionmaker(
-                    bind=Session._engine, query_cls=Query
-                )
-            )
-        self._sqla_session = Session._session_factory()
-        return self
-
-    def __exit__(self, except_type, except_value, except_trace):
-        if except_value:
-            self._sqla_session.rollback()
-        else:
-            sqlalchemy.event.listen(
-                self._session_factory, 'after_bulk_delete',
-                self._after_bulk_delete_callback
-            )
-            self._sqla_session.commit()
-        self._sqla_session.close()
-
-    def _after_bulk_delete_callback(self, delete_context):
-        '''Deletes locations defined by instances of :py:class`tmlib.Model`
-        after they have been deleted en bulk.
-
-        Parameters
-        ----------
-        delete_context: sqlalchemy.orm.persistence.BulkDelete
-        '''
-        logger.debug(
-            'deleted %d rows from table "%s"',
-            delete_context.rowcount, delete_context.primary_table.name
-        )
+        self._session = session
 
     def __getattr__(self, attr):
-        '''Delegates to :py:class:`sqlalchemy.orm.session.Session` when possible.
-        '''
-        if hasattr(self._sqla_session, attr):
-            return getattr(self._sqla_session, attr)
+        if hasattr(self._session, attr):
+            return getattr(self._session, attr)
         elif hasattr(self, attr):
             return getattr(self, attr)
         else:
             raise AttributeError(
-                'Object of type "%s" doesn\'t have attribute "%s".'
+                'Object "%s" doens\'t have an attribute "%s".'
                 % (self.__class__.__name__, attr)
             )
+
+    @property
+    def engine(self):
+        '''sqlalchemy.engine.Engine: engine for the database connection'''
+        return self._session.get_bind()
 
     def get_or_create(self, model, **kwargs):
         '''Gets an instance of a model class if it already exists or
@@ -252,14 +199,14 @@ class Session(object):
             try:
                 instance = model(**kwargs)
                 logger.debug('created new instance: %r', instance)
-                self._sqla_session.add(instance)
-                self._sqla_session.commit()
+                self._session.add(instance)
+                self._session.commit()
                 logger.debug('added and committed new instance: %r', instance)
             except sqlalchemy.exc.IntegrityError as err:
                 logger.error(
                     'creation of instance %r failed:\n%s', instance, str(err)
                 )
-                self._sqla_session.rollback()
+                self._session.rollback()
                 try:
                     instance = self.query(model).filter_by(**kwargs).one()
                     logger.debug('found existing instance: %r', instance)
@@ -300,10 +247,10 @@ class Session(object):
                 instances = list()
                 for kwargs in args:
                     instances.append(model(**kwargs))
-                self._sqla_session.add_all(instances)
-                self._sqla_session.commit()
+                self._session.add_all(instances)
+                self._session.commit()
             except sqlalchemy.exc.IntegrityError:
-                self._sqla_session.rollback()
+                self._session.rollback()
                 instances = list()
                 for kwargs in args:
                     instances.extend(
@@ -312,4 +259,183 @@ class Session(object):
             except:
                 raise
         return instances
+
+
+class _Session(object):
+
+    '''
+    It provide access to all methods and attributes of
+    :py:class:`sqlalchemy.orm.session.Session` and additional
+    custom methods implemented in
+    :py:class:`tmlib.models.utils.SQLAlchemy_Session`.
+
+    Note
+    ----
+    The engine is cached and reused in case of a reconnection within the same
+    Python process.
+
+    Warning
+    -------
+    This is *not* thread-safe!
+    '''
+    _engines = dict()
+    _session_factories = dict()
+
+    def __enter__(self):
+        if self._db_uri not in self.__class__._session_factories:
+            self.__class__._engines[self._db_uri] = \
+                create_db_engine(self._db_uri)
+            self.__class__._session_factories[self._db_uri] = \
+                sqlalchemy.orm.scoped_session(
+                    sqlalchemy.orm.sessionmaker(
+                        bind=self.__class__._engines[self._db_uri],
+                        query_cls=Query
+                    )
+                )
+        session_factory = self.__class__._session_factories[self._db_uri]
+        self._session = SQLAlchemy_Session(session_factory())
+        return self._session
+
+    def __exit__(self, except_type, except_value, except_trace):
+        if except_value:
+            self._session.rollback()
+        else:
+            # TODO: if experiment is deleted, also delete its database
+            self._session.commit()
+            sqlalchemy.event.listen(
+                self._session_factories[self._db_uri],
+                'after_bulk_delete', self._after_bulk_delete_callback
+            )
+        self._session.close()
+
+    def _after_bulk_delete_callback(self, delete_context):
+        '''Deletes locations defined by instances of :py:class`tmlib.Model`
+        after they have been deleted en bulk.
+
+        Parameters
+        ----------
+        delete_context: sqlalchemy.orm.persistence.BulkDelete
+        '''
+        logger.debug(
+            'deleted %d rows from table "%s"',
+            delete_context.rowcount, delete_context.primary_table.name
+        )
+
+
+class MainSession(_Session):
+
+    '''Session scopes for interaction with the main `TissueMAPS` database.
+
+    Examples
+    --------
+    from tmlib.models.utils import Session
+    from tmlib.models import Experiment
+
+    with MainSession() as session:
+        print session.query(Experiment).all()
+
+    Note
+    ----
+    All changes get automatically committed at the end of the interaction.
+    In case of an error, a rollback is issued.
+
+    See also
+    --------
+    :py:class:`tmlib.models.MainModel`
+    '''
+
+    def __init__(self, db_uri=None):
+        '''
+        Parameters
+        ----------
+        db_uri: str, optional
+            URI of the main `TissueMAPS` database; defaults to the value of
+            the environment variable ``TMPAS_DB_URI`` (default: ``None``)
+        '''
+        if db_uri is None:
+            self._db_uri = DATABASE_URI
+        else:
+            self._db_uri = db_uri
+        if not database_exists(self._db_uri):
+            raise ValueError('Database does not exist: %s' % self._db_uri)
+
+
+class ExperimentSession(_Session):
+
+    '''Session scopes for interaction with an experiment-secific `TissueMAPS`
+    database.
+
+    Examples
+    --------
+    from tmlib.models.utils import Session
+    from tmlib.models import Plate
+
+    with ExperimentSession(experiment_id=1) as session:
+        print session.query(Plate).all()
+
+    Note
+    ----
+    All changes get automatically committed at the end of the interaction.
+    In case of an error, a rollback is issued.
+
+    See also
+    --------
+    :py:class:`tmlib.models.ExperimentModel`
+    '''
+
+    def __init__(self, experiment_id, db_uri=None):
+        '''
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the experiment that should be accessed
+        db_uri: str, optional
+            URI of the main `TissueMAPS` database; defaults to the value of
+            the environment variable ``TMPAS_DB_URI`` (default: ``None``)
+        '''
+        if db_uri is None:
+            db_uri = DATABASE_URI
+        self.experiment_id = experiment_id
+        if self.experiment_id is not None:
+            if not isinstance(self.experiment_id, int):
+                raise TypeError('Argument "experiment_id" must have type int.')
+            self._db_uri = '{main}_experiment_{id}'.format(
+                main=db_uri, id=self.experiment_id
+            )
+
+    def __enter__(self):
+        if database_exists(self._db_uri):
+            do_create_tables = False
+        else:
+            logger.debug(
+                'create database for experiment %d', self.experiment_id
+            )
+            create_database(self._db_uri)
+            do_create_tables = True
+        if self._db_uri not in self.__class__._session_factories:
+            self.__class__._engines[self._db_uri] = \
+                create_db_engine(self._db_uri)
+            self.__class__._session_factories[self._db_uri] = \
+                sqlalchemy.orm.scoped_session(
+                    sqlalchemy.orm.sessionmaker(
+                        bind=self.__class__._engines[self._db_uri],
+                        query_cls=Query
+                    )
+                )
+            if do_create_tables:
+                engine = self.__class__._engines[self._db_uri]
+                # TODO: create template with postgis extension already created
+                logger.debug(
+                    'create postgis extension in database for experiment %d',
+                    self.experiment_id
+                )
+                engine.execute('CREATE EXTENSION postgis;')
+                logger.debug(
+                    'create tables in database for experiment %d',
+                    self.experiment_id
+                )
+                ExperimentModel.metadata.create_all(engine)
+        session_factory = self.__class__._session_factories[self._db_uri]
+        self._session = SQLAlchemy_Session(session_factory())
+        return self._session
 

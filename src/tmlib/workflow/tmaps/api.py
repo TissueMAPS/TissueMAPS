@@ -28,9 +28,8 @@ class WorkflowManager(BasicClusterRoutines):
         super(WorkflowManager, self).__init__()
         self.experiment_id = experiment_id
         self.verbosity = verbosity
-        with tm.utils.Session() as session:
-            experiment = session.query(tm.Experiment).\
-                get(self.experiment_id)
+        with tm.utils.MainSession() as session:
+            experiment = session.query(tm.Experiment).get(self.experiment_id)
             self.workflow_description = experiment.workflow_description
 
     def create_workflow(self, submission_id, user_name,

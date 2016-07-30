@@ -78,13 +78,23 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
 
-    with tm.utils.Session() as session:
+    with tm.utils.MainSession() as session:
+        try:
+            experiment = session.query(tm.Experiment).\
+                filter_by(name=args.experiment_name).\
+                one()
+            experiment_id = experiment.id
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Experiment "%s" does not exist!' % args.experiment_name
+            )
+        except:
+            raise
 
+    with tm.utils.ExperimentSession(experiment_id=experiment_id) as session:
         try:
             acquisition = session.query(tm.Acquisition).\
                 join(tm.Plate).\
-                join(tm.Experiment).\
-                filter(tm.Experiment.name == args.experiment_name).\
                 filter(tm.Plate.name == args.plate_name).\
                 filter(tm.Acquisition.name == args.acquisition_name).\
                 one()

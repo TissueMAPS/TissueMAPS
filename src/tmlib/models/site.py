@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import Model, DateMixIn
+from tmlib.models import ExperimentModel, DateMixIn
 from tmlib.models import distribute_by_replication
 
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 @distribute_by_replication
-class Site(Model, DateMixIn):
+class Site(ExperimentModel, DateMixIn):
 
     '''A *site* is a unique `y`, `x` position projected onto the
     *plate* bottom plane that was scanned by the microscope.

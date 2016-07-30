@@ -54,10 +54,9 @@ class ImageRegistrator(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
 
-        with tm.utils.Session() as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
 
-            for plate in session.query(tm.Plate).\
-                    filter_by(experiment_id=self.experiment_id):
+            for plate in session.query(tm.Plate):
 
                 if not(len(plate.cycles) > 1):
                     raise NotSupportedError(
@@ -141,38 +140,12 @@ class ImageRegistrator(ClusterRoutines):
 
     @same_docstring_as(ClusterRoutines.delete_previous_job_output)
     def delete_previous_job_output(self):
-        with tm.utils.Session() as session:
-
-            cycle_ids = session.query(tm.Cycle.id).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id).\
-                all()
-            cycle_ids = [p[0] for p in cycle_ids]
-
-            site_ids = session.query(tm.Site.id).\
-                join(tm.Well).\
-                join(tm.Plate).\
-                filter(tm.Plate.experiment_id == self.experiment_id).\
-                all()
-            site_ids = [p[0] for p in site_ids]
-
-        if cycle_ids:
-
-            with tm.utils.Session() as session:
-
-                logger.info('delete existing site shifts')
-                session.query(tm.SiteShift).\
-                    filter(tm.SiteShift.cycle_id.in_(cycle_ids)).\
-                    delete()
-
-        if site_ids:
-
-            with tm.utils.Session() as session:
-
-                logger.info('delete existing site intersections')
-                session.query(tm.SiteIntersection).\
-                    filter(tm.SiteIntersection.site_id.in_(site_ids)).\
-                    delete()
+        logger.info('delete existing site shifts and intersections')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            tm.SiteShift.__table__.drop(session.engine)
+            tm.SiteShift.__table__.create(session.engine)
+            tm.SiteIntersection.__table__.drop(session.engine)
+            tm.SiteIntersection.__table__.create(session.engine)
 
     def run_job(self, batch):
         '''Calculates shift and overhang values for the given sites.
@@ -190,7 +163,7 @@ class ImageRegistrator(ClusterRoutines):
         reference_file_ids = batch['input_ids']['reference_file_ids']
         target_file_ids = batch['input_ids']['target_file_ids']
         for i, rid in enumerate(reference_file_ids):
-            with tm.utils.Session() as session:
+            with tm.utils.ExperimentSession(self.experiment_id) as session:
                 reference_file = session.query(tm.ChannelImageFile).get(rid)
                 reference_img = reference_file.get().project().array
                 logger.info(

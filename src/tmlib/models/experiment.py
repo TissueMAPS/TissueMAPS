@@ -7,7 +7,7 @@ from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import Model, DateMixIn
+from tmlib.models import MainModel, DateMixIn
 from tmlib.models import distribute_by_replication
 from tmlib.readers import YamlReader
 from tmlib.writers import YamlWriter
@@ -27,7 +27,7 @@ EXPERIMENT_LOCATION_FORMAT = 'experiment_{id}'
 
 @remove_location_upon_delete
 @distribute_by_replication
-class Experiment(Model, DateMixIn):
+class Experiment(MainModel, DateMixIn):
 
     '''An *experiment* is the main organizational unit of `TissueMAPS`.
     It represents a set of images and associated data.
@@ -43,8 +43,7 @@ class Experiment(Model, DateMixIn):
     name: str
         name of the experiment
     root_directory: str
-        absolute path to root directory where experiment directory
-        should be created in
+        absolute path to root directory where experiment is located on disk
     description: str
         description of the experimental setup
     microscope_type: str
@@ -88,7 +87,7 @@ class Experiment(Model, DateMixIn):
     __table_args__ = (UniqueConstraint('name', 'user_id'), )
 
     # Table columns
-    name = Column(String)
+    name = Column(String, index=True)
     microscope_type = Column(String, index=True)
     plate_format = Column(Integer)
     plate_acquisition_mode = Column(String)
@@ -105,7 +104,7 @@ class Experiment(Model, DateMixIn):
 
     def __init__(self, name, microscope_type, plate_format,
                  plate_acquisition_mode, user_id,
-                 root_directory='$TMAPS_STORAGE_HOME', description='',
+                 root_directory, description='',
                  zoom_factor=2, well_spacer_size=500,
                  vertical_site_displacement=0, horizontal_site_displacement=0):
         '''
@@ -121,9 +120,9 @@ class Experiment(Model, DateMixIn):
             the way plates were acquired with the microscope
         user_id: int
             ID of the owner
-        root_directory: str, optional
-            absolute path to root directory where experiment directory
-            should be created in (default: `$TMAPS_STORAGE`)
+        root_directory: str
+            absolute path to root directory on disk where experiment should
+            be created in
         description: str, optional
             description of the experimental setup
         zoom_factor: int, optional
@@ -199,11 +198,6 @@ class Experiment(Model, DateMixIn):
     def channels_location(self):
         '''str: location where channels data are stored'''
         return os.path.join(self.location, 'channels')
-
-    @autocreate_directory_property
-    def mapobject_types_location(self):
-        '''str: location where mapobject type data are stored'''
-        return os.path.join(self.location, 'mapobject_types')
 
     @autocreate_directory_property
     def workflow_location(self):

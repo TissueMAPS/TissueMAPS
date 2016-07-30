@@ -149,7 +149,7 @@ class CliMeta(ABCMeta):
         tmlib.workflow.job or tmlib.workflow.job.JobCollection
             loaded jobs
         '''
-        with tm.utis.Session() as session:
+        with tm.utis.MainSession() as session:
             last_submission_id = session.query(func.max(tm.Submission.id)).\
                 filter(
                     tm.Submission.experiment_id == self.api_instance.experiment_id,

@@ -4,7 +4,7 @@ import sys
 import argparse
 import sqlalchemy.orm.exc
 
-import tmlib.models
+import tmlib.models as tm
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
@@ -21,17 +21,19 @@ def valid_dir(path):
 
 def add_experiment(experiment_name, user_name, microscope_type, plate_format,
                    plate_acquisition_mode):
-    with tmlib.models.utils.Session() as session:
+    with tm.utils.MainSession() as session:
         try:
-            user = session.query(tmlib.models.User).\
-                filter_by(name=user_name).one()
+            user = session.query(tm.User).\
+                filter_by(name=user_name).\
+                one()
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError('Unknown user "%s"!' % user_name)
         except:
             raise
         experiment = session.get_or_create(
-            tmlib.models.Experiment,
+            tm.Experiment,
             name=experiment_name, user_id=user.id,
+            root_directory=os.environ['TMAPS_STORAGE_HOME'],
             microscope_type=microscope_type,
             plate_format=plate_format,
             plate_acquisition_mode=plate_acquisition_mode
@@ -42,9 +44,7 @@ def add_experiment(experiment_name, user_name, microscope_type, plate_format,
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-        description='''
-            Add a new experiment to the TissueMAPS database.
-        '''
+        description='Add a new experiment to the TissueMAPS database.'
     )
     parser.add_argument(
         '-e', '--experiment_name', required=True, type=str,
@@ -81,6 +81,6 @@ if __name__ == '__main__':
     )
 
     print(
-        'EXPERIMENT ID: {id}\nRemember it - you will need it to process the '
+        'EXPERIMENT ID: {id}\nYou will need the ID to process the '
         'experiment via the command line!'.format(id=experiment_id)
     )

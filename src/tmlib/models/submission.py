@@ -2,13 +2,13 @@ from sqlalchemy import Column, Integer, String, LargeBinary, Interval, ForeignKe
 from sqlalchemy.dialects.postgres import JSONB
 from sqlalchemy.orm import relationship, backref
 
-from tmlib.models import Model, DateMixIn
+from tmlib.models import MainModel, DateMixIn
 from tmlib.models import distribute_by_replication
 from tmlib.models import distribute_by_hash
 
 
 @distribute_by_replication
-class Submission(Model, DateMixIn):
+class Submission(MainModel, DateMixIn):
 
     '''A *submission* handles the processing of a computational *task*
     on a cluster.
@@ -69,7 +69,7 @@ class Submission(Model, DateMixIn):
         )
 
 
-# class Batch(Model):
+# class Batch(MainModel):
 
 #     '''A *batch* describes all inputs as well as the expected outputs of
 #     an individual *task*.
@@ -132,7 +132,7 @@ class Submission(Model, DateMixIn):
 
 
 @distribute_by_hash('id')
-class Task(Model):
+class Task(MainModel):
 
     '''A *task* represents a computational job that can be submitted to a
     cluster for processing. Its state will be monitored while being processed.

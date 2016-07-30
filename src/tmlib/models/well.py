@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib import utils
-from tmlib.models import Model, DateMixIn
+from tmlib.models import ExperimentModel, DateMixIn
 from tmlib.models import distribute_by_replication
 
 
@@ -15,14 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 @distribute_by_replication
-class Well(Model, DateMixIn):
+class Well(ExperimentModel, DateMixIn):
 
     '''A *well* is a reservoir for biological samples and multiple *wells* are
     typically arranged as a grid on a *plate*.
     From an imaging point of view, a *well* represents a continuous area of
-    image acquisition projected onto the y,x plane of the *plate* bottom.
-    Images may not be acquired continuously along the z axis, however,
-    and a full volume reconstruction therefore not possible.
+    image acquisition when projected onto an y,x plane on the *plate* bottom.
 
     Attributes
     ----------

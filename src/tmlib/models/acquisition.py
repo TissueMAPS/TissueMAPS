@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgres import JSONB
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import Model, DateMixIn
+from tmlib.models import ExperimentModel, DateMixIn
 from tmlib.models import distribute_by_hash
 from tmlib.models import distribute_by_replication
 from tmlib.models.status import FileUploadStatus as fus
@@ -20,7 +20,7 @@ ACQUISITION_LOCATION_FORMAT = 'acquisition_{id}'
 
 @remove_location_upon_delete
 @distribute_by_replication
-class Acquisition(Model, DateMixIn):
+class Acquisition(ExperimentModel, DateMixIn):
 
     '''An *acquisition* contains all files belonging to one microscope image
     acquisition process. Note that in contrast to a *cycle*, an *acquisition*
@@ -161,7 +161,7 @@ class Acquisition(Model, DateMixIn):
 
 
 @distribute_by_hash('id')
-class ImageFileMapping(Model):
+class ImageFileMapping(ExperimentModel):
 
     '''A mapping of an individual 2D pixels plane (a future channel image file)
     to its location within one or more microscope image files defined
