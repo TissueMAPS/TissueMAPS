@@ -4,7 +4,7 @@ import argparse
 import tmlib.models as tm
 
 
-def create_tables(db_uri=None, xl=False):
+def create_tables(db_uri=None):
     '''Creates all tables defined by declarative classes in
     :py:package:`tmlib.models`.
 
@@ -12,16 +12,9 @@ def create_tables(db_uri=None, xl=False):
     ----------
     db_uri: str
         URI of the database
-    xl: bool, optional
-        whether tables should be created for PostgresXL database
-        (default: ``False``)
     '''
-    if xl:
-        psxl = tm.PostgresXl(db_uri)
-        psxl.create_tables()
-    else:
-        engine = tm.utils.create_db_engine()
-        tm.MainModel.metadata.create_all(engine)
+    engine = tm.utils.create_db_engine()
+    tm.MainModel.metadata.create_all(engine)
 
 
 if __name__ == '__main__':
@@ -30,10 +23,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--uri', dest='db_uri', help='database URI', default=None
     )
-    parser.add_argument(
-        '--xl', action='store_true', help='use PostgresXL database cluster'
-    )
 
     args = parser.parse_args()
 
-    create_tables(args.db_uri, args.xl)
+    create_tables(args.db_uri)
