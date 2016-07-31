@@ -5,7 +5,6 @@ from tmlib.models import MainModel, DateMixIn
 from tmlib.models import distribute_by_replication
 
 
-@distribute_by_replication
 class User(MainModel, DateMixIn):
 
     '''A *user*.

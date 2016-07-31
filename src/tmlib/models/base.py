@@ -1,23 +1,43 @@
 '''Abstract base and mixin classes for database models.'''
 import os
+import logging
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy import Column, DateTime, Integer
 from sqlalchemy import func
+from sqlalchemy.schema import DropTable, CreateTable
+from sqlalchemy.schema import UniqueConstraint, PrimaryKeyConstraint
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects import registry
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
 
 from tmlib import utils
 
+logger = logging.getLogger(__name__)
+
 
 class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
 
     '''Metaclass for abstract declarative base classes.'''
 
+    def __init__(self, name, bases, d):
+        distribute_by = (
+            d.pop('__distribute_by_hash__', None) or
+            getattr(self, '__bind_key__', None)
+        )
+        DeclarativeMeta.__init__(self, name, bases, d)
+        if hasattr(self, '__table__'):
+            if distribute_by is not None:
+                self.__table__.info['distribute_by_hash'] = distribute_by
+            else:
+                self.__table__.info['distribute_by_replication'] = True
+
 
 _MainBase = declarative_base(
     name='MainBase', metaclass=_DeclarativeABCMeta
 )
+
 _ExperimentBase = declarative_base(
     name='ExperimentBase', metaclass=_DeclarativeABCMeta
 )
@@ -102,3 +122,45 @@ class File(ExperimentModel):
     @abstractmethod
     def put(self, data):
         pass
+
+
+registry.register('postgresql.xl', 'tmlib.models.dialect', 'PGXLDialect_psycopg2')
+
+
+@compiles(DropTable, 'postgresql')
+def _compile_drop_table(element, compiler, **kwargs):
+    return compiler.visit_drop_table(element) + ' CASCADE'
+
+
+@compiles(CreateTable, 'postgresxl')
+def _compile_create_table(element, compiler, **kwargs):
+    table = element.element
+    distribute_by_hash = 'distribute_by_hash' in table.info
+    if distribute_by_hash:
+        distribution_column = table.info['distribute_by_hash']
+        # The distributed column must be part of the UNIQUE and
+        # PRIMARY KEY constraints
+        # TODO: consider hacking "visit_primary_key_constraint" and
+        # "visit_unique_constraint" instead
+        for c in table.constraints:
+            if (isinstance(c, PrimaryKeyConstraint) or
+                    isinstance(c, UniqueConstraint)):
+                if distribution_column not in c.columns:
+                    c.columns.add(table.columns[distribution_column])
+        # The distributed column must be part of any INDEX
+        for i in table.indexes:
+            if distribution_column not in i.columns:
+                i.columns.add(table.columns[distribution_column])
+    sql = compiler.visit_create_table(element)
+    if distribute_by_hash:
+        logger.debug(
+            'distribute table "%s" by hash "%s"', table.name,
+            distribution_column
+        )
+        sql += ' DISTRIBUTE BY HASH(' + distribution_column + ')'
+    else:
+        logger.debug(
+            'distribute table "%s" by replication', table.name
+        )
+        sql += ' DISTRIBUTE BY REPLICATION'
+    return sql

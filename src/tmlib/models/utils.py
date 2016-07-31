@@ -212,11 +212,37 @@ class SQLAlchemy_Session(object):
                     logger.debug('found existing instance: %r', instance)
                 except:
                     raise
+            except TypeError:
+                raise TypeError(
+                    'Wrong arugments for instantiation of model class "%s".'
+                    % model.__name__
+                )
             except:
                 raise
         except:
             raise
         return instance
+
+    def drop_and_recreate(self, model):
+        '''Drops a database table and re-creates it.
+
+        Parameters
+        ----------
+        model: tmlib.models.MainModel or tmlib.models.ExperimentModel
+            database model class
+
+        Note
+        ----
+        Performs a commit before dropping the table to circumvent locking.
+        '''
+        table = model.__table__
+        engine = self._session.get_bind()
+        self._session.commit()
+        if table.exists(engine):
+            logger.debug('drop table "%s"', table.name)
+            table.drop(engine)
+        logger.debug('create table "%s"', table.name)
+        table.create(engine)
 
     def get_or_create_all(self, model, args):
         '''Gets a collection of instances of a model class if they already
@@ -225,8 +251,8 @@ class SQLAlchemy_Session(object):
         Parameters
         ----------
         model: type
-            an implementation of the :py:class:`tmlib.models.Model`
-            abstract base class
+            an implementation of the :py:class:`tmlib.models.ExperimentModel`
+            or :py:class:`tmlib.models.MainModel` abstract base class
         args: List[dict]
             keyword arguments for each instance that can be passed to the
             constructor of `model` or to
