@@ -3,11 +3,8 @@ from sqlalchemy.dialects.postgres import JSONB
 from sqlalchemy.orm import relationship, backref
 
 from tmlib.models import MainModel, DateMixIn
-from tmlib.models import distribute_by_replication
-from tmlib.models import distribute_by_hash
 
 
-@distribute_by_replication
 class Submission(MainModel, DateMixIn):
 
     '''A *submission* handles the processing of a computational *task*
@@ -131,7 +128,6 @@ class Submission(MainModel, DateMixIn):
 #         )
 
 
-@distribute_by_hash('id')
 class Task(MainModel):
 
     '''A *task* represents a computational job that can be submitted to a
@@ -161,6 +157,8 @@ class Task(MainModel):
 
     #: str: name of the corresponding database table
     __tablename__ = 'tasks'
+
+    __distribute_by_hash__ = 'id'
 
     # Table columns
     state = Column(String, index=True)

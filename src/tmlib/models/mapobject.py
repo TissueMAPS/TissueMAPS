@@ -15,8 +15,6 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import ExperimentModel, DateMixIn
-from tmlib.models import distribute_by_replication
-from tmlib.models import distribute_by_hash
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
@@ -27,7 +25,6 @@ class ST_ExteriorRing(GenericFunction):
     type = Geometry
 
 
-@distribute_by_replication
 class MapobjectType(ExperimentModel, DateMixIn):
 
     '''A *map object type* represent a conceptual group of *map objects*
@@ -275,7 +272,6 @@ class MapobjectType(ExperimentModel, DateMixIn):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
 
 
-@distribute_by_hash('id')
 class Mapobject(ExperimentModel):
 
     '''A *map object* represents a connected pixel component in an
@@ -298,6 +294,8 @@ class Mapobject(ExperimentModel):
 
     #: str: name of the corresponding database table
     __tablename__ = 'mapobjects'
+
+    __distribute_by_hash__ = 'id'
 
     # Table columns
     parent_id = Column(Integer, index=True)
@@ -329,7 +327,6 @@ class Mapobject(ExperimentModel):
         return '<Mapobject(id=%d, type=%s)>' % (self.id, mapobject_type.name)
 
 
-@distribute_by_hash('id')
 class MapobjectSegmentation(ExperimentModel):
 
     '''A *mapobject segmentation* provides the geographic representation
@@ -371,6 +368,8 @@ class MapobjectSegmentation(ExperimentModel):
     __table_args__ = (
         UniqueConstraint('label', 'tpoint', 'zplane', 'site_id', 'mapobject_id'),
     )
+
+    __distribute_by_hash__ = 'mapobject_id'
 
     # Table columns
     is_border = Column(Boolean, index=True)

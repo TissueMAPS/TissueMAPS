@@ -8,7 +8,6 @@ from sqlalchemy.orm import relationship, Session
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import MainModel, DateMixIn
-from tmlib.models import distribute_by_replication
 from tmlib.readers import YamlReader
 from tmlib.writers import YamlWriter
 from tmlib.models.utils import remove_location_upon_delete
@@ -26,7 +25,6 @@ EXPERIMENT_LOCATION_FORMAT = 'experiment_{id}'
 
 
 @remove_location_upon_delete
-@distribute_by_replication
 class Experiment(MainModel, DateMixIn):
 
     '''An *experiment* is the main organizational unit of `TissueMAPS`.
