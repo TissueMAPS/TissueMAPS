@@ -13,8 +13,8 @@ def create_tables(db_uri=None):
     db_uri: str
         URI of the database
     '''
-    engine = tmlib.models.utils.create_db_engine()
-    tmlib.models.Model.metadata.create_all(engine)
+    engine = tm.utils.create_db_engine()
+    tm.MainModel.metadata.create_all(engine)
 
 
 if __name__ == '__main__':
@@ -22,7 +22,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('Create tables in TissueMAPS database.')
     parser.add_argument(
         '--uri', dest='db_uri', help='database URI', default=None
-    )
     )
 
     args = parser.parse_args()
