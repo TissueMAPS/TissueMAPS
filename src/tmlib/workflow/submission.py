@@ -55,10 +55,9 @@ class SubmissionManager(object):
         '''
         if program_name is None:
             program_name = self.program_name
-        with tm.utils.Session() as session:
+        with tm.utils.MainSession() as session:
             submission = tm.Submission(
-                experiment_id=self.experiment_id,
-                program=program_name
+                experiment_id=self.experiment_id, program=program_name
             )
             session.add(submission)
             session.flush()
@@ -85,7 +84,7 @@ class SubmissionManager(object):
             indicates that the task has not yet been inserted into the
             database table
         '''
-        with tm.utils.Session() as session:
+        with tm.utils.MainSession() as session:
             submission = session.query(tm.Submission).get(jobs.submission_id)
             if not hasattr(jobs, 'persistent_id'):
                 raise AttributeError(
@@ -102,7 +101,7 @@ class SubmissionManager(object):
         int
             ID of top task that was last submitted
         '''
-        with tm.utils.Session() as session:
+        with tm.utils.MainSession() as session:
             submission = session.query(tm.Submission).\
                 filter_by(experiment_id=self.experiment_id, program=self.name).\
                 order_by(tm.Submission.id.desc()).\

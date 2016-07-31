@@ -302,8 +302,7 @@ class PyramidBuilder(ClusterRoutines):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             channels = session.query(tm.Channel).all()
             layers_locations = [c.layers_location for c in channels]
-            tm.ChannelLayer.__table__.drop(session.engine)
-            tm.ChannelLayer.__table__.create(session.engine)
+            session.drop_and_recreate(tm.ChannelLayer)
         for loc in layers_locations:
             delete_location(loc)
 

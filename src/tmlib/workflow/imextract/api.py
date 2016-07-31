@@ -137,60 +137,55 @@ class ImageExtractor(ClusterRoutines):
                 subset = False
             with JavaBridge(active=subset):
                 for i, fid in enumerate(file_mapping_ids):
-                    with tm.utils.ExperimentSession(self.experiment_id) as session:
-                        fmapping = session.query(tm.ImageFileMapping).get(fid)
-                        planes = list()
-                        for j, f in enumerate(fmapping.map['files']):
-                            logger.info(
-                                'extract pixel planes from file: %s', f
-                            )
-                            plane_ix = fmapping.map['planes'][j]
-                            series_ix = fmapping.map['series'][j]
-                            filename = os.path.join(
-                                fmapping.acquisition.microscope_images_location,
-                                f
-                            )
-                            with Reader(filename) as reader:
-                                if subset:
-                                    p = reader.read_subset(
-                                        plane=plane_ix, series=series_ix
-                                    )
-                                else:
-                                    p = reader.read()
-                            planes.append(p)
-
-                        dtype = planes[0].dtype
-                        dims = planes[0].shape
-                        stack = np.dstack(planes)
-                        if batch['mip']:
-                            logger.info('perform intensity projection')
-                            img = ChannelImage(np.max(stack, axis=2))
-                        else:
-                            img = ChannelImage(stack)
-                        image_file = session.get_or_create(
-                            tm.ChannelImageFile,
-                            tpoint=fmapping.tpoint,
-                            site_id=fmapping.site_id,
-                            cycle_id=fmapping.cycle_id,
-                            channel_id=fmapping.channel_id
+                    fmapping = session.query(tm.ImageFileMapping).get(fid)
+                    planes = list()
+                    for j, f in enumerate(fmapping.map['files']):
+                        logger.info(
+                            'extract pixel planes from file: %s', f
                         )
-                        logger.info('store image file: %s', image_file.name)
-                        image_file.put(img)
+                        plane_ix = fmapping.map['planes'][j]
+                        series_ix = fmapping.map['series'][j]
+                        filename = os.path.join(
+                            fmapping.acquisition.microscope_images_location,
+                            f
+                        )
+                        with Reader(filename) as reader:
+                            if subset:
+                                p = reader.read_subset(
+                                    plane=plane_ix, series=series_ix
+                                )
+                            else:
+                                p = reader.read()
+                        planes.append(p)
+
+                    dtype = planes[0].dtype
+                    dims = planes[0].shape
+                    stack = np.dstack(planes)
+                    if batch['mip']:
+                        logger.info('perform intensity projection')
+                        img = ChannelImage(np.max(stack, axis=2))
+                    else:
+                        img = ChannelImage(stack)
+                    image_file = session.get_or_create(
+                        tm.ChannelImageFile,
+                        tpoint=fmapping.tpoint,
+                        site_id=fmapping.site_id,
+                        cycle_id=fmapping.cycle_id,
+                        channel_id=fmapping.channel_id
+                    )
+                    logger.info('store image file: %s', image_file.name)
+                    image_file.put(img)
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :py:class:`tm.ChannelImageFile`,
-        :py:class:`tm.IllumstatsFile`,
-        :py:class:`tm.ChannelLayer`, and
-        :py:class:`tm.MapobjectsType` as well as all children for
+        :py:class:`tm.ChannelImageFile` as well as all children for
         the processed experiment.
         '''
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             cycles = session.query(tm.Cycle).all()
             images_locations = [c.images_locations for c in cycles]
             logger.info('delete existing channel image files')
-            tm.ChannelImageFile.__table__.drop(session.engine)
-            tm.ChannelImageFile.__table__.create(session.engine)
+            session.drop_and_recreate(tm.ChannelImageFile)
         for loc in images_locations:
             delete_location(loc)
 
