@@ -5,13 +5,11 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import ExperimentModel, DateMixIn
-from tmlib.models import distribute_by_replication
 
 
 logger = logging.getLogger(__name__)
 
 
-@distribute_by_replication
 class Site(ExperimentModel, DateMixIn):
 
     '''A *site* is a unique `y`, `x` position projected onto the
@@ -48,6 +46,8 @@ class Site(ExperimentModel, DateMixIn):
     __tablename__ = 'sites'
 
     __table_args__ = (UniqueConstraint('x', 'y', 'well_id'), )
+
+    __distribute_by_hash__ = 'id'
 
     # Table columns
     y = Column(Integer, index=True)

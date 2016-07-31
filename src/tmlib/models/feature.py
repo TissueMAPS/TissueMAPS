@@ -3,14 +3,11 @@ from sqlalchemy import Column, String, Integer, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import distribute_by_hash
-from tmlib.models import distribute_by_replication
 from tmlib.models import ExperimentModel
 
 logger = logging.getLogger(__name__)
 
 
-@distribute_by_replication
 class Feature(ExperimentModel):
 
     '''A *feature* is a measurement that is associated with a particular
@@ -34,6 +31,8 @@ class Feature(ExperimentModel):
     __tablename__ = 'features'
 
     __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
+
+    __distribute_by_hash__ = 'id'
 
     # Table columns
     name = Column(String, index=True)
@@ -70,7 +69,10 @@ class Feature(ExperimentModel):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
 
 
+<<<<<<< HEAD
 @distribute_by_hash('mapobject_id')
+=======
+>>>>>>> Implement PostgresXL distribution in model metaclass
 class FeatureValue(ExperimentModel):
 
     '''An individual value of a *feature* that was measured for a given
@@ -96,6 +98,8 @@ class FeatureValue(ExperimentModel):
     __table_args__ = (
         UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
     )
+
+    __distribute_by_hash__ = 'feature_id'
 
     # Table columns
     value = Column(Float(precision=15))

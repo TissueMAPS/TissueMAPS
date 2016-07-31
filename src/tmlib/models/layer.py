@@ -18,7 +18,6 @@ from tmlib.models.well import Well
 from tmlib.models.plate import Plate
 from tmlib.models.base import Model
 from tmlib.models.base import ExperimentModel
-from tmlib.models import distribute_by_replication
 from tmlib.utils import autocreate_directory_property
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.writers import XmlWriter
@@ -32,7 +31,6 @@ CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 
 
 @remove_location_upon_delete
-@distribute_by_replication
 class ChannelLayer(ExperimentModel):
 
     '''A *channel layer* represents a multi-resolution overview of all images

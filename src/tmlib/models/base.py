@@ -29,6 +29,13 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
         DeclarativeMeta.__init__(self, name, bases, d)
         if hasattr(self, '__table__'):
             if distribute_by is not None:
+                column_names = [c.name for c in self.__table__.columns]
+                if distribute_by not in column_names:
+                    raise ValueError(
+                        'Hash for PostgresXL distribution "%s" '
+                        'is not a column of table "%s"'
+                        % (distribute_by, self.__table__.name)
+                    )
                 self.__table__.info['distribute_by_hash'] = distribute_by
             else:
                 self.__table__.info['distribute_by_replication'] = True

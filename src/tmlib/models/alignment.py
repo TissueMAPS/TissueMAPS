@@ -3,13 +3,11 @@ from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship, backref
 
 from tmlib.models import ExperimentModel
-from tmlib.models import distribute_by_hash
 
 
 logger = logging.getLogger(__name__)
 
 
-@distribute_by_hash('id')
 class SiteShift(ExperimentModel):
 
     '''A *site* may be shifted between different *cycles* and needs to be
@@ -37,6 +35,8 @@ class SiteShift(ExperimentModel):
 
     #: str: name of the corresponding database table
     __tablename__ = 'site_shifts'
+
+    __distribute_by_hash__ = 'id'
 
     # Table columns
     y = Column(Integer)
@@ -91,7 +91,6 @@ class SiteShift(ExperimentModel):
         )
 
 
-@distribute_by_hash('id')
 class SiteIntersection(ExperimentModel):
 
     '''When *sites* are shifted between *cycles*, they only have a subset
@@ -122,6 +121,8 @@ class SiteIntersection(ExperimentModel):
 
     #: str: name of the corresponding database table
     __tablename__ = 'site_intersections'
+
+    __distribute_by_hash__ = 'id'
 
     # Table columns
     upper_overhang = Column(Integer)
