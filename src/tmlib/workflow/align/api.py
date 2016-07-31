@@ -142,10 +142,8 @@ class ImageRegistrator(ClusterRoutines):
     def delete_previous_job_output(self):
         logger.info('delete existing site shifts and intersections')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            tm.SiteShift.__table__.drop(session.engine)
-            tm.SiteShift.__table__.create(session.engine)
-            tm.SiteIntersection.__table__.drop(session.engine)
-            tm.SiteIntersection.__table__.create(session.engine)
+            session.drop_and_recreate(tm.SiteShift)
+            session.drop_and_recreate(tm.SiteIntersection)
 
     def run_job(self, batch):
         '''Calculates shift and overhang values for the given sites.

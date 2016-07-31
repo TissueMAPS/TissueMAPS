@@ -60,7 +60,7 @@ class MetadataExtractor(ClusterRoutines):
         job_descriptions['run'] = list()
         count = 0
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            for acq in session.query(tm.Acquisition)
+            for acq in session.query(tm.Acquisition):
                 n_files = session.query(tm.MicroscopeImageFile.id).\
                     filter_by(acquisition_id=acq.id).\
                     count()
@@ -94,13 +94,11 @@ class MetadataExtractor(ClusterRoutines):
                 'set attribute "omexml" of instances of class '
                 'tmlib.models.MicroscopeImageFile to None'
             )
-            n_files = session.query(tm.MicroscopeImageFile.id).count()
+            file_ids = session.query(tm.MicroscopeImageFile.id)
             session.bulk_update_mappings(
                 tm.MicroscopeImageFile,
-                [{'omexml': None} for _ in xrange(n_files)]
+                [{'id': i[0], 'omexml': None} for i in file_ids]
             )
-            # for f in session.query(tm.MicroscopeImageFile):
-            #     f.omexml = None
 
     def run_job(self, batch):
         '''Extracts OMEXML from microscope image or metadata files.

@@ -345,7 +345,7 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
             gc3libs.Run.State.RUNNING,
             gc3libs.Run.State.STOPPED
         }
-        with tm.utils.Session() as session:
+        with tm.utils.MainSession() as session:
             task_info = session.query(tm.Task).get(task_.persistent_id)
             failed = task_info.exitcode != 0 and task_info.exitcode is not None
             data['done'] = task_info.state == gc3libs.Run.State.TERMINATED

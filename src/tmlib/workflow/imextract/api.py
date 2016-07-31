@@ -139,8 +139,8 @@ class ImageExtractor(ClusterRoutines):
                 Reader = ImageReader
                 subset = False
             with JavaBridge(active=subset):
-                for i, fid in enumerate(file_mapping_ids):
-                    with tm.utils.ExperimentSession(self.experiment_id) as session:
+                with tm.utils.ExperimentSession(self.experiment_id) as session:
+                    for i, fid in enumerate(file_mapping_ids):
                         fmapping = session.query(tm.ImageFileMapping).get(fid)
                         planes = list()
                         for j, f in enumerate(fmapping.map['files']):
@@ -187,18 +187,14 @@ class ImageExtractor(ClusterRoutines):
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :py:class:`tm.ChannelImageFile`,
-        :py:class:`tm.IllumstatsFile`,
-        :py:class:`tm.ChannelLayer`, and
-        :py:class:`tm.MapobjectsType` as well as all children for
+        :py:class:`tm.ChannelImageFile` as well as all children for
         the processed experiment.
         '''
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             cycles = session.query(tm.Cycle).all()
             images_locations = [c.images_locations for c in cycles]
             logger.info('delete existing channel image files')
-            tm.ChannelImageFile.__table__.drop(session.engine)
-            tm.ChannelImageFile.__table__.create(session.engine)
+            session.drop_and_recreate(tm.ChannelImageFile)
         for loc in images_locations:
             delete_location(loc)
 

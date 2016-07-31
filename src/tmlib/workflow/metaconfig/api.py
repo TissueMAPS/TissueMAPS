@@ -64,6 +64,11 @@ class MetadataConfigurator(ClusterRoutines):
         job_descriptions = dict()
         job_descriptions['run'] = list()
         job_count = 0
+
+        with tm.utils.MainSession() as session:
+            experiment = session.query(tm.Experiment).get(self.experiment_id)
+            microscope_type = experiment.microscope_type
+
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             for acq in session.query(tm.Acquisition):
                 job_count += 1
@@ -81,7 +86,7 @@ class MetadataConfigurator(ClusterRoutines):
                     'microscope_image_file_ids': [
                         f.id for f in acq.microscope_image_files
                     ],
-                    'microscope_type': acq.plate.experiment.microscope_type,
+                    'microscope_type': microscope_type,
                     'regex': args.regex,
                     'acquisition_id': acq.id,
                     'stitch_major_axis': args.stitch_major_axis,
@@ -107,25 +112,21 @@ class MetadataConfigurator(ClusterRoutines):
             experiment = session.query(tm.Experiment).get(self.experiment_id)
             channels_location = experiment.channels_location
 
+        logger.info('delete existing channels')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            session.drop_and_recreate(tm.Channel)
+        delete_location(channels_location)
+
         logger.info('delete existing wells')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            tm.Well.__table__.drop(session.engine)
-            tm.Well.__table__.create(session.engine)
+            session.drop_and_recreate(tm.Well)
 
         logger.info('delete existing cycles')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             plates = session.query(tm.Plate).all()
             cycles_locations = [p.cycles_location for p in plates]
-            tm.Cycle.__table__.drop(session.engine)
-            tm.Cycle.__table__.create(session.engine)
+            session.drop_and_recreate(tm.Cycle)
         for loc in cycles_locations:
-            delete_location(loc)
-
-        logger.info('delete existing channels')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            tm.Channel.__table__.drop(session.engine)
-            tm.Channel.__table__.create(session.engine)
-        for loc in channels_locations:
             delete_location(loc)
 
     def run_job(self, batch):
@@ -158,7 +159,7 @@ class MetadataConfigurator(ClusterRoutines):
         '''
         MetadataReader = metadata_reader_factory(batch['microscope_type'])
 
-        with tm.utils.Session() as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
             acquisition = session.query(tm.Acquisition).\
                 get(batch['acquisition_id'])
             metadata_filenames = [
@@ -188,7 +189,7 @@ class MetadataConfigurator(ClusterRoutines):
                 'try to retrieve missing metadata from filenames '
                 'using regular expression'
             )
-            with tm.utils.Session() as session:
+            with tm.utils.MainSession() as session:
                 experiment = session.query(tm.Experiment).get(self.experiment_id)
                 plate_dimensions = experiment.plates[0].dimensions
             mdhandler.configure_metadata_from_filenames(
@@ -246,7 +247,7 @@ class MetadataConfigurator(ClusterRoutines):
         for w in np.unique(md.well_name):
             logger.info('create well "%s"', w)
 
-            with tm.utils.Session() as session:
+            with tm.utils.ExperimentSession(self.experiment_id) as session:
                 acquisition = session.query(tm.Acquisition).\
                     get(batch['acquisition_id'])
 
@@ -302,11 +303,12 @@ class MetadataConfigurator(ClusterRoutines):
         batch: dict
             description of the *collect* job
         '''
-        with tm.utils.Session() as session:
+        with tm.utils.MainSession() as session:
             # We need to do this per plate to ensure correct indices
             # TODO: check plates have similar channels, etc
             experiment = session.query(tm.Experiment).get(self.experiment_id)
             acquisition_mode = experiment.plate_acquisition_mode
+            channels_location = experiment.channels_location
             logger.info('plates were acquired in mode "%s"', acquisition_mode)
             is_time_series = acquisition_mode == 'basic'
             if is_time_series:
@@ -315,7 +317,8 @@ class MetadataConfigurator(ClusterRoutines):
             if is_multiplexing:
                 logger.info('time points are interpreted as multiplexing cycles')
 
-            for plate in experiment.plates:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            for plate in session.query(tm.Plate):
                 logger.info('plate "%s"', plate.name)
                 t_index = 0
                 w_index = 0
@@ -357,10 +360,12 @@ class MetadataConfigurator(ClusterRoutines):
                                 tm.Channel,
                                 name=name, index=w_index, wavelength=w,
                                 bit_depth=bit_depth,
-                                experiment_id=self.experiment_id
+                                root_directory=channels_location
                             )
 
-                            file_mappings = session.query(tm.ImageFileMapping).\
+                            file_mapping_ids = session.query(
+                                    tm.ImageFileMapping.id
+                                ).\
                                 filter_by(
                                     tpoint=t, wavelength=w,
                                     acquisition_id=acquisition.id
@@ -370,12 +375,17 @@ class MetadataConfigurator(ClusterRoutines):
                                 'of file mappings: tpoint=%d, channel=%d',
                                 t_index, channel.index
                             )
-                            # TODO: Consider bulk_update_mappings() for
-                            # performance
-                            for fm in file_mappings:
-                                fm.tpoint = t_index
-                                fm.cycle_id = cycle.id
-                                fm.channel_id = channel.id
+                            session.bulk_update_mappings(
+                                tm.ImageFileMapping,
+                                [{
+                                    'id': i[0],
+                                    'tpoint': t_index,
+                                    'cycle_id': cycle.id,
+                                    'channel_id': channel.id
+                                  }
+                                  for i in file_mapping_ids
+                                ]
+                            )
 
                             w_index += 1
 
