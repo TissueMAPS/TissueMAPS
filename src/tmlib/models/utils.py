@@ -39,6 +39,22 @@ def create_db_engine(db_uri=DATABASE_URI):
     )
 
 
+def create_db_session_factory(engine):
+    '''Creates a factory for creating a database session.
+
+    Parameters
+    ----------
+    engine: sqlalchemy.engine.base.Engine
+
+    Returns
+    -------
+    sqlalchemy.orm.session.Session
+    '''
+    return sqlalchemy.orm.scoped_session(
+        sqlalchemy.orm.sessionmaker(bind=engine, query_cls=Query)
+    )
+
+
 def delete_location(path):
     '''Deletes a location on disk.
 
@@ -312,12 +328,7 @@ class _Session(object):
             self.__class__._engines[self._db_uri] = \
                 create_db_engine(self._db_uri)
             self.__class__._session_factories[self._db_uri] = \
-                sqlalchemy.orm.scoped_session(
-                    sqlalchemy.orm.sessionmaker(
-                        bind=self.__class__._engines[self._db_uri],
-                        query_cls=Query
-                    )
-                )
+                create_db_session_factory(self.__class__.engines[self._db_uri])
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory())
         return self._session
