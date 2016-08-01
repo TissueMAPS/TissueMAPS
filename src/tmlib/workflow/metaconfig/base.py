@@ -464,7 +464,6 @@ class MetadataHandler(object):
 
         provided_fields = re.findall(r'\(\?P\<(\w+)\>', regex)
         possible_fields = {'w', 'c', 'z', 's', 't'}
-        required_fields = {'c', 's'}
         defaults = {'w': 'A01', 'z': 0, 't': 0}
         for name in provided_fields:
             if name not in possible_fields:
@@ -472,12 +471,6 @@ class MetadataHandler(object):
                     '"%s" is not a supported regular expression field.\n'
                     'Supported are "%s"'
                     % (name, '", "'.join(required_fields))
-                )
-
-        for name in required_fields:
-            if name not in provided_fields:
-                raise RegexError(
-                    'Regular expression must contain field "%s".', name
                 )
 
         for name in possible_fields:

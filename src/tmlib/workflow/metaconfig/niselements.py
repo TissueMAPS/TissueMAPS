@@ -19,8 +19,7 @@ from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
 logger = logging.getLogger(__name__)
 
 #: Regular expression pattern to identify image files
-# TODO: how are time points encoded?
-IMAGE_FILE_REGEX_PATTERN = '.+_t(?P<t>\d+)_(?P<w>[A-Z]\d+)_(?P<s>\d+)-(?P<c>\d+)\.nd2'
+IMAGE_FILE_REGEX_PATTERN = '.+\.nd2'
 
 #: Supported extensions for metadata files
 METADATA_FILE_REGEX_PATTERN = r'(?!.*)'
