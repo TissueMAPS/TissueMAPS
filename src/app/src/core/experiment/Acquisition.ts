@@ -38,9 +38,9 @@ class Acquisition {
         _.extend(this, args);
 
         this._uploader = $injector.get<any>('Upload');
-        this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 20000000});
+        this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 5000000000});
         this._uploader.defaults.blobUrlsMaxQueueSize = 10;  // default: 200
-        this._uploader.defaults.blobUrlsMaxMemory = 20000000;
+        this._uploader.defaults.blobUrlsMaxMemory = 5000000000;
     }
 
     fetchExistingFiles(): ng.IPromise<MicroscopeFile[]> {
@@ -85,6 +85,7 @@ class Acquisition {
             } else {
                 newFile.upload = this._uploader.upload({
                     url: url,
+                    // resumeSizeUrl: url + '/status'
                     header: {'Authorization': 'JWT ' + $window.sessionStorage['token']},
                     file: newFile,
                 }).progress((evt) => {
