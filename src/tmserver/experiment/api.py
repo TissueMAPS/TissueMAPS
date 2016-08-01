@@ -14,6 +14,8 @@ from tmlib.models import (
     Experiment, ChannelLayer, Plate, Acquisition, Feature, PyramidTileFile
 )
 from tmlib.image import PyramidTile
+from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
+from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
 from tmserver.util import (
     extract_model_from_path,
     extract_model_from_body
@@ -108,6 +110,47 @@ def get_features(experiment):
     return jsonify({
         'data': features
     })
+
+
+@api.route('/microscope_types', methods=['GET'])
+@jwt_required()
+def get_microscope_types():
+    """Gets all implemented microscope types.
+
+    Response
+    --------
+    {
+        "data": list of microscope types,
+    }
+
+    See also
+    --------
+    :py:class:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
+    """
+    return jsonify({
+        'data': list(SUPPORTED_MICROSCOPE_TYPES)
+    })
+
+
+@api.route('/acquisition_modes', methods=['GET'])
+@jwt_required()
+def get_acquisition_modes():
+    """Gets all implemented plate acquisition modes.
+
+    Response
+    --------
+    {
+        "data": list of plate acquisition modes,
+    }
+
+    See also
+    --------
+    :py:class:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
+    """
+    return jsonify({
+        'data': list(SUPPORTED_PLATE_AQUISITION_MODES)
+    })
+
 
 
 @api.route('/experiments', methods=['GET'])
