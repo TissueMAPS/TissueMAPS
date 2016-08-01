@@ -38,10 +38,9 @@
 
       <div class="form-group">
         <label>Plate acquisition mode</label>
-        <select class="form-control" ng-model="createExpCtrl.opt.plateAcquisitionMode">
-          <option value="">---Please select---</option>
-          <option value="multiplexing">multiplexing</option>
-          <option value="basic">basic</option>
+        <select class="form-control"
+          ng-model="createExpCtrl.opt.plateAcquisitionMode"
+          ng-options="o for o in createExpCtrl.supportedAcquisitionModes">
         </select>
 
         <p class="help-block">
@@ -52,10 +51,8 @@
 
       <div class="form-group">
         <label>Microscope type</label>
-        <select class="form-control" ng-model="createExpCtrl.opt.microscopeType">
-          <option value="">---Please select---</option>
-          <option value="visiview">VisiView</option>
-          <option value="cellvoyager">CellVoyager</option>
+        <select class="form-control" ng-model="createExpCtrl.opt.microscopeType"
+          ng-options="o for o in createExpCtrl.supportedMicroscopeTypes">
         </select>
 
         <p class="help-block">
