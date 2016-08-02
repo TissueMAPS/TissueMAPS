@@ -1,0 +1,13 @@
+<div class="row userpanel-window" ng-controller="UserpanelWindowCtrl as userpanelCtrl">
+  <div class="userpanel col-md-12">
+    <div class="row">
+      <div class="col-md-2 userpanel-sidebar">
+        <ul class="nav nav-sidebar">
+          <li class="sidebar-tab" ui-sref="userpanel.experiment.list">
+            <a>Experiments</a>
+          </li>
+        </ul>
+      </div>
+      <div class="col-md-10 experiment-list" ui-view="userpanel-main"></div>
+    </div>
+</div>

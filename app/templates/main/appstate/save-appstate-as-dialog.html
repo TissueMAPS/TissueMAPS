@@ -1,0 +1,30 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss(false)" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">Save application state</h2>
+</div>
+
+<div class="modal-body">
+  <p>
+  Please enter a name and an optional description for the current state of the application.
+  Doing so will allow you to restore your current work.
+  </p>
+
+  <form>
+    <div class="form-group">
+      <label for="input-name">Name</label>
+      <input id="input-name" ng-model="dialog.saveinfo.name" type="text" class="form-control" placeholder="Some name">
+    </div>
+    <div class="form-group">
+      <label for="input-description">Description</label>
+      <textarea type="text" ng-model="dialog.saveinfo.description" class="form-control" id="input-description" placeholder="Some description"></textarea>
+    </div>
+    <button ng-click="$close(dialog.saveinfo)" class="btn btn-primary" data-dismiss="modal">
+      Save
+    </button>
+  </form>
+
+</div>
+

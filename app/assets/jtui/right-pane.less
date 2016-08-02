@@ -1,0 +1,23 @@
+@import "variables.less";
+
+.jtui {
+
+    .module-settings-pane {
+        background: white;
+        position: absolute;
+        margin-left: calc(~'@{module-list-pane-width} + @{pipeline-pane-width}');
+        border-right: 1px solid black;
+        width: @module-settings-pane-width;
+        height: 100%;
+
+        .error-input {
+            background-color: @brand-danger;
+        }
+
+        .error-text {
+            color: @brand-danger;
+        }
+
+    }
+}
+

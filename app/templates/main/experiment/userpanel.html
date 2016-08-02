@@ -1,0 +1,83 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="close()" data-dismiss="modal" aria-hidden="true">;
+  <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">Userpanel for {{ userpanel.user.name }}</h2>
+</div>
+
+<div class="modal-body">
+
+  <tabset justified="true">
+    <tab heading="Experiments">
+
+      <div class="panel panel-default">
+
+        <div class="panel-heading">
+          <span class="search form-inline pull-right">
+            <div class="input-group">
+              <div class="input-group-addon"><i class="fa fa-search"></i></div>
+              <input type="text" class="form-control" placeholder="Experiment name" ng-model="experimentQuery.name">
+            </div>
+          </span>
+        </div><!-- END .panel-heading -->
+
+        <div class="panel-body">
+          <ul class="list-group">
+            <li class="list-group-item" ng-repeat="e in userpanel.experiments | filter:experimentQuery">
+              {{ e.name }}
+              <button class="btn btn-primary" ng-click="userpanel.addExperiment(e)">
+                Add to session
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    <tab heading="Saved sessions">
+
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <b>Your sessions</b>
+          <span class="search form-inline pull-right">
+            <div class="input-group">
+              <div class="input-group-addon"><i class="fa fa-search"></i></div>
+              <input type="text" class="form-control" placeholder="Session name" ng-model="appstateQuery.name">
+            </div>
+          </span>
+        </div>
+
+        <div class="panel-body">
+          <ul class="list-group">
+            <li class="list-group-item" ng-repeat="st in userpanel.ownedStates | filter:appstateQuery">
+              {{ st.name }}
+              -
+              {{ st.description }}
+
+              <button class="btn btn-primary" ng-click="userpanel.loadAppState(st)">Load</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel panel-default">
+        <div class="panel-heading"><b>Snapshots</b></div>
+        <div class="panel-body">
+          <ul>
+            <li class="list-group-item"
+              ng-repeat="st in userpanel.ownedSnapshots">
+              {{ st.name }}
+              -
+              <a href="{{ st.link }}" target="_blank">{{ st.link }}</a>
+
+              <button class="btn btn-primary" ng-click="userpanel.loadAppState(st)">Load</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    </tab>
+  </tabset>
+
+</div>

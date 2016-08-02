@@ -1,0 +1,51 @@
+<div class="modal-header">
+
+  <button type="button" class="close" ng-click="$dismiss('Cancel')" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">
+
+    <span ng-model="language" ng-switch on="language">
+      <span ng-switch-when="py">
+        <!-- <a ng-href="https://github.com/TissueMAPS/JtLibrary/tree/master/modules/{{m.name}}.{{m.language}}" target="_blank"> -->
+          <img class="logo" style="src=height: 30px; width: 30px;" src="/resources/img/python_logo.png" alt="Python">
+        </a>
+      </span>
+      <span ng-switch-when="m">
+        <!-- <a ng-href="https://github.com/TissueMAPS/JtLibrary/tree/master/modules/{{m.name}}.{{m.language}}" target="_blank"> -->
+          <img class="logo" style="src=height: 30px; width: 30px;" src="/resources/img/matlab_logo.png" alt="Matlab">
+        </a>
+      </span>
+      <span ng-switch-when="r">
+        <!-- <a ng-href="https://github.com/TissueMAPS/JtLibrary/tree/master/modules/{{m.name}}.{{m.language}}" target="_blank"> -->
+          <img class="logo" style="src=height: 30px; width: 30px;" src="/resources/img/R_logo.png" alt="R">
+        </a>
+      </span>
+      <span ng-switch-when="jl">
+        <!-- <a ng-href="https://github.com/TissueMAPS/JtLibrary/tree/master/modules/{{m.name}}.{{m.language}}" target="_blank"> -->
+          <img class="logo" style="src=height: 30px; width: 30px;" src="/resources/img/julia_logo.png" alt="Julia">
+        </a>
+      </span>
+    </span>
+
+    Source code for module <b>{{name}}</b>
+  </h2>
+
+</div>
+
+<div class="modal-body">
+
+  <div marked="code">
+  </div>
+
+</div>
+
+<div class="modal-footer">
+
+  <button type="button" ng-click="$dismiss('No')"
+          class="btn btn-default" data-dismiss="modal">
+     <i class="fa fa-times"></i>
+  </button>
+
+</div>

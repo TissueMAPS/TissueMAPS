@@ -1,0 +1,21 @@
+<tm-viewer-window>
+  <!-- <tm-viewers-tabbar></tm-viewers-tabbar> -->
+  <div class='viewers-container'>
+
+    <!-- <div class="middle-container-center" ng-show="app.isViewportEmpty()"> -->
+    <!--   <p> -->
+    <!--     To add a new experiment, visit your userpanel by clicking on the <i class="fa fa-user"></i> icon in the top-left corner. -->
+    <!--   </p> -->
+
+    <!--   <p> -->
+    <!--     Saving your work can be done via the <i class="fa fa-floppy-o"></i> icons. -->
+    <!--   </p> -->
+
+    <!--   <p> -->
+    <!--     If you would like to share a snapshot of your work with somebody else, you just need to press the <i class="fa fa-globe"></i> icon. -->
+    <!--   </p> -->
+    <!-- </div> -->
+
+    <tm-viewer ng-repeat="viewer in viewerWindowCtrl.viewers"></tm-viewer>
+  </div>
+</tm-viewer-window>

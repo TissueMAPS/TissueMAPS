@@ -1,0 +1,45 @@
+<div class="module-list-pane">
+
+  <div class="pane-header">
+      Available Modules
+  </div>
+
+  <div class="pane-content">
+
+    <!-- <div class="input-group"> -->
+    <!--     <span class="input-group-addon"> -->
+    <!--         <i class="fa fa-search fa-fw"></i> -->
+    <!--     </span> -->
+    <!--     <input class="form-control" ng-model="searchModules.name" -->
+    <!--         type="text" placeholder="module name"> -->
+    <!-- </div> -->
+
+    <!-- <div class="spacer"></div> -->
+
+    <!-- module list -->
+    <div class="pane-subcontent" perfect-scrollbar>
+      <ul class="list-group">
+        <li ng-repeat="m in modules | filter:searchModules">
+          <span class="list-group-item"
+            ng-drag="true" ng-drag-data="m"
+            ng-drag-success="onDragSuccess($data,$event)">
+            {{m.name}}
+            <i class="fa fa-question"
+               style="float: right"
+               ng-click="showSourceCode(m)">
+            </i>
+          </span>
+        </li>
+      </ul>
+
+      <div ng-drag-clone="">
+        <span class="list-group-item-cloned">
+            {{clonedData.name}}
+        </span>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

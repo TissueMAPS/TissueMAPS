@@ -1,0 +1,35 @@
+<div class="viewer" id="viewer-{{::viewer.id}}">
+  <div class="viewer-middle">
+    <div class="tool-ui" ng-controller="ToolUICtrl as toolUICtrl">
+      <tm-toolbar></tm-toolbar>
+      <tm-tool-window></tm-tool-window>
+    </div>
+    <tm-viewport></tm-viewport>
+    <tm-viewer-sidebar></tm-viewer-sidebar>
+  </div>
+  <div class="viewer-bottom">
+    <div class="corner"></div>
+    <div class="bottombar">
+      <span class="z-plane-indicator">
+        z
+      </span>
+      <div ui-slider
+        min="{{viewerCtrl.minZ}}" max="{{viewerCtrl.maxZ}}"
+        step="{{viewerCtrl.zStep}}" ng-model="viewerCtrl.currentZplane">
+      </div>
+      <span class="z-plane-indicator">
+        {{ viewer.currentZplane | pad:3 }} 
+      </span>
+      <span class="z-plane-indicator">
+        t
+      </span>
+      <div ui-slider
+        min="{{viewerCtrl.minT}}" max="{{viewerCtrl.maxT}}"
+        step="{{viewerCtrl.tStep}}" ng-model="viewerCtrl.currentTpoint">
+      </div>
+      <span class="z-plane-indicator">
+        {{ viewer.currentTpoint | pad:3 }} 
+      </span>
+    </div>
+  </div>
+</div>

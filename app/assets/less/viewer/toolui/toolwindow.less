@@ -1,0 +1,106 @@
+@import "../../libs/lesshat/lesshat-prefixed";
+@import "../../variables.less";
+@import "../../ui.less";
+
+.tool-window {
+    position: absolute;
+    left: @toolbar-width + 4px;
+    top: 5px;
+    max-height: calc(~'100% - 5px');
+    width: 450px;
+    transition: 1s;
+    z-index: 50;
+
+    // shadow to the right
+    .lh-box-shadow(0px 0px 3px black);
+    background: #eee;
+    border: 1px solid darken(@panel-bg-color, 20%);
+}
+
+.tool-window-content {
+    padding: 10px;
+    position: relative;  // for perfect-scrollbar
+    overflow: hidden;   // for perfect-scrollbar
+    /**
+     * NOTE: The tool window content should have a maximal size of the map-container-height.
+     * The problem is that max-height can't be set to an expression involving parent 
+     * percentages since the parent element, div.tool-window, does not have a height set.
+     * Just setting the parent's max-height will not work in this case since a child's max-height
+     * is based on the height property of the parent.
+     * If the height was set on the parent, then the tool window would be too large and even if made
+     * transparent, the problem of it blocking the click events to the map would occur.
+     * For this reason the max-height is here hardcoded based on whole viewport height.
+     */
+    max-height: calc(~'100vh - 2 * 5px - @{viewer-bottom-height} - @{appbar-height} - @{tool-window-header-height} - 40px');
+    border-top: 1px solid black;
+
+    .lh-background-image(linear-gradient(
+        to bottom,
+        @modal-background-color 0%,
+        darken(@modal-background-color, 5%) 100%
+    ));
+}
+
+.tool-window-header {
+    height: @tool-window-header-height;
+    padding: 10px;
+    background-color: @panel-bg-color;
+    color: @font-color-light;
+
+    .tool-session-id {
+        color: white;
+        font-size: 1em;
+    }
+
+    .tool-name {
+        font-weight: bold;
+    }
+
+    .spinner {
+        padding: 0 5px;
+    }
+
+    .delete-btn {
+        float: right;
+    }
+}
+
+// .tool-windows-tabbar {
+//     position: absolute;
+//     width: @map-container-width;
+//     background-color: @panel-bg-color;
+//     left: @toolbar-width;
+//     z-index: 5;
+//     top: 0px;
+//     padding-top: 4px;
+
+//     ul {
+//         padding: 0;
+//         margin: 0;
+//         height: 20px;
+//         line-height: 20px;
+//     }
+
+//     li {
+//         background-color: @panel-fg;
+//         width: 140px;
+//         color: #333;
+//         display: inline-block;
+//         border-left: 1px solid black;
+//         border-right: 1px solid black;
+//         text-align: center;
+//         border-bottom: 1px solid black;
+//         line-height: 20px;
+//         height: 20px;
+//         padding: 0 15px;
+
+//         &:last-child {
+//             border-right: 1px solid black;
+//         }
+//     }
+
+// }
+
+// .tool-windows-container {
+
+// }

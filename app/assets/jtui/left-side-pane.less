@@ -1,0 +1,52 @@
+// @import "lesshat/lesshat-prefixed";
+@import "variables.less";
+@import "bootstrap/mixins/list-group.less";
+
+.jtui {
+    /* available modules */
+    .module-list-pane {
+        position: absolute;
+        border-right: 1px solid black;
+        margin-top: @setup-window-header-height;
+        width: @module-list-pane-width;
+        height: 100%;
+        background: @panel-bg-color;
+        color: @font-color-light;
+
+        .pane-subcontent {
+
+            ul.list-group {
+                // No need to set list-style: none; since .list-group-item is block level
+                margin-bottom: 20px;
+                padding-left: 0; // reset padding because ul and ol
+            }
+
+            // Individual list items
+            // Use on `li`s or `div`s within the `.list-group` parent.
+            .list-group-item {
+                position: relative;
+                display: block;
+                padding: 10px 15px;
+                margin-bottom: 3px;
+                color: @font-color-light;
+                background-color: @panel-fg;
+                border: 1px solid @panel-fg2;
+                .border-top-radius(@list-group-border-radius);
+                .border-bottom-radius(@list-group-border-radius);
+                overflow: hidden;
+            }
+
+            .list-group-item-cloned {
+                position: relative;
+                display: block;
+                padding: 10px 15px;
+                margin-bottom: 3px;
+                background-color: @panel-fg;
+                border: 1px solid #337ab7;
+                .border-top-radius(@list-group-border-radius);
+                .border-bottom-radius(@list-group-border-radius);
+                overflow: hidden;
+            }
+        }
+    }
+}

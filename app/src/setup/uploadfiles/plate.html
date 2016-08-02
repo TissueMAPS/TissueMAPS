@@ -1,0 +1,30 @@
+<div class="experiment-list" ui-view>
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      Plates
+    </div>
+    <div class="panel-body">
+      <ul class="list-group">
+        <li class="list-group-item" ng-repeat="pl in plateListCtrl.plates">
+          <a ui-sref=".detail({plateid: pl.id})">{{::pl.name}}</a>
+          <span class="plate-status-indicator">
+            <span ng-show="pl.isReadyForProcessing">(READY FOR PROCESSING)</span>
+            <span ng-hide="pl.isReadyForProcessing">(NOT READY FOR PROCESSING)</span>
+          </span>
+          - {{ pl.acquisitions.length }} acquisitions
+          <button ng-click="plateListCtrl.deletePlate(pl)" class="btn btn-danger pull-right">
+            <i class="fa fa-trash-o" aria-hidden="true"></i>
+            Delete
+          </button>
+        </li>
+      </ul>
+    </div>
+    <div class="panel-footer">
+      <button class="btn btn-default" ui-sref=".create">
+        <i class="fa fa-plus" aria-hidden="true"></i>
+        Add plate
+      </button>
+    </div>
+  </div>
+</div>
