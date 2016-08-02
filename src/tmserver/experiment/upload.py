@@ -63,28 +63,26 @@ def register_upload(acquisition):
     image_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
     image_filenames = [f.name for f in acquisition.microscope_image_files]
-    registered_image_filenames = [
-        f for f in data['files']
-        if image_regex.search(f) and
-        secure_filename(f) not in image_filenames
+    valid_image_filenames = [
+        f for f in data['files'] if image_regex.search(f)
     ]
     img_files = [
         MicroscopeImageFile(
             name=secure_filename(f), acquisition_id=acquisition.id
         )
-        for f in registered_image_filenames
+        for f in valid_image_filenames and
+        secure_filename(f) not in image_filenames
     ]
     metadata_filenames = [f.name for f in acquisition.microscope_metadata_files]
-    registered_metadata_filenames = [
-        f for f in data['files']
-        if metadata_regex.search(f) and
-        secure_filename(f) not in metadata_filenames
+    valid_metadata_filenames = [
+        f for f in data['files'] if metadata_regex.search(f)
     ]
     meta_files = [
         MicroscopeMetadataFile(
             name=secure_filename(f), acquisition_id=acquisition.id
         )
-        for f in registered_metadata_filenames
+        for f in valid_metadata_filenames
+        if secure_filename(f) not in metadata_filenames
     ]
 
     db.session.add_all(img_files + meta_files)
@@ -99,7 +97,7 @@ def register_upload(acquisition):
     # potentially modified by secure_filename()!
     return jsonify({
         'message': 'Ok',
-        'data': registered_image_filenames + registered_metadata_filenames
+        'data': valid_image_filenames + valid_metadata_filenames
     })
 
 
