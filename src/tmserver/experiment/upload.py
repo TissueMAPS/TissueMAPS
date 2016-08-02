@@ -70,8 +70,8 @@ def register_upload(acquisition):
         MicroscopeImageFile(
             name=secure_filename(f), acquisition_id=acquisition.id
         )
-        for f in valid_image_filenames and
-        secure_filename(f) not in image_filenames
+        for f in valid_image_filenames
+        if secure_filename(f) not in image_filenames
     ]
     metadata_filenames = [f.name for f in acquisition.microscope_metadata_files]
     valid_metadata_filenames = [
