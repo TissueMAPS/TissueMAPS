@@ -1,19 +1,19 @@
 *.py[cod]
 
-src/build
-src/app/assets/libs/bower_components
-src/app/index.html
-src/_build/style-main.css
-src/_build/style-tools.css
-src/app/assets/css/style-main.css
-src/app/assets/css/style-tools.css
-src/coverage
-src/app/build
+src/javascript/build
+src/javascript/app/assets/libs/bower_components
+src/javascript/app/index.html
+src/javascript/_build/style-main.css
+src/javascript/_build/style-tools.css
+src/javascript/app/assets/css/style-main.css
+src/javascript/app/assets/css/style-tools.css
+src/javascript/coverage
+src/javascript/app/build
 expdata
 testdata
 !expdata/.gitkeep
-src/node_modules
-src/app/src/toolwindow/index.html
+src/javascript/node_modules
+src/javascript/app/src/javascript/toolwindow/index.html
 
 # Build directores (sphinx, grunt etc.)
 _build
@@ -22,8 +22,64 @@ _prod
 
 # Other dirs
 .cache/
-src/_dist
-src/_prod
+src/javascript/_dist
+src/javascript/_prod
 
-ilui/node_modules
-ilui/app/index.html
+.DS_Store
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+
+# PyBuilder
+target/
+
+# Sphinx builds
+_build/
+
+
