@@ -1,0 +1,19 @@
+Metadata-Version: 1.1
+Name: tmclient
+Version: 0.0.1
+Summary: Client library for TissueMAPS RESTful API.
+Home-page: https://github.com/tissuemaps/tmclient
+Author: Markus D. Herrmann and Robin Hafen
+Author-email: markusdherrmann@gmail.com
+License: UNKNOWN
+Description: UNKNOWN
+Platform: Linux
+Platform: OS-X
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Classifier: Topic :: System :: Emulators
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: System Administrators
+Classifier: Programming Language :: Python
+Classifier: Development Status :: 4 - Beta
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS
