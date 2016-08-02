@@ -25,7 +25,7 @@ IMAGE_FILE_REGEX_PATTERN = '.+\.nd2'
 METADATA_FILE_REGEX_PATTERN = r'(?!.*)'
 
 
-class NISElementsMetadataHandler(MetadataHandler):
+class NiselementsMetadataHandler(MetadataHandler):
 
     '''Class for handling metadata specific to microscopes equipped with
     NISElements software.
@@ -43,12 +43,12 @@ class NISElementsMetadataHandler(MetadataHandler):
         omexml_metadata: bioformats.omexml.OMEXML
             metadata extracted from microscope metadata files
         '''
-        super(NISElementsMetadataHandler, self).__init__(
+        super(NiselementsMetadataHandler, self).__init__(
             omexml_images, omexml_metadata
         )
 
 
-class NISElementsMetadataReader(MetadataReader):
+class NiselementsMetadataReader(MetadataReader):
 
     '''Class for reading metadata from files formats specific to microscopes
     equipped with NISElements software.
