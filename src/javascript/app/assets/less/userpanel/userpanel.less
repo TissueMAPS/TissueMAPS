@@ -1,0 +1,84 @@
+@import "../variables.less";
+@import "../ui.less";
+
+.userpanel {
+    padding-left: 0;
+}
+
+.userpanel-sidebar {
+    overflow-x: hidden;
+    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+    border-right: 1px solid @panel-bg-color;
+    // border-right: 1px solid #eee;
+    border-right: 1px solid black;
+    height: 100vh;
+    padding: 0;
+    padding-top: 40px;
+    color: @font-color-light;
+    .panel-horizontal();
+
+    background-color: @panel-bg-color;
+    // .ui-panel-gradient(right, @panel-bg-color, 2%, 98%);
+
+    border-left: 1px solid #626262;
+    border-right: 1px solid #222222;
+}
+
+.nav-sidebar {
+}
+
+.nav-sidebar > li {
+    // .ui-panel-gradient(right, #333, 2%, 98%);
+    border-top: 1px solid #232323;
+    padding: 0px 15px;
+    background-color: #444;
+    cursor: pointer;
+    cursor: hand;
+
+    &:last-child {
+        border-bottom: 1px solid #232323;
+    }
+}
+.nav-sidebar > li > a {
+    color: @font-color-light;
+
+    &:hover, &:focus {
+      background-color: lighten(#333, 10%);
+    }
+}
+// .nav-sidebar > .active > a,
+// .nav-sidebar > .active > a:hover,
+// .nav-sidebar > .active > a:focus {
+//   background-color: #222 !important;
+// }
+
+.experiment-list {
+
+    background: darken(white, 5%);
+    // .panel-horizontal();
+
+    height: 100vh;
+
+    ul {
+        padding: 0;
+    }
+
+    .list-group-item {
+        button {
+            float: right;
+            margin-left: 4px;
+            padding: 0 5px;
+            height: 1.4em;
+        }
+    }
+
+    .panel-heading {
+        padding: 0 10px;
+        height: 50px;
+        line-height: 50px;
+
+        .search {
+            height: 24x;
+        }
+    }
+}

@@ -1,0 +1,37 @@
+<div class="modal-header">
+
+  <button type="button" class="close" ng-click="input.cancel()" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">{{input.title}}</h2>
+
+</div>
+
+<div class="modal-body">
+
+    {{input.message}}
+
+    <input ng-if="input.widgetType == 'text'" type="text" ng-model="input.value">
+    <input ng-if="input.widgetType == 'checkbox'" type="checkbox" ng-model="input.value">
+    <div ng-if="input.widgetType == 'dropdown'">
+        <select ng-model="input.value">
+            <option ng-repeat="choice in input.choices" ng-value="choice">{{choice}}</option>
+        </select>
+    </div>
+
+</div>
+
+<div class="modal-footer">
+
+  <button type="submit" ng-click="input.cancel()" class="btn btn-default" data-dismiss="modal">
+     Cancel
+  </button>
+
+  <button type="submit" ng-click="input.ok()" class="btn btn-primary" data-dismiss="modal">
+     Ok
+  </button>
+
+</div>
+
+

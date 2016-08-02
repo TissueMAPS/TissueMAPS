@@ -1,0 +1,12 @@
+<div class="toolbar">
+  <div class="spacer"></div>
+
+  <ul>
+    <li ng-repeat="tool in toolbarCtrl.tools">
+       <div class="toolbutton" ng-click="toolbarCtrl.clickToolTab(tool)">
+            <span class="toolid" ng-bind-html="tool.icon"></span>
+       </div>
+    </li>
+  </ul>
+
+</div>

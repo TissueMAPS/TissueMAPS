@@ -1,0 +1,13 @@
+<div ng-controller="FeatureStatsCtrl">
+  <div class="panel panel-default">
+    <div class="panel-body">
+      <highchart id="chart1" config="highchartConfig"></highchart>
+    </div>
+   </div>
+
+   <tm-feature-selection-widget
+     single-selection="true"
+     on-change="featSelectionChanged(selectedFeatures)"/>
+
+  </div>
+</div>

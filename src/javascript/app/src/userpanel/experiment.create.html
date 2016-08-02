@@ -1,0 +1,78 @@
+<h1>Create experiment</h1>
+
+<p>
+  To create an experiment, please choose what type of microscope you used to acquire your images.
+</p>
+
+<div class="row">
+  <div class="col-md-8">
+
+    <form>
+      <div class="form-group">
+        <label>Experiment name</label>
+        <input type="text" class="form-control" ng-model="createExpCtrl.opt.name">
+      </div>
+
+      <div class="form-group">
+        <label>Description</label>
+        <textarea class="form-control" ng-model="createExpCtrl.opt.description"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Plate format</label>
+        <select class="form-control" ng-model="createExpCtrl.opt.plateFormat">
+          <option value="">---Please select---</option>
+          <option value="1">1</option>
+          <option value="96">96</option>
+          <option value="384">384</option>
+        </select>
+
+        <p class="help-block">
+          A well plate represents a container with multiple reservoirs for different
+              samples (wells) that might be stained independently, but imaged under the
+              same conditions.
+              There are different plate *formats*, which encode the number of wells
+              in the plate, e.g. "384".
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label>Plate acquisition mode</label>
+        <select class="form-control"
+          ng-model="createExpCtrl.opt.plateAcquisitionMode"
+          ng-options="o for o in createExpCtrl.supportedAcquisitionModes">
+        </select>
+
+        <p class="help-block">
+          Please specify the microscope you used to take the pictures for this experiment.
+          Note that all plateSources of an experiment have to be acquired by the same microscope.
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label>Microscope type</label>
+        <select class="form-control" ng-model="createExpCtrl.opt.microscopeType"
+          ng-options="o for o in createExpCtrl.supportedMicroscopeTypes">
+        </select>
+
+        <p class="help-block">
+          Please specify the microscope you used to take the pictures for this experiment.
+          Note that all plateSources of an experiment have to be acquired by the same microscope.
+        </p>
+      </div>
+
+      <div class="form-group">
+        <button class="btn btn-default btn-primary"
+          ng-click="createExpCtrl.createExperiment()"
+          ui-sref="^.list"
+          ng-disabled="!createExpCtrl.canCreateExperiment">
+          Create experiment
+        </button>
+      </div>
+    </form>
+
+    <div class="alert alert-danger" ng-show="createExpCtrl.error">{{ createExpCtrl.error }}</div>
+
+  </div>
+
+</div>

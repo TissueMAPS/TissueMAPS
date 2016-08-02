@@ -1,0 +1,21 @@
+<div ng-controller="SVMCtrl as svm" perfect-scrollbar>
+
+  <p>
+
+  <tm-class-selection-widget></tm-class-selection-widget>
+
+  </p>
+
+  <p>
+    <label>Select features</label>
+    <tm-feature-selection-widget
+      on-change="selectedFeatures = selectedFeatures">
+    </tm-feature-selection-widget>
+
+  </p>
+
+  <p>
+    <button class="btn btn-primary" ng-click="svm.sendRequest()">Classify</button>
+  </p>
+
+</div>
