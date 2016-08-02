@@ -60,25 +60,31 @@ def register_upload(acquisition):
         )
 
     microscope_type = acquisition.plate.experiment.microscope_type
-    imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
+    image_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
-    img_filenames = [f.name for f in acquisition.microscope_image_files]
+    image_filenames = [f.name for f in acquisition.microscope_image_files]
+    registered_image_filenames = [
+        f for f in data['files']
+        if image_regex.search(f) and
+        secure_filename(f) not in image_filenames
+    ]
     img_files = [
         MicroscopeImageFile(
             name=secure_filename(f), acquisition_id=acquisition.id
         )
-        for f in data['files']
-        if imgfile_regex.search(f) and
-        secure_filename(f) not in img_filenames
+        for f in registered_image_filenames
     ]
-    meta_filenames = [f.name for f in acquisition.microscope_metadata_files]
+    metadata_filenames = [f.name for f in acquisition.microscope_metadata_files]
+    registered_metadata_filenames = [
+        f for f in data['files']
+        if metadata_regex.search(f) and
+        secure_filename(f) not in metadata_filenames
+    ]
     meta_files = [
         MicroscopeMetadataFile(
             name=secure_filename(f), acquisition_id=acquisition.id
         )
-        for f in data['files']
-        if metadata_regex.search(f) and
-        secure_filename(f) not in meta_filenames
+        for f in registered_metadata_filenames
     ]
 
     db.session.add_all(img_files + meta_files)
@@ -89,7 +95,12 @@ def register_upload(acquisition):
     acquisition.microscope_images_location
     acquisition.microscope_metadata_location
 
-    return jsonify(message='Upload registered')
+    # NOTE: We have to return the original local filenames and not the ones
+    # potentially modified by secure_filename()!
+    return jsonify({
+        'message': 'Ok',
+        'data': registered_image_filenames + registered_metadata_filenames
+    })
 
 
 @api.route('/acquisitions/<acquisition_id>/upload/validity-check', methods=['POST'])

@@ -21,6 +21,7 @@ from tmserver.util import (
     extract_model_from_body
 )
 from tmserver.model import decode_pk
+from tmserver.model import encode_pk
 from tmserver.extensions import db
 from tmserver.extensions import gc3pie
 from tmserver.api import api
@@ -496,6 +497,25 @@ def delete_acquisition(acquisition):
 @extract_model_from_path(Acquisition, check_ownership=True)
 def get_acquisition(acquisition):
     return jsonify(data=acquisition)
+
+
+@api.route('/acquisitions/id', methods=['GET'])
+@jwt_required()
+def get_acquisition_id():
+    experiment_name = request.args.get('experiment_name')
+    plate_name = request.args.get('plate_name')
+    acquisition_name = request.args.get('acquisition_name')
+    acq = db.session.query(Acquisition).\
+        join(Plate).\
+        join(Experiment).\
+        filter(
+            Experiment.name == experiment_name,
+            Plate.name == plate_name,
+            Acquisition.name == acquisition_name
+        ).\
+        one()
+
+    return jsonify(data=encode_pk(acq.id))
 
 
 @api.route('/acquisitions/<acquisition_id>/image_files', methods=['GET'])
