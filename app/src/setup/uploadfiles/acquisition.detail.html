@@ -63,7 +63,7 @@
 
       <div class="already-added-files" perfect-scrollbar>
         <ul>
-            <li ng-repeat="f in aq.files | filter:{upload_status: 'COMPLETE'} | orderBy:'name'">
+            <li ng-repeat="f in aq.files | filter:{status: 'COMPLETE'} | orderBy:'name'">
           {{:: f.name}}
           </li>
         </ul>
