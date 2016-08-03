@@ -287,14 +287,14 @@ class MapobjectType(Model, DateMixIn):
                     (Feature.name.in_(set(feature_names))) &
                     (Feature.mapobject_type_id == self.id)
                 ).\
-                order_by(FeatureValue.mapobject_id.desc()).\
+                order_by(FeatureValue.mapobject_id).\
                 all()
         else:
             feature_values = session.query(
                 Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
                 join(FeatureValue).\
                 filter(Feature.mapobject_type_id == self.id).\
-                order_by(FeatureValue.mapobject_id.desc()).\
+                order_by(FeatureValue.mapobject_id).\
                 all()
 
         feature_df_long = pd.DataFrame(feature_values)
@@ -325,22 +325,22 @@ class MapobjectType(Model, DateMixIn):
                 Well.name,
                 Site.y,
                 Site.x,
-                MapobjectSegmentation.label
+                MapobjectSegmentation.label,
+                MapobjectSegmentation.mapobject_id
             ).\
             join(Mapobject).\
             join(Site).\
             join(Well).\
             join(Plate).\
-            filter(Mapobject.mapobject_type_id == mapobject_type.id).\
-            order_by(Mapobject.id.desc()).\
+            filter(Mapobject.mapobject_type_id == self.id).\
+            order_by(Mapobject.id).\
             all()
         )
         metadata.columns = [
-            'mapobject', 'tpoint', 'zplane', 'plate', 'well', 'y', 'x', 'label'
+            'tpoint', 'zplane', 'plate', 'well', 'y', 'x', 'label', 'mapobject'
         ]
-        metadata.set_index('mapobject')
-        return metadata
-
+        metadata.sort(['mapobject'], inplace=True)
+        return metadata.set_index('mapobject', inplace=True)
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
