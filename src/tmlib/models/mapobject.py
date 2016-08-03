@@ -260,38 +260,41 @@ class MapobjectType(Model, DateMixIn):
         return (min_poly_zoom, max_poly_zoom)
 
     def get_feature_value_matrix(self, feature_names=[]):
-        '''Gets a wide format pandas data frame of feature values.
+        '''Gets a feature matrix for all mapobjects of this type.
 
         Parameters
         ----------
         feature_names: List[str], optional
-            names of features that will be used as labels of the data frame
+            names of features that should be included (default: ``[]``);
+            all features will be used by default
 
         Returns
         -------
         pandas.DataFrame
-            A data frame with features as columns and rows as mapobjects.
-            The index of this data frame is set to the mapobject ids.
-            As such the DF can be indexed using the syntax:
-            feature_values_of_mapobject_x = df.loc[x]
+            *n*x*p* matrix, where *n* is the number of mapobjects and *p*
+            the number of features.
+            The index is set to the IDs of the mapobjects.
 
         '''
         from tmlib.models import Feature, FeatureValue
         session = Session.object_session(self)
         if feature_names:
             feature_values = session.query(
-                Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
+                    Feature.name, FeatureValue.mapobject_id, FeatureValue.value
+                ).\
                 join(FeatureValue).\
                 filter(
                     (Feature.name.in_(set(feature_names))) &
                     (Feature.mapobject_type_id == self.id)
                 ).\
+                order_by(FeatureValue.mapobject_id.desc()).\
                 all()
         else:
             feature_values = session.query(
                 Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
                 join(FeatureValue).\
                 filter(Feature.mapobject_type_id == self.id).\
+                order_by(FeatureValue.mapobject_id.desc()).\
                 all()
 
         feature_df_long = pd.DataFrame(feature_values)
@@ -301,6 +304,43 @@ class MapobjectType(Model, DateMixIn):
             index='mapobject', columns='feature'
         )
         return feature_df
+
+    def get_matadata_matrix(self):
+        '''Gets the metadata for all mapobjects of this type.
+
+        Returns
+        -------
+        pandas.DataFrame
+            *n*x*q* matrix, where *n* is the number of mapobjects and *q*
+            the number of metadata attributes.
+            The index is set to the IDs of the mapobjects.
+        '''
+        from tmlib.models import Plate, Well, Site
+        session = Session.object_session(self)
+        metadata = pd.DataFrame(
+            session.query(
+                MapobjectSegmentation.tpoint,
+                MapobjectSegmentation.zplane,
+                Plate.name,
+                Well.name,
+                Site.y,
+                Site.x,
+                MapobjectSegmentation.label
+            ).\
+            join(Mapobject).\
+            join(Site).\
+            join(Well).\
+            join(Plate).\
+            filter(Mapobject.mapobject_type_id == mapobject_type.id).\
+            order_by(Mapobject.id.desc()).\
+            all()
+        )
+        metadata.columns = [
+            'mapobject', 'tpoint', 'zplane', 'plate', 'well', 'y', 'x', 'label'
+        ]
+        metadata.set_index('mapobject')
+        return metadata
+
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
