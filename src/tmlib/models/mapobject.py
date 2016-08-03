@@ -340,7 +340,8 @@ class MapobjectType(Model, DateMixIn):
             'tpoint', 'zplane', 'plate', 'well', 'y', 'x', 'label', 'mapobject'
         ]
         metadata.sort(['mapobject'], inplace=True)
-        return metadata.set_index('mapobject', inplace=True)
+        metadata.set_index('mapobject', inplace=True)
+        return metadata
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
