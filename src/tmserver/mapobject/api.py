@@ -11,7 +11,7 @@ from flask import jsonify, request, send_file
 from sqlalchemy.sql import text
 
 from tmlib.models import (
-    MapobjectSegmentation, MapobjectType,
+    MapobjectSegmentation, MapobjectType, Mapobject,
     Experiment, Plate, Well, Site
 )
 
@@ -152,23 +152,42 @@ def get_mapobjects_segmentation(experiment, object_name):
     )
 
 
-@api.route('/experiments/<experiment_id>/mapobjects/<object_name>/features', methods=['GET'])
+@api.route('/experiments/<experiment_id>/mapobjects/<object_name>/features',
+        methods=['GET'])
 @jwt_required()
 @extract_model_from_path(Experiment)
 def get_feature_values(experiment, object_name):
-    mapobject_type = db.session(MapobjectType).\
+    mapobject_type = db.session.query(MapobjectType).\
         filter_by(experiment_id=experiment.id, name=object_name).\
         one()
     features = mapobject_type.get_feature_value_matrix()
-    filename = '%s_%s_features.csv' % (experiment.name, object_name)
+    metadata = mapobject_type.get_metadata_matrix()
+    if features.values.shape[0] != metadata.values.shape[0]:
+        raise ValueError(
+            'Features and metadata must have same number of "%s" objects'
+            % object_name
+        )
+    if features.index != metadata.index:
+        raise ValueError(
+            'Features and metadata must have the same index.'
+        )
+    basename = '%s_%s_features' % (experiment.name, object_name)
+    data_filename = '%s_data.csv' % basename
+    metadata_filename = '%s_metadata.csv' % basename
     f = StringIO()
     with ZipFile(f, 'w') as zf:
         zf.writestr(
-            filename, features.to_csv(None, encoding='utf-8', index=False)
+            data_filename,
+            features.to_csv(None, encoding='utf-8', index=False)
+        )
+        zf.writestr(
+            metadata_filename,
+            metadata.to_csv(None, encoding='utf-8', index=False)
         )
     f.seek(0)
     return send_file(
         f,
-        attachment_filename=filename,
-        mimetype='application/octet-stream'
+        attachment_filename='%s.zip' % basename,
+        mimetype='application/octet-stream',
+        as_attachment=True
     )
