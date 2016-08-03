@@ -278,7 +278,7 @@ class MapobjectType(Model, DateMixIn):
         '''
         from tmlib.models import Feature, FeatureValue
         session = Session.object_session(self)
-        if feature_values:
+        if feature_names:
             feature_values = session.query(
                 Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
                 join(FeatureValue).\
