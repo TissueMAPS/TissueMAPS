@@ -259,12 +259,12 @@ class MapobjectType(Model, DateMixIn):
             max_poly_zoom = 0 if max_poly_zoom < 0 else max_poly_zoom
         return (min_poly_zoom, max_poly_zoom)
 
-    def get_feature_value_matrix(self, feature_names): 
+    def get_feature_value_matrix(self, feature_names=[]):
         '''Gets a wide format pandas data frame of feature values.
 
         Parameters
         ----------
-        feature_names: List[str]
+        feature_names: List[str], optional
             names of features that will be used as labels of the data frame
 
         Returns
@@ -278,14 +278,22 @@ class MapobjectType(Model, DateMixIn):
         '''
         from tmlib.models import Feature, FeatureValue
         session = Session.object_session(self)
-        feature_values = session.query(
-            Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
-            join(FeatureValue).\
-            filter(
-                (Feature.name.in_(set(feature_names))) &
-                (Feature.mapobject_type_id == self.id)
-            ).\
-            all()
+        if feature_values:
+            feature_values = session.query(
+                Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
+                join(FeatureValue).\
+                filter(
+                    (Feature.name.in_(set(feature_names))) &
+                    (Feature.mapobject_type_id == self.id)
+                ).\
+                all()
+        else:
+            feature_values = session.query(
+                Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
+                join(FeatureValue).\
+                filter(Feature.mapobject_type_id == self.id).\
+                all()
+
         feature_df_long = pd.DataFrame(feature_values)
         feature_df_long.columns = ['feature', 'mapobject', 'value']
         feature_df = pd.pivot_table(
