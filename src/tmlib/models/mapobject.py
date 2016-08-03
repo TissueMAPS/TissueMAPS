@@ -305,7 +305,7 @@ class MapobjectType(Model, DateMixIn):
         )
         return feature_df
 
-    def get_matadata_matrix(self):
+    def get_metadata_matrix(self):
         '''Gets the metadata for all mapobjects of this type.
 
         Returns
