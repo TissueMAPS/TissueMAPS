@@ -1,31 +1,31 @@
 import os.path as p
 import json
 import logging
+from cStringIO import StringIO
+from zipfile import ZipFile
 
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 from flask.ext.jwt import jwt_required
-from flask import jsonify, request
+from flask import jsonify, request, send_file
 from sqlalchemy.sql import text
+
+from tmlib.models import (
+    MapobjectSegmentation, MapobjectType,
+    Experiment, Plate, Well, Site
+)
 
 from tmserver.api import api
 from tmserver.extensions import db
+from tmserver.util import extract_model_from_path
 
-from tmserver.mapobject import MapobjectSegmentation, MapobjectType
-from tmserver.experiment import Experiment
 
 logger = logging.getLogger(__name__)
 
 
-@api.route('/experiments/<experiment_id>/mapobjects/<object_name>', methods=['GET'])
-def get_mapobjects_tile(experiment_id, object_name):
-
-    ex = db.session.query(Experiment).get_with_hash(experiment_id)
-    if not ex:
-        return RESOURCE_NOT_FOUND_RESPONSE
-    # TODO: Requests should have a auth token
-    # if not ex.belongs_to(current_identity):
-    #     return NOT_AUTHORIZED_RESPONSE
+@api.route('/experiments/<experiment_id>/mapobjects/<object_name>/tile', methods=['GET'])
+@extract_model_from_path(Experiment)
+def get_mapobjects_tile(experiment, object_name):
 
     # The coordinates of the requested tile
     x = request.args.get('x')
@@ -47,7 +47,7 @@ def get_mapobjects_tile(experiment_id, object_name):
     )
 
     if object_name == 'DEBUG_TILE':
-        maxzoom = ex.channels[0].layers[0].maxzoom_level_index
+        maxzoom = experiment.channels[0].layers[0].maxzoom_level_index
         minx, miny, maxx, maxy = MapobjectSegmentation.bounding_box(x, y, z, maxzoom)
         return jsonify({
             'type': 'Feature',
@@ -67,7 +67,7 @@ def get_mapobjects_tile(experiment_id, object_name):
         })
 
     mapobject_type = db.session.query(MapobjectType).\
-        filter_by(name=object_name, experiment_id=ex.id).\
+        filter_by(name=object_name, experiment_id=experiment.id).\
         one()
     query_res = mapobject_type.get_mapobject_outlines_within_tile(
         x, y, z, tpoint, zplane
@@ -95,3 +95,80 @@ def get_mapobjects_tile(experiment_id, object_name):
         "type": "FeatureCollection",
         "features": features
     })
+
+
+@api.route('/experiments/<experiment_id>/mapobjects/<object_name>/segmentations', methods=['GET'])
+@jwt_required()
+@extract_model_from_path(Experiment)
+def get_mapobjects_segmentation(experiment, object_name):
+    well_name = request.args.get('well_name')
+    x = request.args.get('x')
+    y = request.args.get('y')
+    zplane = request.args.get('zplane')
+    tpoint = request.args.get('tpoint')
+    site = db.session.query(Site).\
+        join(Well).\
+        filter(
+            Well.plate_id == cycle.id, Well.name == well_name,
+            Site.x == x, Site.y == y
+        ).\
+        one()
+    mapobject_type = db.session.query(MapobjectType).\
+        filter_by(name=object_name, experiment_id=experiment.id).\
+        one()
+    segmentation = db.session.query(
+            MapobjectSegmentation.label,
+            MapobjectSegmentation.geom_poly
+        ).\
+        join(MapobjectType).\
+        filter(
+            MapobjectType.name == object_name,
+            MapobjectType.experiment_id == experiment.id,
+            MapobjectSegmentation.site_id == site.id,
+            MapobjectSegmentation.zplane == zplane,
+            MapobjectSegmentation.tpoint == tpoint
+        )
+    array = np.zeros((site.height, site.width), np.uint16)
+    for seg in segmentation:
+        poly = to_shape(seg.geom_poly)
+        coordinates = np.array(poly.exterior.coords).astype(int)
+        x, y = np.split(coordinates, 2, axis=1)
+        x -= site.offset[1]
+        y -= site.offset[0]
+        y, x = skimage.draw.polygon(y, x)
+        array[y, x] = seg.label
+    f = StringIO()
+    buf = array.get_buffer()
+    f.write(buf.tostring)
+    f.seek(0)
+    filename = '%s_%s_%s_x%2d_y%2d_z%3d_t%d.png' % (
+        experiment.name, object_name, site.well.name, site.x, site.y,
+        zplane, tpoint
+    )
+    return send_file(
+        f,
+        attachment_filename=filename,
+        mimetype='image/png'
+    )
+
+
+@api.route('/experiments/<experiment_id>/mapobjects/<object_name>/features', methods=['GET'])
+@jwt_required()
+@extract_model_from_path(Experiment)
+def get_feature_values(experiment, object_name):
+    mapobject_type = db.session(MapobjectType).\
+        filter_by(experiment_id=experiment.id, name=object_name).\
+        one()
+    features = mapobject_type.get_feature_value_matrix()
+    filename = '%s_%s_features.csv' % (experiment.name, object_name)
+    f = StringIO()
+    with ZipFile(f, 'w') as zf:
+        zf.writestr(
+            filename, features.to_csv(None, encoding='utf-8', index=False)
+        )
+    f.seek(0)
+    return send_file(
+        f,
+        attachment_filename=filename,
+        mimetype='application/octet-stream'
+    )

@@ -1,6 +1,7 @@
 from tmlib.models import (
-    Experiment, Channel, ChannelLayer, Plate, Acquisition,
-    Feature, MapobjectType
+    Experiment, Channel, ChannelLayer, Plate, Acquisition, Cycle,
+    Feature, MapobjectType,
+    MicroscopeImageFile, MicroscopeMetadataFile,
 )
 from tmserver.serialize import json_encoder
 from tmserver.model import encode_pk
@@ -70,6 +71,30 @@ def encode_acquisition(obj, encoder):
         'description': obj.description,
         'plate_id': encode_pk(obj.plate_id),
         'status': obj.status
+    }
+
+
+@json_encoder(MicroscopeImageFile)
+def enocode_microscope_image_file(obj, encoder):
+    return {
+        'name': obj.name,
+        'status': obj.status
+    }
+
+
+@json_encoder(MicroscopeMetadataFile)
+def enocode_microscope_metadata_file(obj, encoder):
+    return {
+        'name': obj.name,
+        'status': obj.status
+    }
+
+
+@json_encoder(Cycle)
+def encode_cycle(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'plate_id': encode_pk(obj.plate_id),
     }
 
 

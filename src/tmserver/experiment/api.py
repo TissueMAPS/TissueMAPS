@@ -1,5 +1,6 @@
 import json
 import os
+from cStringIO import StringIO
 import logging
 
 import numpy as np
@@ -11,7 +12,8 @@ from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.models import (
-    Experiment, ChannelLayer, Plate, Acquisition, Feature, PyramidTileFile
+    Experiment, ChannelLayer, Plate, Acquisition, Feature, PyramidTileFile,
+    Cycle, Well, Site, ChannelImageFile
 )
 from tmlib.image import PyramidTile
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
@@ -61,7 +63,7 @@ def get_image_tile(channel_layer):
     ).one_or_none()
     if tile_file is None:
         raise ResourceNotFoundError(
-            'Tile not found: column=%d, row=%d, level=%d', x, y, z
+            'Tile not found: column=%d, row=%d, level=%d' % (x, y, z)
         )
     return send_file(tile_file.location)
     #     logger.warn('file does not exist - send empty image')
@@ -71,7 +73,42 @@ def get_image_tile(channel_layer):
     #     buf = img.array.get_buffer()
     #     f.write(buf.tostring)
     #     f.seek(0)
-    #     send_file(f, mimetype='image/jpeg')
+    #     return send_file(f, mimetype='image/jpeg')
+
+
+@api.route('/cycles/<cycle_id>/image_files', methods=['GET'])
+@jwt_required()
+@extract_model_from_path(Cycle, check_ownership=True)
+def get_channel_image(cycle):
+    channel_name = request.args.get('channel_name')
+    well_name = request.args.get('well_name')
+    x = request.args.get('x')
+    y = request.args.get('y')
+    tpoint = request.args.get('tpoint')
+    zplane = request.args.get('zplane')
+    site_id = db.session.query(Site.id).\
+        join(Well).\
+        filter(
+            Well.plate_id == cycle.id, Well.name == well_name,
+            Site.x == x, Site.y == y
+        ).\
+        one()[0]
+    channel_id = db.session.query(Channel.id).\
+        filter_by(experiment_id=cycle.plate.experiment_id, name=channel_name).\
+        one()[0]
+    image_file = db.session.query(ChannelImageFile).\
+        filter_by(
+            cycle_id=cycle.id, site_id=site_id, channel_id=channel_id,
+            tpoint=tpoint
+        ).\
+        one()
+    img = image_file.get(zplane)
+    f = StringIO()
+    buf = img.array.get_buffer()
+    f.write(buf.tostring)
+    f.seek(0)
+    return send_file(f, mimetype='image/png')
+
 
 @api.route('/features', methods=['GET'])
 @jwt_required()
@@ -522,21 +559,15 @@ def get_acquisition_id():
 @jwt_required()
 @extract_model_from_path(Acquisition, check_ownership=True)
 def get_acquisition_image_files(acquisition):
-    return jsonify(
-        data=[
-            {'name': f.name, 'upload_status': f.upload_status}
-            for f in acquisition.microscope_image_files
-        ]
-    )
+    return jsonify({
+        'data': acquisition.microscope_image_files
+    })
 
 
 @api.route('/acquisitions/<acquisition_id>/metadata_files', methods=['GET'])
 @jwt_required()
 @extract_model_from_path(Acquisition, check_ownership=True)
 def get_acquisition_metadata_files(acquisition):
-    return jsonify(
-        data=[
-            {'name': f.name, 'upload_status': f.upload_status}
-            for f in acquisition.microscope_metadata_files
-        ]
-    )
+    return jsonify({
+        'data': acquisition.microscope_metadata_files
+    })

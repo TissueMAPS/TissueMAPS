@@ -164,25 +164,25 @@ def upload_file(acquisition):
             % filename
         )
 
-    if file_obj.upload_status == FileUploadStatus.COMPLETE:
+    if file_obj.status == FileUploadStatus.COMPLETE:
         logger.info('file "%s" already uploaded')
         return jsonify(message='File already uploaded')
-    elif file_obj.upload_status == FileUploadStatus.UPLOADING:
+    elif file_obj.status == FileUploadStatus.UPLOADING:
         logger.info('file "%s" already uploading')
         return jsonify(message='File upload already in progress')
 
     logger.info('upload file "%s"', filename)
-    file_obj.upload_status = FileUploadStatus.UPLOADING
+    file_obj.status = FileUploadStatus.UPLOADING
     db.session.add(file_obj)
     db.session.commit()
 
     try:
         f.save(file_obj.location)
-        file_obj.upload_status = FileUploadStatus.COMPLETE
+        file_obj.status = FileUploadStatus.COMPLETE
         db.session.add(file_obj)
         db.session.commit()
     except Exception as error:
-        file_obj.upload_status = FileUploadStatus.FAILED
+        file_obj.status = FileUploadStatus.FAILED
         db.session.add(file_obj)
         db.session.commit()
         raise InternalServerError(
