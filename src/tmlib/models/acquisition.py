@@ -118,11 +118,8 @@ class Acquisition(Model, DateMixIn):
     @property
     def status(self):
         '''str: upload status based on the status of microscope files'''
-        child_status = set([
-            f.upload_status for f in self.microscope_image_files
-        ]).union(set([
-            f.upload_status for f in self.microscope_metadata_files
-        ]))
+        child_status = set([f.status for f in self.microscope_image_files]).\
+            union(set([f.status for f in self.microscope_metadata_files]))
         if fus.UPLOADING in child_status:
             return fus.UPLOADING
         elif len(child_status) == 1 and fus.COMPLETE in child_status:

@@ -55,7 +55,7 @@ class MicroscopeImageFile(File, DateMixIn):
     # Table columns
     name = Column(String, index=True)
     omexml = Column(Text)
-    upload_status = Column(String, index=True)
+    status = Column(String, index=True)
     acquisition_id = Column(
         Integer,
         ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -79,7 +79,7 @@ class MicroscopeImageFile(File, DateMixIn):
         '''
         self.name = name
         self.acquisition_id = acquisition_id
-        self.upload_status = FileUploadStatus.WAITING
+        self.status = FileUploadStatus.WAITING
 
     @property
     def location(self):
@@ -107,7 +107,7 @@ class MicroscopeImageFile(File, DateMixIn):
         return {
             'id': self.id,
             'name': self.name,
-            'upload_status': self.upload_status
+            'status': self.status
         }
 
     def __repr__(self):
@@ -138,7 +138,7 @@ class MicroscopeMetadataFile(File, DateMixIn):
 
     # Table columns
     name = Column(String, index=True)
-    upload_status = Column(String, index=True)
+    status = Column(String, index=True)
     acquisition_id = Column(
         Integer,
         ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -164,7 +164,7 @@ class MicroscopeMetadataFile(File, DateMixIn):
         '''
         self.name = name
         self.acquisition_id = acquisition_id
-        self.upload_status = FileUploadStatus.WAITING
+        self.status = FileUploadStatus.WAITING
 
     @property
     def location(self):
@@ -182,8 +182,7 @@ class MicroscopeMetadataFile(File, DateMixIn):
         pass
 
     def as_dict(self):
-        '''
-        Return attributes as key-value pairs.
+        '''Return attributes as key-value pairs.
 
         Returns
         -------
@@ -192,7 +191,7 @@ class MicroscopeMetadataFile(File, DateMixIn):
         return {
             'id': self.id,
             'name': self.name,
-            'upload_status': self.upload_status
+            'status': self.status
         }
 
     def __repr__(self):

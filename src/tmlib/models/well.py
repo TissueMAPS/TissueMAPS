@@ -6,7 +6,7 @@ from sqlalchemy import Column, String, Integer, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from .. import utils
+from tmlib import utils
 from tmlib.models import Model, DateMixIn
 from tmlib.models import distribute_by_replication
 
