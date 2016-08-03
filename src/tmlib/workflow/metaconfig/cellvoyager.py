@@ -49,10 +49,9 @@ class CellvoyagerMetadataHandler(MetadataHandler):
     @staticmethod
     def _calculate_coordinates(positions):
         # y axis is inverted
-        coordinates = stitch.calc_grid_coordinates_from_positions(
+        return stitch.calc_grid_coordinates_from_positions(
             positions, reverse_rows=True
         )
-        return coordinates
 
 
 class CellvoyagerMetadataReader(MetadataReader):
@@ -155,7 +154,9 @@ class CellvoyagerMetadataReader(MetadataReader):
             # TODO: Fuck the whole OMEXML approach and simply put everything
             # into a pandas data frame.
             captures = matches.groupdict()
-            lookup[well_id].append(captures)
+            index = sorted(captures.keys())
+            key = tuple([captures[ix] for ix in index])
+            lookup[well_id].append(key)
             count += 1
 
         # Obtain the general experiment information and well plate format
@@ -177,9 +178,9 @@ class CellvoyagerMetadataReader(MetadataReader):
             col = int(w[1:]) - 1
             well = metadata.WellsDucktype(plate).new(row=row, column=col)
             well_samples = metadata.WellSampleDucktype(well.node)
-            for i, reference in enumerate(lookup[w]):
+            for index, reference in enumerate(lookup[w]):
                 # Create a *WellSample* element for each acquisition site
-                well_samples.new(index=i)
-                well_samples[i].ImageRef = reference
+                well_samples.new(index=index)
+                well_samples[index].ImageRef = '::'.join(reference)
 
         return metadata

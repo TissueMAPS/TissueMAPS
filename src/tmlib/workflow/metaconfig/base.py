@@ -174,7 +174,9 @@ class MetadataHandler(object):
                     n_planes = pixels.plane_count  # update plane count
 
                 bit_depth = get_bit_depth(image.Pixels.PixelType)
-                metadata['bit_depth'].append(bit_depth)
+                metadata['bit_depth'].extend(
+                    [bit_depth for _ in range(n_planes)]
+                )
                 # Each metadata element represents an image, which could
                 # correspond to an individual plane or a z-stack, i.e. a
                 # collection of several focal planes for the same channel
@@ -266,9 +268,11 @@ class MetadataHandler(object):
         SPW *Plate* element. For consistency a slide should be represented
         as a plate with a single *Well* element.
         The *ImageRef* attribute of *WellSample* elements must be provided in
-        form of a dictionary with keys *w*, *s*, *t*, *c*, *z* for
-        "well", "site", "time", "channel" and "z dimension" information,
-        respectively.
+        form of a string that can be used to map the well sample to its
+        corresponding image file. The string can either be the filename
+        (if it's possible to map the sample directly to the file) or it can
+        encode the group names of the regular expression that's provided
+        for the microscope type.
 
         Warning
         -------
@@ -306,7 +310,6 @@ class MetadataHandler(object):
                 'number of images specified in metadata doesn\'t match the '
                 'number of available images'
             )
-            # raise MetadataError('Incorrect number of images.')
 
         md = self.metadata
 
@@ -316,18 +319,24 @@ class MetadataHandler(object):
             tuple(r.search(name).groupdict().values()): name
             for name in md.name
         }
+        match_by_pattern = True
+        if len(matches) == 1:
+            match_by_pattern = False
         for i in xrange(n_images):
-
             # Only consider image elements for which the value of the *Name*
             # attribute matches.
             image = self.omexml_metadata.image(i)
             pixels = image.Pixels
             name = image.Name
-            try:
-                matched_name = matches[tuple(r.search(name).groupdict().values())]
-            except KeyError:
-                logger.warning('image #%d "%s" is missing', i, name)
-                continue
+            if match_by_pattern:
+                try:
+                    key = tuple(r.search(name).groupdict().values())
+                    matched_name = matches[key]
+                except KeyError:
+                    logger.warning('image #%d "%s" is missing', i, name)
+                    continue
+            else:
+                matched_name = name
             idx = md[md.name == matched_name].index[0]
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
@@ -336,22 +345,29 @@ class MetadataHandler(object):
             # Here we create a lookup table with a mapping of captured matches
             # to the index of the corresponding image element.
             if len(self._file_mapper_list[idx].files) > 1:
-                raise MetadataError('There should only be a single filename.')
+                raise MetadataError(
+                    'There should only be a single matching reference file.'
+                )
             filename = os.path.basename(self._file_mapper_list[idx].files[0])
             match = r.search(filename)
             if not match:
                 raise RegexError(
                     'Incorrect reference to image files in plate element.'
                 )
-            captures = match.groupdict()
-            if 'z' not in captures.keys():
-                captures['z'] = md.at[idx, 'zplane']
+            if match_by_pattern:
+                captures = match.groupdict()
+                if 'z' not in captures.keys():
+                    captures['z'] = md.at[idx, 'zplane']
+                else:
+                    # NOTE: quick and dirty hack for CellVoyager microscope,
+                    # which may not write the z index into the image file
+                    # (depending on the software version)
+                    md.at[idx, 'zplane'] = captures['z']
+                index = sorted(captures.keys())
+                reference = tuple([captures[ix] for ix in index])
+                key = '::'.join(reference)
             else:
-                # NOTE: quick and dirty hack for CellVoyager microscope,
-                # which doesn't write the z index into the image file
-                md.at[idx, 'zplane'] = captures['z']
-            index = sorted(captures.keys())
-            key = tuple([captures[ix] for ix in index])
+                key = filename
             lookup[key] = idx
 
             if pixels.channel_count > 1:
@@ -370,7 +386,6 @@ class MetadataHandler(object):
                 md.at[idx, 'stage_position_x'] = pixels.Plane(0).PositionX
                 md.at[idx, 'stage_position_y'] = pixels.Plane(0).PositionY
 
-
         # NOTE: Plate information is usually not readily available from images
         # or additional metadata files and thus requires custom readers/handlers
         plate = self.omexml_metadata.plates[0]
@@ -381,9 +396,9 @@ class MetadataHandler(object):
                 # Find the reference *Image* elements for the current
                 # well sample using the above created lookup table
                 reference = well.Sample[i].ImageRef
-                index = sorted(reference.keys())
-                key = tuple([reference[ix] for ix in index])
-                image_id = lookup[key]
+                # index = sorted(reference.keys())
+                # key = tuple([reference[ix] for ix in index])
+                image_id = lookup[reference]
                 md.at[image_id, 'well_name'] = w
 
         return self.metadata
@@ -400,11 +415,13 @@ class MetadataHandler(object):
         logger.info('check whether required metadata information is missing')
         md = self.metadata
         missing_metadata = set()
-        if any(md['channel_name'].isnull()):
+        if any([len(v) == 0 for v in md.well_name.values]):
+            missing_metadata.add('well')
+        if any(md.channel_name.isnull()):
             missing_metadata.add('channel')
-        if any(md['zplane'].isnull()):
+        if any(md.zplane.isnull()):
             missing_metadata.add('focal plane')
-        if any(md['tpoint'].isnull()):
+        if any(md.tpoint.isnull()):
             missing_metadata.add('time point')
         return missing_metadata
 
@@ -505,8 +522,7 @@ class MetadataHandler(object):
 
     @staticmethod
     def _calculate_coordinates(positions):
-        coordinates = stitch.calc_grid_coordinates_from_positions(positions)
-        return coordinates
+        return stitch.calc_grid_coordinates_from_positions(positions)
 
     def determine_grid_coordinates_from_stage_positions(self):
         '''Determines the coordinates of each image acquisition site within the

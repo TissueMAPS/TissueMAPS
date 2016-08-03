@@ -243,18 +243,21 @@ class VisiviewMetadataReader(MetadataReader):
             '%s%.2d' % (rows[i], columns[i])
             for i in xrange(len(sites))
         ]
-        lut = defaultdict(list)
+        lookup = defaultdict(list)
         r = re.compile(VisiviewMetadataHandler.IMAGE_FILE_REGEX_PATTERN)
         for f in microscope_image_files:
             matches = r.search(f)
             # NOTE: We assume that the "site" id is global per plate
             captures = matches.groupdict()
-            ix = sites.index(int(captures['s']))
+            field_index = sites.index(int(captures['s']))
             # NOTE: dict() creates a copy for each sample
             samples = [dict(captures) for z in xrange(nd['NZSteps'])]
             for z in xrange(nd['NZSteps']):
                 samples[z]['z'] = z
-            lut[wells[ix]].extend(samples)
+            for s in samples:
+                index = sorted(s.keys())
+                reference = tuple([s[ix] for ix in index])
+                lookup[wells[field_index]].append(reference)
 
         # TODO: Sort samples according to "site"
 
@@ -265,9 +268,9 @@ class VisiviewMetadataReader(MetadataReader):
             well = metadata.WellsDucktype(plate).new(row=row_index,
                                                      column=col_index)
             well_samples = metadata.WellSampleDucktype(well.node)
-            for i, reference in enumerate(lut[w]):
+            for i, reference in enumerate(lookup[w]):
                 # Create a *WellSample* element for each acquisition site
                 well_samples.new(index=i)
-                well_samples[i].ImageRef = reference
+                well_samples[i].ImageRef = '::'.join(reference)
 
         return metadata

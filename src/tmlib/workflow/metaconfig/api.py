@@ -188,7 +188,7 @@ class MetadataConfigurator(ClusterRoutines):
         missing = mdhandler.determine_missing_metadata()
         if missing:
             logger.warning(
-                'required metadata information is missing: %s',
+                'required metadata information is missing: "%s"',
                 '", "'.join(missing)
             )
             logger.info(
