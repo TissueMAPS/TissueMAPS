@@ -19,7 +19,7 @@ class SegmentationLayer extends VectorTileLayer {
     constructor(objectTypeName: string, opt: SegmentationLayerOpts) {
          
         var url = '/api/experiments/' + opt.experimentId + '/mapobjects/' +
-                  objectTypeName +
+                  objectTypeName + '/tile'
                   '?x={x}&y={y}&z={z}' + '&zplane=' + opt.zplane + '&tpoint=' + opt.tpoint;
         super({
             visible: opt.visible,

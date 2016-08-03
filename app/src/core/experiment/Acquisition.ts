@@ -4,7 +4,7 @@
  */
 interface MicroscopeFile {
     name: string;
-    upload_status: string;
+    status: string;
 }
 
 /**
@@ -52,10 +52,10 @@ class Acquisition {
             metaDataFiles: $http.get('/api/acquisitions/' + this.id + '/metadata_files')
         }).then((responses: any) => {
             var imageFiles = responses.imageFiles.data.data.filter((f) => {
-                return f.upload_status == 'COMPLETE';
+                return f.status == 'COMPLETE';
             });
             var metaDataFiles = responses.metaDataFiles.data.data.filter((f) => {
-                return f.upload_status == 'COMPLETE';
+                return f.status == 'COMPLETE';
             });
             var files = Array.prototype.concat(imageFiles, metaDataFiles)
             this.files = files;
@@ -97,7 +97,7 @@ class Acquisition {
                     config.file.progress = 100;
                     config.file.status = 'COMPLETE';
                     this.files.push(<MicroscopeFile>{
-                        name: config.file.name, upload_status: 'COMPLETE'
+                        name: config.file.name, status: 'COMPLETE'
                     });
                     fileDef.resolve(config.file);
                 }).error((data, status, headers, config) => {
@@ -121,7 +121,7 @@ class Acquisition {
 
     countCompleted() {
         return this.files.filter((f) => {
-            return f.upload_status == 'COMPLETE';
+            return f.status == 'COMPLETE';
         }).length
     }
     /**
