@@ -9,9 +9,12 @@ References
 '''
 
 import numpy as np
+import logging
 
 from tmlib.utils import assert_type
 from tmlib.image import IllumstatsImage
+
+logger = logging.getLogger(__name__)
 
 
 class OnlineStatistics(object):
