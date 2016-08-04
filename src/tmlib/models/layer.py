@@ -426,12 +426,31 @@ class ChannelLayer(Model):
 
         return range(start_index, end_index)
 
+    def get_image_files_intersecting_with_tile(self, row, column):
+        '''Gets all image files that intersect with a given tile at the highest
+        resolution level.
+
+        Parameters
+        ----------
+        row: int
+            zero-based row index of the tile
+        column: int
+            zero-based column index of the tile
+
+        Returns
+        -------
+        List[tmlib.models.ChannelImageFile]
+            image files
+        '''
+
     @cached_property
     def base_tile_coordinate_to_image_file_map(self):
         '''Dict[Tuple[int], List[tmlib.models.ChannelImageFile]]: maps
         coordinates of tiles at the maximal zoom level
         to the corresponding image files which intersect with each tile
         '''
+        # TODO: use function instead that only looks in the neighborhood of
+        # the file instead of global mapping
         mapping = collections.defaultdict(list)
         experiment = self.channel.experiment
         image_files = [
