@@ -477,7 +477,9 @@ class CommandLineInterface(SubmissionManager):
         if phase == 'run':
             logger.info('create run jobs')
             if job_id is not None:
-                batches = [b for b in self.batches['run'] if b['id'] == job_id]
+                batch_file = api.build_batch_filename_for_run_job(job_id)
+                batch = api.read_batch_file(batch_file)
+                batches = [batch]
             else:
                 batches = self.batches['run']
             return api.create_run_jobs(

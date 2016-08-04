@@ -148,7 +148,7 @@ class SubmissionManager(object):
         while True:
 
             time.sleep(3)
-            logger.debug('wait for 3 sechnds')
+            logger.debug('wait for 3 seconds')
 
             t_elapsed = datetime.datetime.now() - t_submitted
             logger.info('elapsed time: %s', str(t_elapsed))

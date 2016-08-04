@@ -124,9 +124,9 @@ class ImageExtractor(ClusterRoutines):
         with tm.utils.Session() as session:
             fmappings = session.query(tm.ImageFileMapping.map).\
                 filter(tm.ImageFileMapping.id.in_(file_mapping_ids)).\
-                all()[0]
-            series = np.array([m['series'] for m in fmappings]).flatten()
-            planes = np.array([m['planes'] for m in fmappings]).flatten()
+                all()
+            series = np.array([m[0]['series'] for m in fmappings]).flatten()
+            planes = np.array([m[0]['planes'] for m in fmappings]).flatten()
             if len(np.unique(series)) > 1 or len(np.unique(planes)) > 1:
                 # Let's not use Java in case we don't have to!
                 logger.debug('use BioFormats image reader')

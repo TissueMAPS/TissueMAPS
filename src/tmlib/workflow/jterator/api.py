@@ -428,9 +428,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     img = img.align()  # shifted and cropped!
                     images[f.tpoint].append(img.array)
 
-                # zstacks = list()
-                # for zplanes in images.itervalues():
-                #     zstacks.append(np.dstack(zplanes))
                 store['pipe'][channel_name] = np.stack(images.values(), axis=-1)
 
             # Load outlins of mapobjects of the specified types and reconstruct
@@ -444,7 +441,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     ).\
                     join(tm.Mapobject).\
                     join(tm.MapobjectType).\
-                    join(tm.Site).\
                     filter(
                         tm.MapobjectType.name == mapobject_type_name,
                         tm.MapobjectSegmentation.site_id == batch['site_id'],

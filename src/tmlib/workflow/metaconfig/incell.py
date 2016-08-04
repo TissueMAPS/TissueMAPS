@@ -76,7 +76,7 @@ class IncellMetadataReader(MetadataReader):
         if len(microscope_metadata_files) != 1:
             raise ValueError('Expected one microscope metadata file.')
         xdce_filename = microscope_metadata_files[0]
-        if not xdce_filename.endswith('xdce'):
+        if not re.search(METADATA_FILE_REGEX_PATTERN, xdce_filename):
             raise ValueError('Microscope metadata file has wrong format.')
         tree = etree.parse(xdce_filename)
         root = tree.getroot()

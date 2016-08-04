@@ -184,7 +184,9 @@ class MetadataHandler(object):
                 for p in xrange(n_planes):
                     plane = pixels.Plane(p)
                     metadata['name'].append(image.Name)
-                    metadata['channel_name'].append(pixels.Channel(plane.TheC).Name)
+                    metadata['channel_name'].append(
+                        pixels.Channel(plane.TheC).Name
+                    )
 
                     metadata['tpoint'].append(plane.TheT)
                     metadata['zplane'].append(plane.TheZ)
@@ -203,7 +205,7 @@ class MetadataHandler(object):
                     fm.series = [s]
                     fm.planes = [p]
                     self._file_mapper_list.append(fm)
-                    self._file_mapper_lookup[image.Name].append(fm)
+                    self._file_mapper_lookup[f].append(fm)
 
                     i += 1
 
@@ -245,7 +247,7 @@ class MetadataHandler(object):
         represent individual image acquisition sites within a well and can hold
         metadata, such as the x and y positions of the *WellSample* within the
         *Well*. In addition, there is an *ImageRef* element, which can be used
-        to map a *WellSample* to the corresponding *Image* elements.
+        to map a *WellSample* to the corresponding *Image* element.
 
         Custom handlers must provide the metadata from additional files
         as a single *OMEXML* object that holds the information for all images.
@@ -256,23 +258,26 @@ class MetadataHandler(object):
         *number of time series* x *number of acquisition sites*.
         The *Name* attribute of each *Image* element can be set with the
         image filename, in which the corresponding *Plane* element is stored.
-        This information can serve as a reference to match additionally
-        provided information. The values of the *SizeT*,
-        *SizeC* and *SizeZ* attributes still have to match the actual pattern
-        in the image files, however. For example, if the image file contains
-        planes for one time point, one acquisition site
-        and 10 focal planes, then *SizeT* == 1, *SizeC* == 1 and *SizeZ*
-        == 10. Thereby we can keep track of individual planes upon formatting.
+        The values of the *SizeT*, *SizeC* and *SizeZ* attributes still have
+        to match the actual pattern in the image files, however.
+        For example, if the image file contains
+        planes for one time point, one acquisition site and 10 focal planes,
+        then *SizeT* == 1, *SizeC* == 1 and *SizeZ* == 10. Thereby we can keep
+        track of individual planes upon formatting.
 
         Custom handlers are further required to provide information for the
         SPW *Plate* element. For consistency a slide should be represented
         as a plate with a single *Well* element.
         The *ImageRef* attribute of *WellSample* elements must be provided in
-        form of a string that can be used to map the well sample to its
-        corresponding image file. The string can either be the filename
+        form of a unique, hashable string or integer that can be used to map
+        the well sample to its corresponding image file.
+        When represented by a string, the reference can either be the filename
         (if it's possible to map the sample directly to the file) or it can
         encode the group names of the regular expression that's provided
         for the microscope type.
+        When represented by an integer, the number has to match an ID of an
+        *Image* element within the corrsponding OMEXML file. In this case,
+        the *Name* attribute of *Image* elements must be set to ``None``.
 
         Warning
         -------
@@ -332,12 +337,18 @@ class MetadataHandler(object):
                 try:
                     key = tuple(r.search(name).groupdict().values())
                     matched_name = matches[key]
+                    idx = md[md.name == matched_name].index[0]
                 except KeyError:
                     logger.warning('image #%d "%s" is missing', i, name)
                     continue
             else:
-                matched_name = name
-            idx = md[md.name == matched_name].index[0]
+                if name is None:
+                    # When no image name is provided the index number (*Series*)
+                    # must be provided as reference.
+                    idx = i
+                else:
+                    matched_name = name
+                    idx = md[md.name == matched_name].index[0]
             # Individual image elements need to be mapped to well sample
             # elements in the well plate. The custom handlers provide a
             # regular expression, which is supposed to match a pattern in the
@@ -367,7 +378,10 @@ class MetadataHandler(object):
                 reference = tuple([captures[ix] for ix in index])
                 key = '::'.join(reference)
             else:
-                key = filename
+                if name is None:
+                    key = idx
+                else:
+                    key = filename
             lookup[key] = idx
 
             if pixels.channel_count > 1:
@@ -375,16 +389,24 @@ class MetadataHandler(object):
                     'Only image elements with one channel are supported.'
                 )
 
-            if hasattr(image, 'AcquisitionDate'):
+            # Only update the attribute in case they haven't been set set yet
+            # to prevent them from getting overwritten by some random bullshit.
+            if (hasattr(image, 'AcquisitionDate') and
+                    md.loc[idx, 'date'] is None):
                 md.at[idx, 'date'] = image.AcquisitionDate
 
-            if hasattr(pixels.Channel(0), 'Name'):
-                md.at[idx, 'channel_name'] = pixels.Channel(0).Name
+            if (hasattr(pixels, 'Channel') and
+                    md.loc[idx, 'channel_name'] is None):
+                if hasattr(pixels.Channel(0), 'Name'):
+                    import ipdb; ipdb.set_trace()
+                    md.at[idx, 'channel_name'] = pixels.Channel(0).Name
 
-            if (hasattr(pixels.Plane(0), 'PositionX') and
-                    hasattr(pixels.Plane(0), 'PositionY')):
-                md.at[idx, 'stage_position_x'] = pixels.Plane(0).PositionX
-                md.at[idx, 'stage_position_y'] = pixels.Plane(0).PositionY
+            if (hasattr(pixels, 'Plane') and
+                    md.loc[idx, 'stage_position_y'] is None):
+                if (hasattr(pixels.Plane(0), 'PositionX') and
+                        hasattr(pixels.Plane(0), 'PositionY')):
+                    md.at[idx, 'stage_position_x'] = pixels.Plane(0).PositionX
+                    md.at[idx, 'stage_position_y'] = pixels.Plane(0).PositionY
 
         # NOTE: Plate information is usually not readily available from images
         # or additional metadata files and thus requires custom readers/handlers
@@ -672,6 +694,7 @@ class MetadataHandler(object):
         # Map the locations of each plane with the original image files
         # in order to be able to perform the intensity projection later on
         grouped_file_mapper_list = list()
+        grouped_file_mapper_lookup = defaultdict(list)
         for i, indices in enumerate(sorted(zstacks.groups.values())):
             fm = ImageFileMapping()
             fm.files = list()
@@ -685,10 +708,12 @@ class MetadataHandler(object):
                 fm.planes.extend(self._file_mapper_list[index].planes)
                 fm.zlevels.append(md.loc[index, 'zplane'])
             grouped_file_mapper_list.append(fm)
+            grouped_file_mapper_lookup[tuple(fm.files)].append(fm)
 
         # Update metadata and file mapper objects
         self.metadata = grouped_md
         self._file_mapper_list = grouped_file_mapper_list
+        self._file_mapper_lookup =  grouped_file_mapper_lookup
 
         return self.metadata
 
@@ -785,12 +810,9 @@ class MetadataReader(object):
     ----
     In case custom readers provide a *Plate* element, they also have to specify
     an *ImageRef* elements for each *WellSample* element, which serve as
-    references to OME *Image* elements. Each *ImageRef* attribute must be a
-    dictionary with a single entry. The value must be a list of strings, where
-    each element represents the reference information that can be used to map
-    the *WellSample* element to an individual *Image* element. The key must be
-    a regular expression string that can be used to extract the reference
-    information from the corresponding image filenames.
+    references to OME *Image* elements. Each *ImageRef* attribute must be either
+    a unique, hashable string or integer, that can be used to map each
+    *Image* element to its corresponding *WellSample*.
     '''
 
     __metaclass__ = ABCMeta
