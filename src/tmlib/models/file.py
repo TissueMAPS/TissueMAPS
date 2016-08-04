@@ -210,9 +210,6 @@ class ChannelImageFile(File, DateMixIn):
     ----------
     tpoint: int
         zero-based time point index in the time series
-    omitted: bool
-        whether the image file is considered empty, i.e. consisting only of
-        background pixels without having biologically relevant information
     site_id: int
         ID of the parent site
     site: tmlib.models.Site
@@ -240,7 +237,6 @@ class ChannelImageFile(File, DateMixIn):
     _name = Column('name', String, index=True)
     name = Column(String, index=True)
     tpoint = Column(Integer, index=True)
-    omitted = Column(Boolean, index=True)
     _n_planes = Column('n_planes', Integer, index=True)
     n_planes = Column(Integer, index=True)
     cycle_id = Column(
@@ -276,7 +272,7 @@ class ChannelImageFile(File, DateMixIn):
     #: Format string for filenames
     FILENAME_FORMAT = 'channel_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}.h5'
 
-    def __init__(self, tpoint, site_id, cycle_id, channel_id, omitted=False):
+    def __init__(self, tpoint, site_id, cycle_id, channel_id):
         '''
         Parameters
         ----------
@@ -288,16 +284,9 @@ class ChannelImageFile(File, DateMixIn):
             ID of the parent cycle
         channel_id: int
             ID of the parent channel
-        omitted: bool, optional
-            whether the image file is considered empty, i.e. consisting only of
-            background pixels without having biologically relevant information
-            (default: ``False``)
-        n_planes: int
-            number of pixels planes in the image
         '''
         self.tpoint = tpoint
         self.site_id = site_id
-        self.omitted = omitted
         self.cycle_id = cycle_id
         self.channel_id = channel_id
         self._n_planes = 0

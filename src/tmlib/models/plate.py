@@ -241,6 +241,7 @@ class Plate(Model, DateMixIn):
         '''Tuple[int]: *y*, *x* coordinate of the top, left corner of the plate
         relative to the layer overview at the maximum zoom level
         '''
+        logger.debug('calculate plate offset')
         experiment = self.experiment
         plate_coordinate = zip(*np.where(experiment.plate_grid == self.id))[0]
         y_offset = (

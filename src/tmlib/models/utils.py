@@ -207,8 +207,13 @@ class Session(object):
         '''
         if hasattr(self._sqla_session, attr):
             return getattr(self._sqla_session, attr)
-        else:
+        elif hasattr(self, attr):
             return getattr(self, attr)
+        else:
+            raise AttributeError(
+                'Object of type "%s" doesn\'t have attribute "%s".'
+                % (self.__class__.__name__, attr)
+            )
 
     def get_or_create(self, model, **kwargs):
         '''Gets an instance of a model class if it already exists or

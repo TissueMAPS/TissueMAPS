@@ -227,7 +227,8 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     '''
     # Calculate the spread along each dimension to determine the major stitch
     # axis.
-    spread = np.var(np.array(stage_positions), axis=0)
+    coordinates = np.array(stage_positions)
+    spread = np.max(coordinates, axis=0) - np.min(coordinates, axis=0)
     options = np.array(['vertical', 'horizontal'])
     # Guess the stitch dimensions.
     dims = guess_stitch_dimensions(n, options[spread == np.max(spread)])
@@ -235,11 +236,10 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
         p for p in itertools.product(range(dims[0]), range(dims[1]))
     ])
 
-    coordinates = np.array(stage_positions)
     if reverse_rows:
-        coordinates[:, 0] = coordinates[:, 0] * -1
+        coordinates[:, 0] *= -1
     if reverse_columns:
-        coordinates[:, 1] = coordinates[:, 1] * -1
+        coordinates[:, 1] *= -1
 
     # Caluculate the centroids for each grid position.
     row_centroids, _ = kmeans(coordinates[:, 0], dims[0])
@@ -249,13 +249,15 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     ])
 
     grid_positions = list()
+    indices = list()
     for c in coordinates:
         # Find the stage position that's closest to the centroid.
         distance = centroids - c
-        closest = np.abs(np.sum(distance, axis=1))
+        closest = np.sum(np.abs(distance), axis=1)
         index = np.where(closest == np.min(closest))[0][0]
         pos = tuple(positions[index, :])
         grid_positions.append(pos)
+        indices.append(index)
 
     if len(set(grid_positions)) != n:
         raise MetadataError(
@@ -263,5 +265,4 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
             'wrong stage positions were provided.'
         )
         # Or there is a bug in this code ;)
-
     return grid_positions

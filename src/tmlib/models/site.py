@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 from cached_property import cached_property
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
@@ -40,6 +40,9 @@ class Site(Model, DateMixIn):
         channel image files that belong to the site
     mapobject_segmentations: List[tmlib.models.MapobjectSegmentation]
         segmentations that belong to the site
+    omitted: bool
+        whether the image file is considered empty, i.e. consisting only of
+        background pixels without having biologically relevant information
     '''
 
     #: str: name of the corresponding database table
@@ -52,6 +55,7 @@ class Site(Model, DateMixIn):
     x = Column(Integer, index=True)
     height = Column(Integer, index=True)
     width = Column(Integer, index=True)
+    omitted = Column(Boolean, index=True)
     well_id = Column(
         Integer,
         ForeignKey('wells.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -64,7 +68,7 @@ class Site(Model, DateMixIn):
         backref=backref('sites', cascade='all, delete-orphan')
     )
 
-    def __init__(self, y, x, height, width, well_id):
+    def __init__(self, y, x, height, width, well_id, omitted=False):
         '''
         Parameters
         ----------
@@ -78,12 +82,17 @@ class Site(Model, DateMixIn):
             number of pixels along the horizontal axis of the site
         well_id: int
             ID of the parent well
+        omitted: bool, optional
+            whether the image file is considered empty, i.e. consisting only of
+            background pixels without having biologically relevant information
+            (default: ``False``)
         '''
         self.y = y
         self.x = x
         self.height = height
         self.width = width
         self.well_id = well_id
+        self.omitted = omitted
 
     @property
     def coordinate(self):
@@ -102,6 +111,7 @@ class Site(Model, DateMixIn):
         '''Tuple[int]: *y*, *x* coordinate of the top, left corner of the site
         relative to the layer overview at the maximum zoom level
         '''
+        logger.debug('calculate site offset')
         well = self.well
         plate = well.plate
         experiment = plate.experiment

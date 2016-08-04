@@ -130,9 +130,10 @@ class PyramidBuilder(ClusterRoutines):
                         filter(
                             tm.ChannelImageFile.channel_id==cid,
                             tm.ChannelImageFile.tpoint==t,
-                            ~tm.ChannelImageFile.omitted
+                            ~tm.Site.omitted
                         ).\
-                        order_by(tm.ChannelImageFile.site_id).\
+                        join(tm.Site).\
+                        order_by(tm.Site.id).\
                         all()
 
                     layer = session.get_or_create(
@@ -478,10 +479,10 @@ class PyramidBuilder(ClusterRoutines):
                 image_store = dict()
                 image = file.get(z=layer.zplane)
                 if batch['illumcorr']:
-                    logger.info('correct image')
+                    logger.debug('correct image')
                     image = image.correct(stats)
                 if batch['align']:
-                    logger.info('align image')
+                    logger.debug('align image')
                     image = image.align(crop=False)
                 if not image.is_uint8:
                     image = image.clip(clip_below, clip_above)
@@ -511,15 +512,15 @@ class PyramidBuilder(ClusterRoutines):
                     # i.e. pixels falling into the currently processed tile
                     # that are not contained by the file.
                     file_coordinate = np.array((file.site.y, file.site.x))
-                    # TODO: calculate this only for the local neighborhood
-                    # of the file rather than for all files!
-                    extra_files = layer.base_tile_coordinate_to_image_file_map[
+                    extra_file_ids = layer.base_tile_coordinate_to_image_file_map[
                         (tile_file.row, tile_file.column)
                     ]
-                    extra_files.remove(file)  # remove the current file
-                    if len(extra_files) > 0:
+                    extra_file_ids.remove(file.id)  # remove the current file
+                    if len(extra_file_ids) > 0:
                         logger.debug('tile overlaps multiple images')
-                    for extra_file in extra_files:
+                    for efid in extra_file_ids:
+                        extra_file = session.query(tm.ChannelImageFile).\
+                            get(efid)
                         if extra_file.name not in image_store:
                             image = extra_file.get(z=layer.zplane)
                             if batch['illumcorr']:

@@ -14,6 +14,8 @@ from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.file import ChannelImageFile
 from tmlib.models.site import Site
+from tmlib.models.well import Well
+from tmlib.models.plate import Plate
 from tmlib.models.base import Model
 from tmlib.models import distribute_by_replication
 from tmlib.utils import autocreate_directory_property
@@ -426,50 +428,37 @@ class ChannelLayer(Model):
 
         return range(start_index, end_index)
 
-    def get_image_files_intersecting_with_tile(self, row, column):
-        '''Gets all image files that intersect with a given tile at the highest
-        resolution level.
-
-        Parameters
-        ----------
-        row: int
-            zero-based row index of the tile
-        column: int
-            zero-based column index of the tile
-
-        Returns
-        -------
-        List[tmlib.models.ChannelImageFile]
-            image files
-        '''
-
     @cached_property
     def base_tile_coordinate_to_image_file_map(self):
-        '''Dict[Tuple[int], List[tmlib.models.ChannelImageFile]]: maps
-        coordinates of tiles at the maximal zoom level
-        to the corresponding image files which intersect with each tile
+        '''Dict[Tuple[int], List[int]]: IDs of all images, which intersect
+        with a given tile; maps coordinates of tiles at the maximal zoom level
+        to the files of intersecting images
         '''
-        # TODO: use function instead that only looks in the neighborhood of
-        # the file instead of global mapping
+        # NOTE: This may become a bottleneck for really large pyramids.
         mapping = collections.defaultdict(list)
         experiment = self.channel.experiment
-        image_files = [
-            f for f in self.channel.image_files if f.tpoint == self.tpoint
-        ]
-        for f in image_files:
-            if f.omitted:
+        session = Session.object_session(self)
+        sites = session.query(Site).\
+            join(Well).\
+            join(Plate).\
+            filter(Plate.experiment_id == experiment.id)
+        for site in sites:
+            if site.omitted:
                 continue
-            y_offset_site, x_offset_site = f.site.offset
+            fid = session.query(ChannelImageFile.id).\
+                filter_by(site_id=site.id, channel_id=self.channel.id).\
+                one()[0]
+            y_offset_site, x_offset_site = site.offset
             row_indices = self._calc_tile_indices(
-                y_offset_site, f.site.image_size[0],
+                y_offset_site, site.image_size[0],
                 experiment.vertical_site_displacement
             )
             col_indices = self._calc_tile_indices(
-                x_offset_site, f.site.image_size[1],
+                x_offset_site, site.image_size[1],
                 experiment.horizontal_site_displacement
             )
             for row, col in itertools.product(row_indices, col_indices):
-                mapping[(row, col)].append(f)
+                mapping[(row, col)].append(fid)
         return mapping
 
     def calc_coordinates_of_next_higher_level(self, level, row, column):
