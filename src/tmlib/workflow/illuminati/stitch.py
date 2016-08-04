@@ -231,7 +231,8 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     spread = np.max(coordinates, axis=0) - np.min(coordinates, axis=0)
     options = np.array(['vertical', 'horizontal'])
     # Guess the stitch dimensions.
-    dims = guess_stitch_dimensions(n, options[spread == np.max(spread)])
+    index = np.where(spread == np.max(spread))[0][0]
+    dims = guess_stitch_dimensions(n, options[index])
     positions = np.array([
         p for p in itertools.product(range(dims[0]), range(dims[1]))
     ])
