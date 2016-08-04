@@ -111,6 +111,7 @@ class NiselementsMetadataReader(MetadataReader):
             if 'Point Name' in line:
                 strip = True
 
+        # Get number of planes and use this info somehow to build a reference
         metadata.image_count = count
         for i in xrange(count):
             img = metadata.image(i)

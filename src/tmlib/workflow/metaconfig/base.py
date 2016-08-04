@@ -593,7 +593,7 @@ class MetadataHandler(object):
 
         return self.metadata
 
-    def determine_grid_coordinates_from_layout(self, stitch_layout, 
+    def determine_grid_coordinates_from_layout(self, stitch_layout,
             stitch_major_axis, stitch_dimensions=None):
         '''Determines the coordinates of each image acquisition site within the
         continuous acquisition grid (slide or well in a plate)
