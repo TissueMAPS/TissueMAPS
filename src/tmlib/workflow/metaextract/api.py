@@ -1,7 +1,8 @@
 import os
 import re
 import logging
-import subprocess
+# import subprocess
+from tmlib.readers import JavaBridge, BFOmeXmlReader
 
 import tmlib.models as tm
 from tmlib.workflow import register_api
@@ -126,36 +127,39 @@ class MetadataExtractor(ClusterRoutines):
         subprocess.CalledProcessError
             when extraction failed
         '''
-        with tm.utils.Session() as session:
-            for fid in batch['microscope_image_file_ids']:
-                img_file = session.query(tm.MicroscopeImageFile).\
-                    get(fid)
-                logger.info('process image "%s"' % img_file.name)
+        with JavaBridge() as java:
+            with tm.utils.Session() as session:
+                for fid in batch['microscope_image_file_ids']:
+                    img_file = session.query(tm.MicroscopeImageFile).\
+                        get(fid)
+                    logger.info('process image "%s"' % img_file.name)
+                    with BFOmeXmlReader(img_file.location) as reader:
+                        omexml = reader.read()
+                    img_file.omexml = unicode(omexml)
                 # The "showinf" command line tool writes the extracted OMEXML
                 # to standard output.
-                command = [
-                    'showinf', '-omexml-only', '-nopix', '-novalid',
-                    '-no-upgrade', '-no-sas', img_file.location
-                ]
-                p = subprocess.Popen(
-                    command,
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                )
-                stdout, stderr = p.communicate()
-                if p.returncode != 0 or not stdout:
-                    raise MetadataError(
-                        'Extraction of OMEXML failed! Error message:\n%s'
-                        % stderr
-                    )
-                try:
-                    omexml = re.search(
-                        r'<(\w+).*</\1>', stdout, flags=re.DOTALL
-                    ).group()
-                except:
-                    raise RegexError(
-                        'OMEXML metadata could not be extracted.'
-                    )
-                img_file.omexml = unicode(omexml)
+                # command = [
+                #     'showinf', '-omexml-only', '-nopix', '-novalid',
+                #     '-no-upgrade', '-no-sas', img_file.location
+                # ]
+                # p = subprocess.Popen(
+                #     command,
+                #     stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                # )
+                # stdout, stderr = p.communicate()
+                # if p.returncode != 0 or not stdout:
+                #     raise MetadataError(
+                #         'Extraction of OMEXML failed! Error message:\n%s'
+                #         % stderr
+                #     )
+                # try:
+                #     omexml = re.search(
+                #         r'<(\w+).*</\1>', stdout, flags=re.DOTALL
+                #     ).group()
+                # except:
+                #     raise RegexError(
+                #         'OMEXML metadata could not be extracted.'
+                #     )
 
     @notimplemented
     def collect_job_output(self, batch):

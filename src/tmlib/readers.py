@@ -556,12 +556,15 @@ class BFImageReader(object):
 
     @same_docstring_as(Reader.__init__)
     def __init__(self, filename):
+        bioformats.init_logger()
         self.filename = filename
 
     def __enter__(self):
+        self._reader = bioformats.ImageReader(self.filename, perform_init=True)
         return self
 
     def __exit__(self, except_type, except_value, except_trace):
+        self._reader.close()
         if except_type is javabridge.JavaException:
             raise NotSupportedError('File format is not supported.')
         if except_value:
@@ -590,7 +593,7 @@ class BFImageReader(object):
             pixel array
         '''
         logger.debug('read image pixels from file: %s', self.filename)
-        return bioformats.load_image(self.filename, rescale=False)
+        return self._reader.read(rescale=False)
 
     def read_subset(self, series=None, plane=None):
         '''Reads a subset of images from a file.
@@ -618,9 +621,32 @@ class BFImageReader(object):
             when the file format is not supported by the reader
         '''
         logger.debug('read data from file: %s' % self.filename)
-        return bioformats.load_image(
-            self.filename, rescale=False, series=series, index=plane
-        )
+        # TODO: z and t
+        return self._reader.read(series=series, index=plane, rescale=False)
+
+
+class BFOmeXmlReader(object):
+
+    @same_docstring_as(Reader.__init__)
+    def __init__(self, filename):
+        bioformats.init_logger()
+        self.filename = filename
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, except_type, except_value, except_trace):
+        if except_type is javabridge.JavaException:
+            raise NotSupportedError('File format is not supported.')
+        if except_value:
+            sys.stdout.write(
+                'The following error occurred:\n%s' % str(except_value)
+            )
+            for tb in traceback.format_tb(except_trace):
+                sys.stdout.write(tb)
+
+    def read(self):
+        return bioformats.get_omexml_metadata(self.filename)
 
 
 class ImageReader(Reader):

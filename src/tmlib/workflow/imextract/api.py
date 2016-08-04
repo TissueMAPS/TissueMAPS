@@ -134,6 +134,8 @@ class ImageExtractor(ClusterRoutines):
                 subset = True
             else:
                 logger.debug('use standard image reader')
+                # Don't take the risk. Python-Bioformats may overcomplicate
+                # things for this simple case.
                 Reader = ImageReader
                 subset = False
             with JavaBridge(active=subset):
