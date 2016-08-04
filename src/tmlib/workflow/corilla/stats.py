@@ -67,6 +67,9 @@ class OnlineStatistics(object):
             array = pixels.array.astype(float)
             if log_transform:
                 array = np.log10(array)
+            if np.any(np.isinf(array)):
+                logger.warn('skip image because it contains infinite values')
+                continue
             self.n += 1
             delta_mean = array - self._mean
             self._mean = self._mean + delta_mean / self.n
