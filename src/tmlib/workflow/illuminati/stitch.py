@@ -245,7 +245,9 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     row_centroids, _ = kmeans(coordinates[:, 0], dims[0])
     col_centroids, _ = kmeans(coordinates[:, 1], dims[1])
     centroids = np.array([
-        c for c in itertools.product(row_centroids, col_centroids)
+        c for c in itertools.product(
+            sorted(row_centroids), sorted(col_centroids)
+        )
     ])
 
     grid_positions = list()
