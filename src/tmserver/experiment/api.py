@@ -76,7 +76,44 @@ def get_image_tile(channel_layer):
     #     return send_file(f, mimetype='image/jpeg')
 
 
-@api.route('/cycles/<cycle_id>/image_files', methods=['GET'])
+@api.route('/cycles/id', methods=['GET'])
+@jwt_required()
+def get_cycle_id():
+    experiment_name = request.args.get('experiment_name')
+    plate_name = request.args.get('plate_name')
+    cycle_index = request.args.get('cycle_index')
+    cycle = db.session.query(Cycle).\
+        join(Plate).\
+        join(Experiment).\
+        filter(
+            Experiment.name == experiment_name,
+            Plate.name == plate_name,
+            Cycle.index == cycle_index,
+        ).\
+        one()
+    return jsonify({
+        'id': encode_pk(cycle.id)
+    })
+
+
+@api.route('/channels/id', methods=['GET'])
+@jwt_required()
+def get_channel_id():
+    experiment_name = request.args.get('experiment_name')
+    channel_name = request.args.get('channel_name')
+    channel = db.session.query(Channel).\
+        join(Experiment).\
+        filter(
+            Experiment.name == experiment_name,
+            Channel.name == channel_name,
+        ).\
+        one()
+    return jsonify({
+        'id': encode_pk(channel.id)
+    })
+
+
+@api.route('/cycles/<cycle_id>/image-files', methods=['GET'])
 @jwt_required()
 @extract_model_from_path(Cycle, check_ownership=True)
 def get_channel_image(cycle):
@@ -223,6 +260,27 @@ def get_experiment(experiment):
     """
     return jsonify({
         'data': experiment
+    })
+
+
+@api.route('/experiments/id', methods=['GET'])
+@jwt_required()
+def get_experiment_id():
+    """Gets the ID of an experiment given its name.
+
+    Response
+    --------
+    {
+        "data": an experiment ID serialized to json
+    }
+
+    """
+    experiment_name = request.args.get('experiment_name')
+    experiment = db.session.query(Experiment).\
+        filter_by(user_id=current_identity.id, name=experiment_name).\
+        one()
+    return jsonify({
+        'id': encode_pk(experiment.id)
     })
 
 
@@ -440,7 +498,6 @@ def get_plates():
 def delete_plate(plate):
     db.session.delete(plate)
     db.session.commit()
-
     return jsonify(message='Deletion ok')
 
 
@@ -469,18 +526,32 @@ def create_plate(experiment):
     data = json.loads(request.data)
     name = data.get('name')
     desc = data.get('description', '')
-
     if not name:
         raise MissingPOSTParameterError('name')
-
     pl = Plate(
         name=name, description=desc,
         experiment_id=experiment.id
     )
     db.session.add(pl)
     db.session.commit()
-
     return jsonify(data=pl)
+
+
+@api.route('/plates/id', methods=['GET'])
+@jwt_required()
+def get_plate_id():
+    experiment_name = request.args.get('experiment_name')
+    plate_name = request.args.get('plate_name')
+    plate = db.session.query(Plate).\
+        join(Experiment).\
+        filter(
+            Experiment.name == experiment_name,
+            Plate.name == plate_name,
+        ).\
+        one()
+    return jsonify({
+        'id': encode_pk(plate.id)
+    })
 
 
 @api.route('/acquisitions', methods=['POST'])
@@ -542,7 +613,7 @@ def get_acquisition_id():
     experiment_name = request.args.get('experiment_name')
     plate_name = request.args.get('plate_name')
     acquisition_name = request.args.get('acquisition_name')
-    acq = db.session.query(Acquisition).\
+    acquisition = db.session.query(Acquisition).\
         join(Plate).\
         join(Experiment).\
         filter(
@@ -552,7 +623,9 @@ def get_acquisition_id():
         ).\
         one()
 
-    return jsonify(data=encode_pk(acq.id))
+    return jsonify({
+        'id': encode_pk(acquisition.id)
+    })
 
 
 @api.route('/acquisitions/<acquisition_id>/image_files', methods=['GET'])

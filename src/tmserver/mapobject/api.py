@@ -18,6 +18,7 @@ from tmlib.models import (
 from tmserver.api import api
 from tmserver.extensions import db
 from tmserver.util import extract_model_from_path
+from tmserver.error import MalformedRequestError
 
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ def get_mapobjects_tile(experiment, object_name):
     tpoint = request.args.get('tpoint')
     # Check arguments for validity and convert to integers
     if any([var is None for var in [x, y, z, zplane, tpoint]]):
-        return MALFORMED_REQUEST_RESPONSE
+        raise MalformedRequestError('Missing request arguments.')
     else:
         x, y, z, zplane, tpoint = map(int, [x, y, z, zplane, tpoint])
 
@@ -167,7 +168,7 @@ def get_feature_values(experiment, object_name):
             'Features and metadata must have same number of "%s" objects'
             % object_name
         )
-    if features.index != metadata.index:
+    if any(features.index.values != metadata.index.values):
         raise ValueError(
             'Features and metadata must have the same index.'
         )
