@@ -398,7 +398,6 @@ class MetadataHandler(object):
             if (hasattr(pixels, 'Channel') and
                     md.loc[idx, 'channel_name'] is None):
                 if hasattr(pixels.Channel(0), 'Name'):
-                    import ipdb; ipdb.set_trace()
                     md.at[idx, 'channel_name'] = pixels.Channel(0).Name
 
             if (hasattr(pixels, 'Plane') and
@@ -543,12 +542,12 @@ class MetadataHandler(object):
         return self.metadata
 
     @staticmethod
-    def _calculate_coordinates(positions):
-        return stitch.calc_grid_coordinates_from_positions(positions)
+    def _calculate_coordinates(positions, n):
+        return stitch.calc_grid_coordinates_from_positions(positions, n)
 
     def determine_grid_coordinates_from_stage_positions(self):
         '''Determines the coordinates of each image acquisition site within the
-        overall continuous acquisition grid (slide or well in a plate)
+        continuous acquisition grid (slide or well in a plate)
         based on the absolute microscope stage positions.
 
         Returns
@@ -577,37 +576,38 @@ class MetadataHandler(object):
             'relative acquisition grid coordinates'
         )
 
+        planes_per_well = md.groupby(['well_name'])
+        n = planes_per_well.count()
+        n_tpoints = len(np.unique(md.tpoint))
+        n_channels = len(np.unique(md.channel_name))
+        n_zplanes = len(np.unique(md.zplane))
         for well_name in np.unique(md.well_name):
-
-            ix = np.where(md.well_name == well_name)[0]
+            ix = planes_per_well.groups[well_name]
             positions = zip(
                 md.loc[ix, 'stage_position_y'], md.loc[ix, 'stage_position_x']
             )
-
-            coordinates = self._calculate_coordinates(positions)
-
-            md.loc[ix, 'well_position_y'] = [site[0] for site in coordinates]
-            md.loc[ix, 'well_position_x'] = [site[1] for site in coordinates]
+            n = len(positions) / (n_tpoints * n_channels * n_zplanes)
+            coordinates = self._calculate_coordinates(positions, n)
+            md.loc[ix, 'well_position_y'] = [c[0] for c in coordinates]
+            md.loc[ix, 'well_position_x'] = [c[1] for c in coordinates]
 
         return self.metadata
 
-    def determine_grid_coordinates_from_layout(self,
-                                               stitch_layout,
-                                               stitch_major_axis,
-                                               stitch_dimensions=None):
+    def determine_grid_coordinates_from_layout(self, stitch_layout, 
+            stitch_major_axis, stitch_dimensions=None):
         '''Determines the coordinates of each image acquisition site within the
-        overall continuous acquisition grid (slide or well in a plate)
+        continuous acquisition grid (slide or well in a plate)
         based on a provided layout.
 
         Parameters
         ----------
         stitch_layout: str
             layout of the acquisition grid
-            (``"horizontal"``, ``"zigzag_horizontal"``, ``"vertical"``,
+            (options: ``"horizontal"``, ``"zigzag_horizontal"``, ``"vertical"``,
              or ``"zigzag_vertical"``)
         stitch_major_axis: str
             longer axis of the acquisition grid
-            (``"vertical"`` or ``"horizontal"``)
+            (options: ``"vertical"`` or ``"horizontal"``)
         stitch_dimensions: Tuple[int], optional
             dimensions of the acquisition grid, i.e. number of images
             along each axis

@@ -1,4 +1,8 @@
 import numpy as np
+from scipy.cluster.vq import kmeans
+import itertools
+
+from tmlib.errors import MetadataError
 
 
 def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
@@ -193,17 +197,18 @@ def calc_grid_coordinates_from_layout(stitch_dims, stitch_layout):
     return zip(rows, cols)
 
 
-def calc_grid_coordinates_from_positions(stage_positions,
+def calc_grid_coordinates_from_positions(stage_positions, n,
                                          reverse_rows=False,
                                          reverse_columns=False):
-    '''
-    Calculate the relative position of each image within the acquisition grid.
-    The coordinates are one-based to be consistent with the OME data model.
+    '''Calculates the relative position of each image within the acquisition
+    grid. The coordinates are one-based to be consistent with the OME data model.
 
     Parameters
     ----------
     stage_positions: List[Tuple[float]]
         absolute microscope stage positions
+    n: int
+        number of expected grid coordinates
     reverse_rows: bool, optional
         sort positions along row dimension in descending order
     reverse_columns: bool, optional
@@ -219,40 +224,44 @@ def calc_grid_coordinates_from_positions(stage_positions,
     -------
     List[Tuple[int]]
         relative positions (zero-based coordinates) within the grid
-
-    TODO
-    ----
-    How to deal with reversing of axes in an automated way?
     '''
-    # The stage positions may not be identical between different
-    # channels acquired at the same site, so we round them.
-    rounded_positions = [(int(p[0]/10), int(p[1]/10)) for p in stage_positions]
+    # Calculate the spread along each dimension to determine the major stitch
+    # axis.
+    spread = np.var(np.array(stage_positions), axis=0)
+    options = np.array(['vertical', 'horizontal'])
+    # Guess the stitch dimensions.
+    dims = guess_stitch_dimensions(n, options[spread == np.max(spread)])
+    positions = np.array([
+        p for p in itertools.product(range(dims[0]), range(dims[1]))
+    ])
 
-    # Determine unique stage positions.
-    unique_positions = list(set(rounded_positions))
-    unique_indices = [unique_positions.index(p) for p in rounded_positions]
-
-    # Calculate the relative coordinates for each unique stage position.
-    positions = np.array(unique_positions)
-    row_positions = np.unique(positions[:, 0])
-    col_positions = np.unique(positions[:, 1])
-
+    coordinates = np.array(stage_positions)
     if reverse_rows:
-        row_positions = row_positions[::-1]
+        coordinates[:, 0] = coordinates[:, 0] * -1
     if reverse_columns:
-        col_positions = col_positions[::-1]
+        coordinates[:, 1] = coordinates[:, 1] * -1
 
-    unique_coordinates = [tuple() for x in xrange(len(unique_positions))]
-    for i, r in enumerate(row_positions):
-        for j, c in enumerate(col_positions):
-            pos = np.array((r, c))
-            pos_index = np.where(np.all(positions == pos, axis=1))
-            for ix in pos_index:
-                if len(ix) == 0:
-                    continue
-                unique_coordinates[ix[0]] = (i, j)
+    # Caluculate the centroids for each grid position.
+    row_centroids, _ = kmeans(coordinates[:, 0], dims[0])
+    col_centroids, _ = kmeans(coordinates[:, 1], dims[1])
+    centroids = np.array([
+        c for c in itertools.product(row_centroids, col_centroids)
+    ])
 
-    # Map the unique coordinates back.
-    coordinates = [unique_coordinates[i] for i in unique_indices]
+    grid_positions = list()
+    for c in coordinates:
+        # Find the stage position that's closest to the centroid.
+        distance = centroids - c
+        closest = np.abs(np.sum(distance, axis=1))
+        index = np.where(closest == np.min(closest))[0][0]
+        pos = tuple(positions[index, :])
+        grid_positions.append(pos)
 
-    return coordinates
+    if len(set(grid_positions)) != n:
+        raise MetadataError(
+            'Either the expected number of grid positions is incorrect or '
+            'wrong stage positions were provided.'
+        )
+        # Or there is a bug in this code ;)
+
+    return grid_positions

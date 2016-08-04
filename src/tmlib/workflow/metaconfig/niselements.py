@@ -13,6 +13,7 @@ import numpy as np
 from collections import defaultdict
 
 from tmlib import utils
+from tmlib.workflow.illuminati import stitch
 from tmlib.workflow.metaconfig.base import MetadataReader
 from tmlib.workflow.metaconfig.base import MetadataHandler
 from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
@@ -46,6 +47,13 @@ class NiselementsMetadataHandler(MetadataHandler):
         '''
         super(NiselementsMetadataHandler, self).__init__(
             omexml_images, omexml_metadata
+        )
+
+    @staticmethod
+    def _calculate_coordinates(positions, n):
+        # x axis is inverted
+        return stitch.calc_grid_coordinates_from_positions(
+            positions, n, reverse_columns=True
         )
 
 

@@ -49,6 +49,10 @@ class IncellMetadataHandler(MetadataHandler):
             omexml_images, omexml_metadata
         )
 
+    # @staticmethod
+    # def _calculate_coordinates(positions, n):
+    #     # TODO: coordinates are not absolute, but relative to well center.
+    #     # This requires a different approach.
 
 class IncellMetadataReader(MetadataReader):
 
