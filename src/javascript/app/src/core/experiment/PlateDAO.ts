@@ -12,8 +12,8 @@ class PlateDAO extends HTTPDataAccessObject<Plate> {
      * @classdesc An DataAccessObject for querying and creating objects
      * of type Plate.
      */
-    constructor() {
-        super('/api/plates')
+    constructor(experimentId: string) {
+        super('/api/experiments/' + experimentId + '/plates')
     }
 
     fromJSON(data: SerializedPlate) {
@@ -21,8 +21,9 @@ class PlateDAO extends HTTPDataAccessObject<Plate> {
             id: data.id,
             name: data.name,
             description: data.description,
+            experiment_id: data.experiment_id,
             acquisitions: data.acquisitions.map((acq) => {
-                return (new AcquisitionDAO()).fromJSON(acq);
+                return (new AcquisitionDAO(data.experiment_id)).fromJSON(acq);
             }),
             status: data.status
         });

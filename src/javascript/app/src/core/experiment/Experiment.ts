@@ -53,6 +53,7 @@ class Experiment implements Model {
                 id: ch.id,
                 layers: ch.layers,
                 name: ch.name,
+                experimentId: ch.experiment_id,
                 bitDepth: ch.bit_depth,
                 visible: isFirstChannel
             });

@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/pelkmanslab/TissueMAPS"
+    "url": "https://github.com/tissuemaps/tmclient"
   },
   "author": "Robin Hafen <robin.hafen@gmail.com>",
   "license": "",
   "bugs": {
-    "url": "https://github.com/pelkmanslab/TissueMAPS/issues"
+    "url": "https://github.com/tissuemaps/tmclient/issues"
   },
-  "homepage": "https://github.com/pelkmanslab/TissueMAPS",
+  "homepage": "https://github.com/tissuemaps/tmclient",
   "devDependencies": {
     "bower": "^1.4.1",
     "del": "^2.2.0",

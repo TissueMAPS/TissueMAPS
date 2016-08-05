@@ -50,17 +50,16 @@ abstract class HTTPDataAccessObject<T extends Model> {
      */
     getAll(params?: any): ng.IPromise<T[] | APIError> {
         var queryUrl;
-        if (params !== undefined) {
+        if (params === undefined || _.isEmpty(params)) {
+            queryUrl = this.url;
+        } else {
             var queryString = _.chain(params).pairs().map((arr) => {
                 return arr[0] + '=' + arr[1];
             }).reduce((a, b) => {
                 return a + '&' + b;
             }).value();
             queryUrl = this.url + '?' + queryString;
-        } else {
-            queryUrl = this.url;
         }
-
         return this._$http.get(queryUrl)
         .then((resp: any) => {
             var serializedModels = (resp.data.data);

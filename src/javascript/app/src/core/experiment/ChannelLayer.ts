@@ -6,6 +6,7 @@ interface SerializedChannelLayer {
     max_zoom: number;
     max_intensity: number;
     min_intensity: number;
+    experiment_id: string;
     image_size: {
         width: number;
         height: number;
@@ -19,6 +20,7 @@ interface ChannelLayerArgs {
     maxZoom: number;
     maxIntensity: number;
     minIntensity: number;
+    experimentId: string;
     imageSize: Size;
     visible?: boolean;
 }
@@ -29,13 +31,15 @@ class ChannelLayer extends ImageTileLayer {
     zplane: number;
     maxIntensity: number;
     minIntensity: number;
+    experimentId: string;
     maxZoom: number;
 
     constructor(args: ChannelLayerArgs) {
-        
+
         var tileLayerArgs = {
             imageSize: args.imageSize,
-            url: '/api/channel_layers/' + args.id + '',
+            url: '/api/experiments/' + args.experimentId +
+                '/channel_layers/' + args.id + '',
             additiveBlend: true,
             visible: args.visible
         };
@@ -46,6 +50,7 @@ class ChannelLayer extends ImageTileLayer {
         this.zplane = args.zplane;
         this.maxIntensity = args.maxIntensity;
         this.minIntensity = args.minIntensity;
+        this.experimentId = args.experimentId;
         this.maxZoom = args.maxZoom;
     }
 }

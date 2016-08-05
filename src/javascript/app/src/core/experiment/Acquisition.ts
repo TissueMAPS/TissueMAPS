@@ -15,6 +15,7 @@ interface AcquisitionArgs {
     name: string;
     description: string;
     status: string;
+    experiment_id: string;
 }
 
 class Acquisition {
@@ -22,6 +23,7 @@ class Acquisition {
     name: string;
     description: string;
     status: string;
+    experimentId: string;
     files: MicroscopeFile[] = [];
 
     private _uploader: any;
@@ -35,6 +37,8 @@ class Acquisition {
      * @param {AcquisitionArgs} args - Constructor arguments.
      */
     constructor(args: AcquisitionArgs) {
+        this.experimentId = args.experiment_id;
+        delete args.experiment_id;
         _.extend(this, args);
 
         this._uploader = $injector.get<any>('Upload');
@@ -47,9 +51,13 @@ class Acquisition {
         this.clearFiles();
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
+        var imageUrl = '/api/experiments/' + this.experimentId +
+            '/acquisitions/' + this.id + '/image-files';
+        var metaDataUrl = '/api/experiments/' + this.experimentId +
+            '/acquisitions/' + this.id + '/metadata-files';
         return $q.all({
-            imageFiles: $http.get('/api/acquisitions/' + this.id + '/image_files'),
-            metaDataFiles: $http.get('/api/acquisitions/' + this.id + '/metadata_files')
+            imageFiles: $http.get(imageUrl),
+            metaDataFiles: $http.get(metaDataUrl)
         }).then((responses: any) => {
             var imageFiles = responses.imageFiles.data.data.filter((f) => {
                 return f.status == 'COMPLETE';
@@ -67,49 +75,51 @@ class Acquisition {
      * Upload a mutiple files. This method has to be called after the files
      * have been registered, i.e. created server-side.
      */
-    private _uploadRegisteredFiles(newFiles) {
-        var url = '/api/acquisitions/' + this.id + '/upload/upload-file';
+    private _uploadRegisteredFiles(newFiles): any {
+        var url = '/api/experiments/' + this.experimentId +
+            '/acquisitions/' + this.id + '/upload/upload-file';
         var $q = $injector.get<ng.IQService>('$q');
         var $window = $injector.get<ng.IWindowService>('$window');
+        var $timeout = $injector.get<any>('$timeout');
         this.status = 'UPLOADING';
         var namesUploadedFiles = this.files.map(function(f) {
             return f.name;
         });
-        var filePromises = newFiles.map((newFile) => {
-            var fileDef = $q.defer();
-            if (namesUploadedFiles.indexOf(newFile.name) != -1) {
+        angular.forEach(newFiles, (file) => {
+            if (namesUploadedFiles.indexOf(file.name) != -1) {
                 // Skip files that were already uploaded.
-                newFile.progress = 100;
-                newFile.status = 'COMPLETE';
-                fileDef.resolve(newFile);
+                file.progress = 100;
+                file.status = 'COMPLETE';
             } else {
-                newFile.upload = this._uploader.upload({
+                this._uploader.upload({
                     url: url,
                     // resumeSizeUrl: url + '/status'
-                    header: {'Authorization': 'JWT ' + $window.sessionStorage['token']},
-                    file: newFile,
-                }).progress((evt) => {
-                    var progressPercentage = Math.round(100.0 * evt.loaded / evt.total);
-                    evt.config.file.progress = progressPercentage;
-                    evt.config.file.status = 'UPLOADING';
-                }).success((data, status, headers, config) => {
-                    // console.log('upload of file complete: ', config.file.name)
-                    config.file.progress = 100;
-                    config.file.status = 'COMPLETE';
-                    this.files.push(<MicroscopeFile>{
-                        name: config.file.name, status: 'COMPLETE'
+                    header: {
+                        'Authorization':
+                            'JWT ' + $window.sessionStorage['token']
+                    },
+                    file: file
+                })
+                .then((response) => {
+                    $timeout(function () {
+                        file.result = response.data;
                     });
-                    fileDef.resolve(config.file);
-                }).error((data, status, headers, config) => {
-                    console.log('upload of file failed: ', config.file.name)
-                    config.file.status = 'FAILED';
-                    this.status = 'FAILED';
-                    fileDef.resolve(config.file);
+                }, (response) => {
+                    if (response.status > 0)
+                        file.status = 'FAILED';
+                        console.log(response.status + ': ' + response.data)
+                }, (evt) => {
+                    file.progress = Math.round(100.0 * evt.loaded / evt.total);
+                    file.status = 'UPLOADING';
+                    if (file.progress == 100) {
+                        file.status = 'COMPLETE';
+                        this.files.push(<MicroscopeFile>{
+                            name: file.name, status: 'COMPLETE'
+                        });
+                    }
                 });
             }
-            return fileDef.promise;
         });
-        return filePromises;
     }
 
     /**
@@ -131,7 +141,8 @@ class Acquisition {
      */
     private _registerUpload(newFiles) {
         var fileNames = _(newFiles).pluck('name');
-        var url = '/api/acquisitions/' + this.id + '/upload/register';
+        var url = '/api/experiments/' + this.experimentId +
+            '/acquisitions/' + this.id + '/upload/register';
         this.status = 'WAITING';
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');

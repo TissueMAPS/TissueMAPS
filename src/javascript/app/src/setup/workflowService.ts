@@ -26,9 +26,8 @@ class WorkflowService {
     }
 
     getPlates(experiment: Experiment): ng.IPromise<any> {
-        return (new PlateDAO()).getAll({
-            experiment_id: experiment.id
-        }).then((plates) => {
+        return (new PlateDAO(experiment.id)).getAll()
+        .then((plates) => {
             // console.log(plates)
             this.plates = plates;
             return plates;
