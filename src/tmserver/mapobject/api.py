@@ -99,10 +99,10 @@ def get_mapobjects_tile(experiment, object_name):
     })
 
 
-@api.route('/experiments/<experiment_id>/mapobjects/<object_name>/segmentations', methods=['GET'])
+@api.route('/plates/<plate_id>/mapobjects/<object_name>/segmentations', methods=['GET'])
 @jwt_required()
-@extract_model_from_path(Experiment)
-def get_mapobjects_segmentation(experiment, object_name):
+@extract_model_from_path(Plate)
+def get_mapobjects_segmentation(plate, object_name):
     well_name = request.args.get('well_name')
     x = request.args.get('x')
     y = request.args.get('y')
@@ -111,12 +111,12 @@ def get_mapobjects_segmentation(experiment, object_name):
     site = db.session.query(Site).\
         join(Well).\
         filter(
-            Well.plate_id == cycle.id, Well.name == well_name,
+            Well.plate_id == plate.id, Well.name == well_name,
             Site.x == x, Site.y == y
         ).\
         one()
     mapobject_type = db.session.query(MapobjectType).\
-        filter_by(name=object_name, experiment_id=experiment.id).\
+        filter_by(name=object_name, experiment_id=plate.experimen_id).\
         one()
     segmentation = db.session.query(
             MapobjectSegmentation.label,
@@ -125,7 +125,7 @@ def get_mapobjects_segmentation(experiment, object_name):
         join(MapobjectType).\
         filter(
             MapobjectType.name == object_name,
-            MapobjectType.experiment_id == experiment.id,
+            MapobjectType.experiment_id == plate.experiment_id,
             MapobjectSegmentation.site_id == site.id,
             MapobjectSegmentation.zplane == zplane,
             MapobjectSegmentation.tpoint == tpoint
