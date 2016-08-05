@@ -9,6 +9,7 @@ from flask.ext.jwt import current_identity
 from flask.ext.jwt import jwt_required
 from flask import jsonify, request, send_file
 from sqlalchemy.sql import text
+from werkzeug import secure_filename
 
 from tmlib.models import (
     MapobjectSegmentation, MapobjectType, Mapobject,
@@ -139,17 +140,17 @@ def get_mapobjects_segmentation(experiment, object_name):
         y, x = skimage.draw.polygon(y, x)
         array[y, x] = seg.label
     f = StringIO()
-    buf = array.get_buffer()
-    f.write(buf.tostring)
+    f.write(cv2.imencode('.png', array)[1])
     f.seek(0)
-    filename = '%s_%s_%s_x%2d_y%2d_z%3d_t%d.png' % (
-        experiment.name, object_name, site.well.name, site.x, site.y,
-        zplane, tpoint
+    filename = '%s_%s_x%3d_y%3d_z%3d_t%3d_%s.png' % (
+        experiment.name, site.well.name, site.x, site.y, zplane, tpoint,
+        object_name
     )
     return send_file(
         f,
-        attachment_filename=filename,
-        mimetype='image/png'
+        attachment_filename=secure_filename(filename),
+        mimetype='image/png',
+        as_attachement=True
     )
 
 
@@ -172,7 +173,9 @@ def get_feature_values(experiment, object_name):
         raise ValueError(
             'Features and metadata must have the same index.'
         )
-    basename = '%s_%s_features' % (experiment.name, object_name)
+    basename = secure_filename(
+        '%s_%s_features' % (experiment.name, object_name)
+    )
     data_filename = '%s_data.csv' % basename
     metadata_filename = '%s_metadata.csv' % basename
     f = StringIO()

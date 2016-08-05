@@ -1,5 +1,6 @@
 import json
 import os
+import cv2
 from cStringIO import StringIO
 import logging
 
@@ -7,13 +8,14 @@ import numpy as np
 from flask import jsonify, send_file, current_app, request
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
+from werkzeug import secure_filename
 
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.models import (
     Experiment, ChannelLayer, Plate, Acquisition, Feature, PyramidTileFile,
-    Cycle, Well, Site, ChannelImageFile
+    Cycle, Well, Site, ChannelImageFile, Channel
 )
 from tmlib.image import PyramidTile
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
@@ -115,18 +117,18 @@ def get_channel_id():
 
 @api.route('/cycles/<cycle_id>/image-files', methods=['GET'])
 @jwt_required()
-@extract_model_from_path(Cycle, check_ownership=True)
+@extract_model_from_path(Cycle)
 def get_channel_image(cycle):
     channel_name = request.args.get('channel_name')
     well_name = request.args.get('well_name')
-    x = request.args.get('x')
-    y = request.args.get('y')
-    tpoint = request.args.get('tpoint')
-    zplane = request.args.get('zplane')
+    x = int(request.args.get('x'))
+    y = int(request.args.get('y'))
+    tpoint = int(request.args.get('tpoint'))
+    zplane = int(request.args.get('zplane'))
     site_id = db.session.query(Site.id).\
         join(Well).\
         filter(
-            Well.plate_id == cycle.id, Well.name == well_name,
+            Well.plate_id == cycle.plate_id, Well.name == well_name,
             Site.x == x, Site.y == y
         ).\
         one()[0]
@@ -141,10 +143,18 @@ def get_channel_image(cycle):
         one()
     img = image_file.get(zplane)
     f = StringIO()
-    buf = img.array.get_buffer()
-    f.write(buf.tostring)
+    f.write(cv2.imencode('.png', img.array)[1])
     f.seek(0)
-    return send_file(f, mimetype='image/png')
+    filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
+        cycle.plate.experiment.name, well_name, x, y, zplane, tpoint,
+        channel_name
+    )
+    return send_file(
+        f,
+        attachment_filename=secure_filename(filename),
+        mimetype='image/png',
+        as_attachment=True
+    )
 
 
 @api.route('/features', methods=['GET'])
