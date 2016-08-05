@@ -73,8 +73,7 @@ class SelectionLayer extends VectorLayer {
         var size = 42; // Compute via resolution
         // Avoid whitespaces in image name
         var colorRgbString = this.color.toRGBString().replace(/\s/g, '');
-        var imageSrc =
-            'resources/img/marker/marker-' + colorRgbString + '-' + size +'.png';
+        var imageSrc = 'resources/img/marker/marker-' + colorRgbString + '-' + size +'.png';
         var style = new ol.style.Style({
             image: new ol.style.Icon({
                 // the bottom of the marker should point to the mapObject's

@@ -9,6 +9,7 @@ interface SerializedLabelLayer {
     name: string;
     type: string;
     attributes: any;
+    experiment_id: string;
 }
 
 interface SerializedToolResult {
@@ -16,11 +17,12 @@ interface SerializedToolResult {
     name: string;
     layer: SerializedLabelLayer;
     plots: SerializedPlot[];
+    experiment_id: string;
 }
 
 class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
-    constructor() {
-        super('/api/toolresults')
+    constructor(experimentId: string) {
+        super('/api/experiments/' + experimentId + '/toolresults')
     }
 
     fromJSON(data: SerializedToolResult) {

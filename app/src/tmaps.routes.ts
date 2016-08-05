@@ -233,7 +233,8 @@ angular.module('tmaps.ui')
         resolve: {
             plate: ['$http', '$stateParams', ($http, $stateParams) => {
                 var plateId = $stateParams.plateid;
-                return (new PlateDAO()).get(plateId);
+                var experimentId = $stateParams.experimentid;
+                return (new PlateDAO(experimentId)).get(plateId);
             }]
         },
         breadcrumb: {
@@ -267,7 +268,8 @@ angular.module('tmaps.ui')
         resolve: {
             acquisition: ['$stateParams', function($stateParams) {
                 var acquisitionId = $stateParams.acquisitionid;
-                return (new AcquisitionDAO()).get(acquisitionId);
+                var experimentId = $stateParams.experimentid;
+                return (new AcquisitionDAO(experimentId)).get(acquisitionId);
             }]
         },
         breadcrumb: {
@@ -295,8 +297,8 @@ angular.module('tmaps.ui')
                         function(experiment, projectService, $stateParams) {
 
                         return projectService.getProject(
-                                    experiment.id,
-                                    $stateParams.projectName);
+                            experiment.id, $stateParams.projectName
+                        );
             }],
             channels: ['experiment', 'projectService', '$stateParams',
                         function(experiment, projectService, $stateParams) {

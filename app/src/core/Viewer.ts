@@ -172,7 +172,7 @@ class Viewer {
             var sessionUUID = data.session_uuid;
             var toolId = data.tool_id;
             console.log('ToolService: HANDLE REQUEST.');
-            var result = (new ToolResultDAO()).fromJSON(data.result);
+            var result = (new ToolResultDAO(this.experiment.id)).fromJSON(data.result);
             result.attachToViewer(this);
             session.isRunning = false;
             session.results.push(result);

@@ -11,10 +11,11 @@ interface LabelLayerArgs {
     tpoint: number;
     zplane: number;
     visible?: boolean;
+    experiment_id: string;
 }
 
 abstract class LabelLayer extends VectorTileLayer {
-    
+
     id: string;
     attributes: any;
 
@@ -77,7 +78,10 @@ abstract class LabelLayer extends VectorTileLayer {
                 throw new Error('Unknown geometry type for feature');
             }
         };
-        var url = '/api/labellayers/' + args.id + '/tiles?x={x}&y={y}&z={z}' + '&zplane=' + args.zplane + '&tpoint=' + args.tpoint;
+        var url = '/api/experiments/' + args.experiment_id +
+            '/labellayers/' + args.id +
+            '/tiles?x={x}&y={y}&z={z}' + '&zplane=' + args.zplane +
+            '&tpoint=' + args.tpoint;
 
         var app = $injector.get<Application>('application');
         var size = app.activeViewer.viewport.mapSize;

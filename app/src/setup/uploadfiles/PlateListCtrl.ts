@@ -15,7 +15,7 @@ class PlateListCtrl {
         .then((deleteForReal) => {
             if (deleteForReal) {
                 // console.log('delete plate HAAAARD')
-                (new PlateDAO()).delete(plate.id)
+                (new PlateDAO(this.experiment.id)).delete(plate.id)
                 .then((resp) => {
                     this._$state.go('plate', {}, {
                         reload: 'setup'
