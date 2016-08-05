@@ -38,8 +38,7 @@ def is_image_file(filename):
 
 class Image(object):
 
-    '''
-    Abstract base class for an image. An image is defined as a 2D pixels or
+    '''Abstract base class for an image. An image is defined as a 2D pixels or
     3D voxels array.
 
     Note
@@ -403,6 +402,7 @@ class Image(object):
         Alignment may change the dimensions of the image when `crop` is
         ``True``.
         '''
+        # TODO: optional inplace operation
         if self.metadata is None:
             raise AttributeError(
                 'Image requires attribute "metadata" for alignment.'
@@ -421,6 +421,27 @@ class Image(object):
         new_object = self.__class__(arr, self.metadata)
         new_object.metadata.is_aligned = True
         return new_object
+
+    def encode(file_type='png'):
+        '''Encodes the image for a given `file_type`.
+
+        Parameters
+        ----------
+        file_type: str
+            encoding (options: ``{"png", "jpeg"}``, default: ``"png"``)
+
+        Returns
+        -------
+        str
+            encoded image
+        '''
+        supported_types = {'png', 'jpeg'}
+        if file_type not in supported_types:
+            raise ValueError(
+                'Supported file types are "%s"' % '", "'.join(supported_types)
+            )
+
+        return cv2.imencode('.%s' % file_type, self.array)[1]
 
 
 class ChannelImage(Image):
@@ -567,6 +588,7 @@ class ChannelImage(Image):
             when channel doesn't match between illumination statistics and
             image
         '''
+        # TODO: optional inplace operation
         if self.metadata is None:
             raise ValueError('Illumination correction requires image metadata.')
         if (stats.mean.metadata.channel != self.metadata.channel or
