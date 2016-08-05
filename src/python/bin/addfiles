@@ -6,7 +6,7 @@ import argparse
 from tmlib.logging_utils import configure_logging
 from tmlib.logging_utils import map_logging_verbosity
 
-from tmclient.upload import FileUploader
+from tmclient.upload import UploadService
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     args.source_directory = os.path.expandvars(args.source_directory)
     args.source_directory = os.path.expanduser(args.source_directory)
 
-    uploader = FileUploader(args.hostname)
+    uploader = UploadService(args.hostname)
     password = uploader.load_credentials(args.username)
     uploader.login(args.username, password)
 

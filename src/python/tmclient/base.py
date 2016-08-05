@@ -5,6 +5,8 @@ import urllib
 import requests
 from abc import ABCMeta
 
+from tmclient.errors import ServerError
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ class HttpClient(object):
         self.session = requests.Session()
         self.session.get(self.base_url)
 
-    def get_url(self, uri, params={}):
+    def build_url(self, uri, params={}):
         '''Gets the full URL based on the base URL and the provided
         API `uri`.
 
@@ -100,7 +102,7 @@ class HttpClient(object):
             password of the user
         '''
         logger.debug('login in as: "%s"' % username)
-        url = self.get_url('/auth')
+        url = self.build_url('/auth')
         payload = {'username': username, 'password': password}
         res = self.session.post(url, json=payload)
         self._handle_error(res)
