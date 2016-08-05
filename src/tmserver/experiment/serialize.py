@@ -20,7 +20,6 @@ def encode_experiment(obj, encoder):
         'plate_acquisition_mode': obj.plate_acquisition_mode,
         'channels': map(encoder.default, obj.channels),
         'mapobject_types': map(encoder.default, obj.mapobject_types),
-        'plates': [p.id for p in obj.plates],
         'workflow_description': obj.workflow_description.as_dict()
     }
 
@@ -31,7 +30,8 @@ def encode_channel(obj, encoder):
         'id': encode_pk(obj.id),
         'name': obj.name,
         'bit_depth': obj.bit_depth,
-        'layers': [encoder.default(ch) for ch in obj.layers]
+        'layers': [encoder.default(ch) for ch in obj.layers],
+        'experiment_id': encode_pk(obj.experiment_id)
     }
 
 
@@ -44,6 +44,7 @@ def encode_channel_layer(obj, encoder):
         'zplane': obj.zplane,
         'max_intensity': obj.max_intensity,
         'min_intensity': obj.min_intensity,
+        'experiment_id': encode_pk(obj.channel.experiment_id),
         'image_size': {
             'width': obj.width,
             'height': obj.height
@@ -59,7 +60,8 @@ def encode_plate(obj, encoder):
         'description': obj.description,
         'experiment_id': encode_pk(obj.experiment_id),
         'acquisitions': map(encoder.default, obj.acquisitions),
-        'status': obj.status
+        'status': obj.status,
+        'experiment_id': encode_pk(obj.experiment_id)
     }
 
 
@@ -70,7 +72,8 @@ def encode_acquisition(obj, encoder):
         'name': obj.name,
         'description': obj.description,
         'plate_id': encode_pk(obj.plate_id),
-        'status': obj.status
+        'status': obj.status,
+        'experiment_id': encode_pk(obj.plate.experiment_id)
     }
 
 
@@ -102,7 +105,8 @@ def encode_cycle(obj, encoder):
 def encode_feature(obj, encoder):
     return {
         'id': encode_pk(obj.id),
-        'name': obj.name
+        'name': obj.name,
+        'experiment_id': encode_pk(obj.experiment_id)
     }
 
 
@@ -111,5 +115,6 @@ def encode_mapobject_type(obj, encoder):
     return {
         'id': encode_pk(obj.id),
         'name': obj.name,
-        'features': map(encoder.default, obj.features)
+        'features': map(encoder.default, obj.features),
+        'experiment_id': encode_pk(obj.experiment_id)
     }

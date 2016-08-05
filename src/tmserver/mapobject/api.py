@@ -15,37 +15,30 @@ from flask import jsonify, request, send_file
 from sqlalchemy.sql import text
 from werkzeug import secure_filename
 
-from tmlib.models import (
-    MapobjectSegmentation, MapobjectType, Mapobject,
-    Experiment, Plate, Well, Site
-)
+import tmlib.models as tm
 
 from tmserver.api import api
 from tmserver.extensions import db
-from tmserver.util import extract_model_from_path
-from tmserver.error import MalformedRequestError
+from tmserver.util import extract_model_from_path, assert_request_params
+from tmserver.error import MalformedRequestError, ResourceNotFoundError
 
 
 logger = logging.getLogger(__name__)
 
 
 @api.route('/experiments/<experiment_id>/mapobjects/<object_name>/tile', methods=['GET'])
-@extract_model_from_path(Experiment)
+@assert_request_params('x', 'y', 'z', 'zplane', 'tpoint')
+@extract_model_from_path(tm.Experiment)
 def get_mapobjects_tile(experiment, object_name):
 
     # The coordinates of the requested tile
-    x = request.args.get('x')
-    y = request.args.get('y')
+    x = request.args.get('x', type=int)
+    y = request.args.get('y', type=int)
     # "z" is the pyramid zoom level and "zlevel" the z-resolution of the
     # acquired image
-    z = request.args.get('z')
-    zplane = request.args.get('zplane')
-    tpoint = request.args.get('tpoint')
-    # Check arguments for validity and convert to integers
-    if any([var is None for var in [x, y, z, zplane, tpoint]]):
-        raise MalformedRequestError('Missing request arguments.')
-    else:
-        x, y, z, zplane, tpoint = map(int, [x, y, z, zplane, tpoint])
+    z = request.args.get('z', type=int)
+    zplane = request.args.get('zplane', type=int)
+    tpoint = request.args.get('tpoint', type=int)
 
     logger.debug(
         'get mapobject tile: x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
@@ -54,7 +47,9 @@ def get_mapobjects_tile(experiment, object_name):
 
     if object_name == 'DEBUG_TILE':
         maxzoom = experiment.channels[0].layers[0].maxzoom_level_index
-        minx, miny, maxx, maxy = MapobjectSegmentation.bounding_box(x, y, z, maxzoom)
+        minx, miny, maxx, maxy = tm.MapobjectSegmentation.bounding_box(
+            x, y, z, maxzoom
+        )
         return jsonify({
             'type': 'Feature',
             'geometry': {
@@ -72,7 +67,7 @@ def get_mapobjects_tile(experiment, object_name):
             }
         })
 
-    mapobject_type = db.session.query(MapobjectType).\
+    mapobject_type = db.session.query(tm.MapobjectType).\
         filter_by(name=object_name, experiment_id=experiment.id).\
         one()
     query_res = mapobject_type.get_mapobject_outlines_within_tile(
@@ -80,7 +75,6 @@ def get_mapobjects_tile(experiment, object_name):
     )
 
     features = []
-
     if len(query_res) > 0:
         # Try to estimate how many points there are in total within
         # the polygons of this tile.
@@ -103,38 +97,46 @@ def get_mapobjects_tile(experiment, object_name):
     })
 
 
-@api.route('/plates/<plate_id>/mapobjects/<object_name>/segmentations', methods=['GET'])
+@api.route(
+    'experiments/<experiment_id>/mapobjects/<object_name>/segmentations',
+    methods=['GET']
+)
 @jwt_required()
-@extract_model_from_path(Plate)
-def get_mapobjects_segmentation(plate, object_name):
+@assert_request_params('plate_name', 'well_name', 'x', 'y', 'zplane', 'tpoint')
+@extract_model_from_path(tm.Experiment)
+def get_mapobjects_segmentation(experiment, object_name):
+    plate_name = request.args.get('plate_name')
     well_name = request.args.get('well_name')
     # TODO: raise MissingGETParameterError when arg missing
-    x = int(request.args.get('x'))
-    y = int(request.args.get('y'))
-    zplane = int(request.args.get('zplane'))
-    tpoint = int(request.args.get('tpoint'))
-    site = db.session.query(Site).\
-        join(Well).\
+    x = request.args.get('x', type=int)
+    y = request.args.get('y', type=int)
+    zplane = request.args.get('zplane', type=int)
+    tpoint = request.args.get('tpoint', type=int)
+    site = db.session.query(tm.Site).\
+        join(tm.Well).\
+        join(tm.Plate).\
         filter(
-            Well.plate_id == plate.id, Well.name == well_name,
-            Site.x == x, Site.y == y
+            tm.Plate.experiment_id == experiment.id,
+            tm.Plate.name == plate_name,
+            tm.Well.name == well_name,
+            tm.Site.x == x, Site.y == y
         ).\
         one()
-    mapobject_type = db.session.query(MapobjectType).\
-        filter_by(name=object_name, experiment_id=plate.experiment_id).\
+    mapobject_type = db.session.query(tm.MapobjectType).\
+        filter_by(name=object_name, experiment_id=experiment.id).\
         one()
     segmentations = db.session.query(
-            MapobjectSegmentation.label,
-            MapobjectSegmentation.geom_poly
+            tm.MapobjectSegmentation.label,
+            tm.MapobjectSegmentation.geom_poly
         ).\
-        join(Mapobject).\
-        join(MapobjectType).\
+        join(tm.Mapobject).\
+        join(tm.MapobjectType).\
         filter(
-            MapobjectType.name == object_name,
-            MapobjectType.experiment_id == plate.experiment_id,
-            MapobjectSegmentation.site_id == site.id,
-            MapobjectSegmentation.zplane == zplane,
-            MapobjectSegmentation.tpoint == tpoint
+            tm.MapobjectType.name == object_name,
+            tm.MapobjectType.experiment_id == experiment.id,
+            tm.MapobjectSegmentation.site_id == site.id,
+            tm.MapobjectSegmentation.zplane == zplane,
+            tm.MapobjectSegmentation.tpoint == tpoint
         ).\
         all()
     height = site.height - (
@@ -145,8 +147,7 @@ def get_mapobjects_segmentation(plate, object_name):
     )
     array = np.zeros((height, width), np.uint16)
     if len(segmentations) == 0:
-        # TODO: better error class and more detailed message
-        raise ValueError('No segmentations found.')
+        raise ResourceNotFoundError('No segmentations found.')
 
     for seg in segmentations:
         # TODO: move this into tmlib
@@ -164,7 +165,7 @@ def get_mapobjects_segmentation(plate, object_name):
     f.write(cv2.imencode('.png', array)[1])
     f.seek(0)
     filename = '%s_%s_x%3d_y%3d_z%3d_t%3d_%s.png' % (
-        plate.experiment.name, site.well.name, site.x, site.y, zplane, tpoint,
+        experiment.name, site.well.name, site.x, site.y, zplane, tpoint,
         object_name
     )
     return send_file(
@@ -175,12 +176,14 @@ def get_mapobjects_segmentation(plate, object_name):
     )
 
 
-@api.route('/experiments/<experiment_id>/mapobjects/<object_name>/features',
-        methods=['GET'])
+@api.route(
+    '/experiments/<experiment_id>/mapobjects/<object_name>/features',
+    methods=['GET']
+)
 @jwt_required()
-@extract_model_from_path(Experiment)
+@extract_model_from_path(tm.Experiment)
 def get_feature_values(experiment, object_name):
-    mapobject_type = db.session.query(MapobjectType).\
+    mapobject_type = db.session.query(tm.MapobjectType).\
         filter_by(experiment_id=experiment.id, name=object_name).\
         one()
     features = mapobject_type.get_feature_value_matrix()

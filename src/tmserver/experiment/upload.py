@@ -10,31 +10,27 @@ from flask.ext.jwt import jwt_required
 from werkzeug import secure_filename
 from sqlalchemy.orm.exc import MultipleResultsFound
 
-from tmlib.models import (
-    Acquisition,
-    MicroscopeImageFile,
-    MicroscopeMetadataFile
-)
+import tmlib.models as tm
 from tmlib.models.status import FileUploadStatus
 from tmlib.workflow.metaconfig import get_microscope_type_regex
 
 from tmserver.extensions import redis_store
 from tmserver.api import api
 from tmserver.extensions import db
-from tmserver.util import (
-    extract_model_from_path,
-    extract_model_from_body
-)
+from tmserver.util import extract_model_from_path, assert_request_params
 from tmserver.error import *
 
 logger = logging.getLogger(__name__)
 
 
-@api.route('/acquisitions/<acquisition_id>/upload/register',
-                 methods=['PUT'])
+@api.route(
+    '/experiments/<experiment_id>/acquisitions/<acquisition_id>/upload/register',
+    methods=['PUT']
+)
 @jwt_required()
-@extract_model_from_path(Acquisition, check_ownership=True)
-def register_upload(acquisition):
+@assert_request_params('files')
+@extract_model_from_path(tm.Experiment, tm.Acquisition, check_ownership=True)
+def register_upload(experiment, acquisition):
     """
     Tell the server that an upload for this acquisition is imminent.
     The client should wait for this response before uploading files.
@@ -52,9 +48,9 @@ def register_upload(acquisition):
     Response 200 or 500
 
     """
-    data = json.loads(request.data)
+    data = request.get_json()
 
-    if data is None or len(data.get('files', [])) == 0:
+    if len(data.get('files', [])) == 0:
         raise MalformedRequestError(
             'No files supplied. Cannot register upload.'
         )
@@ -67,7 +63,7 @@ def register_upload(acquisition):
         f for f in data['files'] if image_regex.search(f)
     ]
     img_files = [
-        MicroscopeImageFile(
+        tm.MicroscopeImageFile(
             name=secure_filename(f), acquisition_id=acquisition.id
         )
         for f in valid_image_filenames
@@ -78,7 +74,7 @@ def register_upload(acquisition):
         f for f in data['files'] if metadata_regex.search(f)
     ]
     meta_files = [
-        MicroscopeMetadataFile(
+        tm.MicroscopeMetadataFile(
             name=secure_filename(f), acquisition_id=acquisition.id
         )
         for f in valid_metadata_filenames
@@ -101,15 +97,17 @@ def register_upload(acquisition):
     })
 
 
-@api.route('/acquisitions/<acquisition_id>/upload/validity-check', methods=['POST'])
+@api.route(
+    '/experiments/<experiment_id>/acquisitions/<acquisition_id>/upload/validity-check',
+    methods=['POST']
+)
 @jwt_required()
-@extract_model_from_path(Acquisition, check_ownership=True)
-def file_validity_check(acquisition):
-    data = json.loads(request.data)
-    if not 'files' in data:
-        raise MalformedRequestError()
+@assert_request_params('files')
+@extract_model_from_path(tm.Experiment, tm.Acquisition, check_ownership=True)
+def file_validity_check(experiment, acquisition):
+    data = request.get_json()
     if not type(data['files']) is list:
-        raise MalformedRequestError()
+        raise MalformedRequestError('No image files provided.')
 
     microscope_type = acquisition.plate.experiment.microscope_type
     imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
@@ -127,10 +125,13 @@ def file_validity_check(acquisition):
     })
 
 
-@api.route('/acquisitions/<acquisition_id>/upload/upload-file', methods=['POST'])
+@api.route(
+    '/experiments/<experiment_id>/acquisitions/<acquisition_id>/upload/upload-file',
+    methods=['POST']
+)
 @jwt_required()
-@extract_model_from_path(Acquisition, check_ownership=True)
-def upload_file(acquisition):
+@extract_model_from_path(tm.Experiment, tm.Acquisition, check_ownership=True)
+def upload_file(experiment, acquisition):
     f = request.files.get('file')
     if acquisition.status == FileUploadStatus.COMPLETE:
         logger.info('acquisition already complete')
@@ -141,10 +142,10 @@ def upload_file(acquisition):
         raise MalformedRequestError('Missing file entry in this request.')
 
     filename = secure_filename(f.filename)
-    imgfile = db.session.query(MicroscopeImageFile).\
+    imgfile = db.session.query(tm.MicroscopeImageFile).\
         filter_by(name=filename, acquisition_id=acquisition.id).\
         one_or_none()
-    metafile = db.session.query(MicroscopeMetadataFile).\
+    metafile = db.session.query(tm.MicroscopeMetadataFile).\
         filter_by(name=filename, acquisition_id=acquisition.id).\
         one_or_none()
 

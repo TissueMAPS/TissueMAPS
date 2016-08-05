@@ -4,6 +4,8 @@ from flask import jsonify, request, current_app
 from flask_jwt import jwt_required
 from flask.ext.jwt import current_identity
 
+import tmlib.models as tm
+
 from tmserver.extensions import db
 from tmserver.tool import Tool, ToolSession, LabelLayer, LabelLayerLabel
 from tmserver.api import api
@@ -13,11 +15,7 @@ from tmserver.error import (
     ResourceNotFoundError,
     NotAuthorizedError
 )
-from tmserver.util import (
-    extract_model_from_path,
-    extract_model_from_body
-)
-from tmlib.models import MapobjectType
+from tmserver.util import extract_model_from_path, assert_request_params
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +41,14 @@ def get_tools():
     })
 
 
-@api.route('/tools/<tool_id>/request', methods=['POST'])
+@api.route(
+    '/experiments/<experiment_id>/tools/<tool_id>/request',
+    methods=['POST']
+)
 @jwt_required()
-def process_tool_request(tool_id):
+@assert_request_params('payload', 'session_uuid')
+@extract_model_from_path(tm.Experiment, Tool, check_ownership=True)
+def process_tool_request(experiment, tool):
     """
     Process a generic tool request sent by the client.
     POST payload should have the format:
@@ -70,27 +73,12 @@ def process_tool_request(tool_id):
 
     """
     logger.info('process tool request')
-    data = json.loads(request.data)
-
-    # Check if the request is valid.
-    if not 'payload' in data \
-            or not 'experiment_id' in data \
-            or not 'session_uuid' in data:
-        raise MalformedRequestError()
+    data = request.get_json()
 
     payload = data.get('payload', {})
     session_uuid = data.get('session_uuid')
-    experiment_id = data.get('experiment_id')
-
-    # Check if the user has permissions to access this experiment.
-    e = db.session.query(Experiment).get_with_hash(experiment_id)
-    if e is None:
-        raise ResourceNotFoundError('No such experiment')
-    if not e.belongs_to(current_identity):
-        raise NotAuthorizedError()
 
     # Instantiate the correct tool plugin class.
-    tool = db.session.query(Tool).get_with_hash(tool_id)
     tool_cls = tool.get_class()
     tool_inst = tool_cls()
 
@@ -100,14 +88,16 @@ def process_tool_request(tool_id):
         one_or_none()
     if session is None:
         session = ToolSession(
-            experiment_id=e.id, uuid=session_uuid, tool_id=tool.id
+            experiment_id=experiment.id, uuid=session_uuid, tool_id=tool.id
         )
         db.session.add(session)
         db.session.commit()
 
     # Execute the tool plugin.
     use_spark = current_app.config.get('USE_SPARK', False)
-    tool_result = tool_inst.process_request(payload, session, e, use_spark=use_spark)
+    tool_result = tool_inst.process_request(
+        payload, session, experiment, use_spark=use_spark
+    )
     # Commit all results that may have been added to the db
     db.session.commit()
 
@@ -120,31 +110,26 @@ def process_tool_request(tool_id):
     return jsonify(response)
 
 
-@api.route('/labellayers/<label_layer_id>/tiles', methods=['GET'])
-@extract_model_from_path(LabelLayer)
-def get_result_labels(label_layer):
+@api.route(
+    '/experiments/<experiment_id>/labellayers/<label_layer_id>/tiles',
+    methods=['GET']
+)
+@assert_request_params('x', 'y', 'z', 'zplane', 'tpoint')
+@extract_model_from_path(tm.Experiment, LabelLayer)
+def get_result_labels(experiment, label_layer):
     """Get all mapobjects together with the labels that were assigned to them
     for a given tool result and tile coordinate.
 
     """
     logger.info('get result tiles for label layer "%s"', label_layer.type)
     # The coordinates of the requested tile
-    x = request.args.get('x')
-    y = request.args.get('y')
-    z = request.args.get('z')
-    zplane = request.args.get('zplane')
-    tpoint = request.args.get('tpoint')
+    x = request.args.get('x', type=int)
+    y = request.args.get('y', type=int)
+    z = request.args.get('z', type=int)
+    zplane = request.args.get('zplane', type=int)
+    tpoint = request.args.get('tpoint', type=int)
 
-    # Check arguments for validity and convert to integers
-    if any([var is None for var in [x, y, z, zplane, tpoint]]):
-        raise MalformedRequestError(
-            'One of the following request arguments is missing: '
-            'x, t, z, zlevel, t'
-        )
-    else:
-        x, y, z, zplane, tpoint = map(int, [x, y, z, zplane, tpoint])
-
-    mapobject_type = db.session.query(MapobjectType).\
+    mapobject_type = db.session.query(tm.MapobjectType).\
         get(label_layer.mapobject_type_id)
     query_res = mapobject_type.get_mapobject_outlines_within_tile(
         x, y, z, zplane=zplane, tpoint=tpoint

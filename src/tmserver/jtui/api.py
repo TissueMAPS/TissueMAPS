@@ -142,7 +142,7 @@ def get_projects(location):
     return projects
 
 
-@jtui.route('/get_available_jtprojects/<path:experiment_id>')
+@jtui.route('/get_available_jtprojects/<experiment_id>')
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def get_available_jtprojects(experiment):
@@ -171,7 +171,7 @@ def get_available_jtprojects(experiment):
     return jsonify(jtprojects=serialized_projects)
 
 
-@jtui.route('/get_jtproject/<path:experiment_id>/<path:project_name>')
+@jtui.route('/get_jtproject/<experiment_id>/<project_name>')
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def get_jtproject(experiment, project_name):
@@ -314,7 +314,7 @@ def get_available_jtpipelines():
     return jsonify(jtpipelines=pipes)
 
 
-@jtui.route('/get_available_channels/<path:experiment_id>')
+@jtui.route('/get_available_channels/<experiment_id>')
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def get_available_channels(experiment):
@@ -336,7 +336,7 @@ def get_available_channels(experiment):
         return jsonify(channels=[c.name for c in channels])
 
 
-@jtui.route('/get_module_source_code/<path:module_filename>')
+@jtui.route('/get_module_source_code/<module_filename>')
 @jwt_required()
 def get_module_source_code(module_filename):
     '''Gets the source code for a given module.
@@ -359,7 +359,7 @@ def get_module_source_code(module_filename):
     return send_file(files[0])
 
 
-@jtui.route('/get_module_figure/<path:experiment_id>/<path:project_name>/<path:module_name>/<path:job_id>')
+@jtui.route('/get_module_figure/<experiment_id>/<project_name>/<module_name>/<job_id>')
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def get_module_figure(experiment, project_name, module_name, job_id):
@@ -405,7 +405,7 @@ def get_module_figure(experiment, project_name, module_name, job_id):
         })
 
 
-@jtui.route('/create_joblist/<path:experiment_id>', methods=['POST'])
+@jtui.route('/create_joblist/<experiment_id>', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def create_joblist(experiment):
@@ -451,7 +451,7 @@ def create_joblist(experiment):
         return jsonify({'joblist': None, 'error': error})
 
 
-@jtui.route('/save_jtproject/<path:experiment_id>', methods=['POST'])
+@jtui.route('/save_jtproject/<experiment_id>', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def save_jtproject(experiment):
@@ -476,7 +476,7 @@ def save_jtproject(experiment):
         return jsonify({'success': False, 'error': error})
 
 
-@jtui.route('/check_jtproject/<path:experiment_id>', methods=['POST'])
+@jtui.route('/check_jtproject/<experiment_id>', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def check_jtproject(experiment):
@@ -500,7 +500,7 @@ def check_jtproject(experiment):
         return jsonify({'success': False, 'error': error})
 
 
-@jtui.route('/remove_jtproject/<path:experiment_id>', methods=['POST'])
+@jtui.route('/remove_jtproject/<experiment_id>', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def remove_jtproject(experiment):
@@ -522,7 +522,7 @@ def remove_jtproject(experiment):
         return jsonify({'success': False, 'error': error})
 
 
-@jtui.route('/create_jtproject/<path:experiment_id>', methods=['POST'])
+@jtui.route('/create_jtproject/<experiment_id>', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def create_jtproject(experiment):
@@ -617,7 +617,7 @@ def _get_output(jobs, modules, fig_location):
     return output
 
 
-@jtui.route('/get_job_status/<path:experiment_id>', methods=['POST'])
+@jtui.route('/get_job_status/<experiment_id>', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def get_job_status(experiment):
@@ -648,7 +648,7 @@ def get_job_status(experiment):
     return jsonify(status=status_result)
 
 
-@jtui.route('/get_job_output/<path:experiment_id>', methods=['POST'])
+@jtui.route('/get_job_output/<experiment_id>', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def get_job_output(experiment):
@@ -684,7 +684,7 @@ def get_job_output(experiment):
         return jsonify(output=None, error=error)
 
 
-@jtui.route('/run_jobs/<path:experiment_id>', methods=['POST'])
+@jtui.route('/run_jobs/<experiment_id>', methods=['POST'])
 @jwt_required()
 @extract_model_from_path(Experiment, check_ownership=True)
 def run_jobs(experiment):
