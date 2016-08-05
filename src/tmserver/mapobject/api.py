@@ -1,6 +1,10 @@
 import os.path as p
 import json
 import logging
+import numpy as np
+import cv2
+from geoalchemy2.shape import to_shape
+import skimage.draw
 from cStringIO import StringIO
 from zipfile import ZipFile
 
@@ -104,10 +108,11 @@ def get_mapobjects_tile(experiment, object_name):
 @extract_model_from_path(Plate)
 def get_mapobjects_segmentation(plate, object_name):
     well_name = request.args.get('well_name')
-    x = request.args.get('x')
-    y = request.args.get('y')
-    zplane = request.args.get('zplane')
-    tpoint = request.args.get('tpoint')
+    # TODO: raise MissingGETParameterError when arg missing
+    x = int(request.args.get('x'))
+    y = int(request.args.get('y'))
+    zplane = int(request.args.get('zplane'))
+    tpoint = int(request.args.get('tpoint'))
     site = db.session.query(Site).\
         join(Well).\
         filter(
@@ -116,12 +121,13 @@ def get_mapobjects_segmentation(plate, object_name):
         ).\
         one()
     mapobject_type = db.session.query(MapobjectType).\
-        filter_by(name=object_name, experiment_id=plate.experimen_id).\
+        filter_by(name=object_name, experiment_id=plate.experiment_id).\
         one()
-    segmentation = db.session.query(
+    segmentations = db.session.query(
             MapobjectSegmentation.label,
             MapobjectSegmentation.geom_poly
         ).\
+        join(Mapobject).\
         join(MapobjectType).\
         filter(
             MapobjectType.name == object_name,
@@ -129,28 +135,43 @@ def get_mapobjects_segmentation(plate, object_name):
             MapobjectSegmentation.site_id == site.id,
             MapobjectSegmentation.zplane == zplane,
             MapobjectSegmentation.tpoint == tpoint
-        )
-    array = np.zeros((site.height, site.width), np.uint16)
-    for seg in segmentation:
+        ).\
+        all()
+    height = site.height - (
+        site.intersection.lower_overhang + site.intersection.upper_overhang
+    )
+    width = site.width - (
+        site.intersection.left_overhang + site.intersection.right_overhang
+    )
+    array = np.zeros((height, width), np.uint16)
+    if len(segmentations) == 0:
+        # TODO: better error class and more detailed message
+        raise ValueError('No segmentations found.')
+
+    for seg in segmentations:
+        # TODO: move this into tmlib
         poly = to_shape(seg.geom_poly)
         coordinates = np.array(poly.exterior.coords).astype(int)
         x, y = np.split(coordinates, 2, axis=1)
         x -= site.offset[1]
         y -= site.offset[0]
+        y *= -1
+        y -= site.intersection.lower_overhang
+        x -= site.intersection.right_overhang
         y, x = skimage.draw.polygon(y, x)
         array[y, x] = seg.label
     f = StringIO()
     f.write(cv2.imencode('.png', array)[1])
     f.seek(0)
     filename = '%s_%s_x%3d_y%3d_z%3d_t%3d_%s.png' % (
-        experiment.name, site.well.name, site.x, site.y, zplane, tpoint,
+        plate.experiment.name, site.well.name, site.x, site.y, zplane, tpoint,
         object_name
     )
     return send_file(
         f,
         attachment_filename=secure_filename(filename),
         mimetype='image/png',
-        as_attachement=True
+        as_attachment=True
     )
 
 

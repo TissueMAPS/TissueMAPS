@@ -15,7 +15,7 @@ from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.models import (
     Experiment, ChannelLayer, Plate, Acquisition, Feature, PyramidTileFile,
-    Cycle, Well, Site, ChannelImageFile, Channel
+    Cycle, Well, Site, ChannelImageFile, Channel, IllumstatsFile
 )
 from tmlib.image import PyramidTile
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
@@ -121,10 +121,12 @@ def get_channel_id():
 def get_channel_image(cycle):
     channel_name = request.args.get('channel_name')
     well_name = request.args.get('well_name')
+    # TODO: raise MissingGETParameterError when arg missing
     x = int(request.args.get('x'))
     y = int(request.args.get('y'))
     tpoint = int(request.args.get('tpoint'))
     zplane = int(request.args.get('zplane'))
+    illumcorr = bool(request.args.get('correct'))
     site_id = db.session.query(Site.id).\
         join(Well).\
         filter(
@@ -142,6 +144,18 @@ def get_channel_image(cycle):
         ).\
         one()
     img = image_file.get(zplane)
+    if illumcorr:
+        # TODO: cache for a limited amount of time to not having to load
+        # the file repeatedly when user downloads multiple files
+        logger.info('correct image for illumination artefacts')
+        illumstats_file = db.session.query(IllumstatsFile).\
+            filter_by(channel_id=channel_id, cycle_id=cycle.id).\
+            one_or_none()
+        if illumstats_file is None:
+            raise ValueError('No illumination statistics found.')
+        stats = illumstats_file.get()
+        img = img.correct(stats)
+    img = img.align()
     f = StringIO()
     f.write(cv2.imencode('.png', img.array)[1])
     f.seek(0)
