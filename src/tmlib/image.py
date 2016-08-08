@@ -439,7 +439,7 @@ class Image(object):
             arrays.append(arr)
         arr = np.dstack(arrays)
         if inplace:
-            self.metdata.is_aligned = True
+            self.metadata.is_aligned = True
             self._array = arr
             return self
         else:
@@ -531,7 +531,7 @@ class ChannelImage(Image):
                 return self
             else:
                 new_image = self.__class__(arr, self.metadata)
-                new_image.metdata.is_rescaled = True
+                new_image.metadata.is_rescaled = True
                 return new_image
         elif self.is_uint8:
             return self
