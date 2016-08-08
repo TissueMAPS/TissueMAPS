@@ -447,7 +447,7 @@ class Image(object):
             new_object.metadata.is_aligned = True
             return new_object
 
-    def encode(file_type='png'):
+    def encode(self, file_type='png'):
         '''Encodes the image for a given `file_type`.
 
         Parameters
