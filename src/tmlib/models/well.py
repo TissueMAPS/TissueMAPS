@@ -171,7 +171,7 @@ class Well(Model, DateMixIn):
         '''Tuple[int]: *y*, *x* coordinate of the top, left corner of the site
         relative to the layer overview at the maximum zoom level
         '''
-        logger.debug('calculate well offset')
+        logger.debug('calculate offset of well %d', self.id)
         plate = self.plate
         n_rows = plate.nonempty_rows.index(self.y)
         n_columns = plate.nonempty_columns.index(self.x)

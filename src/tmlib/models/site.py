@@ -1,6 +1,5 @@
 import logging
 import numpy as np
-from cached_property import cached_property
 from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
@@ -99,19 +98,19 @@ class Site(Model, DateMixIn):
         '''Tuple[int]: row, column coordinate of the site within the well'''
         return (self.y, self.x)
 
-    @cached_property
+    @property
     def image_size(self):
         '''Tuple[int]: number of pixels along the vertical (*y*) and horizontal
         (*x*) axis, i.e. height and width of the site
         '''
         return (self.height, self.width)
 
-    @cached_property
+    @property
     def offset(self):
         '''Tuple[int]: *y*, *x* coordinate of the top, left corner of the site
         relative to the layer overview at the maximum zoom level
         '''
-        logger.debug('calculate site offset')
+        logger.debug('calculate offset for site %d', self.id)
         well = self.well
         plate = well.plate
         experiment = plate.experiment
