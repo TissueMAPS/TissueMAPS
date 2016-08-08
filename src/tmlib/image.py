@@ -92,18 +92,18 @@ class Image(object):
     def is_int(self):
         '''bool: whether voxels array has integer data type
         '''
-        return self.array.dtype == np.int
+        return issubclass(self.array.dtype.type, np.integer)
 
     @property
     def is_float(self):
         '''bool: whether voxels array has float data type
         '''
-        return self.array.dtype == np.float
+        return issubclass(self.array.dtype.type, np.float)
 
     @property
     def is_uint(self):
         '''bool: whether voxels array has unsigned integer data type'''
-        return self.array.dtype == np.uint16 or self.array.dtype == np.uint8
+        return issubclass(self.array.dtype.type, np.unsignedinteger)
 
     @property
     def is_uint8(self):
