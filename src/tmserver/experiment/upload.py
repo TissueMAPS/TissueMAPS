@@ -166,13 +166,13 @@ def upload_file(experiment, acquisition):
         )
 
     if file_obj.status == FileUploadStatus.COMPLETE:
-        logger.info('file "%s" already uploaded')
+        logger.debug('file "%s" already uploaded')
         return jsonify(message='File already uploaded')
     elif file_obj.status == FileUploadStatus.UPLOADING:
-        logger.info('file "%s" already uploading')
+        logger.debug('file "%s" already uploading')
         return jsonify(message='File upload already in progress')
 
-    logger.info('upload file "%s"', filename)
+    logger.debug('upload file "%s"', filename)
     file_obj.status = FileUploadStatus.UPLOADING
     db.session.add(file_obj)
     db.session.commit()

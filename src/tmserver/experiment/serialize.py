@@ -106,7 +106,7 @@ def encode_feature(obj, encoder):
     return {
         'id': encode_pk(obj.id),
         'name': obj.name,
-        'experiment_id': encode_pk(obj.experiment_id)
+        'experiment_id': encode_pk(obj.mapobject_type.experiment_id)
     }
 
 

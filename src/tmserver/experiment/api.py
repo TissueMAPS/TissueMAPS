@@ -1,6 +1,5 @@
 import json
 import os
-import cv2
 from cStringIO import StringIO
 import logging
 
@@ -59,13 +58,13 @@ def get_image_tile(experiment, channel_layer):
         column=x, row=y, level=z, channel_layer_id=channel_layer.id
     ).one_or_none()
     if tile_file is None:
-        raise ResourceNotFoundError(
-            'Tile not found: column=%d, row=%d, level=%d' % (x, y, z)
-        )
-        logger.warn('file does not exist - send empty image')
+        # raise ResourceNotFoundError(
+        #     'Tile not found: column=%d, row=%d, level=%d' % (x, y, z)
+        # )
+        logger.warn('file does not exist - send empty tile')
         f = StringIO()
-        img = PyramidTile.create_as_background()
-        f.write(cv2.imencode('.jpeg', img.array))
+        tile = PyramidTile.create_as_background()
+        f.write(tile.jpeg_encode())
         f.seek(0)
         return send_file(f, mimetype='image/jpeg')
     return send_file(tile_file.location)
@@ -110,7 +109,7 @@ def get_channel_id(experiment):
 @jwt_required()
 @extract_model_from_path(tm.Experiment)
 @assert_request_params('channel_name', 'tpoint', 'zplane')
-def get_channel_id(experiment):
+def get_channel_layer_id(experiment):
     channel_name = request.args.get('channel_name')
     tpoint = request.args.get('tpoint', type=int)
     zplane = request.args.get('zplane', type=int)
@@ -170,8 +169,9 @@ def get_channel_image(experiment, channel_name):
         one()
     img = image_file.get(zplane)
     if illumcorr:
-        # TODO: cache for a limited amount of time to not having to load
-        # the file repeatedly when user downloads multiple files
+        # TODO: cache in Redis for a limited amount of time to not having to
+        # load the file repeatedly when user downloads multiple files of the
+        # same channel
         logger.info('correct image for illumination artefacts')
         illumstats_file = db.session.query(tm.IllumstatsFile).\
             filter_by(channel_id=channel_id, cycle_id=cycle.id).\
@@ -185,7 +185,7 @@ def get_channel_image(experiment, channel_name):
         img = img.correct(stats)
     img = img.align()
     f = StringIO()
-    f.write(cv2.imencode('.png', img.array)[1])
+    f.write(img.encode('png'))
     f.seek(0)
     filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
         experiment.name, well_name, x, y, zplane, tpoint, channel_name
@@ -196,44 +196,6 @@ def get_channel_image(experiment, channel_name):
         mimetype='image/png',
         as_attachment=True
     )
-
-
-@api.route('/experiments/<experiment_id>/features', methods=['GET'])
-@jwt_required()
-@extract_model_from_path(tm.Experiment, check_ownership=True)
-def get_features(experiment):
-    """Sends a list of feature objects.
-
-    Request
-    -------
-
-    Required GET parameters:
-        - experiment_id
-
-    Response
-    --------
-
-    {
-        "data": {
-            mapobject_type_name: [
-                {
-                    "name": string
-                },
-                ...
-            ],
-            ...
-        }
-    }
-
-    """
-    features = db.session.query(tm.Feature).\
-        filter_by(experiment_id=experiment.id).\
-        all()
-    if not features:
-        logger.waring('no features found')
-    return jsonify({
-        'data': features
-    })
 
 
 @api.route('/microscope_types', methods=['GET'])
