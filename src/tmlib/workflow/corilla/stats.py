@@ -65,9 +65,9 @@ class OnlineStatistics(object):
         '''
         # Calculate percentiles with unsigned integer data type
         for z, pixels in image.iter_planes():
-            self._percentiles += np.percentile(pixels.array, self._q)
+            self._percentiles += np.percentile(pixels, self._q)
             # The other statistics require float data type
-            array = pixels.array.astype(float)
+            array = pixels.astype(float)
             if log_transform:
                 array = np.log10(array)
             if np.any(np.isinf(array)):

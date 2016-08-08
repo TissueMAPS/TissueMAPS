@@ -11,6 +11,7 @@ from tmlib.readers import BFImageReader
 from tmlib.readers import ImageReader
 from tmlib.readers import JavaBridge
 from tmlib.image import ChannelImage
+from tmlib.metadata import ChannelImageMetadata
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow import register_api
 
@@ -165,11 +166,6 @@ class ImageExtractor(ClusterRoutines):
                         dtype = planes[0].dtype
                         dims = planes[0].shape
                         stack = np.dstack(planes)
-                        if batch['mip']:
-                            logger.info('perform intensity projection')
-                            img = ChannelImage(np.max(stack, axis=2))
-                        else:
-                            img = ChannelImage(stack)
                         image_file = session.get_or_create(
                             tm.ChannelImageFile,
                             tpoint=fmapping.tpoint,
@@ -177,6 +173,16 @@ class ImageExtractor(ClusterRoutines):
                             cycle_id=fmapping.cycle_id,
                             channel_id=fmapping.channel_id
                         )
+                        metadata = ChannelImageMetadata(
+                            channel_id=image_file.channel_id,
+                            cycle_id=image_file.cycle_id,
+                            site_id=image_file.site_id,
+                            tpoint=image_file.tpoint
+                        )
+                        img = ChannelImage(stack, metadata)
+                        if batch['mip']:
+                            logger.info('perform intensity projection')
+                            img = img.project()
                         logger.info('store image file: %s', image_file.name)
                         image_file.put(img)
 

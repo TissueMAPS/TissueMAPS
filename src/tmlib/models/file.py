@@ -306,14 +306,10 @@ class ChannelImageFile(File, DateMixIn):
         '''
         logger.debug('get data from channel image file: %s', self.name)
         metadata = ChannelImageMetadata(
-            name=self.name,
+            channel_id=self.channel_id,
+            site_id=self.site_id,
             tpoint=self.tpoint,
-            channel=self.channel.index,
-            plate=self.site.well.plate.name,
-            well=self.site.well.name,
-            y=self.site.y,
-            x=self.site.x,
-            cycle=self.cycle.index
+            cycle_id=self.cycle_id
         )
         if z is not None:
             with DatasetReader(self.location) as f:
@@ -364,7 +360,7 @@ class ChannelImageFile(File, DateMixIn):
         else:
             with DatasetWriter(self.location, truncate=True) as f:
                 for z, plane in image.iter_planes():
-                    f.write('z_%d' % z, plane.array)
+                    f.write('z_%d' % z, plane)
             self.n_planes = image.dimensions[2]
 
     @hybrid_property
@@ -393,12 +389,10 @@ class ChannelImageFile(File, DateMixIn):
         return os.path.join(self.cycle.channel_images_location, self.name)
 
     def __repr__(self):
-        return (
-            '<ChannelImageFile('
-                'id=%r, tpoint=%r, well=%r, y=%r, x=%r, channel=%r'
-            ')>'
-            % (self.id, self.tpoint, self.site.well.name, self.site.y,
-               self.site.x, self.channel.index)
+        return '<%s(id=%r, tpoint=%r, well=%r, y=%r, x=%r, channel=%r)>' % (
+            self.__class__.__name__, self.id, self.tpoint,
+            self.site.well.name, self.site.y,
+            self.site.x, self.channel.index
         )
 
 
@@ -617,12 +611,10 @@ class PyramidTileFile(File):
         with ImageReader(self.location) as f:
             pixels = f.read(dtype=np.uint8)
         metadata = PyramidTileMetadata(
-            name=self.name,
-            group=self.group,
             level=self.level,
             row=self.row,
             column=self.column,
-            zplane=self.channel_layer.zplane
+            channel_layer_id=self.channel_layer.id
         )
         return PyramidTile(pixels, metadata)
 
@@ -647,11 +639,8 @@ class PyramidTileFile(File):
         )
 
     def __repr__(self):
-        return (
-            '<PyramidTileFile('
-                'id=%r, row=%r, column=%r, level=%r'
-            ')>'
-            % (self.id, self.row, self.column, self.level)
+        return '<%s(id=%r, row=%r, column=%r, level=%r)>' % (
+            self.__class__.__name__, self.id, self.row, self.column, self.level
         )
 
 
@@ -741,8 +730,8 @@ class IllumstatsFile(File, DateMixIn):
             'get data from illumination statistics file: %s', self.name
         )
         metadata = IllumstatsImageMetadata(
-            channel=self.channel.index,
-            cycle=self.cycle.index
+            channel_id=self.channel.id,
+            cycle_id=self.cycle.id
         )
         with DatasetReader(self.location) as f:
             mean = IllumstatsImage(f.read('mean'), metadata)

@@ -8,54 +8,29 @@ logger = logging.getLogger(__name__)
 
 class ChannelImageMetadata(object):
 
-    '''Base class for image metadata, such as the name of the channel or
-    the relative position of the image within the well (acquisition grid).
-    '''
+    '''Class for metadata that describes channel images.'''
 
-    __metaclass__ = ABCMeta
-
-    _SUPPORTED_KWARGS = {
-        'zplane', 'x_shift', 'y_shift',
-        'upper_overhang', 'lower_overhang', 'right_overhang', 'left_overhang',
-        'is_aligned', 'is_omitted', 'is_corrected', 'is_rescaled'
-    }
-
-    # @assert_type()
-    def __init__(self, name, tpoint, plate, well, x, y, channel, cycle,
-                 **kwargs):
+    def __init__(self, channel_id, site_id, cycle_id, tpoint, **kwargs):
         '''
         Parameters
         ----------
-        name: str
-            name of the image (the same as that of the corresponding file)
+        channel_id: int
+            channel ID
+        site_id: int
+            site ID
+        cycle_id: int
+            cycle ID
         tpoint: int
-            zero-based time series index
-        plate: str
-            name of the corresponding plate
-        well: str
-            name of the corresponding well
-        x: int
-            zero-based column index of the image within the corresponding well
-        y: int
-            zero-based row index of the image within the corresponding well
-        channel: int
-            zero-based index of the corresponding channel
-        cycle: int
-            zero-based index of the corresponding cycle based on the order
-            of acquisition
+            zero-based time point index
         **kwargs: dict, optional
             additional keyword arguments
         '''
-        self.name = name
         self.tpoint = tpoint
-        self.plate = plate
-        self.well = well
-        self.y = y
-        self.x = x
-        self.channel = channel
-        self.cycle = cycle
+        self.channel_id = channel_id
+        self.cycle_id = cycle_id
         self.is_corrected = False
         self.is_rescaled = False
+        self.is_clipped = False
         self.is_aligned = False
         self.is_omitted = False
         self.upper_overhang = 0
@@ -64,18 +39,15 @@ class ChannelImageMetadata(object):
         self.left_overhang = 0
         self.x_shift = 0
         self.y_shift = 0
-        self.zplane = None
-        if kwargs:
-            for key, value in kwargs.iteritems():
-                if key in self._SUPPORTED_KWARGS:
+        for key, value in kwargs.iteritems():
+            if hasattr(self.__class__, key):
+                if isinstance(getattr(self.__class__, key), property):
                     setattr(self, key, value)
-                else:
-                    logger.warning('argument "%s" is ignored', key)
 
     @property
     def upper_overhang(self):
         '''int: overhang in pixels at the upper side of the image
-        relative to the corresponding site in the reference cycle
+        relative to the site in the reference cycle
         '''
         return self._upper_overhang
 
@@ -88,7 +60,7 @@ class ChannelImageMetadata(object):
     @property
     def lower_overhang(self):
         '''int: overhang in pixels at the lower side of the image
-        relative to the corresponding site in the reference cycle
+        relative to the site in the reference cycle
         '''
         return self._lower_overhang
 
@@ -101,7 +73,7 @@ class ChannelImageMetadata(object):
     @property
     def left_overhang(self):
         '''int: overhang in pixels at the left side of the image
-        relative to the corresponding site in the reference cycle
+        relative to the site in the reference cycle
         '''
         return self._left_overhang
 
@@ -114,7 +86,7 @@ class ChannelImageMetadata(object):
     @property
     def right_overhang(self):
         '''int: overhang in pixels at the right side of the image
-        relative to the corresponding site in the reference cycle
+        relative to the site in the reference cycle
         '''
         return self._right_overhang
 
@@ -127,7 +99,7 @@ class ChannelImageMetadata(object):
     @property
     def x_shift(self):
         '''int: shift of the image in pixels in x direction relative to the
-        corresponding site in the reference cycle
+        site in the reference cycle
         '''
         return self._x_shift
 
@@ -140,7 +112,7 @@ class ChannelImageMetadata(object):
     @property
     def y_shift(self):
         '''int: shift of the image in pixels in y direction relative to the
-        corresponding site in the reference cycle
+        site in the reference cycle
         '''
         return self._y_shift
 
@@ -183,32 +155,36 @@ class ChannelImageMetadata(object):
             raise TypeError('Attribute "is_aligned" must have type bool.')
         self._is_aligned = value
 
+    def __repr__(self):
+        return (
+            '<%s(channel_id=%r, site_id=%r, cycle_id=%r, tpoint=%r)' % (
+                self.__class__.__name__, self.channel_id,
+                self.site_id, self.cycle_id, self.tpoint
+            )
+        )
+
 
 class ImageFileMapping(object):
 
-    '''Container for information about the location of individual images
-    (planes) within the microscope image file and references to the files in
-    which they will be stored upon extraction.
+    '''Class for a mapping of an extracted image file to microscope image
+    file(s) and the location of the individual pixel planes within these files.
     '''
-
-    _SUPPORTED_ATTRS = {
-        'files', 'series', 'planes', 'zlevels'
-    }
 
     def __init__(self, **kwargs):
         '''
         Parameters
         ----------
         kwargs: dict, optional
-            file mapping key-value pairs
+            file mapping as key-value pairs
         '''
         for key, value in kwargs.iteritems():
-            if key in self._SUPPORTED_ATTRS:
-                setattr(self, key, value)
+            if hasattr(self.__class__, key):
+                if isinstance(getattr(self.__class__, key), property):
+                    setattr(self, key, value)
 
     @property
     def files(self):
-        '''str: absolute path to the required original image files'''
+        '''str: absolute path to the microscope image files'''
         return self._files
 
     @files.setter
@@ -280,7 +256,7 @@ class ImageFileMapping(object):
         Returns
         -------
         dict
-            key-value representation of the object
+            mapping as key-values
 
         Examples
         --------
@@ -303,36 +279,82 @@ class ImageFileMapping(object):
         '''
         mapping = dict()
         for attr in dir(self):
-            if attr in self._SUPPORTED_ATTRS:
-                mapping[attr] = getattr(self, attr)
+            if hasattr(self.__class__, attr):
+                if isinstance(getattr(self.__class__, attr), property):
+                    mapping[attr] = getattr(self, attr)
         return mapping
 
     def __repr__(self):
-        return 'ImageFileMapping(ref_index=%r)' % self.ref_index
+        return '%s(ref_index=%r)' % (self.__class__.__name__, self.ref_index)
+
+
+class SegmentationImageMetadata(object):
+
+    '''Class for metadata to describe a segmentation image.'''
+
+    def __init__(self, mapobject_type_id, site_id):
+        '''
+        Parameters
+        ----------
+        mapobject_type_id: int
+            mapobject type ID
+        site_id: int
+            site ID
+        '''
+        self.mapobject_type_id = mapobject_type_id
+        self.site_id = site_id
+
+    def __repr__(self):
+        return '%s(mapobject_type_id=%r, site_id=%r)' % (
+            self.__class__.__name__, self.mapobject_type_id, self.site_id
+        )
+
 
 class PyramidTileMetadata(object):
 
-    def __init__(self, **kwargs):
-        pass
+    '''Class for metadata to describe a pyramid tile.'''
+
+    def __init__(self, level, row, column, channel_layer_id):
+        '''
+        Parameters
+        ----------
+        level: int
+            zero-based zoom level index
+        row: int
+            zero-based row index
+        column: int
+            zero-based column index
+        channel_layer_id: int
+            channel layer ID
+        '''
+        self.level = level
+        self.row = row
+        self.column = column
+        self.channel_layer_id = channel_layer_id
+
+    def __repr__(self):
+        return '%s(level=%r, row=%r, column=%r, channel_layer_id=%r)' % (
+            self.__class__.__name__, self.level, self.row, self.column,
+            self.channel_layer_id
+        )
 
 
 class IllumstatsImageMetadata(object):
 
-    '''Class for metadata specific to illumination statistics images.'''
+    '''Class for metadata to describe an illumination statistics image.'''
 
-    @assert_type(cycle='int', channel='int')
-    def __init__(self, cycle, channel):
+    @assert_type(cycle_id='int', channel_id='int')
+    def __init__(self, cycle_id, channel_id):
         '''
         Parameters
         ----------
-        cycle: int
-            zero-based index of the corresponding cycle based on the order
-            of acquisition
-        channel: int
-            zero-based index of the corresponding channel
+        cycle_id: int
+            cycle ID
+        channel_id: int
+            channel ID
         '''
-        self.cycle = cycle
-        self.channel = channel
+        self.cycle_id = cycle_id
+        self.channel_id = channel_id
         self.is_smoothed = False
 
     @property
@@ -345,3 +367,8 @@ class IllumstatsImageMetadata(object):
         if not isinstance(value, bool):
             raise TypeError('Attribute "is_smoothed" must have type bool.')
         self._is_smoothed = value
+
+    def __repr__(self):
+        return '%s(cycle_id=%r, channel_id=%r)' % (
+            self.__class__.__name__, self.cycle_id, self.channel_id
+        )

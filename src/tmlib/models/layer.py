@@ -428,20 +428,67 @@ class ChannelLayer(Model):
 
         return range(start_index, end_index)
 
+    def map_base_tile_to_images(self, site):
+        '''Maps tile coordinates to image files intersecting with the tile.
+
+        Parameters
+        ----------
+        site: tmlib.models.Site
+            site whose neighbours could be included in the search
+
+        Returns
+        -------
+        Dict[Tuple[int], List[int]]
+            IDs of all images, which intersect with a given tile at the
+            maximal zoom level
+        '''
+        experiment = self.channel.experiment
+        session = Session.object_session(self)
+        neighbouring_sites = session.query(Site).\
+            join(Well).\
+            filter(
+                Well.id == site.well.id,
+                Site.x.in_([site.x - 1, site.x]),
+                Site.y.in_([site.y - 1, site.y])
+            )
+
+        mapping = collections.defaultdict(list)
+        for current_site in neighbouring_sites:
+            if current_site.y == site.y and current_site.x == site.x:
+                continue
+            if current_site.omitted:
+                continue
+            fid = session.query(ChannelImageFile.id).\
+                filter_by(site_id=current_site.id, channel_id=self.channel.id).\
+                one()[0]
+            y_offset_site, x_offset_site = current_site.offset
+            row_indices = self._calc_tile_indices(
+                y_offset_site, current_site.image_size[0],
+                experiment.vertical_site_displacement
+            )
+            col_indices = self._calc_tile_indices(
+                x_offset_site, current_site.image_size[1],
+                experiment.horizontal_site_displacement
+            )
+            for row, col in itertools.product(row_indices, col_indices):
+                mapping[(row, col)].append(fid)
+
+        return mapping
+
     @cached_property
     def base_tile_coordinate_to_image_file_map(self):
         '''Dict[Tuple[int], List[int]]: IDs of all images, which intersect
         with a given tile; maps coordinates of tiles at the maximal zoom level
         to the files of intersecting images
         '''
-        # NOTE: This may become a bottleneck for really large pyramids.
-        mapping = collections.defaultdict(list)
+        logger.debug('create mapping of base tile coordinates to image files')
         experiment = self.channel.experiment
         session = Session.object_session(self)
         sites = session.query(Site).\
             join(Well).\
             join(Plate).\
             filter(Plate.experiment_id == experiment.id)
+        mapping = collections.defaultdict(list)
         for site in sites:
             if site.omitted:
                 continue
