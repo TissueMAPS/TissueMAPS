@@ -137,17 +137,17 @@ def get_channel_layer_id(experiment):
     'plate_name', 'cycle_index', 'well_name', 'x', 'y', 'tpoint', 'zplane'
 )
 def get_channel_image(experiment, channel_name):
-    channel_name = request.args.get('plate_name')
+    plate_name = request.args.get('plate_name')
     well_name = request.args.get('well_name')
     x = request.args.get('x', type=int)
     y = request.args.get('y', type=int)
-    channel_name = request.args.get('cycle_index', type=int)
+    cycle_index = request.args.get('cycle_index', type=int)
     tpoint = request.args.get('tpoint', type=int)
     zplane = request.args.get('zplane', type=int)
     illumcorr = request.args.get('correct', type=bool)
     site_id = db.session.query(tm.Site.id).\
         join(tm.Well).\
-        joint(tm.Plate).\
+        join(tm.Plate).\
         filter(
             tm.Plate.experiment_id == experiment.id,
             tm.Plate.name == plate_name,
@@ -174,7 +174,7 @@ def get_channel_image(experiment, channel_name):
         # same channel
         logger.info('correct image for illumination artefacts')
         illumstats_file = db.session.query(tm.IllumstatsFile).\
-            filter_by(channel_id=channel_id, cycle_id=cycle.id).\
+            filter_by(channel_id=channel_id, cycle_id=image_file.cycle_id).\
             one_or_none()
         if illumstats_file is None:
             raise ResourceNotFoundError(
