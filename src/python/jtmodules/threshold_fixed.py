@@ -11,8 +11,9 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
     '''Thresholds an image with Otsu's method.
     For more information on the algorithmic implementation see
     :py:func:`mahotas.otsu`.
-    Additional parameters allow correction of the calculated threshold level
-    or restriction of it to a defined range. This may be useful to prevent
+
+    Additional parameters allow correction of the calculated fixed threshold
+    level or restriction of it to a defined range. This may be useful to prevent
     extreme levels in case the `image` contains artifacts.
 
     Parameters
@@ -34,11 +35,6 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
     Dict[str, numpy.ndarray[bool] or str]
         * "mask": thresholded mimage
         * "figure": JSON string representation of the figure
-
-    Raises
-    ------
-    TypeError
-        when `image` doesn't have unsigned integer type
     '''
     if max_threshold is None:
         max_threshold = np.max(image)
@@ -47,28 +43,26 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
     if min_threshold is None:
         min_threshold = np.min(image)
     logger.info('set minimal threshold: %d', min_threshold)
-
-    # threshold function requires unsigned integer type
-    if not str(image.dtype).startswith('uint'):
-        raise TypeError('Image must have unsigned integer type')
+    logger.info('set threshold correction factor: %.2f', correction_factor)
 
     thresh = mh.otsu(image)
     logger.info('calculated threshold level: %d', thresh)
 
-    logger.info('threshold correction factor: %.2f', correction_factor)
     corr_thresh = thresh * correction_factor
-    logger.info('applied threshold level: %d', corr_thresh)
+    logger.info('corrected threshold level: %d', corr_thresh)
 
     if corr_thresh > max_threshold:
         corr_thresh = max_threshold
     elif corr_thresh < min_threshold:
         corr_thresh = min_threshold
 
+    logger.info('threshold image')
     thresh_image = image > corr_thresh
 
     outputs = {'mask': thresh_image}
 
     if plot:
+        logger.info('create plot')
         from jtlib import plotting
         outlines = mh.morph.dilate(mh.labeled.bwperim(thresh_image))
         plots = [
@@ -78,7 +72,7 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
             plotting.create_mask_image_plot(thresh_image, 'ur')
         ]
         outputs['figure'] = plotting.create_figure(
-            plots, title='image thresholded at %s' % thresh
+            plots, title='thresholded at fixed level: %s' % thresh
         )
     else:
         outputs['figure'] = str()
