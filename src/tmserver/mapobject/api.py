@@ -187,7 +187,7 @@ def get_mapobjects_segmentation(experiment, object_name):
         raise ResourceNotFoundError('No segmentations found.')
     polygons = dict()
     for seg in segmentations:
-        polygons[(tpoint, zplane, segm.label)] = seg.geom_poly
+        polygons[(tpoint, zplane, seg.label)] = seg.geom_poly
 
     height = site.height - (
         site.intersection.lower_overhang + site.intersection.upper_overhang
@@ -196,8 +196,8 @@ def get_mapobjects_segmentation(experiment, object_name):
         site.intersection.left_overhang + site.intersection.right_overhang
     )
     y_offset, x_offset = site.offset
-    y_offset += site.intersections.lower_overhang
-    x_offset += site.intersections.right_overhang
+    y_offset += site.intersection.lower_overhang
+    x_offset += site.intersection.right_overhang
 
     img = SegmentationImage.create_from_polygons(
         polygons, y_offset, x_offset, (height, width)
@@ -205,7 +205,7 @@ def get_mapobjects_segmentation(experiment, object_name):
     f = StringIO()
     f.write(img.encode('png'))
     f.seek(0)
-    filename = '%s_%s_x%3d_y%3d_z%3d_t%3d_%s.png' % (
+    filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
         experiment.name, site.well.name, site.x, site.y, zplane, tpoint,
         object_name
     )
