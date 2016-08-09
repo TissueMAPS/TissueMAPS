@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser('Create tables in TissueMAPS database.')
     parser.add_argument(
-        '--uri', destination='db_uri', help='database URI', default=None
+            '--uri', dest='db_uri', help='database URI', default=None
     )
 
     args = parser.parse_args()
