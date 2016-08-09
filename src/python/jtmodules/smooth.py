@@ -1,3 +1,4 @@
+import logging
 import cv2
 import mahotas as mh
 import skimage.morphology
@@ -5,6 +6,8 @@ import skimage.filters.rank
 import numpy as np
 
 VERSION = '0.0.1'
+
+logger = logging.getLogger(__name__)
 
 
 def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
