@@ -301,11 +301,11 @@ class PipelineChecker(object):
             handles_path = complete_path(
                 module['handles'], self.step_location
             )
-            with YamlReader(handles_path) as f:
-                if self.handles_descriptions is None:
+            if self.handles_descriptions is None:
+                with YamlReader(handles_path) as f:
                     handles = f.read()
-                else:
-                    handles = self.handles_descriptions[i]
+            else:
+                handles = self.handles_descriptions[i]
 
             # Ensure that names of piped arguments are unique
             n = Counter([arg['name'] for arg in handles['input']])
@@ -318,6 +318,7 @@ class PipelineChecker(object):
 
             if not handles['output']:
                 continue
+
             n = Counter([arg['name'] for arg in handles['output']])
             repeated = [x for x in n.values() if x > 1]
             if repeated:
@@ -332,26 +333,25 @@ class PipelineChecker(object):
                     # We only check piped arguments
                     continue
                 channels = self.pipe_description['input']['channels']
-                if channels:
-                    layer_names = [ch['name'] for ch in channels]
-                    if input_handle.key in layer_names:
-                        # Only check piped data
-                        continue
-                    if not module['active']:
-                        # Don't check inactive modules
-                        continue
-                    if input_handle.key not in upstream_outputs:
-                        raise PipelineDescriptionError(
-                            'The value of "key" of input item #%d '
-                            'with name "%s" in module "%s" '
-                            'is not created upstream in the pipeline: '
-                            '\n"%s"'
-                            % (j, input_handle.name, module['name'],
-                               input_handle.key)
-                        )
-                else:
+                if not channels:
                     raise PipelineDescriptionError(
                         'You provided no input for the pipeline.'
+                    )
+                channel_names = [ch['name'] for ch in channels]
+                if input_handle.key in channel_names:
+                    # Only check piped data
+                    continue
+                if not module['active']:
+                    # Don't check inactive modules
+                    continue
+                if input_handle.key not in upstream_outputs:
+                    raise PipelineDescriptionError(
+                        'The value of "key" of input item #%d '
+                        'with name "%s" in module "%s" '
+                        'is not created upstream in the pipeline: '
+                        '\n"%s"'
+                        % (j, input_handle.name, module['name'],
+                           input_handle.key)
                     )
 
             # Store all upstream output items

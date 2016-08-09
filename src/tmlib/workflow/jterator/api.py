@@ -462,8 +462,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # for each axis.
                 site = session.query(tm.Site).get(batch['site_id'])
                 y_offset, x_offset = site.offset
-                y_offset -= site.intersections.lower_overhang
-                x_offset -= site.intersections.right_overhang
+                y_offset += site.intersection.lower_overhang
+                x_offset += site.intersection.right_overhang
                 handle.from_polygons(polygons, y_offset, x_offset, dims)
                 store['pipe'][handle.key] = handle.value
                 store['segmented_objects'][handle.key] = handle

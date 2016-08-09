@@ -82,7 +82,8 @@ class Project(object):
 
     @handles.setter
     def handles(self, value):
-        # Ensure that the modules have the same order.
+        # Ensure that handles descriptions are sorted according to the order
+        # specified in the pipeline description.
         handles_names = [v['name'] for v in value]
         handles = list()
         for i, module in self.pipe['description']['pipeline']:
