@@ -258,60 +258,22 @@ class PyramidBuilder(ClusterRoutines):
                                 })
                             job_descriptions['run'].append(description)
 
-                        # if level == layer.maxzoom_level_index:
-                        #     # Creation of empty base tiles, i.e. tiles that
-                        #     # don't map to images
-                        #     coordinates = layer.get_empty_base_tile_coordinates()
-                        #     batches = self._create_batches(
-                        #         list(coordinates), args.batch_size * 100
-                        #     )
-                        #     for batch in batches:
-                        #         job_count += 1
-                        #         job_descriptions['run'].append({
-                        #             'id': job_count,
-                        #             'inputs': {},
-                        #             'outputs': {
-                        #                 'image_files': [
-                        #                     os.path.join(
-                        #                         layer.location,
-                        #                         layer.build_tile_group_name(
-                        #                             layer.tile_coordinate_group_map[
-                        #                                 level, y, x
-                        #                             ]
-                        #                         ),
-                        #                         layer.build_tile_file_name(
-                        #                             level, y, x
-                        #                         )
-                        #                     )
-                        #                     for y, x in batch
-                        #                 ]
-                        #             },
-                        #             'layer_id': layer.id,
-                        #             'level': level,
-                        #             'index': index,
-                        #             'clip_value': None,
-                        #             'clip_percent': None
-                        #         })
         job_descriptions['collect'] = {'inputs': {}, 'outputs': {}}
         return job_descriptions
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :py:class:`tm.ChannelLayer` and
-        :py:class:`tm.MapobjectType` as well as all children
+        :py:class:`tm.ChannelLayer` and as well as all children
         instances for the processed experiment.
         '''
         with tm.utils.Session() as session:
-
             channel_ids = session.query(tm.Channel.id).\
                 filter_by(experiment_id=self.experiment_id).\
                 all()
             channel_ids = [p[0] for p in channel_ids]
 
         if channel_ids:
-
             with tm.utils.Session() as session:
-
                 logger.debug('delete existing channel layers')
                 session.query(tm.ChannelLayer).\
                     filter(tm.ChannelLayer.channel_id.in_(channel_ids)).\
@@ -582,35 +544,6 @@ class PyramidBuilder(ClusterRoutines):
                             )
 
                     tile_file.put(tile)
-
-    # def _create_empty_maxzoom_level_tiles(self, batch):
-    #     with tm.utils.Session() as session:
-
-    #         layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
-
-    #         logger.info(
-    #             'processing layer: channel=%d, zplane=%d, tpoint=%d',
-    #             layer.channel.index, layer.zplane, layer.tpoint
-    #         )
-    #         logger.info(
-    #             'creating empty tiles at maximum zoom level %d', batch['level']
-    #         )
-
-    #         for filename in batch['outputs']['image_files']:
-    #             name = os.path.basename(filename)
-    #             level, row, column = layer.get_coordinate_from_name(name)
-    #             if level != batch['level']:
-    #                 raise ValueError('Level doesn\'t match!')
-    #             group = layer.tile_coordinate_group_map[level, row, column]
-    #             tile_file = session.get_or_create(
-    #                 tm.PyramidTileFile,
-    #                 name=name, group=group, row=row,
-    #                 column=column, level=batch['level'],
-    #                 channel_layer_id=layer.id
-    #             )
-    #             logger.debug('creating tile: %s', tile_file.name)
-    #             tile = PyramidTile.create_as_background()
-    #             tile_file.put(tile)
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.Session() as session:

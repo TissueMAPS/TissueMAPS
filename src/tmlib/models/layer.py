@@ -429,7 +429,9 @@ class ChannelLayer(Model):
         return range(start_index, end_index)
 
     def map_base_tile_to_images(self, site):
-        '''Maps tile coordinates to image files intersecting with the tile.
+        '''Maps tiles at the highest resolution level to all image files of
+        the same channel, which intersect with the given tile. Only images
+        bordering `site` to the left and/or top are considered.
 
         Parameters
         ----------
@@ -439,11 +441,12 @@ class ChannelLayer(Model):
         Returns
         -------
         Dict[Tuple[int], List[int]]
-            IDs of all images, which intersect with a given tile at the
-            maximal zoom level
+            IDs of images intersecting with a given tile hashable by tile
+            row, column coordinates
         '''
         experiment = self.channel.experiment
         session = Session.object_session(self)
+        # Only consider sites to the left and/or top of the current site
         neighbouring_sites = session.query(Site).\
             join(Well).\
             filter(
