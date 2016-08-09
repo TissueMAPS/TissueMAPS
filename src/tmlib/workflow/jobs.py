@@ -13,7 +13,44 @@ from tmlib.utils import create_datetimestamp
 logger = logging.getLogger(__name__)
 
 
-class Job(gc3libs.Application):
+class StateMixin(object):
+
+    '''Mixin class for classses derived from :py:class:`gc3libs.Task` or
+    :py:class:`gc3libs.TaskCollection` to simplify status checks.'''
+
+    @property
+    def is_terminated(self):
+        '''bool: whether the job is in state TERMINATED
+        '''
+        return self.execution.state == gc3libs.Run.State.TERMINATED
+
+    @property
+    def is_running(self):
+        '''bool: whether the job is in state RUNNING
+        '''
+        return self.execution.state == gc3libs.Run.State.RUNNING
+
+    @property
+    def is_stopped(self):
+        '''bool: whether the job is in state STOPPED
+        '''
+        return self.execution.state == gc3libs.Run.State.STOPPED
+
+    @property
+    def is_submitted(self):
+        '''bool: whether the job is in state SUBMITTED
+        '''
+        return self.execution.state == gc3libs.Run.State.SUBMITTED
+
+    @property
+    def is_new(self):
+        '''bool: whether the job is in state NEW
+        '''
+        return self.execution.state == gc3libs.Run.State.NEW
+
+
+
+class Job(gc3libs.Application, StateMixin):
 
     '''Abstract base class for a `TissueMAPS` job.
 
@@ -106,36 +143,6 @@ class Job(gc3libs.Application):
         # TODO
         return super(Job, self).retry()
 
-    @property
-    def is_terminated(self):
-        '''bool: whether the job is in state TERMINATED
-        '''
-        return self.execution.state == gc3libs.Run.State.TERMINATED
-
-    @property
-    def is_running(self):
-        '''bool: whether the job is in state RUNNING
-        '''
-        return self.execution.state == gc3libs.Run.State.RUNNING
-
-    @property
-    def is_stopped(self):
-        '''bool: whether the job is in state STOPPED
-        '''
-        return self.execution.state == gc3libs.Run.State.STOPPED
-
-    @property
-    def is_submitted(self):
-        '''bool: whether the job is in state SUBMITTED
-        '''
-        return self.execution.state == gc3libs.Run.State.SUBMITTED
-
-    @property
-    def is_new(self):
-        '''bool: whether the job is in state NEW
-        '''
-        return self.execution.state == gc3libs.Run.State.NEW
-
 
 class RunJob(Job):
 
@@ -195,7 +202,7 @@ class RunJob(Job):
         )
 
 
-class JobCollection(object):
+class JobCollection(StateMixin):
 
     '''Abstract base class for job collections.'''
 
