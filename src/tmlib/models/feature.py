@@ -69,10 +69,6 @@ class Feature(ExperimentModel):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
 
 
-<<<<<<< HEAD
-@distribute_by_hash('mapobject_id')
-=======
->>>>>>> Implement PostgresXL distribution in model metaclass
 class FeatureValue(ExperimentModel):
 
     '''An individual value of a *feature* that was measured for a given
