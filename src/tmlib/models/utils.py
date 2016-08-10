@@ -328,7 +328,7 @@ class _Session(object):
             self.__class__._engines[self._db_uri] = \
                 create_db_engine(self._db_uri)
             self.__class__._session_factories[self._db_uri] = \
-                create_db_session_factory(self.__class__.engines[self._db_uri])
+                create_db_session_factory(self.__class__._engines[self._db_uri])
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory())
         return self._session

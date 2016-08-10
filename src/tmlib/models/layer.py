@@ -16,7 +16,6 @@ from tmlib.models.file import ChannelImageFile
 from tmlib.models.site import Site
 from tmlib.models.well import Well
 from tmlib.models.plate import Plate
-from tmlib.models.base import Model
 from tmlib.models.base import ExperimentModel
 from tmlib.utils import autocreate_directory_property
 from tmlib.models.utils import remove_location_upon_delete
