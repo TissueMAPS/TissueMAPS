@@ -3,6 +3,7 @@
 src/javascript/build
 src/javascript/tasks
 src/javascript/scripts
+src/javascript/package.json
 src/javascript/app/assets/libs/bower_components
 # src/javascript/app/index.html
 src/javascript/_build/style-main.css
