@@ -72,8 +72,7 @@ class HttpClient(object):
 
         The file must be called ``".tmaps_pass.yaml"`` and stored in
         the home directory. It must provide a YAML mapping where
-        keys are usernames and the values the corresponding
-        passwords.
+        keys are usernames and the values the corresponding passwords.
 
         Parameters
         ----------
@@ -86,10 +85,19 @@ class HttpClient(object):
             password for the given user
         '''
         cred_filepath = os.path.expanduser('~/.tmaps_pass.yaml')
-        if os.path.exists(cred_filepath):
+        if not os.path.exists(cred_filepath):
+            raise OSError('Credentials file ".tmaps_pass.yaml" not found.')
+        try:
             with open(cred_filepath) as cred_file:
-                user_credentials = yaml.load(cred_file.read())
-        return user_credentials[username]
+                credentials = yaml.load(cred_file.read())
+        except Exception as err:
+            raise ValueError(
+                'Credentials could not be read from file: %s.' % err
+            )
+        if username not in credentials:
+            raise KeyError('No credentials found for user "%s".' % username)
+        return credentials[username]
+
 
     def login(self, username, password):
         '''Authenticates the user.

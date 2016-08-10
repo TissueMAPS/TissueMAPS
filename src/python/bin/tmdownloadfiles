@@ -1,0 +1,143 @@
+#!/usr/bin/env python
+'''Command line tool for downloading files from TissueMAPS.'''
+import os
+import logging
+import argparse
+
+from tmclient.logging_utils import configure_logging
+from tmclient.logging_utils import map_logging_verbosity
+from tmclient.download import DownloadService
+
+logger = logging.getLogger(__name__)
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description='Download files from TissueMAPS.'
+    )
+    parser.add_argument(
+        '-H', '--hostname', required=True,
+        help='hostname of TissueMAPS instance'
+    )
+    parser.add_argument(
+        '-U', '--username', required=True,
+        help='name of TissueMAPS user'
+    )
+    parser.add_argument(
+        '-P', '--password',
+        help='password of TissueMAPS user'
+    )
+    parser.add_argument(
+        '-v', '--verbosity', action='count', default=0,
+        help='increase logging verbosity (no logging by default)'
+    )
+    parser.add_argument(
+        '-e', '--experiment_name', required=True,
+        help='name of the parent experiment'
+    )
+    parser.add_argument(
+        '-d', '--directory',
+        help='path to directory where files should be downloaded to'
+    )
+
+    subparsers = parser.add_subparsers(dest='file_type', help='file type')
+    subparsers.required = True
+
+    channel_image_parser = subparsers.add_parser(
+        'channel_image', help='download channel image'
+    )
+    channel_image_parser.set_defaults(method='download_channel_image_file')
+    channel_image_parser.add_argument(
+        '-c', '--channel_name', required=True,
+        help='name of the channel'
+    )
+    channel_image_parser.add_argument(
+        '-p', '--plate_name', required=True,
+        help='name of the plate'
+    )
+    channel_image_parser.add_argument(
+        '-w', '--well_name', required=True,
+        help='name of the well'
+    )
+    channel_image_parser.add_argument(
+        '-i', '--cycle_index', required=True,
+        help='zero-based index of the cycle'
+    )
+    channel_image_parser.add_argument(
+        '-x', '--well_pos_x', required=True,
+        help='zero-based x cooridinate of the acquisition site within the well'
+    )
+    channel_image_parser.add_argument(
+        '-y', '--well_pos_y', required=True,
+        help='zero-based y cooridinate of the acquisition site within the well'
+    )
+    channel_image_parser.add_argument(
+        '-z', '--zplane', default=0,
+        help='zero-based z-plane index (default: 0)'
+    )
+    channel_image_parser.add_argument(
+        '-t', '--tpoint', default=0,
+        help='zero-based time point index (default: 0)'
+    )
+
+    segmentation_image_parser = subparsers.add_parser(
+        'segmentation_image', help='download segmented objects as label image'
+    )
+    segmentation_image_parser.set_defaults(
+        method='download_segmentation_image_file'
+    )
+    segmentation_image_parser.add_argument(
+        '-o', '--object_name', required=True,
+        help='name of the segmented objects'
+    )
+    segmentation_image_parser.add_argument(
+        '-p', '--plate_name', required=True,
+        help='name of the plate'
+    )
+    segmentation_image_parser.add_argument(
+        '-w', '--well_name', required=True,
+        help='name of the well'
+    )
+    segmentation_image_parser.add_argument(
+        '-x', '--well_pos_x', required=True,
+        help='zero-based x cooridinate of the acquisition site within the well'
+    )
+    segmentation_image_parser.add_argument(
+        '-y', '--well_pos_y', required=True,
+        help='zero-based y cooridinate of the acquisition site within the well'
+    )
+    segmentation_image_parser.add_argument(
+        '-z', '--zplane', default=0,
+        help='zero-based z-plane index (default: 0)'
+    )
+    segmentation_image_parser.add_argument(
+        '-t', '--tpoint', default=0,
+        help='zero-based time point index (default: 0)'
+    )
+
+    feature_value_parser = subparsers.add_parser(
+        'features', help='download feature data and corresponding metadata'
+    )
+    feature_value_parser.set_defaults(method='download_features_file')
+    feature_value_parser.add_argument(
+        '-o', '--object_name', required=True,
+        help='name of the segmented objects'
+    )
+
+    args = parser.parse_args()
+
+    configure_logging()
+    logging_level = map_logging_verbosity(args.verbosity)
+    logger = logging.getLogger('tmclient')
+    logger.setLevel(logging_level)
+
+    service = DownloadService(args.hostname)
+    if args.password is None:
+        args.password = service.load_credentials(args.username)
+    service.login(args.username, args.password)
+
+    experiment_id = service.get_experiment_id(args.experiment_name)
+    arguments = vars(args)
+    arguments.update({'experiment_id': experiment_id})
+    service.call(args.method, arguments)
