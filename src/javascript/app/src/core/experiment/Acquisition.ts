@@ -113,9 +113,12 @@ class Acquisition {
                     file.status = 'UPLOADING';
                     if (file.progress == 100) {
                         file.status = 'COMPLETE';
-                        this.files.push(<MicroscopeFile>{
-                            name: file.name, status: 'COMPLETE'
-                        });
+                        if (namesUploadedFiles.indexOf(file.name) == -1) {
+                            this.files.push(<MicroscopeFile>{
+                                name: file.name, status: 'COMPLETE'
+                            });
+                            namesUploadedFiles.push(file.name)
+                        }
                     }
                 });
             }
