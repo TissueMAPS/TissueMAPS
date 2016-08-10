@@ -413,15 +413,15 @@ def get_job_log_output(experiment):
 @api.route('/experiments', methods=['POST'])
 @jwt_required()
 @assert_request_params(
-    'name', 'description', 'plate_format', 'plate_acquisition_mode'
+    'name', 'microscope_type', 'plate_format', 'plate_acquisition_mode'
 )
 def create_experiment():
     data = request.get_json()
     name = data.get('name')
-    description = data.get('description', '')
     microscope_type = data.get('microscope_type')
     plate_format = int(data.get('plate_format'))
     plate_acquisition_mode = data.get('plate_acquisition_mode')
+    description = data.get('description', '')
     experiment = tm.Experiment(
         name=name,
         description=description,

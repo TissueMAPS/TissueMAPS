@@ -254,6 +254,10 @@ def get_feature_values(experiment, object_name):
             metadata.to_csv(None, encoding='utf-8', index=False)
         )
     f.seek(0)
+    # TODO: These files may become very big, we may need to use a generator to
+    # stream the file: http://flask.pocoo.org/docs/0.11/patterns/streaming
+    # On the client side the streaming requests can be handled by an iterator:
+    # http://docs.python-requests.org/en/master/user/advanced/#streaming-requests
     return send_file(
         f,
         attachment_filename='%s.zip' % basename,
