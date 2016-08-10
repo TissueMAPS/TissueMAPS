@@ -15,7 +15,9 @@ from tmserver.error import (
 
 def assert_request_params(*params):
     """A decorator for GET and POST request functions that asserts that the
-    request contains the required parameters.
+    request contains the required parameters. For GET method the parameters
+    are expected to be encoded in the URL, while for POST method they are
+    expected in the request body.
 
     Parameters
     ----------
