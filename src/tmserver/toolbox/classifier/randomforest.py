@@ -13,13 +13,13 @@ class RandomForest(SupervisedClassifier):
 
         X = labeled_feature_data.drop('label', axis=1)
         y = labeled_feature_data.label
+        clf = RandomForestClassifier()
         folds = cross_validation.StratifiedKFold(y, n_folds=n_folds)
         grid = {
             'max_depth': [3, 5, 7],
             'min_samples_split': [1, 3, 10],
             'min_samples_leaf': [1, 3, 10]
         }
-        clf = RandomForestClassifier()
         gs = GridSearchCV(clf, grid, cv=folds)
         gs.fit(X, y)
 

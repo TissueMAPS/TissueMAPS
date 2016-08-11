@@ -14,12 +14,12 @@ def register():
     username = data.get('username')
     email = data.get('email')
 
-    u = User(name=username, password=password, email=email)
-    db.session.add(u)
-    db.session.commit()
+    with tm.utils.MainSession() as session:
+        u = tm.User(name=username, password=password, email=email)
+        session.add(u)
 
-    return jsonify({
-        'id': u.id,
-        'name': username,
-        'email': email
-    })
+        return jsonify({
+            'id': u.id,
+            'name': username,
+            'email': email
+        })

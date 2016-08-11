@@ -9,13 +9,12 @@ import tmlib.models as tm
 from tmserver.extensions import db
 from tmserver.tool import Tool, ToolSession, LabelLayer, LabelLayerLabel
 from tmserver.api import api
-from tmserver.experiment import Experiment
 from tmserver.error import (
     MalformedRequestError,
     ResourceNotFoundError,
     NotAuthorizedError
 )
-from tmserver.util import extract_model_from_path, assert_request_params
+from tmserver.util import decode_url_ids, decode_body_ids
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +35,11 @@ def _create_mapobject_feature(obj_id, geometry_obj):
 @jwt_required()
 def get_tools():
     # TODO: Only return tools for the current user
-    return jsonify({
-        'data': db.session.query(Tool).all()
-    })
+    with tm.utils.MainSession() as session:
+        tools = session.query(Tool).all()
+        return jsonify({
+            'data': tools
+        })
 
 
 @api.route(
@@ -46,9 +47,10 @@ def get_tools():
     methods=['POST']
 )
 @jwt_required()
+@jwt_required()
+@decode_url_ids()
 @assert_request_params('payload', 'session_uuid')
-@extract_model_from_path(tm.Experiment, Tool, check_ownership=True)
-def process_tool_request(experiment, tool):
+def process_tool_request(experiment_id, tool_id):
     """
     Process a generic tool request sent by the client.
     POST payload should have the format:
@@ -78,45 +80,42 @@ def process_tool_request(experiment, tool):
     payload = data.get('payload', {})
     session_uuid = data.get('session_uuid')
 
-    # Instantiate the correct tool plugin class.
-    tool_cls = tool.get_class()
-    tool_inst = tool_cls()
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.Experiment).get(experiment_id)
+        if experiment is None:
+            raise ResourceNotFoundError('No such experiment')
 
-    # Load or create the persistent tool session.
-    session = db.session.query(ToolSession).\
-        filter_by(uuid=session_uuid).\
-        one_or_none()
-    if session is None:
-        session = ToolSession(
+        # Instantiate the correct tool plugin class.
+        tool = session.query(Tool).get(tool_id)
+        tool_cls = tool.get_class()
+        tool_inst = tool_cls()
+
+        # Load or create the persistent tool session.
+        tool_session = session.get_or_create(
+            ToolSession,
             experiment_id=experiment.id, uuid=session_uuid, tool_id=tool.id
         )
-        db.session.add(session)
-        db.session.commit()
 
-    # Execute the tool plugin.
-    use_spark = current_app.config.get('USE_SPARK', False)
-    tool_result = tool_inst.process_request(
-        payload, session, experiment, use_spark=use_spark
-    )
-    # Commit all results that may have been added to the db
-    db.session.commit()
+        # Execute the tool plugin.
+        use_spark = current_app.config.get('USE_SPARK', False)
+        tool_result = tool_inst.process_request(
+            payload, session, experiment, use_spark=use_spark
+        )
 
-    response = {
-        'result': tool_result,
-        'session_uuid': session_uuid,
-        'tool_id': tool_id
-    }
-
-    return jsonify(response)
+        return jsonify({
+            'result': tool_result,
+            'session_uuid': session_uuid,
+            'tool_id': tool_id
+        })
 
 
 @api.route(
     '/experiments/<experiment_id>/labellayers/<label_layer_id>/tiles',
     methods=['GET']
 )
+@decode_url_ids()
 @assert_request_params('x', 'y', 'z', 'zplane', 'tpoint')
-@extract_model_from_path(tm.Experiment, LabelLayer)
-def get_result_labels(experiment, label_layer):
+def get_result_labels(experiment_id, label_layer_id):
     """Get all mapobjects together with the labels that were assigned to them
     for a given tool result and tile coordinate.
 
@@ -129,32 +128,35 @@ def get_result_labels(experiment, label_layer):
     zplane = request.args.get('zplane', type=int)
     tpoint = request.args.get('tpoint', type=int)
 
-    mapobject_type = db.session.query(tm.MapobjectType).\
-        get(label_layer.mapobject_type_id)
-    query_res = mapobject_type.get_mapobject_outlines_within_tile(
-        x, y, z, zplane=zplane, tpoint=tpoint
-    )
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        mapobject_type = session.query(tm.MapobjectType).\
+            get(label_layer.mapobject_type_id)
+        query_res = mapobject_type.get_mapobject_outlines_within_tile(
+            x, y, z, zplane=zplane, tpoint=tpoint
+        )
 
-    features = []
-    has_mapobjects_within_tile = len(query_res) > 0
+        features = []
+        has_mapobjects_within_tile = len(query_res) > 0
 
-    if has_mapobjects_within_tile:
-        mapobject_ids = [c[0] for c in query_res]
-        mapobject_id_to_label = label_layer.get_labels_for_objects(mapobject_ids)
+        if has_mapobjects_within_tile:
+            mapobject_ids = [c[0] for c in query_res]
+            mapobject_id_to_label = label_layer.get_labels_for_objects(
+                mapobject_ids
+            )
 
-        features = [
-            {
-                'type': 'Feature',
-                'geometry': json.loads(geom_geojson_str),
-                'properties': {
-                    'label': mapobject_id_to_label[id],
-                    'id': id
-                 }
-            }
-            for id, geom_geojson_str in query_res
-        ]
+            features = [
+                {
+                    'type': 'Feature',
+                    'geometry': json.loads(geom_geojson_str),
+                    'properties': {
+                        'label': mapobject_id_to_label[id],
+                        'id': id
+                     }
+                }
+                for id, geom_geojson_str in query_res
+            ]
 
-    return jsonify({
-        'type': 'FeatureCollection',
-        'features': features
-    })
+        return jsonify({
+            'type': 'FeatureCollection',
+            'features': features
+        })

@@ -6,6 +6,7 @@ from flask import current_app
 logger = logging.getLogger(__name__)
 
 class Spark(object):
+
     def __init__(self, app=None):
         """An extension that creates a spark context to submit computational
         tasks to an Apache Spark cluster.

@@ -6,31 +6,13 @@ import time
 import gc3libs
 import gc3libs.core
 import gc3libs.session
-# Copyright (C) 2015 S3IT, University of Zurich.
-#
-# Authors:
-#   Riccardo Murri <riccardo.murri@gmail.com>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 __docformat__ = 'reStructuredText'
 __version__ = '$Revision$'
 
 
 def _get_scheduler_and_lock_factory(lib):
-    """
-    Return factories for creating a period task scheduler and locks.
+    """Returns factories for creating a period task scheduler and locks.
 
     The scheduler will be a scheduler class from the APScheduler_
     framework (which see for the API), and the lock factory is an
@@ -82,16 +64,17 @@ def _get_scheduler_and_lock_factory(lib):
     elif lib in ['asyncio', 'tornado', 'twisted', 'qt']:
         raise NotImplemented(
             "Support for {lib} is not yet available!"
-            .format(lib=lib))
+            .format(lib=lib)
+        )
     else:
         raise ValueError(
             "Library '{lib}' is unknown to `{mod}._get_scheduler_and_lock_factory()`"
-            .format(lib=lib, mod=__name__))
+            .format(lib=lib, mod=__name__)
+        )
 
 
 def at_most_once_per_cycle(fn):
-    """
-    Ensure the decorated function is not executed more than once per
+    """Ensures the decorated function is not executed more than once per
     each poll interval.
 
     Cached results are returned instead, if `Engine.progress()` has
@@ -120,8 +103,7 @@ def at_most_once_per_cycle(fn):
 
 
 class BgEngine(object):
-    """
-    Run a GC3Pie `Engine`:class: instance in the background.
+    """A GC3Pie `Engine`:class: instance that runs in the background.
 
     A `BgEngine` exposes the same interface as a regular `Engine`
     class, but proxies all operations for asynchronous execution by
@@ -135,8 +117,6 @@ class BgEngine(object):
     """
     def __init__(self, lib, *args, **kwargs):
         """
-        Initialize an instance of class `BgEngine`:class:.
-
         Parameters
         ----------
         lib: str
@@ -181,8 +161,7 @@ class BgEngine(object):
     #
 
     def start(self, interval):
-        """
-        Start triggering the main loop every `interval` seconds.
+        """Starts triggering the main loop every `interval` seconds.
 
         Parameters
         ----------
@@ -191,16 +170,17 @@ class BgEngine(object):
         """
         self.running = True
         self._scheduler.add_job(
-            (lambda: self._perform()), 'interval', seconds=interval
+            (lambda: self._perform()), 'interval', seconds=interval,
+            # TODO: "id" to be able to later remove the job?
         )
         self._scheduler.start()
         gc3libs.log.info(
             "Started background execution of Engine %s every %d seconds",
-            self._engine, interval)
+            self._engine, interval
+        )
 
     def stop(self, wait=False):
-        """
-        Stop background execution of the main loop.
+        """Stops background execution of the main loop.
 
         Parameters
         ----------
@@ -212,7 +192,8 @@ class BgEngine(object):
         Call :py:meth:`start` to resume running.
         """
         gc3libs.log.info(
-            "Stopping background execution of Engine %s ...", self._engine)
+            "Stopping background execution of Engine %s ...", self._engine
+        )
         self.running = False
         self._scheduler.shutdown(wait)
 
@@ -240,7 +221,8 @@ class BgEngine(object):
         for fn, args, kwargs in q:
             gc3libs.log.debug(
                 "Executing delayed call %s(*%r, **%r) ...",
-                fn.__name__, args, kwargs)
+                fn.__name__, args, kwargs
+            )
             try:
                 fn(*args, **kwargs)
             except Exception, err:
@@ -248,11 +230,13 @@ class BgEngine(object):
                     "Got %s executing delayed call %s(*%r, **%r): %s",
                     err.__class__.__name__,
                     fn.__name__, args, kwargs,
-                    err, exc_info=__debug__)
+                    err, exc_info=__debug__
+                )
         # update GC3Pie tasks
         gc3libs.log.debug(
             "%s: calling `progress()` on Engine %s ...",
-            self, self._engine)
+            self, self._engine
+        )
         try:
             self._engine.progress()
             try:
@@ -262,12 +246,14 @@ class BgEngine(object):
             except Exception, err:
                 gc3libs.log.error(
                     "Got %s invoking callback after `Engine.progress()`: %s",
-                    err.__class__.__name__, err, exc_info=__debug__)
+                    err.__class__.__name__, err, exc_info=__debug__
+                )
             self._progress_last_run = time.time()
         except Exception, err:
             gc3libs.log.error(
                 "Got %s running `Engine.progress()` in the background: %s",
-                err.__class__.__name__, err, exc_info=__debug__)
+                err.__class__.__name__, err, exc_info=__debug__
+            )
         gc3libs.log.debug("%s: _perform() done", self)
 
     #
@@ -289,9 +275,10 @@ class BgEngine(object):
     def fetch_output(self, task, output_dir=None,
                      overwrite=False, changed_only=True, **extra_args):
         with self._q_locked:
-            self._q.append((self._engine.fetch_output,
-                            (task, output_dir, overwrite, changed_only),
-                            extra_args))
+            self._q.append(
+                (self._engine.fetch_output,
+                (task, output_dir, overwrite, changed_only), extra_args)
+            )
 
     def free(self, task, **extra_args):
         with self._q_locked:
@@ -311,8 +298,10 @@ class BgEngine(object):
 
     def peek(self, task, what='stdout', offset=0, size=None, **extra_args):
         with self._q_locked:
-            self._q.append((self._engine.peek,
-                           (task, what, offset, size), extra_args))
+            self._q.append(
+                (self._engine.peek,
+                (task, what, offset, size), extra_args)
+            )
 
     def progress(self):
         """

@@ -22,15 +22,9 @@ class SVM(SupervisedClassifier):
         ]
         clf = svm.SVC()
         gs = GridSearchCV(clf, searchspace, cv=folds)
-        print 'train SVM model'
-        t = time.time()
         gs.fit(X, y)
-        print 'fitting model took %f seconds' % (time.time() - t)
 
-        print 'apply trained model'
-        t = time.time()
         predictions = gs.predict(unlabeled_feature_data)
-        print 'predicting labels took %f seconds' % (time.time() - t)
         return zip(unlabeled_feature_data.index.tolist(), predictions.tolist())
 
     def classify_spark(self, unlabeled_feature_data, labeled_feature_data):

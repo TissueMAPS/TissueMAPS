@@ -4,7 +4,7 @@ import importlib
 from abc import ABCMeta
 from abc import abstractmethod
 
-from tmlib.models import Feature, FeatureValue, MapobjectType
+import tmlib.models as tm
 from tmserver.serialize import json_encoder
 from tmserver.model import Model
 from tmserver.extensions import spark
@@ -111,16 +111,17 @@ class ToolRequestHandler(object):
         pandas.DataFrame
             data frame with columns "mapobject_id" and "value"
         """
-        feature_values = db.session.query(
-                FeatureValue.mapobject_id, FeatureValue.value
-            ).\
-            join(Feature).\
-            join(MapobjectType).\
-            filter(
-                Feature.name == feature_name,
-                MapobjectType.name == mapobject_type_name
-            ).\
-            all()
+        with tm.utils.ExperimentSession(experiment_id) as session:
+            feature_values = session.query(
+                    tm.FeatureValue.mapobject_id, tm.FeatureValue.value
+                ).\
+                join(tm.Feature).\
+                join(tm.MapobjectType).\
+                filter(
+                    tm.Feature.name == feature_name,
+                    tm.MapobjectType.name == mapobject_type_name
+                ).\
+                all()
         return pd.DataFrame(feature_values, columns=['mapobject_id', 'value'])
 
     @abstractmethod

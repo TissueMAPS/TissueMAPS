@@ -17,7 +17,7 @@ from tmlib.workflow.metaconfig import get_microscope_type_regex
 from tmserver.extensions import redis_store
 from tmserver.api import api
 from tmserver.extensions import db
-from tmserver.util import extract_model_from_path, assert_request_params
+from tmserver.util import decode_url_ids, decode_body_ids, assert_request_params
 from tmserver.error import *
 
 logger = logging.getLogger(__name__)
@@ -29,8 +29,9 @@ logger = logging.getLogger(__name__)
 )
 @jwt_required()
 @assert_request_params('files')
-@extract_model_from_path(tm.Experiment, tm.Acquisition, check_ownership=True)
-def register_upload(experiment, acquisition):
+@jwt_required()
+@decode_url_ids()
+def register_upload(experiment_id, acquisition_id):
     """
     Tell the server that an upload for this acquisition is imminent.
     The client should wait for this response before uploading files.
@@ -55,46 +56,40 @@ def register_upload(experiment, acquisition):
             'No files supplied. Cannot register upload.'
         )
 
-    microscope_type = acquisition.plate.experiment.microscope_type
-    image_regex, metadata_regex = get_microscope_type_regex(microscope_type)
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.Experiment).get(experiment_id)
+        microscope_type = experiment.microscope_type
+    imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
-    image_filenames = [f.name for f in acquisition.microscope_image_files]
-    valid_image_filenames = [
-        f for f in data['files'] if image_regex.search(f)
-    ]
-    img_files = [
-        tm.MicroscopeImageFile(
-            name=secure_filename(f), acquisition_id=acquisition.id
-        )
-        for f in valid_image_filenames
-        if secure_filename(f) not in image_filenames
-    ]
-    metadata_filenames = [f.name for f in acquisition.microscope_metadata_files]
-    valid_metadata_filenames = [
-        f for f in data['files'] if metadata_regex.search(f)
-    ]
-    meta_files = [
-        tm.MicroscopeMetadataFile(
-            name=secure_filename(f), acquisition_id=acquisition.id
-        )
-        for f in valid_metadata_filenames
-        if secure_filename(f) not in metadata_filenames
-    ]
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        acquisition = session.query(tm.Acquisition).get(acquisition_id)
+        img_filenames = [f.name for f in acquisition.microscope_image_files]
+        img_files = [
+            MicroscopeImageFile(
+                name=secure_filename(f), acquisition_id=acquisition.id
+            )
+            for f in data['files']
+            if imgfile_regex.search(f) and
+            secure_filename(f) not in img_filenames
+        ]
+        meta_filenames = [f.name for f in acquisition.microscope_metadata_files]
+        meta_files = [
+            MicroscopeMetadataFile(
+                name=secure_filename(f), acquisition_id=acquisition.id
+            )
+            for f in data['files']
+            if metadata_regex.search(f) and
+            secure_filename(f) not in meta_filenames
+        ]
 
-    db.session.add_all(img_files + meta_files)
-    db.session.commit()
+        session.bulk_save_objects(img_files + meta_files)
 
-    # Trigger creation of directories
-    acquisition.location
-    acquisition.microscope_images_location
-    acquisition.microscope_metadata_location
+        # Trigger creation of directories
+        acquisition.location
+        acquisition.microscope_images_location
+        acquisition.microscope_metadata_location
 
-    # NOTE: We have to return the original local filenames and not the ones
-    # potentially modified by secure_filename()!
-    return jsonify({
-        'message': 'Ok',
-        'data': valid_image_filenames + valid_metadata_filenames
-    })
+    return jsonify(message='ok')
 
 
 @api.route(
@@ -103,19 +98,23 @@ def register_upload(experiment, acquisition):
 )
 @jwt_required()
 @assert_request_params('files')
-@extract_model_from_path(tm.Experiment, tm.Acquisition, check_ownership=True)
-def file_validity_check(experiment, acquisition):
-    data = request.get_json()
+@decode_url_ids()
+def file_validity_check(experiment_id, acquisition_id):
+    data = json.loads(request.data)
+    if not 'files' in data:
+        raise MalformedRequestError()
     if not type(data['files']) is list:
         raise MalformedRequestError('No image files provided.')
-
-    microscope_type = acquisition.plate.experiment.microscope_type
-    imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
     def check_file(fname):
         is_imgfile = imgfile_regex.search(fname) is not None
         is_metadata_file = metadata_regex.search(fname) is not None
         return is_metadata_file or is_imgfile
+
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.Experiment).get(experiment_id)
+        microscope_type = experiment.microscope_type
+    imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
     # TODO: check if metadata files are missing
     is_valid = [check_file(f['name']) for f in data['files']]
@@ -130,64 +129,63 @@ def file_validity_check(experiment, acquisition):
     methods=['POST']
 )
 @jwt_required()
-@extract_model_from_path(tm.Experiment, tm.Acquisition, check_ownership=True)
-def upload_file(experiment, acquisition):
+@decode_url_ids()
+def upload_file(experiment_id, acquisition_id):
     f = request.files.get('file')
-    if acquisition.status == FileUploadStatus.COMPLETE:
-        logger.info('acquisition already complete')
-        return jsonify(message='Acquisition complete')
 
     # Get the file form the form
     if not f:
         raise MalformedRequestError('Missing file entry in this request.')
 
-    filename = secure_filename(f.filename)
-    imgfile = db.session.query(tm.MicroscopeImageFile).\
-        filter_by(name=filename, acquisition_id=acquisition.id).\
-        one_or_none()
-    metafile = db.session.query(tm.MicroscopeMetadataFile).\
-        filter_by(name=filename, acquisition_id=acquisition.id).\
-        one_or_none()
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        acquisition = session.query(tm.Acquisition).get(acquisition_id)
+        if acquisition.status == FileUploadStatus.COMPLETE:
+            logger.info('acquisition already complete')
+            return jsonify(message='Acquisition complete')
 
-    is_imgfile = imgfile is not None
-    is_metafile = metafile is not None
-    if not is_metafile and not is_imgfile:
-        raise MalformedRequestError(
-            'File was not registered: "%s"' % filename
-        )
-    elif is_imgfile:
-        file_obj = imgfile
-    elif is_metafile:
-        file_obj = metafile
-    else:
-        raise MalformedRequestError(
-            'File was registered as both image and metadata file: "%s"'
-            % filename
-        )
+        filename = secure_filename(f.filename)
+        imgfile = session.query(MicroscopeImageFile).\
+            filter_by(name=filename, acquisition_id=acquisition_id).\
+            one_or_none()
+        metafile = session.query(MicroscopeMetadataFile).\
+            filter_by(name=filename, acquisition_id=acquisition_id).\
+            one_or_none()
 
-    if file_obj.status == FileUploadStatus.COMPLETE:
-        logger.debug('file "%s" already uploaded')
-        return jsonify(message='File already uploaded')
-    elif file_obj.status == FileUploadStatus.UPLOADING:
-        logger.debug('file "%s" already uploading')
-        return jsonify(message='File upload already in progress')
+        is_imgfile = imgfile is not None
+        is_metafile = metafile is not None
+        if not is_metafile and not is_imgfile:
+            raise MalformedRequestError(
+                'File was not registered: "%s"' % filename
+            )
+        elif is_imgfile:
+            file_obj = imgfile
+        elif is_metafile:
+            file_obj = metafile
+        else:
+            raise MalformedRequestError(
+                'File was registered as both image and metadata file: "%s"'
+                % filename
+            )
 
-    logger.debug('upload file "%s"', filename)
-    file_obj.status = FileUploadStatus.UPLOADING
-    db.session.add(file_obj)
-    db.session.commit()
+        if file_obj.upload_status == FileUploadStatus.COMPLETE:
+            logger.info('file "%s" already uploaded')
+            return jsonify(message='File already uploaded')
+        elif file_obj.upload_status == FileUploadStatus.UPLOADING:
+            logger.info('file "%s" already uploading')
+            return jsonify(message='File upload already in progress')
 
-    try:
-        f.save(file_obj.location)
-        file_obj.status = FileUploadStatus.COMPLETE
-        db.session.add(file_obj)
-        db.session.commit()
-    except Exception as error:
-        file_obj.status = FileUploadStatus.FAILED
-        db.session.add(file_obj)
-        db.session.commit()
-        raise InternalServerError(
-            'Upload of file failed: %s' % str(error)
-        )
+        logger.info('upload file "%s"', filename)
+        file_obj.upload_status = FileUploadStatus.UPLOADING
+        session.add(file_obj)
+        session.commit()
 
-    return jsonify(message='Upload ok')
+        try:
+            f.save(file_obj.location)
+            file_obj.upload_status = FileUploadStatus.COMPLETE
+        except Exception as error:
+            file_obj.upload_status = FileUploadStatus.FAILED
+            raise InternalServerError(
+                'Upload of file failed: %s' % str(error)
+            )
+
+    return jsonify(message='ok')

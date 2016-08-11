@@ -1,10 +1,11 @@
 import datetime
 
 from flask import current_app, request
+from flask_sqlalchemy_session import current_session
 from passlib.hash import sha256_crypt
 from flask_jwt import JWT
 
-from tmserver.extensions import db
+import tmlib.models as tm
 from tmserver.user import User
 
 
@@ -16,7 +17,7 @@ jwt = JWT()
 def authenticate(username, password):
     """Check if there is a user with this username-pw-combo
     and return the user object if a matching user has been found."""
-    user = db.session.query(User).filter_by(name=username).first()
+    user = current_session.query(tm.User).filter_by(name=username).one()
     if user and sha256_crypt.verify(password, user.password):
         return user
     else:
@@ -26,7 +27,9 @@ def authenticate(username, password):
 @jwt.identity_handler
 def load_user(payload):
     """Lookup the user for a token payload."""
-    user = db.session.query(User).get(payload['uid'])
+    # if the scope creates a problem consider using
+    # http://flask-sqlalchemy-session.readthedocs.io/en/v1.1/
+    user = current_session.query(tm.User).get(payload['uid'])
     return user
 
 

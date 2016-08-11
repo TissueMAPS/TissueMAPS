@@ -3,8 +3,8 @@ import pandas as pd
 from abc import ABCMeta
 from abc import abstractmethod
 
-from tmlib.models import FeatureValue, Feature, MapobjectType
-from tmserver.extensions import db
+import tmlib.models as tm
+
 from tmserver.extensions import spark
 from tmserver.tool import Result
 from tmserver.tool import ScalarLabelLayer
@@ -27,9 +27,9 @@ class Classifier(ToolRequestHandler):
             ID of the processed experiment
         mapobject_type_name: str
             name of the selected mapobject type, see
-            :py:class:`tmlib.models.MapobjectType`
+            :py:class:`tmlib.models.tm.MapobjectType`
         feature_names: List[str]
-            names of selected features, see :py:class:`tmlib.models.Feature`
+            names of selected features, see :py:class:`tmlib.models.tm.Feature`
 
         Returns
         -------
@@ -38,17 +38,18 @@ class Classifier(ToolRequestHandler):
             to items of `feature_names` and rows are mapobjects indexable by
             `mapobject_ids`
         '''
-        mapobject_type_id = db.session.query(MapobjectType.id).\
-            filter_by(name=mapobject_type_name, experiment_id=experiment_id).\
-            one()
-        feature_values = db.session.query(
-                Feature.name, FeatureValue.mapobject_id, FeatureValue.value
-            ).\
-            join(FeatureValue).\
-            filter(
-                (Feature.name.in_(feature_names)) &
-                (Feature.mapobject_type_id == mapobject_type_id)).\
-            all()
+        with tm.utils.ExperimentSession(experiment_id) as session:
+            mapobject_type_id = session.query(tm.MapobjectType.id).\
+                filter_by(name=mapobject_type_name).\
+                one()
+            feature_values = session.query(
+                    tm.Feature.name, tm.FeatureValue.mapobject_id, tm.FeatureValue.value
+                ).\
+                join(tm.FeatureValue).\
+                filter(
+                    (tm.Feature.name.in_(feature_names)) &
+                    (tm.Feature.mapobject_type_id == mapobject_type_id)).\
+                all()
         feature_df_long = pd.DataFrame(feature_values)
         feature_df_long.columns = ['features', 'mapobject', 'value']
         return pd.pivot_table(
@@ -67,9 +68,9 @@ class Classifier(ToolRequestHandler):
             ID of the processed experiment
         mapobject_type_name: str
             name of the selected mapobject type, see
-            :py:class:`tmlib.models.MapobjectType`
+            :py:class:`tmlib.models.tm.MapobjectType`
         feature_names: List[str]
-            names of selected features, see :py:class:`tmlib.models.Feature`
+            names of selected features, see :py:class:`tmlib.models.tm.Feature`
 
         Returns
         -------
@@ -204,14 +205,15 @@ class SupervisedClassifier(Classifier):
         '''
         pass
 
-    def process_request(self, payload, tool_session, experiment, use_spark=False):
+    def process_request(self, payload, tool_session, experiment_id, use_spark=False):
         #m Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
 
-        mapobject_type_id = db.session.query(MapobjectType.id).\
-            filter_by(name=mapobject_type_name, experiment_id=experiment.id).\
-            one()
+        with tm.utils.ExperimentSession(experiment_id) as session:
+            mapobject_type_id = session.query(tm.MapobjectType.id).\
+                filter_by(name=mapobject_type_name).\
+                one()
 
         labeled_mapobjects = list()
         color_map = dict()
@@ -227,7 +229,7 @@ class SupervisedClassifier(Classifier):
             from pyspark.ml.classification import RandomForestClassifier
             from pyspark.ml.evaluation import MulticlassClassificationEvaluator
             unlabeled_feature_data = self.format_feature_data_spark(
-                experiment.id, mapobject_type_name, feature_names
+                experiment_id, mapobject_type_name, feature_names
             )
             labeled_feature_data = self.label_feature_data_spark(
                 unlabeled_feature_data, labeled_mapobjects
@@ -237,7 +239,7 @@ class SupervisedClassifier(Classifier):
             )
         else:
             unlabeled_feature_data = self.format_feature_data_sklearn(
-                experiment.id, mapobject_type_name, feature_names
+                experiment_id, mapobject_type_name, feature_names
             )
             labeled_feature_data = self.label_feature_data_sklearn(
                 unlabeled_feature_data, labeled_mapobjects
@@ -295,14 +297,15 @@ class UnsupervisedClassifier(Classifier):
         '''
         pass
 
-    def process_request(self, payload, tool_session, experiment, use_spark=False):
+    def process_request(self, payload, tool_session, experiment_id, use_spark=False):
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
         k = payload['k']
 
-        mapobject_type_id = db.session.query(MapobjectType.id).\
-            filter_by(name=mapobject_type_name, experiment_id=experiment.id).\
-            one()
+        with tm.utils.ExperimentSession(experiment_id) as session:
+            mapobject_type_id = session.query(tm.MapobjectType.id).\
+                filter_by(name=mapobject_type_name).\
+                one()
 
         if use_spark:
             feature_data = self.format_feature_data_spark(

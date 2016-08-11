@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 from sqlalchemy import Integer, ForeignKey, Column, String
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, Session
 from sqlalchemy.dialects.postgresql import JSON
 
 from tmserver.serialize import json_encoder
@@ -45,24 +45,25 @@ class Result(Model):
             additional plots that should be visualized client-side
 
         """
+        session = Session.object_session(self)
         if name is None:
             self.name = '%s result' % tool_session.tool.name
         else:
             self.name = name
         self.tool_session_id = tool_session.id
         logger.info('create persistent result for tool "%s"', self.name)
-        db.session.add(self)
-        db.session.flush()
+        session.add(self)
+        session.flush()
 
         # Add layer
         layer.result_id = self.id
-        db.session.add(layer)
+        session.add(layer)
 
         # Add plots
         for plot in plots:
             plot.result_id = self.id
 
-        db.session.add_all(plots)
+        session.add_all(plots)
 
 
 @json_encoder(Result)
@@ -114,12 +115,13 @@ class LabelLayer(Model):
             a dictionary with extra attributes to be saved
 
         """
+        session = Session.object_session(self)
         self.type = self.__class__.__name__
         self.attributes = extra_attributes
         self.mapobject_type_id = mapobject_type_id
 
-        db.session.add(self)
-        db.session.flush()
+        session.add(self)
+        session.flush()
 
         if labels:
             logger.info('create label layer labels')
@@ -129,7 +131,7 @@ class LabelLayer(Model):
                  'label_layer_id': self.id}
                 for mapobject_id, label in labels.items()
             ]
-            db.session.bulk_insert_mappings(LabelLayerLabel, label_objs)
+            session.bulk_insert_mappings(LabelLayerLabel, label_objs)
 
     def get_labels_for_objects(self, mapobject_ids):
         """Returns the labels for the given `mapobjects` from the corresponding
@@ -153,10 +155,11 @@ class LabelLayer(Model):
 
         """
         logger.info('get labels from database table')
+        session = Session.object_session(self)
         if self.type == 'HeatmapLabelLayer':
             print self.attributes['feature_id']
             return dict(
-                db.session.query(
+                session.query(
                     FeatureValue.mapobject_id, FeatureValue.value
                 ).
                 filter(
@@ -167,7 +170,7 @@ class LabelLayer(Model):
             )
         else:
             return dict(
-                db.session.query(
+                session.query(
                     LabelLayerLabel.mapobject_id, LabelLayerLabel.label
                 ).
                 filter(

@@ -2,15 +2,20 @@ import sys
 import os
 from os.path import join, dirname, abspath
 import logging
-
 from flask import Flask
+from flask_sqlalchemy_session import flask_scoped_session
 import gc3libs
+
+from tmlib.models.utils import create_db_engine, create_db_session_factory
 
 from tmserver import defaultconfig
 from tmserver.extensions import db
 from tmserver.extensions import jwt
 from tmserver.extensions import redis_store
 from tmserver.serialize import TmJSONEncoder
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(config_overrides={}):
@@ -104,8 +109,12 @@ def create_app(config_overrides={}):
 
     ## Initialize Plugins
     jwt.init_app(app)
-    db.init_app(app)
     redis_store.init_app(app)
+
+    # Create a session scope for interacting with the main database
+    engine = create_db_engine()
+    session_factory = create_db_session_factory(engine)
+    session = flask_scoped_session(session_factory, app)
 
     if app.config.get('USE_SPARK', False):
         from tmserver.extensions import spark

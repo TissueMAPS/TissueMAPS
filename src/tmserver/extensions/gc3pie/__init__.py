@@ -89,13 +89,11 @@ class GC3Pie(object):
         """
         return current_app.extensions.get('gc3pie', {}).get('store')
 
-    def store_jobs(self, experiment, jobs):
+    def store_jobs(self, jobs):
         """Stores jobs in the database.
 
         Parameters
         ----------
-        experiment: tmlib.models.Experiment
-            experiment object
         jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
             individual computational task or collection of tasks
 
@@ -112,21 +110,19 @@ class GC3Pie(object):
         logger.debug('insert jobs into tasks table')
         persistent_id = self._store.save(jobs)
         logger.debug('update submissions table')
-        submission = db.session.query(tm.Submission).\
-            get(jobs.submission_id)
-        submission.top_task_id = persistent_id
-        db.session.add(submission)
-        db.session.commit()
+        with tm.utils.MainSession() as session:
+            submission = session.query(tm.Submission).get(jobs.submission_id)
+            submission.top_task_id = persistent_id
 
-    def retrieve_jobs(self, experiment, submitting_program):
-        """Retrieves stored jobs of the most recent submission for the given
-        `experiment` and `submitting_program` from the database.
+    def retrieve_jobs(self, experiment_id, program):
+        """Retrieves all stored jobs for the given `experiment` that were
+        submitted by `program`.
 
         Parameters
         ----------
-        experiment: tmlib.models.Experiment
-            processed experiment
-        submitting_program: str
+        experiment_id: int
+            ID of the processed experiment
+        program: str
             name of the program that submitted the jobs, e.g. ``"jtui"``
 
         Returns
@@ -141,23 +137,24 @@ class GC3Pie(object):
         """
         # submission_manager = SubmissionManager(experiment.id, 'workflow')
         # task_id = submission_manager.get_task_id_for_last_submission()
-        last_submission_id = db.session.query(func.max(tm.Submission.id)).\
-            filter(
-                tm.Submission.experiment_id == experiment.id,
-                tm.Submission.program == submitting_program
-            ).\
-            group_by(tm.Submission.experiment_id).\
-            one_or_none()
-        if last_submission_id is not None:
-            last_submission_id = last_submission_id[0]
-            last_submission = db.session.query(tm.Submission).\
-                get(last_submission_id)
-            job_id = last_submission.top_task_id
-            if job_id is None:
+        with tm.utils.MainSession() as session:
+            last_submission_id = session.query(func.max(tm.Submission.id)).\
+                filter(
+                    tm.Submission.experiment_id == experiment_id,
+                    tm.Submission.program == program
+                ).\
+                group_by(tm.Submission.experiment_id).\
+                one_or_none()
+            if last_submission_id is not None:
+                last_submission_id = last_submission_id[0]
+                last_submission = session.query(tm.Submission).\
+                    get(last_submission_id)
+                job_id = last_submission.top_task_id
+                if job_id is None:
+                    return None
+                return self._store.load(job_id)
+            else:
                 return None
-            return self._store.load(job_id)
-        else:
-            return None
 
     def retrieve_single_job(self, job_id):
         """Retrieves an individual job from the store.
@@ -209,17 +206,21 @@ class GC3Pie(object):
             from where all subsequent tasks should be resubmitted
         """
         logger.info('add jobs to engine')
+        # TODO: does this update???
         self._engine.add(jobs)
         logger.info('redo jobs')
         self._engine.redo(jobs, index)
 
-    def get_status_of_submitted_jobs(self, jobs):
+    def get_status_of_submitted_jobs(self, jobs, recursion_depth=4):
         '''Gets the status of submitted jobs.
 
         Parameters
         ----------
         jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
             individual computational task or collection of tasks
+        recursion_depth: int, optional
+            recursion depth for subtask querying; by default
+            data of all subtasks will be queried (default: ``4``)
 
         Returns
         -------
@@ -230,4 +231,4 @@ class GC3Pie(object):
         --------
         :py:function:`tmlib.workflow.utils.get_task_data_from_sql_store`
         '''
-        return get_task_data_from_sql_store(jobs)
+        return get_task_data_from_sql_store(jobs, recursion_depth)

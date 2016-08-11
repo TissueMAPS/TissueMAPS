@@ -20,7 +20,7 @@ from tmlib.image import SegmentationImage
 
 from tmserver.api import api
 from tmserver.extensions import db
-from tmserver.util import extract_model_from_path, assert_request_params
+from tmserver.util import decode_url_ids, assert_request_params
 from tmserver.error import MalformedRequestError, ResourceNotFoundError
 
 
@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
     methods=['GET']
 )
 @assert_request_params('x', 'y', 'z', 'zplane', 'tpoint')
-@extract_model_from_path(tm.Experiment)
-def get_mapobjects_tile(experiment, object_name):
+@decode_url_ids()
+def get_mapobjects_tile(experiment_id, object_name):
 
     # The coordinates of the requested tile
     x = request.args.get('x', type=int)
@@ -50,7 +50,9 @@ def get_mapobjects_tile(experiment, object_name):
     )
 
     if object_name == 'DEBUG_TILE':
-        maxzoom = experiment.channels[0].layers[0].maxzoom_level_index
+        with tm.utils.ExperimentSession(experiment_id) as session:
+            layer = session.query(tm.ChannelLayers).first()
+            maxzoom = layer.maxzoom_level_index
         minx, miny, maxx, maxy = tm.MapobjectSegmentation.bounding_box(
             x, y, z, maxzoom
         )
@@ -71,12 +73,13 @@ def get_mapobjects_tile(experiment, object_name):
             }
         })
 
-    mapobject_type = db.session.query(tm.MapobjectType).\
-        filter_by(name=object_name, experiment_id=experiment.id).\
-        one()
-    query_res = mapobject_type.get_mapobject_outlines_within_tile(
-        x, y, z, tpoint, zplane
-    )
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        mapobject_type = session.query(tm.MapobjectType).\
+            filter_by(name=object_name).\
+            one()
+        query_res = mapobject_type.get_mapobject_outlines_within_tile(
+            x, y, z, tpoint, zplane
+        )
 
     features = []
     if len(query_res) > 0:
@@ -103,8 +106,8 @@ def get_mapobjects_tile(experiment, object_name):
 
 @api.route('/experiments/<experiment_id>/features', methods=['GET'])
 @jwt_required()
-@extract_model_from_path(tm.Experiment, check_ownership=True)
-def get_features(experiment):
+@decode_url_ids()
+def get_features(experiment_id):
     """Sends a list of feature objects.
 
     Request
@@ -129,14 +132,13 @@ def get_features(experiment):
     }
 
     """
-    features = db.session.query(tm.Feature).\
-        filter_by(experiment_id=experiment.id).\
-        all()
-    if not features:
-        logger.waring('no features found')
-    return jsonify({
-        'data': features
-    })
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        features = session.query(tm.Feature).all()
+        if not features:
+            logger.waring('no features found')
+        return jsonify({
+            'data': features
+        })
 
 
 @api.route(
@@ -146,7 +148,8 @@ def get_features(experiment):
 @jwt_required()
 @assert_request_params('plate_name', 'well_name', 'x', 'y', 'zplane', 'tpoint')
 @extract_model_from_path(tm.Experiment)
-def get_mapobjects_segmentation(experiment, object_name):
+@decode_url_ids()
+def get_mapobjects_segmentation(experiment_id, object_name):
     plate_name = request.args.get('plate_name')
     well_name = request.args.get('well_name')
     # TODO: raise MissingGETParameterError when arg missing
@@ -155,49 +158,48 @@ def get_mapobjects_segmentation(experiment, object_name):
     zplane = request.args.get('zplane', type=int)
     tpoint = request.args.get('tpoint', type=int)
     label = request.args.get('label', None)
-    site = db.session.query(tm.Site).\
-        join(tm.Well).\
-        join(tm.Plate).\
-        filter(
-            tm.Plate.experiment_id == experiment.id,
-            tm.Plate.name == plate_name,
-            tm.Well.name == well_name,
-            tm.Site.x == x, tm.Site.y == y
-        ).\
-        one()
-    mapobject_type = db.session.query(tm.MapobjectType).\
-        filter_by(name=object_name, experiment_id=experiment.id).\
-        one()
-    segmentations = db.session.query(
-            tm.MapobjectSegmentation.label,
-            tm.MapobjectSegmentation.geom_poly
-        ).\
-        join(tm.Mapobject).\
-        join(tm.MapobjectType).\
-        filter(
-            tm.MapobjectType.name == object_name,
-            tm.MapobjectType.experiment_id == experiment.id,
-            tm.MapobjectSegmentation.site_id == site.id,
-            tm.MapobjectSegmentation.zplane == zplane,
-            tm.MapobjectSegmentation.tpoint == tpoint
-        ).\
-        all()
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        site = session.query(tm.Site).\
+            join(tm.Well).\
+            join(tm.Plate).\
+            filter(
+                tm.Plate.name == plate_name,
+                tm.Well.name == well_name,
+                tm.Site.x == x, tm.Site.y == y
+            ).\
+            one()
+        mapobject_type = db.session.query(tm.MapobjectType).\
+            filter_by(name=object_name).\
+            one()
+        segmentations = db.session.query(
+                tm.MapobjectSegmentation.label,
+                tm.MapobjectSegmentation.geom_poly
+            ).\
+            join(tm.Mapobject).\
+            join(tm.MapobjectType).\
+            filter(
+                tm.MapobjectType.name == object_name,
+                tm.MapobjectSegmentation.site_id == site.id,
+                tm.MapobjectSegmentation.zplane == zplane,
+                tm.MapobjectSegmentation.tpoint == tpoint
+            ).\
+            all()
 
-    if len(segmentations) == 0:
-        raise ResourceNotFoundError('No segmentations found.')
-    polygons = dict()
-    for seg in segmentations:
-        polygons[(tpoint, zplane, seg.label)] = seg.geom_poly
+        if len(segmentations) == 0:
+            raise ResourceNotFoundError('No segmentations found.')
+        polygons = dict()
+        for seg in segmentations:
+            polygons[(tpoint, zplane, seg.label)] = seg.geom_poly
 
-    height = site.height - (
-        site.intersection.lower_overhang + site.intersection.upper_overhang
-    )
-    width = site.width - (
-        site.intersection.left_overhang + site.intersection.right_overhang
-    )
-    y_offset, x_offset = site.offset
-    y_offset += site.intersection.lower_overhang
-    x_offset += site.intersection.right_overhang
+        height = site.height - (
+            site.intersection.lower_overhang + site.intersection.upper_overhang
+        )
+        width = site.width - (
+            site.intersection.left_overhang + site.intersection.right_overhang
+        )
+        y_offset, x_offset = site.offset
+        y_offset += site.intersection.lower_overhang
+        x_offset += site.intersection.right_overhang
 
     img = SegmentationImage.create_from_polygons(
         polygons, y_offset, x_offset, (height, width)
@@ -222,13 +224,15 @@ def get_mapobjects_segmentation(experiment, object_name):
     methods=['GET']
 )
 @jwt_required()
-@extract_model_from_path(tm.Experiment)
-def get_feature_values(experiment, object_name):
-    mapobject_type = db.session.query(tm.MapobjectType).\
-        filter_by(experiment_id=experiment.id, name=object_name).\
-        one()
-    features = mapobject_type.get_feature_value_matrix()
-    metadata = mapobject_type.get_metadata_matrix()
+@decode_url_ids()
+def get_feature_values(experiment_id, object_name):
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        mapobject_type = session.query(tm.MapobjectType).\
+            filter_by(name=object_name).\
+            one()
+        features = mapobject_type.get_feature_value_matrix()
+        metadata = mapobject_type.get_metadata_matrix()
+
     if features.values.shape[0] != metadata.values.shape[0]:
         raise ValueError(
             'Features and metadata must have same number of "%s" objects'

@@ -1,14 +1,10 @@
-from tmlib.models import (
-    Experiment, Channel, ChannelLayer, Plate, Acquisition, Cycle,
-    Feature, MapobjectType,
-    MicroscopeImageFile, MicroscopeMetadataFile,
-)
+import tmlib.models as tm
 from tmserver.serialize import json_encoder
 from tmserver.model import encode_pk
 from tmlib.workflow.description import WorkflowDescription
 
 
-@json_encoder(Experiment)
+@json_encoder(tm.Experiment)
 def encode_experiment(obj, encoder):
     return {
         'id': encode_pk(obj.id),
@@ -18,13 +14,13 @@ def encode_experiment(obj, encoder):
         'plate_format': obj.plate_format,
         'microscope_type': obj.microscope_type,
         'plate_acquisition_mode': obj.plate_acquisition_mode,
-        'channels': map(encoder.default, obj.channels),
+        # 'channels': map(encoder.default, obj.channels),
         'mapobject_types': map(encoder.default, obj.mapobject_types),
         'workflow_description': obj.workflow_description.as_dict()
     }
 
 
-@json_encoder(Channel)
+@json_encoder(tm.Channel)
 def encode_channel(obj, encoder):
     return {
         'id': encode_pk(obj.id),
@@ -35,7 +31,7 @@ def encode_channel(obj, encoder):
     }
 
 
-@json_encoder(ChannelLayer)
+@json_encoder(tm.ChannelLayer)
 def encode_channel_layer(obj, encoder):
     return {
         'id': encode_pk(obj.id),
@@ -52,7 +48,7 @@ def encode_channel_layer(obj, encoder):
     }
 
 
-@json_encoder(Plate)
+@json_encoder(tm.Plate)
 def encode_plate(obj, encoder):
     return {
         'id': encode_pk(obj.id),
@@ -65,7 +61,7 @@ def encode_plate(obj, encoder):
     }
 
 
-@json_encoder(Acquisition)
+@json_encoder(tm.Acquisition)
 def encode_acquisition(obj, encoder):
     return {
         'id': encode_pk(obj.id),
@@ -77,7 +73,7 @@ def encode_acquisition(obj, encoder):
     }
 
 
-@json_encoder(MicroscopeImageFile)
+@json_encoder(tm.MicroscopeImageFile)
 def enocode_microscope_image_file(obj, encoder):
     return {
         'name': obj.name,
@@ -85,7 +81,7 @@ def enocode_microscope_image_file(obj, encoder):
     }
 
 
-@json_encoder(MicroscopeMetadataFile)
+@json_encoder(tm.MicroscopeMetadataFile)
 def enocode_microscope_metadata_file(obj, encoder):
     return {
         'name': obj.name,
@@ -93,7 +89,7 @@ def enocode_microscope_metadata_file(obj, encoder):
     }
 
 
-@json_encoder(Cycle)
+@json_encoder(tm.Cycle)
 def encode_cycle(obj, encoder):
     return {
         'id': encode_pk(obj.id),
@@ -101,7 +97,7 @@ def encode_cycle(obj, encoder):
     }
 
 
-@json_encoder(Feature)
+@json_encoder(tm.Feature)
 def encode_feature(obj, encoder):
     return {
         'id': encode_pk(obj.id),
@@ -110,11 +106,27 @@ def encode_feature(obj, encoder):
     }
 
 
-@json_encoder(MapobjectType)
+@json_encoder(tm.MapobjectType)
 def encode_mapobject_type(obj, encoder):
     return {
         'id': encode_pk(obj.id),
         'name': obj.name,
         'features': map(encoder.default, obj.features),
         'experiment_id': encode_pk(obj.experiment_id)
+    }
+
+
+@json_encoder(tm.MicroscopeImageFile)
+def encode_microscope_image_file(obj, encoder):
+    return {
+        'name': obj.name,
+        'upload_status': obj.upload_status
+
+
+@json_encoder(tm.MicroscopeMetadataFile)
+def encode_microscope_metadata_file(obj, encoder):
+    return {
+        'name': obj.name,
+        'upload_status': obj.upload_status
+    }
     }

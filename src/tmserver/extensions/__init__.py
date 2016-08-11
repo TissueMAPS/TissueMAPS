@@ -1,5 +1,6 @@
-from flask.ext.sqlalchemy import SQLAlchemy
-db = SQLAlchemy()
+from flask_sqlalchemy_session import flask_scoped_session
+# from flask.ext.sqlalchemy import SQLAlchemy
+# db = SQLAlchemy()
 
 from auth import jwt
 
