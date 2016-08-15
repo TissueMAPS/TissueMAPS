@@ -1,14 +1,16 @@
-interface RandomForestScope extends ToolWindowContentScope {
-    randomForest: RandomForestCtrl;
+interface ClassificationScope extends ToolWindowContentScope {
+    randomForest: ClassificationCtrl;
     featureWidget: FeatureSelectionWidgetCtrl;
     mapobjectTypeWidget: MapobjectTypeWidgetCtrl;
     classSelectionWidget: ClassSelectionWidgetCtrl;
 }
 
-class RandomForestCtrl extends ToolCtrl {
+class ClassificationCtrl extends ToolCtrl {
     static $inject = ['$scope', 'viewer'];
 
-    constructor(public $scope: RandomForestScope,
+    algorithm: string = 'rf';
+
+    constructor(public $scope: ClassificationScope,
                 public viewer: Viewer) {
         super();
     }
@@ -29,7 +31,8 @@ class RandomForestCtrl extends ToolCtrl {
         this.sendRequest({
             chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
             selected_features: selectedFeatures,
-            training_classes: trainingClasses
+            training_classes: trainingClasses,
+            method: this.algorithm
         });
     }
 }
