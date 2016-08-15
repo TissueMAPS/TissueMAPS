@@ -63,6 +63,7 @@
         "app/src/core/experiment/PlateDAO.ts",
         "app/src/core/experiment/Acquisition.ts",
         "app/src/core/experiment/AcquisitionDAO.ts",
+        "app/src/core/experiment/MapobjectType.ts",
         "app/src/core/experiment/Channel.ts",
         "app/src/core/experiment/ChannelLayer.ts",
 
@@ -85,7 +86,6 @@
         "app/src/core/serialize/typedefs.ts",
 
         "app/src/core/tool/Tool.ts",
-        "app/src/core/tool/ToolDAO.ts",
         "app/src/core/tool/ToolSession.ts",
         "app/src/core/tool/ToolCtrl.ts",
         "app/src/core/tool/ToolResult.ts",

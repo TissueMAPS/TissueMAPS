@@ -2,12 +2,11 @@ interface SerializedAcquisition {
     id: string;
     name: string;
     description: string;
-    plate_id: string;
     status: string;
-    experiment_id: string;
 }
 
 class AcquisitionDAO extends HTTPDataAccessObject<Acquisition> {
+
     /**
      * @classdesc A DataAccessObject for the Acquisition class.
      */
@@ -20,8 +19,7 @@ class AcquisitionDAO extends HTTPDataAccessObject<Acquisition> {
             id: aq.id,
             name: aq.name,
             status: aq.status,
-            description: aq.description,
-            experiment_id: aq.experiment_id
+            description: aq.description
         });
     }
 }

@@ -13,9 +13,8 @@ interface MicroscopeFile {
 interface AcquisitionArgs {
     id: string;
     name: string;
-    description: string;
     status: string;
-    experiment_id: string;
+    description: string;
 }
 
 class Acquisition {
@@ -23,10 +22,11 @@ class Acquisition {
     name: string;
     description: string;
     status: string;
-    experimentId: string;
     files: MicroscopeFile[] = [];
+    experimentId: string;
 
     private _uploader: any;
+    private _$stateParams: any;
 
     /**
      * Construct a new acquisition.
@@ -37,10 +37,10 @@ class Acquisition {
      * @param {AcquisitionArgs} args - Constructor arguments.
      */
     constructor(args: AcquisitionArgs) {
-        this.experimentId = args.experiment_id;
-        delete args.experiment_id;
+
         _.extend(this, args);
 
+        this._$stateParams = $injector.get<any>('$stateParams');
         this._uploader = $injector.get<any>('Upload');
         this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 5000000000});
         this._uploader.defaults.blobUrlsMaxQueueSize = 10;  // default: 200
@@ -51,9 +51,9 @@ class Acquisition {
         this.clearFiles();
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
-        var imageUrl = '/api/experiments/' + this.experimentId +
+        var imageUrl = '/api/experiments/' + this._$stateParams.experimentid +
             '/acquisitions/' + this.id + '/image-files';
-        var metaDataUrl = '/api/experiments/' + this.experimentId +
+        var metaDataUrl = '/api/experiments/' + this._$stateParams.experimentid +
             '/acquisitions/' + this.id + '/metadata-files';
         return $q.all({
             imageFiles: $http.get(imageUrl),
@@ -76,7 +76,7 @@ class Acquisition {
      * have been registered, i.e. created server-side.
      */
     private _uploadRegisteredFiles(newFiles): any {
-        var url = '/api/experiments/' + this.experimentId +
+        var url = '/api/experiments/' + this._$stateParams.experimentid +
             '/acquisitions/' + this.id + '/upload/upload-file';
         var $q = $injector.get<ng.IQService>('$q');
         var $window = $injector.get<ng.IWindowService>('$window');
@@ -144,7 +144,7 @@ class Acquisition {
      */
     private _registerUpload(newFiles) {
         var fileNames = _(newFiles).pluck('name');
-        var url = '/api/experiments/' + this.experimentId +
+        var url = '/api/experiments/' + this._$stateParams.experimentid +
             '/acquisitions/' + this.id + '/upload/register';
         this.status = 'WAITING';
         var $http = $injector.get<ng.IHttpService>('$http');

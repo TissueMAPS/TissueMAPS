@@ -128,7 +128,7 @@ angular.module('tmaps.ui')
             experiment: getExperiment,
             plates: ['workflowService', 'experiment',
                         (workflowService, experiment) => {
-                return workflowService.getPlates(experiment)
+                return experiment.getPlates()
                 .then((plates) => {
                     // console.log(plates)
                     return plates;

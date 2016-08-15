@@ -22,7 +22,8 @@ interface SerializedToolResult {
 
 class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
     constructor(experimentId: string) {
-        super('/api/experiments/' + experimentId + '/toolresults')
+        // TODO: session
+        super('/api/experiments/' + experimentId + '/tools/results')
     }
 
     fromJSON(data: SerializedToolResult) {
