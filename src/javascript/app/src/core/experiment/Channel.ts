@@ -2,7 +2,6 @@ interface SerializedChannel {
     id: string;
     name: string;
     bit_depth: number;
-    experiment_id: string;
     layers: SerializedChannelLayer[];
 }
 
@@ -14,7 +13,6 @@ interface ChannelArgs {
     name: string;
     layers: SerializedChannelLayer[];
     bitDepth: number;
-    experimentId: string;
     visible?: boolean;
 }
 
@@ -22,7 +20,6 @@ class Channel implements Layer {
     id: string;
     name: string;
     bitDepth: number;
-    experimentId: string;
     maxIntensity: number;
     minIntensity: number;
 
@@ -36,14 +33,14 @@ class Channel implements Layer {
      *
      * @class Channel
      * @classdesc A channel represents a collection of layers acquired at
-     * different z levels. A channel is visualized as a single layer that can
-     * be colorized. 
+     * different z levels and time points. A channel is visualized as a single
+     * layer that can
+     * be colorized.
      * @param {ChannelArgs} args - An argument object of type ChannelArgs.
      * @param {string} args.id - The id of this channel that was given by the server.
      * @param {string} args.name - A descriptive name for this channel (displayed in the UI).
      * @param {number} args.bitDepth - Number of bits used to indicate intensity in the orginal images.
      * @param {Array.<ChannelLayer>} args.layers - Array of layers of type ChannelLayer.
-     * @param {string} args.experimentId - The id of the parent experiment.
      * @param {boolean} args.visible - If the channel should be visible when it is added. Default is false.
      */
     constructor(args: ChannelArgs) {
@@ -58,7 +55,6 @@ class Channel implements Layer {
          */
         this.id = args.id;
         this.bitDepth = args.bitDepth;
-        this.experimentId = args.experimentId;
         var isChannelVisible = args.visible !== undefined ? args.visible : true;
         args.layers.forEach((l) => {
             var isBottomLayer = l.zplane === 0 && l.tpoint === 0;
@@ -70,7 +66,6 @@ class Channel implements Layer {
                 maxIntensity: l.max_intensity,
                 minIntensity: l.min_intensity,
                 imageSize: l.image_size,
-                experimentId: l.experiment_id,
                 visible: isChannelVisible && isBottomLayer
             });
         });

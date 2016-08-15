@@ -2,12 +2,16 @@ class AcquisitionCreateCtrl {
 
     error: string;
 
-    static $inject = ['plate', '$http', '$state'];
+    static $inject = ['plate', '$http', '$state', '$stateParams'];
 
-    constructor(public plate: Plate, private _$http, private _$state) {}
+    constructor(public plate: Plate,
+                private _$http,
+                private _$state,
+                private _$stateParams) {
+    }
 
     createAcquisition(name: string, description: string) {
-        (new AcquisitionDAO(this.plate.experimentId)).create({
+        (new AcquisitionDAO(this._$stateParams.experimentid)).create({
             plate_name: this.plate.name,
             name: name,
             description: description

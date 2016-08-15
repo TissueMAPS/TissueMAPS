@@ -1,6 +1,5 @@
 class WorkflowService {
     workflow: Workflow;
-    plates: any;  // TypeScript doesn't like Plate[] here ???
 
     private _$http: ng.IHttpService;
     private _$q: ng.IQService;
@@ -14,26 +13,14 @@ class WorkflowService {
     }
 
     private _getWorkflowDescription(experiment: Experiment): ng.IPromise<any> {
-        return this._$http.get('/api/experiments/' + experiment.id + '/workflow/load')
+        return this._$http.get('/api/experiments/' + experiment.id + '/workflow/description')
         .then((resp: any) => {
             // console.log(resp)
-            experiment.workflowDescription = resp.data.data;
+            // experiment.workflowDescription = resp.data.data;
             return resp.data.data;
         })
         .catch((resp) => {
             return this._$q.reject(resp.data.error);
-        });
-    }
-
-    getPlates(experiment: Experiment): ng.IPromise<any> {
-        return (new PlateDAO(experiment.id)).getAll()
-        .then((plates) => {
-            // console.log(plates)
-            this.plates = plates;
-            return plates;
-        })
-        .catch((error) => {
-            return this._$q.reject(error);
         });
     }
 
@@ -138,7 +125,7 @@ class WorkflowService {
             this.workflow.stages.map((stage, stageIndex) => {
                 if (stageIndex == 0 && stage.name == 'upload') {
                     // hack around "upload" stage
-                    this.getPlates(experiment)
+                    experiment.getPlates()
                     .then((plates) => {
                         stage.status = this._getUploadStatus(plates);
                     })
@@ -195,16 +182,19 @@ class WorkflowService {
             return def.promise;
         }
         else {
-            this._getWorkflowDescription(experiment);
-            return this._getWorkflowStatus(experiment)
-            .then((workflowStatus) => {
-                // console.log(workflowStatus)
-                // TODO: handle null status
-                this.workflow = new Workflow(
-                    experiment.workflowDescription, workflowStatus
-                );
-                return this.workflow;
-            });
+            return this._getWorkflowDescription(experiment)
+            .then((workflowDescription) => {
+                return this._getWorkflowStatus(experiment)
+                .then((workflowStatus) => {
+                    // console.log(workflowDescription)
+                    // console.log(workflowStatus)
+                    // TODO: handle null status
+                    this.workflow = new Workflow(
+                        workflowDescription, workflowStatus
+                    );
+                    return this.workflow;
+                });
+            })
         }
     }
 
@@ -218,7 +208,7 @@ class WorkflowService {
         var data = {
             description: this.workflow.getDescription(index)
         };
-        return this._$http.post('/api/experiments/' + experiment.id + '/workflow/save', data)
+        return this._$http.post('/api/experiments/' + experiment.id + '/workflow/description', data)
         .then((resp) => {
             // console.log(resp)
             return resp;

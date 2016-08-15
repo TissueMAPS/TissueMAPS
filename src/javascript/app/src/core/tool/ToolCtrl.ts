@@ -8,6 +8,7 @@
  * are created. 
  */
 class ToolCtrl {
+    // TODO: tool session ???
     sendRequest(payload: any): ng.IPromise<any> {
         return <ng.IPromise<any>>{};
     }

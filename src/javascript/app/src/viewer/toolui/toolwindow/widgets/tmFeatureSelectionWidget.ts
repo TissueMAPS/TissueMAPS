@@ -24,8 +24,7 @@ class FeatureSelectionWidgetCtrl {
         this.$scope.$parent[this.name] = this;
 
         var parentScope = <ToolWindowContentScope>this.$scope.$parent;
-        var experiment = parentScope.viewer.experiment;
-        experiment.mapobjectTypes.forEach((type) => {
+        parentScope.viewer.mapobjectTypes.forEach((type) => {
             var featureTabs = type.features.map((f) => {
                 return {
                     name: f.name,

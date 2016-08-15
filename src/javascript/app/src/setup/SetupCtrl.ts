@@ -546,7 +546,7 @@ class SetupCtrl {
         // We need to keep up to date with chages of the workflow status
         // (including the status of plates for the "upload" stage)
         this.workflow = this._workflowService.workflow;
-        this.plates = this._workflowService.plates;
+        this.plates = plates;
         var stageName = this._$state.params.stageName;
         this.workflow.stages.map((stage, stageIndex) => {
             if (stage.name == stageName) {

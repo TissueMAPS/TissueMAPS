@@ -3,16 +3,16 @@ class AcquisitionDetailCtrl {
     newFiles: MicroscopeFile[] = [];
     filesDropped: boolean;
 
-    static $inject = ['acquisition', '$state', '$http', '$q'];
+    static $inject = ['acquisition', '$state', '$http', '$q', '$stateParams'];
 
     constructor(public acquisition: Acquisition, private _$state,
-                private _$http, private _$q) {
+                private _$http, private _$q, private _$stateParams) {
         acquisition.fetchExistingFiles();
         this.filesDropped = false;
     }
 
     filterValidFiles(files: {name: string;}[]) {
-        var url = '/api/experiments/' + this.acquisition.experimentId +
+        var url = '/api/experiments/' + this._$stateParams.experimentid +
             '/acquisitions/' + this.acquisition.id + '/upload/validity-check';
         return this._$http.post(url, {
             files: files.map((f) => {

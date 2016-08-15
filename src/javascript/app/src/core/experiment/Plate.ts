@@ -3,7 +3,6 @@ interface PlateArgs {
     name: string;
     description: string;
     acquisitions: Acquisition[];
-    experiment_id: string;
     status: string;
 }
 
@@ -12,7 +11,6 @@ class Plate {
     name: string;
     description: string;
     status: string;
-    experimentId: string;
     acquisitions: Acquisition[];
 
     /**
@@ -28,7 +26,6 @@ class Plate {
         this.name = args.name;
         this.description = args.description;
         this.acquisitions = args.acquisitions;
-        this.experimentId = args.experiment_id;
         this.status = args.status;
     }
 

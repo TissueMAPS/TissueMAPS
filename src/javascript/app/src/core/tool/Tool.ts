@@ -1,7 +1,7 @@
 /**
- * An interface for the content of the POST request that is sent to the 
+ * An interface for the content of the POST request that is sent to the
  * server in order to perform a tool computation.
- * Such a request consists has to contain the id for the experiment for 
+ * Such a request consists has to contain the id for the experiment for
  * which the tool computation should be performed.
  * Furthermore, the tool session UUID has to be sent as well, so that the
  * server can provide the server-side tool session with session-specific
@@ -10,8 +10,8 @@
  * payload object.
  */
 interface ServerToolRequest {
-    experiment_id: string;
     session_uuid: string;
+    tool_name: string;
     payload: any;
 }
 
@@ -22,7 +22,7 @@ interface ServerToolRequest {
  * be processed client-side (e.g. visualized as a LabelResultLayer).
  */
 interface ServerToolResponse {
-    tool_id: number;
+    tool_name: string;
     session_uuid: any;
     result: SerializedToolResult;
 }
@@ -31,18 +31,18 @@ interface ServerToolResponse {
  * Argument object for constructing a tool.
  */
 interface ToolArgs {
-    id: string;
     name: string,
     description: string,
     icon: string,
+    methods: any[]
 }
 
 class Tool {
     sessions: ToolSession[];
-    id: string;
     name: string;
     description: string;
     icon: string;
+    methods: any[];
 
     /**
      * Construct a tool object.
@@ -50,17 +50,18 @@ class Tool {
      * @param {string} args.id - Tool id issued by the server.
      * @param {string} args.name - The name of the tool
      * that should be displayed in the UI.
-     * @param {string} args.description - Helpful description of 
+     * @param {string} args.description - Helpful description of
      * what this tool does.
      * @param {string} args.icon - 1-3 letter or symbol abbreviation
      * for this tool.
+     * @param {[]} args.methods - Methods this tool supports
      */
     constructor(args: ToolArgs) {
         this.sessions = [];
-        this.id = args.id;
         this.name = args.name;
         this.description = args.description;
         this.icon = args.icon;
+        this.methods = args.methods;
     }
 
     /**

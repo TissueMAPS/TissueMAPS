@@ -2,14 +2,15 @@ class PlateDetailCtrl {
 
     error: string;
 
-    static $inject = ['plate', '$state', 'dialogService'];
+    static $inject = ['plate', 'dialogService', '$state', '$stateParams'];
 
     constructor(public plate: Plate,
+                private _dialogService: DialogService,
                 private _$state,
-                private _dialogService: DialogService) {}
+                private _$stateParams) {}
 
     createAcquisition(name: string, description: string) {
-        (new AcquisitionDAO(this.plate.experimentId)).create({
+        (new AcquisitionDAO(this._$stateParams.experimentid)).create({
             plate_name: this.plate.name,
             name: name,
             description: description
@@ -29,7 +30,7 @@ class PlateDetailCtrl {
         .then((deleteForReal) => {
             if (deleteForReal) {
                 // console.log('delete acquisition HAAAARD')
-                (new AcquisitionDAO(this.plate.experimentId)).delete(acq.id)
+                (new AcquisitionDAO(this._$stateParams.experimentid)).delete(acq.id)
                 .then((resp) => {
                     this._$state.go('plate.detail', {}, {
                         reload: 'plate.detail'

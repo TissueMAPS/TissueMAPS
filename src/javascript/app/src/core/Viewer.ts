@@ -16,32 +16,54 @@ class Viewer {
 
     private _element: JQuery = null;
 
+    private _$http: ng.IHttpService;
+    private _$q: ng.IQService;
+
     mapObjectSelectionHandler: MapObjectSelectionHandler;
     tools: ng.IPromise<Tool[]>;
+    channels: Channel[] = [];
+    mapobjectTypes: MapobjectType[] = [];
 
     // TODO: A viewer should mayble be creatable without an experiment.
     // The initialization process of loading an experiment would be done by a
     // separate function.
     constructor(experiment: Experiment) {
+
+        this._$http = $injector.get<ng.IHttpService>('$http');
+        this._$q = $injector.get<ng.IQService>('$q');
+
         this.id = makeUUID();
         this.experiment = experiment;
         this.viewport = new Viewport();
-        this.tools = (new ToolDAO()).getAll();
 
-        this.viewport.initMap(this.experiment.channels[0].layers[0].imageSize)
+        this.tools = this.getTools();
 
-        this.experiment.channels.forEach((ch) => {
-            this.viewport.addLayer(ch);
-        });
+        console.log('instatiate viewer')
+        this.experiment.getChannels()
+        .then((channels) => {
+            if (channels) {
+                this.viewport.initMap(channels[0].layers[0].imageSize)
+                channels.forEach((ch) => {
+                    this.channels.push(ch);
+                    this.viewport.addLayer(ch);
+                });
+            }
+        })
 
-        // Subsequently add the selection handler and initialize the selection layers.
-        // TODO: The process of adding the layers could be made nicer.
-        // The view should be set independent of 'ChannelLayers' etc.
         this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this);
-        this.experiment.mapobjectTypes.forEach((t) => {
-            this.mapObjectSelectionHandler.addMapObjectType(t.name);
-            this.mapObjectSelectionHandler.addNewSelection(t.name);
-        });
+        this.experiment.getMapobjectTypes()
+        .then((mapobjectTypes) => {
+            // Subsequently add the selection handler and initialize the layers.
+            // TODO: The process of adding the layers could be made nicer.
+            // The view should be set independent of 'ChannelLayers' etc.
+            if (mapobjectTypes) {
+                mapobjectTypes.forEach((t) => {
+                    this.mapobjectTypes.push(t);
+                    this.mapObjectSelectionHandler.addMapObjectType(t.name);
+                    this.mapObjectSelectionHandler.addNewSelection(t.name);
+                });
+            }
+        })
 
         //// DEBUG
         // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
@@ -54,6 +76,19 @@ class Viewer {
         // segmLayer.strokeColor = Color.RED;
         // segmLayer.fillColor = Color.WHITE.withAlpha(0);
         // this.viewport.addLayer(segmLayer);
+    }
+
+    getTools(): ng.IPromise<any> {
+        return this._$http.get('/api/tools')
+        .then((resp: any) => {
+            // console.log(resp)
+            return resp.data.data.map((t) => {
+                return new Tool(t);
+            });
+        })
+        .catch((resp) => {
+            return this._$q.reject(resp.data.error);
+        });
     }
 
     get currentResult() {
@@ -102,7 +137,7 @@ class Viewer {
     }
 
     set currentTpoint(t: number) {
-        this.experiment.channels.forEach((ch) => {
+        this.channels.forEach((ch) => {
             ch.setPlane(this._currentZplane, t);
         });
         this._currentTpoint = t;
@@ -113,7 +148,7 @@ class Viewer {
     }
 
     set currentZplane(z: number) {
-        this.experiment.channels.forEach((ch) => {
+        this.channels.forEach((ch) => {
             ch.setPlane(z, this._currentTpoint);
         });
         this._currentZplane = z;
@@ -150,13 +185,13 @@ class Viewer {
     // }
 
     sendToolRequest(session: ToolSession, payload: any) {
-        var url = '/api/tools/' + session.tool.id + '/request';
+        var url = '/api/experiments/' + this.experiment.id + '/tools/request';
         // TODO: Send event to Viewer messagebox
         var $http = $injector.get<ng.IHttpService>('$http');
         var request: ServerToolRequest = {
-            experiment_id: this.experiment.id,
             session_uuid: session.uuid,
-            payload: payload
+            payload: payload,
+            tool_name: session.tool.name
         };
         console.log('ToolService: START REQUEST.');
         session.isRunning = true;
@@ -170,7 +205,6 @@ class Viewer {
             // vpScope.$broadcast('toolRequestSuccess');
             var data = <ServerToolResponse> resp.data;
             var sessionUUID = data.session_uuid;
-            var toolId = data.tool_id;
             console.log('ToolService: HANDLE REQUEST.');
             var result = (new ToolResultDAO(this.experiment.id)).fromJSON(data.result);
             result.attachToViewer(this);
@@ -191,5 +225,75 @@ class Viewer {
             return err.data;
         });
 
+    }
+
+    /**
+     * The highest zoom level for any layer of this experiment.
+     * It is assumed that all layers of an experiment have the same max
+     * zoom level.
+     * @type number
+     */
+    get maxZoom(): number {
+        return this.channels[0].layers[0].maxZoom;
+    }
+
+    /**
+     * The highest time point supported by this experiment.
+     * @type number
+     */
+    get maxT(): number {
+        if (this.channels) {
+            var ts = this.channels.map((ch) => {
+                return ch.maxT;
+            });
+            return Math.max.apply(this, ts);
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * The lowest time point supported by this experiment.
+     * @type number
+     */
+    get minT(): number {
+        if (this.channels) {
+            var ts = this.channels.map((ch) => {
+                return ch.minT;
+            });
+            return Math.min.apply(this, ts);
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * The highest zplane supported by this experiment.
+     * @type number
+     */
+    get maxZ(): number {
+        if (this.channels) {
+            var zs = this.channels.map((ch) => {
+                return ch.maxZ;
+            });
+            return Math.max.apply(this, zs);
+        } else {
+            return 0;
+        }
+    }
+
+    /**
+     * The lowest zplane supported by this experiment.
+     * @type number
+     */
+    get minZ(): number {
+        if (this.channels) {
+            var zs = this.channels.map((ch) => {
+                return ch.minZ;
+            });
+            return Math.min.apply(this, zs);
+        } else {
+            return 0;
+        }
     }
 }

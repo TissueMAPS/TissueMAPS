@@ -35,9 +35,9 @@ class ViewerCtrl {
         // the knob is all the way to the left. Therefore
         // we set 0 to be zStep/tStep and substract this value before
         // settings the current zplane/tpoint on the viewer.
-        this.maxT = $scope.viewer.experiment.maxT * this.tStep + this.tStep;
+        this.maxT = $scope.viewer.maxT * this.tStep + this.tStep;
         this.minT = this.tStep;
-        this.maxZ = $scope.viewer.experiment.maxZ * this.zStep + this.zStep;
+        this.maxZ = $scope.viewer.maxZ * this.zStep + this.zStep;
         this.minZ = this.zStep;
     }
 }

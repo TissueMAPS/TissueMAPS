@@ -13,7 +13,7 @@ class ObjectLayerCtrl {
         this.layer.opacity = v / 100;
     }
 
-    selectableColors = [ 
+    selectableColors = [
         '#e41a1c',
         '#377eb8',
         '#4daf4a',
