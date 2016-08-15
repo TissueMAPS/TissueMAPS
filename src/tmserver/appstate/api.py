@@ -6,7 +6,6 @@ from flask.ext.jwt import current_identity
 
 from tmserver.appstate import Appstate
 from tmserver.user import User
-from tmserver.extensions import db
 from tmserver.api import api
 from tmserver.model import decode_pk
 

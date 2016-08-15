@@ -87,9 +87,9 @@ def decode_body_ids(*model_ids):
                     )
                 if not mid.endswith('_id'):
                     raise MalformedRequestError('IDs must end with "_id".')
-                encoded_model_id = data.get(key)
+                encoded_model_id = data.get(mid)
                 model_id = decode_pk(encoded_model_id)
-                kwargs[key] = model_id
+                kwargs[mid] = model_id
             return f(*args, **kwargs)
         return wrapped
     return decorator
@@ -128,12 +128,17 @@ def decode_url_ids():
                     kwargs[arg] = model_id
                 if arg == 'experiment_id':
                     with tm.utils.MainSession() as session:
-                        experiment = session.query(tm.Experiment).get(model_id)
-                        if not experiment.belongs_to(current_identity):
-                            raise NotAuthorizedError(
-                                'User is not authorized to access experiment %d.'
-                                % model_id
-                            )
+                        experiment = session.query(tm.ExperimentReference).\
+                            get(model_id)
+                        try:
+                            if not experiment.belongs_to(current_identity):
+                                raise NotAuthorizedError(
+                                    'User is not authorized to access '
+                                    'experiment #%d.' % model_id
+                                )
+                                current_identity.id
+                        except AttributeError:
+                            pass
             return f(*args, **kwargs)
         return wrapped
     return decorator

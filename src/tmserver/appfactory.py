@@ -9,7 +9,6 @@ import gc3libs
 from tmlib.models.utils import create_db_engine, create_db_session_factory
 
 from tmserver import defaultconfig
-from tmserver.extensions import db
 from tmserver.extensions import jwt
 from tmserver.extensions import redis_store
 from tmserver.serialize import TmJSONEncoder

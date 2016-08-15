@@ -16,7 +16,6 @@ from tmlib.workflow.metaconfig import get_microscope_type_regex
 
 from tmserver.extensions import redis_store
 from tmserver.api import api
-from tmserver.extensions import db
 from tmserver.util import decode_url_ids, decode_body_ids, assert_request_params
 from tmserver.error import *
 
@@ -56,16 +55,14 @@ def register_upload(experiment_id, acquisition_id):
             'No files supplied. Cannot register upload.'
         )
 
-    with tm.utils.MainSession() as session:
+    with tm.utils.ExperimentSession(experiment_id) as session:
         experiment = session.query(tm.Experiment).get(experiment_id)
         microscope_type = experiment.microscope_type
-    imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
-
-    with tm.utils.ExperimentSession(experiment_id) as session:
+        imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
         img_filenames = [f.name for f in acquisition.microscope_image_files]
         img_files = [
-            MicroscopeImageFile(
+            tm.MicroscopeImageFile(
                 name=secure_filename(f), acquisition_id=acquisition.id
             )
             for f in data['files']
@@ -74,7 +71,7 @@ def register_upload(experiment_id, acquisition_id):
         ]
         meta_filenames = [f.name for f in acquisition.microscope_metadata_files]
         meta_files = [
-            MicroscopeMetadataFile(
+            tm.MicroscopeMetadataFile(
                 name=secure_filename(f), acquisition_id=acquisition.id
             )
             for f in data['files']
@@ -111,7 +108,7 @@ def file_validity_check(experiment_id, acquisition_id):
         is_metadata_file = metadata_regex.search(fname) is not None
         return is_metadata_file or is_imgfile
 
-    with tm.utils.MainSession() as session:
+    with tm.utils.ExperimentSession(experiment_id) as session:
         experiment = session.query(tm.Experiment).get(experiment_id)
         microscope_type = experiment.microscope_type
     imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
@@ -144,10 +141,10 @@ def upload_file(experiment_id, acquisition_id):
             return jsonify(message='Acquisition complete')
 
         filename = secure_filename(f.filename)
-        imgfile = session.query(MicroscopeImageFile).\
+        imgfile = session.query(tm.MicroscopeImageFile).\
             filter_by(name=filename, acquisition_id=acquisition_id).\
             one_or_none()
-        metafile = session.query(MicroscopeMetadataFile).\
+        metafile = session.query(tm.MicroscopeMetadataFile).\
             filter_by(name=filename, acquisition_id=acquisition_id).\
             one_or_none()
 
@@ -167,23 +164,23 @@ def upload_file(experiment_id, acquisition_id):
                 % filename
             )
 
-        if file_obj.upload_status == FileUploadStatus.COMPLETE:
+        if file_obj.status == FileUploadStatus.COMPLETE:
             logger.info('file "%s" already uploaded')
             return jsonify(message='File already uploaded')
-        elif file_obj.upload_status == FileUploadStatus.UPLOADING:
+        elif file_obj.status == FileUploadStatus.UPLOADING:
             logger.info('file "%s" already uploading')
             return jsonify(message='File upload already in progress')
 
         logger.info('upload file "%s"', filename)
-        file_obj.upload_status = FileUploadStatus.UPLOADING
+        file_obj.status = FileUploadStatus.UPLOADING
         session.add(file_obj)
         session.commit()
 
         try:
             f.save(file_obj.location)
-            file_obj.upload_status = FileUploadStatus.COMPLETE
+            file_obj.status = FileUploadStatus.COMPLETE
         except Exception as error:
-            file_obj.upload_status = FileUploadStatus.FAILED
+            file_obj.status = FileUploadStatus.FAILED
             raise InternalServerError(
                 'Upload of file failed: %s' % str(error)
             )

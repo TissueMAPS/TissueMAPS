@@ -5,7 +5,6 @@ import collections
 from sqlalchemy import func
 from flask import current_app
 
-from tmserver.extensions import db
 from tmserver.extensions.gc3pie.engine import BgEngine
 
 import tmlib.models as tm
@@ -115,8 +114,8 @@ class GC3Pie(object):
             submission.top_task_id = persistent_id
 
     def retrieve_jobs(self, experiment_id, program):
-        """Retrieves all stored jobs for the given `experiment` that were
-        submitted by `program`.
+        """Retrieves the top level job for the given `experiment`
+        from the store that were most recently submitted by `program`.
 
         Parameters
         ----------
@@ -211,16 +210,13 @@ class GC3Pie(object):
         logger.info('redo jobs')
         self._engine.redo(jobs, index)
 
-    def get_status_of_submitted_jobs(self, jobs, recursion_depth=4):
+    def get_status_of_submitted_jobs(self, jobs):
         '''Gets the status of submitted jobs.
 
         Parameters
         ----------
         jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
             individual computational task or collection of tasks
-        recursion_depth: int, optional
-            recursion depth for subtask querying; by default
-            data of all subtasks will be queried (default: ``4``)
 
         Returns
         -------
@@ -231,4 +227,4 @@ class GC3Pie(object):
         --------
         :py:function:`tmlib.workflow.utils.get_task_data_from_sql_store`
         '''
-        return get_task_data_from_sql_store(jobs, recursion_depth)
+        return get_task_data_from_sql_store(jobs)

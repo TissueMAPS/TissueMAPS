@@ -15,7 +15,6 @@ from flask.ext.jwt import jwt_required
 from tmserver.extensions import websocket
 from tmserver.util import decode_url_ids
 from tmserver.extensions import gc3pie
-from tmserver.extensions import db
 
 import tmlib.models as tm
 from tmlib.utils import flatten

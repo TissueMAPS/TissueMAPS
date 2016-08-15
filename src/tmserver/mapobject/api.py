@@ -19,7 +19,6 @@ import tmlib.models as tm
 from tmlib.image import SegmentationImage
 
 from tmserver.api import api
-from tmserver.extensions import db
 from tmserver.util import decode_url_ids, assert_request_params
 from tmserver.error import MalformedRequestError, ResourceNotFoundError
 
@@ -147,7 +146,6 @@ def get_features(experiment_id):
 )
 @jwt_required()
 @assert_request_params('plate_name', 'well_name', 'x', 'y', 'zplane', 'tpoint')
-@extract_model_from_path(tm.Experiment)
 @decode_url_ids()
 def get_mapobjects_segmentation(experiment_id, object_name):
     plate_name = request.args.get('plate_name')

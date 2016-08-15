@@ -97,6 +97,24 @@ def get_cycle_id(experiment_id):
         })
 
 
+@api.route('/experiments/<experiment_id>/channels', methods=['GET'])
+@jwt_required()
+@decode_url_ids()
+def get_channels(experiment_id):
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        channels = session.query(tm.Channel).all()
+        return jsonify(data=channels)
+
+
+@api.route('/experiments/<experiment_id>/mapobject_types', methods=['GET'])
+@jwt_required()
+@decode_url_ids()
+def get_mapobject_types(experiment_id):
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        mapobject_types = session.query(tm.MapobjectType).all()
+        return jsonify(data=mapobject_types)
+
+
 @api.route('/experiments/<experiment_id>/channels/id', methods=['GET'])
 @jwt_required()
 @assert_request_params('channel_name')
@@ -258,7 +276,7 @@ def get_experiments():
 
     """
     with tm.utils.MainSession() as session:
-        experiments = session.query(tm.Experiment).\
+        experiments = session.query(tm.ExperimentReference).\
             filter_by(user_id=current_identity.id).\
             all()
         return jsonify({
@@ -279,8 +297,9 @@ def get_experiment(experiment_id):
     }
 
     """
+    logger.info('get experiment #%d', experiment_id)
     with tm.utils.MainSession() as session:
-        experiment = session.query(tm.Experiment).get(experiment_id)
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
         return jsonify({
             'data': experiment
         })
@@ -318,14 +337,16 @@ def submit_workflow(experiment_id):
     data = request.get_json()
     # data = json.loads(request.data)
     workflow_description = WorkflowDescription(**data['description'])
-    experiment.persist_workflow_description(workflow_description)
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        experiment.persist_workflow_description(workflow_description)
     workflow_manager = WorkflowManager(experiment_id, 1)
     submission_manager = SubmissionManager(experiment_id, 'workflow')
     submission_id, user_name = submission_manager.register_submission()
     workflow = workflow_manager.create_workflow(
         submission_id, user_name, workflow_description
     )
-    gc3pie.store_jobs(experiment_id, workflow)
+    gc3pie.store_jobs(workflow)
     gc3pie.submit_jobs(workflow)
 
     return jsonify({
@@ -358,34 +379,37 @@ def resubmit_workflow(experiment_id):
 @decode_url_ids()
 def get_workflow_status(experiment_id):
     logger.info('get workflow status')
-    workflow = gc3pie.retrieve_jobs(experiment, 'workflow')
+    workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
     status = gc3pie.get_status_of_submitted_jobs(workflow)
     return jsonify({
         'data': status
     })
 
 
-@api.route('/experiments/<experiment_id>/workflow/load', methods=['GET']) 
+@api.route('/experiments/<experiment_id>/workflow/description', methods=['GET']) 
 @jwt_required()
 @decode_url_ids()
 def get_workflow_description(experiment_id):
     logger.info('get workflow description')
     with tm.utils.MainSession() as session:
-        experiment = session.query(tm.Experiment).get(experiment_id)
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
         description = experiment.workflow_description
     return jsonify({
         'data': description.as_dict()
     })
 
 
-@api.route('/experiments/<experiment_id>/workflow/save', methods=['POST'])
+@api.route('/experiments/<experiment_id>/workflow/description', methods=['POST'])
 @jwt_required()
 @assert_request_params('description')
 @decode_url_ids()
 def save_workflow_description(experiment_id):
     data = request.get_json()
     workflow_description = WorkflowDescription(**data['description'])
-    experiment.persist_workflow_description(workflow_description)
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).\
+            get(experiment_id)
+        experiment.persist_workflow_description(workflow_description)
     return jsonify({
         'message': 'ok'
     })
@@ -437,20 +461,35 @@ def create_experiment():
     plate_acquisition_mode = data.get('plate_acquisition_mode')
     description = data.get('description', '')
     with tm.utils.MainSession() as session:
-        experiment = tm.Experiment(
+        experiment_ref = tm.ExperimentReference(
             name=name,
             description=description,
             user_id=current_identity.id,
+            root_directory=current_app.config['TMAPS_STORAGE_HOME']
+        )
+        session.add(experiment_ref)
+        session.commit()
+        experiment_id = experiment_ref.id
+        root_directory = experiment_ref.location
+
+    with tm.utils.ExperimentSession(experiment_id) as exp_session:
+        experiment = tm.Experiment(
+            root_directory=root_directory,
             microscope_type=microscope_type,
             plate_format=plate_format,
-            root_directory=current_app.config['TMAPS_STORAGE_HOME'],
             plate_acquisition_mode=plate_acquisition_mode
         )
-        session.add(experiment)
-        session.commit()
-        return jsonify({
-            'data': experiment
-        })
+        exp_session.add(experiment)
+
+    return jsonify({
+        'data': {
+            'id': experiment_id,
+            'name': name,
+            'description': description,
+            'user': current_identity.name
+        }
+    })
+
 
 
 @api.route('/experiments/<experiment_id>', methods=['DELETE'])
@@ -467,7 +506,9 @@ def delete_experiment(experiment_id):
 
     """
     with tm.utils.MainSession() as session:
-        session.query(tm.Experiment).filter_by(id=experiment_id).delete()
+        session.query(tm.ExperimentReference).\
+            filter_by(id=experiment_id).\
+            delete()
     return jsonify(message='ok')
 
 
@@ -484,31 +525,6 @@ def get_plate(experiment_id, plate_id):
 @jwt_required()
 @decode_url_ids()
 def get_plates(experiment_id):
-    """Get all plates for a specific experiment.
-
-    Request
-    -------
-
-    Required GET parameters:
-        - experiment_id
-
-    Response
-    --------
-
-    {
-        "data": [
-            {
-                "id": string,
-                "name": string,
-                "description": string,
-                "experiment_id": number,
-                "acquisition": Object
-            },
-            ...
-        ]
-    }
-
-    """
     with tm.utils.ExperimentSession(experiment_id) as session:
         plates = session.query(tm.Plate).all()
         return jsonify(data=plates)
@@ -550,15 +566,8 @@ def create_plate(experiment_id):
     name = data.get('name')
     desc = data.get('description', '')
 
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.Experiment).get(experiment_id)
-        plates_location = experiment.plates_location
-
     with tm.utils.ExperimentSession(experiment_id) as session:
-        plate = tm.Plate(
-            name=name, description=desc,
-            root_location=plates_location
-        )
+        plate = tm.Plate(name=name, description=desc)
         session.add(plate)
         session.commit()
 
@@ -586,8 +595,8 @@ def get_plate_id(experiment_id):
 @jwt_required()
 @assert_request_params('plate_name', 'name')
 @decode_url_ids()
-@decode_body_ids(plate_id)
-def create_acquisition(experiment_id, plate_id):
+@decode_body_ids()
+def create_acquisition(experiment_id):
     """
     Create a new acquisition for the plate with id `plate_id`.
 
@@ -609,7 +618,7 @@ def create_acquisition(experiment_id, plate_id):
     name = data.get('name')
     desc = data.get('description', '')
     with tm.utils.ExperimentSession(experiment_id) as session:
-        plate = db.session.query(tm.Plate).\
+        plate = session.query(tm.Plate).\
             filter_by(name=plate_name).\
             one_or_none()
         if plate is None:
@@ -640,7 +649,7 @@ def delete_acquisition(experiment_id, acquisition_id):
     methods=['GET']
 )
 @jwt_required()
-@decode_body_ids()
+@decode_url_ids()
 def get_acquisition(experiment_id, acquisition_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
@@ -672,7 +681,7 @@ def get_acquisition_id(experiment_id):
     methods=['GET']
 )
 @jwt_required()
-@decode_body_ids()
+@decode_url_ids()
 def get_acquisition_image_files(experiment_id, acquisition_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
@@ -686,8 +695,8 @@ def get_acquisition_image_files(experiment_id, acquisition_id):
     methods=['GET']
 )
 @jwt_required()
-@extract_model_from_path(tm.Experiment, tm.Acquisition, check_ownership=True)
-def get_acquisition_metadata_files(experiment, acquisition):
+@decode_url_ids()
+def get_acquisition_metadata_files(experiment_id, acquisition_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
         return jsonify({

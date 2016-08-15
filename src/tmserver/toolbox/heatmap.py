@@ -3,14 +3,21 @@ import pandas as pd
 import logging
 
 import tmlib.models as tm
-from tmserver.tool import HeatmapLabelLayer, Result
-from tmserver.tool import ToolRequestHandler
+from tmserver.tool import HeatmapLabelLayer, ToolResult
+from tmserver.tool import Tool
 
 logger = logging.getLogger(__name__)
 
 
-class Heatmap(ToolRequestHandler):
-    def process_request(self, payload, session, experiment_id, use_spark=False):
+class Heatmap(Tool):
+
+    __icon__ = 'HMP'
+
+    __description__ = '''
+        Color codes mapobjects according to the value of a selected feature.
+    '''
+
+    def process_request(self, payload, session_id, experiment_id, use_spark=False):
         """
         {
             "chosen_object_type": str,
@@ -58,7 +65,7 @@ class Heatmap(ToolRequestHandler):
         }
 
         logger.info('return tool result')
-        return Result(
+        return ToolResult(
             tool_session=session,
             layer=HeatmapLabelLayer(
                  mapobject_type_id=mapobject_type.id,

@@ -4,19 +4,13 @@ from tmserver.model import encode_pk
 from tmlib.workflow.description import WorkflowDescription
 
 
-@json_encoder(tm.Experiment)
+@json_encoder(tm.ExperimentReference)
 def encode_experiment(obj, encoder):
     return {
         'id': encode_pk(obj.id),
         'name': obj.name,
         'description': obj.description,
-        'user': obj.user.name,
-        'plate_format': obj.plate_format,
-        'microscope_type': obj.microscope_type,
-        'plate_acquisition_mode': obj.plate_acquisition_mode,
-        # 'channels': map(encoder.default, obj.channels),
-        'mapobject_types': map(encoder.default, obj.mapobject_types),
-        'workflow_description': obj.workflow_description.as_dict()
+        'user': obj.user.name
     }
 
 
@@ -27,7 +21,6 @@ def encode_channel(obj, encoder):
         'name': obj.name,
         'bit_depth': obj.bit_depth,
         'layers': [encoder.default(ch) for ch in obj.layers],
-        'experiment_id': encode_pk(obj.experiment_id)
     }
 
 
@@ -54,10 +47,8 @@ def encode_plate(obj, encoder):
         'id': encode_pk(obj.id),
         'name': obj.name,
         'description': obj.description,
-        'experiment_id': encode_pk(obj.experiment_id),
         'acquisitions': map(encoder.default, obj.acquisitions),
         'status': obj.status,
-        'experiment_id': encode_pk(obj.experiment_id)
     }
 
 
@@ -69,7 +60,6 @@ def encode_acquisition(obj, encoder):
         'description': obj.description,
         'plate_id': encode_pk(obj.plate_id),
         'status': obj.status,
-        'experiment_id': encode_pk(obj.plate.experiment_id)
     }
 
 
@@ -102,7 +92,6 @@ def encode_feature(obj, encoder):
     return {
         'id': encode_pk(obj.id),
         'name': obj.name,
-        'experiment_id': encode_pk(obj.mapobject_type.experiment_id)
     }
 
 
@@ -112,7 +101,6 @@ def encode_mapobject_type(obj, encoder):
         'id': encode_pk(obj.id),
         'name': obj.name,
         'features': map(encoder.default, obj.features),
-        'experiment_id': encode_pk(obj.experiment_id)
     }
 
 
@@ -120,13 +108,13 @@ def encode_mapobject_type(obj, encoder):
 def encode_microscope_image_file(obj, encoder):
     return {
         'name': obj.name,
-        'upload_status': obj.upload_status
+        'status': obj.status
+    }
 
 
 @json_encoder(tm.MicroscopeMetadataFile)
 def encode_microscope_metadata_file(obj, encoder):
     return {
         'name': obj.name,
-        'upload_status': obj.upload_status
-    }
+        'status': obj.status
     }

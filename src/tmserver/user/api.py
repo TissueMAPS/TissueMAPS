@@ -4,7 +4,6 @@ from flask import request, jsonify
 
 from tmserver.user import User
 from tmserver.api import api
-from tmserver.extensions import db
 
 
 @api.route('/register', methods=['POST'])

@@ -1,11 +1,11 @@
-from tmserver.model import Model
+from tmlib.models import MainModel
 
 from sqlalchemy import Integer, ForeignKey, Column, Text, String
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import relationship
 
 
-class Appstate(Model):
+class Appstate(MainModel):
     __tablename__ = 'appstates'
 
     name = Column(String(80), nullable=False)

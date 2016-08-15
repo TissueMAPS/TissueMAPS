@@ -6,66 +6,73 @@ from flask.ext.jwt import current_identity
 
 import tmlib.models as tm
 
-from tmserver.extensions import db
-from tmserver.tool import Tool, ToolSession, LabelLayer, LabelLayerLabel
+from tmserver.tool import ToolSession, LabelLayer, LabelLayerValue
 from tmserver.api import api
 from tmserver.error import (
     MalformedRequestError,
     ResourceNotFoundError,
     NotAuthorizedError
 )
-from tmserver.util import decode_url_ids, decode_body_ids
+from tmserver.util import decode_url_ids, decode_body_ids, assert_request_params
+from tmserver.toolbox import SUPPORTED_TOOLS
+from tmserver.toolbox import get_tool_class
+
 
 logger = logging.getLogger(__name__)
 
 
-def _create_mapobject_feature(obj_id, geometry_obj):
-    """Create a GeoJSON feature object given a object id of type int
-    and a object that represents a GeoJSON geometry definition."""
+def _create_mapobject_feature(mapobject_id, geometry_description):
+    """Creates a GeoJSON feature for the given mapobject and GeoJSON geometry.
+
+    Parameters
+    ----------
+    mapobject_id: int
+        ID of the mapobject
+    geometry_description: XXX
+        description of a GeoJSON geometry
+
+    Returns
+    -------
+    dict
+    """
     return {
         'type': 'Feature',
-        'geometry': geometry_obj,
+        'geometry': geometry_description,
         'properties': {
-            'id': str(obj_id)
+            'id': str(mapobject_id)
         }
     }
 
 
-@api.route('/tools')
+@api.route('/tools', methods=['GET'])
 @jwt_required()
 def get_tools():
-    # TODO: Only return tools for the current user
-    with tm.utils.MainSession() as session:
-        tools = session.query(Tool).all()
-        return jsonify({
-            'data': tools
+    tool_descriptions = list()
+    for name in SUPPORTED_TOOLS:
+        tool_cls = get_tool_class(name)
+        tool_descriptions.append({
+            'name': tool_cls.__name__,
+            'icon': tool_cls.__icon__,
+            'description': tool_cls.__description__,
+            'methods': getattr(tool_cls, '__methods__', [])
         })
+    return jsonify(data=tool_descriptions)
 
 
 @api.route(
-    '/experiments/<experiment_id>/tools/<tool_id>/request',
-    methods=['POST']
+    '/experiments/<experiment_id>/tools/request', methods=['POST']
 )
 @jwt_required()
-@jwt_required()
 @decode_url_ids()
-@assert_request_params('payload', 'session_uuid')
-def process_tool_request(experiment_id, tool_id):
-    """
-    Process a generic tool request sent by the client.
+@assert_request_params('payload', 'session_uuid', 'tool_name')
+def process_tool_request(experiment_id, tool_name):
+    """Processes a generic tool request sent by the client.
     POST payload should have the format:
 
     {
-        experiment_id: string,
-        payload: dict
+        payload: dict,
+        session_uuid: str
     }
-
-    The server searches for the Tool with id `tool_id` and call its
-    request method passing it the argument `payload` as well as the tool
-    instance object that was saved in the database when the window was opened on
-    the client.
-    The tool has access to trans-request storage via the instance property
-    'data_storage'.
 
     Returns:
 
@@ -74,38 +81,30 @@ def process_tool_request(experiment_id, tool_id):
     }
 
     """
-    logger.info('process tool request')
     data = request.get_json()
-
     payload = data.get('payload', {})
     session_uuid = data.get('session_uuid')
+    tool_name = data.get('tool_name')
 
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.Experiment).get(experiment_id)
-        if experiment is None:
-            raise ResourceNotFoundError('No such experiment')
+    # Instantiate the correct tool plugin class.
+    logger.info('process request of tool "%s"', tool_name)
+    tool_cls = get_tool_class(tool_name)
+    tool = tool_cls()
 
-        # Instantiate the correct tool plugin class.
-        tool = session.query(Tool).get(tool_id)
-        tool_cls = tool.get_class()
-        tool_inst = tool_cls()
+    with tm.utils.ExperimentSession(experiment_id) as session:
 
-        # Load or create the persistent tool session.
-        tool_session = session.get_or_create(
-            ToolSession,
-            experiment_id=experiment.id, uuid=session_uuid, tool_id=tool.id
-        )
+        # Load or create the persistent tool session
+        tool_session = session.get_or_create(ToolSession, uuid=session_uuid)
 
         # Execute the tool plugin.
         use_spark = current_app.config.get('USE_SPARK', False)
-        tool_result = tool_inst.process_request(
-            payload, session, experiment, use_spark=use_spark
+        tool_result = tool.process_request(
+            payload, tool_session.id, use_spark=use_spark
         )
 
         return jsonify({
             'result': tool_result,
-            'session_uuid': session_uuid,
-            'tool_id': tool_id
+            'session_uuid': session_uuid
         })
 
 
@@ -160,3 +159,14 @@ def get_result_labels(experiment_id, label_layer_id):
             'type': 'FeatureCollection',
             'features': features
         })
+
+@api.route(
+    '/experiments/<experiment_id>/toolresults/<toolresult_id>', methods=['GET']
+)
+@jwt_required()
+@decode_url_ids()
+def get_tool_result(experiment_id, toolresult_id):
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        tool_result = session.query(tm.ToolResult).get(toolresult_id)
+        return jsonify(tool_result)
+
