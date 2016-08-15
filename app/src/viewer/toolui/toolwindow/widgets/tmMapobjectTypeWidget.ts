@@ -21,7 +21,7 @@ class MapobjectTypeWidgetCtrl {
 
     constructor(private _$scope: any) {
         this._$scope.$parent['mapobjectTypeWidget'] = this;
-        this.mapobjectTypeNames = this._$scope.viewer.experiment.mapobjectTypes.map((t) => {
+        this.mapobjectTypeNames = this._$scope.viewer.mapobjectTypes.map((t) => {
             return t.name;
         });
     }
