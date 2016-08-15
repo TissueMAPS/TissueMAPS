@@ -7,7 +7,8 @@ from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import MainModel, DateMixIn
+from tmlib.models import MainModel, ExperimentModel, DateMixIn
+from tmlib.models import ExperimentSession
 from tmlib.readers import YamlReader
 from tmlib.writers import YamlWriter
 from tmlib.models.utils import remove_location_upon_delete
@@ -25,86 +26,48 @@ EXPERIMENT_LOCATION_FORMAT = 'experiment_{id}'
 
 
 @remove_location_upon_delete
-class Experiment(MainModel, DateMixIn):
+class ExperimentReference(MainModel, DateMixIn):
 
-    '''An *experiment* is the main organizational unit of `TissueMAPS`.
-    It represents a set of images and associated data.
+    '''A reference to an *experiment*, which is stored in a separate database.
 
-    Images are grouped by *plates* and *cycles*. A *plate* represents a
-    container for the imaged biological samples and a *cycle* corresponds to a
-    particular time point of image acquisition. In the simplest case,
-    an *experiment* is composed of a single *plate* with one *cycle* where
-    each sample was imaged once.
+    All data associated with an experiment are stored in separate,
+    experiment-specific databases.
 
     Attributes
     ----------
     name: str
-        name of the experiment
+        name given to the experiment
     root_directory: str
         absolute path to root directory where experiment is located on disk
     description: str
         description of the experimental setup
-    microscope_type: str
-        microscope that was used to acquire the images
-    plate_format: int
-        number of wells in the plate, e.g. 384
-    plate_acquisition_mode: str
-        the way plates were acquired with the microscope
     user_id: int
         ID of the owner
     user: tmlib.models.User
         the user who owns the experiment
-    plates: List[tmlib.models.Plate]
-        plates that belong to the experiment
-    channels: List[tmlib.models.Channel]
-        channels that belong to the experiment
-    mapobject_types: List[tmlib.models.MapobjectType]
-        mapobject types that belong to the experiment
     submissions: List[tmlib.models.Submission]
         submissions that belong to the experiment
-    zoom_factor: int
-        zoom factor between pyramid levels
-    vertical_site_displacement: int, optional
-        displacement of neighboring sites within a well along the
-        vertical axis
-    horizontal_site_displacement: int
-        displacement of neighboring sites within a well along the
-        horizontal axis
-    well_spacer_size: int
-        gab between neighboring wells in pixels
 
     See also
     --------
-    :py:class:`tmlib.models.Plate`
-    :py:class:`tmlib.models.Cycle`
+    :py:class:`tmlib.models.Experiment`
     '''
 
     #: str: name of the corresponding database table
-    __tablename__ = 'experiments'
+    __tablename__ = 'experiment_references'
 
     __table_args__ = (UniqueConstraint('name', 'user_id'), )
 
     # Table columns
     name = Column(String, index=True)
-    microscope_type = Column(String, index=True)
-    plate_format = Column(Integer)
-    plate_acquisition_mode = Column(String)
     description = Column(Text)
     root_directory = Column(String)
-    zoom_factor = Column(Integer)
-    vertical_site_displacement = Column(Integer)
-    horizontal_site_displacement = Column(Integer)
-    well_spacer_size = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id'), index=True)
 
     # Relationships to other tables
-    user = relationship('User', backref='experiments')
+    user = relationship('User', back_populates='experiments')
 
-    def __init__(self, name, microscope_type, plate_format,
-                 plate_acquisition_mode, user_id,
-                 root_directory, description='',
-                 zoom_factor=2, well_spacer_size=500,
-                 vertical_site_displacement=0, horizontal_site_displacement=0):
+    def __init__(self, name, user_id, root_directory, description=''):
         '''
         Parameters
         ----------
@@ -123,54 +86,12 @@ class Experiment(MainModel, DateMixIn):
             be created in
         description: str, optional
             description of the experimental setup
-        zoom_factor: int, optional
-            zoom factor between pyramid levels (default: ``2``)
-        well_spacer_size: int
-            gab between neighboring wells in pixels (default: ``500``)
-        vertical_site_displacement: int, optional
-            displacement of neighboring sites within a well along the
-            vertical axis (default: ``0``)
-        horizontal_site_displacement: int, optional
-            displacement of neighboring sites within a well along the
-            horizontal axis (default: ``0``)
 
-        See also
-        --------
-        :py:attr:`tmlib.models.experiment.SUPPORTED_MICROSCOPE_TYPES`
-        :py:attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
-        :py:attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
         '''
         self.name = name
         self.user_id = user_id
         self.description = description
-
-        if microscope_type not in SUPPORTED_MICROSCOPE_TYPES:
-            raise ValueError(
-                'Unsupported microscope type! Supported are: "%s"'
-                % '", "'.join(SUPPORTED_MICROSCOPE_TYPES)
-            )
-        self.microscope_type = microscope_type
-
-        if plate_format not in SUPPORTED_PLATE_FORMATS:
-            raise ValueError(
-                'Unsupported plate format! Supported are: %s'
-                % ', '.join(map(str, SUPPORTED_PLATE_FORMATS))
-            )
-        self.plate_format = plate_format
-
-        if plate_acquisition_mode not in SUPPORTED_PLATE_AQUISITION_MODES:
-            raise ValueError(
-                'Unsupported acquisition mode! Supported are: "%s"'
-                % '", "'.join(SUPPORTED_PLATE_AQUISITION_MODES)
-            )
-        self.plate_acquisition_mode = plate_acquisition_mode
-
         self.root_directory = root_directory
-        self.zoom_factor = zoom_factor
-        self.well_spacer_size = well_spacer_size
-        # TODO: we may be able to calculate this automatically from OMEXML
-        self.vertical_site_displacement = vertical_site_displacement
-        self.horizontal_site_displacement = horizontal_site_displacement
 
     @autocreate_directory_property
     def location(self):
@@ -186,16 +107,6 @@ class Experiment(MainModel, DateMixIn):
             os.path.expandvars(self.root_directory),
             EXPERIMENT_LOCATION_FORMAT.format(id=self.id)
         )
-
-    @autocreate_directory_property
-    def plates_location(self):
-        '''str: location where plates data are stored'''
-        return os.path.join(self.location, 'plates')
-
-    @autocreate_directory_property
-    def channels_location(self):
-        '''str: location where channels data are stored'''
-        return os.path.join(self.location, 'channels')
 
     @autocreate_directory_property
     def workflow_location(self):
@@ -228,10 +139,14 @@ class Experiment(MainModel, DateMixIn):
         '''
         if not os.path.exists(self._workflow_descriptor_file):
             logger.warn('no persistent workflow description found')
-            if self.plate_acquisition_mode == 'multiplexing':
-                workflow_type = 'multiplexing'
-            else:
-                workflow_type = 'canonical'
+            # TODO: we might want to move the workflow description to the
+            # actual experiment class or handle it separately.
+            with ExperimentSession(self.id) as session:
+                exp = session.query(Experiment).get(self.id)
+                if exp.plate_acquisition_mode == 'multiplexing':
+                    workflow_type = 'multiplexing'
+                else:
+                    workflow_type = 'canonical'
             logger.info('default to "%s" workflow type', workflow_type)
             workflow_description = WorkflowDescription(workflow_type)
             self.persist_workflow_description(workflow_description)
@@ -273,27 +188,6 @@ class Experiment(MainModel, DateMixIn):
         '''str: location where submission data are stored'''
         return os.path.join(self.workflow_location, 'session')
 
-    @cached_property
-    def plate_spacer_size(self):
-        '''int: gap between neighboring plates in pixels'''
-        return self.well_spacer_size * 2
-
-    @cached_property
-    def plate_grid(self):
-        '''numpy.ndarray[int]: IDs of plates arranged according to
-        their relative position of the plate within the experiment overview
-        image
-        '''
-        n = len(self.plates)
-        dimensions = guess_stitch_dimensions(n)
-        cooridinates = itertools.product(
-            range(dimensions[0]), range(dimensions[1])
-        )
-        grid = np.zeros(dimensions, dtype=int)
-        for i, (y, x) in enumerate(cooridinates):
-            grid[y, x] = self.plates[i].id
-        return grid
-
     def belongs_to(self, user):
         '''Determines whether the experiment belongs to a given `user`.
 
@@ -309,16 +203,8 @@ class Experiment(MainModel, DateMixIn):
         '''
         return self.user_id == user.id
 
-    @property
-    def is_ready_for_processing(self):
-        '''bool: whether the experiment is ready for processing
-        (requires that upload of images is complete)
-        '''
-        return all([pls.is_ready_for_processing for pls in self.plate_sources])
-
     def get_mapobject_type(self, name):
-        '''
-        Return a mapobject type belonging to this experiment by name.
+        '''Returns a mapobject type belonging to this experiment by name.
 
         Parameters
         ----------
@@ -343,32 +229,141 @@ class Experiment(MainModel, DateMixIn):
             filter_by(name=name, experiment_id=self.id).\
             one()
 
-    def as_dict(self):
-        '''Returns attributes as key-value pairs.
-
-        Returns
-        -------
-        dict
-        '''
-        mapobject_info = []
-        for t in self.mapobject_types:
-            mapobject_info.append({
-                'mapobject_type_name': t.name,
-                'features': [{'name': f.name} for f in t.features]
-            })
-
-        return {
-            'id': self.hash,
-            'name': self.name,
-            'description': self.description,
-            'user': self.user.name,
-            'plate_format': self.plate_format,
-            'microscope_type': self.microscope_type,
-            'plate_acquisition_mode': self.plate_acquisition_mode,
-            'channels': [ch.as_dict() for ch in self.channels],
-            'mapobject_info': mapobject_info,
-            'plates': [pl.as_dict() for pl in self.plates]
-        }
-
     def __repr__(self):
         return '<Experiment(id=%r, name=%r)>' % (self.id, self.name)
+
+
+class Experiment(ExperimentModel):
+
+    '''An *experiment* is the main organizational unit of `TissueMAPS`.
+    It represents a set of images and associated data.
+
+    Attributes
+    ----------
+    microscope_type: str
+        microscope that was used to acquire the images
+    plate_format: int
+        number of wells in the plate, e.g. 384
+    plate_acquisition_mode: str
+        the way plates were acquired with the microscope
+    root_directory: str
+        absolute path to the location of the referencec experiment on disk
+    zoom_factor: int
+        zoom factor between pyramid levels
+    vertical_site_displacement: int, optional
+        displacement of neighboring sites within a well along the
+        vertical axis
+    horizontal_site_displacement: int
+        displacement of neighboring sites within a well along the
+        horizontal axis
+    well_spacer_size: int
+        gab between neighboring wells in pixels
+    plates: List[tmlib.models.Plate]
+        all plates belonging to the referenced experiment
+    channels: List[tmlib.models.Channel]
+        all channels belonging to the referenced experiment
+    mapobject_types: List[tmlib.models.MapobjectType]
+        all mapobject types belonging to the referenced experiment
+    '''
+
+    __tablename__ = 'experiment'
+
+    __table_args__ = (UniqueConstraint('id'), )
+
+    microscope_type = Column(String, index=True)
+    plate_format = Column(Integer)
+    plate_acquisition_mode = Column(String)
+    zoom_factor = Column(Integer)
+    vertical_site_displacement = Column(Integer)
+    horizontal_site_displacement = Column(Integer)
+    well_spacer_size = Column(Integer)
+    root_directory = Column(String)
+
+    def __init__(self, microscope_type, plate_format, plate_acquisition_mode,
+            root_directory, zoom_factor=2, well_spacer_size=500,
+            vertical_site_displacement=0, horizontal_site_displacement=0):
+        '''
+        Parameters
+        ----------
+        microscope_type: str
+            microscope that was used to acquire the images
+        plate_format: int
+            number of wells in the plate, e.g. 384
+        plate_acquisition_mode: str
+            the way plates were acquired with the microscope
+        root_directory: str
+            absolute path to the location of the referencec experiment on disk
+        zoom_factor: int, optional
+            zoom factor between pyramid levels (default: ``2``)
+        well_spacer_size: int
+            gab between neighboring wells in pixels (default: ``500``)
+        vertical_site_displacement: int, optional
+            displacement of neighboring sites within a well along the
+            vertical axis (default: ``0``)
+        horizontal_site_displacement: int, optional
+            displacement of neighboring sites within a well along the
+            horizontal axis (default: ``0``)
+
+        See also
+        --------
+        :py:attr:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
+        :py:attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
+        :py:attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
+        '''
+        self.root_directory = root_directory
+        self.zoom_factor = zoom_factor
+        self.well_spacer_size = well_spacer_size
+        # TODO: we may be able to calculate this automatically from OMEXML
+        self.vertical_site_displacement = vertical_site_displacement
+        self.horizontal_site_displacement = horizontal_site_displacement
+        if microscope_type not in SUPPORTED_MICROSCOPE_TYPES:
+            raise ValueError(
+                'Unsupported microscope type! Supported are: "%s"'
+                % '", "'.join(SUPPORTED_MICROSCOPE_TYPES)
+            )
+        self.microscope_type = microscope_type
+
+        if plate_format not in SUPPORTED_PLATE_FORMATS:
+            raise ValueError(
+                'Unsupported plate format! Supported are: %s'
+                % ', '.join(map(str, SUPPORTED_PLATE_FORMATS))
+            )
+        self.plate_format = plate_format
+
+        if plate_acquisition_mode not in SUPPORTED_PLATE_AQUISITION_MODES:
+            raise ValueError(
+                'Unsupported acquisition mode! Supported are: "%s"'
+                % '", "'.join(SUPPORTED_PLATE_AQUISITION_MODES)
+            )
+        self.plate_acquisition_mode = plate_acquisition_mode
+
+    @autocreate_directory_property
+    def plates_location(self):
+        '''str: location where plates data are stored'''
+        return os.path.join(self.root_directory, 'plates')
+
+    @autocreate_directory_property
+    def channels_location(self):
+        '''str: location where channels data are stored'''
+        return os.path.join(self.root_directory, 'channels')
+
+    @cached_property
+    def plate_spacer_size(self):
+        '''int: gap between neighboring plates in pixels'''
+        return self.well_spacer_size * 2
+
+    @cached_property
+    def plate_grid(self):
+        '''numpy.ndarray[int]: IDs of plates arranged according to
+        their relative position of the plate within the experiment overview
+        image
+        '''
+        n = len(self.plates)
+        dimensions = guess_stitch_dimensions(n)
+        cooridinates = itertools.product(
+            range(dimensions[0]), range(dimensions[1])
+        )
+        grid = np.zeros(dimensions, dtype=int)
+        for i, (y, x) in enumerate(cooridinates):
+            grid[y, x] = self.plates[i].id
+        return grid

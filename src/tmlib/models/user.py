@@ -1,5 +1,6 @@
 from passlib.hash import sha256_crypt
 from sqlalchemy import Column, String
+from sqlalchemy.orm import relationship
 
 from tmlib.models import MainModel, DateMixIn
 
@@ -25,6 +26,8 @@ class User(MainModel, DateMixIn):
     name = Column(String, index=True, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
+
+    experiments = relationship('ExperimentReference', back_populates='user')
 
     def __init__(self, name, email, password):
         '''

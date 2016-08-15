@@ -40,7 +40,8 @@ def create_db_engine(db_uri=DATABASE_URI):
 
 
 def create_db_session_factory(engine):
-    '''Creates a factory for creating a database session.
+    '''Creates a factory for creating a scoped database session that will use
+    :py:class:`tmlib.models.utils.Query` to query the database.
 
     Parameters
     ----------

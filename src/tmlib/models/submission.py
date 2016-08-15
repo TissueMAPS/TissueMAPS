@@ -31,7 +31,9 @@ class Submission(MainModel, DateMixIn):
     program = Column(String, index=True)
     experiment_id = Column(
         Integer,
-        ForeignKey('experiments.id', onupdate='CASCADE', ondelete='CASCADE'),
+        ForeignKey(
+            'experiment_references.id', onupdate='CASCADE', ondelete='CASCADE'
+        ),
         index=True
     )
     top_task_id = Column(
@@ -42,7 +44,7 @@ class Submission(MainModel, DateMixIn):
 
     # Relationships to other tables
     experiment = relationship(
-        'Experiment',
+        'ExperimentReference',
         backref=backref('submissions', cascade='all, delete-orphan')
     )
 

@@ -69,10 +69,12 @@ class Plate(ExperimentModel, DateMixIn):
     ----------
     name: str
         name of the plate
-    description: str, optional
+    description: str
         description of the plate
-    root_directory: str
-        absolute path to root directory where plate is located on disk
+    experiment_id: int
+        ID of the experiment reference
+    experiment: tmlib.models.ExperimentReference
+        experiment reference
     cycles: List[tmlib.model.Cycle]
         cycles that belong to the plate
     acquisitions: List[tmlib.model.Acqusition]
@@ -88,24 +90,31 @@ class Plate(ExperimentModel, DateMixIn):
 
     # Table columns
     name = Column(String, index=True)
-    root_directory = Column(String)
     description = Column(Text)
+    experiment_id = Column(
+        Integer,
+        ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
 
-    def __init__(self, name, root_directory, description=''):
+    # Relationships to other tables
+    experiment = relationship(
+        'Experiment',
+        backref=backref('plates', cascade='all, delete-orphan')
+    )
+
+    def __init__(self, name, description=''):
         '''
         Parameters
         ----------
         name: str
             name of the plate
-        root_directory: str
-            absolute path to root directory on disk where plate should be
-            created in
         description: str, optional
             description of the plate
         '''
         self.name = name
-        self.root_directory = root_directory
         self.description = description
+        self.experiment_id = 1
 
     @autocreate_directory_property
     def location(self):
@@ -116,7 +125,8 @@ class Plate(ExperimentModel, DateMixIn):
                 'Therefore, its location cannot be determined.' % self.name
             )
         return os.path.join(
-            self.root_directory, PLATE_LOCATION_FORMAT.format(id=self.id)
+            self.experiment.root_directory,
+            PLATE_LOCATION_FORMAT.format(id=self.id)
         )
 
     @autocreate_directory_property
@@ -238,36 +248,6 @@ class Plate(ExperimentModel, DateMixIn):
             plate_coordinate[1] * experiment.plate_spacer_size
         )
         return (y_offset, x_offset)
-
-    def belongs_to(self, user):
-        '''Determines whether the plate belongs to a given `user`.
-
-        Parameters
-        ----------
-        user: tmlib.user.User
-            `TissueMAPS` user
-
-        Returns
-        -------
-        bool
-            whether plate belongs to `user`
-        '''
-        return self.experiment.user_id == user.id
-
-    def as_dict(self):
-        '''Returns attributes as key-value pairs.
-
-        Returns
-        -------
-        dict
-        '''
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'status': self.status,
-            'acquisitions': [aq.as_dict() for aq in self.acquisitions]
-        }
 
     def __repr__(self):
         return '<Plate(id=%r, name=%r)>' % (self.id, self.name)

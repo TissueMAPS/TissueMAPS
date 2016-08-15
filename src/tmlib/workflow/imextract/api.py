@@ -192,7 +192,7 @@ class ImageExtractor(ClusterRoutines):
         '''
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             cycles = session.query(tm.Cycle).all()
-            images_locations = [c.images_locations for c in cycles]
+            images_locations = [c.channel_images_location for c in cycles]
             logger.info('delete existing channel image files')
             session.drop_and_recreate(tm.ChannelImageFile)
         for loc in images_locations:

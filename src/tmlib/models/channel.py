@@ -33,6 +33,10 @@ class Channel(ExperimentModel, DateMixIn):
         layers belonging to the channel
     illumstats_files: List[tmlib.model.IllumstatsFile]
         illumination statistics files that belongs to the channel
+    experiment_id: int
+        ID of the parent experiment
+    experiment: tmlib.models.Experiment
+        parent experiment
     '''
 
     #: str: name of the corresponding database table
@@ -45,9 +49,19 @@ class Channel(ExperimentModel, DateMixIn):
     index = Column(Integer, index=True)
     wavelength = Column(String, index=True)
     bit_depth = Column(Integer)
-    root_directory = Column(String)
+    experiment_id = Column(
+        Integer,
+        ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
 
-    def __init__(self, name, index, wavelength, bit_depth, root_directory):
+    # Relationships to other tables
+    experiment = relationship(
+        'Experiment',
+        backref=backref('channels', cascade='all, delete-orphan')
+    )
+
+    def __init__(self, name, index, wavelength, bit_depth):
         '''
         Parameters
         ----------
@@ -59,15 +73,12 @@ class Channel(ExperimentModel, DateMixIn):
             name of the corresponding wavelength
         bit_depth: int
             number of bits used to indicate intensity of pixels
-        root_directory: str
-            absolute path to root directory on disk where channel should
-            be created in
         '''
         self.name = name
         self.index = index
         self.wavelength = wavelength
         self.bit_depth = bit_depth
-        self.root_directory = root_directory
+        self.experiment_id = 1
 
     @autocreate_directory_property
     def location(self):
@@ -78,7 +89,8 @@ class Channel(ExperimentModel, DateMixIn):
                 'Therefore, its location cannot be determined.' % self.name
             )
         return os.path.join(
-            self.root_directory, CHANNEL_LOCATION_FORMAT.format(id=self.id)
+            self.experiment.root_directory,
+            CHANNEL_LOCATION_FORMAT.format(id=self.id)
         )
 
     @autocreate_directory_property

@@ -478,8 +478,8 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
 
 class Workflow(SequentialTaskCollection, State):
 
-    '''A *workflow* represents a computational pipeline that processes one
-    *workflow stage* after another on a cluster.
+    '''A *workflow* represents a computational pipeline that processes a
+    sequence of *workflow stages* on a cluster.
     '''
 
     def __init__(self, experiment_id, verbosity, submission_id, user_name,
@@ -508,16 +508,16 @@ class Workflow(SequentialTaskCollection, State):
 
         See also
         --------
-        :py:class:`tmlib.cfg.UserConfiguration`
-       '''
+        :py:class:`tmlib.workflow.WorkflowStage`
+        '''
         self.experiment_id = experiment_id
         self.verbosity = verbosity
         self.waiting_time = waiting_time
         self.submission_id = submission_id
         self.user_name = user_name
         self.update_description(description)
-        with tmlib.models.utils.Session() as session:
-            experiment = session.query(tmlib.models.Experiment).\
+        with tmlib.models.utils.MainSession() as session:
+            experiment = session.query(tmlib.models.ExperimentReference).\
                 get(self.experiment_id)
             super(Workflow, self).__init__(tasks=None, jobname=experiment.name)
         self._current_task = 0

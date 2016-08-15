@@ -200,12 +200,6 @@ class ImageFileMapping(ExperimentModel):
 
     __tablename__ = 'image_file_mappings'
 
-    __table_args__ = (
-        UniqueConstraint(
-            'tpoint', 'site_id', 'cycle_id', 'wavelength'
-        ),
-    )
-
     __distribute_by_hash__ = 'id'
 
     tpoint = Column(Integer, index=True)

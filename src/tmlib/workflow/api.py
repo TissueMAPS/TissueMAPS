@@ -90,7 +90,8 @@ class ClusterRoutines(BasicClusterRoutines):
         self.experiment_id = experiment_id
         self.verbosity = verbosity
         with tm.utils.MainSession() as session:
-            experiment = session.query(tm.Experiment).get(self.experiment_id)
+            experiment = session.query(tm.ExperimentReference).\
+                get(self.experiment_id)
             self.workflow_location = experiment.workflow_location
 
     @property

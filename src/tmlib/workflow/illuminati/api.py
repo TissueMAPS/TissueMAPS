@@ -16,6 +16,7 @@ from tmlib.image import PyramidTile
 from tmlib.image import Image
 from tmlib.errors import DataIntegrityError
 from tmlib.errors import WorkflowError
+from tmlib.models.utils import delete_location
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
@@ -259,11 +260,12 @@ class PyramidBuilder(ClusterRoutines):
         :py:class:`tm.MapobjectType` where ``is_static == True``
         as well as all children instances for the processed experiment.
         '''
-        logger.debug('delete existing channel layers')
+        logger.debug('delete existing channel layers and pyramid tile files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             channels = session.query(tm.Channel).all()
             layers_locations = [c.layers_location for c in channels]
             session.drop_and_recreate(tm.ChannelLayer)
+            session.drop_and_recreate(tm.PyramidTileFile)
         for loc in layers_locations:
             delete_location(loc)
 
@@ -644,12 +646,13 @@ class PyramidBuilder(ClusterRoutines):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             mapobject_ids = session.query(tm.Mapobject.id).\
                 join(tm.MapobjectType).\
-                filter(tm.MapobjectType.is_static=True).\
+                filter(tm.MapobjectType.is_static).\
                 all()
             mapobject_ids = [m.id for m in mapobject_ids]
-            session.query(tm.Mapobject).\
-                filter(tm.Mapobject.id.in_(mapobject_ids)).\
-                delete()
+            if mapobject_ids:
+                session.query(tm.Mapobject).\
+                    filter(tm.Mapobject.id.in_(mapobject_ids)).\
+                    delete()
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
 
@@ -664,8 +667,7 @@ class PyramidBuilder(ClusterRoutines):
 
                 logger.info('create mapobject type "%s"', name)
                 mapobject_type = session.get_or_create(
-                    tm.MapobjectType,
-                    name=name, experiment_id=self.experiment_id, is_static=True
+                    tm.MapobjectType, name=name, is_static=True
                 )
 
                 logger.info('create mapobjects of type "%s"', name)

@@ -338,7 +338,7 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
         data = dict()
         if recursion_depth is not None:
             if i > recursion_depth:
-                return data
+                return
 
         live_states = {
             gc3libs.Run.State.SUBMITTED,

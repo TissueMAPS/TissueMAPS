@@ -42,6 +42,10 @@ class MapobjectType(ExperimentModel, DateMixIn):
         to outlines
     mapobjects: List[tmlib.models.Mapobject]
         mapobjects that belong to the mapobject type
+    experiment_id: int
+        ID of the parent experiment
+    experiment: tmlib.models.Experiment
+        parent experiment
     '''
 
     #: str: name of the corresponding database table
@@ -54,6 +58,17 @@ class MapobjectType(ExperimentModel, DateMixIn):
     is_static = Column(Boolean, index=True)
     _max_poly_zoom = Column('max_poly_zoom', Integer)
     _min_poly_zoom = Column('min_poly_zoom', Integer)
+    experiment_id = Column(
+        Integer,
+        ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    # Relationships to other tables
+    experiment = relationship(
+        'Experiment',
+        backref=backref('mapobject_types', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, is_static=False, parent_id=None):
         '''
@@ -67,6 +82,7 @@ class MapobjectType(ExperimentModel, DateMixIn):
         '''
         self.name = name
         self.is_static = is_static
+        self.experiment_id = 1
 
     @hybrid_property
     def min_poly_zoom(self):
