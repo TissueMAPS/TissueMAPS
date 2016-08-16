@@ -17,11 +17,11 @@ if __name__ == '__main__':
         description='Download files from TissueMAPS.'
     )
     parser.add_argument(
-        '-H', '--hostname', required=True,
-        help='hostname of TissueMAPS instance'
+        '-H', '--host_name', required=True,
+        help='host_name of TissueMAPS instance'
     )
     parser.add_argument(
-        '-U', '--username', required=True,
+        '-U', '--user_name', required=True,
         help='name of TissueMAPS user'
     )
     parser.add_argument(
@@ -92,7 +92,7 @@ if __name__ == '__main__':
         help='name of the segmented objects'
     )
     segmentation_image_parser.add_argument(
-        '-p', '--plate_name', required=True,
+        '-P', '--plate_name', required=True,
         help='name of the plate'
     )
     segmentation_image_parser.add_argument(
@@ -132,12 +132,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('tmclient')
     logger.setLevel(logging_level)
 
-    service = DownloadService(args.hostname)
-    if args.password is None:
-        args.password = service.load_credentials(args.username)
-    service.login(args.username, args.password)
-
-    experiment_id = service.get_experiment_id(args.experiment_name)
-    arguments = vars(args)
-    arguments.update({'experiment_id': experiment_id})
-    service.call(args.method, arguments)
+    service = DownloadService(
+        args.host_name, args.experiment_name, args.user_name, args.password
+    )
+    service(args)

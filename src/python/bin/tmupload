@@ -17,11 +17,11 @@ if __name__ == '__main__':
         description='Upload microscope files to TissueMAPS.'
     )
     parser.add_argument(
-        '-H', '--hostname', required=True,
-        help='hostname of TissueMAPS instance'
+        '-H', '--host_name', required=True,
+        help='host_name of TissueMAPS instance'
     )
     parser.add_argument(
-        '-U', '--username', required=True,
+        '-U', '--user_name', required=True,
         help='name of TissueMAPS user'
     )
     parser.add_argument(
@@ -64,10 +64,8 @@ if __name__ == '__main__':
     logging.getLogger('tmclient').setLevel(logging_level)
     logger.setLevel(logging_level)
 
-    service = UploadService(args.hostname)
-    if not args.password:
-        args.password = service.load_credentials(args.username)
-    service.login(args.username, args.password)
+    service = UploadService(
+        args.host_name, args.experiment_name, args.user_name, args.password
+    )
 
-    args.experiment_id = service.get_experiment_id(args.experiment_name)
     service(args)

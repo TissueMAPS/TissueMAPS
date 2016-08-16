@@ -19,8 +19,10 @@ class DownloadService(ExperimentService):
     '''Class for downloading image files from TissueMAPS via its RESTful API.'''
 
     @same_docstring_as(ExperimentService.__init__)
-    def __init__(self, hostname):
-        super(DownloadService, self).__init__(hostname)
+    def __init__(self, hostname, experiment_name, user_name, password):
+        super(DownloadService, self).__init__(
+            hostname, experiment_name, user_name, password
+        )
 
     @classmethod
     def _extract_filename_from_headers(cls, headers):
@@ -43,13 +45,10 @@ class DownloadService(ExperimentService):
         with open(filepath, 'w') as f:
             f.write(data)
 
-    def _download_channel_image(self, experiment_id, channel_name,
-            plate_name, well_name, well_pos_y, well_pos_x,
+    def _download_channel_image(self, channel_name, plate_name,
+            well_name, well_pos_y, well_pos_x,
             cycle_index=0, tpoint=0, zplane=0, correct=True):
-        logger.info(
-            'download image of channel "%s" for experiment %s',
-            channel_name, experiment_id
-        )
+        logger.info('download image of channel "%s"', channel_name)
         params = {
             'plate_name': plate_name,
             'cycle_index': cycle_index,
@@ -62,7 +61,7 @@ class DownloadService(ExperimentService):
         }
         url = self.build_url(
             '/api/experiments/%s/channels/%s/image-files' % (
-                experiment_id, channel_name
+                self._experiment_id, channel_name
             ),
             params
         )
@@ -70,15 +69,13 @@ class DownloadService(ExperimentService):
         self._handle_error(response)
         return response
 
-    def download_channel_image(self, experiment_id, channel_name,
-            plate_name, well_name, well_pos_y, well_pos_x,
+    def download_channel_image(self, channel_name, plate_name,
+            well_name, well_pos_y, well_pos_x,
             cycle_index=0, tpoint=0, zplane=0, correct=True):
         '''Downloads a channel image.
 
         Parameters
         ----------
-        experiment_id: str
-            ID of the parent experiment
         channel_name: str
             name of the channel
         plate_name: str
@@ -111,23 +108,21 @@ class DownloadService(ExperimentService):
         See also
         --------
         :py:class:`tmlib.models.ChannelImageFile`
+        :py:class:`tmlib.image.ChannelImage`
         '''
         response = self._download_channel_image(
-            experiment_id, channel_name,
-            plate_name, well_name, well_pos_y, well_pos_x,
+            channel_name, plate_name, well_name, well_pos_y, well_pos_x,
             cycle_index=0, tpoint=0, zplane=0, correct=True
         )
         return response.content
 
-    def download_channel_image_file(self, experiment_id, channel_name,
-            plate_name, well_name, well_pos_y, well_pos_x,
-            cycle_index=0, tpoint=0, zplane=0, correct=True, directory=None):
+    def download_channel_image_file(self, channel_name, plate_name,
+            well_name, well_pos_y, well_pos_x, cycle_index=0,
+            tpoint=0, zplane=0, correct=True, directory=None):
         '''Downloads a channel image and writes it to a `PNG` file on disk.
 
         Parameters
         ----------
-        experiment_id: str
-            ID of the parent experiment
         channel_name: str
             name of the channel
         plate_name: str
@@ -157,23 +152,19 @@ class DownloadService(ExperimentService):
 
         See also
         --------
-        `tmclient.dowload.Downloadservice.download_channel_image`
+        :py:method:`tmclient.DownloadService.download_channel_image`
         '''
         response = self._download_channel_image(
-            experiment_id, channel_name,
-            plate_name, well_name, well_pos_y, well_pos_x,
+            channel_name, plate_name, well_name, well_pos_y, well_pos_x,
             cycle_index=0, tpoint=0, zplane=0, correct=True
         )
         data = response.content
         filename = self._extract_filename_from_headers(response.headers)
         self._write_file(directory, filename, data)
 
-    def _download_segmentation_image(self, experiment_id, object_name,
-            plate_name, well_name, well_pos_y, well_pos_x, tpoint=0, zplane=0):
-        logger.info(
-            'download segmentated objects "%s" for experiment %s',
-            object_name, experiment_id
-        )
+    def _download_segmentation_image(self, object_name, plate_name,
+            well_name, well_pos_y, well_pos_x, tpoint=0, zplane=0):
+        logger.info('download segmentated objects "%s"', object_name)
         params = {
             'plate_name': plate_name,
             'well_name': well_name,
@@ -184,7 +175,7 @@ class DownloadService(ExperimentService):
         }
         url = self.build_url(
             '/api/experiments/%s/mapobjects/%s/segmentations' % (
-                experiment_id, object_name
+                self._experiment_id, object_name
             ),
             params
         )
@@ -192,7 +183,7 @@ class DownloadService(ExperimentService):
         self._handle_error(response)
         return response
 
-    def download_segmentation_image(self, experiment_id, object_name,
+    def download_segmentation_image(self, object_name,
             plate_name, well_name, well_pos_y, well_pos_x, tpoint=0, zplane=0):
         '''Downloads a segmentation image.
 
@@ -227,25 +218,22 @@ class DownloadService(ExperimentService):
 
         See also
         --------
-        `tmlib.models.Mapobject`
-        `tmlib.models.MapobjectType`
-        `tmlib.models.MapobjectSegmentation`
+        :py:class:`tmlib.models.MapobjectSegmentation`
+        :py:class:`tmlib.image.SegmentationImage`
         '''
         response = self._download_segmentation_image(
-            experiment_id, object_name,
-            plate_name, well_name, well_pos_y, well_pos_x, tpoint=0, zplane=0
+            object_name, plate_name, well_name, well_pos_y, well_pos_x,
+            tpoint=0, zplane=0
         )
         return response.content
 
-    def download_segmentation_image_file(self, experiment_id, object_name,
+    def download_segmentation_image_file(self, object_name,
             plate_name, well_name, well_pos_y, well_pos_x, tpoint=0, zplane=0,
             directory=None):
         '''Downloads a segmentation image and writes it to a `PNG` file on disk.
 
         Parameters
         ----------
-        plate_id: int
-            ID of the parent experiment
         object_name: str
             name of the segmented objects
         plate_name: str
@@ -267,16 +255,20 @@ class DownloadService(ExperimentService):
         Note
         ----
         Image gets automatically aligned between cycles.
+
+        See also
+        --------
+        :py:method:`tmclient.DownloadService.download_segmentation_image`
         '''
         response = self._download_segmentation_image(
-            experiment_id, object_name,
-            plate_name, well_name, well_pos_y, well_pos_x, tpoint=0, zplane=0
+            object_name, plate_name, well_name, well_pos_y, well_pos_x,
+            tpoint=0, zplane=0
         )
         data = response.content
         filename = self._extract_filename_from_headers(response.headers)
         self._write_file(directory, filename, data)
 
-    def download_features_file(self, experiment_id, object_name, directory=None):
+    def download_features_file(self, object_name, directory=None):
         '''Downloads all feature values for the given object type and writes
         it into a zipped archive on disk.
         The archive will contain two `CSV` files, one for the actual feature
@@ -287,21 +279,16 @@ class DownloadService(ExperimentService):
 
         Parameters
         ----------
-        experiment_id: int
-            ID of the parent experiment
         object_name: str
             name of the segmented objects
         directory: str, optional
             absolute path to the directory on disk where the file should be saved
             (defaults to temporary directory)
         '''
-        logger.info(
-            'download features of "%s" for experiment %s',
-            object_name, experiment_id
-        )
+        logger.info('download features of "%s"', object_name)
         url = self.build_url(
             '/api/experiments/%s/mapobjects/%s/feature-values' % (
-                experiment_id, object_name
+                self._experiment_id, object_name
             )
         )
         res = self.session.get(url)

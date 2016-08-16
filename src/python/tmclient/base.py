@@ -19,16 +19,23 @@ class HttpClient(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, hostname):
+    def __init__(self, host_name, user_name, password=None):
         '''
         Parameters
         ----------
-        hostname: str
-            hostname of the TissueMAPS instance
+        host_name: str
+            name of the TissueMAPS instance
+        user_name: str
+            name of the TissueMAPS user
+        password: str, optional
+            password for `username` (default: ``None``)
         '''
-        self.base_url = 'http://%s' % hostname
+        self.base_url = 'http://%s' % host_name
         self.session = requests.Session()
         self.session.get(self.base_url)
+        if password is None:
+            password = self._load_credentials(user_name)
+        self.login(user_name, password)
 
     def build_url(self, uri, params={}):
         '''Gets the full URL based on the base URL and the provided
@@ -58,16 +65,19 @@ class HttpClient(object):
             message = 'Status %s: %s' % (result.status_code, result.reason)
             try:
                 data = result.json()
-                message += '\n%s: %s' % (
-                    data['error']['type'], data['error']['message']
-                )
-                # if 'description' in json:
-                #     message += json['description']
+                if 'description' in data:
+                    message += '\n%s: %s' % (
+                        data['error'], data['description']
+                    )
+                else:
+                    message += '\n%s: %s' % (
+                        data['error']['type'], data['error']['message']
+                    )
             except ValueError:
                 pass
             raise ServerError(message)
 
-    def load_credentials(self, username):
+    def _load_credentials(self, username):
         '''Loads password from file.
 
         The file must be called ``".tmaps_pass.yaml"`` and stored in
