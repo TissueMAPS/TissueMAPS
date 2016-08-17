@@ -36,7 +36,7 @@ class SiteShift(ExperimentModel):
     #: str: name of the corresponding database table
     __tablename__ = 'site_shifts'
 
-    __distribute_by_hash__ = 'id'
+    __distribute_by_hash__ = 'site_id'
 
     # Table columns
     y = Column(Integer)
@@ -122,7 +122,7 @@ class SiteIntersection(ExperimentModel):
     #: str: name of the corresponding database table
     __tablename__ = 'site_intersections'
 
-    __distribute_by_hash__ = 'id'
+    __distribute_by_hash__ = 'site_id'
 
     # Table columns
     upper_overhang = Column(Integer)

@@ -32,8 +32,6 @@ class Feature(ExperimentModel):
 
     __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
 
-    __distribute_by_hash__ = 'id'
-
     # Table columns
     name = Column(String, index=True)
     is_aggregate = Column(Boolean, index=True)
@@ -95,7 +93,7 @@ class FeatureValue(ExperimentModel):
         UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
     )
 
-    __distribute_by_hash__ = 'feature_id'
+    __distribute_by_hash__ = 'mapobject_id'
 
     # Table columns
     value = Column(Float(precision=15))
