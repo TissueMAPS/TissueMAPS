@@ -30,15 +30,39 @@ def add_experiment(experiment_name, user_name, microscope_type, plate_format,
             raise ValueError('Unknown user "%s"!' % user_name)
         except:
             raise
-        experiment = session.get_or_create(
-            tm.Experiment,
-            name=experiment_name, user_id=user.id,
-            root_directory=os.environ['TMAPS_STORAGE_HOME'],
-            microscope_type=microscope_type,
-            plate_format=plate_format,
-            plate_acquisition_mode=plate_acquisition_mode
-        )
-        return experiment.id
+        try:
+            experiment = session.query(tm.ExperimentReference).\
+                filter_by(
+                    name=experiment_name, user_id=user.id,
+                    root_directory=os.environ['TMAPS_STORAGE_HOME']
+                ).\
+                one()
+            already_exists = True
+        except sqlalchemy.orm.exc.NoResultFound:
+            already_exists = False
+            experiment = tm.ExperimentReference(
+                name=experiment_name, user_id=user.id,
+                root_directory=os.environ['TMAPS_STORAGE_HOME']
+            )
+            session.add(experiment)
+            session.flush()
+            raise ValueError('Unknown user "%s"!' % user_name)
+        except:
+            raise
+        experiment_id = experiment.id
+    
+    if not already_exists:
+
+        with tm.utils.ExperimentSession(experiment_id) as session:
+            experiment = tm.Experiment(
+                microscope_type=microscope_type,
+                plate_format=plate_format,
+                plate_acquisition_mode=plate_acquisition_mode,
+                root_directory=os.environ['TMAPS_STORAGE_HOME']
+            )
+            session.add(experiment)
+
+    return experiment_id
 
 
 if __name__ == '__main__':

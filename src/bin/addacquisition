@@ -19,7 +19,7 @@ def add_acquisition(experiment_name, plate_name, acquisition_name):
         except:
             raise
 
-    with tm.utils.ExperimentSession(experiment_id=experiment_id) as session:
+    with tm.utils.ExperimentSession(experiment_id) as session:
         try:
             plate = session.query(tm.Plate).\
                 filter_by(name=plate_name).\

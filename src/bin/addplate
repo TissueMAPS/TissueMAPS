@@ -8,10 +8,10 @@ import tmlib.models as tm
 def add_plate(plate_name, experiment_name):
     with tm.utils.MainSession() as session:
         try:
-            experiment = session.query(tm.Experiment).\
-                filter_by(name=experiment_name).one()
+            experiment = session.query(tm.ExperimentReference).\
+                filter_by(name=experiment_name).\
+                one()
             experiment_id = experiment.id
-            plates_location = experiment.plates_location
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(
                 'Experiment "%s" does not exist!' % experiment_name
@@ -19,10 +19,8 @@ def add_plate(plate_name, experiment_name):
         except:
             raise
 
-    with tm.utils.ExperimentSession(experiment_id=experiment_id) as session:
-        plate = session.get_or_create(
-            tm.Plate, name=plate_name, root_directory=plates_location
-        )
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        plate = session.get_or_create(tm.Plate, name=plate_name)
         return plate.id
 
 

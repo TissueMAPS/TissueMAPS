@@ -230,7 +230,7 @@ class ExperimentReference(MainModel, DateMixIn):
             one()
 
     def __repr__(self):
-        return '<Experiment(id=%r, name=%r)>' % (self.id, self.name)
+        return '<ExperimentReference(id=%r, name=%r)>' % (self.id, self.name)
 
 
 class Experiment(ExperimentModel):
