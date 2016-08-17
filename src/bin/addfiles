@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+import os
+import re
+import shutil
+import argparse
+import sqlalchemy.orm.exc
+from werkzeug.utils import secure_filename
+
+import tmlib.models as tm
+from tmlib.models.status import FileUploadStatus
+from tmlib.workflow.metaconfig import get_microscope_type_regex
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description='''
+            Add microscope files to an existing acquisition
+            in the TissueMAPS database.
+        '''
+    )
+    parser.add_argument(
+        '-e', '--experiment_name', required=True,
+        help='name of the parent experiment'
+    )
+    parser.add_argument(
+        '-p', '--plate_name', required=True,
+        help='name of the parent plate'
+    )
+    parser.add_argument(
+        '-a', '--acquisition_name', required=True,
+        help='name of the new acquisition'
+    )
+    parser.add_argument(
+        '-s', '--source_directory', required=True,
+        help='path to directory that contains the microscope files'
+    )
+    args = parser.parse_args()
+
+    with tm.utils.Session() as session:
+
+        try:
+            acquisition = session.query(tm.Acquisition).\
+                join(tm.Plate).\
+                join(tm.Experiment).\
+                filter(tm.Experiment.name == args.experiment_name).\
+                filter(tm.Plate.name == args.plate_name).\
+                filter(tm.Acquisition.name == args.acquisition_name).\
+                one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Acquisition "%s" does not exist for plate "%s" and '
+                'experiment "%s"!'
+                % (args.acquisition_name, args.plate_name, args.experiment_name)
+            )
+        except:
+            raise
+
+        # Register all files in the database.
+        # This will automatically set upload_status to "WAITING".
+        if not os.path.exists(args.source_directory):
+            raise OSError(
+                'Source directory does not exist: %s' % args.source_directory
+            )
+        microscope_type = acquisition.plate.experiment.microscope_type
+        r_image, r_metadata= get_microscope_type_regex(microscope_type)
+        image_file_names = [
+            f.name for f in acquisition.microscope_image_files
+        ]
+        metdata_file_names = [
+            f.name for f in acquisition.microscope_metadata_files
+        ]
+        files_to_add = []
+        for f in os.listdir(args.source_directory):
+            if r_image.search(f):
+                name = secure_filename(f)
+                # Skip already inserted files.
+                if name not in image_file_names:
+                    print 'register image file "%s"' % f
+                    file = session.get_or_create(
+                        tm.MicroscopeImageFile,
+                        name=name, acquisition_id=acquisition.id
+                    )
+                    files_to_add.append(file)
+            elif r_metadata.search(f):
+                name = secure_filename(os.path.basename(f))
+                if name not in metdata_file_names:
+                    print 'register metadata file "%s"' % f
+                    file = tm.MicroscopeMetadataFile(
+                        name=name, acquisition_id=acquisition.id
+                    )
+                    files_to_add.append(file)
+            else:
+                print 'unknow file format: "%s"' % f
+            session.bulk_save_objects(files_to_add)

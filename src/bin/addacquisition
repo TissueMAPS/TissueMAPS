@@ -8,8 +8,9 @@ import tmlib.models as tm
 def add_acquisition(experiment_name, plate_name, acquisition_name):
     with tm.utils.MainSession() as session:
         try:
-            experiment = session.query(tm.Experiment).\
-                filter_by(name=experiment_name).one()
+            experiment = session.query(tm.ExperimentReference).\
+                filter_by(name=experiment_name).\
+                one()
             experiment_id = experiment.id
         except sqlalchemy.orm.exc.NoResultFound:
             raise ValueError(
