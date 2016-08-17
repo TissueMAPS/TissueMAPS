@@ -1,3 +1,4 @@
 git+https://github.com/cellprofiler/python-bioformats
 git+https://github.com/jmcgeheeiv/pyfakefs
-git+https://github.com/tissuemaps/gc3pie@develop
+git+https://github.com/tissuemaps/gc3pie@master
+git+https://github.com/tissuemaps/sqlalchemy-utils@master
