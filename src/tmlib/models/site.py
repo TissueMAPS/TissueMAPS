@@ -47,8 +47,6 @@ class Site(ExperimentModel, DateMixIn):
 
     __table_args__ = (UniqueConstraint('x', 'y', 'well_id'), )
 
-    __distribute_by_hash__ = 'id'
-
     # Table columns
     y = Column(Integer, index=True)
     x = Column(Integer, index=True)
