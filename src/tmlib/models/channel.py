@@ -89,7 +89,7 @@ class Channel(ExperimentModel, DateMixIn):
                 'Therefore, its location cannot be determined.' % self.name
             )
         return os.path.join(
-            self.experiment.root_directory,
+            self.experiment.channel_location,
             CHANNEL_LOCATION_FORMAT.format(id=self.id)
         )
 

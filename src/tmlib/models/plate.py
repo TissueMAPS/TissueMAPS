@@ -125,7 +125,7 @@ class Plate(ExperimentModel, DateMixIn):
                 'Therefore, its location cannot be determined.' % self.name
             )
         return os.path.join(
-            self.experiment.root_directory,
+            self.experiment.plates_location,
             PLATE_LOCATION_FORMAT.format(id=self.id)
         )
 

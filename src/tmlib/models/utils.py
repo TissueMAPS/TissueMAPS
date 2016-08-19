@@ -33,6 +33,7 @@ def create_db_engine(db_uri=DATABASE_URI):
     # If this creates problems, consider using a different poolclass,
     # e.g. sqlalchemy.pool.AssertionPool and/or changing settings, such as
     # pool_size or max_overflow.
+    logger.debug('create database engine')
     return sqlalchemy.create_engine(
         db_uri, poolclass=sqlalchemy.pool.QueuePool,
         pool_size=5, max_overflow=10
