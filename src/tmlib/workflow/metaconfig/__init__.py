@@ -20,7 +20,7 @@ __logo__ = '''
 
 SUPPORTED_MICROSCOPE_TYPES = {
     'visiview', 'cellvoyager', 'axio', 'default', 'metamorph', 'niselements',
-    'incell'
+    'incell', 'imc'
 }
 
 
