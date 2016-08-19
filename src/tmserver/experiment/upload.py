@@ -109,7 +109,7 @@ def file_validity_check(experiment_id, acquisition_id):
         return is_metadata_file or is_imgfile
 
     with tm.utils.ExperimentSession(experiment_id) as session:
-        experiment = session.query(tm.Experiment).get(experiment_id)
+        experiment = session.query(tm.Experiment).get(1)
         microscope_type = experiment.microscope_type
     imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
