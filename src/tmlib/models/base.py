@@ -174,6 +174,11 @@ def _compile_create_table(element, compiler, **kwargs):
     return sql
 
 
+@compiles(DropTable, 'postgresxl')
+def _compile_drop_table(element, compiler, **kwargs):
+    return compiler.visit_drop_table(element) + ' CASCADE'
+
+
 @compiles(array_agg, 'postgresxl')
 def compile_array_agg(element, compiler, **kw):
     compiled = "%s(%s)" % (element.name, compiler.process(element.clauses))
