@@ -3,7 +3,8 @@ import os
 import logging
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
 from sqlalchemy import Column, DateTime, Integer
-from sqlalchemy import func
+from sqlalchemy import func, text, cast
+from sqlalchemy_utils.expressions import array_agg
 from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.schema import UniqueConstraint, PrimaryKeyConstraint
 from sqlalchemy.ext.compiler import compiles
@@ -171,3 +172,14 @@ def _compile_create_table(element, compiler, **kwargs):
         )
         sql += ' DISTRIBUTE BY REPLICATION'
     return sql
+
+
+@compiles(array_agg, 'postgresxl')
+def compile_array_agg(element, compiler, **kw):
+    compiled = "%s(%s)" % (element.name, compiler.process(element.clauses))
+    if element.default is None:
+        return compiled
+    return str(func.coalesce(
+        text(compiled),
+        cast(postgresql.array(element.default), element.type)
+    ).compile(compiler))
