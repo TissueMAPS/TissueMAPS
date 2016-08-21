@@ -59,12 +59,14 @@ class ImageExtractor(ClusterRoutines):
             # They will be written into the same file and trying to access the
             # same file from different machines will create problems with file
             # locks.
-            file_mappings_per_site = dict(session.query(
+            file_mappings_per_site = dict(
+                session.query(
                     tm.ImageFileMapping.site_id,
                     func.array_agg(tm.ImageFileMapping.id)
                 ).\
                 group_by(tm.ImageFileMapping.site_id).\
-                all())
+                all()
+            )
             batches = self._create_batches(
                 file_mappings_per_site.values(), args.batch_size
             )
