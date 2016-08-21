@@ -125,18 +125,9 @@ class MetadataConfigurator(ClusterRoutines):
         for loc in cycles_locations:
             delete_location(loc)
 
-        logger.info('reset channel and cycle ID on image file mappings')
+        logger.debug('delete existing image file mappings')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            file_mapping_ids = session.query(tm.ImageFileMapping.id).all()
-            session.bulk_update_mappings(
-                tm.ImageFileMapping, [
-                    {
-                        'id': i.id,
-                        'cycle_id': None,
-                        'channel_id': None
-                    } for i in file_mapping_ids
-                ]
-            )
+            session.drop_and_recreate(tm.ImageFileMapping)
 
     def run_job(self, batch):
         '''Formats OMEXML metadata extracted from microscope image files and
