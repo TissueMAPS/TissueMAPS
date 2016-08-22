@@ -252,23 +252,21 @@ class Experiment(ExperimentModel):
         zoom factor between pyramid levels
     vertical_site_displacement: int, optional
         displacement of neighboring sites within a well along the
-        vertical axis
+        vertical axis in pixels
     horizontal_site_displacement: int
         displacement of neighboring sites within a well along the
-        horizontal axis
+        horizontal axis in pixels
     well_spacer_size: int
         gab between neighboring wells in pixels
     plates: List[tmlib.models.Plate]
-        all plates belonging to the referenced experiment
+        all plates belonging to the experiment
     channels: List[tmlib.models.Channel]
-        all channels belonging to the referenced experiment
+        all channels belonging to the experiment
     mapobject_types: List[tmlib.models.MapobjectType]
-        all mapobject types belonging to the referenced experiment
+        all mapobject types belonging to the experiment
     '''
 
     __tablename__ = 'experiment'
-
-    __table_args__ = (UniqueConstraint('id'), )
 
     microscope_type = Column(String, index=True)
     plate_format = Column(Integer)
@@ -299,10 +297,10 @@ class Experiment(ExperimentModel):
             gab between neighboring wells in pixels (default: ``500``)
         vertical_site_displacement: int, optional
             displacement of neighboring sites within a well along the
-            vertical axis (default: ``0``)
+            vertical axis in pixels (default: ``0``)
         horizontal_site_displacement: int, optional
             displacement of neighboring sites within a well along the
-            horizontal axis (default: ``0``)
+            horizontal axis in pixels (default: ``0``)
 
         See also
         --------
