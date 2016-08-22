@@ -15,11 +15,9 @@ from tmserver.error import (
 )
 
 
-def assert_request_params(*params):
-    """A decorator for GET and POST request functions that asserts that the
-    request contains the required parameters. For GET method the parameters
-    are expected to be encoded in the URL, while for POST method they are
-    expected in the request body.
+def assert_query_params(*params):
+    """A decorator for GET request functions that asserts that the
+    query string contains the required parameters.
 
     Parameters
     ----------
@@ -28,30 +26,64 @@ def assert_request_params(*params):
 
     Raises
     ------
-    tmserver.error.MissingPOSTParameterError or tmserver.error.MissingGETParameterError
-            when a required parameter is missing in the request
+    tmserver.error.MissingGETParameterError
+        when a required parameter is missing in the request
     """
     def decorator(f):
         @functools.wraps(f)
         def wrapped(*args, **kwargs):
-            if request.method == 'POST':
-                data = request.get_json()
+            if request.method != 'GET':
+                raise ValueError(
+                    '"assert_query_params" must decorate GET request functions'
+                )
+            missing = []
             for p in params:
-                if request.method == 'GET':
-                    if p not in request.args:
-                        raise MissingGETParameterError(p)
-                elif request.method == 'POST':
-                    if data is None:
-                        raise MissingPOSTParameterError(p)
-                    else:
-                        if p not in data:
-                            raise MissingPOSTParameterError(p)
+                if p not in request.args:
+                    missing.append(p)
+            if missing:
+                raise MissingGETParameterError(*missing)
             return f(*args, **kwargs)
         return wrapped
     return decorator
 
 
-def decode_body_ids(*model_ids):
+def assert_form_params(*params):
+    """A decorator for POST request functions that asserts that the
+    form body contains the required parameters.
+
+    Parameters
+    ----------
+    *params: List[str]
+        names of required parameters
+
+    Raises
+    ------
+    tmserver.error.MissingPOSTParameterError
+        when a required parameter is missing in the request
+    """
+    def decorator(f):
+        @functools.wraps(f)
+        def wrapped(*args, **kwargs):
+            if request.method != 'POST':
+                raise ValueError(
+                    '"assert_form_params" must decorate POST request functions'
+                )
+            data = request.get_json()
+            missing = []
+            for p in params:
+                if data is None:
+                    raise MissingPOSTParameterError(*params)
+                else:
+                    if p not in data:
+                        missing.append(p)
+            if missing:
+                raise MissingPOSTParameterError(*missing)
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator
+
+
+def decode_form_ids(*model_ids):
     """A decorator that extracts and decodes specified model ids from the POST
     body and inserts them into the argument list of the view function.
 
@@ -95,7 +127,7 @@ def decode_body_ids(*model_ids):
     return decorator
 
 
-def decode_url_ids():
+def decode_query_ids():
     """A decorator that extracts and decodes all model IDs from the URL
     and inserts them into the argument list of the view function.
 

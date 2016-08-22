@@ -13,7 +13,8 @@ from tmserver.error import (
     ResourceNotFoundError,
     NotAuthorizedError
 )
-from tmserver.util import decode_url_ids, decode_body_ids, assert_request_params
+from tmserver.util import decode_query_ids, decode_form_ids
+from tmserver.util import assert_query_params, assert_form_params
 from tmserver.toolbox import SUPPORTED_TOOLS
 from tmserver.toolbox import get_tool_class
 
@@ -63,8 +64,8 @@ def get_tools():
     '/experiments/<experiment_id>/tools/request', methods=['POST']
 )
 @jwt_required()
-@decode_url_ids()
-@assert_request_params('payload', 'session_uuid', 'tool_name')
+@decode_query_ids()
+@assert_form_params('payload', 'session_uuid', 'tool_name')
 def process_tool_request(experiment_id, tool_name):
     """Processes a generic tool request sent by the client.
     POST payload should have the format:
@@ -112,8 +113,8 @@ def process_tool_request(experiment_id, tool_name):
     '/experiments/<experiment_id>/labellayers/<label_layer_id>/tiles',
     methods=['GET']
 )
-@decode_url_ids()
-@assert_request_params('x', 'y', 'z', 'zplane', 'tpoint')
+@decode_query_ids()
+@assert_query_params('x', 'y', 'z', 'zplane', 'tpoint')
 def get_result_labels(experiment_id, label_layer_id):
     """Get all mapobjects together with the labels that were assigned to them
     for a given tool result and tile coordinate.
@@ -164,7 +165,7 @@ def get_result_labels(experiment_id, label_layer_id):
     '/experiments/<experiment_id>/toolresults/<toolresult_id>', methods=['GET']
 )
 @jwt_required()
-@decode_url_ids()
+@decode_query_ids()
 def get_tool_result(experiment_id, toolresult_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         tool_result = session.query(tm.ToolResult).get(toolresult_id)

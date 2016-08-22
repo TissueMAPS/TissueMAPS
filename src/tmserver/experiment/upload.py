@@ -16,7 +16,8 @@ from tmlib.workflow.metaconfig import get_microscope_type_regex
 
 from tmserver.extensions import redis_store
 from tmserver.api import api
-from tmserver.util import decode_url_ids, decode_body_ids, assert_request_params
+from tmserver.util import decode_query_ids, decode_form_ids
+from tmserver.util import assert_query_params, assert_form_params
 from tmserver.error import *
 
 logger = logging.getLogger(__name__)
@@ -24,12 +25,12 @@ logger = logging.getLogger(__name__)
 
 @api.route(
     '/experiments/<experiment_id>/acquisitions/<acquisition_id>/upload/register',
-    methods=['PUT']
+    methods=['POST']
 )
 @jwt_required()
-@assert_request_params('files')
+@assert_form_params('files')
 @jwt_required()
-@decode_url_ids()
+@decode_query_ids()
 def register_upload(experiment_id, acquisition_id):
     """
     Tell the server that an upload for this acquisition is imminent.
@@ -56,7 +57,7 @@ def register_upload(experiment_id, acquisition_id):
         )
 
     with tm.utils.ExperimentSession(experiment_id) as session:
-        experiment = session.query(tm.Experiment).get(1)
+        experiment = session.query(tm.Experiment).one()
         microscope_type = experiment.microscope_type
         imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
@@ -94,8 +95,8 @@ def register_upload(experiment_id, acquisition_id):
     methods=['POST']
 )
 @jwt_required()
-@assert_request_params('files')
-@decode_url_ids()
+@assert_form_params('files')
+@decode_query_ids()
 def file_validity_check(experiment_id, acquisition_id):
     data = json.loads(request.data)
     if not 'files' in data:
@@ -109,7 +110,7 @@ def file_validity_check(experiment_id, acquisition_id):
         return is_metadata_file or is_imgfile
 
     with tm.utils.ExperimentSession(experiment_id) as session:
-        experiment = session.query(tm.Experiment).get(1)
+        experiment = session.query(tm.Experiment).one()
         microscope_type = experiment.microscope_type
     imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
@@ -126,13 +127,14 @@ def file_validity_check(experiment_id, acquisition_id):
     methods=['POST']
 )
 @jwt_required()
-@decode_url_ids()
+@decode_query_ids()
 def upload_file(experiment_id, acquisition_id):
+    # TODO: shouldn't this be a PUT request?
     f = request.files.get('file')
 
     # Get the file form the form
     if not f:
-        raise MalformedRequestError('Missing file entry in this request.')
+        raise MalformedRequestError('Missing file entry in the upload request.')
 
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisition = session.query(tm.Acquisition).get(acquisition_id)

@@ -13,7 +13,8 @@ from flask import send_file, jsonify, request, Blueprint, current_app
 from flask.ext.jwt import jwt_required
 
 from tmserver.extensions import websocket
-from tmserver.util import decode_url_ids
+from tmserver.util import decode_query_ids
+from tmserver.util import assert_form_params, assert_query_params
 from tmserver.extensions import gc3pie
 
 import tmlib.models as tm
@@ -140,10 +141,10 @@ def get_projects(location):
     return projects
 
 
-@jtui.route('/get_available_jtprojects/<experiment_id>')
+@jtui.route('/experiments/<experiment_id>/projects')
 @jwt_required()
-@decode_url_ids()
-def get_available_jtprojects(experiment_id):
+@decode_query_ids()
+def get_available_projects(experiment_id):
     '''Lists all Jterator projects available in the data location.
     A project consists of a pipeline description ("pipe") and
     several module descriptions ("handles").
@@ -169,10 +170,10 @@ def get_available_jtprojects(experiment_id):
     return jsonify(jtprojects=serialized_projects)
 
 
-@jtui.route('/get_jtproject/<experiment_id>/<project_name>')
+@jtui.route('/experiments/<experiment_id>/projects/<project_name>')
 @jwt_required()
-@decode_url_ids()
-def get_jtproject(experiment_id, project_name):
+@decode_query_ids()
+def get_project(experiment_id, project_name):
     '''Returns a single Jterator project for a given experiment.
     A project consists of a pipeline description ("pipe") and
     several module descriptions ("handles"), represented on disk by `.pipe`
@@ -182,8 +183,6 @@ def get_jtproject(experiment_id, project_name):
     ----------
     experiment: tmlib.models.Experiment
         processed experiment
-    project_name: str
-        name of the pipeline
 
     Returns
     -------
@@ -227,6 +226,10 @@ def get_jtproject(experiment_id, project_name):
                 ...
 
     '''
+    logger.info(
+        'get jterator project "%s" for experiment %d',
+        project_name, experiment_id
+    )
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=logging.INFO,
@@ -236,9 +239,9 @@ def get_jtproject(experiment_id, project_name):
     return jsonify(jtproject=serialized_project)
 
 
-@jtui.route('/get_available_jtmodules')
+@jtui.route('/available_modules')
 @jwt_required()
-def get_available_jtmodules():
+def get_available_modules():
     '''Lists all available Jterator modules in the
     `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
 
@@ -289,9 +292,9 @@ def get_available_jtmodules():
     return jsonify(jtmodules=modules.as_dict())
 
 
-@jtui.route('/get_available_jtpipelines')
+@jtui.route('/available_pipelines')
 @jwt_required()
-def get_available_jtpipelines():
+def get_available_pipelines():
     '''Lists all available Jterator pipelines in the
     `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
 
@@ -312,9 +315,9 @@ def get_available_jtpipelines():
     return jsonify(jtpipelines=pipes)
 
 
-@jtui.route('/get_available_channels/<experiment_id>')
+@jtui.route('/experiments/<experiment_id>/available_channels')
 @jwt_required()
-@decode_url_ids()
+@decode_query_ids()
 def get_available_channels(experiment_id):
     '''Lists all channels for a given experiment.
 
@@ -334,9 +337,10 @@ def get_available_channels(experiment_id):
         return jsonify(channels=[c.name for c in channels])
 
 
-@jtui.route('/get_module_source_code/<module_filename>')
+@jtui.route('/module_source_code')
+@assert_query_params('module_filename')
 @jwt_required()
-def get_module_source_code(module_filename):
+def get_module_source_code():
     '''Gets the source code for a given module.
 
     Parameters
@@ -349,6 +353,7 @@ def get_module_source_code(module_filename):
     str
        content of the module source code file
     '''
+    module_filename = request.args.get('module_filename')
     modules = AvailableModules(current_app.config.get('TMAPS_MODULES_HOME'))
     files = [
         f for i, f in enumerate(modules.module_files)
@@ -357,10 +362,11 @@ def get_module_source_code(module_filename):
     return send_file(files[0])
 
 
-@jtui.route('/get_module_figure/<experiment_id>/<project_name>/<module_name>/<job_id>')
+@jtui.route('/experiments/<experiment_id>/projects/<project_name>/figure')
 @jwt_required()
-@decode_url_ids()
-def get_module_figure(experiment_id, project_name, module_name, job_id):
+@assert_query_params('module_name', 'job_id')
+@decode_query_ids()
+def get_module_figure(experiment_id, project_name):
     '''Gets the figure for a given module.
 
     Parameters
@@ -369,23 +375,22 @@ def get_module_figure(experiment_id, project_name, module_name, job_id):
         ID of the processed experiment
     project_name: str
         name of the project (pipeline)
-    module_name: str
-        name of the module
-    job_id: int
-        ID of the computational job
 
     Returns
     -------
     str
         html figure representation
     '''
+    module_name = request.args.get('module_name')
+    job_id = request.args.get('job_id', type=int)
+
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=logging.INFO,
         pipeline=project_name,
     )
     fig_file = [
-        m.build_figure_filename(jt.figures_location, int(job_id))
+        m.build_figure_filename(jt.figures_location, job_id)
         for m in jt.pipeline if m.name == module_name
     ]
     if len(fig_file) == 0:
@@ -403,20 +408,21 @@ def get_module_figure(experiment_id, project_name, module_name, job_id):
         })
 
 
-@jtui.route('/create_joblist/<experiment_id>', methods=['POST'])
+@jtui.route(
+    '/experiments/<experiment_id>/projects/<project_name>/joblist',
+    methods=['POST']
+)
 @jwt_required()
-@decode_url_ids()
+@decode_query_ids()
 def create_joblist(experiment_id):
     '''Creates a list of jobs for the current project to give the user a
     possiblity to select a site of interest.
 
     '''
-    data = json.loads(request.data)
-    data = yaml.load(data['jtproject'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=logging.INFO,
-        pipeline=data['name']
+        pipeline=project_name
     )
     try:
         batches = jt.get_batches_from_files()
@@ -449,21 +455,25 @@ def create_joblist(experiment_id):
         return jsonify({'joblist': None, 'error': error})
 
 
-@jtui.route('/save_jtproject/<experiment_id>', methods=['POST'])
+@jtui.route(
+    '/experiments/<experiment_id>/projects/<project_name>/save',
+    methods=['POST']
+)
 @jwt_required()
-@decode_url_ids()
-def save_jtproject(experiment_id):
+@assert_form_params('project')
+@decode_query_ids()
+def save_project(experiment_id, project_name):
     '''Saves modifications of the pipeline and module descriptions to the
     corresponding `.pipe` and `.handles` files.
     '''
     data = json.loads(request.data)
-    data = yaml.load(data['jtproject'])
+    project = yaml.load(data['project'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=1,
-        pipeline=data['name'],
-        pipe=data['pipe'],
-        handles=data['handles'],
+        pipeline=project_name,
+        pipe=project['pipe'],
+        handles=project['handles'],
     )
     try:
         jt.project.save()
@@ -474,20 +484,24 @@ def save_jtproject(experiment_id):
         return jsonify({'success': False, 'error': error})
 
 
-@jtui.route('/check_jtproject/<experiment_id>', methods=['POST'])
+@jtui.route(
+    '/experiments/<experiment_id>/projects/<project_name>/check',
+    methods=['POST']
+)
 @jwt_required()
-@decode_url_ids()
-def check_jtproject(experiment_id):
+@assert_form_params('project')
+@decode_query_ids()
+def check_jtproject(experiment_id, project_name):
     '''Checks pipeline and module descriptions.
     '''
     data = json.loads(request.data)
-    data = yaml.load(data['jtproject'])
+    project = yaml.load(data['project'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=1,
-        pipeline=data['name'],
-        pipe=data['pipe'],
-        handles=data['handles'],
+        pipeline=project_name,
+        pipe=project['pipe'],
+        handles=project['handles'],
     )
     try:
         jt.check_pipeline()
@@ -498,18 +512,19 @@ def check_jtproject(experiment_id):
         return jsonify({'success': False, 'error': error})
 
 
-@jtui.route('/remove_jtproject/<experiment_id>', methods=['POST'])
+@jtui.route(
+    '/experiments/<experiment_id>/projects/<project_name>/delete',
+    methods=['POST']
+)
 @jwt_required()
-@decode_url_ids()
-def remove_jtproject(experiment_id):
+@decode_query_ids()
+def delete_project(experiment_id, project_name):
     '''Removes `.pipe` and `.handles` files from a given Jterator project.
     '''
-    data = json.loads(request.data)
-    pipeline = yaml.load(data['pipeline'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=1,
-        pipeline=pipeline
+        pipeline=project_name
     )
     try:
         jt.project.remove()
@@ -520,10 +535,14 @@ def remove_jtproject(experiment_id):
         return jsonify({'success': False, 'error': error})
 
 
-@jtui.route('/create_jtproject/<experiment_id>', methods=['POST'])
+@jtui.route(
+    '/experiments/<experiment_id>/projects/<project_name>/create',
+    methods=['POST']
+)
 @jwt_required()
-@decode_url_ids()
-def create_jtproject(experiment_id):
+@assert_form_params('template')
+@decode_query_ids()
+def create_jtproject(experiment_id, project_name):
     '''Creates a new jterator project in an existing experiment folder, i.e.
     create a `.pipe` file with an *empty* pipeline description
     and a "handles" subfolder that doesn't yet contain any `.handles` files.
@@ -535,7 +554,7 @@ def create_jtproject(experiment_id):
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=1,
-        pipeline=data['pipeline'],
+        pipeline=project_name,
     )
     # Create the project, i.e. create a folder that contains a .pipe file and
     # handles subfolder with .handles files
@@ -552,27 +571,15 @@ def create_jtproject(experiment_id):
     return jsonify(jtproject=serialized_jtproject)
 
 
-@jtui.route('/<experiment_id>/kill_jobs', methods=['POST'])
+@jtui.route('/experiments/<experiment_id>/jobs/kill', methods=['POST'])
+@assert_form_params('task_id')
 @jwt_required()
-def kill_jobs():
+@decode_query_ids()
+def kill_jobs(experiment_id):
     '''Kills submitted jobs.
     '''
-    data = json.loads(request.data)
-    persistent_id = data['taskId']
     # TODO
-    if persistent_id:
-        try:
-            task = tasks[persistent_id]
-            logger.info('kill job: ', persistent_id)
-            engine.kill(task)
-            return jsonify({'success': True})
-        except Exception as e:
-            error = str(e)
-            print 'Error upon killing job %d: ' % persistent_id
-            print error
-            return jsonify({'success': False, 'error': error})
-    else:
-        return jsonify({'success': False, 'error': 'No jobs were specified.'})
+    raise NotImplementedError()
 
 
 def _get_output(jobs, modules, fig_location):
@@ -615,10 +622,13 @@ def _get_output(jobs, modules, fig_location):
     return output
 
 
-@jtui.route('/get_job_status/<experiment_id>', methods=['POST'])
+@jtui.route(
+    '/experiments/<experiment_id>/projects/<project_name>/jobs/status',
+    methods=['POST']
+)
 @jwt_required()
-@decode_url_ids()
-def get_job_status(experiment_id):
+@decode_query_ids()
+def get_job_status(experiment_id, project_name):
     '''Gets the status of submitted jobs.
 
     Parameters
@@ -626,18 +636,9 @@ def get_job_status(experiment_id):
     experiment: tmlib.models.Experiment
         processed experiment
     '''
-    data = json.loads(request.data)
-    data = yaml.load(data['jtproject'])
-    jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
-        verbosity=1,
-        pipeline=data['name'],
-        pipe=data['pipe'],
-        handles=data['handles'],
-    )
     jobs = gc3pie.retrieve_jobs(
         experiment_id=experiment_id,
-        submitting_program='jtui-{project}'.format(project=jt.pipe_name)
+        program='jtui-{project}'.format(project=project_name)
     )
     if jobs is None:
         status_result = {}
@@ -646,10 +647,14 @@ def get_job_status(experiment_id):
     return jsonify(status=status_result)
 
 
-@jtui.route('/get_job_output/<experiment_id>', methods=['POST'])
+@jtui.route(
+    '/experiments/<experiment_id>/projects/<project_name>/jobs/output',
+    methods=['POST']
+)
 @jwt_required()
-@decode_url_ids()
-def get_job_output(experiment_id):
+@assert_form_params('project')
+@decode_query_ids()
+def get_job_output(experiment_id, project_name):
     '''Gets output generated by a previous submission.
 
     Parameters
@@ -659,18 +664,18 @@ def get_job_output(experiment_id):
 
     '''
     data = json.loads(request.data)
-    data = yaml.load(data['jtproject'])
+    project = yaml.load(data['project'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=1,
-        pipeline=data['name'],
-        pipe=data['pipe'],
-        handles=data['handles'],
+        pipeline=project_name,
+        pipe=project['pipe'],
+        handles=project['handles'],
     )
     try:
         jobs = gc3pie.retrieve_jobs(
             experiment_id=experiment_id,
-            submitting_program='jtui-{project}'.format(project=jt.pipe_name)
+            program='jtui-{project}'.format(project=jt.pipe_name)
         )
         output = _get_output(jobs, jt.pipeline, jt.figures_location)
         return jsonify(output=output)
@@ -682,10 +687,14 @@ def get_job_output(experiment_id):
         return jsonify(output=None, error=error)
 
 
-@jtui.route('/run_jobs/<experiment_id>', methods=['POST'])
+@jtui.route(
+    '/experiments/<experiment_id>/projects/<project_name>/jobs/run',
+    methods=['POST']
+)
 @jwt_required()
-@decode_url_ids()
-def run_jobs(experiment_id):
+@assert_form_params('job_ids', 'project')
+@decode_query_ids()
+def run_jobs(experiment_id, project_name):
     '''Runs one or more jobs of the current project with pipeline and module
     descriptions provided by the UI.
 
@@ -699,17 +708,17 @@ def run_jobs(experiment_id):
 
     '''
     data = json.loads(request.data)
-    job_ids = map(int, data['jobIds'])
-    data = yaml.load(data['jtproject'])
+    job_ids = map(int, data['job_ids'])
+    project = yaml.load(data['project'])
     # TODO: sometimes the check fails, although the description seems fine,
     # could it be related to the "hashkey" stuff that javascript adds to the
     # JSON object?
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=1,
-        pipeline=data['name'],
-        pipe=data['pipe'],
-        handles=data['handles'],
+        pipeline=project_name,
+        pipe=project['pipe'],
+        handles=project['handles'],
     )
 
     # 1. Delete figures and logs from previous submission

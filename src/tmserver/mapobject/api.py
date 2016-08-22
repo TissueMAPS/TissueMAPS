@@ -19,7 +19,7 @@ import tmlib.models as tm
 from tmlib.image import SegmentationImage
 
 from tmserver.api import api
-from tmserver.util import decode_url_ids, assert_request_params
+from tmserver.util import decode_query_ids, assert_query_params
 from tmserver.error import MalformedRequestError, ResourceNotFoundError
 
 
@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
     '/experiments/<experiment_id>/mapobjects/<object_name>/tile',
     methods=['GET']
 )
-@assert_request_params('x', 'y', 'z', 'zplane', 'tpoint')
-@decode_url_ids()
+@assert_query_params('x', 'y', 'z', 'zplane', 'tpoint')
+@decode_query_ids()
 def get_mapobjects_tile(experiment_id, object_name):
 
     # The coordinates of the requested tile
@@ -105,7 +105,7 @@ def get_mapobjects_tile(experiment_id, object_name):
 
 @api.route('/experiments/<experiment_id>/features', methods=['GET'])
 @jwt_required()
-@decode_url_ids()
+@decode_query_ids()
 def get_features(experiment_id):
     """Sends a list of feature objects.
 
@@ -145,8 +145,8 @@ def get_features(experiment_id):
     methods=['GET']
 )
 @jwt_required()
-@assert_request_params('plate_name', 'well_name', 'x', 'y', 'zplane', 'tpoint')
-@decode_url_ids()
+@assert_query_params('plate_name', 'well_name', 'x', 'y', 'zplane', 'tpoint')
+@decode_query_ids()
 def get_mapobjects_segmentation(experiment_id, object_name):
     plate_name = request.args.get('plate_name')
     well_name = request.args.get('well_name')
@@ -222,7 +222,7 @@ def get_mapobjects_segmentation(experiment_id, object_name):
     methods=['GET']
 )
 @jwt_required()
-@decode_url_ids()
+@decode_query_ids()
 def get_feature_values(experiment_id, object_name):
     with tm.utils.ExperimentSession(experiment_id) as session:
         mapobject_type = session.query(tm.MapobjectType).\
