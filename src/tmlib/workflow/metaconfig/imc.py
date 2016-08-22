@@ -22,7 +22,7 @@ IMAGE_FILE_REGEX_PATTERN = r'[^_]+_.*\((?P<c>.*)\).*tiff'
 METADATA_FILE_REGEX_PATTERN = r'(?!.*)'
 
 
-class ImgMetadataHandler(MetadataHandler):
+class ImcMetadataHandler(MetadataHandler):
 
     '''Class for handling metadata specific to the Image Mass Cytometer.'''
 
@@ -43,7 +43,7 @@ class ImgMetadataHandler(MetadataHandler):
         )
 
 
-class ImgMetadataReader(MetadataReader):
+class ImcMetadataReader(MetadataReader):
 
     '''Class for reading metadata from files formats specific to the Image
     Mass Cytometer.
