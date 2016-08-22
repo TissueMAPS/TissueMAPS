@@ -499,11 +499,9 @@ class SetupCtrl {
     private _createJteratorProject(projectName, templateName) {
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
-        var data = {
-            pipeline: projectName,
-            template: templateName
-        };
-        return $http.post('/jtui/create_jtproject/' + this.experiment.id, data)
+        var url = '/jtui/experiments/' + this.experiment.id +
+                  '/projects/' + projectName + '/create';
+        return $http.post(url, {'template': templateName})
         .then((resp) => {
             // console.log(resp)
             return resp;
@@ -518,10 +516,9 @@ class SetupCtrl {
     private _removeJteratorProject(projectName) {
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
-        var data = {
-            pipeline: projectName
-        };
-        return $http.post('/jtui/remove_jtproject/' + this.experiment.id, data)
+        var url = '/jtui/experiments/' + this.experiment.id +
+                  '/projects/' + projectName + '/delete';
+        return $http.post(url, {})
         .then((resp) => {
             // console.log(resp)
             return resp;

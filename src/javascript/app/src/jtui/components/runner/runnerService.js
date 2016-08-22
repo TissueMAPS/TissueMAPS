@@ -7,12 +7,14 @@ angular.module('jtui.runner')
 
         console.log('Run jobs: ', jobIds);
 
+        var url = '/jtui/experiments/' + project.experiment_id +
+                  '/projects/' + project.name + '/jobs/run';
         var request = $http({
             method: 'post',
-            url: '/jtui/run_jobs' + '/' + project.experiment_id,
+            url: url,
             data: {
-                jtproject: jsyaml.safeDump(projectService.values2yaml(project)),
-                jobIds: jobIds
+                project: jsyaml.safeDump(projectService.values2yaml(project)),
+                job_ids: jobIds
             }
         });
 
@@ -23,13 +25,12 @@ angular.module('jtui.runner')
 
         console.log('Get status of submitted jobs...')
 
+        var url = '/jtui/experiments/' + project.experiment_id +
+                  '/projects/' + project.name + '/jobs/status';
         var request = $http({
             method: 'post',
-            url: '/jtui/get_job_status' +
-                  '/' + project.experiment_id,
-            data: {
-                jtproject: jsyaml.safeDump(projectService.values2yaml(project))
-            }
+            url: url,
+            data: {}
         });
 
         return(request.then(handleSuccess, handleError));
@@ -39,12 +40,13 @@ angular.module('jtui.runner')
 
         console.log('Get output of submitted jobs...')
 
+        var url = '/jtui/experiments/' + project.experiment_id +
+                  '/projects/' + project.name + '/jobs/output';
         var request = $http({
             method: 'post',
-            url: '/jtui/get_job_output' +
-                  '/' + project.experiment_id,
+            url: url,
             data: {
-                jtproject: jsyaml.safeDump(projectService.values2yaml(project))
+                project: jsyaml.safeDump(projectService.values2yaml(project))
             }
         });
 
@@ -55,15 +57,12 @@ angular.module('jtui.runner')
 
         console.log('kill submitted jobs')
 
-        if (taskId == null) {
-            // TODO: modal that complains
-        }
+        var url = '/jtui/experiments/' + project.experiment_id +
+                  '/projects/' + project.name + '/jobs/kill';
         var request = $http({
             method: 'post',
-            url: '/jtui/kill_jobs',
-            data: {
-                jtproject: jsyaml.safeDump(projectService.values2yaml(project))
-            }
+            url: url,
+            data: {}
         });
 
         return(request.then(handleSuccess, handleError));

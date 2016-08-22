@@ -149,7 +149,7 @@ class Acquisition {
         this.status = 'WAITING';
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
-        return $http.put(url, { files: fileNames })
+        return $http.post(url, { files: fileNames })
         .then((resp) => {
             // this.clearFiles();
             return resp.status === 200;
