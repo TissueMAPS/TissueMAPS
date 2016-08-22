@@ -59,9 +59,7 @@ angular.module('jtui.project')
 
         console.log('get project ', pipeName);
         var projectDef = $q.defer();
-        var url = '/jtui/get_jtproject' +
-                  '/' + experimentID +
-                  '/' + pipeName;
+        var url = '/jtui/experiments/' + experimentID + '/projects/' + pipeName;
         $http.get(url).success(function (data) {
             var proj = jsyaml.safeLoad(data.jtproject);
             console.log('returned project: ', proj)
@@ -84,8 +82,7 @@ angular.module('jtui.project')
     function getChannels(experimentID) {
 
         var channelsDef = $q.defer();
-        var url = '/jtui/get_available_channels' +
-                  '/' + experimentID;
+        var url = '/jtui/experiments/' + experimentID + '/available_channels';
         $http.get(url).success(function (data) {
             console.log('available channels: ', data.channels)
             channelsDef.resolve(data.channels)
@@ -97,11 +94,9 @@ angular.module('jtui.project')
     function getModuleFigure(experimentID, pipelineName, moduleName, jobID) {
 
         var figureDef = $q.defer();
-        var url = '/jtui/get_module_figure' +
-                  '/' + experimentID +
-                  '/' + pipelineName +
-                  '/' + moduleName +
-                  '/' + jobID;
+        var url = '/jtui/experiments/' + experimentID +
+                  '/projects/' + pipelineName + '/figure' +
+                  '?' + 'job_id=' + jobID + '&' + 'module_name=' + moduleName;
         $http.get(url).success(function (data) {
             figureDef.resolve(data)
         });
@@ -113,11 +108,13 @@ angular.module('jtui.project')
 
         // console.log('changed project:', values2yaml(project))
 
+        var url = '/jtui/experiments/' + project.experiment_id +
+                  '/projects/' + project.name + '/save';
         var request = $http({
             method: 'post',
-            url: '/jtui/save_jtproject' + '/' + project.experiment_id,
+            url: url,
             data: {
-                jtproject: jsyaml.safeDump(values2yaml(project))
+                project: jsyaml.safeDump(values2yaml(project))
             }
         });
 
@@ -128,11 +125,13 @@ angular.module('jtui.project')
 
         // console.log('changed project:', values2yaml(project))
 
+        var url = '/jtui/experiments/' + project.experiment_id +
+                  '/projects/' + project.name + '/check';
         var request = $http({
             method: 'post',
-            url: '/jtui/check_jtproject' + '/' + project.experiment_id,
+            url: url,
             data: {
-                jtproject: jsyaml.safeDump(values2yaml(project))
+                project: jsyaml.safeDump(values2yaml(project))
             }
         });
 
@@ -147,80 +146,24 @@ angular.module('jtui.project')
             return pat.name != ""
         });
 
+        var url = '/jtui/experiments/' + project.experiment_id +
+                  '/projects/' + project.name + '/joblist';
         var request = $http({
             method: 'post',
-            url: '/jtui/create_joblist' + '/' + project.experiment_id,
-            data: {
-                jtproject: jsyaml.safeDump(values2yaml(project))
-            }
-        });
-
-        return(request.then(handleSuccess, handleError));
-    }
-
-    function createJtproject(newProject) {
-
-        console.log('project: ', newProject)
-
-        var request = $http({
-            method: 'post',
-            url: '/jtui/create_jtproject' + '/' + newProject.experiment_id,
-            data: {
-                pipeline: newProject.projectName,
-                template: newProject.skelName
-            }
-        });
-
-        return(request.then(handleSuccess, handleError));
-    }
-
-    function removeJtproject(project) {
-
-        console.log('project: ', project)
-
-        var request = $http({
-            method: 'post',
-            url: '/jtui/remove_jtproject' + '/' + project.experiment_id,
-            data: {
-                jtproject: jsyaml.safeDump(values2yaml(project))
-            }
-        });
-
-        return(request.then(handleSuccess, handleError));
-    }
-
-    function createJoblist(project) {
-
-        // // Remove empty pattern from project object
-        // project.pipe.description.images.layers = project.pipe.description.images.layers.filter(function (pat) {
-        //     console.log(pat)
-        //     return pat.name != ""
-        // });
-
-        console.log('create joblist for project: ', project)
-
-        var request = $http({
-            method: 'post',
-            url: '/jtui/create_joblist' + '/' + project.experiment_id,
-            data: {
-                jtproject: jsyaml.safeDump(values2yaml(project))
-            }
+            url: url,
+            data: {}
         });
 
         return(request.then(handleSuccess, handleError));
     }
 
     return({
-        // getProjects: getProjects,
         getProject: getProject,
-        // getExperiments: getExperiments,
         getChannels: getChannels,
         getModuleFigure: getModuleFigure,
         saveProject: saveProject,
         checkProject: checkProject,
-        removeJtproject: removeJtproject,
         createJoblist: createJoblist,
-        createJtproject: createJtproject,
         values2yaml: values2yaml
     });
 
