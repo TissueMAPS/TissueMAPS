@@ -66,7 +66,7 @@ class MetadataConfigurator(ClusterRoutines):
         job_count = 0
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            experiment = session.query(tm.Experiment).get(self.experiment_id)
+            experiment = session.query(tm.Experiment).one()
             for acq in session.query(tm.Acquisition):
                 job_count += 1
                 description = {
@@ -107,7 +107,7 @@ class MetadataConfigurator(ClusterRoutines):
         '''
         logger.info('delete existing channels')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            experiment = session.query(tm.Experiment).get(self.experiment_id)
+            experiment = session.query(tm.Experiment).one()
             channels_location = experiment.channels_location
             session.drop_and_recreate(tm.Channel)
         delete_location(channels_location)
@@ -160,7 +160,7 @@ class MetadataConfigurator(ClusterRoutines):
         MetadataReader = metadata_reader_factory(batch['microscope_type'])
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            experiment = session.query(tm.Experiment).get(self.experiment_id)
+            experiment = session.query(tm.Experiment).one()
             plate_dimensions = experiment.plates[0].dimensions
             acquisition = session.query(tm.Acquisition).\
                 get(batch['acquisition_id'])
@@ -305,7 +305,7 @@ class MetadataConfigurator(ClusterRoutines):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             # We need to do this per plate to ensure correct indices
             # TODO: check plates have similar channels, etc
-            experiment = session.query(tm.Experiment).get(self.experiment_id)
+            experiment = session.query(tm.Experiment).one()
             acquisition_mode = experiment.plate_acquisition_mode
             channels_location = experiment.channels_location
             logger.info('plates were acquired in mode "%s"', acquisition_mode)
