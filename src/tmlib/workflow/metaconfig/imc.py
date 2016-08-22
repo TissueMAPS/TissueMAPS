@@ -23,7 +23,6 @@ METADATA_FILE_REGEX_PATTERN = r'(?!.*)'
 
 
 class ImcMetadataHandler(MetadataHandler):
-
     '''Class for handling metadata specific to the Image Mass Cytometer.'''
 
     #: Regular expression pattern to identify image files
@@ -38,13 +37,12 @@ class ImcMetadataHandler(MetadataHandler):
         omexml_metadata: bioformats.omexml.OMEXML
             metadata extracted from microscope metadata files 
         '''
-        super(AxioMetadataHandler, self).__init__(
+        super(ImcMetadataHandler, self).__init__(
             omexml_images, omexml_metadata
         )
 
 
 class ImcMetadataReader(MetadataReader):
-
     '''Class for reading metadata from files formats specific to the Image
     Mass Cytometer.
 
