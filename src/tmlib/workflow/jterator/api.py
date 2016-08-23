@@ -61,10 +61,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         files on disk.
         '''
         super(ImageAnalysisPipeline, self).__init__(experiment_id, verbosity)
-        self.pipe_name = pipeline
         self.engines = {'Python': None, 'R': None}
         self.project = Project(
-            step_location=self.step_location, pipe_name=self.pipe_name,
+            step_location=self.step_location, name=pipeline,
             pipe=pipe, handles=handles
         )
 
@@ -76,7 +75,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         step_location = os.path.join(self.workflow_location, self.step_name)
         if not os.path.exists(step_location):
             os.mkdir(step_location)
-        return os.path.join(step_location, self.pipe_name)
+        return os.path.join(step_location, self.project.name)
 
     @property
     def project(self):
@@ -304,7 +303,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 join(tm.Mapobject).\
                 join(tm.MapobjectSegmentation).\
                 filter(
-                    tm.MapobjectSegmentation.pipeline == self.pipe_name,
+                    tm.MapobjectSegmentation.pipeline == self.project.name,
                     ~tm.MapobjectType.is_static
                 ).\
                 all()
@@ -319,7 +318,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         # Pipeline name may include spaces
-        command.extend(['--pipeline', self.pipe_name])
+        command.extend(['--pipeline', self.project.name])
         command.append(self.experiment_id)
         command.extend(['run', '--job', str(job_id)])
         return command
@@ -328,7 +327,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # Overwrite method to include "--pipeline" argument
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
-        command.extend(['--pipeline', self.pipe_name])
+        command.extend(['--pipeline', self.project.name])
         command.append(self.experiment_id)
         command.append('collect')
         return command
@@ -508,7 +507,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         filter(
                             tm.Mapobject.mapobject_type_id == mapobject_type.id,
                             tm.MapobjectSegmentation.site_id == batch['site_id'],
-                            tm.MapobjectSegmentation.pipeline == self.pipe_name
+                            tm.MapobjectSegmentation.pipeline == self.project.name
                         ).\
                         all()
                     logger.info(
@@ -541,7 +540,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 tm.Mapobject.mapobject_type_id == mapobject_type.id,
                                 tm.MapobjectSegmentation.site_id == batch['site_id'],
                                 tm.MapobjectSegmentation.label == label,
-                                tm.MapobjectSegmentation.pipeline == self.pipe_name
+                                tm.MapobjectSegmentation.pipeline == self.project.name
                             ).\
                             one()
                     except NoResultFound:
@@ -582,7 +581,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     logger.debug('add segmentations for mapobject #%d', label)
                     mapobject_segmentations.append(
                         dict(
-                            pipeline=self.pipe_name,
+                            pipeline=self.project.name,
                             label=label,
                             tpoint=t, zplane=z,
                             geom_poly=outline.wkt,

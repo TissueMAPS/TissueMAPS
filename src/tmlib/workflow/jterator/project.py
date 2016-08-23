@@ -44,13 +44,13 @@ class Project(object):
     of YAML pipeline and module descriptor files that can be edited in the
     JtUI app.
     '''
-    def __init__(self, step_location, pipe_name, pipe=None, handles=None):
+    def __init__(self, step_location, name, pipe=None, handles=None):
         '''
         Parameters
         ----------
         step_location: str
             path to the project folder
-        pipe_name: str
+        name: str
             name of the pipeline
         pipe: dict, optional
             pipeline description (default: ``None``)
@@ -58,7 +58,7 @@ class Project(object):
             module descriptions (default: ``None``)
         '''
         self.step_location = step_location
-        self.pipe_name = pipe_name
+        self.name = name
         self._pipe = pipe
         self._handles = handles
 
@@ -95,7 +95,7 @@ class Project(object):
     def _pipe_filename(self):
         '''str: name of the YAML pipeline descriptor file
         '''
-        return '%s%s' % (self.pipe_name, PIPE_SUFFIX)
+        return '%s%s' % (self.name, PIPE_SUFFIX)
 
     def _get_pipe_file(self, directory=None):
         if not directory:
@@ -285,7 +285,7 @@ class Project(object):
             with YamlReader(pipe_file) as f:
                 pipe_content = f.read()
             new_pipe_file = os.path.join(
-                self.step_location, '%s%s' % (self.pipe_name, PIPE_SUFFIX)
+                self.step_location, '%s%s' % (self.name, PIPE_SUFFIX)
             )
             with YamlWriter(new_pipe_file) as f:
                 f.write(pipe_content)
@@ -357,7 +357,7 @@ class Project(object):
         dict
         '''
         attrs = dict()
-        attrs['name'] = self.pipe_name
+        attrs['name'] = self.name
         attrs['pipe'] = yaml.safe_load(
             ruamel.yaml.dump(self.pipe, Dumper=ruamel.yaml.RoundTripDumper)
         )
