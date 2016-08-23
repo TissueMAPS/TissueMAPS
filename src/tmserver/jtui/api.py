@@ -675,7 +675,7 @@ def get_job_output(experiment_id, project_name):
     try:
         jobs = gc3pie.retrieve_jobs(
             experiment_id=experiment_id,
-            program='jtui-{project}'.format(project=jt.pipe_name)
+            program='jtui-{pipeline}'.format(pipeline=jt.project.name)
         )
         output = _get_output(jobs, jt.pipeline, jt.figures_location)
         return jsonify(output=output)
@@ -710,15 +710,12 @@ def run_jobs(experiment_id, project_name):
     data = json.loads(request.data)
     job_ids = map(int, data['job_ids'])
     project = yaml.load(data['project'])
-    # TODO: sometimes the check fails, although the description seems fine,
-    # could it be related to the "hashkey" stuff that javascript adds to the
-    # JSON object?
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=1,
         pipeline=project_name,
         pipe=project['pipe'],
-        handles=project['handles'],
+        handles=project['handles']
     )
 
     # 1. Delete figures and logs from previous submission
@@ -738,7 +735,7 @@ def run_jobs(experiment_id, project_name):
     with tm.utils.MainSession() as session:
         submission = tm.Submission(
             experiment_id=experiment_id,
-            program='jtui-{project}'.format(project=jt.pipe_name)
+            program='jtui-{pipeline}'.format(pipeline=jt.project.name)
         )
         session.add(submission)
         session.flush()
