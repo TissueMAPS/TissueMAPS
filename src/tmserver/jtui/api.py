@@ -11,6 +11,7 @@ import subprocess
 from natsort import natsorted
 from flask import send_file, jsonify, request, Blueprint, current_app
 from flask.ext.jwt import jwt_required
+from flask.ext.jwt import current_identity
 
 from tmserver.extensions import websocket
 from tmserver.util import decode_query_ids
