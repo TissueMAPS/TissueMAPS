@@ -77,21 +77,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
             os.mkdir(step_location)
         return os.path.join(step_location, self.project.name)
 
-    @property
-    def project(self):
-        '''tmlib.jterator.project.Project: jterator project
-        '''
-        return self._project
-
-    @project.setter
-    def project(self, value):
-        if not isinstance(value, Project):
-            raise TypeError(
-                'Attribute "project" must have type '
-                'tmlib.jterator.project.Project'
-            )
-        self._project = value
-
     def check_pipeline(self):
         '''Checks descriptions provided via `pipe` and `handles` files.
         '''
