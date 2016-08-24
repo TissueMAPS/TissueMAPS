@@ -62,6 +62,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         super(ImageAnalysisPipeline, self).__init__(experiment_id, verbosity)
         self.engines = {'Python': None, 'R': None}
+        self.name = pipeline
         self.project = Project(
             step_location=self.step_location, name=pipeline,
             pipe=pipe, handles=handles
@@ -75,7 +76,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         step_location = os.path.join(self.workflow_location, self.step_name)
         if not os.path.exists(step_location):
             os.mkdir(step_location)
-        return os.path.join(step_location, self.project.name)
+        return os.path.join(step_location, self.name)
 
     def check_pipeline(self):
         '''Checks descriptions provided via `pipe` and `handles` files.
