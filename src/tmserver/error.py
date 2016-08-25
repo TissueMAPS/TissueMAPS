@@ -59,22 +59,22 @@ class MalformedRequestError(APIException):
 
 @register_error
 class MissingGETParameterError(MalformedRequestError):
-    def __init__(self, parameter):
+    def __init__(self, *parameters):
         super(MissingGETParameterError, self).__init__(
             message=(
-                'The following GET parameters is required but was missing'
-                ' in the request: %s.' % parameter
+                'The following GET parameters are required but were missing'
+                ' in the request: "%s".' % '", "'.join(parameters)
             )
         )
 
 
 @register_error
 class MissingPOSTParameterError(MalformedRequestError):
-    def __init__(self, parameter):
+    def __init__(self, *parameters):
         super(MissingPOSTParameterError, self).__init__(
             message=(
                 'The following POST parameters are required but were missing'
-                ' in the request body: %s.' % parameter
+                ' in the request body: "%s".' % '", "'.join(parameters)
             )
         )
 
