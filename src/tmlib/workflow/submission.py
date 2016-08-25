@@ -108,7 +108,8 @@ class SubmissionManager(object):
                 first()
             return submission.top_task_id
 
-    def submit_jobs(self, jobs, engine, start_index=0, monitoring_depth=1):
+    def submit_jobs(self, jobs, engine, start_index=0, monitoring_depth=1,
+            monitoring_interval=10):
         '''Submits jobs to a cluster and continuously monitors their progress.
 
         Parameters
@@ -122,6 +123,8 @@ class SubmissionManager(object):
         monitoring_depth: int, optional
             recursion depth for job monitoring, i.e. in which detail subtasks
             in the task tree should be monitored (default: ``1``)
+        monitoring_interval: int, optional
+            seconds to wait between monitoring iterations (default: ``10``)
 
         Returns
         -------
@@ -135,6 +138,8 @@ class SubmissionManager(object):
         logger.debug('monitoring depth: %d' % monitoring_depth)
         if monitoring_depth < 0:
             monitoring_depth = 0
+        if monitoring_interval < 0:
+            monitoring_interval = 0
 
         logger.debug('add jobs %s to engine', jobs)
         engine.add(jobs)
@@ -146,8 +151,8 @@ class SubmissionManager(object):
         break_next = False
         while True:
 
-            time.sleep(3)
-            logger.debug('wait for 3 seconds')
+            time.sleep(monitoring_interval)
+            logger.debug('wait for %d seconds', monitoring_interval)
 
             t_elapsed = datetime.datetime.now() - t_submitted
             logger.info('elapsed time: %s', str(t_elapsed))

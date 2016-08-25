@@ -520,10 +520,14 @@ class CommandLineInterface(SubmissionManager):
         ),
         monitoring_depth=Argument(
             type=int, help='number of child tasks that should be monitored',
-            default=1, flag='m'
+            default=1, flag='d'
+        ),
+        monitoring_intervale=Argument(
+            type=int, help='seconds to wait between monitoring iterations',
+            default=10, flag='i'
         )
     )
-    def submit(self, phase, job_id, monitoring_depth):
+    def submit(self, phase, job_id, monitoring_depth, monitoring_interval):
         self._print_logo()
         api = self.api_instance
         if job_id is not None and phase != 'run':
@@ -544,7 +548,10 @@ class CommandLineInterface(SubmissionManager):
         engine = create_gc3pie_engine(store)
         logger.info('submit and monitor jobs')
         try:
-            self.submit_jobs(jobs, engine, monitoring_depth=monitoring_depth)
+            self.submit_jobs(
+                jobs, engine, monitoring_depth=monitoring_depth
+                monitoring_interval=monitoring_interval
+            )
         except KeyboardInterrupt:
             logger.info('processing interrupted')
             logger.info('killing jobs')
