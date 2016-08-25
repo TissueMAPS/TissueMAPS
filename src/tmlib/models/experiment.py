@@ -142,7 +142,7 @@ class ExperimentReference(MainModel, DateMixIn):
             # TODO: we might want to move the workflow description to the
             # actual experiment class or handle it separately.
             with ExperimentSession(self.id) as session:
-                exp = session.query(Experiment).get(self.id)
+                exp = session.query(Experiment).get(1)
                 if exp.plate_acquisition_mode == 'multiplexing':
                     workflow_type = 'multiplexing'
                 else:
