@@ -87,7 +87,16 @@ def register_upload(experiment_id, acquisition_id):
         acquisition.microscope_images_location
         acquisition.microscope_metadata_location
 
-    return jsonify(message='ok')
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        image_file_names = session.query(tm.MicroscopeImageFile.name).\
+            filter(tm.MicroscopeImageFile.status != FileUploadStatus.COMPLETE).\
+            all()
+        metadata_file_names = session.query(tm.MicroscopeMetadataFile.name).\
+            filter(tm.MicroscopeImageFile.status != FileUploadStatus.COMPLETE).\
+            all()
+        return jsonify({
+            'data': [f.name for f in image_file_names + metadata_file_names]
+        })
 
 
 @api.route(
