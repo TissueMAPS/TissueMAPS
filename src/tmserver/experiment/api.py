@@ -713,7 +713,7 @@ def get_acquisition(experiment_id, acquisition_id):
 @api.route('/experiments/<experiment_id>/acquisitions/id', methods=['GET'])
 @jwt_required()
 @assert_query_params('plate_name', 'acquisition_name')
-@decode_form_ids()
+@decode_query_ids()
 def get_acquisition_id(experiment_id):
     plate_name = request.args.get('plate_name')
     acquisition_name = request.args.get('acquisition_name')
