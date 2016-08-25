@@ -87,7 +87,7 @@ class Project(object):
         if value is not None:
             handles_names = [v['name'] for v in value]
             handles = list()
-            for i, module in self.pipe['description']['pipeline']:
+            for module in self.pipe['description']['pipeline']:
                 index = handles_names.index(module['name'])
                 handles.append(value[index])
         else:
