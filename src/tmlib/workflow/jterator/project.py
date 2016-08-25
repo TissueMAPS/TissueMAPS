@@ -59,8 +59,8 @@ class Project(object):
         '''
         self.step_location = step_location
         self.name = name
-        self._pipe = pipe
-        self._handles = handles
+        self.pipe = pipe
+        self.handles = handles
 
     @property
     def pipe(self):
@@ -84,11 +84,14 @@ class Project(object):
     def handles(self, value):
         # Ensure that handles descriptions are sorted according to the order
         # specified in the pipeline description.
-        handles_names = [v['name'] for v in value]
-        handles = list()
-        for i, module in self.pipe['description']['pipeline']:
-            index = handles_names.index(module['name'])
-            handles.append(value[index])
+        if value is not None:
+            handles_names = [v['name'] for v in value]
+            handles = list()
+            for i, module in self.pipe['description']['pipeline']:
+                index = handles_names.index(module['name'])
+                handles.append(value[index])
+        else:
+            handles = value
         self._handles = handles
 
     @property
