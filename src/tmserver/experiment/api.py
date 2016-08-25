@@ -346,7 +346,7 @@ def get_experiment_id():
     experiment_name = request.args.get('experiment_name')
     logger.info('get ID of experiment "%s"', experiment_name)
     with tm.utils.MainSession() as session:
-        experiment = session.query(tm.Experiment).\
+        experiment = session.query(tm.ExperimentReference).\
             filter_by(user_id=current_identity.id, name=experiment_name).\
             one()
         return jsonify({
