@@ -522,7 +522,7 @@ class CommandLineInterface(SubmissionManager):
             type=int, help='number of child tasks that should be monitored',
             default=1, flag='d'
         ),
-        monitoring_intervale=Argument(
+        monitoring_interval=Argument(
             type=int, help='seconds to wait between monitoring iterations',
             default=10, flag='i'
         )
@@ -549,7 +549,7 @@ class CommandLineInterface(SubmissionManager):
         logger.info('submit and monitor jobs')
         try:
             self.submit_jobs(
-                jobs, engine, monitoring_depth=monitoring_depth
+                jobs, engine, monitoring_depth=monitoring_depth,
                 monitoring_interval=monitoring_interval
             )
         except KeyboardInterrupt:
