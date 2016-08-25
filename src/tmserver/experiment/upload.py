@@ -59,7 +59,7 @@ def register_upload(experiment_id, acquisition_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         experiment = session.query(tm.Experiment).one()
         microscope_type = experiment.microscope_type
-        imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
+        img_regex, metadata_regex = get_microscope_type_regex(microscope_type)
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
         img_filenames = [f.name for f in acquisition.microscope_image_files]
         img_files = [
@@ -67,7 +67,7 @@ def register_upload(experiment_id, acquisition_id):
                 name=secure_filename(f), acquisition_id=acquisition.id
             )
             for f in data['files']
-            if imgfile_regex.search(f) and
+            if img_regex.search(f) and
             secure_filename(f) not in img_filenames
         ]
         meta_filenames = [f.name for f in acquisition.microscope_metadata_files]
@@ -92,7 +92,7 @@ def register_upload(experiment_id, acquisition_id):
             filter(tm.MicroscopeImageFile.status != FileUploadStatus.COMPLETE).\
             all()
         metadata_file_names = session.query(tm.MicroscopeMetadataFile.name).\
-            filter(tm.MicroscopeImageFile.status != FileUploadStatus.COMPLETE).\
+            filter(tm.MicroscopeMetadataFile.status != FileUploadStatus.COMPLETE).\
             all()
         return jsonify({
             'data': [f.name for f in image_file_names + metadata_file_names]
