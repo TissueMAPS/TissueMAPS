@@ -723,7 +723,7 @@ def get_acquisition_id(experiment_id):
     )
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisition = session.query(tm.Acquisition).\
-            join(Plate).\
+            join(tm.Plate).\
             filter(
                 tm.Plate.name == plate_name,
                 tm.Acquisition.name == acquisition_name
