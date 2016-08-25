@@ -683,7 +683,7 @@ def create_acquisition(experiment_id):
     methods=['DELETE']
 )
 @jwt_required()
-@decode_form_ids()
+@decode_query_ids()
 def delete_acquisition(experiment_id, acquisition_id):
     logger.info(
         'delete acquisition %d from experiment %d',
