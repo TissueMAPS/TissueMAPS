@@ -1,5 +1,6 @@
 import os
 import shutil
+import random
 import logging
 import sqlalchemy
 import sqlalchemy.orm
@@ -12,8 +13,47 @@ from sqlalchemy_utils.functions import drop_database
 
 logger = logging.getLogger(__name__)
 
+
+def get_db_host():
+    '''Gets a URLs for a database connection.
+    The number of database hosts varies depending on the implemented
+    infrastructure. When `PostgresXL <http://www.postgres-xl.org/>_ is used,
+    the number of hosts equals the number of available coordinators.
+    The host addresses are determined from environement variables
+    ``TMAPS_NUMBER_DB_HOSTS`` and ``TMAPS_DB_URI_{index}``, where ``index``
+    is a random integer from the range of vailable hosts.
+    Thereby, one host is randomly selected for the current Python process to
+    achieve load balanching.
+
+    Returns
+    -------
+    str
+        database URL
+
+    Raises
+    ------
+    OSError
+        when expected environment variables are not set
+    '''
+    try:
+        n = int(os.environ['TMAPS_NUMBER_DB_HOSTS'])
+    except KeyError:
+        raise OSError('Environment variable "TMAPS_NUMBER_DB_HOSTS" not set.')
+    except:
+        raise
+    index = random.randrange(1, n+1)
+    env_var_name = 'TMAPS_DB_URI_%d' % index
+    try:
+        db_uri = os.environ[env_var_name]
+    except KeyError:
+        raise OSError('Environment variable "%s" not set.' % env_var_name)
+    except:
+        raise
+    return db_uri
+
+
 #: URI for the TissueMAPS database
-DATABASE_URI = os.environ['TMAPS_DB_URI']
+DATABASE_URI = get_db_host()
 
 
 def create_db_engine(db_uri=DATABASE_URI):
