@@ -192,6 +192,9 @@ def get_channel_image(experiment_id, channel_name):
     tpoint = request.args.get('tpoint', type=int)
     zplane = request.args.get('zplane', type=int)
     illumcorr = request.args.get('correct', type=bool)
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        experiment_name = experiment.name
     with tm.utils.ExperimentSession(experiment_id) as session:
         site_id = session.query(tm.Site.id).\
             join(tm.Well).\
@@ -235,7 +238,7 @@ def get_channel_image(experiment_id, channel_name):
     f.write(img.encode('png'))
     f.seek(0)
     filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
-        experiment.name, well_name, x, y, zplane, tpoint, channel_name
+        experiment_name, well_name, x, y, zplane, tpoint, channel_name
     )
     return send_file(
         f,
