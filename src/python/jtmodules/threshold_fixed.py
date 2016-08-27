@@ -56,7 +56,7 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
     elif corr_thresh < min_threshold:
         corr_thresh = min_threshold
 
-    logger.info('threshold image')
+    logger.info('threshold image at %d', corr_thresh)
     thresh_image = image > corr_thresh
 
     outputs = {'mask': thresh_image}
