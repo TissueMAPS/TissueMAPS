@@ -10,7 +10,7 @@ from gc3libs.url import Url
 from gc3libs.persistence.sql import make_sqlstore
 
 import tmlib.models as tm
-from tmlib.models.utils import DATABASE_URI
+from tmlib.models.utils import get_db_host
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,8 @@ def create_gc3pie_sql_store():
         return get_recursive(task, datetime.timedelta(seconds=0))
 
     logger.info('create GC3Pie store using "tasks" SQL table')
-    store_url = Url(DATABASE_URI)
+    db_uri = get_db_host()
+    store_url = Url(db_uri)
     table_columns = tm.Task.__table__.columns
     return make_sqlstore(
         url=store_url,

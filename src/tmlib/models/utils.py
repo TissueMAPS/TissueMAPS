@@ -9,9 +9,12 @@ from tmlib.models import ExperimentModel
 from sqlalchemy_utils.functions import database_exists
 from sqlalchemy_utils.functions import create_database
 from sqlalchemy_utils.functions import drop_database
+from sqlalchemy.event import listens_for
 
 
 logger = logging.getLogger(__name__)
+
+DATABASE_URI = None
 
 
 def get_db_host():
@@ -35,35 +38,37 @@ def get_db_host():
     OSError
         when expected environment variables are not set
     '''
-    try:
-        n = int(os.environ['TMAPS_NUMBER_DB_HOSTS'])
-    except KeyError:
-        raise OSError('Environment variable "TMAPS_NUMBER_DB_HOSTS" not set.')
-    except:
-        raise
-    index = random.randrange(1, n+1)
-    env_var_name = 'TMAPS_DB_URI_%d' % index
-    try:
-        db_uri = os.environ[env_var_name]
-    except KeyError:
-        raise OSError('Environment variable "%s" not set.' % env_var_name)
-    except:
-        raise
-    return db_uri
+    # TODO: could be done more elegantly
+    # http://docs.sqlalchemy.org/en/latest/core/pooling.html#using-a-custom-connection-function
+    global DATABASE_URI
+    if DATABASE_URI is None:
+        try:
+            n = int(os.environ['TMAPS_NUMBER_DB_HOSTS'])
+        except KeyError:
+            raise OSError('Environment variable "TMAPS_NUMBER_DB_HOSTS" not set.')
+        except:
+            raise
+        index = random.randrange(1, n+1)
+        print 'DATABASE HOST %d' % index
+        logger.info('connect to database host #%d', index)
+        env_var_name = 'TMAPS_DB_URI_%d' % index
+        try:
+            DATABASE_URI = os.environ[env_var_name]
+        except KeyError:
+            raise OSError('Environment variable "%s" not set.' % env_var_name)
+        except:
+            raise
+    return DATABASE_URI
 
 
-#: URI for the TissueMAPS database
-DATABASE_URI = get_db_host()
-
-
-def create_db_engine(db_uri=DATABASE_URI):
+def create_db_engine(db_uri):
     '''Creates a database engine with a connection pool size of ``5``
     and maximal overflow of ``10``.
 
     Parameters
     ----------
-    db_uri: str, optional
-        database uri; defaults to value of environment variable `TMAPS_DB_URI`
+    db_uri: str
+        database uri
 
     Returns
     -------
@@ -73,10 +78,34 @@ def create_db_engine(db_uri=DATABASE_URI):
     # If this creates problems, consider using a different poolclass,
     # e.g. sqlalchemy.pool.AssertionPool and/or changing settings, such as
     # pool_size or max_overflow.
+    # We may need a different setting for the web server when compared to the
+    # cluster worker nodes, where a single connection is usually sufficient.
     logger.debug('create database engine')
     return sqlalchemy.create_engine(
+        # db_uri, poolclass=sqlalchemy.pool.NullPool
         db_uri, poolclass=sqlalchemy.pool.QueuePool,
         pool_size=5, max_overflow=10
+    )
+
+
+@listens_for(sqlalchemy.pool.Pool, 'connect')
+def _on_pool_connect(dbapi_con, connection_record):
+    logger.debug('create database connection: %d', dbapi_con.get_backend_pid())
+
+
+@listens_for(sqlalchemy.pool.Pool, 'checkin')
+def _on_pool_checkin(dbapi_con, connection_record):
+    logger.debug(
+        'database connection returned to pool: %d',
+        dbapi_con.get_backend_pid()
+    )
+
+
+@listens_for(sqlalchemy.pool.Pool, 'checkout')
+def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
+    logger.debug(
+        'database connection retrieved from pool: %d',
+        dbapi_con.get_backend_pid()
     )
 
 
@@ -432,7 +461,7 @@ class MainSession(_Session):
             the environment variable ``TMPAS_DB_URI`` (default: ``None``)
         '''
         if db_uri is None:
-            self._db_uri = DATABASE_URI
+            self._db_uri = get_db_host()
         else:
             self._db_uri = db_uri
         if not database_exists(self._db_uri):
