@@ -376,7 +376,7 @@ class Image(object):
             new_img.metadata.is_smoothed = True
             return new_img
 
-    def shrink(self, factor):
+    def shrink(self, factor, inplace=True):
         '''Shrinks the first two dimensions of the pixels/voxels array
         by `factor`. Pixels/voxels values of the aggregated array
         are the mean of the neighbouring pixels/voxels, where the neighbourhood
@@ -387,6 +387,9 @@ class Image(object):
         factor: int
             factor by which the size of the image should be reduced along
             the y and x axis
+        inplace: bool, optional
+            shrink the array inplace instead of returning a copy
+            (default: ``True``)
 
         Returns
         -------
@@ -395,9 +398,13 @@ class Image(object):
         '''
         shrink_factors = (factor,) * 2 + (1,) * (self._array.ndim - 2)
         arr = skimage.measure.block_reduce(
-                self._array, shrink_factors, func=np.mean
+            self._array, shrink_factors, func=np.mean
         ).astype(self.dtype)
-        return self.__class__(arr, self.metadata)
+        if inplace:
+            self._array = arr
+            return self
+        else:
+            return self.__class__(arr, self.metadata)
 
     def align(self, crop=True, inplace=True):
         '''Aligns, i.e. shifts and optionally crops, an image based on

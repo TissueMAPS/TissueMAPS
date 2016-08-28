@@ -600,6 +600,7 @@ class PyramidTileFile(File):
         self.column = column
         self.level = level
         self.channel_layer_id = channel_layer_id
+        self._location = None
 
     def get(self):
         '''Gets a stored tile.
@@ -621,24 +622,32 @@ class PyramidTileFile(File):
         return PyramidTile(pixels, metadata)
 
     @assert_type(image='tmlib.image.PyramidTile')
-    def put(self, image):
+    def put(self, tile):
         '''Puts a tile to storage.
 
         Parameters
         ----------
-        image: tmlib.image.PyramidTile
+        tile: tmlib.image.PyramidTile
             pixels data that should be stored in the file
+
         '''
         logger.debug('put data to pyramid tile file: %s', self.name)
         with ImageWriter(self.location) as f:
-            f.write(image.array)
+            f.write(tile.array)
 
     @property
     def location(self):
         '''str: location of the file'''
-        return os.path.join(
-            self.channel_layer.location, 'TileGroup%d' % self.group, self.name
-        )
+        if self._location is None:
+            self._location = os.path.join(
+                self.channel_layer.location,
+                'TileGroup%d' % self.group, self.name
+            )
+        return self._location
+
+    @location.setter
+    def location(self, value):
+        self._location = value
 
     def __repr__(self):
         return '<%s(id=%r, row=%r, column=%r, level=%r)>' % (

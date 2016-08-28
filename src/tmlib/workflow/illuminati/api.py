@@ -149,7 +149,7 @@ class PyramidBuilder(ClusterRoutines):
                             # Therefore, the batch size needs to be adjusted.
                             batches = self._create_batches(
                                 np.arange(np.prod(layer.dimensions[level])),
-                                args.batch_size * 10 * level
+                                args.batch_size * 5 * level
                             )
 
                         for batch in batches:
@@ -441,6 +441,7 @@ class PyramidBuilder(ClusterRoutines):
                 image_store[file.name] = image
 
                 extra_file_map = layer.map_base_tile_to_images(file.site)
+                tile_files = list()
                 for t in tiles:
                     name = layer.build_tile_file_name(
                         batch['level'], t['row'], t['column']
@@ -448,8 +449,7 @@ class PyramidBuilder(ClusterRoutines):
                     group = layer.tile_coordinate_group_map[
                         batch['level'], t['row'], t['column']
                     ]
-                    tile_file = session.get_or_create(
-                        tm.PyramidTileFile,
+                    tile_file = tm.PyramidTileFile(
                         name=name, group=group,
                         row=t['row'], column=t['column'],
                         level=batch['level'],
@@ -539,7 +539,20 @@ class PyramidBuilder(ClusterRoutines):
                                 % tile_file.name
                             )
 
+                    # This could be determined via foreign keys once the
+                    # model object is added to the session. We don't do this
+                    # here, because we use a bulk insert for better performance.
+                    # This may cause some inconsistency, because files already
+                    # on disk before they are tracked via the database.
+                    tile_file.location = os.path.join(
+                        layer.location, 'TileGroup%d' % tile_file.group,
+                        tile_file.name
+                    )
                     tile_file.put(tile)
+                    tile_files.append(tile_file)
+
+                # INSERT or UPDATE rows in pyramid_tile_files table
+                session.bulk_save_objects(tile_files)
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
