@@ -262,12 +262,13 @@ class PyramidBuilder(ClusterRoutines):
         '''
         logger.debug('delete existing channel layers and pyramid tile files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            channels = session.query(tm.Channel).all()
-            layers_locations = [c.layers_location for c in channels]
-            session.drop_and_recreate(tm.ChannelLayer)
-            session.drop_and_recreate(tm.PyramidTileFile)
-        for loc in layers_locations:
-            delete_location(loc)
+            session.query(tm.ChannelLayer).delete()
+            # channels = session.query(tm.Channel).all()
+            # layers_locations = [c.layers_location for c in channels]
+            # session.drop_and_recreate(tm.ChannelLayer)
+            # session.drop_and_recreate(tm.PyramidTileFile)
+        # for loc in layers_locations:
+        #     delete_location(loc)
 
         logger.debug('delete existing static mapobject types')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
@@ -449,7 +450,8 @@ class PyramidBuilder(ClusterRoutines):
                     group = layer.tile_coordinate_group_map[
                         batch['level'], t['row'], t['column']
                     ]
-                    tile_file = tm.PyramidTileFile(
+                    tile_file = session.get_or_create(
+                        tm.PyramidTileFile,
                         name=name, group=group,
                         row=t['row'], column=t['column'],
                         level=batch['level'],
@@ -549,10 +551,6 @@ class PyramidBuilder(ClusterRoutines):
                         tile_file.name
                     )
                     tile_file.put(tile)
-                    tile_files.append(tile_file)
-
-                # INSERT or UPDATE rows in pyramid_tile_files table
-                session.bulk_save_objects(tile_files)
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:

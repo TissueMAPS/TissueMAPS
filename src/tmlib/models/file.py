@@ -621,7 +621,7 @@ class PyramidTileFile(File):
         )
         return PyramidTile(pixels, metadata)
 
-    @assert_type(image='tmlib.image.PyramidTile')
+    @assert_type(tile='tmlib.image.PyramidTile')
     def put(self, tile):
         '''Puts a tile to storage.
 

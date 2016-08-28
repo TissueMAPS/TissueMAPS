@@ -14,7 +14,7 @@ from sqlalchemy.event import listens_for
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URI = None
+_DATABASE_URI = None
 
 
 def get_db_host():
@@ -40,8 +40,8 @@ def get_db_host():
     '''
     # TODO: could be done more elegantly
     # http://docs.sqlalchemy.org/en/latest/core/pooling.html#using-a-custom-connection-function
-    global DATABASE_URI
-    if DATABASE_URI is None:
+    global _DATABASE_URI
+    if _DATABASE_URI is None:
         try:
             n = int(os.environ['TMAPS_NUMBER_DB_HOSTS'])
         except KeyError:
@@ -53,12 +53,12 @@ def get_db_host():
         logger.info('connect to database host #%d', index)
         env_var_name = 'TMAPS_DB_URI_%d' % index
         try:
-            DATABASE_URI = os.environ[env_var_name]
+            _DATABASE_URI = os.environ[env_var_name]
         except KeyError:
             raise OSError('Environment variable "%s" not set.' % env_var_name)
         except:
             raise
-    return DATABASE_URI
+    return _DATABASE_URI
 
 
 def create_db_engine(db_uri):
@@ -82,9 +82,9 @@ def create_db_engine(db_uri):
     # cluster worker nodes, where a single connection is usually sufficient.
     logger.debug('create database engine')
     return sqlalchemy.create_engine(
-        # db_uri, poolclass=sqlalchemy.pool.NullPool
-        db_uri, poolclass=sqlalchemy.pool.QueuePool,
-        pool_size=5, max_overflow=10
+        db_uri, poolclass=sqlalchemy.pool.AssertionPool
+        # db_uri, poolclass=sqlalchemy.pool.QueuePool,
+        # pool_size=5, max_overflow=10
     )
 
 
@@ -502,7 +502,7 @@ class ExperimentSession(_Session):
             the environment variable ``TMPAS_DB_URI`` (default: ``None``)
         '''
         if db_uri is None:
-            db_uri = DATABASE_URI
+            db_uri = _DATABASE_URI
         self.experiment_id = experiment_id
         if self.experiment_id is not None:
             if not isinstance(self.experiment_id, int):

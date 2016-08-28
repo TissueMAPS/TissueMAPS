@@ -68,7 +68,7 @@ def get_microscope_type_regex(microscope_type):
     '''
     module = import_microscope_type_module(microscope_type)
     return (
-        re.compile(module.IMAGE_FILE_REGEX_PATTERN), 
+        re.compile(module.IMAGE_FILE_REGEX_PATTERN),
         re.compile(module.METADATA_FILE_REGEX_PATTERN)
     )
 

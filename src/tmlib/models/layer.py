@@ -759,6 +759,6 @@ class ChannelLayer(ExperimentModel):
     def __repr__(self):
         return (
             '<%s(id=%r, channel=%r, tpoint=%r, zplane=%r)>'
-            % (self.__class__.__name__, self.id, self.channel.index,
+            % (self.__class__.__name__, self.id, self.channel_id,
                 self.tpoint, self.zplane)
         )
