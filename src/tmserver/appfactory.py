@@ -6,7 +6,9 @@ from flask import Flask
 from flask_sqlalchemy_session import flask_scoped_session
 import gc3libs
 
-from tmlib.models.utils import create_db_engine, create_db_session_factory
+from tmlib.models.utils import (
+    create_db_engine, create_db_session_factory, get_db_host
+)
 
 from tmserver import defaultconfig
 from tmserver.extensions import jwt
@@ -111,7 +113,8 @@ def create_app(config_overrides={}):
     redis_store.init_app(app)
 
     # Create a session scope for interacting with the main database
-    engine = create_db_engine()
+    db_uri = get_db_host()
+    engine = create_db_engine(db_uri)
     session_factory = create_db_session_factory(engine)
     session = flask_scoped_session(session_factory, app)
 
