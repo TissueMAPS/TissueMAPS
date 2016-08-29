@@ -463,12 +463,13 @@ def kill_workflow(experiment_id):
 @decode_query_ids()
 def get_job_log_output(experiment_id):
     data = request.get_json()
+    job_id = data['job_id']
     logger.info(
         'get job log output for experiment %d and job %d',
         experiment_id, job_id
     )
     # NOTE: This is the persistent task ID of the job
-    job = gc3pie.retrieve_single_job(data['job_id'])
+    job = gc3pie.retrieve_single_job(job_id)
     stdout_file = os.path.join(job.output_dir, job.stdout)
     with open(stdout_file, 'r') as f:
         out = f.read()

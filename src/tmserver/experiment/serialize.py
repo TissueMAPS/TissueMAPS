@@ -58,7 +58,6 @@ def encode_acquisition(obj, encoder):
         'id': encode_pk(obj.id),
         'name': obj.name,
         'description': obj.description,
-        'plate_id': encode_pk(obj.plate_id),
         'status': obj.status,
     }
 
