@@ -45,15 +45,16 @@ def get_db_uri():
     global _DATABASE_URI
     if _DATABASE_URI is None:
         try:
-            n = int(os.environ['TMAPS_NUMBER_DB_HOSTS'])
+            n = int(os.environ['TMAPS_NUMBER_DB_COMPUTE_HOSTS'])
         except KeyError:
-            raise OSError('Environment variable "TMAPS_NUMBER_DB_HOSTS" not set.')
+            raise OSError(
+                'Environment variable "TMAPS_NUMBER_DB_COMPUTE_HOSTS" not set.'
+            )
         except:
             raise
         index = random.randrange(1, n+1)
-        print 'DATABASE HOST %d' % index
         logger.info('connect to database host #%d', index)
-        env_var_name = 'TMAPS_DB_URI_%d' % index
+        env_var_name = 'TMAPS_DB_COMPUTE_URI_%d' % index
         try:
             _DATABASE_URI = os.environ[env_var_name]
         except KeyError:
