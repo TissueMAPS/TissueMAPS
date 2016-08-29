@@ -27,6 +27,8 @@ class Acquisition {
 
     private _uploader: any;
     private _$stateParams: any;
+    private _$http: ng.IHttpService;
+    private _$q: ng.IQService;
 
     /**
      * Construct a new acquisition.
@@ -41,6 +43,8 @@ class Acquisition {
         _.extend(this, args);
 
         this._$stateParams = $injector.get<any>('$stateParams');
+        this._$http = $injector.get<ng.IHttpService>('$http');
+        this._$q = $injector.get<ng.IQService>('$q');
         this._uploader = $injector.get<any>('Upload');
         this._uploader.setDefaults({ngfMinSize: 0, ngfMaxSize: 5000000000});
         this._uploader.defaults.blobUrlsMaxQueueSize = 10;  // default: 200
@@ -49,15 +53,13 @@ class Acquisition {
 
     fetchExistingFiles(): ng.IPromise<MicroscopeFile[]> {
         this.clearFiles();
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
         var imageUrl = '/api/experiments/' + this._$stateParams.experimentid +
             '/acquisitions/' + this.id + '/image-files';
         var metaDataUrl = '/api/experiments/' + this._$stateParams.experimentid +
             '/acquisitions/' + this.id + '/metadata-files';
-        return $q.all({
-            imageFiles: $http.get(imageUrl),
-            metaDataFiles: $http.get(metaDataUrl)
+        return this._$q.all({
+            imageFiles: this._$http.get(imageUrl),
+            metaDataFiles: this._$http.get(metaDataUrl)
         }).then((responses: any) => {
             var imageFiles = responses.imageFiles.data.data.filter((f) => {
                 return f.status == 'COMPLETE';
@@ -71,6 +73,16 @@ class Acquisition {
         });
     }
 
+    getUploadedFileCount(): ng.IPromise<number> {
+        var url = '/api/experiments/' + this._$stateParams.experimentid +
+            '/acquisitions/' + this.id + '/upload/count';
+        return this._$http.get(url)
+        .then((resp: any) => {
+            console.log('number of uploaded files: ', resp.data.data)
+            return resp.data.data;
+        });
+    }
+
     /**
      * Upload a mutiple files. This method has to be called after the files
      * have been registered, i.e. created server-side.
@@ -78,7 +90,6 @@ class Acquisition {
     private _uploadRegisteredFiles(newFiles): any {
         var url = '/api/experiments/' + this._$stateParams.experimentid +
             '/acquisitions/' + this.id + '/upload/upload-file';
-        var $q = $injector.get<ng.IQService>('$q');
         var $window = $injector.get<ng.IWindowService>('$window');
         var $timeout = $injector.get<any>('$timeout');
         this.status = 'UPLOADING';

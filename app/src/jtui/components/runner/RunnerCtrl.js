@@ -6,7 +6,7 @@ angular.module('jtui.runner')
     // Get the current module
     for (i in $scope.project.handles) {
         if ($scope.project.handles[i].name == currentModuleName) {
-          console.log($scope.project)
+          // console.log($scope.project)
           var currentModule = $scope.project.handles[i];
           var currentModuleIndex = i;
         }
@@ -14,14 +14,14 @@ angular.module('jtui.runner')
     $scope.module = currentModule;
 
     $scope.goToPreviousModule = function () {
-        console.log('current module: ', $scope.module.name)
+        // console.log('current module: ', $scope.module.name)
         var moduleIndex = $scope.project.handles.map(function (e) {
             return e.name;
         }).indexOf($scope.module.name);
         var previousModuleIndex = moduleIndex - 1;
-        console.log('previous module index: ', previousModuleIndex)
+        // console.log('previous module index: ', previousModuleIndex)
         if (previousModuleIndex >= 0 && $scope.project.handles.length > previousModuleIndex) {
-            console.log('go to previous module: ', $scope.project.handles[previousModuleIndex].name)
+            // console.log('go to previous module: ', $scope.project.handles[previousModuleIndex].name)
             $state.go('project.module', {
                 moduleName: $scope.project.handles[previousModuleIndex].name
             });
@@ -29,14 +29,14 @@ angular.module('jtui.runner')
     };
 
     $scope.goToNextModule = function () {
-        console.log('current module: ', $scope.module.name)
+        // console.log('current module: ', $scope.module.name)
         var moduleIndex = $scope.project.handles.map(function (e) {
             return e.name;
         }).indexOf($scope.module.name);
         var nextModuleIndex = moduleIndex + 1;
-        console.log('next module index: ', nextModuleIndex)
+        // console.log('next module index: ', nextModuleIndex)
         if (nextModuleIndex >= 0 && $scope.project.handles.length > nextModuleIndex) {
-            console.log('go to next module: ', $scope.project.handles[nextModuleIndex].name)
+            // console.log('go to next module: ', $scope.project.handles[nextModuleIndex].name)
             $state.go('project.module', {
                 moduleName: $scope.project.handles[nextModuleIndex].name
             });

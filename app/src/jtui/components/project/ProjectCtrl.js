@@ -294,7 +294,7 @@ angular.module('jtui.project')
     $scope.startMonitoring = function() {
         // stops any running interval to avoid two intervals running at the same time
         $scope.stopMonitoring();
-        promise = $interval(getStatus, 5000);
+        promise = $interval(getStatus, 10000);
     };
 
     $scope.stopMonitoring = function() {

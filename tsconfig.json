@@ -106,6 +106,8 @@
 
         "app/src/dialog/DialogCtrl.ts",
         "app/src/dialog/dialogService.ts",
+        "app/src/dialog/WaitingDialogCtrl.ts",
+        "app/src/dialog/waitingDialogService.ts",
 
         "app/src/viewer/misc/tmAttachToParent.ts",
         "app/src/viewer/misc/uiComponents.ts",
