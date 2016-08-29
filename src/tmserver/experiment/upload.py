@@ -50,8 +50,9 @@ def register_upload(experiment_id, acquisition_id):
 
     """
     data = request.get_json()
+    files = data['files']
 
-    if len(data.get('files', [])) == 0:
+    if len(files) == 0:
         raise MalformedRequestError(
             'No files supplied. Cannot register upload.'
         )
@@ -66,7 +67,7 @@ def register_upload(experiment_id, acquisition_id):
             tm.MicroscopeImageFile(
                 name=secure_filename(f), acquisition_id=acquisition.id
             )
-            for f in data['files']
+            for f in files
             if img_regex.search(f) and
             secure_filename(f) not in img_filenames
         ]
@@ -75,7 +76,7 @@ def register_upload(experiment_id, acquisition_id):
             tm.MicroscopeMetadataFile(
                 name=secure_filename(f), acquisition_id=acquisition.id
             )
-            for f in data['files']
+            for f in files
             if metadata_regex.search(f) and
             secure_filename(f) not in meta_filenames
         ]
@@ -197,3 +198,28 @@ def upload_file(experiment_id, acquisition_id):
             )
 
     return jsonify(message='ok')
+
+
+@api.route(
+    '/experiments/<experiment_id>/acquisitions/<acquisition_id>/upload/count',
+    methods=['GET']
+)
+@jwt_required()
+@decode_query_ids()
+def get_uploaded_file_count(experiment_id, acquisition_id):
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        acquisition = session.query(tm.Acquisition).get(acquisition_id)
+        n_imgfiles = session.query(tm.MicroscopeImageFile).\
+            filter_by(
+                status=FileUploadStatus.COMPLETE, acquisition_id=acquisition_id
+            ).\
+            count()
+        n_metafiles = session.query(tm.MicroscopeMetadataFile).\
+            filter_by(
+                status=FileUploadStatus.COMPLETE, acquisition_id=acquisition_id
+            ).\
+            count()
+    return jsonify({
+        'data': n_imgfiles + n_metafiles
+    })
+
