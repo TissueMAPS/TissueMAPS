@@ -542,6 +542,7 @@ class Workflow(SequentialTaskCollection, State):
             :py:class:`tmlib.tmaps.description.WorkflowDescription`
 
         '''
+        logger.info('update workflow description')
         self.description = copy.deepcopy(description)
         self.description.stages = list()
         for stage in description.stages:
@@ -620,6 +621,7 @@ class Workflow(SequentialTaskCollection, State):
             index for the list of `tasks` (stages)
         '''
         stage_desc = self.description.stages[index]
+        logger.info('update stage #%d: %s', index, stage_desc.name)
         if index > len(self.tasks) - 1:
             stage = self._add_stage(stage_desc)
             self.tasks.append(stage)
