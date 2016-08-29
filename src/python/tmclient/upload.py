@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 import logging
@@ -20,7 +21,7 @@ class UploadService(ExperimentService):
     @same_docstring_as(ExperimentService.__init__)
     def __init__(self, host_name, experiment_name, user_name, password):
         super(UploadService, self).__init__(
-            hostname, experiment_name, user_name, password
+            host_name, experiment_name, user_name, password
         )
 
     def get_uploaded_filenames(self, plate_name, acquisition_name):
@@ -99,9 +100,7 @@ class UploadService(ExperimentService):
         directory = os.path.expanduser(directory)
         directory = os.path.expandvars(directory)
         filenames = os.listdir(directory)
-        acquisition_id = self._get_acquisition_id(
-            args.plate_name, args.acquisition_name
-        )
+        acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
         registered_filenames = self._register_files_for_upload(
             acquisition_id, filenames
         )
@@ -134,7 +133,7 @@ class UploadService(ExperimentService):
             )
         )
         payload = {'files': filenames}
-        res = self.session.put(url, json=payload)
+        res = self.session.post(url, json=payload)
         self._handle_error(res)
         return res.json()['data']
 

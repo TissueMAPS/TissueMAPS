@@ -61,16 +61,20 @@ if __name__ == '__main__':
         help='name of the well'
     )
     channel_image_parser.add_argument(
-        '-i', '--cycle_index', required=True,
-        help='zero-based index of the cycle'
-    )
-    channel_image_parser.add_argument(
         '-x', '--well_pos_x', required=True,
         help='zero-based x cooridinate of the acquisition site within the well'
     )
     channel_image_parser.add_argument(
         '-y', '--well_pos_y', required=True,
         help='zero-based y cooridinate of the acquisition site within the well'
+    )
+    channel_image_parser.add_argument(
+        '--correct', action='store_true',
+        help='whether image should be corrected for illumination artifacts'
+    )
+    channel_image_parser.add_argument(
+        '-i', '--cycle_index', default=0,
+        help='zero-based index of the cycle (default: 0)'
     )
     channel_image_parser.add_argument(
         '-z', '--zplane', default=0,

@@ -196,14 +196,15 @@ class ExperimentService(HttpClient):
             'get acquisition ID given acquisition "%s" and plate "%s"',
             acquisition_name, plate_name
         )
-        data = {
+        params = {
             'plate_name': plate_name,
             'acquisition_name': acquisition_name
         }
         url = self.build_url(
-            '/api/experiments/%s/acquisitions/id' % self._experiment_id
+            '/api/experiments/%s/acquisitions/id' % self._experiment_id,
+            params
         )
-        res = self.session.post(url, json=data)
+        res = self.session.get(url)
         self._handle_error(res)
         return res.json()['id']
 
@@ -214,7 +215,7 @@ class ExperimentService(HttpClient):
         ----------
         plate_name: str
             name of the parent plate
-        acquisition_id: str
+        acquisition_name: str
             name that should be given to the acquisition
 
         See also
@@ -225,14 +226,14 @@ class ExperimentService(HttpClient):
             'create acquisition "%s" for plate "%s"',
             acquisition_name, plate_name
         )
-        params = {
+        data = {
             'plate_name': plate_name,
-            'acquisition_name': acquisition_name
+            'name': acquisition_name
         }
         url = self.build_url(
-            '/api/experiments/%s/acquisitions' % self._experiment_id, params
+            '/api/experiments/%s/acquisitions' % self._experiment_id
         )
-        res = self.session.post(url)
+        res = self.session.post(url, json=data)
         self._handle_error(res)
 
     def _get_cycle_id(self, plate_name, cycle_index):

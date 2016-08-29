@@ -2,6 +2,7 @@ import requests
 import os
 import re
 import json
+import cv2
 import logging
 import tempfile
 
@@ -112,9 +113,10 @@ class DownloadService(ExperimentService):
         '''
         response = self._download_channel_image(
             channel_name, plate_name, well_name, well_pos_y, well_pos_x,
-            cycle_index=0, tpoint=0, zplane=0, correct=True
+            cycle_index=cycle_index, tpoint=tpoint, zplane=zplane,
+            correct=correct
         )
-        return response.content
+        return cv2.imdecode(response.content)
 
     def download_channel_image_file(self, channel_name, plate_name,
             well_name, well_pos_y, well_pos_x, cycle_index=0,
@@ -156,7 +158,8 @@ class DownloadService(ExperimentService):
         '''
         response = self._download_channel_image(
             channel_name, plate_name, well_name, well_pos_y, well_pos_x,
-            cycle_index=0, tpoint=0, zplane=0, correct=True
+            cycle_index=cycle_index, tpoint=tpoint, zplane=zplane,
+            correct=correct
         )
         data = response.content
         filename = self._extract_filename_from_headers(response.headers)
