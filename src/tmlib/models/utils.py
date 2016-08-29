@@ -17,21 +17,23 @@ logger = logging.getLogger(__name__)
 _DATABASE_URI = None
 
 
-def get_db_host():
-    '''Gets a URLs for a database connection.
+def get_db_uri():
+    '''Gets a URI for a database connection.
     The number of database hosts varies depending on the implemented
     infrastructure. When `PostgresXL <http://www.postgres-xl.org/>_ is used,
     the number of hosts equals the number of available coordinators.
+    One host is reserved for the web server, all others are used by the
+    different compute nodes of the cluster.
     The host addresses are determined from environement variables
-    ``TMAPS_NUMBER_DB_HOSTS`` and ``TMAPS_DB_URI_{index}``, where ``index``
-    is a random integer from the range of vailable hosts.
+    ``TMAPS_NUMBER_DB_COMPUTE_HOSTS`` and ``TMAPS_DB_COMPUTE_URI_{index}``,
+    where ``index`` is a random integer from the range of vailable hosts.
     Thereby, one host is randomly selected for the current Python process to
     achieve load balanching.
 
     Returns
     -------
     str
-        database URL
+        database URI
 
     Raises
     ------
@@ -61,9 +63,27 @@ def get_db_host():
     return _DATABASE_URI
 
 
+def set_db_uri(db_uri):
+    '''Sets the database URI for the current Python process and all child
+    processes.
+
+    Parameters
+    ----------
+    db_uri: str
+        database URI
+
+    Returns
+    -------
+    str
+        database URI
+    '''
+    global _DATABASE_URI
+    _DATABASE_URI = db_uri
+    return _DATABASE_URI
+
+
 def create_db_engine(db_uri):
-    '''Creates a database engine with a connection pool size of ``5``
-    and maximal overflow of ``10``.
+    '''Creates a database engine with only one connection.
 
     Parameters
     ----------
@@ -73,18 +93,17 @@ def create_db_engine(db_uri):
     Returns
     -------
     sqlalchemy.engine.base.Engine
+        created database engine
+
+    Warning
+    -------
+    The engine should only be created once for each Python process.
     '''
-    # This creates a default Pool.
-    # If this creates problems, consider using a different poolclass,
-    # e.g. sqlalchemy.pool.AssertionPool and/or changing settings, such as
-    # pool_size or max_overflow.
-    # We may need a different setting for the web server when compared to the
-    # cluster worker nodes, where a single connection is usually sufficient.
-    logger.debug('create database engine')
+    logger.debug('create database engine for process %d', os.getpid())
     return sqlalchemy.create_engine(
-        db_uri, poolclass=sqlalchemy.pool.AssertionPool
-        # db_uri, poolclass=sqlalchemy.pool.QueuePool,
-        # pool_size=5, max_overflow=10
+        # db_uri, poolclass=sqlalchemy.pool.AssertionPool
+        db_uri, poolclass=sqlalchemy.pool.QueuePool,
+        pool_size=5, max_overflow=10
     )
 
 
@@ -415,6 +434,7 @@ class _Session(object):
                 'after_bulk_delete', self._after_bulk_delete_callback
             )
         self._session.close()
+        self._engines[self._db_uri].dispose()
 
     def _after_bulk_delete_callback(self, delete_context):
         '''Deletes locations defined by instances of :py:class`tmlib.Model`
@@ -461,7 +481,7 @@ class MainSession(_Session):
             the environment variable ``TMPAS_DB_URI`` (default: ``None``)
         '''
         if db_uri is None:
-            self._db_uri = get_db_host()
+            self._db_uri = get_db_uri()
         else:
             self._db_uri = db_uri
         if not database_exists(self._db_uri):
