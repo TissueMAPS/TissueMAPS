@@ -30,7 +30,7 @@ class Plate {
     }
 
     get isReadyForProcessing() {
-        var hasMinOneAcquisition = this.acquisitions.length > 0; 
+        var hasMinOneAcquisition = this.acquisitions.length > 0;
         var allAcquisitionsReady = _.all(this.acquisitions.map((aq) => {
             return aq.status === 'COMPLETE';
         }));

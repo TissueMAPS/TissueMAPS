@@ -57,12 +57,12 @@ angular.module('jtui.project')
 
     function getProject(experimentID, pipeName) {
 
-        console.log('get project ', pipeName);
+        // console.log('get project ', pipeName);
         var projectDef = $q.defer();
         var url = '/jtui/experiments/' + experimentID + '/projects/' + pipeName;
         $http.get(url).success(function (data) {
             var proj = jsyaml.safeLoad(data.jtproject);
-            console.log('returned project: ', proj)
+            // console.log('returned project: ', proj)
             if (proj.pipe.description.pipeline == null) {
                 proj.pipe.description.pipeline = [];
             }
@@ -84,7 +84,7 @@ angular.module('jtui.project')
         var channelsDef = $q.defer();
         var url = '/jtui/experiments/' + experimentID + '/available_channels';
         $http.get(url).success(function (data) {
-            console.log('available channels: ', data.channels)
+            // console.log('available channels: ', data.channels)
             channelsDef.resolve(data.channels)
         });
 

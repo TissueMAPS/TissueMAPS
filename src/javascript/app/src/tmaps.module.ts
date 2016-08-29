@@ -23,6 +23,7 @@
         'ui.router',
         'tmaps.auth',
         'ngFileUpload',
+        'angular-loading-bar',
         'ui.router.breadcrumbs'
     ]);
 
@@ -41,6 +42,7 @@
         'ui.sortable',
         'ui.slider',
 
+        'angular-loading-bar',
         'perfect_scrollbar',
 
         'ngColorPicker',
@@ -59,8 +61,8 @@
     }]);
 
     // Run this code after all providers have been registered
-    tmaps.run(['$rootScope', 'authService', 'loginDialogService', '$state', 'application', '$websocket',
-              function($rootScope, authService, loginDialogService, $state, application, $websocket) {
+    tmaps.run(['$rootScope', 'authService', 'loginDialogService', 'waitingDialogService' , '$state', 'application', '$websocket',
+              function($rootScope, authService, loginDialogService, waitingDialogService, $state, application, $websocket) {
 
         /**
          * Check if the user is trying to transition to a state that requires
@@ -68,8 +70,7 @@
          * 'loginRequired === true'). If yes, then prompt the user with a login
          * dialog before proceeding.
          */
-        $rootScope.$on('$stateChangeStart',
-                       function(event, toState, toParams, fromState, fromParams) {
+        $rootScope.$on('$stateChangeStart', (event, toState, toParams, fromState, fromParams) => {
 
             var loginRequired = toState.data && toState.data.loginRequired;
 
@@ -88,6 +89,11 @@
                     // don't proceed with state transition.
                 });
             }
+            else {
+                // Indicate that data is loaded for state change
+                // TODO: Fix loading bar
+                // $rootScope.loadingDialog = waitingDialogService.show('Loading');
+            }
         });
 
 
@@ -98,6 +104,10 @@
                 $state.go(to.redirectTo, params);
             }
         });
+
+        // $rootScope.$on('$stateChangeSuccess', (evt, to, params) => {
+        //     $rootScope.loadingDialog.close();
+        // });
 
     }]);
 

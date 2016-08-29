@@ -2,13 +2,18 @@ class AcquisitionDetailCtrl {
 
     newFiles: MicroscopeFile[] = [];
     filesDropped: boolean;
+    nUploadedFiles: number;
 
     static $inject = ['acquisition', '$state', '$http', '$q', '$stateParams'];
 
     constructor(public acquisition: Acquisition, private _$state,
                 private _$http, private _$q, private _$stateParams) {
-        acquisition.fetchExistingFiles();
         this.filesDropped = false;
+        this.nUploadedFiles = 0;
+        acquisition.getUploadedFileCount()
+        .then((count) => {
+            this.nUploadedFiles = count;
+        })
     }
 
     filterValidFiles(files: {name: string;}[]) {
