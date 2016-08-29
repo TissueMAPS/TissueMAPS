@@ -638,7 +638,7 @@ class PyramidTileFile(File):
     @property
     def location(self):
         '''str: location of the file'''
-        if not hasattr(self, '_location'):
+        if getattr(self, '_location', None) is None:
             self._location = os.path.join(
                 self.channel_layer.location,
                 'TileGroup%d' % self.group, self.name
