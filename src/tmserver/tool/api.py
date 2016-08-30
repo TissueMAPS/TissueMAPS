@@ -15,8 +15,8 @@ from tmserver.error import (
 )
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
-from tmserver.toolbox import SUPPORTED_TOOLS
-from tmserver.toolbox import get_tool_class
+from tmtoolbox import SUPPORTED_TOOLS
+from tmtoolbox import get_tool_class
 
 
 logger = logging.getLogger(__name__)
