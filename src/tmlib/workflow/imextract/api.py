@@ -6,7 +6,6 @@ import collections
 from sqlalchemy import func
 
 import tmlib.models as tm
-from tmlib.models.utils import delete_location
 from tmlib.utils import notimplemented
 from tmlib.readers import BFImageReader
 from tmlib.readers import ImageReader
@@ -192,13 +191,9 @@ class ImageExtractor(ClusterRoutines):
         :py:class:`tm.ChannelImageFile` as well as all children for
         the processed experiment.
         '''
+        logger.info('delete existing channel image files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            cycles = session.query(tm.Cycle).all()
-            images_locations = [c.channel_images_location for c in cycles]
-            logger.info('delete existing channel image files')
-            session.drop_and_recreate(tm.ChannelImageFile)
-        for loc in images_locations:
-            delete_location(loc)
+            session.query(tm.ChannelImageFile).delete()
 
     def collect_job_output(self, batch):
         '''Omits channel image files that do not exist across all cycles.

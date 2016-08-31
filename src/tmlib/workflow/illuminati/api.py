@@ -263,12 +263,6 @@ class PyramidBuilder(ClusterRoutines):
         logger.debug('delete existing channel layers and pyramid tile files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             session.query(tm.ChannelLayer).delete()
-            # channels = session.query(tm.Channel).all()
-            # layers_locations = [c.layers_location for c in channels]
-            # session.drop_and_recreate(tm.ChannelLayer)
-            # session.drop_and_recreate(tm.PyramidTileFile)
-        # for loc in layers_locations:
-        #     delete_location(loc)
 
         logger.debug('delete existing static mapobject types')
         with tm.utils.ExperimentSession(self.experiment_id) as session:

@@ -100,11 +100,7 @@ class IllumstatsCalculator(ClusterRoutines):
         '''
         logger.info('delete existing illumination statistics files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            cycles = session.query(tm.Cycle).all()
-            illumstats_locations = [c.illumstats_location for c in cycles]
-            session.drop_and_recreate(tm.IllumstatsFile)
-        for loc in illumstats_locations:
-            delete_location(loc)
+            session.query(tm.IllumstatsFile).delete()
 
     def run_job(self, batch):
         '''Calculates illumination statistics.

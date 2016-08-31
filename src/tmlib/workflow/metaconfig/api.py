@@ -5,7 +5,6 @@ import pandas as pd
 import bioformats
 
 import tmlib.models as tm
-from tmlib.models.utils import delete_location
 from tmlib.workflow.metaconfig import metadata_handler_factory
 from tmlib.workflow.metaconfig import metadata_reader_factory
 from tmlib.workflow.api import ClusterRoutines
@@ -107,27 +106,19 @@ class MetadataConfigurator(ClusterRoutines):
         '''
         logger.info('delete existing channels')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            experiment = session.query(tm.Experiment).one()
-            channels_location = experiment.channels_location
-            session.drop_and_recreate(tm.Channel)
-        delete_location(channels_location)
+            session.query(tm.Channel).delete()
 
         logger.info('delete existing wells and sites')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.drop_and_recreate(tm.Well)
-            session.drop_and_recreate(tm.Site)
+            session.query(tm.Well).delete()
 
         logger.info('delete existing cycles')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            plates = session.query(tm.Plate).all()
-            cycles_locations = [p.cycles_location for p in plates]
-            session.drop_and_recreate(tm.Cycle)
-        for loc in cycles_locations:
-            delete_location(loc)
+            session.query(tm.Cycle).delete()
 
         logger.debug('delete existing image file mappings')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.drop_and_recreate(tm.ImageFileMapping)
+            session.query(tm.ImageFileMapping).delete()
 
     def run_job(self, batch):
         '''Formats OMEXML metadata extracted from microscope image files and

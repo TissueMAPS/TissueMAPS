@@ -629,6 +629,11 @@ class ClusterRoutines(BasicClusterRoutines):
             user_name=user_name
         )
 
+
+    # def create_init_job(self, submission_id, user_name,
+    #         duration='06:00:00', memory=3800, cores=1):
+    #     pass
+
     def create_run_jobs(self, submission_id, user_name, batches,
             duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
@@ -672,24 +677,22 @@ class ClusterRoutines(BasicClusterRoutines):
                 submission_id=submission_id,
                 user_name=user_name
             )
-            if duration:
-                job.requested_walltime = Duration(duration)
-            if memory:
-                job.requested_memory = Memory(memory, Memory.MB)
-            if cores:
-                if not isinstance(cores, int):
-                    raise TypeError(
-                        'Argument "cores" must have type int.'
-                    )
-                if not cores > 0:
-                    raise ValueError(
-                        'The value of "cores" must be positive.'
-                    )
-                job.requested_cores = cores
+            job.requested_walltime = Duration(duration)
+            job.requested_memory = Memory(memory, Memory.MB)
+            if not isinstance(cores, int):
+                raise TypeError(
+                    'Argument "cores" must have type int.'
+                )
+            if not cores > 0:
+                raise ValueError(
+                    'The value of "cores" must be positive.'
+                )
+            job.requested_cores = cores
             run_jobs.add(job)
         return run_jobs
 
-    def create_collect_job(self, submission_id, user_name):
+    def create_collect_job(self, submission_id, user_name,
+            duration='06:00:00', memory=3800, cores=1):
         '''Creates job for the "collect" phase of the step.
 
         Parameters
@@ -698,6 +701,15 @@ class ClusterRoutines(BasicClusterRoutines):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        duration: str, optional
+            computational time that should be allocated for a single job;
+            in HH:MM:SS format (default: ``"06:00:00"``)
+        memory: int, optional
+            amount of memory in Megabyte that should be allocated for a single
+            (default: ``3800)
+        cores: int, optional
+            number of CPU cores that should be allocated for a single job
+            (default: ``1``)
 
         Returns
         -------
@@ -709,21 +721,26 @@ class ClusterRoutines(BasicClusterRoutines):
         Duration defaults to 2 hours and memory to 3800 megabytes.
         '''
         logger.info('create collect job for submission %d', submission_id)
-        duration = Duration('02:00:00')
-        memory = Memory(3800, Memory.MB)
-        cores = 1
         logger.debug('allocated time for collect job: %s', duration)
         logger.debug('allocated memory for collect job: %d MB', memory)
         logger.debug('allocated cores for collect job: %d', cores)
-        collect_job = CollectJob(
+        job = CollectJob(
             step_name=self.step_name,
             arguments=self._build_collect_command(),
             output_dir=self.log_location,
             submission_id=submission_id,
             user_name=user_name
         )
-        collect_job.requested_walltime = duration
-        collect_job.requested_memory = memory
-        collect_job.requested_cores = cores
-        return collect_job
+        job.requested_walltime = Duration(duration)
+        job.requested_memory = Memory(memory, Memory.MB)
+        if not isinstance(cores, int):
+            raise TypeError(
+                'Argument "cores" must have type int.'
+            )
+        if not cores > 0:
+            raise ValueError(
+                'The value of "cores" must be positive.'
+            )
+        job.requested_cores = cores
+        return job
 

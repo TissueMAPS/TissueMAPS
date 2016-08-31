@@ -330,7 +330,7 @@ class WorkflowStepDescription(object):
 
     @property
     def extra_args(self):
-        '''tmlib.workflow.args.ExtraArguments: extra arguments instance'''
+        '''tmlib.workflow.args.ExtraArguments: extra arguments'''
         return self._extra_args
 
     @extra_args.setter
@@ -344,7 +344,7 @@ class WorkflowStepDescription(object):
 
     @property
     def batch_args(self):
-        '''tmlib.workflow.args.BatchArguments: batch arguments instance'''
+        '''tmlib.workflow.args.BatchArguments: batch arguments'''
         return self._batch_args
 
     @batch_args.setter
