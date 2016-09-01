@@ -13,7 +13,12 @@ def create_tables(db_uri=None):
     db_uri: str
         URI of the database
     '''
-    engine = tm.utils.create_db_engine()
+    if db_uri is None:
+        try:
+            db_uri = os.environ['TMAPS_DB_WEB_URL']
+        except KeyError:
+            raise OSError('Environment variable "TMAPS_DB_WEB_URL" not set.')
+    engine = tm.utils.create_db_engine(db_uri)
     tm.MainModel.metadata.create_all(engine)
 
 
