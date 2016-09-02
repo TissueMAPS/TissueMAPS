@@ -7,7 +7,8 @@ logger = logging.getLogger(__name__)
 VERSION = '0.0.1'
 
 
-def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  plot=False):
+def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
+        fill=True, plot=False):
     '''Thresholds an image with Otsu's method.
     For more information on the algorithmic implementation see
     :py:func:`mahotas.otsu`.
@@ -27,6 +28,9 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
         minimal threshold level (default: ``numpy.min(image)``)
     max_threshold: int, optional
         maximal threshold level (default: ``numpy.max(image)``)
+    fill: bool, optional
+        whether holes in connected components should be filled
+        (default: ``True``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -38,12 +42,12 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
     '''
     if max_threshold is None:
         max_threshold = np.max(image)
-    logger.info('set maximal threshold: %d', max_threshold)
+    logger.debug('set maximal threshold: %d', max_threshold)
 
     if min_threshold is None:
         min_threshold = np.min(image)
-    logger.info('set minimal threshold: %d', min_threshold)
-    logger.info('set threshold correction factor: %.2f', correction_factor)
+    logger.debug('set minimal threshold: %d', min_threshold)
+    logger.debug('set threshold correction factor: %.2f', correction_factor)
 
     thresh = mh.otsu(image)
     logger.info('calculated threshold level: %d', thresh)
@@ -52,12 +56,18 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,  pl
     logger.info('corrected threshold level: %d', corr_thresh)
 
     if corr_thresh > max_threshold:
+        logger.info('set threshold level to maximum: %d', max_threshold)
         corr_thresh = max_threshold
     elif corr_thresh < min_threshold:
+        logger.info('set threshold level to minimum: %d', min_threshold)
         corr_thresh = min_threshold
 
     logger.info('threshold image')
     thresh_image = image > corr_thresh
+
+    if fill:
+        logger.info('fill holes')
+        thresh_image = mh.close_holes(thresh_image)
 
     outputs = {'mask': thresh_image}
 

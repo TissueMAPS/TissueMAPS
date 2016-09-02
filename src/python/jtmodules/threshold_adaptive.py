@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 VERSION = '0.0.1'
 
 
-def main(image, kernel_size, plot=False):
+def main(image, kernel_size, fill=True, plot=False):
     '''Thresholds an image using an adaptive method, where different thresholds
     get applied to different regions of the image.
     For more information on the algorithmic implementation see
@@ -25,6 +25,9 @@ def main(image, kernel_size, plot=False):
     kernel_size: int
         size of the neighbourhood region that's used to calculate the threshold
         value at each pixel position (must be an odd number)
+    fill: bool, optional
+        whether holes in connected components should be filled
+        (default: ``True``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -37,11 +40,11 @@ def main(image, kernel_size, plot=False):
     Raises
     ------
     ValueError
-        when `kernel_size` is not odd
+        when `kernel_size` is not an odd number
     '''
     if kernel_size % 2 == 0:
         raise ValueError('Argument "kernel_size" must be an odd integer.')
-    logger.info('set kernel size: %d', kernel_size)
+    logger.debug('set kernel size: %d', kernel_size)
 
     logger.debug('map image intensities to 8-bit range')
     image_8bit = mh.stretch(image)
@@ -54,6 +57,9 @@ def main(image, kernel_size, plot=False):
     )
     thresh_image = thresh_image > 0
 
+    if fill:
+        logger.info('fill holes')
+        thresh_image = mh.close_holes(thresh_image)
     outputs = {'mask': thresh_image}
 
     if plot:
