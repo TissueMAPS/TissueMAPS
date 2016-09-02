@@ -337,8 +337,8 @@ def main(input_mask, input_image, min_area, max_area,
             x += x_offset
             cut_mask[y, x] = True
 
-            from matplotlib import pyplot as plt
-            plt.imshow(mask + 2*line); plt.show()
+            # from matplotlib import pyplot as plt
+            # plt.imshow(mask + 2*line); plt.show()
 
         output_mask[cut_mask] = 0
 
