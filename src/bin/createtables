@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import argparse
 
 import tmlib.models as tm
@@ -15,7 +16,7 @@ def create_tables(db_uri=None):
     '''
     if db_uri is None:
         try:
-            db_uri = os.environ['TMAPS_DB_WEB_URL']
+            db_uri = os.environ['TMAPS_DB_WEB_URI']
         except KeyError:
             raise OSError('Environment variable "TMAPS_DB_WEB_URL" not set.')
     engine = tm.utils.create_db_engine(db_uri)
