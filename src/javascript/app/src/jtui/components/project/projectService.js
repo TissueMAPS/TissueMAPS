@@ -140,12 +140,6 @@ angular.module('jtui.project')
 
     function createJoblist(project) {
 
-        // Remove empty pattern from project object
-        project.pipe.description.images.layers = project.pipe.description.images.layers.filter(function (pat) {
-            console.log(pat)
-            return pat.name != ""
-        });
-
         var url = '/jtui/experiments/' + project.experiment_id +
                   '/projects/' + project.name + '/joblist';
         var request = $http({
