@@ -445,9 +445,10 @@ def create_joblist(experiment_id, project_name):
                 metadata[batch['id']] = {
                     'tpoint': f.tpoint,
                     'channel_name': f.channel.name,
+                    'plate': f.site.well.plate.name,
                     'well': f.site.well.name,
-                    'well_position': [f.site.y, f.site.x],
-                    'plate': f.site.well.plate.name
+                    'y': f.site.y,
+                    'x': f.site.x,
                 }
             return jsonify({'joblist': metadata})
     except Exception, e:
