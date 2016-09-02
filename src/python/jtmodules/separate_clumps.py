@@ -322,9 +322,10 @@ def main(input_mask, input_image, min_area, max_area,
 
             # TODO: We may want to be a bit more tolerant here,
             # because the shape could be screwed up after cutting.
-            if (solidity < max_solidity or
-                form_factor < max_form_factor or
-                area < min_cut_area):
+            if area < min_cut_area:
+            # if (solidity < max_solidity or
+            #     form_factor < max_form_factor or
+            #     area < min_cut_area):
                 logger.warn(
                     'no cut for object %d - line didn\'t pass tests', oid
                 )
@@ -336,9 +337,6 @@ def main(input_mask, input_image, min_area, max_area,
             y += y_offset
             x += x_offset
             cut_mask[y, x] = True
-
-            # from matplotlib import pyplot as plt
-            # plt.imshow(mask + 2*line); plt.show()
 
         output_mask[cut_mask] = 0
 
