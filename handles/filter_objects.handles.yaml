@@ -9,6 +9,12 @@ input:
     - name: feature
       type: Character
       value: 
+      options:
+        - area
+        - eccentricity
+        - perimeter
+        - solidity
+        - roundness
       help: >
         Name of the region property based on which label_image should be filtered.
 

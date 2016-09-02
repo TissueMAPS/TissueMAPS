@@ -6,6 +6,14 @@ from jtlib import utils
 VERSION = '0.0.2'
 
 
+SUPPORTED_FEATURES = {
+    'area': mh.labeled.labeled_size,
+    'perimenter': mh.labeled.bwperim,
+    'excentricity': mh.features.eccentricity,
+    'roundness': mh.features.roundness,
+}
+
+
 def main(input_mask, feature, threshold, remove, plot):
     '''Filters objects (labeled connected components) based on specified
     features.
@@ -15,8 +23,7 @@ def main(input_mask, feature, threshold, remove, plot):
     input_mask: numpy.ndarray[numpy.int32]
         labeled image that should be filtered
     feature: str
-        name of the region property based on which the image should be filtered
-        see `scikit-image docs <http://scikit-image.org/docs/dev/api/skimage.measure.html#regionprops>`_
+        name of the feature based on which the image should be filtered
     threshold:
         threshold level (type depends on the chosen `feature`)
     remove: str
@@ -32,28 +39,44 @@ def main(input_mask, feature, threshold, remove, plot):
 
     Raises
     ------
+    TypeError
+        when `input_mask` is not binary
     ValueError
         when value of `remove` is not ``"below"`` or ``"above"``
+    ValueError
+        when value of `feature` is not one of the supported features
+
     '''
     if input_mask.dtype != np.bool:
-        raise TypeError('Argument label image must be binary')
-
-    labeled_input_mask = mh.label(input_mask)[0]
-    regions = skimage.measure.regionprops(labeled_input_mask)
-    if remove == 'above':
-        ids_to_keep = [r['label'] for r in regions if r[feature] < threshold]
-    elif remove == 'below':
-        ids_to_keep = [r['label'] for r in regions if r[feature] > threshold]
-    else:
+        raise TypeError('Argument "input_mask" must be binary.')
+    if feature not in SUPPORTED_FEATURES:
         raise ValueError(
-            'Argument "remove" must be a either "above" or "below"'
+            'Argument "feature" must be one of the following: "%s".'
+            % '", "'.join(SUPPORTED_FEATURES.keys())
         )
 
-    filtered_image = np.zeros(input_mask.shape, dtype=input_mask.dtype)
-    for ix in ids_to_keep:
-        filtered_image[labeled_input_mask == ix] = ix
+    labeled_image = mh.label(input_mask)[0]
+    feature_image = SUPPORTED_FEATURES[feature](labeled_image)
+    if remove == 'above':
+        logger.info(
+            'remove objects with "%s" values above %d', feature, threshold
+        )
+        condition_image = feature_image > threshold
+    elif remove == 'below':
+        condition_image = feature_image < threshold
+        logger.info(
+            'remove objects with "%s" values below %d', feature, threshold
+        )
+    else:
+        raise ValueError(
+            'Argument "remove" must be a either "above" or "below".'
+        )
 
-    n_removed = len(np.unique(labeled_input_mask)) - len(np.unique(filtered_image))
+    filtered_image = mh.labeled.remove_regions_where(
+        labeled_image, condition_image
+    )
+
+    n_removed = len(np.unique(labeled_image)) - len(np.unique(filtered_image))
 
     output_mask = filtered_image > 0
     output = {'output_mask': output_mask}
