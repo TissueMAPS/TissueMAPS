@@ -6,7 +6,6 @@ from flask.ext.jwt import current_identity
 
 import tmlib.models as tm
 
-from tmserver.tool import ToolSession, LabelLayer, LabelLayerValue
 from tmserver.api import api
 from tmserver.error import (
     MalformedRequestError,
@@ -15,6 +14,9 @@ from tmserver.error import (
 )
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
+from tmtoolbox.session import ToolSession
+from tmtoolbox.result import ToolResult, LabelLayer
+
 from tmtoolbox import SUPPORTED_TOOLS
 from tmtoolbox import get_tool_class
 
@@ -120,7 +122,6 @@ def get_result_labels(experiment_id, label_layer_id):
     for a given tool result and tile coordinate.
 
     """
-    logger.info('get result tiles for label layer "%s"', label_layer.type)
     # The coordinates of the requested tile
     x = request.args.get('x', type=int)
     y = request.args.get('y', type=int)
@@ -129,6 +130,8 @@ def get_result_labels(experiment_id, label_layer_id):
     tpoint = request.args.get('tpoint', type=int)
 
     with tm.utils.ExperimentSession(experiment_id) as session:
+        label_layer = session.query(LabelLayer).get(label_layer_id)
+        logger.info('get result tiles for label layer "%s"', label_layer.type)
         mapobject_type = session.query(tm.MapobjectType).\
             get(label_layer.mapobject_type_id)
         query_res = mapobject_type.get_mapobject_outlines_within_tile(
@@ -168,6 +171,6 @@ def get_result_labels(experiment_id, label_layer_id):
 @decode_query_ids()
 def get_tool_result(experiment_id, toolresult_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
-        tool_result = session.query(tm.ToolResult).get(toolresult_id)
+        tool_result = session.query(ToolResult).get(toolresult_id)
         return jsonify(tool_result)
 
