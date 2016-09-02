@@ -143,6 +143,7 @@ def _compile_drop_table(element, compiler, **kwargs):
 @compiles(CreateTable, 'postgresxl')
 def _compile_create_table(element, compiler, **kwargs):
     table = element.element
+    logger.info('create table "%s"', table.name)
     distribute_by_hash = 'distribute_by_hash' in table.info
     if distribute_by_hash:
         distribution_column = table.info['distribute_by_hash']
@@ -161,13 +162,13 @@ def _compile_create_table(element, compiler, **kwargs):
                 i.columns.add(table.columns[distribution_column])
     sql = compiler.visit_create_table(element)
     if distribute_by_hash:
-        logger.debug(
+        logger.info(
             'distribute table "%s" by hash "%s"', table.name,
             distribution_column
         )
         sql += ' DISTRIBUTE BY HASH(' + distribution_column + ')'
     else:
-        logger.debug(
+        logger.info(
             'distribute table "%s" by replication', table.name
         )
         sql += ' DISTRIBUTE BY REPLICATION'
