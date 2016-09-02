@@ -292,11 +292,11 @@ def main(input_mask, input_image, min_area, max_area,
             dist_abs = mh.distance(mh.morph.open(mask)).astype(int)
             # Rescale distances to make them independent of object size
             lut = np.linspace(0, 1, np.max(dist_abs)+1)
-            dist = lut[dist_abs]
-            # Select the two biggest peaks: We want to have only two objects.
-            # peaks = mh.label(dist > max_cut_intensity)[0]
-            thresh = mh.otsu(dist_abs.astype(np.uint16)) * cut_sensitivity
-            peaks = mh.label(dist_abs > thresh)[0]
+            dist = lut[dist_abs] * 255
+            # Find peaks that can be used as seeds for the watershed transform
+            thresh = mh.otsu((dist).astype(np.uint8)) * cut_sensitivity
+            peaks = mh.label(dist > thresh)[0]
+            # Select the two biggest peaks, since want to have only two objects.
             sizes = mh.labeled.labeled_size(peaks)
             index = np.argsort(sizes)[::-1][1:3]
             for label in np.unique(peaks):
@@ -305,11 +305,12 @@ def main(input_mask, input_image, min_area, max_area,
             peaks = mh.labeled.relabel(peaks)[0]
             ws_regions = mh.cwatershed(np.invert(dist_abs), peaks)
             ws_regions[~mask] = 0
+            # Use the line between the regions to make the cut
             line = mh.labeled.borders(ws_regions)
             outer_lines = mh.labeled.borders(mask)
             line[outer_lines] = 0
-            # lines = mh.thin(lines)
 
+            # Ensure that cut is reasonable give the user defined criteria
             test_cut_mask = mask.copy()
             test_cut_mask[line] = False
             test_cut_mask = mh.morph.open(test_cut_mask)
@@ -319,6 +320,8 @@ def main(input_mask, input_image, min_area, max_area,
             smaller_object = subobjects == smaller_id
             area, form_factor, solidity = calc_area_shape_features(smaller_object)
 
+            # TODO: We may want to be a bit more tolerant here,
+            # because the shape could be screwed up after cutting.
             if (solidity < max_solidity or
                 form_factor < max_form_factor or
                 area < min_cut_area):
@@ -333,6 +336,9 @@ def main(input_mask, input_image, min_area, max_area,
             y += y_offset
             x += x_offset
             cut_mask[y, x] = True
+
+            from matplotlib import pyplot as plt
+            plt.imshow(mask + 2*line); plt.show()
 
         output_mask[cut_mask] = 0
 
