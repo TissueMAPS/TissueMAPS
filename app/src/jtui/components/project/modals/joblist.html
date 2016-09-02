@@ -17,7 +17,8 @@
         <th>job id</th>
         <th>plate</th>
         <th>well</th>
-        <th>well position</th>
+        <th>y</th>
+        <th>x</th>
         <th>time point</th>
       </tr>
     </thead>
@@ -27,7 +28,8 @@
         <td>{{ job_id }}</td>
         <td>{{ metadata.plate }}</td>
         <td>{{ metadata.well }}</td>
-        <td>({{ metadata.well_position[0] }}, {{ metadata.well_position[1] }})</td>
+        <td>{{ metadata.y }}</td>
+        <td>{{ metadata.x }}</td>
         <td>{{ metadata.tpoint }}</td>
       </tr>
     </tbody>
