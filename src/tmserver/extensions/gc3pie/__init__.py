@@ -204,9 +204,10 @@ class GC3Pie(object):
             index of an individual task within a sequential collection of tasks
             from where all subsequent tasks should be resubmitted
         """
-        logger.info('add jobs to engine')
-        # TODO: does this update???
-        self._engine.add(jobs)
+        logger.info('update jobs in engine')
+        # We need to remove the jobs first, simple addition doesn't update them!
+        self._engine.remove(jobs)
+        # self._engine.add(jobs)
         logger.info('redo jobs')
         self._engine.redo(jobs, index)
 

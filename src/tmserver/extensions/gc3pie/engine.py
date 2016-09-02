@@ -3,12 +3,15 @@ from collections import defaultdict
 import functools
 import itertools
 import time
+import logging
 import gc3libs
 import gc3libs.core
 import gc3libs.session
 
 __docformat__ = 'reStructuredText'
 __version__ = '$Revision$'
+
+logger = logging.getLogger(__name__)
 
 
 def _get_scheduler_and_lock_factory(lib):
@@ -261,6 +264,7 @@ class BgEngine(object):
     #
 
     def add(self, task):
+        logger.debug('add task to engine: %s', task.persistent_id)
         with self._q_locked:
             self._q.append((self._engine.add, (task,), {}))
 
@@ -293,6 +297,7 @@ class BgEngine(object):
             self._q.append((self._engine.get_backend, (name,), {}))
 
     def kill(self, task, **extra_args):
+        logger.debug('kill task: %s', task.persistent_id)
         with self._q_locked:
             self._q.append((self._engine.kill, (task,), extra_args))
 
@@ -318,6 +323,7 @@ class BgEngine(object):
             self._engine.progress()
 
     def remove(self, task):
+        logger.debug('remove task from engine: %s', task.persistent_id)
         with self._q_locked:
             self._q.append((self._engine.remove, (task,), {}))
 
