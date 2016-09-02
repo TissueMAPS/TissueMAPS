@@ -3,16 +3,14 @@ where a `clump` is a connected component with certain size and shape.
 '''
 import numpy as np
 import cv2
-import heapq
 import pandas as pd
-import itertools
 import collections
 import mahotas as mh
 import skimage.morphology
 import logging
 import jtlib.utils
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 
 logger = logging.getLogger(__name__)
 PAD = 1
@@ -95,344 +93,6 @@ def find_watershed_lines(mask, img, ksize):
     sizes = mh.labeled.labeled_size(labeled_lines)
     too_small = np.where(sizes < 10)
     lines = mh.labeled.remove_regions(labeled_lines, too_small) > 0
-    return lines
-
-
-def find_branch_points(skeleton):
-    '''Finds branch points of a skeleton.
-
-    Parameters
-    ----------
-    skeleton: numpy.ndarray[numpy.bool]
-        array with skeleton lines
-
-    Returns
-    -------
-    numpy.ndarray[numpy.int32]
-        labeled branch points
-
-    Note
-    ----
-    Fast implementation in C++ using
-    `mahotas library <http://mahotas.readthedocs.io/en/latest/>`_.
-    '''
-    x0  = np.array([[1, 0, 1], [0, 1, 0], [1, 0, 1]])
-    x1 = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
-    t0 = np.array([[0, 0, 0], [1, 1, 1], [0, 1, 0]])
-    t1 = np.flipud(t0)
-    t2 = t0.T
-    t3 = np.fliplr(t2)
-    t4 = np.array([[1, 0, 1], [0, 1, 0], [1, 0, 0]])
-    t5 = np.flipud(t4)
-    t6 = np.fliplr(t4)
-    t7 = np.fliplr(t5)
-    y0 = np.array([[1, 0, 1], [0, 1, 0], [2, 1, 2]])
-    y1 = np.flipud(y0)
-    y2 = y0.T
-    y3 = np.fliplr(y2)
-    y4 = np.array([[0, 1, 2], [1, 1, 2], [2, 2, 1]])
-    y5 = np.flipud(y4)
-    y6 = np.fliplr(y4)
-    y7 = np.fliplr(y5)
-    strels = [
-        x0, x1, t0, t1, t2, t3, t4, t5, t6, t7, y0, y1, y2, y3, y4, y5, y6, y7
-    ]
-    nodes = np.zeros(skeleton.shape)
-    for s in strels:
-        nodes += mh.morph.hitmiss(skeleton, s)
-    return mh.label(nodes)[0]
-
-
-def find_border_points(skeleton, mask):
-    '''Finds points of `skeleton` that intersect with the border (contour)
-    of an object defined by `mask`.
-
-    Parameters
-    ----------
-    skeleton: numpy.ndarray[numpy.bool]
-        image of skeleton lines
-    mask: numpy.ndarray[numpy.bool]
-        mask image
-
-    Returns
-    -------
-    numpy.ndarray[numpy.int32]
-        labeled border points
-
-    Note
-    ----
-    Fast implementation in C++ using
-    `mahotas library <http://mahotas.readthedocs.io/en/latest/>`_.
-    '''
-    points = (
-        skeleton +
-        mh.morph.erode(mask)*2 +
-        (skeleton != mh.morph.erode(mh.morph.erode(mask)))*3
-    ) == 6
-    return mh.label(points)[0]
-
-
-def find_end_points(skeleton):
-    '''Finds end points of a skeleton.
-
-    Parameters
-    ----------
-    skeleton: numpy.ndarray[numpy.bool]
-        image of skeleton lines
-
-    Returns
-    -------
-    numpy.ndarray[numpy.int32]
-        labeled end points
-
-    Note
-    ----
-    Fast implementation in C++ using
-    `mahotas library <http://mahotas.readthedocs.io/en/latest/>`_.
-    '''
-    s1 = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 0]])
-    s2 = np.fliplr(s1)
-    s3 = np.flipud(s1)
-    s4 = np.fliplr(np.flipud(s1))
-    s5 = np.array([[1, 1, 0], [0, 1, 0], [0, 0, 0]])
-    s6 = np.fliplr(s5)
-    s7 = np.flipud(s5)
-    s8 = np.fliplr(np.flipud(s5))
-    s9 = np.array([[0, 0, 0], [1, 1, 0], [0, 0, 0]])
-    s10 = np.fliplr(s9)
-    s11 = np.array([[0, 0, 0], [0, 1, 0], [0, 1, 0]])
-    s12 = np.flipud(s11)
-    s13 = np.array([[1, 0, 0], [1, 1, 0], [0, 0, 0]])
-    s14 = np.fliplr(s13)
-    s15 = np.flipud(s13)
-    s16 = np.fliplr(np.flipud(s13))
-    strels = [
-        s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16
-    ]
-    nodes = np.zeros(skeleton.shape)
-    for s in strels:
-        nodes += mh.morph.hitmiss(skeleton, s)
-    return mh.label(nodes)[0]
-
-
-def get_line_segments(skeleton, branch_points, end_points):
-    '''Gets all individual line segments of a `skeleton` separated at
-    `branch_points`.
-
-    Parameters
-    ----------
-    skeleton: numpy.ndarray[numpy.bool]
-        image of skeleton
-    branch_points: numpy.ndarray[numpy.bool]
-        image of branch points
-    end_points: numpy.ndarray[numpy.bool]
-        image of end points
-
-    Returns
-    -------
-    numpy.ndarray[numpy.int32]
-        labeled line segments
-
-    Note
-    ----
-    Fast implementation in C++ using
-    `mahotas library <http://mahotas.readthedocs.io/en/latest/>`_.
-    '''
-    segments = mh.label((skeleton > 0) - (branch_points > 0))[0]
-    sizes = mh.labeled.labeled_size(segments)
-    # Cutting the skeleton into segments may result in small spurs that are
-    # not connected to two nodes. We remove them here.
-    # NOTE: Cutoff of 100 is chosen totally arbitrary.
-    too_small = np.where(sizes < 100)[0]
-    se = np.ones((3, 3), bool)  # 8-connected!
-    if too_small.size > 0:
-        check_points = mh.label((branch_points + end_points) > 0, Bc=se)[0]
-        remove = list()
-        for s in too_small:
-            index = mh.morph.dilate(segments == s)
-            if len(np.unique(check_points[index])) < 3:
-                remove.append(s)
-        remove = np.array(remove)
-    else:
-        remove = too_small
-    if remove.size > 0:
-        segments = mh.labeled.remove_regions(segments, remove) > 0
-    return mh.label(segments > 0)[0]
-
-
-def map_nodes_to_edges(nodes, edges):
-    '''Map nodes to connecting edges.
-
-    Parameters
-    ----------
-    nodes: numpy.ndarray[numpy.int32]
-        labeled end and branch points
-    edges: numpy.ndarray[numpy.int32]
-        labeled line segments
-
-    Returns
-    -------
-    Tuple[Dict[int, Set[int]]]
-        mappings of nodes and connecting edges
-    '''
-    node_ids = np.unique(nodes[nodes > 0])
-    edge_ids = np.unique(edges[edges > 0])
-    node_to_egdes_map = dict()
-    edge_to_nodes_map = dict()
-    se = np.ones((3, 3), bool)  # 8-connected!
-    for n in node_ids:
-        node_index = mh.morph.dilate(nodes == n, Bc=se)
-        node_to_egdes_map[n] = set(np.unique(edges[node_index])[1:])
-    for e in edge_ids:
-        edge_index = mh.morph.dilate(edges == e, Bc=se)
-        connected_nodes = set(np.unique(nodes[edge_index])[1:])
-        if len(connected_nodes) < 2:
-            # Sometimes there are small spurs that are only connected to
-            # a single node. We ignore them.
-            raise ValueError('Edge %d must connect two nodes.' % e)
-        edge_to_nodes_map[e] = connected_nodes
-    return (node_to_egdes_map, edge_to_nodes_map)
-
-
-def build_graph(edges, node_map, edge_map):
-    '''Builds a graph.
-
-    Parameters
-    ----------
-    edges: numpy.ndarray[numpy.int32]
-        labeled line segments
-    node_map: Dict[int, Set[int]]
-        mapping of nodes to connecting edges
-    edge_map: Dict[int, Set[int]]
-        mapping of edges to nodes
-
-    Returns
-    -------
-    Dict[int, Dict[int]]
-        graph, i.e. mapping of parent nodes to child nodes
-    '''
-    graph = dict()
-    for n, edge_ids in node_map.iteritems():
-        graph[n] = dict()
-        for e in edge_ids:
-            for nn in edge_map[e]:
-                if nn == n:
-                    continue
-                graph[n].update({
-                    nn: np.sum(edges[edges == e])
-                })
-    return graph
-
-
-def find_shortest_path(graph, start, end):
-    '''Finds shortest path between `start` and `end` node in `graph` using
-    `Dijkstra's algorithm <https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm>`_.
-
-    Parameters
-    ----------
-    graph: Dict[int, Dict[int]]
-        mapping of parent nodes to child nodes
-    start: int
-        start node
-    end: int
-        end node
-
-    Returns
-    -------
-    List[int]
-        sequence of nodes along the shortest path
-
-    See also
-    --------
-    :py:func:`jtmodules.separate_clumps.build_graph`
-    '''
-    queue = [(0, start, [])]
-    been_there = set()
-    while True:
-        try:
-            (distance, v, path) = heapq.heappop(queue)
-        except IndexError:
-            # We end up here when no line can be found in graph that connects
-            # start and end nodes.
-            logger.debug('incomplete line: {0}'.format(path))
-            return []
-        except:
-            raise
-        if v not in been_there:
-            path = path + [v]
-            been_there.add(v)
-            if v == end:
-                return path
-            for (next, d) in graph[v].iteritems():
-                heapq.heappush(queue, (distance + d, next, path))
-
-
-def find_line_segments_along_path(path, node_map):
-    '''Finds the line segments connecting nodes lying on `path`.
-
-    Parameters
-    ----------
-    path: List[int]
-        sequence of nodes in a graph
-    node_map: Dict[int, Set[int]]
-        mapping of nodes to lines connected to the nodes
-
-    Returns
-    -------
-    List[int]
-        sequence of line segments that connect nodes in `path`
-    '''
-    segments = list()
-    for i, n in enumerate(path):
-        if i == len(path) - 1:
-            break
-        segments += [
-            e for e in node_map[n] if e in node_map[path[i+1]]
-        ]
-    return segments
-
-
-def build_lines_from_segments(line_segments, nodes, graph, end_nodes, node_map):
-    '''Builds lines by combining `line_segments` that connect pairs of
-    `target_nodes` along all possible paths in `graph`.
-
-    Parameters
-    ----------
-    line_segments: numpy.ndarray[numpy.int32]
-        labeled image with line segments
-    nodes: numpy.ndarray[numpy.int32]
-        labeled image with nodes
-    graph: Dict[int, Set[int]]
-        mapping of parent nodes to child nodes
-    end_nodes: List[Tuple[int]]
-        end nodes of the `path` that should be connected
-    node_map: Dict[int, Set[int]]
-        mapping of nodes to connecting lines
-
-    Returns
-    -------
-    Dict[Tuple[int], numpy.ndarray[numpy.bool]]
-        shortest line connecting each pair of `end_nodes` provided a separate
-        mask image for each line
-    '''
-    # Find lines that connect start and end points (all combinations)
-    lines = dict()
-    for start, end in itertools.combinations(set(end_nodes), 2):
-        p = find_shortest_path(graph, start, end)
-        line_ids = find_line_segments_along_path(p, node_map)
-        line = np.zeros(line_segments.shape, bool)
-        for lid in line_ids:
-            line[line_segments == lid] = True
-        for nid in p:
-            line[nodes == nid] = True
-        # Shapely line approach?
-        # coords = np.array(np.where(line)).T
-        # line = shapely.geometry.asLineString(coords)
-        if np.count_nonzero(line) == 0:
-            continue
-        # We need to dilate the line a bit to ensure that it will actually
-        # cut the entire object.
-        lines[(start, end)] = mh.morph.dilate(line)
     return lines
 
 
@@ -552,8 +212,8 @@ def create_area_shape_feature_images(label_image):
 
 
 def main(input_mask, input_image, min_area, max_area,
-        min_cut_area, max_cut_intensity, max_form_factor, max_solidity,
-        region_sensitivity, line_sensitivity, cutting_passes, plot=False):
+        min_cut_area, cut_sensitivity, max_form_factor, max_solidity,
+        cutting_passes, plot=False):
     '''Detects clumps in `input_mask` and cuts them along watershed lines
     connecting two points falling into concave regions on their contour.
 
@@ -570,21 +230,13 @@ def main(input_mask, input_image, min_area, max_area,
     min_cut_area: int
         minimal area a cut object can have
         (useful to limit size of cut objects)
-    max_cut_intensity: float
-        maximal intensity along a cut line based on a distance transformation
-        of `input_mask` with values in the range [0, 1]
+    cut_sensitivity: int
+        positive number that determines how likely it is that a clump is cut;
+        value > 1 increases the change of a cut, while value < 1 decreases it
     max_solidity: float
         maximal solidity an object must have to be considerd a clump
     max_form_factor: float
         maximal form factor an object must have to be considerd a clump
-    region_sensitivity: int
-        sensitivity of detecting concave regions along the contour of clumps
-        (distance between the farthest contour point and the convex hull)
-    line_sensitivity: int
-        sensitivity of detecting potential cut lines within clumps
-        (size of the kernel that's used to morphologically open the mask of
-        regional intensity peaks, which are used as seeds for the watershed
-        transform)
     cutting_passes: int
         number of cutting cycles to separate clumps that consist of more than
         two subobjects
@@ -598,7 +250,6 @@ def main(input_mask, input_image, min_area, max_area,
         * "figure": JSON figure representation
     '''
 
-    # TODO: test modes
     output_mask = input_mask.copy()
     cut_mask = np.zeros(output_mask.shape, bool)
     clumps_mask = np.zeros(output_mask.shape, bool)
@@ -638,69 +289,14 @@ def main(input_mask, input_image, min_area, max_area,
             x += x_offset
             clumps_mask[y, x] = True
 
-            concave_region_points, n_concave_regions = find_concave_regions(
-                mask, region_sensitivity
-            )
-            concave_region_points = mh.label(concave_region_points)[0]
-            concave_region_point_ids = np.unique(concave_region_points)[1:]
-            if n_concave_regions < 2:
-                logger.debug('no cut - not enough concave regions')
-                continue
-
-            # skeleton = find_watershed_lines(mask, img, line_sensitivity)
-            # branch_points = find_branch_points(skeleton)
-            # end_points = find_border_points(skeleton, mask)
-            # end_points += find_end_points(skeleton)
-            # # Re-label 8-connected to ensure that neighboring end points get
-            # # assigned the same label
-            # se = np.ones((3, 3), bool)  # 8-connected
-            # end_points = mh.label(end_points > 0, Bc=se)[0]
-            # end_point_ids = np.unique(end_points)[1:]
-            # line_segments = get_line_segments(
-            #     skeleton, branch_points, end_points
-            # )
-            # node_points, n_nodes = mh.label(
-            #     (branch_points + end_points) > 0, Bc=se
-            # )
-            # node_ids = np.unique(node_points)[1:]
-            # if n_nodes == 0:
-            #     logger.debug(
-            #         'no cut - no watershed lines connceting concave regions'
-            #     )
-            #     continue
-
-            # # Find the nodes that lie closest to concave regions.
-            # # These will be the start and end points of the cut lines
-            # node_edge_map, edge_note_map = map_nodes_to_edges(
-            #     node_points, line_segments
-            # )
-            # # TODO: limit distance to prevent ending up outside of concave region
-            # concave_region_point_node_map = find_nodes_closest_to_concave_regions(
-            #     concave_region_points, end_points, node_points
-            # )
-
-            # # Build a graph, where end and branch points are nodes
-            # # and line segments are the edges that connect nodes
-            # graph = build_graph(line_segments, node_edge_map, edge_note_map)
-            # target_nodes = concave_region_point_node_map.values()
-
-            # # Build all lines that connect nodes in the graph
-            # lines = build_lines_from_segments(
-            #     line_segments, node_points, graph, target_nodes, node_edge_map
-            # )
-            # if len(lines) == 0:
-            #     logger.debug(
-            #         'no cut - no watershed lines found between concave regions'
-            #     )
-            #     continue
-
-            # features = list()
             dist_abs = mh.distance(mh.morph.open(mask)).astype(int)
             # Rescale distances to make them independent of object size
             lut = np.linspace(0, 1, np.max(dist_abs)+1)
             dist = lut[dist_abs]
             # Select the two biggest peaks: We want to have only two objects.
-            peaks = mh.label(dist > max_cut_intensity)[0]
+            # peaks = mh.label(dist > max_cut_intensity)[0]
+            thresh = mh.otsu(dist_abs.astype(np.uint16)) * cut_sensitivity
+            peaks = mh.label(dist_abs > thresh)[0]
             sizes = mh.labeled.labeled_size(peaks)
             index = np.argsort(sizes)[::-1][1:3]
             for label in np.unique(peaks):
@@ -709,97 +305,30 @@ def main(input_mask, input_image, min_area, max_area,
             peaks = mh.labeled.relabel(peaks)[0]
             ws_regions = mh.cwatershed(np.invert(dist_abs), peaks)
             ws_regions[~mask] = 0
-            lines = mh.labeled.borders(ws_regions)
+            line = mh.labeled.borders(ws_regions)
             outer_lines = mh.labeled.borders(mask)
-            lines[outer_lines] = 0
+            line[outer_lines] = 0
             # lines = mh.thin(lines)
 
-            # for (start, end), line in lines.iteritems():
-            #     test_cut_mask = mask.copy()
-            #     test_cut_mask[line] = False
-            #     test_cut_mask = mh.morph.open(test_cut_mask)
-            #     subobjects, n_subobjects = mh.label(test_cut_mask)
-            #     sizes = mh.labeled.labeled_size(subobjects)
-            #     smaller_id = np.where(sizes == np.min(sizes))[0][0]
-            #     smaller_object = subobjects == smaller_id
-            #     area, form_factor, solidity = calc_area_shape_features(smaller_object)
-            #     intensity = img[line]
-            #     # Calculate the length of the line and its straightness.
-            #     start_coord = np.array(np.where(node_points == start)).T[0, :]
-            #     end_coord = np.array(np.where(node_points == end)).T[0, :]
-            #     # Straightness is defined as the length of the line relative
-            #     # to the length of a perfectly straight line
-            #     # (Eucledian distance between the two points).
-            #     totally_straight = np.linalg.norm(start_coord - end_coord)
-            #     length = np.count_nonzero(line)
-            #     straightness = totally_straight / length
-            #     # Compute distance map of (morphologically opened) mask image
-            #     # and calculate intensity along line.
-            #     dist_intensity = dist[line]
-            #     f = {
-            #         'n_objects': n_subobjects,
-            #         'cut_object_solidity': solidity,
-            #         'cut_object_form_factor': form_factor,
-            #         'cut_object_area': area,
-            #         'min_stain_intensity': np.min(intensity),
-            #         'mean_stain_intensity': np.mean(intensity),
-            #         'median_stain_intensity': np.median(intensity),
-            #         'max_stain_intensity': np.max(intensity),
-            #         'length': length,
-            #         'straightness': straightness,
-            #         'min_dist_intensity': np.min(dist_intensity),
-            #         'mean_dist_intensity': np.mean(dist_intensity),
-            #         'median_dist_intensity': np.median(dist_intensity),
-            #         'max_dist_intensity': np.max(dist_intensity),
-            #     }
-            #     features.append(f)
-            # features = pd.DataFrame(features)
-            # features.index = pd.MultiIndex.from_tuples(
-            #     lines.keys(), names=['start', 'end']
-            # )
+            test_cut_mask = mask.copy()
+            test_cut_mask[line] = False
+            test_cut_mask = mh.morph.open(test_cut_mask)
+            subobjects, n_subobjects = mh.label(test_cut_mask)
+            sizes = mh.labeled.labeled_size(subobjects)
+            smaller_id = np.where(sizes == np.min(sizes))[0][0]
+            smaller_object = subobjects == smaller_id
+            area, form_factor, solidity = calc_area_shape_features(smaller_object)
 
-            # # TODO: Additional intensity criteria to prevent "stupid" cuts
-            # # e.g. only select line when intensity is below a certain global
-            # # intensity threshold.
-            # potential_line_index = (
-            #     (features.n_objects == 2) &
-            #     (features.cut_object_solidity > max_solidity) &
-            #     (features.cut_object_form_factor > max_form_factor) &
-            #     (features.cut_object_area > min_cut_area) &
-            #     (features.max_dist_intensity < max_cut_intensity)
-            # )
-            # if not any(potential_line_index):
-            #     logger.debug('no cut - no line passed tests')
-            #     continue
-
-            # # potential_lines = [
-            # #     lines[idx]
-            # #     for idx in features.ix[potential_line_index].index.values
-            # # ]
-            # # plt.imshow((np.sum(potential_lines, axis=0) > 0) + mask * 2);
-            # # plt.show()
-
-            # # Select the "optimal" line based on its intensity profile, length
-            # # and straightness
-            # selected_features = features.loc[
-            #     potential_line_index,
-            #     ['mean_stain_intensity', 'mean_dist_intensity',
-            #         'length', 'straightness',
-            #         'cut_object_solidity', 'cut_object_form_factor']
-            # ]
-            # # TODO: optimize feature selection and weights
-            # # The line should be short and straight, intensity along the line should
-            # # be low and the cut object should be round.
-            # weights = np.array([2, 4, 2, -2, -1, -1])
-            # costs = selected_features.dot(weights)
-            # idx = costs[costs == np.min(costs)].index.values[0]
-
-            # # plt.imshow(mask + lines[idx]*2)
-            # # plt.show()
+            if (solidity < max_solidity or
+                form_factor < max_form_factor or
+                area < min_cut_area):
+                logger.warn(
+                    'no cut for object %d - line didn\'t pass tests', oid
+                )
+                continue
 
             # Update cut mask
-            # y, x = np.where(mh.morph.dilate(lines[idx]))
-            y, x = np.where(mh.morph.dilate(lines))
+            y, x = np.where(mh.morph.dilate(line))
             y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
             y += y_offset
             x += x_offset

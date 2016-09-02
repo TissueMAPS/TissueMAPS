@@ -23,14 +23,12 @@ input:
       Minimal area of a cut fragment, cuts that would
       result in a smaller fragment will not be performed.
 
-  - name: max_cut_intensity
+  - name: cut_sensitivity
     type: Numeric
-    value: 0.5
+    value: 2
     help: >
-      Maximum intensity of the rescaled distance transform along a cut line.
-      Cuts that would be made along a line whose maximum intensity exceeds
-      this value will not be performed. Increasing this value will make cuts
-      through the middle of an object less likely.
+      Positive number that determines how likely it is that a clump is cut -
+      value > 1 increases the change of a cut, while value < 1 decreases it.
 
   - name: max_solidity
     type: Numeric
@@ -57,45 +55,6 @@ input:
     value: 50000
     help: >
       Maximal area of a connected pixel component to be considered a clump.
-
-  - name: line_sensitivity
-    type: Numeric
-    value: 10
-    help: >
-        Sensitivity of detecting potential cut lines within clumps
-        (size of the kernel that's used to detect regional intensity peaks,
-        which are used as seeds for the watershed transform) - the larger
-        the value the less lines will be detected.
-
-  - name: region_sensitivity
-    type: Numeric
-    value: 5
-    help: >
-        Sensitivity of detecting concave regions along the contour of clumps
-        (distance between the farthest contour point and the convex hull) -
-        the larger the value the less regions will be detected.
-
-  # - name: selection_test_mode
-  #   type: Boolean
-  #   value: false
-  #   options:
-  #     - false
-  #     - true
-  #   help: >
-  #     Whether selected clumps should be plotted in order to empirically determine
-  #     optimal values for `max_solidity`, `min_formfactor`, `min_area` and
-  #     and `max_area` (results will be shown for the last cutting pass).
-
-  # - name: region_test_mode
-  #   type: Boolean
-  #   value: false
-  #   options:
-  #     - false
-  #     - true
-  #   help: >
-  #     Whether result of the perimeter analysis should be plotted in order to
-  #     empirically determine optimal values for `min_angle` and `max_radius`
-  #     (results will be shown for the last cutting pass).
 
   - name: plot
     type: Plot
