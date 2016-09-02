@@ -4,7 +4,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 
 
 def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
