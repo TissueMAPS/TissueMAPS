@@ -62,7 +62,7 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
         logger.info('set threshold level to minimum: %d', min_threshold)
         corr_thresh = min_threshold
 
-    logger.info('threshold image')
+    logger.info('threshold image at %d', corr_thresh)
     thresh_image = image > corr_thresh
 
     if fill:
