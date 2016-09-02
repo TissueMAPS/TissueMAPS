@@ -415,7 +415,7 @@ def get_module_figure(experiment_id, project_name):
 )
 @jwt_required()
 @decode_query_ids()
-def create_joblist(experiment_id):
+def create_joblist(experiment_id, project_name):
     '''Creates a list of jobs for the current project to give the user a
     possiblity to select a site of interest.
 
