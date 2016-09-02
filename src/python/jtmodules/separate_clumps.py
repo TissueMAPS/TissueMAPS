@@ -638,144 +638,168 @@ def main(input_mask, input_image, min_area, max_area,
             x += x_offset
             clumps_mask[y, x] = True
 
-            concave_region_points, n_concave_regions = find_concave_regions(mask, region_sensitivity)
+            concave_region_points, n_concave_regions = find_concave_regions(
+                mask, region_sensitivity
+            )
             concave_region_points = mh.label(concave_region_points)[0]
             concave_region_point_ids = np.unique(concave_region_points)[1:]
             if n_concave_regions < 2:
                 logger.debug('no cut - not enough concave regions')
                 continue
 
-            skeleton = find_watershed_lines(mask, img, line_sensitivity)
-            branch_points = find_branch_points(skeleton)
-            end_points = find_border_points(skeleton, mask)
-            end_points += find_end_points(skeleton)
-            # Re-label 8-connected to ensure that neighboring end points get
-            # assigned the same label
-            se = np.ones((3, 3), bool)  # 8-connected
-            end_points = mh.label(end_points > 0, Bc=se)[0]
-            end_point_ids = np.unique(end_points)[1:]
-            line_segments = get_line_segments(skeleton, branch_points, end_points)
-            node_points, n_nodes = mh.label((branch_points + end_points) > 0, Bc=se)
-            node_ids = np.unique(node_points)[1:]
-            if n_nodes == 0:
-                logger.debug(
-                    'no cut - no watershed lines connceting concave regions'
-                )
-                continue
+            # skeleton = find_watershed_lines(mask, img, line_sensitivity)
+            # branch_points = find_branch_points(skeleton)
+            # end_points = find_border_points(skeleton, mask)
+            # end_points += find_end_points(skeleton)
+            # # Re-label 8-connected to ensure that neighboring end points get
+            # # assigned the same label
+            # se = np.ones((3, 3), bool)  # 8-connected
+            # end_points = mh.label(end_points > 0, Bc=se)[0]
+            # end_point_ids = np.unique(end_points)[1:]
+            # line_segments = get_line_segments(
+            #     skeleton, branch_points, end_points
+            # )
+            # node_points, n_nodes = mh.label(
+            #     (branch_points + end_points) > 0, Bc=se
+            # )
+            # node_ids = np.unique(node_points)[1:]
+            # if n_nodes == 0:
+            #     logger.debug(
+            #         'no cut - no watershed lines connceting concave regions'
+            #     )
+            #     continue
 
-            # Find the nodes that lie closest to concave regions.
-            # These will be the start and end points of the cut lines
-            node_edge_map, edge_note_map = map_nodes_to_edges(
-                node_points, line_segments
-            )
-            # TODO: limit distance to prevent ending up outside of concave region
-            concave_region_point_node_map = find_nodes_closest_to_concave_regions(
-                concave_region_points, end_points, node_points
-            )
+            # # Find the nodes that lie closest to concave regions.
+            # # These will be the start and end points of the cut lines
+            # node_edge_map, edge_note_map = map_nodes_to_edges(
+            #     node_points, line_segments
+            # )
+            # # TODO: limit distance to prevent ending up outside of concave region
+            # concave_region_point_node_map = find_nodes_closest_to_concave_regions(
+            #     concave_region_points, end_points, node_points
+            # )
 
-            # Build a graph, where end and branch points are nodes
-            # and line segments are the edges that connect nodes
-            graph = build_graph(line_segments, node_edge_map, edge_note_map)
-            target_nodes = concave_region_point_node_map.values()
+            # # Build a graph, where end and branch points are nodes
+            # # and line segments are the edges that connect nodes
+            # graph = build_graph(line_segments, node_edge_map, edge_note_map)
+            # target_nodes = concave_region_point_node_map.values()
 
-            # Build all lines that connect nodes in the graph
-            lines = build_lines_from_segments(
-                line_segments, node_points, graph, target_nodes, node_edge_map
-            )
-            if len(lines) == 0:
-                logger.debug(
-                    'no cut - no watershed lines found between concave regions'
-                )
-                continue
+            # # Build all lines that connect nodes in the graph
+            # lines = build_lines_from_segments(
+            #     line_segments, node_points, graph, target_nodes, node_edge_map
+            # )
+            # if len(lines) == 0:
+            #     logger.debug(
+            #         'no cut - no watershed lines found between concave regions'
+            #     )
+            #     continue
 
-            features = list()
-            for (start, end), line in lines.iteritems():
-                test_cut_mask = mask.copy()
-                test_cut_mask[line] = False
-                test_cut_mask = mh.morph.open(test_cut_mask)
-                subobjects, n_subobjects = mh.label(test_cut_mask)
-                sizes = mh.labeled.labeled_size(subobjects)
-                smaller_id = np.where(sizes == np.min(sizes))[0][0]
-                smaller_object = subobjects == smaller_id
-                area, form_factor, solidity = calc_area_shape_features(smaller_object)
-                intensity = img[line]
-                # Calculate the length of the line and its straightness.
-                start_coord = np.array(np.where(node_points == start)).T[0, :]
-                end_coord = np.array(np.where(node_points == end)).T[0, :]
-                # Straightness is defined as the length of the line relative
-                # to the length of a perfectly straight line
-                # (Eucledian distance between the two points).
-                totally_straight = np.linalg.norm(start_coord - end_coord)
-                length = np.count_nonzero(line)
-                straightness = totally_straight / length
-                # Compute distance map of (morphologically opened) mask image
-                # and calculate intensity along line.
-                dist = mh.distance(mh.morph.open(mask)).astype(int)
-                lut = np.linspace(0, 1, np.max(dist)+1)
-                dist_intensity = lut[dist][line]
-                f = {
-                    'n_objects': n_subobjects,
-                    'cut_object_solidity': solidity,
-                    'cut_object_form_factor': form_factor,
-                    'cut_object_area': area,
-                    'min_stain_intensity': np.min(intensity),
-                    'mean_stain_intensity': np.mean(intensity),
-                    'median_stain_intensity': np.median(intensity),
-                    'max_stain_intensity': np.max(intensity),
-                    'length': length,
-                    'straightness': straightness,
-                    'min_dist_intensity': np.min(dist_intensity),
-                    'mean_dist_intensity': np.mean(dist_intensity),
-                    'median_dist_intensity': np.median(dist_intensity),
-                    'max_dist_intensity': np.max(dist_intensity),
-                }
-                features.append(f)
-            features = pd.DataFrame(features)
-            features.index = pd.MultiIndex.from_tuples(
-                lines.keys(), names=['start', 'end']
-            )
+            # features = list()
+            dist_abs = mh.distance(mh.morph.open(mask)).astype(int)
+            # Rescale distances to make them independent of object size
+            lut = np.linspace(0, 1, np.max(dist_abs)+1)
+            dist = lut[dist_abs]
+            # Select the two biggest peaks: We want to have only two objects.
+            peaks = mh.label(dist > max_cut_intensity)[0]
+            sizes = mh.labeled.labeled_size(peaks)
+            index = np.argsort(sizes)[::-1][1:3]
+            for label in np.unique(peaks):
+                if label not in index:
+                    peaks[peaks == label] = 0
+            peaks = mh.labeled.relabel(peaks)[0]
+            ws_regions = mh.cwatershed(np.invert(dist_abs), peaks)
+            ws_regions[~mask] = 0
+            lines = mh.labeled.borders(ws_regions)
+            outer_lines = mh.labeled.borders(mask)
+            lines[outer_lines] = 0
+            # lines = mh.thin(lines)
 
-            # TODO: Additional intensity criteria to prevent "stupid" cuts
-            # e.g. only select line when intensity is below a certain global
-            # intensity threshold.
-            potential_line_index = (
-                (features.n_objects == 2) &
-                (features.cut_object_solidity > max_solidity) &
-                (features.cut_object_form_factor > max_form_factor) &
-                (features.cut_object_area > min_cut_area) &
-                (features.max_dist_intensity < max_cut_intensity)
-            )
-            if not any(potential_line_index):
-                logger.debug('no cut - no line passed tests')
-                continue
+            # for (start, end), line in lines.iteritems():
+            #     test_cut_mask = mask.copy()
+            #     test_cut_mask[line] = False
+            #     test_cut_mask = mh.morph.open(test_cut_mask)
+            #     subobjects, n_subobjects = mh.label(test_cut_mask)
+            #     sizes = mh.labeled.labeled_size(subobjects)
+            #     smaller_id = np.where(sizes == np.min(sizes))[0][0]
+            #     smaller_object = subobjects == smaller_id
+            #     area, form_factor, solidity = calc_area_shape_features(smaller_object)
+            #     intensity = img[line]
+            #     # Calculate the length of the line and its straightness.
+            #     start_coord = np.array(np.where(node_points == start)).T[0, :]
+            #     end_coord = np.array(np.where(node_points == end)).T[0, :]
+            #     # Straightness is defined as the length of the line relative
+            #     # to the length of a perfectly straight line
+            #     # (Eucledian distance between the two points).
+            #     totally_straight = np.linalg.norm(start_coord - end_coord)
+            #     length = np.count_nonzero(line)
+            #     straightness = totally_straight / length
+            #     # Compute distance map of (morphologically opened) mask image
+            #     # and calculate intensity along line.
+            #     dist_intensity = dist[line]
+            #     f = {
+            #         'n_objects': n_subobjects,
+            #         'cut_object_solidity': solidity,
+            #         'cut_object_form_factor': form_factor,
+            #         'cut_object_area': area,
+            #         'min_stain_intensity': np.min(intensity),
+            #         'mean_stain_intensity': np.mean(intensity),
+            #         'median_stain_intensity': np.median(intensity),
+            #         'max_stain_intensity': np.max(intensity),
+            #         'length': length,
+            #         'straightness': straightness,
+            #         'min_dist_intensity': np.min(dist_intensity),
+            #         'mean_dist_intensity': np.mean(dist_intensity),
+            #         'median_dist_intensity': np.median(dist_intensity),
+            #         'max_dist_intensity': np.max(dist_intensity),
+            #     }
+            #     features.append(f)
+            # features = pd.DataFrame(features)
+            # features.index = pd.MultiIndex.from_tuples(
+            #     lines.keys(), names=['start', 'end']
+            # )
 
-            # potential_lines = [
-            #     lines[idx]
-            #     for idx in features.ix[potential_line_index].index.values
+            # # TODO: Additional intensity criteria to prevent "stupid" cuts
+            # # e.g. only select line when intensity is below a certain global
+            # # intensity threshold.
+            # potential_line_index = (
+            #     (features.n_objects == 2) &
+            #     (features.cut_object_solidity > max_solidity) &
+            #     (features.cut_object_form_factor > max_form_factor) &
+            #     (features.cut_object_area > min_cut_area) &
+            #     (features.max_dist_intensity < max_cut_intensity)
+            # )
+            # if not any(potential_line_index):
+            #     logger.debug('no cut - no line passed tests')
+            #     continue
+
+            # # potential_lines = [
+            # #     lines[idx]
+            # #     for idx in features.ix[potential_line_index].index.values
+            # # ]
+            # # plt.imshow((np.sum(potential_lines, axis=0) > 0) + mask * 2);
+            # # plt.show()
+
+            # # Select the "optimal" line based on its intensity profile, length
+            # # and straightness
+            # selected_features = features.loc[
+            #     potential_line_index,
+            #     ['mean_stain_intensity', 'mean_dist_intensity',
+            #         'length', 'straightness',
+            #         'cut_object_solidity', 'cut_object_form_factor']
             # ]
-            # plt.imshow((np.sum(potential_lines, axis=0) > 0) + mask * 2);
-            # plt.show()
+            # # TODO: optimize feature selection and weights
+            # # The line should be short and straight, intensity along the line should
+            # # be low and the cut object should be round.
+            # weights = np.array([2, 4, 2, -2, -1, -1])
+            # costs = selected_features.dot(weights)
+            # idx = costs[costs == np.min(costs)].index.values[0]
 
-            # Select the "optimal" line based on its intensity profile, length
-            # and straightness
-            selected_features = features.loc[
-                potential_line_index,
-                ['mean_stain_intensity', 'mean_dist_intensity',
-                    'length', 'straightness',
-                    'cut_object_solidity', 'cut_object_form_factor']
-            ]
-            # TODO: optimize feature selection and weights
-            # The line should be short and straight, intensity along the line should
-            # be low and the cut object should be round.
-            weights = np.array([2, 4, 2, -2, -1, -1])
-            costs = selected_features.dot(weights)
-            idx = costs[costs == np.min(costs)].index.values[0]
-
-            # plt.imshow(mask + lines[idx]*2)
-            # plt.show()
+            # # plt.imshow(mask + lines[idx]*2)
+            # # plt.show()
 
             # Update cut mask
-            y, x = np.where(mh.morph.dilate(lines[idx]))
+            # y, x = np.where(mh.morph.dilate(lines[idx]))
+            y, x = np.where(mh.morph.dilate(lines))
             y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
             y += y_offset
             x += x_offset
