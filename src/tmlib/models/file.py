@@ -532,10 +532,6 @@ class PyramidTileFile(File):
 
     Attributes
     ----------
-    name: str
-        name of the file
-    group: int
-        zero-based tile group index
     level: int
         zero-based zoom level index
     row: int
@@ -546,6 +542,8 @@ class PyramidTileFile(File):
         ID of the parent channel pyramid
     channel_pyramid: tmlib.models.ChannelLayer
         parent channel pyramid to which the tile belongs
+    pixels: str
+        binary image data encoded as JPEG
     '''
 
     #: str: name of the corresponding database table
@@ -560,8 +558,6 @@ class PyramidTileFile(File):
     __distribute_by_hash__ = 'id'
 
     # Table columns
-    name = Column(String, index=True)
-    group = Column(Integer, index=True)
     level = Column(Integer, index=True)
     row = Column(Integer, index=True)
     column = Column(Integer, index=True)
@@ -578,14 +574,10 @@ class PyramidTileFile(File):
         backref=backref('pyramid_tile_files', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, group, level, row, column, channel_layer_id):
+    def __init__(self, level, row, column, channel_layer_id):
         '''
         Parameters
         ----------
-        name: str
-            name of the file
-        group: int
-            zero-based tile group index
         level: int
             zero-based zoom level index
         row: int
@@ -595,9 +587,6 @@ class PyramidTileFile(File):
         channel_layer_id: int
             ID of the parent channel pyramid
         '''
-        # TODO: set name based on format string
-        self.name = name
-        self.group = group
         self.row = row
         self.column = column
         self.level = level
@@ -612,9 +601,6 @@ class PyramidTileFile(File):
         tmlib.image.PyramidTile
             tile stored in the file
         '''
-        logger.debug('get data from pyramid tile file: %s', self.name)
-        # with ImageReader(self.location) as f:
-        #     pixels = f.read(dtype=np.uint8)
         metadata = PyramidTileMetadata(
             level=self.level,
             row=self.row,
@@ -633,26 +619,11 @@ class PyramidTileFile(File):
             pixels data that should be stored in the file
 
         '''
-        logger.debug('put data to pyramid tile file: %s', self.name)
         self.pixels = tile.jpeg_encode()
-        with ImageWriter('/tmp/%s' % self.name) as f:
-            f.write(tile.array)
-        # with ImageWriter(self.location) as f:
-        #     f.write(tile.array)
 
     @property
     def location(self):
-        '''str: location of the file'''
-        if getattr(self, '_location', None) is None:
-            self._location = os.path.join(
-                self.channel_layer.location,
-                'TileGroup%d' % self.group, self.name
-            )
-        return self._location
-
-    @location.setter
-    def location(self, value):
-        self._location = value
+        raise NotImplementedError()
 
     def __repr__(self):
         return '<%s(id=%r, row=%r, column=%r, level=%r)>' % (
