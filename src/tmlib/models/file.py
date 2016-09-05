@@ -2,6 +2,7 @@ import os
 import logging
 import numpy as np
 from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey
+from sqlalchemy.dialects.postgresql import BYTEA
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
@@ -564,6 +565,7 @@ class PyramidTileFile(File):
     level = Column(Integer, index=True)
     row = Column(Integer, index=True)
     column = Column(Integer, index=True)
+    pixels = Column(BYTEA)
     channel_layer_id = Column(
         Integer,
         ForeignKey('channel_layers.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -611,15 +613,15 @@ class PyramidTileFile(File):
             tile stored in the file
         '''
         logger.debug('get data from pyramid tile file: %s', self.name)
-        with ImageReader(self.location) as f:
-            pixels = f.read(dtype=np.uint8)
+        # with ImageReader(self.location) as f:
+        #     pixels = f.read(dtype=np.uint8)
         metadata = PyramidTileMetadata(
             level=self.level,
             row=self.row,
             column=self.column,
             channel_layer_id=self.channel_layer.id
         )
-        return PyramidTile(pixels, metadata)
+        return PyramidTile.create_from_binary(self.pixels, metadata)
 
     @assert_type(tile='tmlib.image.PyramidTile')
     def put(self, tile):
@@ -632,8 +634,11 @@ class PyramidTileFile(File):
 
         '''
         logger.debug('put data to pyramid tile file: %s', self.name)
-        with ImageWriter(self.location) as f:
+        self.pixels = tile.jpeg_encode()
+        with ImageWriter('/tmp/%s' % self.name) as f:
             f.write(tile.array)
+        # with ImageWriter(self.location) as f:
+        #     f.write(tile.array)
 
     @property
     def location(self):

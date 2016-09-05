@@ -454,27 +454,25 @@ class Image(object):
             new_object.metadata.is_aligned = True
             return new_object
 
-    def encode(self, file_type='png'):
-        '''Encodes the image for a given `file_type`.
-
-        Parameters
-        ----------
-        file_type: str
-            encoding (options: ``{"png", "jpeg"}``, default: ``"png"``)
+    def png_encode(self):
+        '''Encodes the image as a PNG file.
 
         Returns
         -------
         numpy.ndarray[numpy.uint8]
             encoded image
         '''
-        supported_types = {'png', 'jpeg'}
-        if file_type not in supported_types:
-            raise ValueError(
-                'Supported file types are "%s"' % '", "'.join(supported_types)
-            )
+        return cv2.imencode('.png', self.array)[1]
 
-        return cv2.imencode('.%s' % file_type, self.array)[1]
+    def tiff_encode(self):
+        '''Encodes the image as a TIFF file.
 
+        Returns
+        -------
+        numpy.ndarray[numpy.uint8]
+            encoded image
+        '''
+        return cv2.imencode('.tif', self.array)[1]
 
 class ChannelImage(Image):
 
@@ -724,21 +722,41 @@ class PyramidTile(Image):
             )
 
     @classmethod
-    def create_as_background(cls, metadata=None, add_noise=False, mu=None, sigma=None):
-        '''Create an image with background voxels. By default background will
+    def create_from_binary(cls, string, metadata=None):
+        '''Creates an image from a binary string.
+
+        Parameters
+        ----------
+        string: str
+            binary string
+        metadata: tmlib.metadata.ImageMetadata, optional
+            image metadata (default: ``None``)
+
+        Returns
+        -------
+        tmlib.image.PyramidTile
+        '''
+        array = np.fromstring(string, np.uint8)
+        array = cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
+        return cls(array, metadata)
+
+    @classmethod
+    def create_as_background(cls, add_noise=False, mu=None, sigma=None,
+            metadata=None):
+        '''Creates an image with background voxels. By default background will
         be zero values. Optionally, Gaussian noise can be added to simulate
         camera background.
 
         Parameters
         ----------
-        metadata: tmlib.metadata.ImageMetadata, optional
-            image metadata (default: ``None``)
         add_noise: bool, optional
             add Gaussian noise (default: ``False``)
         noise_mu: int, optional
             mean of background noise (default: ``None``)
         noise_sigma: int, optional
             variance of background noise (default: ``None``)
+        metadata: tmlib.metadata.ImageMetadata, optional
+            image metadata (default: ``None``)
 
         Returns
         -------
@@ -778,6 +796,7 @@ class PyramidTile(Image):
         return cv2.imencode(
             '.jpeg', self.array, [cv2.IMWRITE_JPEG_QUALITY, quality]
         )[1]
+
 
 class BrightfieldImage(Image):
 
