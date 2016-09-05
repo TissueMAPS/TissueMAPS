@@ -76,17 +76,15 @@ def get_image_tile(experiment_id, channel_layer_id):
             one_or_none()
 
         if tile_file is None:
-            # raise ResourceNotFoundError(
-            #     'Tile not found: column=%d, row=%d, level=%d' % (x, y, z)
-            # )
-            logger.warn('file does not exist - send empty tile')
-            f = StringIO()
+            logger.warn('tile does not exist - create empty')
             tile = PyramidTile.create_as_background()
-            f.write(tile.jpeg_encode())
-            f.seek(0)
-            return send_file(f, mimetype='image/jpeg')
+            pixels = tile.jpeg_encode()
         else:
-            return send_file(tile_file.location)
+            pixels = tile_file.pixels
+        f = StringIO()
+        f.write(pixels)
+        f.seek(0)
+        return send_file(f, mimetype='image/jpeg')
 
 
 @api.route('/experiments/<experiment_id>/cycles/id', methods=['GET'])
