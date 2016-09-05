@@ -35,6 +35,29 @@ class Jterator(CommandLineInterface):
         logger.info('create project: %s' % self.api_instance.step_location)
         self.api_instance.project.create(repo_dir, skel_dir)
 
+    @climethod(
+        help='runs an invidiual jobs on the local machine',
+        job_id=Argument(
+            type=int, help='ID of the job that should be run', flag='j'
+        ),
+        debug=Argument(
+            type=bool, help='perform a debug run (only supported for 2D images)',
+            flag='d', default=False
+        )
+    )
+    def run(self, job_id, debug):
+        self._print_logo()
+        api = self.api_instance
+        if debug:
+            logger.warn('debug mode')
+            batch = {'debug': True, 'plot': False}
+        else:
+            logger.info('read job description from batch file')
+            batch_file = api.build_batch_filename_for_run_job(job_id)
+            batch = api.read_batch_file(batch_file)
+            logger.info('run job #%d' % batch['id'])
+        api.run_job(batch)
+
     @climethod(help='removes an existing project')
     def remove(self):
         self._print_logo()

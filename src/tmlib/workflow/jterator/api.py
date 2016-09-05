@@ -17,6 +17,7 @@ import tmlib.models as tm
 from tmlib.utils import autocreate_directory_property
 from tmlib.utils import flatten
 from tmlib.readers import TextReader
+from tmlib.readers import ImageReader
 from tmlib.writers import TextWriter
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.errors import PipelineDescriptionError
@@ -271,10 +272,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         ]
                     },
                     'site_id': site.id,
-                    'plot': args.plot
+                    'plot': args.plot,
+                    'debug': False
                 })
         job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
-            # TODO: objects
+        # TODO: objects
         return job_descriptions
 
     def delete_previous_job_output(self):
@@ -341,8 +343,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         )
         checker.check_all()
         self._configure_loggers()
-        self.start_engines(batch['plot'])
-        job_id = batch['id']
+        self.start_engines(batch.get('plot', False))
+        job_id = batch.get('id', None)
 
         # Use an in-memory store for pipeline data and only add outputs
         # to the database once the whole pipeline has completed successfully.
@@ -358,88 +360,101 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # images will be automatically aligned, assuming that this is the
         # desired behavior.
         channel_input = self.project.pipe['description']['input']['channels']
-        channel_names = [ch['name'] for ch in channel_input]
         mapobject_type_info = self.project.pipe['description']['input'].get(
             'mapobject_types', list()
         )
         mapobject_type_names = [mt['name'] for mt in mapobject_type_info]
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            for channel_name in channel_names:
-                logger.info('load images for channel "%s"', channel_name)
-                index = channel_names.index(channel_name)
-                site = session.query(tm.Site).get(batch['site_id'])
-                image_files = session.query(tm.ChannelImageFile).\
-                    join(tm.Channel).\
-                    filter(
-                        tm.Channel.name == channel_name,
-                        tm.ChannelImageFile.site_id == site.id
-                    ).\
-                    all()
-                if channel_input[index]['correct']:
-                    logger.info('load illumination statistics')
-                    try:
-                        stats_file = session.query(tm.IllumstatsFile).\
-                            join(tm.Channel).\
-                            join(tm.Cycle).\
-                            filter(tm.Channel.name == channel_name).\
-                            filter(tm.Cycle.plate_id == site.well.plate_id).\
-                            one()
-                    except NoResultFound:
-                        raise PipelineDescriptionError(
-                            'No illumination statistics file found for '
-                            'channel "%s"' % channel_name
-                        )
-                    stats = stats_file.get()
-
+            for item in channel_input:
+                # NOTE: When "path" key is present, the image is loaded from
+                # a file on disk. It is assumed that the image is already
+                # corrected and/or aligned in case this is desired.
                 images = collections.defaultdict(list)
-                for f in image_files:
-                    logger.info('load image "%s"', f.name)
-                    img = f.get()
-                    if channel_input[index]['correct']:
-                        logger.info('correct image "%s"', f.name)
-                        img = img.correct(stats)
-                    logger.debug('align image "%s"', f.name)
-                    img = img.align()  # shifted and cropped!
-                    images[f.tpoint].append(img.array)
+                path = item.get('path', None)
+                if path is None and batch['debug']:
+                    if item['correct']:
+                        logger.info('load illumination statistics')
+                        try:
+                            stats_file = session.query(tm.IllumstatsFile).\
+                                join(tm.Channel).\
+                                join(tm.Cycle).\
+                                filter(tm.Channel.name == channel_name).\
+                                filter(tm.Cycle.plate_id == site.well.plate_id).\
+                                one()
+                        except NoResultFound:
+                            raise PipelineDescriptionError(
+                                'No illumination statistics file found for '
+                                'channel "%s"' % channel_name
+                            )
+                        stats = stats_file.get()
 
-                store['pipe'][channel_name] = np.stack(images.values(), axis=-1)
+                    site = session.query(tm.Site).get(batch['site_id'])
+                    logger.info('load images for channel "%s"', item['name'])
+                    image_files = session.query(tm.ChannelImageFile).\
+                        join(tm.Channel).\
+                        filter(
+                            tm.Channel.name == channel_name,
+                            tm.ChannelImageFile.site_id == site.id
+                        ).\
+                        all()
+
+                    for f in image_files:
+                        logger.info('load image "%s"', f.name)
+                        img = f.get()
+                        if item['correct']:
+                            logger.info('correct image "%s"', f.name)
+                            img = img.correct(stats)
+                        logger.debug('align image "%s"', f.name)
+                        img = img.align()  # shifted and cropped!
+                        images[f.tpoint].append(img.array)
+
+                else:
+                    logger.info(
+                        'load images for channel "%s" from file',
+                        item['name']
+                    )
+                    with ImageReader(path) as f:
+                        array = f.read()
+                    images = {0: array}
+                store['pipe'][item['name']] = np.stack(images.values(), axis=-1)
 
             # Load outlins of mapobjects of the specified types and reconstruct
             # the label images required by modules.
-            for mapobject_type_name in mapobject_type_names:
-                segmentations = session.query(
-                        tm.MapobjectSegmentation.tpoint,
-                        tm.MapobjectSegmentation.zplane,
-                        tm.MapobjectSegmentation.label,
-                        tm.MapobjectSegmentation.geom_poly
-                    ).\
-                    join(tm.Mapobject).\
-                    join(tm.MapobjectType).\
-                    filter(
-                        tm.MapobjectType.name == mapobject_type_name,
-                        tm.MapobjectSegmentation.site_id == batch['site_id']
-                    ).\
-                    all()
-                dims = store['pipe'].values()[0].shape
-                # Add the labeled image to the pipeline and create a handle
-                # object to later add measurements for the objects.
-                handle = SegmentedObjects(
-                    name=mapobject_type_name, key=mapobject_type_name
-                )
-                polygons = {
-                    (s.tpoint, s.zplane, s.label): s.geom_poly
-                    for s in segmentations
-                }
-                # The polygon coordinates are global, i.e. relative to the
-                # map overview. Therefore we have to provide the offsets
-                # for each axis.
-                site = session.query(tm.Site).get(batch['site_id'])
-                y_offset, x_offset = site.offset
-                y_offset += site.intersection.lower_overhang
-                x_offset += site.intersection.right_overhang
-                handle.from_polygons(polygons, y_offset, x_offset, dims)
-                store['pipe'][handle.key] = handle.value
-                store['segmented_objects'][handle.key] = handle
+            if not batch['debug']:
+                for mapobject_type_name in mapobject_type_names:
+                    segmentations = session.query(
+                            tm.MapobjectSegmentation.tpoint,
+                            tm.MapobjectSegmentation.zplane,
+                            tm.MapobjectSegmentation.label,
+                            tm.MapobjectSegmentation.geom_poly
+                        ).\
+                        join(tm.Mapobject).\
+                        join(tm.MapobjectType).\
+                        filter(
+                            tm.MapobjectType.name == mapobject_type_name,
+                            tm.MapobjectSegmentation.site_id == batch['site_id']
+                        ).\
+                        all()
+                    dims = store['pipe'].values()[0].shape
+                    # Add the labeled image to the pipeline and create a handle
+                    # object to later add measurements for the objects.
+                    handle = SegmentedObjects(
+                        name=mapobject_type_name, key=mapobject_type_name
+                    )
+                    polygons = {
+                        (s.tpoint, s.zplane, s.label): s.geom_poly
+                        for s in segmentations
+                    }
+                    # The polygon coordinates are global, i.e. relative to the
+                    # map overview. Therefore we have to provide the offsets
+                    # for each axis.
+                    site = session.query(tm.Site).get(batch['site_id'])
+                    y_offset, x_offset = site.offset
+                    y_offset += site.intersection.lower_overhang
+                    x_offset += site.intersection.right_overhang
+                    handle.from_polygons(polygons, y_offset, x_offset, dims)
+                    store['pipe'][handle.key] = handle.value
+                    store['segmented_objects'][handle.key] = handle
 
         # Remove single-dimensions from image arrays.
         # NOTE: It would be more consistent to preserve shape, but most people
@@ -472,6 +487,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         # Write output
         # ------------
+        if batch['debug']:
+            logger.info('debug mode: no output written')
+            sys.exit(0)
 
         logger.info('write database entries for identified objects')
         with tm.utils.ExperimentSession(self.experiment_id) as session:

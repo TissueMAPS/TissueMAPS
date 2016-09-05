@@ -73,7 +73,7 @@ class PipelineChecker(object):
             # Check for presence of required keys
             REQUIRED_HANDLE_ITEM_KEYS = set()
             possible_subkeys = REQUIRED_HANDLE_ITEM_KEYS.union(
-                {'correct', 'align', 'name'}
+                {'correct', 'align', 'name', 'path'}
             )
             inputs = self.pipe_description['input'][key]
             for inpt in inputs:
