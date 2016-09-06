@@ -233,7 +233,7 @@ def get_channel_image(experiment_id, channel_name):
             img = img.correct(stats)
     img = img.align()
     f = StringIO()
-    f.write(img.encode('png'))
+    f.write(img.png_encode())
     f.seek(0)
     filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
         experiment_name, well_name, x, y, zplane, tpoint, channel_name
