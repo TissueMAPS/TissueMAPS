@@ -1,7 +1,9 @@
-import skimage.measure
+import logging
 import numpy as np
 import mahotas as mh
 from jtlib import utils
+
+logger = logging.getLogger(__name__)
 
 VERSION = '0.0.2'
 
