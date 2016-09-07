@@ -55,7 +55,7 @@ output:
 
     - name: smoothed_image
       type: IntensityImage
-      key: smooth_image.smoothed_image
+      key: smooth.smoothed_image
       help: Smoothed image.
 
     - name: figure
