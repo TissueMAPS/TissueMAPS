@@ -10,7 +10,7 @@ import skimage.morphology
 import logging
 import jtlib.utils
 
-VERSION = '0.0.3'
+VERSION = '0.0.4'
 
 logger = logging.getLogger(__name__)
 PAD = 1
@@ -211,9 +211,9 @@ def create_area_shape_feature_images(label_image):
     return tuple(images)
 
 
-def main(input_mask, input_image, min_area, max_area,
-        min_cut_area, cut_sensitivity, max_form_factor, max_solidity,
-        cutting_passes, plot=False):
+def main(input_mask, min_area, max_area,
+        min_cut_area, max_form_factor, max_solidity, cutting_passes,
+        plot=False):
     '''Detects clumps in `input_mask` and cuts them along watershed lines
     connecting two points falling into concave regions on their contour.
 
@@ -221,8 +221,6 @@ def main(input_mask, input_image, min_area, max_area,
     ----------
     input_mask: numpy.ndarray[numpy.bool]
         image with potential clumps
-    input_image: numpy.ndarray[numpy.unit16 or numpy.uint8]
-        image used for detection of watershed lines
     min_area: int
         minimal area an object must have to be considered a clump
     max_area: int
@@ -230,9 +228,6 @@ def main(input_mask, input_image, min_area, max_area,
     min_cut_area: int
         minimal area a cut object can have
         (useful to limit size of cut objects)
-    cut_sensitivity: int
-        positive number that determines how likely it is that a clump is cut;
-        value > 1 increases the change of a cut, while value < 1 decreases it
     max_solidity: float
         maximal solidity an object must have to be considerd a clump
     max_form_factor: float
@@ -268,9 +263,6 @@ def main(input_mask, input_image, min_area, max_area,
                 label_image, bboxes[oid], pad=PAD
             )
             mask = mask == oid
-            img = jtlib.utils.extract_bbox_image(
-                input_image, bboxes[oid], pad=PAD
-            )
 
             area, form_factor, solidity = calc_area_shape_features(mask)
             if area < min_area or area > max_area:
@@ -289,23 +281,47 @@ def main(input_mask, input_image, min_area, max_area,
             x += x_offset
             clumps_mask[y, x] = True
 
-            dist_abs = mh.distance(mh.morph.open(mask)).astype(int)
-            # Rescale distances to make them independent of object size
-            lut = np.linspace(0, 1, np.max(dist_abs)+1)
-            dist = lut[dist_abs] * 255
+            # Rescale distance intensities to make them independent of clump size
+            dist = mh.stretch(mh.distance(mask))
             # Find peaks that can be used as seeds for the watershed transform
-            thresh = mh.otsu((dist).astype(np.uint8)) * cut_sensitivity
-            peaks = mh.label(dist > thresh)[0]
+            thresh = mh.otsu(dist)
+            peaks = dist > thresh
+            n = mh.label(peaks)[1]
+            if n == 1:
+                logger.debug(
+                    'only one peak detected - perform iterative erosion'
+                )
+                # Iteratively shrink the peaks until we have two peaks that we
+                # can use to separate the clump.
+                while True:
+                    tmp = mh.morph.erode(peaks)
+                    n = mh.label(tmp)[1]
+                    if n == 2 or n == 0:
+                        if n == 2:
+                            peaks = tmp
+                        break
+                    peaks = tmp
             # Select the two biggest peaks, since want to have only two objects.
+            peaks = mh.label(peaks)[0]
             sizes = mh.labeled.labeled_size(peaks)
             index = np.argsort(sizes)[::-1][1:3]
             for label in np.unique(peaks):
                 if label not in index:
                     peaks[peaks == label] = 0
             peaks = mh.labeled.relabel(peaks)[0]
-            ws_regions = mh.cwatershed(np.invert(dist_abs), peaks)
+            ws_regions = mh.cwatershed(np.invert(dist), peaks)
             ws_regions[~mask] = 0
-            # Use the line between the regions to make the cut
+
+            # from matplotlib import pyplot as plt
+            # plt.subplot(1, 3, 1)
+            # plt.imshow(dist)
+            # plt.subplot(1, 3, 2)
+            # plt.imshow(peaks)
+            # plt.subplot(1, 3, 3)
+            # plt.imshow(ws_regions)
+            # plt.show()
+
+            # Use the line separating the watershed regions to make the cut
             line = mh.labeled.borders(ws_regions)
             outer_lines = mh.labeled.borders(mask)
             line[outer_lines] = 0
@@ -320,18 +336,16 @@ def main(input_mask, input_image, min_area, max_area,
             smaller_object = subobjects == smaller_id
             area, form_factor, solidity = calc_area_shape_features(smaller_object)
 
-            # TODO: We may want to be a bit more tolerant here,
-            # because the shape could be screwed up after cutting.
+            # TODO: We may want to prevent cuts that go through areas with
+            # high distance intensity values
             if area < min_cut_area:
-            # if (solidity < max_solidity or
-            #     form_factor < max_form_factor or
-            #     area < min_cut_area):
                 logger.warn(
-                    'no cut for object %d - line didn\'t pass tests', oid
+                    'object %d not cut - resulting object too small', oid
                 )
                 continue
 
             # Update cut mask
+            logger.info('cut object %d', oid)
             y, x = np.where(mh.morph.dilate(line))
             y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
             y += y_offset

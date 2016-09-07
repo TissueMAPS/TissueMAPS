@@ -13,7 +13,7 @@ input:
 
   - name: cutting_passes
     type: Numeric
-    value: 2
+    value: 3
     help: Number of cutting rounds that should be applied.
 
   - name: min_cut_area
@@ -22,13 +22,6 @@ input:
     help: >
       Minimal area of a cut fragment, cuts that would
       result in a smaller fragment will not be performed.
-
-  - name: cut_sensitivity
-    type: Numeric
-    value: 2
-    help: >
-      Positive number that determines how likely it is that a clump is cut -
-      value > 1 increases the change of a cut, while value < 1 decreases it.
 
   - name: max_solidity
     type: Numeric
@@ -65,7 +58,7 @@ output:
 
   - name: output_mask
     type: BinaryImage
-    key: separate_objects.output_mask
+    key: separate_clumps.output_mask
     help: Binary output image.
 
   - name: figure
