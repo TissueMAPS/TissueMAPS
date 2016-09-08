@@ -34,7 +34,7 @@ input:
 
   - name: max_form_factor
     type: Numeric
-    value: 0.60
+    value: 0.70
     help: >
       Maximal form factor of a connected pixel component
       to be considered a clump.
@@ -55,6 +55,13 @@ input:
     type: Plot
     value: false
     help: Should a figure be created?
+
+  - name: selection_test_mode
+    type: Boolean
+    value: false
+    help: >
+      Should an alternative figure be created, which shows values for each
+      of the selection criteria (area, solidity, form factor)?
 
 output:
 

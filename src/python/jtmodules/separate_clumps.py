@@ -8,7 +8,7 @@ import skimage.morphology
 import logging
 import jtlib.utils
 
-VERSION = '0.0.4'
+VERSION = '0.0.5'
 
 logger = logging.getLogger(__name__)
 PAD = 1
@@ -24,9 +24,6 @@ def find_concave_regions(mask, max_dist):
     max_dist: int
         maximally tolerated distance between concave point on object contour
         and the convex hull
-    Note
-    ----
-    Fast implementation in C++ using `OpenCV library <http://opencv.org/>`_.
     '''
     contour_img = np.zeros(mask.shape, dtype=np.uint8)
     contour_img[mask] = 255
@@ -69,12 +66,7 @@ def find_watershed_lines(mask, img, ksize):
     numpy.ndarray[numpy.bool]
         image with lines that separate neighbouring watershed regions
 
-    Note
-    ----
-    Fast implementation in C++ using
-    `mahotas library <http://mahotas.readthedocs.io/en/latest/>`_.
     '''
-
     if ksize < 2:
         ksize = 2
     se = skimage.morphology.square(ksize)
@@ -132,7 +124,7 @@ def find_nodes_closest_to_concave_regions(concave_region_points, end_points, nod
     return concave_region_point_node_map
 
 
-def calc_area_shape_features(mask):
+def calc_features(mask):
     '''Calcuates `area` and shape features `form factor` and `solidity`
     for the given object.
 
@@ -160,27 +152,7 @@ def calc_area_shape_features(mask):
     return np.array([area, form_factor, solidity])
 
 
-# def calc_complex_shape_features(mask):
-#     '''Calculates Zernike moments that describe the shape of the object
-#     in mask.
-
-#     Parameters
-#     ----------
-#     mask: numpy.ndarray[numpy.bool]
-#         bounding box image containing the object where ``True`` is foreground
-#         and ``False`` background
-
-#     Returns
-#     -------
-#     numpy.ndarray[numpy.float64]
-#         shape features
-#     '''
-#     radius = 100
-#     mask_rs = mh.imresize(mask, (radius, radius))
-#     return mh.features.zernike_moments(mask, degree= 12, radius=radius/2)
-
-
-def create_area_shape_feature_images(label_image):
+def create_feature_images(label_image):
     '''Creates label images, where each object is color coded according to
     area/shape features.
 
@@ -202,7 +174,7 @@ def create_area_shape_feature_images(label_image):
     for i in object_ids:
         mask = jtlib.utils.extract_bbox_image(label_image, bboxes[i], pad=PAD)
         mask = mask == i
-        shape_features = calc_area_shape_features(mask)
+        shape_features = calc_features(mask)
         for j, f in enumerate(shape_features):
             images[j][label_image == i] = f
     return tuple(images)
@@ -210,7 +182,7 @@ def create_area_shape_feature_images(label_image):
 
 def main(input_mask, input_image, min_area, max_area,
         min_cut_area, max_form_factor, max_solidity, cutting_passes,
-        plot=False):
+        plot=False, selection_test_mode=False):
     '''Detects clumps in `input_mask` given criteria provided by the user
     and cuts them along the borders of watershed regions, which are determined
     based on the distance transform of `input_mask`.
@@ -238,6 +210,12 @@ def main(input_mask, input_image, min_area, max_area,
         two subobjects
     plot: bool, optional
         whether a plot should be generated
+    selection_test_mode: bool, optional
+        whether, instead the normal plot, heatmaps should be generated that
+        display values of the selection criteria *area*, *form factor* and
+        *solidity* for each individual object in `input_mask` as well as
+        the final selection of "clumps" based on the selection
+        criteria provided by the user
 
     Returns
     -------
@@ -265,7 +243,7 @@ def main(input_mask, input_image, min_area, max_area,
             )
             mask = mask == oid
 
-            area, form_factor, solidity = calc_area_shape_features(mask)
+            area, form_factor, solidity = calc_features(mask)
             if area < min_area or area > max_area:
                 logger.debug('not a clump - outside area range')
                 continue
@@ -326,7 +304,7 @@ def main(input_mask, input_image, min_area, max_area,
             sizes = mh.labeled.labeled_size(subobjects)
             smaller_id = np.where(sizes == np.min(sizes))[0][0]
             smaller_object = subobjects == smaller_id
-            area, form_factor, solidity = calc_area_shape_features(smaller_object)
+            area, form_factor, solidity = calc_features(smaller_object)
 
             # TODO: We may want to prevent cuts that go through areas with
             # high distance intensity values
@@ -350,28 +328,67 @@ def main(input_mask, input_image, min_area, max_area,
     output['output_mask'] = output_mask
     if plot:
         from jtlib import plotting
-        labeled_output_mask, n_objects = mh.label(
-            output_mask, np.ones((3, 3), bool)
-        )
-        colorscale = plotting.create_colorscale(
-            'Spectral', n=n_objects, permute=True, add_background=True
-        )
-        outlines = mh.morph.dilate(mh.labeled.bwperim(output_mask))
-        cutlines = mh.morph.dilate(mh.labeled.bwperim(cut_mask))
-        plots = [
-            plotting.create_mask_image_plot(
-                labeled_output_mask, 'ul', colorscale=colorscale
-            ),
-            plotting.create_intensity_overlay_image_plot(
-                input_image, outlines, 'ur'
-            ),
-            plotting.create_mask_overlay_image_plot(
-                clumps_mask, cutlines, 'll'
+        if selection_test_mode:
+            logger.info('create plot for selection test mode')
+            labeled_output_mask, n_objects = mh.label(
+                input_mask, np.ones((3, 3), bool)
             )
-        ]
-        output['figure'] = plotting.create_figure(
-            plots, title='separated clumps'
-        )
+            area_img, form_factor_img, solidity_img = create_feature_images(
+                input_mask
+            )
+            area_colorscale = plotting.create_colorscale(
+                'Greens', n_objects,
+                add_background=True, background_color='white'
+            )
+            form_factor_colorscale = plotting.create_colorscale(
+                'Blues', n_objects,
+                add_background=True, background_color='white'
+            )
+            solidity_colorscale = plotting.create_colorscale(
+                'Reds', n_objects,
+                add_background=True, background_color='white'
+            )
+            plots = [
+                plotting.create_gradient_image_plot(
+                    area_img, 'ul', colorscale=area_colorscale
+                ),
+                plotting.create_gradient_image_plot(
+                    solidity_img, 'ur', colorscale=solidity_colorscale
+                ),
+                plotting.create_gradient_image_plot(
+                    form_factor_img, 'll', colorscale=form_factor_colorscale
+                ),
+                plotting.create_mask_image_plot(
+                    clumps_mask, 'lr'
+                ),
+            ]
+            output['figure'] = plotting.create_figure(
+                plots, title='selection test mode'
+            )
+        else:
+            logger.info('create plot')
+            labeled_output_mask, n_objects = mh.label(
+                output_mask, np.ones((3, 3), bool)
+            )
+            colorscale = plotting.create_colorscale(
+                'Spectral', n=n_objects, permute=True, add_background=True
+            )
+            outlines = mh.morph.dilate(mh.labeled.bwperim(output_mask))
+            cutlines = mh.morph.dilate(mh.labeled.bwperim(cut_mask))
+            plots = [
+                plotting.create_mask_image_plot(
+                    labeled_output_mask, 'ul', colorscale=colorscale
+                ),
+                plotting.create_intensity_overlay_image_plot(
+                    input_image, outlines, 'ur'
+                ),
+                plotting.create_mask_overlay_image_plot(
+                    clumps_mask, cutlines, 'll'
+                )
+            ]
+            output['figure'] = plotting.create_figure(
+                plots, title='separated clumps'
+            )
     else:
         output['figure'] = str()
 
