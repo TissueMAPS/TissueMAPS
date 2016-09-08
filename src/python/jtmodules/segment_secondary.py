@@ -100,7 +100,7 @@ def main(input_label_image, input_image, background_level, plot=False):
                 output_label_image, 'ur', colorscale=colorscale
             ),
             plotting.create_intensity_overlay_image_plot(
-                input_image, output_label_image, 'll'
+                input_image, output_label_image > 0, 'll'
             )
         ]
         output['figure'] = plotting.create_figure(
