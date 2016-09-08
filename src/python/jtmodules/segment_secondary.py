@@ -92,6 +92,7 @@ def main(input_label_image, input_image, background_level, plot=False):
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
+        outlines = mh.morph.dilate(mh.labeled.bwperim(output_label_image > 0))
         plots = [
             plotting.create_mask_image_plot(
                 input_label_image, 'ul', colorscale=colorscale
@@ -100,7 +101,7 @@ def main(input_label_image, input_image, background_level, plot=False):
                 output_label_image, 'ur', colorscale=colorscale
             ),
             plotting.create_intensity_overlay_image_plot(
-                input_image, output_label_image > 0, 'll'
+                input_image, outlines, 'll'
             )
         ]
         output['figure'] = plotting.create_figure(
