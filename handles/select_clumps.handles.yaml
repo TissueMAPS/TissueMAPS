@@ -1,0 +1,48 @@
+---
+input:
+
+  - name: input_mask
+    type: BinaryImage
+    key:
+    help: Binary image in which clumps should be separated.
+  - name: max_solidity
+    type: Numeric
+    value: 0.92
+    help: >
+      Maximal solidity of a connected pixel component
+      to be considered a clump.
+
+  - name: max_form_factor
+    type: Numeric
+    value: 0.60
+    help: >
+      Maximal form factor of a connected pixel component
+      to be considered a clump.
+
+  - name: min_area
+    type: Numeric
+    value: 5000
+    help: >
+      Minimal area of a connectd pixel component to be considered a clump.
+
+  - name: max_area
+    type: Numeric
+    value: 50000
+    help: >
+      Maximal area of a connected pixel component to be considered a clump.
+
+  - name: plot
+    type: Plot
+    value: false
+    help: Should a figure be created?
+
+output:
+
+  - name: output_mask
+    type: BinaryImage
+    key: select_clumps.output_mask
+    help: Binary output image.
+
+  - name: figure
+    type: Figure
+
