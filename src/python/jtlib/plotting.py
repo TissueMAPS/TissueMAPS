@@ -221,6 +221,66 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
     )
 
 
+def create_gradient_image_plot(image, position, colorscale=None):
+    '''Creates a heatmap plot for a gradient image.
+
+    Paramters
+    ---------
+    image: numpy.ndarray[numpy.float]
+        2D gradient image
+    position: str
+        one-based figure coordinate that defines the relative position of the
+        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
+        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+    colorscale: List[List[int, str]], optional
+        colors that should be used to visually highlight the objects in the
+        mask image; a default continous colorscale will be created if none
+        is provided (default: ``None``)
+
+    Returns
+    -------
+    plotly.graph_objs.graph_objs.Heatmap
+
+    See also
+    --------
+    :py:function:`jtlib.plotting.create_intensity_image_plot`
+    :py:function:`jtlib.plotting.create_colorscale`
+    '''
+
+    _check_position_argument(position)
+    if image.dtype != float:
+        raise TypeError('Argument "image" must have data type float.')
+
+    block = (IMAGE_RESIZE_FACTOR, IMAGE_RESIZE_FACTOR)
+    ds_img = skimage.measure.block_reduce(
+        image, block, func=np.mean
+    ).astype(int)
+
+    if colorscale is None:
+        colorscale = create_colorscale('YlOrBr')
+    return plotly.graph_objs.Heatmap(
+        z=ds_img,
+        # Only show pixel intensities upon mouse hover.
+        hoverinfo='z',
+        # Background should be black and pixel intensities encode
+        # as grey values.
+        colorscale=colorscale,
+        # Rescale pixel intensity values for display.
+        zauto=False,
+        colorbar=dict(
+            thickness=10,
+            yanchor='bottom',
+            y=COLORBAR_POSITION_MAPPING[position][0],
+            x=COLORBAR_POSITION_MAPPING[position][1],
+            len=PLOT_HEIGHT
+        ),
+        y=np.linspace(0, image.shape[0], ds_img.shape[0]),
+        x=np.linspace(0, image.shape[1], ds_img.shape[1]),
+        yaxis=PLOT_POSITION_MAPPING[position][0],
+        xaxis=PLOT_POSITION_MAPPING[position][1],
+    )
+
+
 def create_mask_image_plot(mask, position, colorscale=None):
     '''Creates a heatmap plot for a mask image.
     Unique object labels will be encoded with RGB colors.
@@ -592,6 +652,9 @@ def create_colorscale(name, n=256, permute=False, add_background=False):
     '''Creates a color palette in the format required by
     `plotly <https://plot.ly/python/>`_ based on a
     `matplotlib colormap <http://matplotlib.org/users/colormaps.html>`_.
+    Please refer to
+    `plotly docs <https://plot.ly/python/heatmap-and-contour-colorscales/>`_
+    for more information on colorscale format.
 
     Parameters
     ----------
