@@ -1,6 +1,11 @@
 '''Jterator module for combining objects from two binary mask images into one.
 '''
 import numpy as np
+import logger
+
+logger = logging.getLogger(__name__)
+
+VERSION = '0.0.1'
 
 
 def main(input_mask_1, input_mask_2, plot=False):
