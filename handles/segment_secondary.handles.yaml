@@ -12,22 +12,16 @@ input:
     type: IntensityImage
     key:
     help: >
-      Grayscale image that should be used find the outlines of secondary objects.
+      Grayscale image that should be used to find the outlines of secondary
+      objects.
 
-  - name: threshold_correction_factors
-    type: Sequence
-    value: [
-      2, 1.5, 1.3, 0.9, 0.7, 0.6, 0.58, 0.55, 0.50, 0.45, 0.4, 0.35, 0.3, 0.25
-    ]
-    help: >
-      Correction factors to adjust the automatically calculated threshold level
-      for iterative watershed segmentation.
-
-  - name: min_threshold
+  - name: background_level
     type: Numeric
     value: 120
     help: >
-      Prevent growing of secondary objects beyond a minimal threshold level.
+      Pixels in "input_image" with values below "background_level" will be
+      considered background, which will restrict the expansion of secondary
+      objects.
 
   - name: plot
     type: Plot
