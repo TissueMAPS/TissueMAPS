@@ -128,13 +128,13 @@ def main(input_mask, min_area, max_area, max_form_factor, max_solidity,
         form_factor_colorscale = plotting.create_colorscale('Blues')
         solidity_colorscale = plotting.create_colorscale('Reds')
         plots = [
-            plotting.create_gadient_image_plot(
+            plotting.create_gradient_image_plot(
                 area_img, 'ul', colorscale=area_colorscale
             ),
-            plotting.create_gadient_image_plot(
+            plotting.create_gradient_image_plot(
                 solidity_img, 'ur', colorscale=solidity_colorscale
             ),
-            plotting.create_gadient_image_plot(
+            plotting.create_gradient_image_plot(
                 form_factor_img, 'll', colorscale=form_factor_colorscale
             ),
             plotting.create_mask_image_plot(
