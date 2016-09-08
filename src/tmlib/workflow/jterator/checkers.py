@@ -191,7 +191,7 @@ class PipelineChecker(object):
             else:
                 handles = self.handles_descriptions[i]
 
-            required_keys = {'input', 'output'}
+            required_keys = {'input', 'output', 'version'}
             possible_keys = required_keys.union()
             for key in required_keys:
                 if key not in handles:
