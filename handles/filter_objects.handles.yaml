@@ -1,4 +1,6 @@
 ---
+version: 0.0.3
+
 input:
 
     - name: input_mask
@@ -16,18 +18,22 @@ input:
         - solidity
         - roundness
       help: >
-        Name of the region property based on which label_image should be filtered.
+        Name of the feature based on which objects in "input_mask" should be
+        filtered.
 
-    - name: threshold
+    - name: lower_threshold
       type: Numeric
       value: 
-      help: Threshold level for values of feature.
+      help: >
+        Minimal allowed feature value. Objects with values below this threshold
+        will be removed.
 
-    - name: remove
-      type: Character
-      value:
-      options: [above, below]
-      help: Whether values "above" or "below" threshold should be removed.
+    - name: upper_threshold
+      type: Numeric
+      value: 
+      help: >
+        Maximal allowed feature value. Objects with values above this threshold
+        will be removed.
 
     - name: plot
       type: Plot

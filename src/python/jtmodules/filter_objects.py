@@ -5,7 +5,7 @@ from jtlib import utils
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 
 
 SUPPORTED_FEATURES = {
@@ -16,27 +16,30 @@ SUPPORTED_FEATURES = {
 }
 
 
-def main(input_mask, feature, threshold, remove, plot):
+def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
+        plot=False):
     '''Filters objects (labeled connected components) based on specified
-    features.
+    value range for a given `feature`.
 
     Parameters
     ----------
-    input_mask: numpy.ndarray[numpy.int32]
-        labeled image that should be filtered
+    input_mask: numpy.ndarray[numpy.bool]
+        binary image that should be filtered
     feature: str
         name of the feature based on which the image should be filtered
-    threshold:
-        threshold level (type depends on the chosen `feature`)
-    remove: str
-        remove objects ``"below"`` or ``"above"`` `threshold`
+    lower_threshold:
+        minimal `feature` value objects must have
+        (default: ``None``; type depends on the chosen `feature`)
+    upper_threshold:
+        maximal `feature` value objects must have
+        (default: ``None``; type depends on the chosen `feature`)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
     Dict[str, numpy.ndarray[int32] or str]
-        "filtered_image": filtered label image
+        "output_mask": filtered image
         "figure": JSON string figure representation
 
     Raises
@@ -44,13 +47,17 @@ def main(input_mask, feature, threshold, remove, plot):
     TypeError
         when `input_mask` is not binary
     ValueError
-        when value of `remove` is not ``"below"`` or ``"above"``
+        when both `lower_threshold` and `upper_threshold` are ``None``
     ValueError
         when value of `feature` is not one of the supported features
 
     '''
     if input_mask.dtype != np.bool:
         raise TypeError('Argument "input_mask" must be binary.')
+    if lower_threshold is None and upper_threshold is None:
+        raise ValueError(
+            'Arugment "lower_threshold" or "upper_threshold" must be provided. '
+        )
     if feature not in SUPPORTED_FEATURES:
         raise ValueError(
             'Argument "feature" must be one of the following: "%s".'
@@ -59,28 +66,23 @@ def main(input_mask, feature, threshold, remove, plot):
 
     labeled_image = mh.label(input_mask)[0]
     feature_image = SUPPORTED_FEATURES[feature](labeled_image)
-    if remove == 'above':
-        logger.info(
-            'remove objects with "%s" values above %d', feature, threshold
-        )
-        condition_image = feature_image > threshold
-    elif remove == 'below':
-        condition_image = feature_image < threshold
-        logger.info(
-            'remove objects with "%s" values below %d', feature, threshold
-        )
-    else:
-        raise ValueError(
-            'Argument "remove" must be a either "above" or "below".'
-        )
+    if lower_threshold is None:
+        lower_threshold = np.min(feature_image.flat)
+    if upper_threshold is None:
+        upper_threshold = np.max(feature_image.flat)
+    logger.info(
+        'keep objects with "%s" values in the range [%d, %d]',
+        feature, lower_threshold, upper_threshold
+    )
 
+    condition_image = np.logical_and(
+        feature_image < lower_threshold, feature_image > upper_threshold
+    )
     filtered_image = mh.labeled.remove_regions_where(
         labeled_image, condition_image
     )
-
-    n_removed = len(np.unique(labeled_image)) - len(np.unique(filtered_image))
-
     output_mask = filtered_image > 0
+
     output = {'output_mask': output_mask}
     if plot:
         from jtlib import plotting
@@ -88,10 +90,11 @@ def main(input_mask, feature, threshold, remove, plot):
             plotting.create_mask_image_plot(input_mask, 'ul'),
             plotting.create_mask_image_plot(output_mask, 'ur'),
         ]
+        n_removed = len(np.unique(labeled_image)) - len(np.unique(filtered_image))
         output['figure'] = plotting.create_figure(
             plots,
-            title='''removed %d objects with %s values %s %d
-            ''' % (n_removed, feature, remove, threshold)
+            title='''removed %d objects with "%s" values outside of [%d, %d]
+            ''' % (n_removed, feature, lower_threshold, upper_threshold)
         )
     else:
         output['figure'] = str()
