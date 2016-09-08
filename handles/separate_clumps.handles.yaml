@@ -1,10 +1,12 @@
 ---
+version: 0.0.4
+
 input:
 
   - name: input_mask
     type: BinaryImage
     key:
-    help: Binary image with clumps that should be separated.
+    help: Binary image in which clumps should be separated.
 
   - name: input_image
     type: IntensityImage
@@ -23,6 +25,32 @@ input:
       Minimal area of a cut fragment, cuts that would
       result in a smaller fragment will not be performed.
 
+  - name: max_solidity
+    type: Numeric
+    value: 0.92
+    help: >
+      Maximal solidity of a connected pixel component
+      to be considered a clump.
+
+  - name: max_form_factor
+    type: Numeric
+    value: 0.60
+    help: >
+      Maximal form factor of a connected pixel component
+      to be considered a clump.
+
+  - name: min_area
+    type: Numeric
+    value: 5000
+    help: >
+      Minimal area of a connectd pixel component to be considered a clump.
+
+  - name: max_area
+    type: Numeric
+    value: 50000
+    help: >
+      Maximal area of a connected pixel component to be considered a clump.
+
   - name: plot
     type: Plot
     value: false
@@ -37,8 +65,3 @@ output:
 
   - name: figure
     type: Figure
-
-
-
-
-

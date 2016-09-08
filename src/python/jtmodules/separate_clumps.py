@@ -1,4 +1,6 @@
-'''Jterator module for separation of clumped objects in a binary image.'''
+'''Jterator module for separation of clumps in a binary image,
+where a `clump` is a connected component with certain size and shape.
+'''
 import numpy as np
 import cv2
 import mahotas as mh
@@ -6,7 +8,7 @@ import skimage.morphology
 import logging
 import jtlib.utils
 
-VERSION = '0.0.5'
+VERSION = '0.0.4'
 
 logger = logging.getLogger(__name__)
 PAD = 1
@@ -22,7 +24,6 @@ def find_concave_regions(mask, max_dist):
     max_dist: int
         maximally tolerated distance between concave point on object contour
         and the convex hull
-
     Note
     ----
     Fast implementation in C++ using `OpenCV library <http://opencv.org/>`_.
@@ -131,6 +132,34 @@ def find_nodes_closest_to_concave_regions(concave_region_points, end_points, nod
     return concave_region_point_node_map
 
 
+def calc_area_shape_features(mask):
+    '''Calcuates `area` and shape features `form factor` and `solidity`
+    for the given object.
+
+    Parameters
+    ----------
+    mask: numpy.ndarray[numpy.bool]
+        bounding box image representing the object
+
+    Returns
+    -------
+    numpy.ndarray[numpy.float64]
+        area, form factor and solidity
+    '''
+    mask = mask > 0
+    area = np.float64(np.count_nonzero(mask))
+    perimeter = mh.labeled.perimeter(mask)
+    form_factor = (4.0 * np.pi * area) / (perimeter**2)
+    convex_hull = mh.polygon.fill_convexhull(mask)
+    area_convex_hull = np.count_nonzero(convex_hull)
+    solidity = area / area_convex_hull
+    # eccentricity = mh.features.eccentricity(mask)
+    # roundness = mh.features.roundness(mask)
+    # major_axis, minor_axis = mh.features.ellipse_axes(mask)
+    # elongation = (major_axis - minor_axis) / major_axis
+    return np.array([area, form_factor, solidity])
+
+
 # def calc_complex_shape_features(mask):
 #     '''Calculates Zernike moments that describe the shape of the object
 #     in mask.
@@ -151,23 +180,59 @@ def find_nodes_closest_to_concave_regions(concave_region_points, end_points, nod
 #     return mh.features.zernike_moments(mask, degree= 12, radius=radius/2)
 
 
-def main(input_mask, input_image, min_cut_area, cutting_passes, plot=False):
-    '''Separates clumps in `input_mask` along the borders of watershed regions,
-    which are determined based on the distance transform of `input_mask`.
-    Separation is performed iterative, i.e. only one object is cut from a clump
-    at a time. In case the resulting object would be smaller than
-    `min_cut_area`, the separation would not be performed.
+def create_area_shape_feature_images(label_image):
+    '''Creates label images, where each object is color coded according to
+    area/shape features.
+
+    Parameters
+    ----------
+    label_image: numpy.ndarray[numpy.int32]
+        labeled image
+
+    Returns
+    -------
+    Tuple[numpy.ndarray[numpy.float64]]
+        heatmap images for each feature
+    '''
+    label_image = mh.label(label_image > 0)[0]
+    bboxes = mh.labeled.bbox(label_image)
+    object_ids = np.unique(label_image)[1:]
+    images = [np.zeros(label_image.shape, np.float64) for x in range(3)]
+    # TODO: might be faster by mapping the image through a lookup table
+    for i in object_ids:
+        mask = jtlib.utils.extract_bbox_image(label_image, bboxes[i], pad=PAD)
+        mask = mask == i
+        shape_features = calc_area_shape_features(mask)
+        for j, f in enumerate(shape_features):
+            images[j][label_image == i] = f
+    return tuple(images)
+
+
+def main(input_mask, input_image, min_area, max_area,
+        min_cut_area, max_form_factor, max_solidity, cutting_passes,
+        plot=False):
+    '''Detects clumps in `input_mask` given criteria provided by the user
+    and cuts them along the borders of watershed regions, which are determined
+    based on the distance transform of `input_mask`.
 
     Parameters
     ----------
     input_mask: numpy.ndarray[numpy.bool]
-        2D binary array of clumps
+        2D binary array encoding potential clumps
     input_image: numpy.ndarray[numpy.uint8 or numpy.uint16]
         2D grayscale array with intensity values of the objects that should
         be detected
+    min_area: int
+        minimal area an object must have to be considered a clump
+    max_area: int
+        maximal area an object must have to be considered a clump
     min_cut_area: int
         minimal area a cut object can have
         (useful to limit size of cut objects)
+    max_solidity: float
+        maximal solidity an object must have to be considerd a clump
+    max_form_factor: float
+        maximal form factor an object must have to be considerd a clump
     cutting_passes: int
         number of cutting cycles to separate clumps that consist of more than
         two subobjects
@@ -186,22 +251,36 @@ def main(input_mask, input_image, min_cut_area, cutting_passes, plot=False):
     clumps_mask = np.zeros(output_mask.shape, bool)
     for n in range(cutting_passes):
         logger.info('cutting pass #%d', n+1)
-        label_image, n_objects = mh.label(output_mask)
-        if n_objects == 0:
+        label_image = mh.label(output_mask)[0]
+        object_ids = np.unique(label_image[label_image > 0])
+        if len(object_ids) == 0:
             logger.debug('no objects')
             continue
 
         bboxes = mh.labeled.bbox(label_image)
-        object_ids = np.unique(label_image[label_image > 0])
         for oid in object_ids:
             logger.debug('process object #%d', oid)
             mask = jtlib.utils.extract_bbox_image(
                 label_image, bboxes[oid], pad=PAD
             )
             mask = mask == oid
-            int_img = jtlib.utils.extract_bbox_image(
-                input_image, bboxes[oid], pad=PAD
-            )
+
+            area, form_factor, solidity = calc_area_shape_features(mask)
+            if area < min_area or area > max_area:
+                logger.debug('not a clump - outside area range')
+                continue
+            if form_factor > max_form_factor:
+                logger.debug('not a clump - above form factor threshold')
+                continue
+            if solidity > max_solidity:
+                logger.debug('not a clump - above solidity threshold')
+                continue
+
+            y, x = np.where(mask)
+            y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
+            y += y_offset
+            x += x_offset
+            clumps_mask[y, x] = True
 
             # Rescale distance intensities to make them independent of clump size
             dist = mh.stretch(mh.distance(mask))
@@ -216,9 +295,7 @@ def main(input_mask, input_image, min_cut_area, cutting_passes, plot=False):
                 # Iteratively shrink the peaks until we have two peaks that we
                 # can use to separate the clump.
                 while True:
-                    # We erode to shrink the clump, but also morphologically
-                    # open afterwards to remove potential single-pixel objects
-                    tmp = mh.morph.open(mh.morph.erode(peaks))
+                    tmp = mh.morph.erode(peaks)
                     n = mh.label(tmp)[1]
                     if n == 2 or n == 0:
                         if n == 2:
@@ -249,10 +326,10 @@ def main(input_mask, input_image, min_cut_area, cutting_passes, plot=False):
             sizes = mh.labeled.labeled_size(subobjects)
             smaller_id = np.where(sizes == np.min(sizes))[0][0]
             smaller_object = subobjects == smaller_id
-            area = sizes[smaller_id]
+            area, form_factor, solidity = calc_area_shape_features(smaller_object)
 
             # TODO: We may want to prevent cuts that go through areas with
-            # high intensity values
+            # high distance intensity values
             if area < min_cut_area:
                 logger.warn(
                     'object %d not cut - resulting object too small', oid
@@ -289,7 +366,7 @@ def main(input_mask, input_image, min_cut_area, cutting_passes, plot=False):
                 input_image, outlines, 'ur'
             ),
             plotting.create_mask_overlay_image_plot(
-                labeled_output_mask > 0, cutlines, 'll'
+                clumps_mask, cutlines, 'll'
             )
         ]
         output['figure'] = plotting.create_figure(
