@@ -401,7 +401,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     image_files = session.query(tm.ChannelImageFile).\
                         join(tm.Channel).\
                         filter(
-                            tm.Channel.name == channel_name,
+                            tm.Channel.name == item['name'],
                             tm.ChannelImageFile.site_id == site.id
                         ).\
                         all()
