@@ -2,6 +2,7 @@ import scipy.ndimage as ndi
 
 VERSION = '0.0.1'
 
+
 def main(label_image, n, plot=False):
     '''Expands objects in `label_image` by `n` pixels along each axis.
 

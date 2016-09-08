@@ -3,6 +3,7 @@ import numpy as np
 
 VERSION = '0.0.1'
 
+
 def main(outer_mask, inner_mask, plot=False):
     '''Clips a labeled or binary mask, such that the intersecting pixels/voxels
     are set to background.
