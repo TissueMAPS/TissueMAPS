@@ -161,6 +161,9 @@ def get_available_projects(experiment_id):
         JSON string with "jtprojects" key. The corresponding value is a list
         of Jterator project descriptions in YAML format.
     '''
+    logger.info(
+        'get available jterator projects for experiment %d', experiment_id
+    )
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=logging.INFO,
@@ -283,6 +286,7 @@ def get_available_modules():
             }
 
     '''
+    logger.info('get list of available jterator modules')
     repo_location = current_app.config.get('TMAPS_MODULES_HOME')
     if repo_location is None:
         raise Exception(
@@ -305,6 +309,7 @@ def get_available_pipelines():
         JSON string with "jtpipelines" key. The corresponding value is an
         array of strings.
     '''
+    logger.info('get list of available jterator pipelines')
     pipes_location = os.path.join(
         current_app.config.get('TMAPS_MODULES_HOME'), 'pipes'
     )
@@ -333,6 +338,9 @@ def get_available_channels(experiment_id):
        JSON string with "channels" key. The corresponding value is the list of
        layer names that are available for the given experiment
     '''
+    logger.info(
+        'get list of available channels for experiment %d', experiment_id
+    )
     with tm.utils.ExperimentSession(experiment_id) as session:
         channels = session.query(tm.Channel)
         return jsonify(channels=[c.name for c in channels])
@@ -355,6 +363,7 @@ def get_module_source_code():
        content of the module source code file
     '''
     module_filename = request.args.get('module_filename')
+    logger.info('get source code of module file "%s"', module_filename)
     modules = AvailableModules(current_app.config.get('TMAPS_MODULES_HOME'))
     files = [
         f for i, f in enumerate(modules.module_files)
@@ -384,7 +393,10 @@ def get_module_figure(experiment_id, project_name):
     '''
     module_name = request.args.get('module_name')
     job_id = request.args.get('job_id', type=int)
-
+    logger.info(
+        'get figure for module "%s" and job %d of project "%s" of experiment %d',
+        module_name, job_id, project_name, experiment_id
+    )
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=logging.INFO,
@@ -420,6 +432,10 @@ def create_joblist(experiment_id, project_name):
     possiblity to select a site of interest.
 
     '''
+    logger.info(
+        'create list of jterator jobs for project "%s" of experiment %d',
+        project_name, experiment_id
+    )
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=logging.INFO,
@@ -468,6 +484,10 @@ def save_project(experiment_id, project_name):
     '''Saves modifications of the pipeline and module descriptions to the
     corresponding `.pipe` and `.handles` files.
     '''
+    logger.info(
+        'save jterator project "%s" of experiment %d',
+        project_name, experiment_id
+    )
     data = json.loads(request.data)
     project = yaml.load(data['project'])
     jt = ImageAnalysisPipeline(
@@ -496,6 +516,10 @@ def save_project(experiment_id, project_name):
 def check_jtproject(experiment_id, project_name):
     '''Checks pipeline and module descriptions.
     '''
+    logger.info(
+        'check description of jterator project "%s" of experiment %d',
+        project_name, experiment_id
+    )
     data = json.loads(request.data)
     project = yaml.load(data['project'])
     jt = ImageAnalysisPipeline(
@@ -523,6 +547,10 @@ def check_jtproject(experiment_id, project_name):
 def delete_project(experiment_id, project_name):
     '''Removes `.pipe` and `.handles` files from a given Jterator project.
     '''
+    logger.info(
+        'delete jterator project "%s" of experiment %d',
+        project_name, experiment_id
+    )
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
         verbosity=1,
@@ -709,6 +737,10 @@ def run_jobs(experiment_id, project_name):
         processed experiment
 
     '''
+    logger.info(
+        'submit jobs for jterator pipeline "%s" of experiment %d',
+        project_name, experiment_id
+    )
     data = json.loads(request.data)
     job_ids = map(int, data['job_ids'])
     project = yaml.load(data['project'])
@@ -725,7 +757,6 @@ def run_jobs(experiment_id, project_name):
     jt.remove_previous_pipeline_output()
 
     # 2. Build jobs
-    logger.info('build jobs')
     batch_args_cls, submit_args_cls, _ = get_step_args('jterator')
     batch_args = batch_args_cls()
     batch_args.plot = True
@@ -754,6 +785,5 @@ def run_jobs(experiment_id, project_name):
     # 3. Store jobs in session
     gc3pie.store_jobs(jobs)
     # session.remove(data['previousSubmissionId'])
-    logger.info('submit jobs')
     gc3pie.submit_jobs(jobs)
     return jsonify({'submission_id': jobs.submission_id})
