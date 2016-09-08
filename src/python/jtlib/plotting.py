@@ -254,7 +254,7 @@ def create_gradient_image_plot(image, position, colorscale=None):
     block = (IMAGE_RESIZE_FACTOR, IMAGE_RESIZE_FACTOR)
     ds_img = skimage.measure.block_reduce(
         image, block, func=np.mean
-    ).astype(int)
+    )
 
     if colorscale is None:
         colorscale = create_colorscale('YlOrBr')
@@ -648,7 +648,8 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
 #     # plotly.plotly.image.save_as(fig, img_file)
 
 
-def create_colorscale(name, n=256, permute=False, add_background=False):
+def create_colorscale(name, n=256, permute=False, add_background=False,
+        background_color='black'):
     '''Creates a color palette in the format required by
     `plotly <https://plot.ly/python/>`_ based on a
     `matplotlib colormap <http://matplotlib.org/users/colormaps.html>`_.
@@ -665,7 +666,11 @@ def create_colorscale(name, n=256, permute=False, add_background=False):
     permute: bool, optional
         whether colors should be randomly permuted (default: ``False``)
     add_background: bool, optional
-        whether black should be prepended to the colorscale (default: ``False``)
+        whether a value for background should be prepented to the colorscale
+        (default: ``False``)
+    background_color: str, optional
+        whether "black" or "white" background should be used
+        (default: ``"black"``)
 
     Returns
     -------
@@ -699,5 +704,14 @@ def create_colorscale(name, n=256, permute=False, add_background=False):
         for i, v in enumerate(rgb_values)
     ]
     if add_background:
-        colors[0] = [0, 'rgb(0,0,0)']
+        if background_color == 'black':
+            colors[0] = [0, 'rgb(0,0,0)']
+        elif background_color == 'white':
+            colors[0] = [0, 'rgb(255,255,255)']
+        else:
+            raise ValueError(
+                'Argument "background_color" can be either "black" or "white"'
+            )
+
+    print colors
     return colors
