@@ -214,13 +214,14 @@ def create_area_shape_feature_images(label_image):
 def main(input_mask, min_area, max_area,
         min_cut_area, max_form_factor, max_solidity, cutting_passes,
         plot=False):
-    '''Detects clumps in `input_mask` and cuts them along watershed lines
-    connecting two points falling into concave regions on their contour.
+    '''Detects clumps in `input_mask` given criteria provided by the user
+    and cuts them along the borders of watershed regions, which are determined
+    based on the distance transform of `input_mask`.
 
     Parameters
     ----------
     input_mask: numpy.ndarray[numpy.bool]
-        image with potential clumps
+        2D binary array encoding potential clumps
     min_area: int
         minimal area an object must have to be considered a clump
     max_area: int
