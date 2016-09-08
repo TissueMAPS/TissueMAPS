@@ -309,20 +309,11 @@ def main(input_mask, min_area, max_area,
                 if label not in index:
                     peaks[peaks == label] = 0
             peaks = mh.labeled.relabel(peaks)[0]
-            ws_regions = mh.cwatershed(np.invert(dist), peaks)
-            ws_regions[~mask] = 0
-
-            # from matplotlib import pyplot as plt
-            # plt.subplot(1, 3, 1)
-            # plt.imshow(dist)
-            # plt.subplot(1, 3, 2)
-            # plt.imshow(peaks)
-            # plt.subplot(1, 3, 3)
-            # plt.imshow(ws_regions)
-            # plt.show()
+            regions = mh.cwatershed(np.invert(dist), peaks)
+            regions[~mask] = 0
 
             # Use the line separating the watershed regions to make the cut
-            line = mh.labeled.borders(ws_regions)
+            line = mh.labeled.borders(regions)
             outer_lines = mh.labeled.borders(mask)
             line[outer_lines] = 0
 
