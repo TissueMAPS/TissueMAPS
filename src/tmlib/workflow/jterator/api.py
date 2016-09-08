@@ -386,7 +386,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             stats_file = session.query(tm.IllumstatsFile).\
                                 join(tm.Channel).\
                                 join(tm.Cycle).\
-                                filter(tm.Channel.name == channel_name).\
+                                filter(tm.Channel.name == item['name']).\
                                 filter(tm.Cycle.plate_id == site.well.plate_id).\
                                 one()
                         except NoResultFound:
