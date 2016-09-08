@@ -9,7 +9,7 @@ input:
   - name: input_image
     type: IntensityImage
     key:
-    help: Grayscale image that should be used find optimal cut lines.
+    help: Grayscale image that may be used to help separating clumps.
 
   - name: cutting_passes
     type: Numeric

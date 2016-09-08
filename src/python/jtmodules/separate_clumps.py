@@ -211,7 +211,7 @@ def create_area_shape_feature_images(label_image):
     return tuple(images)
 
 
-def main(input_mask, min_area, max_area,
+def main(input_mask, input_image, min_area, max_area,
         min_cut_area, max_form_factor, max_solidity, cutting_passes,
         plot=False):
     '''Detects clumps in `input_mask` given criteria provided by the user
@@ -222,6 +222,9 @@ def main(input_mask, min_area, max_area,
     ----------
     input_mask: numpy.ndarray[numpy.bool]
         2D binary array encoding potential clumps
+    input_image: numpy.ndarray[numpy.uint8 or numpy.uint16]
+        2D grayscale array with intensity values of the objects that should
+        be detected
     min_area: int
         minimal area an object must have to be considered a clump
     max_area: int
