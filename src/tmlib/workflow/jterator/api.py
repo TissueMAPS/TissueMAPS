@@ -371,7 +371,15 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # corrected and/or aligned in case this is desired.
                 images = collections.defaultdict(list)
                 path = item.get('path', None)
-                if path is None and batch['debug']:
+                if path is not None and batch['debug']:
+                    logger.info(
+                        'load images for channel "%s" from file',
+                        item['name']
+                    )
+                    with ImageReader(path) as f:
+                        array = f.read()
+                    images = {0: array}
+                else:
                     if item['correct']:
                         logger.info('load illumination statistics')
                         try:
@@ -408,14 +416,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         img = img.align()  # shifted and cropped!
                         images[f.tpoint].append(img.array)
 
-                else:
-                    logger.info(
-                        'load images for channel "%s" from file',
-                        item['name']
-                    )
-                    with ImageReader(path) as f:
-                        array = f.read()
-                    images = {0: array}
                 store['pipe'][item['name']] = np.stack(images.values(), axis=-1)
 
             # Load outlins of mapobjects of the specified types and reconstruct
