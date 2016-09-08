@@ -295,7 +295,7 @@ def main(input_mask, input_image, min_area, max_area,
                 # Iteratively shrink the peaks until we have two peaks that we
                 # can use to separate the clump.
                 while True:
-                    tmp = mh.morph.erode(peaks)
+                    tmp = mh.morph.open(mh.morph.erode(peaks))
                     n = mh.label(tmp)[1]
                     if n == 2 or n == 0:
                         if n == 2:
