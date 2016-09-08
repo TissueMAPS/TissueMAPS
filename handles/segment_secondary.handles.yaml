@@ -20,8 +20,7 @@ input:
     value: 120
     help: >
       Pixels in "input_image" with values below "background_level" will be
-      considered background, which will restrict the expansion of secondary
-      objects.
+      considered background to restrict the expansion of secondary objects.
 
   - name: plot
     type: Plot

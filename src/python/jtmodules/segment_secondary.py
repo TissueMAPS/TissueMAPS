@@ -99,7 +99,7 @@ def main(input_label_image, input_image, background_level, plot=False):
             plotting.create_mask_image_plot(
                 output_label_image, 'ur', colorscale=colorscale
             ),
-            plotting.create_overlay_image_plot(
+            plotting.create_intensity_overlay_image_plot(
                 input_image, output_label_image, 'll'
             )
         ]
