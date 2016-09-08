@@ -380,6 +380,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         array = f.read()
                     images = {0: array}
                 else:
+                    site = session.query(tm.Site).get(batch['site_id'])
                     if item['correct']:
                         logger.info('load illumination statistics')
                         try:
@@ -396,7 +397,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             )
                         stats = stats_file.get()
 
-                    site = session.query(tm.Site).get(batch['site_id'])
                     logger.info('load images for channel "%s"', item['name'])
                     image_files = session.query(tm.ChannelImageFile).\
                         join(tm.Channel).\
