@@ -2,10 +2,13 @@
 import numpy as np
 import mahotas as mh
 import logging
+import collections
 
 logger = logging.getLogger(__name__)
 
 VERSION = '0.0.1'
+
+Output = collections.namedtuple('Output', ['output_image', 'figure'])
 
 
 def main(input_image_1, input_image_2, weight_1, weight_2, plot=False):
@@ -21,9 +24,7 @@ def main(input_image_1, input_image_2, weight_1, weight_2, plot=False):
 
     Returns
     -------
-    Dict[str, numpy.ndarray[numpy.bool] or str]
-        * "output_image": combined image
-        * "figure": JSON figure representation
+    jtmodules.combine_channels.Output
 
     Raises
     ------
@@ -64,8 +65,7 @@ def main(input_image_1, input_image_2, weight_1, weight_2, plot=False):
     logger.info('cast combined image back to correct data type')
     combined_image = mh.stretch(combined_image, 0, max_val, input_image_1.dtype)
 
-    output = dict()
-    output['output_mask'] = combined_image
+    output_mask = combined_image
     if plot:
         from jtlib import plotting
         plots = [
@@ -73,12 +73,10 @@ def main(input_image_1, input_image_2, weight_1, weight_2, plot=False):
             plotting.create_intensity_image_plot(input_image_2, 'ur'),
             plotting.create_intensity_image_plot(combined_image, 'll')
         ]
-        output['figure'] = plotting.create_figure(
-            plots, title='combined mask'
-        )
+        figure = plotting.create_figure(plots, title='combined mask')
     else:
-        output['figure'] = str()
+        figure = str()
 
-    return output
+    return Output(output_mask, figure)
 
 

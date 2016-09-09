@@ -2,10 +2,13 @@
 '''
 import numpy as np
 import logger
+import collections
 
 logger = logging.getLogger(__name__)
 
 VERSION = '0.0.1'
+
+Output = collections.namedtuple('Output', ['output_mask', 'figure'])
 
 
 def main(input_mask_1, input_mask_2, plot=False):
@@ -21,15 +24,12 @@ def main(input_mask_1, input_mask_2, plot=False):
 
     Returns
     -------
-    Dict[str, numpy.ndarray[numpy.bool] or str]
-        * "output_mask": combined mask image
-        * "figure": JSON figure representation
+    jtmodules.combine_objects.Output
 
     '''
     combined_mask = np.logical_or(input_mask_1, input_mask_2)
 
-    output = dict()
-    output['output_mask'] = combined_mask
+    output_mask = combined_mask
     if plot:
         from jtlib import plotting
         plots = [
@@ -37,11 +37,9 @@ def main(input_mask_1, input_mask_2, plot=False):
             plotting.create_mask_image_plot(input_mask_2, 'ur'),
             plotting.create_mask_image_plot(combined_mask, 'll')
         ]
-        output['figure'] = plotting.create_figure(
-            plots, title='combined mask'
-        )
+        figure = plotting.create_figure(plots, title='combined mask')
     else:
-        output['figure'] = str()
+        figure = str()
 
-    return output
+    return Output(output_mask, figure)
 

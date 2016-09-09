@@ -1,10 +1,13 @@
 import logging
+import collections
 import mahotas as mh
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
 VERSION = '0.0.2'
+
+Output = collections.namedtuple('Output', ['mask', 'figure'])
 
 
 def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
@@ -36,9 +39,7 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
 
     Returns
     -------
-    Dict[str, numpy.ndarray[bool] or str]
-        * "mask": thresholded mimage
-        * "figure": JSON string representation of the figure
+    jtmodules.threshold_fixed.Output
     '''
     if max_threshold is None:
         max_threshold = np.max(image)
@@ -69,8 +70,6 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
         logger.info('fill holes')
         thresh_image = mh.close_holes(thresh_image)
 
-    outputs = {'mask': thresh_image}
-
     if plot:
         logger.info('create plot')
         from jtlib import plotting
@@ -81,10 +80,10 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
             ),
             plotting.create_mask_image_plot(thresh_image, 'ur')
         ]
-        outputs['figure'] = plotting.create_figure(
+        figure = plotting.create_figure(
             plots, title='thresholded at fixed level: %s' % thresh
         )
     else:
-        outputs['figure'] = str()
+        figure = str()
 
-    return outputs
+    return Output(thresh_image, figure)

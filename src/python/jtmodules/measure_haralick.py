@@ -1,25 +1,29 @@
+'''Jterator module for measuring Haralick texture features.'''
+import collections
 import jtlib.features
 
 VERSION = '0.0.1'
 
+Output = collections.namedtuple('Output', ['measurements', 'figure'])
+
 
 def main(label_image, intensity_image, plot=False):
-    '''Measures Haralick texture features for objects in a labeled image.
+    '''Measures texture features for objects in `label_image` based on
+    grayscale values in `intensity_image`.
 
     Parameters
     ----------
     label_image: numpy.ndarray[int32]
-        labeled image; pixels with the same label encode an object
+        label image with objects that should be measured
     intensity_image: numpy.ndarray[unit8 or uint16]
-        grayscale input image
+        grayscale image
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    Dict[str, List[pandas.DataFrame[float]] or str]
-        * "measurements": extracted Haralick features
-        * "figure": JSON string in case `plot` is ``True``
+    jtmodules.maeasure_gabor.Output
+
     See also
     --------
     :py:class:`jtlib.features.Haralick`
@@ -29,11 +33,11 @@ def main(label_image, intensity_image, plot=False):
             intensity_image=intensity_image
     )
 
-    outputs = {'measurements': [f.extract()]}
+    measurements = [f.extract()]
 
     if plot:
-        outputs['figure'] = f.plot()
+        figure = f.plot()
     else:
-        outputs['figure'] = str()
+        figure = str()
 
-    return outputs
+    return Output(measurements, figure)

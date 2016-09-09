@@ -1,25 +1,26 @@
+'''Jterator module for measuring Zernike features.'''
+import collections
 import jtlib.features
 
 VERSION = '0.0.1'
 
+Output = collections.namedtuple('Output', ['measurements', 'figure'])
+
 
 def main(label_image, plot=False):
-    '''Measures Zernike features of objects in a labeled image.
-    For more details see
-    `mahotas docs <http://mahotas.readthedocs.org/en/latest/features.html>`_.
+    '''Measures texture features for objects in `label_image` based
+    on grayscale values in `intensity_image`.
 
     Parameters
     ----------
     label_image: numpy.ndarray[int32]
-        labeled image
+        label image with objects that should be measured
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    Dict[str, List[pandas.DataFrame[float]] or str]
-        "measurements": extracted Zernike features
-        "figure": JSON string in case `plot` is ``True``
+    jtmodules.measure_zernike.Output
 
     See also
     --------
@@ -27,11 +28,11 @@ def main(label_image, plot=False):
     '''
     f = jtlib.features.Zernike(label_image=label_image)
 
-    outputs = {'measurements': [f.extract()]}
+    measurements = [f.extract()]
 
     if plot:
-        outputs['figure'] = f.plot()
+        figure = f.plot()
     else:
-        outputs['figure'] = str()
+        figure = str()
 
-    return outputs
+    return Outputs(measurements, figure)

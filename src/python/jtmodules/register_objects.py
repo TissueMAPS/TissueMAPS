@@ -1,8 +1,14 @@
+'''Jterator module for registering objects, which will allow taking measurements
+of the objects and persist them on disk.
+'''
+import collections
 import logging
 
 logger = logging.getLogger(__name__)
 
 VERSION = '0.0.1'
+
+Output = collections.namedtuple('Output', ['objects', 'as_polygons'])
 
 
 def main(label_image, as_polygon=True):
@@ -19,10 +25,6 @@ def main(label_image, as_polygon=True):
 
     Returns
     -------
-    Dict[str, numpy.ndarray[int32]]
-        * "objects": label_image
+    jtmodules.register_objects.Output
     '''
-    return {
-        'objects': label_image,
-        'as_polygons': as_polygons 
-    }
+    return (label_image, as_polygons)

@@ -1,12 +1,12 @@
 import logging
 import numpy as np
 import mahotas as mh
+import collections
 from jtlib import utils
 
 logger = logging.getLogger(__name__)
 
 VERSION = '0.0.3'
-
 
 SUPPORTED_FEATURES = {
     'area': mh.labeled.labeled_size,
@@ -14,6 +14,8 @@ SUPPORTED_FEATURES = {
     'excentricity': mh.features.eccentricity,
     'roundness': mh.features.roundness,
 }
+
+Output = collections.namedtuple('Output', ['output_mask', 'figure'])
 
 
 def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
@@ -38,9 +40,7 @@ def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
 
     Returns
     -------
-    Dict[str, numpy.ndarray[int32] or str]
-        "output_mask": filtered image
-        "figure": JSON string figure representation
+    jtmodules.filter_objects.Output
 
     Raises
     ------
@@ -83,7 +83,6 @@ def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
     )
     output_mask = filtered_image > 0
 
-    output = {'output_mask': output_mask}
     if plot:
         from jtlib import plotting
         plots = [
@@ -91,12 +90,12 @@ def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
             plotting.create_mask_image_plot(output_mask, 'ur'),
         ]
         n_removed = len(np.unique(labeled_image)) - len(np.unique(filtered_image))
-        output['figure'] = plotting.create_figure(
+        figure = plotting.create_figure(
             plots,
             title='''removed %d objects with "%s" values outside of [%d, %d]
             ''' % (n_removed, feature, lower_threshold, upper_threshold)
         )
     else:
-        output['figure'] = str()
+        figure = str()
 
-    return output
+    return Output(output_mask, figure)

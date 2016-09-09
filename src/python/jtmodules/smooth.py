@@ -1,6 +1,7 @@
 import logging
 import cv2
 import mahotas as mh
+import collections
 import skimage.morphology
 import skimage.filters.rank
 import numpy as np
@@ -8,6 +9,8 @@ import numpy as np
 VERSION = '0.0.1'
 
 logger = logging.getLogger(__name__)
+
+Output = collections.namedtuple('Output', ['smoothed_image', 'figure'])
 
 
 def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
@@ -38,9 +41,7 @@ def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
 
     Returns
     -------
-    Dict[str, numpy.ndarray[numpy.int32] or str]
-        * "smoothed_image": smoothed intensity image
-        * "figure": html string in case `plot` is ``True``
+    jtmodules.smooth.Output
 
     Raises
     ------
@@ -82,7 +83,7 @@ def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
             '"median-bilateral"'
         )
 
-    output = {'smoothed_image': smoothed_image.astype(image.dtype)}
+    smoothed_image = smoothed_image.astype(image.dtype)
     if plot:
         logger.info('create plot')
         from jtlib import plotting
@@ -95,13 +96,13 @@ def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
                 smoothed_image, 'ur', clip_value=clip_value
             ),
         ]
-        output['figure'] = plotting.create_figure(
+        figure = plotting.create_figure(
             data,
             title='smoothed with {0} filter (kernel size: {1})'.format(
                 filter_name, filter_size
             )
         )
     else:
-        output['figure'] = str()
+        figure = str()
 
-    return output
+    return Output(smoothed_image, figure)

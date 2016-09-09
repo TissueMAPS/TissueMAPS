@@ -6,7 +6,7 @@ input:
     - name: label_image
       type: LabelImage
       key: 
-      help: Labeled image in which objects should be expanded.
+      help: Label image in which objects should be expanded.
 
     - name: n
       type: Numeric
@@ -21,11 +21,10 @@ input:
 
 output:
 
-    - name: expanded_image
+    - name: expanded_label_image
       type: LabelImage
-      key: expanded_objects.expanded_image
+      key: expand_objects.expanded_label_image
       help: Expanded label image.
 
     - name: figure
       type: Figure
-      help: Comparison of <i>label_image</i> and <i>expanded_image</i>.

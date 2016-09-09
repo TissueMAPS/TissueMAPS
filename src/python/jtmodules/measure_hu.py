@@ -1,18 +1,20 @@
+'''Jterator module for measuring weighted Hu texture features.'''
+import collections
 import jtlib.features
 
 VERSION = '0.0.1'
 
 
 def main(label_image, intensity_image, plot=False):
-    '''Measures weighted Hu texture features for objects
-    in a labeled image.
+    '''Measures texture features for objects in `label_image` based on
+    grayscale values in `intensity_image`.
 
     Parameters
     ----------
     label_image: numpy.ndarray[int32]
-        labeled image; pixels with the same label encode an object
+        label image with objects that should be measured
     intensity_image: numpy.ndarray[unit8 or uint16]
-        grayscale input image
+        grayscale image
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 

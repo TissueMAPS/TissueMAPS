@@ -1,7 +1,10 @@
 '''Jterator module for creation of object clipping masks.'''
 import numpy as np
+import collections
 
 VERSION = '0.0.1'
+
+Output = collections.namedtuple('Output', ['clipped_mask', 'figure'])
 
 
 def main(outer_mask, inner_mask, plot=False):
@@ -19,16 +22,17 @@ def main(outer_mask, inner_mask, plot=False):
 
     Returns
     -------
-    Dict[str, numpy.ndarray[numpy.int32] or str]
-        * "clipped_mask": clipped mask
-        * "figure": JSON string representation of the figure
+    jtmodules.clip_objects.Output
     '''
     clipped_mask = np.copy(outer_mask)
     clipped_mask
     clipped_mask[inner_mask > 0] = 0
-    outputs = dict()
-    outputs['clipped_mask'] = clipped_mask
-    outputs['figure'] = str()
+    clipped_mask = clipped_mask
+
     if plot:
-        outputs['figure'] = str()
-    return outputs
+        # TODO
+        figure = str()
+    else:
+        figure = str()
+
+    return Outputs(clipped_mask, figure)

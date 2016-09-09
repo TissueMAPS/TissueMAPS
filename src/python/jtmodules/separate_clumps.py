@@ -6,12 +6,15 @@ import cv2
 import mahotas as mh
 import skimage.morphology
 import logging
+import collections
 import jtlib.utils
 
 VERSION = '0.0.5'
 
 logger = logging.getLogger(__name__)
 PAD = 1
+
+Output = collections.namedtuple('Output', ['output_mask', 'figure'])
 
 
 def find_concave_regions(mask, max_dist):
@@ -219,9 +222,7 @@ def main(input_mask, input_image, min_area, max_area,
 
     Returns
     -------
-    Dict[str, numpy.ndarray[numpy.bool] or str]
-        * "output_mask": image with cut clumped objects
-        * "figure": JSON figure representation
+    jtmodules.separate_clumps.Output
     '''
 
     output_mask = input_mask.copy()
@@ -266,6 +267,25 @@ def main(input_mask, input_image, min_area, max_area,
             thresh = mh.otsu(dist)
             peaks = dist > thresh
             n = mh.label(peaks)[1]
+            # NOTE: Clustering with one feature gives the same results
+            # also Otsu's method, but it may be an alternive in case we
+            # would use more information
+            # import cv2
+            # y, x = np.where(mask)
+            # pixels = np.float32(mh.distance(mask)[mask])
+            # pixels = np.zeros((np.sum(mask), 3), np.float32)
+            # pixels[:, 0] = mh.distance(mask)[mask]
+            # pixels[:, 1] = y
+            # pixels[:, 2] = x
+            # criteria = (
+            #     cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0
+            # )
+            # flags = cv2.KMEANS_RANDOM_CENTERS
+            # compactness, labels, centers = cv2.kmeans(
+            #     pixels, 2, None, criteria, 10, flags
+            # )
+            # label_img = np.zeros(mask.shape)
+            # label_img[y, x] = np.squeeze(labels) + 1
             if n == 1:
                 logger.debug(
                     'only one peak detected - perform iterative erosion'
@@ -280,6 +300,7 @@ def main(input_mask, input_image, min_area, max_area,
                             peaks = tmp
                         break
                     peaks = tmp
+
             # Select the two biggest peaks, since want to have only two objects.
             peaks = mh.label(peaks)[0]
             sizes = mh.labeled.labeled_size(peaks)
@@ -309,13 +330,13 @@ def main(input_mask, input_image, min_area, max_area,
             # TODO: We may want to prevent cuts that go through areas with
             # high distance intensity values
             if area < min_cut_area:
-                logger.warn(
+                logger.debug(
                     'object %d not cut - resulting object too small', oid
                 )
                 continue
 
             # Update cut mask
-            logger.info('cut object %d', oid)
+            logger.debug('cut object %d', oid)
             y, x = np.where(mh.morph.dilate(line))
             y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
             y += y_offset
@@ -324,8 +345,6 @@ def main(input_mask, input_image, min_area, max_area,
 
         output_mask[cut_mask] = 0
 
-    output = dict()
-    output['output_mask'] = output_mask
     if plot:
         from jtlib import plotting
         if selection_test_mode:
@@ -349,20 +368,20 @@ def main(input_mask, input_image, min_area, max_area,
                 add_background=True, background_color='white'
             )
             plots = [
-                plotting.create_gradient_image_plot(
+                plotting.create_float_image_plot(
                     area_img, 'ul', colorscale=area_colorscale
                 ),
-                plotting.create_gradient_image_plot(
+                plotting.create_float_image_plot(
                     solidity_img, 'ur', colorscale=solidity_colorscale
                 ),
-                plotting.create_gradient_image_plot(
+                plotting.create_float_image_plot(
                     form_factor_img, 'll', colorscale=form_factor_colorscale
                 ),
                 plotting.create_mask_image_plot(
                     clumps_mask, 'lr'
                 ),
             ]
-            output['figure'] = plotting.create_figure(
+            figure = plotting.create_figure(
                 plots, title='selection test mode'
             )
         else:
@@ -386,10 +405,10 @@ def main(input_mask, input_image, min_area, max_area,
                     clumps_mask, cutlines, 'll'
                 )
             ]
-            output['figure'] = plotting.create_figure(
+            figure = plotting.create_figure(
                 plots, title='separated clumps'
             )
     else:
-        output['figure'] = str()
+        figure = str()
 
-    return output
+    return Output(output_mask, figure)

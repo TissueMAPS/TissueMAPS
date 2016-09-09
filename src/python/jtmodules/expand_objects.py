@@ -1,6 +1,9 @@
 import scipy.ndimage as ndi
+import collections
 
 VERSION = '0.0.1'
+
+Output = collections.namedtuple('Output', ['expanded_label_image', 'figure'])
 
 
 def main(label_image, n, plot=False):
@@ -9,8 +12,7 @@ def main(label_image, n, plot=False):
     Parameters
     ----------
     label_image: numpy.ndarray[numpy.int32]
-        image where each connected pixel component is labeled with a unique
-        non-zero number
+        2D label image with objects that should be expanded
     n: int
         number of pixels by which each connected component should be expanded
     plot: bool, optional
@@ -18,9 +20,7 @@ def main(label_image, n, plot=False):
 
     Returns
     -------
-    Dict[str, numpy.ndarray[numpy.int32] or str]
-        "expanded_objects": label image with expanded objects
-        "figure": html string in case `plot` is ``True``
+    jtmodules.expand_objects.Output
     '''
     # NOTE: code from CellProfiler module "expandorshrink"
     background = label_image == 0
@@ -28,6 +28,11 @@ def main(label_image, n, plot=False):
     expanded_image = label_image.copy()
     mask = background & (distance < n)
     expanded_image[mask] = label_image[i[mask], j[mask]]
-    output['expanded_image'] = expanded_image
-    output['figure'] = str()
-    return output
+
+    if plot:
+        # TODO
+        figure = str()
+    else:
+        figure = str()
+
+    return Output(expanded_image, figure)

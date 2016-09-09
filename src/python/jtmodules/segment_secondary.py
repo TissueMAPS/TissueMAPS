@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import mahotas as mh
+import collections
 from skimage.segmentation import clear_border
 from skimage.measure import label
 from skimage.measure import regionprops
@@ -10,6 +11,8 @@ from skimage.morphology import watershed, binary_dilation
 from matplotlib import pyplot as plt
 
 logger = logging.getLogger(__name__)
+
+Output = collections.namedtuple('Output', ['output_label_image', 'figure'])
 
 
 def main(input_label_image, input_image, background_level, plot=False):
@@ -32,9 +35,7 @@ def main(input_label_image, input_image, background_level, plot=False):
 
     Returns
     -------
-    Dict[str, numpy.ndarray[numpy.int32] or str]
-        * "output_label_image": 2D labeled array of secondary objects
-        * "figure": JSON figure representation
+    jtmodules.segment_secondary.Output
 
     '''
     if np.any(input_label_image == 0):
@@ -83,9 +84,6 @@ def main(input_label_image, input_image, background_level, plot=False):
                 lut[i] = np.where(orig_count == np.max(orig_count))[0][0]
         output_label_image = lut[new_label_image]
 
-    output = dict()
-    output['output_label_image'] = output_label_image
-
     if plot:
         from jtlib import plotting
         n_objects = len(np.unique(output_label_image)[1:])
@@ -104,11 +102,9 @@ def main(input_label_image, input_image, background_level, plot=False):
                 input_image, outlines, 'll'
             )
         ]
-        output['figure'] = plotting.create_figure(
-            plots, title='secondary objects'
-        )
+        figure = plotting.create_figure(plots, title='secondary objects')
     else:
-        output['figure'] = str()
+        figure = str()
 
-    return output
+    return Output(output_label_image, figure)
 
