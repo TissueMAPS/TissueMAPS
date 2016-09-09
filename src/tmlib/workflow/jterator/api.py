@@ -343,7 +343,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         )
         checker.check_all()
         self._configure_loggers()
-        self.start_engines(batch.get('plot', False))
+        plot = batch.get('plot', batch['debug'])
+        self.start_engines(plot)
         job_id = batch.get('id', None)
 
         # Use an in-memory store for pipeline data and only add outputs
@@ -393,7 +394,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         except NoResultFound:
                             raise PipelineDescriptionError(
                                 'No illumination statistics file found for '
-                                'channel "%s"' % channel_name
+                                'channel "%s"' % item['name']
                             )
                         stats = stats_file.get()
 
