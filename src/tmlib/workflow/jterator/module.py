@@ -178,19 +178,20 @@ class ImageAnalysisModule(object):
             '", "'.join(kwargs.keys())
         )
         py_out = func(**kwargs)
-        if not isinstance(py_out, dict):
+        # TODO: We could import the output class and check for its type.
+        if not isinstance(py_out, tuple):
             raise PipelineRunError(
-                'Module "%s" must return an object of type dict.'
-                % self.name
+                'Module "%s" must return an object of type tuple.' % self.name
             )
 
+        # Modules return a namedtuple.
         for handle in self.handles['output']:
-            if handle.name not in py_out.keys():
+            if not hasattr(py_out, handle.name):
                 raise PipelineRunError(
                     'Module "%s" didn\'t return output argument "%s".'
                     % (self.name, handle.name)
                 )
-            handle.value = py_out[handle.name]
+            handle.value = getattr(py_out, handle.name)
 
         return self.handles['output']
 
