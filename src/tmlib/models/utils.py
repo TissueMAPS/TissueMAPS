@@ -18,17 +18,9 @@ _DATABASE_URI = None
 
 
 def get_db_uri():
-    '''Gets a URI for a database connection.
-    The number of database hosts varies depending on the implemented
-    infrastructure. When `PostgresXL <http://www.postgres-xl.org/>_ is used,
-    the number of hosts equals the number of available coordinators.
-    One host is reserved for the web server, all others are used by the
-    different compute nodes of the cluster.
-    The host addresses are determined from environement variables
-    ``TMAPS_NUMBER_DB_COMPUTE_HOSTS`` and ``TMAPS_DB_COMPUTE_URI_{index}``,
-    where ``index`` is a random integer from the range of vailable hosts.
-    Thereby, one host is randomly selected for the current Python process to
-    achieve load balanching.
+    '''Gets a URI for database connections.
+    The host address is determined from the environement variable
+    ``TMAPS_DB_URI``.
 
     Returns
     -------
@@ -45,20 +37,9 @@ def get_db_uri():
     global _DATABASE_URI
     if _DATABASE_URI is None:
         try:
-            n = int(os.environ['TMAPS_NUMBER_DB_COMPUTE_HOSTS'])
+            _DATABASE_URI = os.environ['TMAPS_DB_URI']
         except KeyError:
-            raise OSError(
-                'Environment variable "TMAPS_NUMBER_DB_COMPUTE_HOSTS" not set.'
-            )
-        except:
-            raise
-        index = random.randrange(1, n+1)
-        logger.info('connect to database host #%d', index)
-        env_var_name = 'TMAPS_DB_COMPUTE_URI_%d' % index
-        try:
-            _DATABASE_URI = os.environ[env_var_name]
-        except KeyError:
-            raise OSError('Environment variable "%s" not set.' % env_var_name)
+            raise OSError('Environment variable "TMAPS_DB_URI" not set.')
         except:
             raise
     return _DATABASE_URI
