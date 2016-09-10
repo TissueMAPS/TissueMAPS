@@ -736,9 +736,9 @@ class PyramidTile(Image):
         -------
         tmlib.image.PyramidTile
         '''
-        array = np.fromstring(string, np.uint8)
-        array = cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
-        return cls(array, metadata)
+        arr = np.fromstring(string, np.uint8)
+        arr = cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
+        return cls(arr, metadata)
 
     @classmethod
     def create_as_background(cls, add_noise=False, mu=None, sigma=None,
@@ -751,9 +751,9 @@ class PyramidTile(Image):
         ----------
         add_noise: bool, optional
             add Gaussian noise (default: ``False``)
-        noise_mu: int, optional
+        mu: int, optional
             mean of background noise (default: ``None``)
-        noise_sigma: int, optional
+        sigma: int, optional
             variance of background noise (default: ``None``)
         metadata: tmlib.metadata.ImageMetadata, optional
             image metadata (default: ``None``)
