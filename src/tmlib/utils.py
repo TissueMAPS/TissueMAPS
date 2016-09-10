@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def create_datetimestamp():
     '''Creates a datetimestamp in the form "year-month-day_hour-minute-second".
-    
+
     Returns
     -------
     str
