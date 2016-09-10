@@ -737,7 +737,7 @@ class PyramidTile(Image):
         tmlib.image.PyramidTile
         '''
         arr = np.fromstring(string, np.uint8)
-        arr = cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
+        arr = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
         return cls(arr, metadata)
 
     @classmethod
