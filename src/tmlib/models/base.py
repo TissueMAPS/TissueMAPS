@@ -137,6 +137,8 @@ registry.register('postgresql.xl', 'tmlib.models.dialect', 'PGXLDialect_psycopg2
 
 @compiles(DropTable, 'postgresql')
 def _compile_drop_table(element, compiler, **kwargs):
+    table = element.element
+    logger.info('drop table "%s" with cascade', table.name)
     return compiler.visit_drop_table(element) + ' CASCADE'
 
 
@@ -177,6 +179,8 @@ def _compile_create_table(element, compiler, **kwargs):
 
 @compiles(DropTable, 'postgresxl')
 def _compile_drop_table(element, compiler, **kwargs):
+    table = element.element
+    logger.info('drop table "%s" with cascade', table.name)
     return compiler.visit_drop_table(element) + ' CASCADE'
 
 

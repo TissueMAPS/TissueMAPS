@@ -562,6 +562,7 @@ class PyramidTileFile(File):
     row = Column(Integer, index=True)
     column = Column(Integer, index=True)
     pixels = Column(BYTEA)
+    #ALTER TABLE pyramid_tile_files ALTER COLUMN pixels SET STORAGE MAIN;
     channel_layer_id = Column(
         Integer,
         ForeignKey('channel_layers.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -619,10 +620,13 @@ class PyramidTileFile(File):
             pixels data that should be stored in the file
 
         '''
+        # TODO: It might be better to use Postgis raster format, but there don't
+        # seem to be good solutions for inserting raster data via SQLAlchemy
         self.pixels = tile.jpeg_encode()
 
     @property
     def location(self):
+        # TODO: Pyramid tiles should not be handled via "file" model any longer.
         raise NotImplementedError()
 
     def __repr__(self):
