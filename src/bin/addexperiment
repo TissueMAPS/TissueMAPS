@@ -46,7 +46,6 @@ def add_experiment(experiment_name, user_name, microscope_type, plate_format,
             )
             session.add(experiment)
             session.flush()
-            raise ValueError('Unknown user "%s"!' % user_name)
         except:
             raise
         experiment_id = experiment.id

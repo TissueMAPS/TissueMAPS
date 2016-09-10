@@ -40,7 +40,7 @@ if __name__ == '__main__':
     with tm.utils.MainSession() as session:
         try:
             experiment = session.query(tm.ExperimentReference).\
-                filter_by(name=experiment_name).\
+                filter_by(name=args.experiment_name).\
                 one()
             experiment_id = experiment.id
         except sqlalchemy.orm.exc.NoResultFound:
