@@ -64,23 +64,23 @@ def get_image_tile(experiment_id, channel_layer_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         channel_layer = session.query(tm.ChannelLayer).get(channel_layer_id)
         logger.debug(
-            'get image tile: x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
+            'get channel layer tile: x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
             x, y, z, channel_layer.zplane, channel_layer.tpoint
         )
 
-        tile_file = session.query(tm.PyramidTileFile).\
+        channel_layer_tile = session.query(tm.ChannelLayerTile).\
             filter_by(
                 column=x, row=y, level=z,
                 channel_layer_id=channel_layer.id
             ).\
             one_or_none()
 
-        if tile_file is None:
+        if channel_layer_tile is None:
             logger.warn('tile does not exist - create empty')
             tile = PyramidTile.create_as_background()
             pixels = tile.jpeg_encode()
         else:
-            pixels = tile_file.pixels
+            pixels = channel_layer_tile._pixels
         f = StringIO()
         f.write(pixels)
         f.seek(0)
