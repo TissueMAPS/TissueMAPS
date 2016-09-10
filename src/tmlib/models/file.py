@@ -2,7 +2,6 @@ import os
 import logging
 import numpy as np
 from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey
-from sqlalchemy.dialects.postgresql import BYTEA
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
@@ -10,11 +9,9 @@ from sqlalchemy import UniqueConstraint
 from tmlib.utils import assert_type
 from tmlib.utils import notimplemented
 from tmlib.image import ChannelImage
-from tmlib.image import PyramidTile
 from tmlib.image import IllumstatsImage
 from tmlib.image import IllumstatsContainer
 from tmlib.metadata import ChannelImageMetadata
-from tmlib.metadata import PyramidTileMetadata
 from tmlib.metadata import IllumstatsImageMetadata
 from tmlib.readers import DatasetReader
 from tmlib.readers import ImageReader
@@ -237,7 +234,7 @@ class ChannelImageFile(File, DateMixIn):
 
     # Table columns
     _name = Column('name', String, index=True)
-    name = Column(String, index=True)
+    # name = Column(String, index=True)
     tpoint = Column(Integer, index=True)
     _n_planes = Column('n_planes', Integer, index=True)
     n_planes = Column(Integer, index=True)
@@ -522,117 +519,6 @@ class ChannelImageFile(File, DateMixIn):
 #             % (self.id, self.tpoint, self.mapobject_type.name,
 #                self.site.well, self.site.y, self.site.x)
 #         )
-
-
-@remove_location_upon_delete
-class PyramidTileFile(File):
-
-    '''A *pyramid tile file* is a component of an image pyramid. Each tile
-    holds a single, small 2D 8-bit pixel plane.
-
-    Attributes
-    ----------
-    level: int
-        zero-based zoom level index
-    row: int
-        zero-based row index of the tile at given `level`
-    column: int
-        zero-based column index of the tile at given zoom `level`
-    channel_layer_id: int
-        ID of the parent channel pyramid
-    channel_pyramid: tmlib.models.ChannelLayer
-        parent channel pyramid to which the tile belongs
-    pixels: str
-        binary image data encoded as JPEG
-    '''
-
-    #: str: name of the corresponding database table
-    __tablename__ = 'pyramid_tile_files'
-
-    __table_args__ = (
-        UniqueConstraint(
-            'level', 'row', 'column', 'channel_layer_id'
-        ),
-    )
-
-    __distribute_by_hash__ = 'id'
-
-    # Table columns
-    level = Column(Integer, index=True)
-    row = Column(Integer, index=True)
-    column = Column(Integer, index=True)
-    pixels = Column(BYTEA)
-    #ALTER TABLE pyramid_tile_files ALTER COLUMN pixels SET STORAGE MAIN;
-    channel_layer_id = Column(
-        Integer,
-        ForeignKey('channel_layers.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    # Relationships to other tables
-    channel_layer = relationship(
-        'ChannelLayer',
-        backref=backref('pyramid_tile_files', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, level, row, column, channel_layer_id):
-        '''
-        Parameters
-        ----------
-        level: int
-            zero-based zoom level index
-        row: int
-            zero-based row index of the tile at given `level`
-        column: int
-            zero-based column index of the tile at given zoom `level`
-        channel_layer_id: int
-            ID of the parent channel pyramid
-        '''
-        self.row = row
-        self.column = column
-        self.level = level
-        self.channel_layer_id = channel_layer_id
-        self._location = None
-
-    def get(self):
-        '''Gets a stored tile.
-
-        Returns
-        -------
-        tmlib.image.PyramidTile
-            tile stored in the file
-        '''
-        metadata = PyramidTileMetadata(
-            level=self.level,
-            row=self.row,
-            column=self.column,
-            channel_layer_id=self.channel_layer.id
-        )
-        return PyramidTile.create_from_binary(self.pixels, metadata)
-
-    @assert_type(tile='tmlib.image.PyramidTile')
-    def put(self, tile):
-        '''Puts a tile to storage.
-
-        Parameters
-        ----------
-        tile: tmlib.image.PyramidTile
-            pixels data that should be stored in the file
-
-        '''
-        # TODO: It might be better to use Postgis raster format, but there don't
-        # seem to be good solutions for inserting raster data via SQLAlchemy
-        self.pixels = tile.jpeg_encode()
-
-    @property
-    def location(self):
-        # TODO: Pyramid tiles should not be handled via "file" model any longer.
-        raise NotImplementedError()
-
-    def __repr__(self):
-        return '<%s(id=%r, row=%r, column=%r, level=%r)>' % (
-            self.__class__.__name__, self.id, self.row, self.column, self.level
-        )
 
 
 @remove_location_upon_delete
