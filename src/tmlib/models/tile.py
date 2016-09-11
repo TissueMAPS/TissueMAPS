@@ -57,7 +57,7 @@ class ChannelLayerTile(ExperimentModel):
     row = Column(Integer)
     column = Column(Integer)
     _pixels = Column('pixels', BYTEA)
-    #ALTER TABLE pyramid_tile_files ALTER COLUMN pixels SET STORAGE MAIN;
+    #ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;
     channel_layer_id = Column(
         Integer,
         ForeignKey('channel_layers.id', onupdate='CASCADE', ondelete='CASCADE'),

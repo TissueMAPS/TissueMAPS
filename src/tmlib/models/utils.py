@@ -509,7 +509,7 @@ class ExperimentSession(_Session):
             the environment variable ``TMPAS_DB_URI`` (default: ``None``)
         '''
         if db_uri is None:
-            db_uri = _DATABASE_URI
+            db_uri = get_db_uri()
         self.experiment_id = experiment_id
         if self.experiment_id is not None:
             if not isinstance(self.experiment_id, int):
