@@ -338,12 +338,12 @@ class Experiment(ExperimentModel):
     @autocreate_directory_property
     def plates_location(self):
         '''str: location where plates data are stored'''
-        return os.path.join(self.location, 'plates')
+        return os.path.join(self.root_directory, 'plates')
 
     @autocreate_directory_property
     def channels_location(self):
         '''str: location where channels data are stored'''
-        return os.path.join(self.location, 'channels')
+        return os.path.join(self.root_directory, 'channels')
 
     @cached_property
     def plate_spacer_size(self):
