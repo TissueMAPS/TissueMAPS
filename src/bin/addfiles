@@ -87,13 +87,12 @@ if __name__ == '__main__':
                 # Skip already inserted files.
                 if name not in image_file_names:
                     print 'register image file "%s"' % f
-                    file = session.get_or_create(
-                        tm.MicroscopeImageFile,
+                    file = tm.MicroscopeImageFile(
                         name=name, acquisition_id=acquisition.id
                     )
                     files_to_add.append(file)
             elif r_metadata.search(f):
-                name = secure_filename(os.path.basename(f))
+                name = secure_filename(f)
                 if name not in metdata_file_names:
                     print 'register metadata file "%s"' % f
                     file = tm.MicroscopeMetadataFile(
@@ -102,4 +101,4 @@ if __name__ == '__main__':
                     files_to_add.append(file)
             else:
                 print 'unknow file format: "%s"' % f
-            session.bulk_save_objects(files_to_add)
+        session.bulk_save_objects(files_to_add)
