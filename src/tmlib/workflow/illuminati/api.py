@@ -227,7 +227,7 @@ class PyramidBuilder(ClusterRoutines):
         logger.debug('delete existing channel layers and pyramid tile files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             session.drop_and_recreate(tm.ChannelLayer)
-            session.drop_and_recreate(tm.PyramidTileFile)
+            session.drop_and_recreate(tm.ChannelLayerTile)
 
         logger.debug('delete existing static mapobject types')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
@@ -401,23 +401,14 @@ class PyramidBuilder(ClusterRoutines):
                 image_store[file.name] = image
 
                 extra_file_map = layer.map_base_tile_to_images(file.site)
-                tile_files = list()
+                channel_layer_tiles = list()
                 for t in tiles:
-                    try:
-                        tile_file = session.query(tm.PyramidTileFile).\
-                            filter_by(
-                                level=batch['level'], channel_layer_id=layer.id,
-                                row=t['row'], column=t['column'],
-                            ).\
-                            one()
-                    except NoResultFound:
-                        tile_file = tm.PyramidTileFile(
-                            level=batch['level'], channel_layer_id=layer.id,
-                            row=t['row'], column=t['column'],
-                        )
+                    level = batch['level']
+                    row = t['row']
+                    column = t['column']
                     logger.debug(
                         'create tile: level=%d, row=%d, column=%d',
-                        tile_file.level, tile_file.row, tile_file.column
+                        level, row, column
                     )
                     tile = layer.extract_tile_from_image(
                         image_store[file.name], t['y_offset'], t['x_offset']
@@ -427,9 +418,7 @@ class PyramidBuilder(ClusterRoutines):
                     # i.e. pixels falling into the currently processed tile
                     # that are not contained by the file.
                     file_coordinate = np.array((file.site.y, file.site.x))
-                    extra_file_ids = extra_file_map[
-                        tile_file.row, tile_file.column
-                    ]
+                    extra_file_ids = extra_file_map[row, column]
                     if len(extra_file_ids) > 0:
                         logger.debug('tile overlaps multiple images')
                     for efid in extra_file_ids:
@@ -498,16 +487,23 @@ class PyramidBuilder(ClusterRoutines):
                             tile.insert(subtile, y_offset, 0)
                         else:
                             raise IndexError(
-                                'Tile "%s" shouldn\'t be in this batch!'
-                                % tile_file.name
+                                'Tile shouldn\'t be in this batch!'
                             )
 
-                    tile_file.pixels = tile.jpeg_encode()
-                    tile_files.append(tile_file)
+                    clt = session.get_or_create(
+                        tm.ChannelLayerTile,
+                        level=level, row=row, column=column,
+                        channel_layer_id=layer.id,
+                    )
+                    # clt.pixels = tile
+                    channel_layer_tiles.append({
+                        'id': clt.id, 'pixels': tile.jpeg_encode()
+                    })
 
-                # Either insert a new row in case the tile does not yet exist
-                # or update the pixels data.
-                session.bulk_save_objects(tile_files)
+                # session.bulk_save_objects(channel_layer_tiles)
+                session.bulk_update_mappings(
+                    tm.ChannelLayerTile, channel_layer_tiles
+                )
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
@@ -526,18 +522,18 @@ class PyramidBuilder(ClusterRoutines):
                     level, row, column
                 )
                 try:
-                    tile_file = session.query(tm.PyramidTileFile).\
+                    clt = session.query(tm.ChannelLayerTile).\
                         filter_by(
                             row=row, column=column, level=level,
                             channel_layer_id=layer.id
                         ).\
                         one()
                 except NoResultFound:
-                    tile_file = tm.PyramidTileFile(
+                    clt = tm.ChannelLayerTile(
                         row=row, column=column, level=level,
                         channel_layer_id=layer.id
                     )
-                    session.add(tile_file)
+                    session.add(clt)
                 logger.debug(
                     'creating tile: level=%d, row=%d, column=%d',
                     level, row, column
@@ -549,13 +545,13 @@ class PyramidBuilder(ClusterRoutines):
                 for i, r in enumerate(rows):
                     for j, c in enumerate(cols):
                         try:
-                            pre_tile_file = session.query(tm.PyramidTileFile).\
+                            pre_clt = session.query(tm.ChannelLayerTile).\
                                 filter_by(
                                     row=r, column=c, level=batch['level']+1,
                                     channel_layer_id=layer.id
                                 ).\
                                 one()
-                            pre_tile = pre_tile_file.get()
+                            pre_tile = pre_clt.pixels
                         except sqlalchemy.orm.exc.NoResultFound:
                             # Tiles at maxzoom level might not exist in case
                             # they are empty. They must exist at the lower
@@ -588,7 +584,7 @@ class PyramidBuilder(ClusterRoutines):
                 # mosaic image, which is composed of the 4 tiles of the next
                 # higher zoom level
                 tile = PyramidTile(mosaic_img.shrink(layer.zoom_factor).array)
-                tile_file.pixels = tile.jpeg_encode()
+                clt.pixels = tile
 
     def run_job(self, batch):
         '''Creates 8-bit grayscale JPEG layer tiles.

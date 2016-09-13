@@ -1,7 +1,7 @@
 import os
 import re
 import logging
-# import subprocess
+import subprocess
 from tmlib.readers import JavaBridge, BFOmeXmlReader
 
 import tmlib.models as tm

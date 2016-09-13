@@ -42,7 +42,7 @@ def create_gc3pie_sql_store():
                 return getattr(_task.execution, time_attr).to_timedelta()
         return get_recursive(task, datetime.timedelta(seconds=0))
 
-    logger.info('create GC3Pie store using "tasks" SQL table')
+    logger.info('create GC3Pie store using "tasks" table')
     db_uri = get_db_uri()
     store_url = Url(db_uri)
     table_columns = tm.Task.__table__.columns
