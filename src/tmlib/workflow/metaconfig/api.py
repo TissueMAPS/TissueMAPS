@@ -249,7 +249,7 @@ class MetadataConfigurator(ClusterRoutines):
 
                 file_mappings = list()
                 for s in np.unique(md.loc[w_index, 'site']):
-                    logger.info('create site #%d', s)
+                    logger.debug('create site #%d', s)
                     s_index = md.site == s
                     y = md.loc[s_index, 'well_position_y'].values[0]
                     x = md.loc[s_index, 'well_position_x'].values[0]
