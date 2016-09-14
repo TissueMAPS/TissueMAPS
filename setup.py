@@ -215,11 +215,11 @@ def readme():
 def get_version():
     src_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
-        'src', 'python'
+        'src', 'python', 'tmclient'
     )
     sys.path = [src_path] + sys.path
-    import tmclient
-    return tmclient.__version__
+    import version
+    return version.__version__
 
 
 def get_requirements():
