@@ -5,8 +5,6 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models import ExperimentModel, DateMixIn
-from tmlib.models.utils import remove_location_upon_delete
-from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +12,6 @@ logger = logging.getLogger(__name__)
 CHANNEL_LOCATION_FORMAT = 'channel_{id}'
 
 
-@remove_location_upon_delete
 class Channel(ExperimentModel, DateMixIn):
 
     '''A *channel* represents all *images* across different time points and
@@ -79,24 +76,6 @@ class Channel(ExperimentModel, DateMixIn):
         self.wavelength = wavelength
         self.bit_depth = bit_depth
         self.experiment_id = 1
-
-    @autocreate_directory_property
-    def location(self):
-        '''str: location were the channel is stored'''
-        if self.id is None:
-            raise AttributeError(
-                'Channel "%s" doesn\'t have an entry in the database yet. '
-                'Therefore, its location cannot be determined.' % self.name
-            )
-        return os.path.join(
-            self.experiment.channels_location,
-            CHANNEL_LOCATION_FORMAT.format(id=self.id)
-        )
-
-    @autocreate_directory_property
-    def layers_location(self):
-        '''str: location where layers are stored'''
-        return os.path.join(self.location, 'layers')
 
     def __repr__(self):
         return '<Channel(id=%r, name=%r)>' % (self.id, self.name)

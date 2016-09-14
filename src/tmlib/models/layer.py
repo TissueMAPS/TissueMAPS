@@ -17,9 +17,6 @@ from tmlib.models.site import Site
 from tmlib.models.well import Well
 from tmlib.models.plate import Plate
 from tmlib.models.base import ExperimentModel
-from tmlib.utils import autocreate_directory_property
-from tmlib.models.utils import remove_location_upon_delete
-from tmlib.writers import XmlWriter
 from tmlib.errors import RegexError
 from tmlib.image import PyramidTile
 
@@ -29,7 +26,6 @@ logger = logging.getLogger(__name__)
 CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 
 
-@remove_location_upon_delete
 class ChannelLayer(ExperimentModel):
 
     '''A *channel layer* represents a multi-resolution overview of all images
@@ -127,19 +123,6 @@ class ChannelLayer(ExperimentModel):
         '''int: factor by which resolution increases per pyramid level'''
         return self.channel.experiment.zoom_factor
 
-    @autocreate_directory_property
-    def location(self):
-        '''str: location were the channel layer content is stored'''
-        if self.id is None:
-            raise AttributeError(
-                'Channel layer "%s" doesn\'t have an entry in the database yet. '
-                'Therefore, its location cannot be determined.' % self.name
-            )
-        return os.path.join(
-            self.channel.layers_location,
-            CHANNEL_LAYER_LOCATION_FORMAT.format(id=self.id)
-        )
-
     @property
     def n_levels(self):
         '''int: number of zoom levels'''
@@ -149,11 +132,6 @@ class ChannelLayer(ExperimentModel):
     def n_tiles(self):
         '''int: total number of tiles across all resolution levels'''
         return np.sum([np.prod(dims) for dims in self.dimensions])
-
-    @property
-    def n_tile_groups(self):
-        '''int: number of tile groups'''
-        return int(np.ceil(np.float(self.n_tiles) / 256))
 
     @property
     def maxzoom_level_index(self):
@@ -542,143 +520,6 @@ class ChannelLayer(ExperimentModel):
             if r < max_row and c < max_column:
                 coordinates.append((r, c))
         return coordinates
-
-    @cached_property
-    def tile_coordinate_group_map(self):
-        '''Dict[Tuple[int], int]: mapping of tile coordinate
-        (level, row, and column index) to tile group index
-        '''
-        logger.debug('build mapping of tile coordinates to group index')
-        n = 0
-        mapping = dict()
-        for level, dims in enumerate(self.dimensions):
-            rows, cols = dims
-            for r, c in itertools.product(np.arange(rows), np.arange(cols)):
-                # Each tile group directory holds maximally 256 files and
-                # groups are filled up from top to bottom, starting at 0 for
-                # the most zoomed out tile and then increasing monotonically
-                # in a row wise manner
-                group_index = n // 256
-                mapping[(level, r, c)] = group_index
-                n += 1
-        return mapping
-
-    def create_image_properties_file(self):
-        '''Creates the image properties XML file, which provides
-        meta-information about the pyramid, such as the image dimensions at the
-        highest resolution level and the total number of tiles.
-        '''
-        logger.debug('create image properties xml file')
-        xml = lxml.etree.Element(
-            'IMAGE_PROPERTIES',
-            WIDTH=str(self.image_size[-1][1]),
-            HEIGHT=str(self.image_size[-1][0]),
-            NUMTILES=str(self.n_tiles),
-            NUMIMAGES=str(1),
-            VERSION='1.8',
-            TILESIZE=str(self.tile_size)
-        )
-        filename = os.path.join(self.location, 'ImageProperties.xml')
-        with XmlWriter(filename) as f:
-            f.write(xml)
-
-    @staticmethod
-    def build_tile_group_name(i):
-        '''Builds name of the `i`-th tile group.
-
-        Parameters
-        ----------
-        i: int
-            zero-based tile group index
-
-        Returns
-        -------
-        str
-            tile group folder name
-        '''
-        return 'TileGroup{i}'.format(i=i)
-
-    @staticmethod
-    def build_tile_file_name(level, row, col):
-        '''Builds name for a tile file at a given pyramid position.
-
-        Parameters
-        ----------
-        level: int
-            zero-based zoom level index
-        row: int
-            zero-based row index of the tile at the given zoom `level`
-        col: int
-            zero-based column index of the tile at the given zoom `level`
-
-        Returns
-        -------
-        str
-            name of the tile
-        '''
-        return '{level}-{col}-{row}.jpg'.format(level=level, col=col, row=row)
-
-    def get_coordinate_from_name(self, filename):
-        '''Determines "level", "row", and "column" index of a tile from its
-        filename.
-
-        Parameters
-        ----------
-        filename: str
-            name of a tile file
-
-        Returns
-        -------
-        Tuple[int]
-            zero-based *level*, *row*, and *column* index of the given tile
-
-        Raises
-        ------
-        tmlib.errors.RegexError
-            when indices cannot be determined from filename
-        '''
-        r = re.compile('(?P<level>\d+)-(?P<column>\d+)-(?P<row>\d+).jpg')
-        m = r.search(filename).groupdict()
-        if not m:
-            RegexError(
-                'Indices could not be determined from file: %s'
-                % filename
-            )
-        indices = {k: int(v) for k, v in m.iteritems()}
-        return (indices['level'], indices['row'], indices['column'])
-
-    def create_tile_groups(self):
-        '''Creates all required tile group directories.
-
-        Raises
-        ------
-        OSError
-            when a tile group directory already exists
-        '''
-        for i in range(self.n_tile_groups):
-            tile_group_dir = os.path.join(self.location, 'TileGroup%d' % i)
-            if not os.path.exists(tile_group_dir):
-                logger.debug('create tile directory: %s', tile_group_dir)
-                os.mkdir(tile_group_dir)
-
-    def get_coordinates_of_next_higher_level(self, filename):
-        '''Gets tiles of the next higher resolution level that make up the given
-        tile.
-
-        Parameters
-        ----------
-        filename: str
-            name of the tile file
-
-        Returns
-        -------
-        List[Tuple[int]
-            row, column coordinates for the tiles of the next higher resolution
-            level for a given a tile
-        '''
-        logger.debug('map tile %s to tiles of next higher level', filename)
-        level, row, col = self.get_coordinate_from_name(filename)
-        return self.calc_coordinates_of_next_higher_level(level, row, col)
 
     def extract_tile_from_image(self, image, y_offset, x_offset):
         '''Extracts a subset of pixels for a tile from an image. In case the
