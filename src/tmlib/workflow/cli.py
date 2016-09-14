@@ -27,6 +27,8 @@ from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.utils import create_gc3pie_session
 from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.submission import SubmissionManager
+from tmlib.workflow.description import WorkflowStepDescription
+from tmlib.workflow.workflow import WorkflowStep
 from tmlib.logging_utils import configure_logging
 from tmlib.logging_utils import map_logging_verbosity
 from tmlib.errors import WorkflowError
@@ -335,7 +337,7 @@ class CommandLineInterface(SubmissionManager):
         shutil.rmtree(api.batches_location)
         os.mkdir(api.batches_location)
 
-        logger.info('create batches')
+        logger.info('create batches for "run" and "collect" jobs')
         batches = api.create_batches(self._batch_args)
         if not batches['run']:
             raise WorkflowError(
@@ -440,84 +442,11 @@ class CommandLineInterface(SubmissionManager):
         logger.debug('get required inputs from batches')
         return self.api_instance.list_input_files(self.batches)
 
-    def create_jobs(self, submission_id, user_name, duration, memory, cores,
-            phase=None, job_id=None):
-        '''Creates *jobs* based on previously created batch descrptions.
-
-        Parameters
-        ----------
-        submission_id: int
-            ID of the corresponding submission
-        user_name: str
-            name of the submitting user
-        duration: str
-            time allocated for a job in the format "HH:MM:SS"
-        memory: int
-            amount of memory allocated for a job in GB
-        cores: int
-            number of cores allocated for a job
-        phase: str, optional
-            phase for which jobs should be build; if not set jobs of *run* and
-            *collect* phase will be submitted
-            (options: ``"run"`` or ``"collect"``; default: ``None``)
-        job_id: int, optional
-            id of a single job that should be submitted (default: ``None``)
-
-        Returns
-        -------
-        gc3libs.workflow.SequentialTaskCollection
-            jobs
-
-        See also
-        --------
-        :py:mod:`tmlib.jobs`
-        '''
-
-        api = self.api_instance
-        if phase == 'run':
-            logger.info('create run jobs')
-            if job_id is not None:
-                batch_file = api.build_batch_filename_for_run_job(job_id)
-                batch = api.read_batch_file(batch_file)
-                batches = [batch]
-            else:
-                batches = self.batches['run']
-            return api.create_run_jobs(
-                submission_id, user_name, batches,
-                duration=duration, memory=memory, cores=cores
-            )
-        elif phase == 'collect':
-            logger.info('create collect job')
-            if 'collect' not in self.batches.keys():
-                raise ValueError(
-                    'Step "%s" doesn\'t have a "collect" phase.'
-                    % self.name
-                )
-            return api.create_collect_job(submission_id, user_name)
-        else:
-            logger.info('create all jobs')
-            step = api.create_step(submission_id, user_name)
-            step.run_jobs = api.create_run_jobs(
-                submission_id, user_name, self.batches['run'],
-                duration=duration, memory=memory, cores=cores
-            )
-            if 'collect' in self.batches.keys():
-                step.collect_job = api.create_collect_job(
-                    submission_id, user_name
-                )
-            return step
-
     @climethod(
-        help='''creates batch jobs, submits them to the cluster and
-            monitors their status
+        help='''creates batch jobs for the "run" and "collect" phases, submits
+            them to the cluster and monitors their status upon processing
+            (requires a prior "init")
         ''',
-        phase=Argument(
-            type=str, choices={'run', 'collect'}, flag='p',
-            help='phase of the workflow step to which the job belongs'
-        ),
-        job_id=Argument(
-            type=int, help='ID of the job that should be run', flag='j'
-        ),
         monitoring_depth=Argument(
             type=int, help='number of child tasks that should be monitored',
             default=1, flag='d'
@@ -527,21 +456,19 @@ class CommandLineInterface(SubmissionManager):
             default=10, flag='i'
         )
     )
-    def submit(self, phase, job_id, monitoring_depth, monitoring_interval):
+    def submit(self, monitoring_depth, monitoring_interval):
         self._print_logo()
-        api = self.api_instance
-        if job_id is not None and phase != 'run':
-            raise AttributeError(
-                'Argument "job_id" is required when "phase" is set to "run".'
-            )
         submission_id, user_name = self.register_submission()
-        jobs = self.create_jobs(
-            submission_id=submission_id, user_name=user_name,
-            duration=self._submission_args.duration,
-            memory=self._submission_args.memory,
-            cores=self._submission_args.cores,
-            phase=phase, job_id=job_id
+        api = self.api_instance
+        description = WorkflowStepDescription(
+            api.step_name, active=True, submission_args=self._submission_args
         )
+        step = WorkflowStep(
+            api.step_name, api.experiment_id, api.verbosity,
+            submission_id, user_name, description, requires_init=False
+        )
+        step.create_run_and_collect_jobs()
+        jobs = step
         store = create_gc3pie_sql_store()
         store.save(jobs)
         self.update_submission(jobs)
@@ -564,8 +491,8 @@ class CommandLineInterface(SubmissionManager):
             raise
 
     @climethod(
-        help='''resubmits previously created jobs to the cluster and
-            monitors their status
+        help='''resubmits previously created jobs for "run" and "collect"
+            phases to the cluster and monitors their status upon processing
         ''',
         phase=Argument(
                 type=str, choices={'run', 'collect'}, flag='p',

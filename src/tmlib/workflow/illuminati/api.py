@@ -270,7 +270,14 @@ class PyramidBuilder(ClusterRoutines):
                 filter_by(is_static=True).\
                 delete()
 
-    def create_run_jobs(self, submission_id, user_name, batches,
+    def create_run_job_collection(self, submission_id):
+        '''tmlib.workflow.job.MultiRunJobCollection: collection of "run" jobs
+        '''
+        return MultiRunJobCollection(
+            step_name=self.step_name, submission_id=submission_id
+        )
+
+    def create_run_jobs(self, submission_id, user_name, job_collection, batches,
             duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
         The `illuminati` step is special in the sense that it implements
@@ -282,6 +289,8 @@ class PyramidBuilder(ClusterRoutines):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        job_collection: tmlib.workflow.jobs.MultiRunJobCollection
+            emtpy collection for "run" jobs
         batches: List[dict]
             job descriptions
         duration: str
@@ -297,10 +306,10 @@ class PyramidBuilder(ClusterRoutines):
         tmlib.workflow.jobs.MultipleRunJobCollection
             run jobs
         '''
-        logger.info('create run jobs for submission %d', submission_id)
-        logger.debug('allocated time for run jobs: %s', duration)
-        logger.debug('allocated memory for run jobs: %d MB', memory)
-        logger.debug('allocated cores for run jobs: %d', cores)
+        logger.info('create "run" jobs for submission %d', submission_id)
+        logger.debug('allocated time for "run" jobs: %s', duration)
+        logger.debug('allocated memory for "run" jobs: %d MB', memory)
+        logger.debug('allocated cores for "run" jobs: %d', cores)
 
         multi_run_jobs = collections.defaultdict(list)
         for b in batches:
@@ -331,12 +340,8 @@ class PyramidBuilder(ClusterRoutines):
 
             multi_run_jobs[b['index']].append(job)
 
-        run_jobs = MultiRunJobCollection(
-            step_name=self.step_name,
-            submission_id=submission_id
-        )
         for index, jobs in multi_run_jobs.iteritems():
-            run_jobs.add(
+            job_collection.add(
                 SingleRunJobCollection(
                     step_name=self.step_name,
                     jobs=jobs,
@@ -345,7 +350,7 @@ class PyramidBuilder(ClusterRoutines):
                 )
             )
 
-        return run_jobs
+        return job_collection
 
     def _create_maxzoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:

@@ -6,6 +6,7 @@ import copy
 import sys
 import traceback
 import gc3libs
+from cached_property import cached_property
 from gc3libs.workflow import SequentialTaskCollection
 from gc3libs.workflow import ParallelTaskCollection
 from gc3libs.workflow import AbortOnError
@@ -17,6 +18,7 @@ from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.description import WorkflowStageDescription
 from tmlib.errors import WorkflowTransitionError
 from tmlib.readers import YamlReader
+from tmlib.workflow.jobs import InitJob
 from tmlib.workflow.jobs import CollectJob
 from tmlib.workflow.jobs import RunJobCollection
 
@@ -59,41 +61,94 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
     '''A *workflow step* represents a collection of computational tasks
     that should be processed in parallel on a cluster, i.e. one parallelization
     step within a larger, more complex workflow.
-    The number of jobs and the arguments for each job are known upon submission.
     '''
 
-    def __init__(self, name, submission_id, user_name, run_jobs=None, collect_job=None):
+    def __init__(self, name, experiment_id, verbosity, submission_id, user_name,
+            description, requires_init=True):
         '''
         Parameters
         ----------
         name: str
             name of the step
+        experiment_id: int
+            ID of the processed experiment
+        verbosity: int
+            logging verbosity index
         submission_id: int
             ID of the corresponding submission
         user_name: str
             name of the submitting user
-        run_jobs: tmlib.jobs.RunJobCollection, optional
-            jobs for the *run* phase that should be processed in parallel
-            (default: ``None``)
-        collect_job: tmlib.jobs.CollectJob, optional
-            job for the *collect* phase that should be processed after
-            `run_jobs` have terminated successfully (default: ``None``)
+        description: tmlib.tmaps.description.WorkflowStepDescription
+            description of the step
+        requires_init: bool, optional
+            whether an "init" job is required (default: ``True``)
         '''
-        super(WorkflowStep, self).__init__(tasks=list(), jobname=name)
+        super(WorkflowStep, self).__init__(tasks=[], jobname=name)
         self.name = name
+        self.experiment_id = experiment_id
+        self.verbosity = verbosity
         self.submission_id = submission_id
         self.user_name = user_name
-        self.run_jobs = run_jobs
-        self.collect_job = collect_job
+        self.description = description
+        self.requires_init = requires_init
+        if self.requires_init:
+            self.create_init_job()
+        self.initialize_run_jobs()
+        import ipdb; ipdb.set_trace()
+        # TODO: how can we figure out whether the step has a collect phase?
+        self.create_collect_job()
+        # TODO: this whole approach with requires_init should be optimized
+        # Pre-create phases, such that progress is correct???
         self._current_task = 0
 
     @property
-    def run_jobs(self):
-        '''tmlib.workflow.jobs.RunJobCollection: collection of run jobs'''
+    def init_job(self):
+        '''tmlib.workflow.jobs.InitJob: job for the "init" phase'''
+        if not self.requires_init:
+            raise WorkflowTransitionError(
+                'Workflow step "%s" was configured without "init" phase.'
+                % self.name
+            )
         try:
             return self.tasks[0]
         except IndexError:
-            return None
+            raise WorkflowTransitionError(
+                'Workflow step "%s" doesn\'t have a "init" job.' % self.name
+            )
+
+    @init_job.setter
+    def init_job(self, value):
+        if not self.requires_init:
+            raise WorkflowTransitionError(
+                'Workflow step "%s" was configured without "init" phase.'
+                % self.name
+            )
+
+        if value is not None:
+            if not isinstance(value, InitJob):
+                raise TypeError(
+                    'Attribute "init_job" must have type '
+                    'tmlib.workflow.jobs.InitJob'
+                )
+            if len(self.tasks) == 0:
+                self.tasks.append(value)
+            else:
+                self.tasks[0] = value
+
+    @property
+    def run_jobs(self):
+        '''tmlib.workflow.jobs.RunJobCollection: collection of jobs for the
+        "run" phase
+        '''
+        try:
+            if self.requires_init:
+                return self.tasks[1]
+            else:
+                return self.tasks[0]
+        except IndexError:
+            raise WorkflowTransitionError(
+                'Workflow step "%s" doesn\'t have any "run" jobs.' % self.name
+            )
 
     @run_jobs.setter
     def run_jobs(self, value):
@@ -104,17 +159,31 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
                     'tmlib.workflow.jobs.RunJobCollection'
                 )
             if len(self.tasks) == 0:
+                if self.requires_init:
+                    raise WorkflowTransitionError(
+                        'Attempt to set "run" jobs before "init" phase.'
+                    )
+                self.tasks.append(value)
+            elif len(self.tasks) == 1:
                 self.tasks.append(value)
             else:
-                self.tasks[0] = value
+                if self.requires_init:
+                    self.tasks[1] = value
+                else:
+                    self.tasks[0] = value
 
     @property
     def collect_job(self):
-        '''tmlib.workflow.jobs.CollectJob: individual collect job'''
+        '''tmlib.workflow.jobs.CollectJob: job for the "collect" phase'''
         try:
-            return self.tasks[1]
+            if self.requires_init:
+                return self.tasks[2]
+            else:
+                return self.tasks[1]
         except IndexError:
-            return None
+            raise WorkflowTransitionError(
+                'Workflow step "%s" doesn\'t have a "collect" job.' % self.name
+            )
 
     @collect_job.setter
     def collect_job(self, value):
@@ -125,12 +194,98 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
                     'tmlib.workflow.jobs.CollectJob'
                 )
             if len(self.tasks) == 0:
-                self.tasks.append(None)
-                self.tasks.append(value)
+                raise WorkflowTransitionError(
+                    'Attempt to set "collect" job before "init" and '
+                    'and "run" phase.'
+                )
             elif len(self.tasks) == 1:
+                if self.requires_init:
+                    raise WorkflowTransitionError(
+                        'Attempt to set "collect" job before "run" phase.'
+                    )
+                self.tasks.append(value)
+            elif len(self.tasks) == 2:
                 self.tasks.append(value)
             else:
-                self.tasks[1] = value
+                if self.requires_init:
+                    self.tasks[2] = value
+                else:
+                    self.tasks[1] = value
+
+    @cached_property
+    def _api_instance(self):
+        logger.debug('load step interface "%s"', self.name)
+        API = get_step_api(self.name)
+        if getattr(self.description, 'extra_args', None):
+            kwargs = dict()
+            for name, value in self.description.extra_args.iterargitems():
+                kwargs[name] = value
+            api_instance = API(self.experiment_id, self.verbosity, **kwargs)
+        else:
+            api_instance = API(self.experiment_id, self.verbosity)
+        return api_instance
+
+    def create_init_job(self):
+        '''Creates job for "init" phase.'''
+        logger.info(
+            'create job for "init" phase of step "%s"', self.name
+        )
+        self.init_job = self._api_instance.create_init_job(
+            self.submission_id, self.user_name,
+            self.description.batch_args
+
+        )
+
+    def initialize_run_jobs(self):
+        '''Creates the job collection for "run" phase.'''
+        self.run_jobs = self._api_instance.create_run_job_collection(
+            self.submission_id
+        )
+
+    def create_run_jobs(self):
+        '''Creates the jobs for "run" phase based on descriptions
+        created by previous "init" phase.
+        '''
+        logger.info(
+            'create jobs for "run" phase of step "%s"', self.name
+        )
+        batches = self._api_instance.get_batches_from_files()
+
+        # TODO: check for required inputs in init phase
+        # required_inputs = self._api_instance.list_input_files(batches)
+        # # TODO: also check for existance of database entries
+        # if not all([os.path.exists(i) for i in required_inputs]):
+        #     logger.error('required inputs were not generated')
+        #     raise WorkflowTransitionError(
+        #         'Inputs for step "%s" do not exist.' % self.name
+        #     )
+
+        logger.info(
+            'allocated time for "run" jobs: %s',
+            self.description.submission_args.duration
+        )
+        logger.info(
+            'allocated memory for "run" jobs: %d MB',
+            self.description.submission_args.memory
+        )
+        logger.info(
+            'allocated cores for "run" jobs: %d',
+            self.description.submission_args.cores
+        )
+        self.run_jobs = self._api_instance.create_run_jobs(
+            self.submission_id, self.user_name, self.run_jobs, batches['run'],
+            duration=self.description.submission_args.duration,
+            memory=self.description.submission_args.memory,
+            cores=self.description.submission_args.cores
+        )
+
+    def create_collect_job(self):
+        '''Creates job for "collect" phase based on descriptions
+        created by previous "init" phase.
+        '''
+        self.collect_job = self._api_instance.create_collect_job(
+            self.submission_id, self.user_name
+        )
 
     def next(self, done):
         '''Progresses to the next phase.
@@ -144,6 +299,9 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         -------
         gc3libs.Run.State
         '''
+        if self.requires_init:
+            if done == 0:
+                self.create_run_jobs()
         return super(WorkflowStep, self).next(done)
 
 
@@ -188,7 +346,6 @@ class WorkflowStage(State):
                 'tmlib.tmaps.description.WorkflowStageDescription'
             )
         self.description = description
-        self.expected_outputs = None
         self.tasks = self._create_steps()
 
     def _create_steps(self):
@@ -205,12 +362,15 @@ class WorkflowStage(State):
         dynamically at runtime.
         '''
         workflow_steps = list()
-        for step in self.description.steps:
+        for step_description in self.description.steps:
             workflow_steps.append(
                 WorkflowStep(
-                    name=step.name,
+                    name=step_description.name,
+                    experiment_id=self.experiment_id,
+                    verbosity=self.verbosity,
                     submission_id=self.submission_id,
-                    user_name=self.user_name
+                    user_name=self.user_name,
+                    description=step_description
                 )
             )
         return workflow_steps
@@ -219,77 +379,6 @@ class WorkflowStage(State):
     def n_steps(self):
         '''int: number of steps in the stage'''
         return len(self.description.steps)
-
-    def create_jobs_for_next_step(self, step, step_description):
-        '''Creates jobs for a given workflow step based on the provided
-        description.
-
-        Parameters
-        ----------
-        step: tmlib.workflow.WorkflowStep
-            the step for which jobs should be created
-        step_description: tmlib.workflow.description.WorkflowStepDescription
-            description of the step
-
-        Returns
-        -------
-        tmlib.tmaps.workflow.WorkflowStep
-            step that should be processed next
-        '''
-        logger.info('create jobs for step "%s"', step_description.name)
-        step_name = step_description.name
-        logger.debug('load step interface "%s"', step_name)
-        api_class = get_step_api(step_name)
-        if getattr(step_description, 'extra_args', None):
-            kwargs = dict()
-            for name, value in step_description.extra_args.iterargitems():
-                kwargs[name] = value
-            api_instance = api_class(
-                self.experiment_id, self.verbosity, **kwargs
-            )
-        else:
-            api_instance = api_class(self.experiment_id, self.verbosity)
-        logger.info('delete previous job output')
-        api_instance.delete_previous_job_output()
-        logger.info('create batches')
-        batches = api_instance.create_batches(step_description.batch_args)
-        logger.debug('write batches to files')
-        api_instance.write_batch_files(batches)
-        required_inputs = api_instance.list_input_files(batches)
-        # Check whether inputs of current step were generated by previous steps
-        if not all([os.path.exists(i) for i in required_inputs]):
-            logger.error('required inputs were not generated')
-            raise WorkflowTransitionError(
-                'inputs for step "%s" do not exist' % step_description.name
-            )
-
-        # # Store the expected outputs to be later able to check whether they
-        # # were actually generated
-        # self.expected_outputs.append(prog_instance.expected_outputs)
-        self.expected_outputs = api_instance.list_output_files(batches)
-        logger.info(
-            'allocated time: %s', step_description.submission_args.duration
-        )
-        logger.info(
-            'allocated memory: %d MB', step_description.submission_args.memory
-        )
-        logger.info(
-            'allocated cores: %d', step_description.submission_args.cores
-        )
-        step.run_jobs = api_instance.create_run_jobs(
-            self.submission_id,
-            self.user_name,
-            batches['run'],
-            duration=step_description.submission_args.duration,
-            memory=step_description.submission_args.memory,
-            cores=step_description.submission_args.cores
-        )
-        if 'collect' in batches:
-            step.collect_job = api_instance.create_collect_job(
-                self.submission_id,
-                self.user_name
-            )
-        return step
 
 
 class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
@@ -341,19 +430,8 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
         index: int
             index for the list of `tasks` (steps)
         '''
-        if index > 0:
-            # NOTE: Checking the existence of files can be problematic,
-            # because NFS may lie. We try to circumvent this by waiting upon
-            # transition to the next step, but this not be sufficient.
-            if not all([os.path.exists(f) for f in self.expected_outputs]):
-                raise WorkflowTransitionError(
-                    'outputs of previous step do not exist (submission: %d)'
-                    % self.submission_id
-                )
         logger.debug('create job descriptions for next step')
-        self.tasks[index] = self.create_jobs_for_next_step(
-            self.tasks[index], self.description.steps[index]
-        )
+        self.tasks[index].create_init_job()
 
     def next(self, done):
         '''Progresses to next step.
@@ -471,9 +549,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
 
     def _update_all_steps(self):
         for index, step_description in enumerate(self.description.steps):
-            self.tasks[index] = self.create_jobs_for_next_step(
-                self.tasks[index], step_description
-            )
+            self.self.tasks[index].create_init_job()
 
 
 class Workflow(SequentialTaskCollection, State):

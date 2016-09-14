@@ -137,6 +137,48 @@ class Job(gc3libs.Application):
         return self.execution.state == gc3libs.Run.State.NEW
 
 
+class InitJob(Job):
+
+    '''Class for a *init* jobs, which creates the descriptions for the
+    subsequent *run* and *collect* phases.
+    '''
+
+    def __init__(self, step_name, arguments, output_dir, submission_id, user_name):
+        '''
+        Parameters
+        ----------
+        step_name: str
+            name of the corresponding TissueMAPS workflow step
+        arguments: List[str]
+            command line arguments
+        output_dir: str
+            absolute path to the output directory, where log reports will
+            be stored
+        submission_id: int
+            ID of the corresponding submission
+        user_name: str
+            name of the submitting user
+        '''
+        super(InitJob, self).__init__(
+            step_name=step_name,
+            arguments=arguments,
+            output_dir=output_dir,
+            submission_id=submission_id,
+            user_name=user_name
+        )
+
+    @property
+    def name(self):
+        '''str:name of the job'''
+        return '%s_init' % self.step_name
+
+    def __repr__(self):
+        return (
+            '<InitJob(name=%r, submission_id=%r)>'
+            % (self.name, self.submission_id)
+        )
+
+
 class RunJob(Job):
 
     '''
@@ -355,12 +397,7 @@ class CollectJob(Job):
 
     @property
     def name(self):
-        '''
-        Returns
-        -------
-        str
-            name of the job
-        '''
+        '''str:name of the job'''
         return '%s_collect' % self.step_name
 
     def __repr__(self):

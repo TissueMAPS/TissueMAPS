@@ -188,7 +188,9 @@ class WorkflowStageDescription(object):
         self.steps = list()
         if steps is not None:
             for step in steps:
-                BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(step['name'])
+                BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(
+                    step['name']
+                )
                 batch_arg_values = {
                     a['name']: a['value'] for a in step['batch_args']
                 }

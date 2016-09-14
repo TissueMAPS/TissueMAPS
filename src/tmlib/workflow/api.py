@@ -20,6 +20,8 @@ from tmlib.writers import JsonWriter
 from tmlib.errors import JobDescriptionError
 from tmlib.errors import WorkflowError
 from tmlib.errors import WorkflowDescriptionError
+from tmlib.workflow import get_step_args
+from tmlib.workflow.jobs import InitJob
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import CollectJob
@@ -188,7 +190,7 @@ class ClusterRoutines(BasicClusterRoutines):
                 os.path.join(self.log_location, '*_collect_*.err')
             )
             if not stdout_files or not stderr_files:
-                raise IOError('No log files found for collect job')
+                raise IOError('No log files found for "collect" job')
         # Take the most recent log files
         log = dict()
         with open(natsorted(stdout_files)[-1], 'r') as f:
@@ -282,7 +284,7 @@ class ClusterRoutines(BasicClusterRoutines):
         )
 
     def build_batch_filename_for_collect_job(self):
-        '''Builds the name of a batch file for a collect job.
+        '''Builds the name of a batch file for a "collect" job.
 
         Returns
         -------
@@ -495,6 +497,15 @@ class ClusterRoutines(BasicClusterRoutines):
             with JsonWriter(batch_file) as f:
                 f.write(batch)
 
+    def _build_init_command(self, batch_args):
+        command = [self.step_name]
+        command.extend(['-v' for x in xrange(self.verbosity)])
+        command.append(self.experiment_id)
+        command.append('init')
+        for k, v in batch_args.iterargitems():
+            command.extend(['--%s' % k, str(v)])
+        return command
+
     def _build_run_command(self, job_id):
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
@@ -564,7 +575,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         In case a *collect* job is required, the corresponding batch must
         provide the following key-value pairs:
-            * "inputs": absolute paths to input files required to collect job
+            * "inputs": absolute paths to input files required to *collect* job
               output of the *run* phase (Dict[*str*, List[*str*]])
             * "outputs": absolute paths to output files produced by the job
               (Dict[*str*, List[*str*]])
@@ -608,7 +619,7 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         print yaml.safe_dump(batches, default_flow_style=False)
 
-    def create_step(self, submission_id, user_name):
+    def create_step(self, submission_id, user_name, description):
         '''Creates the workflow step.
 
         Parameters
@@ -617,6 +628,7 @@ class ClusterRoutines(BasicClusterRoutines):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        description: tmlib.workflow.description.WorkflowStepDescription
 
         Returns
         -------
@@ -626,15 +638,18 @@ class ClusterRoutines(BasicClusterRoutines):
         return WorkflowStep(
             name=self.step_name,
             submission_id=submission_id,
-            user_name=user_name
+            user_name=user_name,
+            description=description
         )
 
+    def create_run_job_collection(self, submission_id):
+        '''tmlib.workflow.job.SingleRunJobCollection: collection of "run" jobs
+        '''
+        return SingleRunJobCollection(
+            step_name=self.step_name, submission_id=submission_id
+        )
 
-    # def create_init_job(self, submission_id, user_name,
-    #         duration='06:00:00', memory=3800, cores=1):
-    #     pass
-
-    def create_run_jobs(self, submission_id, user_name, batches,
+    def create_run_jobs(self, submission_id, user_name, job_collection, batches,
             duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
 
@@ -644,6 +659,8 @@ class ClusterRoutines(BasicClusterRoutines):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        job_collection: tmlib.workflow.job.SingleRunJobCollection
+            empty collection of *run* jobs that should be populated
         batches: List[dict]
             job descriptions
         duration: str
@@ -659,15 +676,11 @@ class ClusterRoutines(BasicClusterRoutines):
         tmlib.workflow.jobs.SingleRunJobCollection
             run jobs
         '''
-        logger.info('create run jobs for submission %d', submission_id)
+        logger.info('create "run" jobs for submission %d', submission_id)
         logger.debug('allocated time for run jobs: %s', duration)
         logger.debug('allocated memory for run jobs: %d MB', memory)
         logger.debug('allocated cores for run jobs: %d', cores)
 
-        run_jobs = SingleRunJobCollection(
-            step_name=self.step_name,
-            submission_id=submission_id
-        )
         for b in batches:
             job = RunJob(
                 step_name=self.step_name,
@@ -688,8 +701,63 @@ class ClusterRoutines(BasicClusterRoutines):
                     'The value of "cores" must be positive.'
                 )
             job.requested_cores = cores
-            run_jobs.add(job)
-        return run_jobs
+            job_collection.add(job)
+        return job_collection
+
+    def create_init_job(self, submission_id, user_name, batch_args,
+            duration='24:00:00', memory=3800, cores=1):
+        '''Creates job for the "init" phase of the step.
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding submission
+        user_name: str
+            name of the submitting user
+        batch_args: tmlib.workflow.args.BatchArguments
+            step-specific implementation of
+            :py:class:`tmlib.workflow.args.BatchArguments`, which will be used
+            for the creation of batches of the subsequent "run" and "collect"
+            phases
+        duration: str, optional
+            computational time that should be allocated for a single job;
+            in HH:MM:SS format (default: ``"24:00:00"``)
+        memory: int, optional
+            amount of memory in Megabyte that should be allocated for a single
+            (default: ``3800)
+        cores: int, optional
+            number of CPU cores that should be allocated for a single job
+            (default: ``1``)
+
+        Returns
+        -------
+        tmlib.workflow.jobs.InitJob
+            init job
+
+        '''
+        logger.info('create "init" job for submission %d', submission_id)
+        logger.debug('allocated time for "init" job: %s', duration)
+        logger.debug('allocated memory for "init" job: %d MB', memory)
+        logger.debug('allocated cores for "init" job: %d', cores)
+        job = InitJob(
+            step_name=self.step_name,
+            arguments=self._build_init_command(batch_args),
+            output_dir=self.log_location,
+            submission_id=submission_id,
+            user_name=user_name
+        )
+        job.requested_walltime = Duration(duration)
+        job.requested_memory = Memory(memory, Memory.MB)
+        if not isinstance(cores, int):
+            raise TypeError(
+                'Argument "cores" must have type int.'
+            )
+        if not cores > 0:
+            raise ValueError(
+                'The value of "cores" must be positive.'
+            )
+        job.requested_cores = cores
+        return job
 
     def create_collect_job(self, submission_id, user_name,
             duration='06:00:00', memory=3800, cores=1):
@@ -716,14 +784,11 @@ class ClusterRoutines(BasicClusterRoutines):
         tmlib.workflow.jobs.CollectJob
             collect job
 
-        Note
-        ----
-        Duration defaults to 2 hours and memory to 3800 megabytes.
         '''
-        logger.info('create collect job for submission %d', submission_id)
-        logger.debug('allocated time for collect job: %s', duration)
-        logger.debug('allocated memory for collect job: %d MB', memory)
-        logger.debug('allocated cores for collect job: %d', cores)
+        logger.info('create "collect" job for submission %d', submission_id)
+        logger.debug('allocated time for "collect" job: %s', duration)
+        logger.debug('allocated memory for "collect" job: %d MB', memory)
+        logger.debug('allocated cores for "collect" job: %d', cores)
         job = CollectJob(
             step_name=self.step_name,
             arguments=self._build_collect_command(),
