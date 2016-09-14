@@ -3,9 +3,6 @@ import requests
 import json
 import logging
 
-from tmlib.models.status import FileUploadStatus
-from tmlib.utils import same_docstring_as
-
 from tmclient.experiment import ExperimentService
 
 
@@ -18,8 +15,19 @@ class UploadService(ExperimentService):
     RESTful API.
     '''
 
-    @same_docstring_as(ExperimentService.__init__)
     def __init__(self, host_name, experiment_name, user_name, password):
+        '''
+        Parameters
+        ----------
+        host_name: str
+            name of the TissueMAPS instance
+        experiment_name: str
+            name of the experiment that should be queried
+        user_name: str
+            name of the TissueMAPS user
+        password: str
+            password for `username`
+        '''
         super(UploadService, self).__init__(
             host_name, experiment_name, user_name, password
         )
@@ -49,7 +57,7 @@ class UploadService(ExperimentService):
         )
         return [
             f['name'] for f in image_files + metadata_files
-            if f['status'] == FileUploadStatus.COMPLETE
+            if f['status'] == 'COMPLETE'
         ]
 
     def _get_image_files(self, acquisition_id):

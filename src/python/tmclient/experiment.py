@@ -3,8 +3,6 @@ import json
 import inspect
 import logging
 
-from tmlib.utils import same_docstring_as
-
 from tmclient.base import HttpClient
 
 logger = logging.getLogger(__name__)
@@ -14,7 +12,6 @@ class ExperimentService(HttpClient):
 
     '''Class for querying a TissueMAPS experiment via RESTful API.'''
 
-    @same_docstring_as(HttpClient.__init__)
     def __init__(self, host_name, experiment_name, user_name, password=None):
         '''
         Parameters

@@ -6,10 +6,6 @@ import os
 import logging
 import argparse
 
-from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
-from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
-from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
-
 from tmclient.logging_utils import configure_logging
 from tmclient.logging_utils import map_logging_verbosity
 from tmclient.experiment import ExperimentService
@@ -52,19 +48,16 @@ if __name__ == '__main__':
     experiment_parser.set_defaults(method='create_experiment')
     experiment_parser.add_argument(
         '--microscope_type', default='cellvoyager',
-        choices=SUPPORTED_MICROSCOPE_TYPES,
         help='microscope type (default: cellvoyager)'
     )
     experiment_parser.add_argument(
         '--plate_format', type=int, default=384,
-        choices=SUPPORTED_PLATE_FORMATS,
         help='''
             well-plate format - total number of wells per plate (default: 384)
         '''
     )
     experiment_parser.add_argument(
         '--plate_acquisition_mode', default='basic',
-        choices=SUPPORTED_PLATE_AQUISITION_MODES,
         help='''
             whether multiple acquisitions of the same plate are interpreted
             as time points (basic mode) or multiplexing cycles

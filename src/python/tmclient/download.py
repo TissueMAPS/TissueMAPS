@@ -6,9 +6,6 @@ import cv2
 import logging
 import tempfile
 
-from tmlib.models.status import FileUploadStatus
-from tmlib.utils import same_docstring_as
-
 from tmclient.experiment import ExperimentService
 
 
@@ -19,8 +16,19 @@ class DownloadService(ExperimentService):
 
     '''Class for downloading image files from TissueMAPS via its RESTful API.'''
 
-    @same_docstring_as(ExperimentService.__init__)
     def __init__(self, hostname, experiment_name, user_name, password):
+        '''
+        Parameters
+        ----------
+        host_name: str
+            name of the TissueMAPS instance
+        experiment_name: str
+            name of the experiment that should be queried
+        user_name: str
+            name of the TissueMAPS user
+        password: str
+            password for `username`
+        '''
         super(DownloadService, self).__init__(
             hostname, experiment_name, user_name, password
         )
