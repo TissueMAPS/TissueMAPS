@@ -497,7 +497,7 @@ class PyramidBuilder(ClusterRoutines):
                     )
                     # clt.pixels = tile
                     channel_layer_tiles.append({
-                        'id': clt.id, 'pixels': tile.jpeg_encode()
+                        'id': clt.id, '_pixels': tile.jpeg_encode()
                     })
 
                 # session.bulk_save_objects(channel_layer_tiles)
