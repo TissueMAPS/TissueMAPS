@@ -50,7 +50,7 @@ class _CliMeta(ABCMeta):
     '''
 
     def __init__(cls, clsname, bases, attrs):
-        super(CliMeta, cls).__init__(clsname, bases, attrs)
+        super(_CliMeta, cls).__init__(clsname, bases, attrs)
         if '__abstract__' in vars(cls).keys():
             return
         pkg_name = '.'.join(cls.__module__.split('.')[:-1])

@@ -67,7 +67,7 @@ class _ApiMeta(ABCMeta):
     '''
 
     def __init__(cls, clsname, bases, attrs):
-        super(ApiMeta, cls).__init__(clsname, bases, attrs)
+        super(_ApiMeta, cls).__init__(clsname, bases, attrs)
         attrs = dir(cls)
         if '__abstract__' in attrs:
             return
