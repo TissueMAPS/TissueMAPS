@@ -57,42 +57,50 @@ class BasicClusterRoutines(object):
         return utils.create_timestamp()
 
 
-class ApiMeta(ABCMeta):
+class _ApiMeta(ABCMeta):
 
-    '''Metaclass for workflow step API classes, i.e. implementations of
-    :py:class:`tmlib.workflow.api.ClusterRoutines`.
+    '''Metaclass for :py:class:`tmlib.workflow.api.ClusterRoutines`.
 
-    The metaclass inspects the method `collect_job_output` of classes derived
-    from :py:class:`tmlib.workflow.api.ClusterRoutines` to dynamically figure
-    out whether the workflow step has implemented the "collect" phase.
-
-    Classes that do not implement the "collect" phase must decorate the
-    `collect_job_output` method with :py:func:`tmlib.utils.notimplemented`.
+    The metaclass inspects the method `collect_job_output` of derived classes
+    to dynamically determine whether the given step has implemented the
+    *collect* phase.
     '''
+
     def __init__(cls, clsname, bases, attrs):
         super(ApiMeta, cls).__init__(clsname, bases, attrs)
         attrs = dir(cls)
-        if 'ClusterRoutines' not in [b.__name__ for b in bases]:
+        if '__abstract__' in attrs:
             return
         collect_method = getattr(cls, 'collect_job_output')
         if getattr(collect_method, 'is_implemented', True):
             has_collect_phase = True
         else:
             has_collect_phase = False
+        # NOTE: This attribute will be used by the constructor of the
+        # WorkflowStep class to determine whether a "collect" job has to be
+        # created for that step.
         setattr(cls, 'has_collect_phase', has_collect_phase)
 
 
 class ClusterRoutines(BasicClusterRoutines):
 
     '''Abstract base class for API classes, which provide methods for
-    for large scale image processing on a batch cluster.
+    for large-scale image processing on a batch cluster.
 
     Each workflow step must implement this class and decorate it with
-    :py:function:`tmlib.workflow.api.api` to register it for use in
-    command line interface and worklow.
+    :py:function:`tmlib.workflow.register_api` to register it for use
+    within a worklow.
+
+    Note
+    ----
+    Classes that don't implement the *collect* phase must decorate the
+    implemented `collect_job_output` method with
+    :py:func:`tmlib.utils.notimplemented`.
     '''
 
-    __metaclass__ = ApiMeta
+    __metaclass__ = _ApiMeta
+
+    __abstract__ = True
 
     def __init__(self, experiment_id, verbosity):
         '''

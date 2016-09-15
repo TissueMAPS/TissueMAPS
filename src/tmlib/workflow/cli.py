@@ -38,7 +38,7 @@ import tmlib.models as tm
 logger = logging.getLogger(__name__)
 
 
-class CliMeta(ABCMeta):
+class _CliMeta(ABCMeta):
 
     '''Metaclass that provides classes command line interface functionality.
     Generated classes behave as abstract base classes and need to be
@@ -47,25 +47,6 @@ class CliMeta(ABCMeta):
     will be added to this class. Derived classes will, however, be automatically
     equipped with this functionality.
 
-    This is achieved by adding an instance of :py:class:`argparse.ArgumentParser`
-    to the derived class.
-    The docstring of the class is used as value for the `description` attribute
-    of the parser and a separate subparser is added for each method of the
-    class that is decorated with :py:func:`tmlib.workflow.climethod`.
-    The decorator provides descriptions for the arguments required, which are
-    added to the corresponding subparser.
-    The :py:method:`tmlib.workflow.cli.CommandLineInterface.init`
-    and :py:method:`tmlib.workflow.cli.CommandLineInterace.submit` methods
-    require additional step-specific arguments that are passed to the *API*
-    methods :py:method:`tmlib.workflow.api.ClusterRoutines.create_batches` and
-    :py:method:`tmlib.workflow.api.ClusterRoutines.create_jobs`, respectively.
-    These arguments are handled separately, because they also need to be
-    accessible outside the scope of the command line interace.
-    They are provided by step-specific implementations of
-    :py:class:`tmlib.workflow.args.BatchArguments` and
-    :py:class:`tmlib.workflow.args.SubmissionArguments`, respectively,
-    and are automatically loaded from the `args` module of the step package
-    and added to corresponding subparser.
     '''
 
     def __init__(cls, clsname, bases, attrs):
@@ -171,12 +152,30 @@ class CommandLineInterface(SubmissionManager):
 
     '''Abstract base class for command line interfaces.
 
-    Derived classes must implement abstract methods and properties
-    and provide the attribute ``__cli__ = True`` to active command line
-    interface functionality.
+    Each workflow step must implement this class. This will automatically
+    provide derived classes with command line interface functionality
+    in form of an instance of :py:class:`argparse.ArgumentParser`.
+    The docstring of the derived class is also used for the `description`
+    attribute of the parser for display in the command line.
+    A separate subparser is added for each method of the derived class that is
+    decorated with :py:func:`tmlib.workflow.climethod`. The decorator provides
+    descriptions of the method arguments, which are also added to the
+    corresponding subparser.
+
+    The :py:method:`tmlib.workflow.cli.CommandLineInterface.init`
+    and :py:method:`tmlib.workflow.cli.CommandLineInterace.submit` methods
+    require additional step-specific arguments that are passed to the *API*
+    methods :py:method:`tmlib.workflow.api.ClusterRoutines.create_batches` and
+    :py:method:`tmlib.workflow.api.ClusterRoutines.create_run_jobs`,
+    respectively. These arguments are handled separately, since they also need
+    to be accessible outside the scope of the command line interace.
+    They are provided by step-specific implementations of
+    :py:class:`tmlib.workflow.args.BatchArguments` and
+    :py:class:`tmlib.workflow.args.SubmissionArguments` and added to the
+    corresponding `init` and `submit` subparsers, respectively.
     '''
 
-    __metaclass__ = CliMeta
+    __metaclass__ = _CliMeta
 
     __abstract__ = True
 
