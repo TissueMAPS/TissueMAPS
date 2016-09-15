@@ -4,9 +4,11 @@ from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.dialects.postgres import JSONB
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.orm import Session
 
 from tmlib.models import ExperimentModel, DateMixIn
 from tmlib.models.status import FileUploadStatus as fus
+from tmlib.models.file import MicroscopeImageFile, MicroscopeMetadataFile
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.utils import autocreate_directory_property
 
@@ -115,8 +117,11 @@ class Acquisition(ExperimentModel, DateMixIn):
     @property
     def status(self):
         '''str: upload status based on the status of microscope files'''
-        child_status = set([f.status for f in self.microscope_image_files]).\
-            union(set([f.status for f in self.microscope_metadata_files]))
+        session = Session.object_session(self)
+        img_files = session.query(MicroscopeImageFile.status).distinct()
+        meta_files = session.query(MicroscopeMetadataFile.status).distinct()
+        child_status = set([f.status for f in img_files]).\
+            union([f.status for f in meta_files])
         if fus.UPLOADING in child_status:
             return fus.UPLOADING
         elif len(child_status) == 1 and fus.COMPLETE in child_status:
