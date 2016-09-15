@@ -17,13 +17,6 @@ input:
       Grayscale image that should be used to find the outlines of secondary
       objects.
 
-  - name: background_level
-    type: Numeric
-    value: 120
-    help: >
-      Pixels in "input_image" with values below "background_level" will be
-      considered background to restrict the expansion of secondary objects.
-
   - name: plot
     type: Plot
     value: false

@@ -12,10 +12,12 @@ from matplotlib import pyplot as plt
 
 logger = logging.getLogger(__name__)
 
+version = '0.0.2'
+
 Output = collections.namedtuple('Output', ['output_label_image', 'figure'])
 
 
-def main(input_label_image, input_image, background_level, plot=False):
+def main(input_label_image, input_image, plot=False):
     '''Detects secondary objects in an image by expanding the primary objects
     encoded in `input_label_image`. The outlines of secondary objects are
     determined based on the watershed transform of `input_image` using the
@@ -27,9 +29,8 @@ def main(input_label_image, input_image, background_level, plot=False):
         2D labeled array encoding primary objects, which serve as seeds for
         watershed transform
     input_image: numpy.ndarray[numpy.uint8 or numpy.uint16]
-        2D grayscale array that serves as gradient for watershed transform
-    background_level: int
-        prevents expansion of objects beyond this intensitiy value
+        2D grayscale array that serves as gradient for watershed transform;
+        optimally this image is enhanced with a low-pass filter
     plot: bool, optional
         whether a plot should be generated
 
@@ -46,18 +47,37 @@ def main(input_label_image, input_image, background_level, plot=False):
     if not has_background:
         output_label_image = input_label_image
     else:
+        # A simple, fixed threshold doesn't work for SE stains. Therefore, we
+        # use adaptive thresholding to determine background regions,
+        # i.e. regions in the input_image that should not be covered by
+        # secondary objects.
+        n_objects = np.max(input_label_image)
+        # TODO: consider using contrast_treshold as input parameter
+        background_mask = mh.thresholding.bernsen(input_image, 5, 5)
+        background_mask = mh.morph.open(background_mask)
+        background_label_image = mh.label(background_mask)[0]
+        background_label_image[background_mask] += n_objects
+
         logger.info('detect secondary objects via watershed transform')
-        regions = mh.cwatershed(np.invert(input_image), input_label_image)
+        # We compute the watershed transform using the seeds of the primary
+        # objects and the additional seeds for the background regions. The
+        # background regions will compete with the foreground regions and
+        # thereby work as a stop criterion for expansion of primary objects.
+        labels = input_label_image + background_label_image
+        regions = mh.cwatershed(np.invert(input_image), labels)
+        # Remove background regions
+        regions[regions > n_objects] = 0
+        # regions[input_image < background_level] = 0
+
         # Ensure objects are separated
         lines = mh.labeled.borders(regions)
         regions[lines] = 0
-        # Remove "background" regions
-        logger.info(
-            'remove background regions with values below %d', background_level
-        )
-        background_mask = input_image < background_level
-        regions[background_mask] = 0
-        # Remove objects that are obviously too small
+
+        # Remove objects that are obviously too small, i.e. smaller than the
+        # seeds (this could happen when we remove certain parts of objects
+        # after the watershed region growing)
+        # TODO: Ensure that mapping of objects is one-to-one, i.e. each primary
+        # object has exactly one secondary object
         min_size = np.min(mh.labeled.labeled_size(input_label_image))
         sizes = mh.labeled.labeled_size(regions)
         too_small = np.where(sizes < min_size)
