@@ -567,10 +567,8 @@ class PyramidBuilder(ClusterRoutines):
                                     % (batch['level']+1, r, c)
                                 )
                             logger.warning(
-                                'tile "%s" was not created - might be empty',
-                                layer.build_tile_file_name(
-                                    batch['level']+1, r, c
-                                )
+                                'tile "%d-%d-%d" was not created - might be empty',
+                                 batch['level']+1, r, c
                             )
                             pre_tile = PyramidTile.create_as_background()
                         # We have to temporally treat it as an "image",
