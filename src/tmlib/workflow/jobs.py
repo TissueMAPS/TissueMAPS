@@ -38,7 +38,8 @@ class Job(gc3libs.Application):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, step_name, arguments, output_dir, submission_id, user_name):
+    def __init__(self, step_name, arguments, output_dir,
+            submission_id, user_name):
         '''
         Parameters
         ----------
@@ -104,7 +105,7 @@ class Job(gc3libs.Application):
             whether job should be resubmitted
         '''
         # TODO
-        return super(Job, self).retry()
+        return super(self.__class__, self).retry()
 
     @property
     def is_terminated(self):
@@ -159,7 +160,7 @@ class InitJob(Job):
         user_name: str
             name of the submitting user
         '''
-        super(InitJob, self).__init__(
+        super(self.__class__, self).__init__(
             step_name=step_name,
             arguments=arguments,
             output_dir=output_dir,
@@ -174,8 +175,8 @@ class InitJob(Job):
 
     def __repr__(self):
         return (
-            '<InitJob(name=%r, submission_id=%r)>'
-            % (self.name, self.submission_id)
+            '<%s(name=%r, submission_id=%r)>'
+            % (self.__class__.__name__, self.name, self.submission_id)
         )
 
 
@@ -211,7 +212,7 @@ class RunJob(Job):
         if not isinstance(index, int) and index is not None:
             raise TypeError('Argument "index" must have type int.')
         self.index = index
-        super(RunJob, self).__init__(
+        super(self.__class__, self).__init__(
             step_name=step_name,
             arguments=arguments,
             output_dir=output_dir,
@@ -232,8 +233,50 @@ class RunJob(Job):
 
     def __repr__(self):
         return (
-            '<RunJob(name=%r, submission_id=%r)>'
-            % (self.name, self.submission_id)
+            '<%s(name=%r, submission_id=%r)>'
+            % (self.__class__.__name__, self.name, self.submission_id)
+        )
+
+
+class CollectJob(Job):
+
+    '''Class for a collect jobs, which can be processed once all
+    parallel jobs are successfully completed.
+    '''
+
+    def __init__(self, step_name, arguments, output_dir, submission_id, user_name):
+        '''
+        Parameters
+        ----------
+        step_name: str
+            name of the corresponding TissueMAPS workflow step
+        arguments: List[str]
+            command line arguments
+        output_dir: str
+            absolute path to the output directory, where log reports will
+            be stored
+        submission_id: int
+            ID of the corresponding submission
+        user_name: str
+            name of the submitting user
+        '''
+        super(self.__class__, self).__init__(
+            step_name=step_name,
+            arguments=arguments,
+            output_dir=output_dir,
+            submission_id=submission_id,
+            user_name=user_name
+        )
+
+    @property
+    def name(self):
+        '''str:name of the job'''
+        return '%s_collect' % self.step_name
+
+    def __repr__(self):
+        return (
+            '<%s(name=%r, submission_id=%r)>'
+            % (self.__class__.__name__, self.name, self.submission_id)
         )
 
 
@@ -285,9 +328,7 @@ class SingleRunJobCollection(ParallelTaskCollection, RunJobCollection):
                 raise TypeError('Argument "index" must have type int.')
             self.name = '%s_run-%.2d' % (self.step_name, index)
         self.submission_id = submission_id
-        super(SingleRunJobCollection, self).__init__(
-            jobname=self.name, tasks=jobs
-        )
+        super(self.__class__, self).__init__(jobname=self.name, tasks=jobs)
 
     def add(self, job):
         '''Adds a job to the collection.
@@ -307,12 +348,13 @@ class SingleRunJobCollection(ParallelTaskCollection, RunJobCollection):
                 'Argument "job" must have type '
                 'tmlib.workflow.jobs.RunJob'
             )
-        super(SingleRunJobCollection, self).add(job)
+        super(self.__class__, self).add(job)
 
     def __repr__(self):
         return (
-            '<SingleRunJobCollection(name=%r, n=%r, submission_id=%r)>'
-            % (self.name, len(self.tasks), self.submission_id)
+            '<%s(name=%r, n=%r, submission_id=%r)>'
+            % (self.__class__.__name__, self.name, len(self.tasks),
+                self.submission_id)
         )
 
 
@@ -334,7 +376,7 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection, RunJobCollec
         self.name = '%s_run' % step_name
         self.step_name = step_name
         self.submission_id = submission_id
-        super(MultiRunJobCollection, self).__init__(
+        super(self.__class__, self).__init__(
             jobname=self.name, tasks=run_job_collections
         )
 
@@ -356,52 +398,39 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection, RunJobCollec
                 'Argument "run_job_collection" must have type '
                 'tmlib.workflow.jobs.SingleRunJobCollection'
             )
-        super(MultiRunJobCollection, self).add(run_job_collection)
+        super(self.__class__, self).add(run_job_collection)
 
     def __repr__(self):
         return (
-            '<MultiRunJobCollection(name=%r, n=%r, submission_id=%r)>'
-            % (self.name, len(self.tasks), self.submission_id)
+            '<%s(name=%r, n=%r, submission_id=%r)>'
+            % (self.__class__.__name__, self.name, len(self.tasks),
+                self.submission_id)
         )
 
 
-class CollectJob(Job):
+class CliJobCollection(SequentialTaskCollection, JobCollection):
 
-    '''Class for a collect jobs, which can be processed once all
-    parallel jobs are successfully completed.
+    '''Class for manual submission of the *run* and *collect* phases of a
+    workflow steps via
+    :py:method:`tmlib.workflow.cli.CommandLineInterface.submit`.
     '''
 
-    def __init__(self, step_name, arguments, output_dir, submission_id, user_name):
+    def __init__(self, step_name, submission_id, jobs=None):
         '''
         Parameters
         ----------
         step_name: str
             name of the corresponding TissueMAPS workflow step
-        arguments: List[str]
-            command line arguments
-        output_dir: str
-            absolute path to the output directory, where log reports will
-            be stored
         submission_id: int
             ID of the corresponding submission
-        user_name: str
-            name of the submitting user
+        jobs: List[tmlibs.workflow.jobs.RunJobCollection or tmlibs.workflow.jobs.CollectJob], optional
+            list of jobs that should be processed (default: ``None``)
         '''
-        super(CollectJob, self).__init__(
-            step_name=step_name,
-            arguments=arguments,
-            output_dir=output_dir,
-            submission_id=submission_id,
-            user_name=user_name
-        )
-
-    @property
-    def name(self):
-        '''str:name of the job'''
-        return '%s_collect' % self.step_name
-
-    def __repr__(self):
-        return (
-            '<CollectJob(name=%r, submission_id=%r)>'
-            % (self.name, self.submission_id)
-        )
+        self.submission_id = submission_id
+        if jobs is not None:
+            if not isinstance(jobs[0], RunJobCollection):
+                raise TypeError(
+                    'First job must have type '
+                    'tmlib.workflow.jobs.RunJobCollection.'
+                )
+        super(self.__class__, self).__init__(jobname=step_name, tasks=jobs)

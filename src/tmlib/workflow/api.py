@@ -57,6 +57,31 @@ class BasicClusterRoutines(object):
         return utils.create_timestamp()
 
 
+class ApiMeta(ABCMeta):
+
+    '''Metaclass for workflow step API classes, i.e. implementations of
+    :py:class:`tmlib.workflow.api.ClusterRoutines`.
+
+    The metaclass inspects the method `collect_job_output` of classes derived
+    from :py:class:`tmlib.workflow.api.ClusterRoutines` to dynamically figure
+    out whether the workflow step has implemented the "collect" phase.
+
+    Classes that do not implement the "collect" phase must decorate the
+    `collect_job_output` method with :py:func:`tmlib.utils.notimplemented`.
+    '''
+    def __init__(cls, clsname, bases, attrs):
+        super(ApiMeta, cls).__init__(clsname, bases, attrs)
+        attrs = dir(cls)
+        if 'ClusterRoutines' not in [b.__name__ for b in bases]:
+            return
+        collect_method = getattr(cls, 'collect_job_output')
+        if getattr(collect_method, 'is_implemented', True):
+            has_collect_phase = True
+        else:
+            has_collect_phase = False
+        setattr(cls, 'has_collect_phase', has_collect_phase)
+
+
 class ClusterRoutines(BasicClusterRoutines):
 
     '''Abstract base class for API classes, which provide methods for
@@ -67,7 +92,7 @@ class ClusterRoutines(BasicClusterRoutines):
     command line interface and worklow.
     '''
 
-    __metaclass__ = ABCMeta
+    __metaclass__ = ApiMeta
 
     def __init__(self, experiment_id, verbosity):
         '''
@@ -155,13 +180,15 @@ class ClusterRoutines(BasicClusterRoutines):
 
         return batches
 
-    def get_log_output_from_files(self, job_id):
+    def get_log_output_from_files(self, phase, job_id=None):
         '''Gets log outputs (standard output and error) from files.
 
         Parameters
         ----------
-        job_id: int
-            one-based job identifier number
+        phase: str
+            phase of the workflow step (options: ``{"init", "run", "collect"}``)
+        job_id: int, optional
+            one-based identifier number of "run" jobs (default: ``None``)
 
         Returns
         -------
@@ -173,7 +200,11 @@ class ClusterRoutines(BasicClusterRoutines):
         In case there are several log files present for the given the most
         recent one will be used (sorted by submission date and time point).
         '''
-        if job_id is not None:
+        if phase == 'run':
+            if not isinstance(job_id, int):
+                raise ValueError(
+                    'Argument "job_id" is required for "run" phase.'
+                )
             stdout_files = glob.glob(
                 os.path.join(self.log_location, '*_run*_%.6d*.out' % job_id)
             )
@@ -184,13 +215,13 @@ class ClusterRoutines(BasicClusterRoutines):
                 raise IOError('No log files found for run job # %d' % job_id)
         else:
             stdout_files = glob.glob(
-                os.path.join(self.log_location, '*_collect*.out')
+                os.path.join(self.log_location, '*_%s*.out' % phase)
             )
             stderr_files = glob.glob(
-                os.path.join(self.log_location, '*_collect_*.err')
+                os.path.join(self.log_location, '*_%s_*.err' % phase)
             )
             if not stdout_files or not stderr_files:
-                raise IOError('No log files found for "collect" job')
+                raise IOError('No log files found for "%s" job' % phase)
         # Take the most recent log files
         log = dict()
         with open(natsorted(stdout_files)[-1], 'r') as f:
@@ -498,15 +529,23 @@ class ClusterRoutines(BasicClusterRoutines):
                 f.write(batch)
 
     def _build_init_command(self, batch_args):
+        logger.debug('build "init" command')
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment_id)
         command.append('init')
-        for k, v in batch_args.iterargitems():
-            command.extend(['--%s' % k, str(v)])
+        for arg in batch_args.iterargs():
+            if arg.type == bool:
+                if ((arg.value and not arg.default) or
+                    (not arg.value and arg.default)):
+                    command.append('--%s' % arg.name)
+            else:
+                if arg.value is not None:
+                    command.extend(['--%s' % arg.name, str(arg.value)])
         return command
 
     def _build_run_command(self, job_id):
+        logger.debug('build "run" command')
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment_id)
@@ -514,6 +553,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return command
 
     def _build_collect_command(self):
+        logger.debug('build "collect" command')
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment_id)

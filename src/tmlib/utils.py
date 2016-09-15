@@ -510,7 +510,6 @@ def notimplemented(func):
         when decorated function (method) is called
     '''
     func.__doc__ = 'Not implemented.'
-    func.is_climethod = False  # removes method from command line interface
 
     def wrapper(obj, *args, **kwargs):
         raise NotImplementedError(
@@ -519,5 +518,7 @@ def notimplemented(func):
 
     wrapper.__name__ = func.__name__
     wrapper.__doc__ = func.__doc__
+    wrapper.is_climethod = False
+    wrapper.is_implemented = False
     return wrapper
 

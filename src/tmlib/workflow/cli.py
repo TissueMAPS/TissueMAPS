@@ -29,6 +29,7 @@ from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.description import WorkflowStepDescription
 from tmlib.workflow.workflow import WorkflowStep
+from tmlib.workflow.jobs import CliJobCollection
 from tmlib.logging_utils import configure_logging
 from tmlib.logging_utils import map_logging_verbosity
 from tmlib.errors import WorkflowError
@@ -106,7 +107,7 @@ class CliMeta(ABCMeta):
             # the "args" attribute of the decoreated method.
             # These arguments are added to the method-specific subparser.
             if isinstance(attr_value, types.MethodType):
-                if getattr(attr_value, 'is_climethod', None):
+                if getattr(attr_value, 'is_climethod', False):
                     method_parser = subparsers.add_parser(
                         attr_name, help=attr_value.help
                     )
@@ -398,11 +399,13 @@ class CommandLineInterface(SubmissionManager):
     @climethod(
         help='prints the log output of a given batch job to the console',
         phase=Argument(
-                type=str, default='run', choices={'run', 'collect'}, flag='p',
-                help='phase of the workflow step to which the job belongs'
+            type=str, choices={'init', 'run', 'collect'}, flag='p',
+            required=True,
+            help='phase of the workflow step to which the job belongs'
         ),
         job_id=Argument(
-            type=int, help='ID of the job that should be run', flag='j'
+            type=int, flag='j',
+            help='ID of the job for which log output should be shown'
         )
     )
     def log(self, phase, job_id):
@@ -417,7 +420,7 @@ class CommandLineInterface(SubmissionManager):
                 'when "phase" is set to "run".'
             )
         api = self.api_instance
-        log = api.get_log_output_from_files(job_id)
+        log = api.get_log_output_from_files(phase, job_id)
         print('\nOUTPUT\n======\n\n%s\n\nERROR\n=====\n\n%s'
               % (log['stdout'], log['stderr']))
 
@@ -460,15 +463,22 @@ class CommandLineInterface(SubmissionManager):
         self._print_logo()
         submission_id, user_name = self.register_submission()
         api = self.api_instance
-        description = WorkflowStepDescription(
-            api.step_name, active=True, submission_args=self._submission_args
+
+        jobs = CliJobCollection(api.step_name, submission_id)
+        run_job_collection = api.create_run_job_collection(submission_id)
+        run_jobs = api.create_run_jobs(
+            submission_id, user_name, run_job_collection, self.batches['run'],
+            duration=self._submission_args.duration,
+            memory=self._submission_args.memory,
+            cores=self._submission_args.cores
         )
-        step = WorkflowStep(
-            api.step_name, api.experiment_id, api.verbosity,
-            submission_id, user_name, description, requires_init=False
-        )
-        step.create_run_and_collect_jobs()
-        jobs = step
+        jobs.add(run_jobs)
+        if api.has_collect_phase:
+            collect_job = api.create_collect_job(
+                submission_id, user_name
+            )
+            jobs.add(collect_job)
+
         store = create_gc3pie_sql_store()
         store.save(jobs)
         self.update_submission(jobs)
@@ -494,38 +504,27 @@ class CommandLineInterface(SubmissionManager):
         help='''resubmits previously created jobs for "run" and "collect"
             phases to the cluster and monitors their status upon processing
         ''',
-        phase=Argument(
-                type=str, choices={'run', 'collect'}, flag='p',
-                help='phase of the workflow step to which the job belongs'
-        ),
-        job_id=Argument(
-            type=int, help='ID of the job that should be run', flag='j'
-        ),
         monitoring_depth=Argument(
-            type=int, help='depth of monitoring the task hierarchy',
-            default=1, flag='m'
+            type=int, help='number of child tasks that should be monitored',
+            default=1, flag='d'
+        ),
+        monitoring_interval=Argument(
+            type=int, help='seconds to wait between monitoring iterations',
+            default=10, flag='i'
         )
     )
-    def resubmit(self, phase, job_id, monitoring_depth):
+    def resubmit(self, monitoring_depth, monitoring_interval):
         self._print_logo()
         api = self.api_instance
-        jobs = self.load_jobs()
-        # Select an individual job based on "phase" and "job_id"
-        if phase == 'collect':
-            if len(jobs.tasks) == 1:
-                raise ValueError(
-                    'Step "%s" doens\'t have a collect phase' % self.name
-                )
-            job_index = 1
-        else:
-            job_index = 0
-        logger.debug('add session to engine store')
-        engine = create_gc3pie_engine(session.store)
+        store = create_gc3pie_sql_store()
+        job_id = self.get_task_id_of_last_submission()
+        jobs = store.load(job_id)
+        engine = create_gc3pie_engine(store)
         logger.info('resubmit and monitor jobs')
         try:
             self.submit_jobs(
-                jobs, engine, start_index=job_index,
-                monitoring_depth=monitoring_depth
+                jobs, engine, monitoring_depth=monitoring_depth,
+                monitoring_interval=monitoring_interval
             )
         except KeyboardInterrupt:
             logger.info('processing interrupted')
