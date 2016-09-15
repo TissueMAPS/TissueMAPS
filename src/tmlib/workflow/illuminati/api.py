@@ -154,41 +154,35 @@ class PyramidBuilder(ClusterRoutines):
                             job_count += 1
                             # For the highest resolution level, the inputs
                             # are channel image files. For all other levels,
-                            # the inputs are the layer tiles of the next higher
+                            # the inputs are the tiles of the next higher
                             # resolution level.
                             if level == layer.maxzoom_level_index:
                                 image_file_subset = np.array(image_files)[batch]
                                 input_files = list()
+                                image_file_ids = list()
                                 for f in image_file_subset:
                                     input_files.append(f.location)
-                                    tiles = layer.map_image_to_base_tiles(f)
-                                    coordinates = [
-                                        [t['row'], t['column']] for t in tiles
-                                    ]
+                                    image_file_ids.append(f.id)
                                 description = {
                                     'id': job_count,
-                                    'inputs': {
-                                        'image_files': input_files
-                                    },
+                                    'inputs': {'image_files': input_files},
                                     'outputs': {},
                                     'layer_id': layer.id,
                                     'level': level,
                                     'index': index,
-                                    'coordinates': coordinates
+                                    'image_file_ids': image_file_ids,
+                                    'align': args.align,
+                                    'illumcorr': args.illumcorr,
+                                    'clip': args.clip,
+                                    'clip_value': args.clip_value,
+                                    'clip_percent': args.clip_percent
                                 }
                             else:
                                 rows = np.arange(layer.dimensions[level][0])
                                 cols = np.arange(layer.dimensions[level][1])
-                                coordinates = [
-                                    [r, c]
-                                    for i, (r, c) in enumerate(
-                                        itertools.product(rows, cols)
-                                    )
-                                    if i in batch
-                                ]
-                                # coordinates = np.array(
-                                #     list(itertools.product(rows, cols))
-                                # )[batch].tolist()
+                                coordinates = np.array(
+                                    list(itertools.product(rows, cols))
+                                )[batch].tolist()
                                 description = {
                                     'id': job_count,
                                     'inputs': {},
@@ -199,20 +193,6 @@ class PyramidBuilder(ClusterRoutines):
                                     'coordinates': coordinates
                                 }
 
-                            if level == layer.maxzoom_level_index:
-                                # Only base tiles need to be corrected for
-                                # illumination artifacts and aligned, this then
-                                # automatically translates to the subsequent levels
-                                description.update({
-                                    'image_file_ids': [
-                                        f.id for f in image_file_subset
-                                    ],
-                                    'align': args.align,
-                                    'illumcorr': args.illumcorr,
-                                    'clip': args.clip,
-                                    'clip_value': args.clip_value,
-                                    'clip_percent': args.clip_percent
-                                })
                             job_descriptions['run'].append(description)
 
         job_descriptions['collect'] = {'inputs': {}, 'outputs': {}}
