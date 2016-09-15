@@ -67,9 +67,8 @@ class _ApiMeta(ABCMeta):
     '''
 
     def __init__(cls, clsname, bases, attrs):
-        super(ApiMeta, cls).__init__(clsname, bases, attrs)
-        attrs = dir(cls)
-        if '__abstract__' in attrs:
+        super(_ApiMeta, cls).__init__(clsname, bases, attrs)
+        if '__abstract__' in vars(cls).keys():
             return
         collect_method = getattr(cls, 'collect_job_output')
         if getattr(collect_method, 'is_implemented', True):
