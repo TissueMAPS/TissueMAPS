@@ -310,6 +310,7 @@ class PyramidBuilder(ClusterRoutines):
             )
 
             if batch['clip'] or batch['illumcorr']:
+                logger.info('load illumination statistics')
                 # Illumination statistics may not have been calculated
                 # are are not required in case fixed clip value is provided.
                 if batch['clip_value'] is None or batch['illumcorr']:
