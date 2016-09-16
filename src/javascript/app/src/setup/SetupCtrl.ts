@@ -18,7 +18,7 @@ class SetupCtrl {
         if (!this.uploadComplete() && stage.name != 'upload') {
             this._dialogService.error(
                 'Processing not yet possible! ' +
-                'Upload incomplete.'
+                'Upload incomplete or not yet fully loaded.'
             )
             this._$state.go('plate', {
                 stageName: 'upload'

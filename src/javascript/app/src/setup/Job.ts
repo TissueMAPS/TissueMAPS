@@ -10,8 +10,10 @@ class Job {
         this.dbId = args.id;
         if (args.type == 'RunJob') {
             this.phase = 'run';
-        } else {
+        } else if (args.type == 'CollectJob') {
             this.phase = 'collect';
+        } else if (args.type == 'InitJob') {
+            this.phase = 'init';
         }
         this.status = new JobStatus(args);
     }
