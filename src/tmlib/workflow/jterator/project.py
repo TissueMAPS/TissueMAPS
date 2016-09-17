@@ -58,6 +58,7 @@ class Project(object):
             module descriptions (default: ``None``)
         '''
         self.step_location = step_location
+        # TODO: check validity of "name"
         self.name = name
         self.pipe = pipe
         self.handles = handles

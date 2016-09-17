@@ -299,7 +299,12 @@ class ArgumentCollection(object):
     @classmethod
     def iterargs(cls):
         '''Iterates over the class attributes of type
-        :py:class:`tmlib.workflow.arg.Argument`
+        :py:class:`tmlib.workflow.arg.Argument`.
+
+        Warning
+        -------
+        The value of the attribute `value` will be the default and not the one
+        set on an instance of the class.
         '''
         for name in dir(cls):
             if name.startswith('_'):

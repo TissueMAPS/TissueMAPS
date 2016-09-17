@@ -343,7 +343,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         )
         checker.check_all()
         self._configure_loggers()
-        self.start_engines(batch.get('plot', False))
+        plot = batch.get('plot', batch['debug'])
+        self.start_engines(plot)
         job_id = batch.get('id', None)
 
         # Use an in-memory store for pipeline data and only add outputs
@@ -371,29 +372,37 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # corrected and/or aligned in case this is desired.
                 images = collections.defaultdict(list)
                 path = item.get('path', None)
-                if path is None and batch['debug']:
+                if path is not None and batch['debug']:
+                    logger.info(
+                        'load images for channel "%s" from file',
+                        item['name']
+                    )
+                    with ImageReader(path) as f:
+                        array = f.read()
+                    images = {0: array}
+                else:
+                    site = session.query(tm.Site).get(batch['site_id'])
                     if item['correct']:
                         logger.info('load illumination statistics')
                         try:
                             stats_file = session.query(tm.IllumstatsFile).\
                                 join(tm.Channel).\
                                 join(tm.Cycle).\
-                                filter(tm.Channel.name == channel_name).\
+                                filter(tm.Channel.name == item['name']).\
                                 filter(tm.Cycle.plate_id == site.well.plate_id).\
                                 one()
                         except NoResultFound:
                             raise PipelineDescriptionError(
                                 'No illumination statistics file found for '
-                                'channel "%s"' % channel_name
+                                'channel "%s"' % item['name']
                             )
                         stats = stats_file.get()
 
-                    site = session.query(tm.Site).get(batch['site_id'])
                     logger.info('load images for channel "%s"', item['name'])
                     image_files = session.query(tm.ChannelImageFile).\
                         join(tm.Channel).\
                         filter(
-                            tm.Channel.name == channel_name,
+                            tm.Channel.name == item['name'],
                             tm.ChannelImageFile.site_id == site.id
                         ).\
                         all()
@@ -408,14 +417,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         img = img.align()  # shifted and cropped!
                         images[f.tpoint].append(img.array)
 
-                else:
-                    logger.info(
-                        'load images for channel "%s" from file',
-                        item['name']
-                    )
-                    with ImageReader(path) as f:
-                        array = f.read()
-                    images = {0: array}
                 store['pipe'][item['name']] = np.stack(images.values(), axis=-1)
 
             # Load outlins of mapobjects of the specified types and reconstruct

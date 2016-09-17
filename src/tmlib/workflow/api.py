@@ -542,13 +542,14 @@ class ClusterRoutines(BasicClusterRoutines):
         command.append(self.experiment_id)
         command.append('init')
         for arg in batch_args.iterargs():
+            value = getattr(batch_args, arg.name)
             if arg.type == bool:
-                if ((arg.value and not arg.default) or
-                    (not arg.value and arg.default)):
+                if ((value and not arg.default) or
+                    (not value and arg.default)):
                     command.append('--%s' % arg.name)
             else:
                 if arg.value is not None:
-                    command.extend(['--%s' % arg.name, str(arg.value)])
+                    command.extend(['--%s' % arg.name, str(value)])
         return command
 
     def _build_run_command(self, job_id):
@@ -752,7 +753,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return job_collection
 
     def create_init_job(self, submission_id, user_name, batch_args,
-            duration='24:00:00', memory=3800, cores=1):
+            duration='12:00:00', memory=3800, cores=1):
         '''Creates job for the "init" phase of the step.
 
         Parameters
@@ -767,13 +768,13 @@ class ClusterRoutines(BasicClusterRoutines):
             for the creation of batches of the subsequent "run" and "collect"
             phases
         duration: str, optional
-            computational time that should be allocated for a single job;
-            in HH:MM:SS format (default: ``"24:00:00"``)
+            computational time that should be allocated for the job
+            in HH:MM:SS format (default: ``"12:00:00"``)
         memory: int, optional
-            amount of memory in Megabyte that should be allocated for a single
+            amount of memory in Megabyte that should be allocated for the job
             (default: ``3800)
         cores: int, optional
-            number of CPU cores that should be allocated for a single job
+            number of CPU cores that should be allocated for the job
             (default: ``1``)
 
         Returns

@@ -44,7 +44,7 @@ class Tmaps(SubmissionManager):
         return 'workflow'
         # return self.__class__.__name__.lower()
 
-    def submit(self, monitoring_depth):
+    def submit(self, monitoring_depth, monitoring_interval):
         '''Create workflow, submit it to the cluster and monitor its progress.
 
         Parameters
@@ -64,7 +64,9 @@ class Tmaps(SubmissionManager):
         logger.info('submit and monitor jobs')
         try:
             self.submit_jobs(
-                workflow, engine, monitoring_depth=monitoring_depth
+                workflow, engine,
+                monitoring_depth=monitoring_depth,
+                monitoring_interval=monitoring_interval
             )
         except KeyboardInterrupt:
             logger.info('processing interrupted')
@@ -200,8 +202,12 @@ class Tmaps(SubmissionManager):
         submit_parser = subparsers.add_parser('submit', help=submit_help)
         submit_parser.description = submit_help
         submit_parser.add_argument(
-            '--monitoring_depth', '-m', type=int, default=2,
-            help='number of child tasks that should be monitored'
+            '--monitoring_depth', '-d', type=int, default=2,
+            help='number of child tasks that should be monitored (default: 2)'
+        )
+        submit_parser.add_argument(
+            '--monitoring_interval', '-i', type=int, default=10,
+            help='interval for monitoring interations (default: 10)'
         )
         resubmit_help = '''resubmit a previously created workflow to the
             cluster and monitor its status
@@ -210,7 +216,11 @@ class Tmaps(SubmissionManager):
         resubmit_parser.description = resubmit_help
         resubmit_parser.add_argument(
             '--monitoring_depth', '-m', type=int, default=2,
-            help='number of child tasks that should be monitored'
+            help='number of child tasks that should be monitored (default: 2)'
+        )
+        resubmit_parser.add_argument(
+            '--monitoring_interval', '-i', type=int, default=10,
+            help='interval for monitoring interations (default: 10)'
         )
         resubmit_parser.add_argument(
             '--stage', '-s', type=str, required=True,

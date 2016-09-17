@@ -7,7 +7,7 @@ from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import MainModel, ExperimentModel, DateMixIn
+from tmlib.models.base import MainModel, DirectoryModel, DateMixIn
 from tmlib.models import ExperimentSession
 from tmlib.readers import YamlReader
 from tmlib.writers import YamlWriter
@@ -233,7 +233,8 @@ class ExperimentReference(MainModel, DateMixIn):
         return '<ExperimentReference(id=%r, name=%r)>' % (self.id, self.name)
 
 
-class Experiment(ExperimentModel):
+@remove_location_upon_delete
+class Experiment(DirectoryModel):
 
     '''An *experiment* is the main organizational unit of `TissueMAPS`.
     It represents a set of images and associated data.
@@ -246,8 +247,8 @@ class Experiment(ExperimentModel):
         number of wells in the plate, e.g. 384
     plate_acquisition_mode: str
         the way plates were acquired with the microscope
-    root_directory: str
-        absolute path to the location of the referencec experiment on disk
+    location: str
+        absolute path to the location of the experiment on disk
     zoom_factor: int
         zoom factor between pyramid levels
     vertical_site_displacement: int, optional
@@ -275,10 +276,10 @@ class Experiment(ExperimentModel):
     vertical_site_displacement = Column(Integer)
     horizontal_site_displacement = Column(Integer)
     well_spacer_size = Column(Integer)
-    root_directory = Column(String)
+    location = Column(String)
 
     def __init__(self, microscope_type, plate_format, plate_acquisition_mode,
-            root_directory, zoom_factor=2, well_spacer_size=500,
+            location, zoom_factor=2, well_spacer_size=500,
             vertical_site_displacement=0, horizontal_site_displacement=0):
         '''
         Parameters
@@ -289,8 +290,8 @@ class Experiment(ExperimentModel):
             number of wells in the plate, e.g. 384
         plate_acquisition_mode: str
             the way plates were acquired with the microscope
-        root_directory: str
-            absolute path to the location of the referencec experiment on disk
+        location: str
+            absolute path to the location of the experiment on disk
         zoom_factor: int, optional
             zoom factor between pyramid levels (default: ``2``)
         well_spacer_size: int
@@ -308,7 +309,7 @@ class Experiment(ExperimentModel):
         :py:attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
         :py:attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
         '''
-        self.root_directory = root_directory
+        self.location = location
         self.zoom_factor = zoom_factor
         self.well_spacer_size = well_spacer_size
         # TODO: we may be able to calculate this automatically from OMEXML
@@ -338,12 +339,12 @@ class Experiment(ExperimentModel):
     @autocreate_directory_property
     def plates_location(self):
         '''str: location where plates data are stored'''
-        return os.path.join(self.root_directory, 'plates')
+        return os.path.join(self.location, 'plates')
 
     @autocreate_directory_property
     def channels_location(self):
         '''str: location where channels data are stored'''
-        return os.path.join(self.root_directory, 'channels')
+        return os.path.join(self.location, 'channels')
 
     @cached_property
     def plate_spacer_size(self):

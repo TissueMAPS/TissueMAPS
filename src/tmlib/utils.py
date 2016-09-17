@@ -1,5 +1,6 @@
 '''Decorators and other utility functions.'''
 import importlib
+import itertools
 import time
 import datetime
 import re
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def create_datetimestamp():
     '''Creates a datetimestamp in the form "year-month-day_hour-minute-second".
-    
+
     Returns
     -------
     str
@@ -77,11 +78,11 @@ def indices(data, item):
     ----------
     data: list
     item:
-        the element whose index position should be determined
+        the element whose index positions should be determined
 
     Returns
     -------
-    list
+    List[int]
         all indices of `item` in `data`
     '''
     start_at = -1
@@ -108,7 +109,8 @@ def flatten(data):
     -------
     list
     '''
-    return [item for sublist in data for item in sublist]
+    return list(itertools.chain.from_iterable(data))
+    # return [item for sublist in data for item in sublist]
 
 
 def common_substring(data):
@@ -143,7 +145,7 @@ def list_directory_tree(start_dir):
     for root, dirs, files in os.walk(start_dir):
         level = root.replace(start_dir, '').count(os.sep)
         indent = ' ' * 4 * (level)
-        print '{}{}/'.format(indent, os.path.basename(root))
+        logger.info('{}{}/'.format(indent, os.path.basename(root)))
 
 
 def is_number(s):
@@ -427,7 +429,7 @@ class autocreate_directory_property(object):
 
     '''Decorator class that acts like a property.
     The value represents a path to a directory on disk. The directory is
-    automatically created when it doesn't exist. Once created the value
+    automatically created when it doesn't exist. Once created, the value
     is cached, so that there is no reattempt to create the directory.
 
     Raises
@@ -508,17 +510,26 @@ def notimplemented(func):
     ------
     NotImplementedError
         when decorated function (method) is called
+
+    Note
+    ----
+    Derived classes of :py:class:`tmlib.workflow.api.ClusterRoutines`
+    must decorate the method `collect_job_output` in case the corresponding
+    step doesn't have a `collect` phase.
     '''
     func.__doc__ = 'Not implemented.'
 
     def wrapper(obj, *args, **kwargs):
         raise NotImplementedError(
             'Abstract method "%s" is not implemented for derived class "%s".'
-            % (func.__name__, obj.__class__.__name__))
+            % (func.__name__, obj.__class__.__name__)
+        )
 
     wrapper.__name__ = func.__name__
     wrapper.__doc__ = func.__doc__
+    # NOTE: this is used by tmlib.workflow.cli._CliMeta!
     wrapper.is_climethod = False
+    # NOTE: this is used by tmlib.workflow.api._ApiMeta!
     wrapper.is_implemented = False
     return wrapper
 

@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Session
 
-from tmlib.models import ExperimentModel, DateMixIn
+from tmlib.models.base import DirectoryModel, ExperimentModel, DateMixIn
 from tmlib.models.status import FileUploadStatus as fus
 from tmlib.models.file import MicroscopeImageFile, MicroscopeMetadataFile
 from tmlib.models.utils import remove_location_upon_delete
@@ -19,7 +19,7 @@ ACQUISITION_LOCATION_FORMAT = 'acquisition_{id}'
 
 
 @remove_location_upon_delete
-class Acquisition(ExperimentModel, DateMixIn):
+class Acquisition(DirectoryModel, DateMixIn):
 
     '''An *acquisition* contains all files belonging to one microscope image
     acquisition process. Note that in contrast to a *cycle*, an *acquisition*

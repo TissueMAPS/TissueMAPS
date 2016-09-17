@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, LargeBinary, Interval, ForeignKe
 from sqlalchemy.dialects.postgres import JSONB
 from sqlalchemy.orm import relationship, backref
 
-from tmlib.models import MainModel, DateMixIn
+from tmlib.models.base import MainModel, DateMixIn
 
 
 class Submission(MainModel, DateMixIn):

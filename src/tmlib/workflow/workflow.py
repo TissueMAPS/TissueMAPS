@@ -194,7 +194,6 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         self.init_job = self._api_instance.create_init_job(
             self.submission_id, self.user_name,
             self.description.batch_args
-
         )
 
     def create_run_job_collection(self):

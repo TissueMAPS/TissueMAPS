@@ -2,7 +2,7 @@ from passlib.hash import sha256_crypt
 from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
 
-from tmlib.models import MainModel, DateMixIn
+from tmlib.models.base import MainModel, DateMixIn
 
 
 class User(MainModel, DateMixIn):

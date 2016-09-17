@@ -1,7 +1,7 @@
 import os
 import re
 import logging
-# import subprocess
+import subprocess
 from tmlib.readers import JavaBridge, BFOmeXmlReader
 
 import tmlib.models as tm
@@ -119,38 +119,38 @@ class MetadataExtractor(ClusterRoutines):
         subprocess.CalledProcessError
             when extraction failed
         '''
-        with JavaBridge() as java:
-            with tm.utils.ExperimentSession(self.experiment_id) as session:
-                for fid in batch['microscope_image_file_ids']:
-                    img_file = session.query(tm.MicroscopeImageFile).get(fid)
-                    logger.info('process image "%s"' % img_file.name)
-                    # # The "showinf" command line tool writes the extracted OMEXML
-                    # # to standard output.
-                    # command = [
-                    #     'showinf', '-omexml-only', '-nopix', '-novalid',
-                    #     '-no-upgrade', '-no-sas', img_file.location
-                    # ]
-                    # p = subprocess.Popen(
-                    #     command,
-                    #     stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                    # )
-                    # stdout, stderr = p.communicate()
-                    # if p.returncode != 0 or not stdout:
-                    #     raise MetadataError(
-                    #         'Extraction of OMEXML failed! Error message:\n%s'
-                    #         % stderr
-                    #     )
-                    # try:
-                    #     # We only want the XML. This will remove potential
-                    #     # warnings and other stuff we don't want.
-                    #     omexml = re.search(
-                    #         r'<(\w+).*</\1>', stdout, flags=re.DOTALL
-                    #     ).group()
-                    # except:
-                    #     raise RegexError('OMEXML metadata could not be extracted.')
-                    with BFOmeXmlReader(img_file.location) as reader:
-                        omexml = reader.read()
-                    img_file.omexml = unicode(omexml)
+        # with JavaBridge() as java:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            for fid in batch['microscope_image_file_ids']:
+                img_file = session.query(tm.MicroscopeImageFile).get(fid)
+                logger.info('process image "%s"' % img_file.name)
+                # The "showinf" command line tool writes the extracted OMEXML
+                # to standard output.
+                command = [
+                    'showinf', '-omexml-only', '-nopix', '-novalid',
+                    '-no-upgrade', '-no-sas', img_file.location
+                ]
+                p = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
+                stdout, stderr = p.communicate()
+                if p.returncode != 0 or not stdout:
+                    raise MetadataError(
+                        'Extraction of OMEXML failed! Error message:\n%s'
+                        % stderr
+                    )
+                try:
+                    # We only want the XML. This will remove potential
+                    # warnings and other stuff we don't want.
+                    omexml = re.search(
+                        r'<(\w+).*</\1>', stdout, flags=re.DOTALL
+                    ).group()
+                except:
+                    raise RegexError('OMEXML metadata could not be extracted.')
+                # with BFOmeXmlReader(img_file.location) as reader:
+                #     omexml = reader.read()
+                img_file.omexml = unicode(omexml)
 
     @notimplemented
     def collect_job_output(self, batch):

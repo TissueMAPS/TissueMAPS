@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import ExperimentModel, DateMixIn
+from tmlib.models.base import DirectoryModel, DateMixIn
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.utils import autocreate_directory_property
 
@@ -15,7 +15,7 @@ CYCLE_LOCATION_FORMAT = 'cycle_{id}'
 
 
 @remove_location_upon_delete
-class Cycle(ExperimentModel, DateMixIn):
+class Cycle(DirectoryModel, DateMixIn):
 
     '''A *cycle* represents an individual image acquisition time point.
     In case of a time series experiment, *cycles* have different time point,

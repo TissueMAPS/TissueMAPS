@@ -105,11 +105,32 @@ class ExperimentModel(_ExperimentBase, IdMixIn):
     __abstract__ = True
 
 
-class File(ExperimentModel):
+class FileSystemModel(ExperimentModel):
 
-    '''Abstract base class for *files*, which have data attached that are
-    stored outside of the database, for example on a file system or an
-    object store.
+    '''Abstract base class for model classes, which refer to data
+    stored on disk outside of the database.
+    '''
+
+    __abstract__ = True
+
+    @abstractproperty
+    def location(self):
+        pass
+
+
+class DirectoryModel(FileSystemModel):
+
+    '''Abstract base class for model classes, which refer to data
+    stored in directories on disk.
+    '''
+
+    __abstract__ = True
+
+
+class FileModel(FileSystemModel):
+
+    '''Abstract base class for model classes, which refer to data
+    stored in files on disk.
     '''
 
     __abstract__ = True
@@ -118,10 +139,6 @@ class File(ExperimentModel):
     def format(self):
         '''str: file extension, e.g. ".tif" or ".jpg"'''
         return os.path.splitext(self.name)[1]
-
-    @abstractproperty
-    def location(self):
-        pass
 
     @abstractmethod
     def get(self):
@@ -137,6 +154,8 @@ registry.register('postgresql.xl', 'tmlib.models.dialect', 'PGXLDialect_psycopg2
 
 @compiles(DropTable, 'postgresql')
 def _compile_drop_table(element, compiler, **kwargs):
+    table = element.element
+    logger.debug('drop table "%s" with cascade', table.name)
     return compiler.visit_drop_table(element) + ' CASCADE'
 
 
@@ -177,6 +196,8 @@ def _compile_create_table(element, compiler, **kwargs):
 
 @compiles(DropTable, 'postgresxl')
 def _compile_drop_table(element, compiler, **kwargs):
+    table = element.element
+    logger.debug('drop table "%s" with cascade', table.name)
     return compiler.visit_drop_table(element) + ' CASCADE'
 
 
