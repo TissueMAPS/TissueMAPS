@@ -104,21 +104,20 @@ class MetadataConfigurator(ClusterRoutines):
         :py:class:`tm.Well`, and :py:class:`tm.Channel` as
         well as all children for the processed experiment.
         '''
-        logger.info('delete existing channels')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.query(tm.Channel).delete()
-
-        logger.info('delete existing wells and sites')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.query(tm.Well).delete()
-
-        logger.info('delete existing cycles')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.query(tm.Cycle).delete()
-
-        logger.debug('delete existing image file mappings')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.query(tm.ImageFileMapping).delete()
+            logger.info('delete existing channels')
+            session.drop_and_recreate(tm.ChannelLayerTile)
+            session.drop_and_recreate(tm.ChannelLayer)
+            session.drop_and_recreate(tm.Channel)
+            logger.info('delete existing cycles')
+            # NOTE: the delete also triggers the removal of the files from disk
+            session.query(tm.ChannelImageFile).delete()
+            session.drop_and_recreate(tm.Cycle)
+            logger.info('delete existing wells')
+            session.drop_and_recreate(tm.Sites)
+            session.drop_and_recreate(tm.Well)
+            logger.debug('delete existing image file mappings')
+            session.drop_and_recreate(tm.ImageFileMapping)
 
     def run_job(self, batch):
         '''Formats OMEXML metadata extracted from microscope image files and
