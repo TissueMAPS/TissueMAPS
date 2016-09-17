@@ -111,10 +111,10 @@ class MetadataConfigurator(ClusterRoutines):
             session.drop_and_recreate(tm.Channel)
             logger.info('delete existing cycles')
             # NOTE: the delete also triggers the removal of the files from disk
-            session.query(tm.ChannelImageFile).delete()
+            session.drop_and_recreate(tm.ChannelImageFile)
             session.drop_and_recreate(tm.Cycle)
             logger.info('delete existing wells')
-            session.drop_and_recreate(tm.Sites)
+            session.drop_and_recreate(tm.Site)
             session.drop_and_recreate(tm.Well)
             logger.debug('delete existing image file mappings')
             session.drop_and_recreate(tm.ImageFileMapping)
