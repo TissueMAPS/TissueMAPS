@@ -5,12 +5,12 @@ import logging
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.pool
-from tmlib.models import ExperimentModel
 from sqlalchemy_utils.functions import database_exists
 from sqlalchemy_utils.functions import create_database
 from sqlalchemy_utils.functions import drop_database
 from sqlalchemy.event import listens_for
 
+from tmlib.models.base import ExperimentModel, FileSystemModel
 
 logger = logging.getLogger(__name__)
 
@@ -317,25 +317,36 @@ class SQLAlchemy_Session(object):
         return instance
 
     def drop_and_recreate(self, model):
-        '''Drops a database table and re-creates it.
+        '''Drops a database table and re-creates it. Also removes
+        locations on disk for each row of the dropped table.
 
         Parameters
         ----------
         model: tmlib.models.MainModel or tmlib.models.ExperimentModel
             database model class
 
-        Note
-        ----
-        Performs a commit before dropping the table to circumvent locking.
+        Warning
+        -------
+        Disk locations are removed after the table is dropped. This can lead
+        to inconsistencies between database and file system representation of
+        `model` instances when the process is interrupted.
         '''
         table = model.__table__
         engine = self._session.get_bind()
-        self._session.commit()
+        locations_to_remove = []
         if table.exists(engine):
-            logger.debug('drop table "%s"', table.name)
+            if issubclass(model, FileSystemModel):
+                model_instances = self._session.query(model).all()
+                locations_to_remove = [m.location for m in model_instances]
+            logger.info('drop table "%s"', table.name)
+            self._session.commit()  # circumvent locking
             table.drop(engine)
-        logger.debug('create table "%s"', table.name)
+        logger.info('create table "%s"', table.name)
         table.create(engine)
+        logger.info('remove "%s" locations on disk', model.__name__)
+        for loc in locations_to_remove:
+            logger.debug('remove "%s"', loc)
+            delete_location(loc)
 
     def get_or_create_all(self, model, args):
         '''Gets a collection of instances of a model class if they already

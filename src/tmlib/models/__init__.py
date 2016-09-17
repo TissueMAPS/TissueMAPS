@@ -1,6 +1,6 @@
 '''`TissueMAPS` database models.'''
 
-from tmlib.models.base import MainModel, ExperimentModel, DateMixIn, File
+from tmlib.models.base import MainModel, ExperimentModel
 from tmlib.models.utils import MainSession, ExperimentSession
 from tmlib.models.user import User
 from tmlib.models.experiment import Experiment, ExperimentReference

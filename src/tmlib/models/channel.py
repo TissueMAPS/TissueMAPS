@@ -4,7 +4,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import ExperimentModel, DateMixIn
+from tmlib.models.base import ExperimentModel, DateMixIn
 
 logger = logging.getLogger(__name__)
 
