@@ -5,6 +5,7 @@ import logging
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.pool
+import sqlalchemy.exc
 from sqlalchemy_utils.functions import database_exists
 from sqlalchemy_utils.functions import create_database
 from sqlalchemy_utils.functions import drop_database
@@ -411,12 +412,15 @@ class _Session(object):
     _engines = dict()
     _session_factories = dict()
 
-    def __enter__(self):
+    def __init__(self, db_uri):
+        self._db_uri = db_uri
         if self._db_uri not in self.__class__._session_factories:
             self.__class__._engines[self._db_uri] = \
                 create_db_engine(self._db_uri)
             self.__class__._session_factories[self._db_uri] = \
                 create_db_session_factory(self.__class__._engines[self._db_uri])
+
+    def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory())
         return self._session
@@ -479,11 +483,16 @@ class MainSession(_Session):
             the environment variable ``TMPAS_DB_URI`` (default: ``None``)
         '''
         if db_uri is None:
-            self._db_uri = get_db_uri()
-        else:
-            self._db_uri = db_uri
-        if not database_exists(self._db_uri):
+            db_uri = get_db_uri()
+        super(MainSession, self).__init__(db_uri)
+        # if not database_exists(db_uri):
+        #     raise ValueError('Database does not exist: %s' % db_uri)
+        try:
+            connection = self.__class__._engines[self._db_uri].connect()
+            connection.close()
+        except sqlalchemy.exc.OperationalError:
             raise ValueError('Database does not exist: %s' % self._db_uri)
+
 
 
 class ExperimentSession(_Session):
@@ -525,42 +534,32 @@ class ExperimentSession(_Session):
         if self.experiment_id is not None:
             if not isinstance(self.experiment_id, int):
                 raise TypeError('Argument "experiment_id" must have type int.')
-            self._db_uri = '{main}_experiment_{id}'.format(
+            db_uri = '{main}_experiment_{id}'.format(
                 main=db_uri, id=self.experiment_id
             )
-
-    def __enter__(self):
-        if database_exists(self._db_uri):
-            do_create_tables = False
-        else:
+        super(ExperimentSession, self).__init__(db_uri)
+        try:
+            connection = self.__class__._engines[self._db_uri].connect()
+            connection.close()
+        except sqlalchemy.exc.OperationalError:
             logger.debug(
                 'create database for experiment %d', self.experiment_id
             )
             create_database(self._db_uri)
-            do_create_tables = True
-        if self._db_uri not in self.__class__._session_factories:
-            self.__class__._engines[self._db_uri] = \
-                create_db_engine(self._db_uri)
-            self.__class__._session_factories[self._db_uri] = \
-                sqlalchemy.orm.scoped_session(
-                    sqlalchemy.orm.sessionmaker(
-                        bind=self.__class__._engines[self._db_uri],
-                        query_cls=Query
-                    )
-                )
-            if do_create_tables:
-                engine = self.__class__._engines[self._db_uri]
-                # TODO: create template with postgis extension already created
-                logger.debug(
-                    'create postgis extension in database for experiment %d',
-                    self.experiment_id
-                )
-                engine.execute('CREATE EXTENSION postgis;')
-                logger.debug(
-                    'create tables in database for experiment %d',
-                    self.experiment_id
-                )
-                ExperimentModel.metadata.create_all(engine)
+            engine = self.__class__._engines[self._db_uri]
+            # TODO: create template with postgis extension already created
+            logger.debug(
+                'create postgis extension in database for experiment %d',
+                self.experiment_id
+            )
+            engine.execute('CREATE EXTENSION postgis;')
+            logger.debug(
+                'create tables in database for experiment %d',
+                self.experiment_id
+            )
+            ExperimentModel.metadata.create_all(engine)
+
+    def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory())
         return self._session
