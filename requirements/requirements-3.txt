@@ -34,3 +34,4 @@ sqlalchemy>=0.9
 sqlalchemy-utils>=0.32.9
 tables>=3.2.2
 ruamel.yaml>=0.10.11
+mahotas>=1.4.1
