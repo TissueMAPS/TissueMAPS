@@ -10,7 +10,7 @@ import flask
 from flask.ext.script import Manager, Server
 from flask.ext.migrate import Migrate, MigrateCommand
 
-from tmlib.models import Model
+from tmlib.models import MainModel
 from tmserver.appfactory import create_app
 from tmserver.extensions import db
 
@@ -61,7 +61,7 @@ def createtables():
     """
     db_uri = cfg['SQLALCHEMY_DATABASE_URI']
     engine = sqlalchemy.create_engine(db_uri)
-    Model.metadata.create_all(engine)
+    MainModel.metadata.create_all(engine)
 
 
 @db_manager.command
@@ -130,7 +130,7 @@ def insertdata(yaml_file):
                 constr_args = rec['args']
                 model_constr = import_from_str(class_name)
 
-                # Check if there are objects that have to be looked up in the 
+                # Check if there are objects that have to be looked up in the
                 # database before creating new database records.
                 for k, v in constr_args.items():
                     if type(v) is str and v.startswith('//'):
