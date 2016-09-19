@@ -4,7 +4,10 @@ TissueMAPS client
 
 ## Setup the TissueMAPS client
 
-    $ cd TissueMAPS/client
+Get the version you want to install from Github:
+
+    $ git clone --recursive https://github.com/TissueMAPS/TmClient
+    $ cd TmClient/src/javascript
 
 Install required node modules (nodejs and its package manager `npm` must be installed on your system) by executing:
 
@@ -28,6 +31,8 @@ command
 
 This will also auto-watch files and rebuild the code as necessary.
 A node-based development server will be started that will serve your files directly, so you don't need to setup NGINX.
+You can reach this server by visiting http://localhost:8002 with your
+browser.
 
 
 ## Building the modified openlayers source code
