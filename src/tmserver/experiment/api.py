@@ -42,7 +42,7 @@ def _raise_error_when_missing(arg):
 )
 @assert_query_params('x', 'y', 'z')
 @decode_query_ids()
-def get_image_tile(experiment_id, channel_layer_id):
+def get_channel_layer_tile(experiment_id, channel_layer_id):
     """
     .. http:get:: /api/experiments/(experiment_id)/channel_layer/(channel_layer_id)/tiles
 
@@ -54,7 +54,7 @@ def get_image_tile(experiment_id, channel_layer_id):
 
     """
     logger.info(
-        'get image tile for channel layer %d from experiment %d',
+        'get tile for channel layer %d of experiment %d',
         channel_layer_id, experiment_id
     )
     x = request.args.get('x', type=int)
@@ -505,16 +505,16 @@ def create_experiment():
         session.add(experiment_ref)
         session.commit()
         experiment_id = experiment_ref.id
-        root_directory = experiment_ref.location
+        experiment_location = experiment_ref.location
 
-    with tm.utils.ExperimentSession(experiment_id) as exp_session:
+    with tm.utils.ExperimentSession(experiment_id) as session:
         experiment = tm.Experiment(
-            root_directory=root_directory,
+            location=experiment_location,
             microscope_type=microscope_type,
             plate_format=plate_format,
             plate_acquisition_mode=plate_acquisition_mode
         )
-        exp_session.add(experiment)
+        session.add(experiment)
 
     return jsonify({
         'data': {
