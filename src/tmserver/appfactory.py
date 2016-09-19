@@ -3,6 +3,7 @@ import os
 from os.path import join, dirname, abspath
 import logging
 from flask import Flask
+from flask_sqlalchemy_session import flask_scoped_session
 import gc3libs
 
 from tmlib.models.utils import (
@@ -115,6 +116,7 @@ def create_app(config_overrides={}):
     db_uri = set_db_uri(app.config['SQLALCHEMY_DATABASE_URI'])
     engine = create_db_engine(db_uri)
     session_factory = create_db_session_factory(engine)
+    session = flask_scoped_session(session_factory, app)
 
     if app.config.get('USE_SPARK', False):
         from tmserver.extensions import spark
