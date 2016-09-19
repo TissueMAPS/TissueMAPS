@@ -241,9 +241,11 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     model.fit(coordinates)
     sort_index = np.lexsort(np.fliplr(model.cluster_centers_).T)
     centroids = model.cluster_centers_[sort_index]
-    rows = np.arange(len(np.unique(centroids[:, 0])))
-    cols = np.arange(len(np.unique(centroids[:, 1])))
-    positions = np.array([p for p in itertools.product(rows, cols)])
+    rows = len(np.unique(centroids[:, 0]))
+    cols = len(np.unique(centroids[:, 1]))
+    positions = np.array([
+        p for p in itertools.product(np.arange(rows), np.arange(cols))
+    ])
     logger.info('stitch dimensions: %d x %d', rows, cols)
 
     grid_positions = np.zeros(coordinates.shape, int)
