@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.cluster.vq import kmeans
+from sklearn.cluster import KMeans
 import itertools
 
 from tmlib.errors import MetadataError
@@ -228,40 +228,30 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     # Calculate the spread along each dimension to determine the major stitch
     # axis.
     coordinates = np.array(stage_positions)
-    spread = np.max(coordinates, axis=0) - np.min(coordinates, axis=0)
-    options = np.array(['vertical', 'horizontal'])
-    # Guess the stitch dimensions.
-    index = np.where(spread == np.max(spread))[0][0]
-    dims = guess_stitch_dimensions(n, options[index])
-    positions = np.array([
-        p for p in itertools.product(range(dims[0]), range(dims[1]))
-    ])
-
     if reverse_rows:
         coordinates[:, 0] *= -1
     if reverse_columns:
         coordinates[:, 1] *= -1
 
     # Caluculate the centroids for each grid position.
-    row_centroids, _ = kmeans(coordinates[:, 0], dims[0])
-    col_centroids, _ = kmeans(coordinates[:, 1], dims[1])
-    centroids = np.array([
-        c for c in itertools.product(
-            sorted(row_centroids), sorted(col_centroids)
-        )
-    ])
+    model = KMeans(n_clusters=n)
+    model.fit(coordinates)
+    sort_index = np.lexsort(np.fliplr(model.cluster_centers_).T)
+    centroids = model.cluster_centers_[sort_index]
+    rows = np.arange(len(np.unique(centroids[:, 0])))
+    cols = np.arange(len(np.unique(centroids[:, 1])))
+    positions = np.array([p for p in itertools.product(rows, cols)])
+    logger.info('stitch dimensions: %d x %d', rows, cols)
 
-    grid_positions = list()
-    indices = list()
-    for c in coordinates:
+    grid_positions = np.zeros(coordinates.shape, int)
+    for i, c in enumerate(coordinates):
         # Find the stage position that's closest to the centroid.
         distance = centroids - c
         closest = np.sum(np.abs(distance), axis=1)
         index = np.where(closest == np.min(closest))[0][0]
-        pos = tuple(positions[index, :])
-        grid_positions.append(pos)
-        indices.append(index)
+        grid_positions[i, :] = positions[index, :]
 
+    grid_positions = zip(*grid_positions.T)
     if len(set(grid_positions)) != n:
         raise MetadataError(
             'Either the expected number of grid positions is incorrect or '
