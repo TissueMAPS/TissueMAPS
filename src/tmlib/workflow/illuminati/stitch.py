@@ -1,8 +1,11 @@
+import logging
 import numpy as np
 from sklearn.cluster import KMeans
 import itertools
 
 from tmlib.errors import MetadataError
+
+logger = logging.getLogger(__name__)
 
 
 def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
