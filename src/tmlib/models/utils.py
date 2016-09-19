@@ -6,7 +6,6 @@ import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.pool
 import sqlalchemy.exc
-from sqlalchemy_utils.functions import database_exists
 from sqlalchemy_utils.functions import create_database
 from sqlalchemy_utils.functions import drop_database
 from sqlalchemy.event import listens_for
@@ -558,6 +557,9 @@ class ExperimentSession(_Session):
                 self.experiment_id
             )
             ExperimentModel.metadata.create_all(engine)
+            engine.execute(
+                'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
+            )
 
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
