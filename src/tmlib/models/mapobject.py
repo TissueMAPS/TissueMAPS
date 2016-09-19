@@ -133,7 +133,7 @@ class MapobjectType(ExperimentModel, DateMixIn):
         If `min_poly_zoom` > `z` > `max_poly_zoom`, mapobjects are represented
         by points and if `z` < `max_poly_zoom` they are not displayed at all.
         '''
-
+        logger.debug('get mapobject outlines falling into tile')
         maxzoom = self.experiment.channels[0].layers[0].maxzoom_level_index
 
         session = Session.object_session(self)
@@ -141,12 +141,15 @@ class MapobjectType(ExperimentModel, DateMixIn):
         do_simplify = self.max_poly_zoom <= z < self.min_poly_zoom
         do_nothing = z < self.max_poly_zoom
         if do_simplify:
+            logger.debug('represent object by centroid')
             select_stmt = session.query(
                 MapobjectSegmentation.mapobject_id,
                 MapobjectSegmentation.geom_centroid.ST_AsGeoJSON())
         elif do_nothing:
+            logger.debug('dont\'t represent object')
             return list()
         else:
+            logger.debug('represent object as polygon')
             select_stmt = session.query(
                 MapobjectSegmentation.mapobject_id,
                 MapobjectSegmentation.geom_poly.ST_AsGeoJSON()
