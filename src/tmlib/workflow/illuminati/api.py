@@ -138,16 +138,21 @@ class PyramidBuilder(ClusterRoutines):
                         if level == layer.maxzoom_level_index:
                             # For the base level, batches are composed of
                             # image files, which will get chopped into tiles.
+                            batch_size = args.batch_size
                             batches = self._create_batches(
-                                np.arange(len(image_files)), args.batch_size
+                                np.arange(len(image_files)), batch_size
                             )
                         else:
                             # For the subsequent levels, batches are composed of
                             # tiles of the previous, next higher level.
                             # Therefore, the batch size needs to be adjusted.
+                            if index == 1:
+                                batch_size *= 25
+                            else:
+                                batch_size /= 4
                             batches = self._create_batches(
                                 np.arange(np.prod(layer.dimensions[level])),
-                                args.batch_size * 5 * level
+                                batch_size
                             )
 
                         for batch in batches:
