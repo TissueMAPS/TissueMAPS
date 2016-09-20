@@ -9,6 +9,11 @@ input:
       help: >
         Labeled image containing the objects whose segmentation should be saved.
 
+    - name: as_polygons
+      type: Boolean
+      value: true
+      help: Whether objects should be represented as polygons.
+
 output:
 
     - name: objects
