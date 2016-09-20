@@ -774,10 +774,12 @@ def run_jobs(experiment_id, project_name):
         session.flush()
 
         submit_args = submit_args_cls()
+        job_collection = jt.create_run_job_collection(submission.id)
         jobs = jt.create_run_jobs(
             submission_id=submission.id,
             user_name=current_identity.name,
             batches=job_descriptions['run'],
+            job_collection=job_collection,
             duration=submit_args.duration,
             memory=submit_args.memory, cores=submit_args.cores
         )
