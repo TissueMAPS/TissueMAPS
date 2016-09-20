@@ -42,7 +42,7 @@ PLOT_POSITION_MAPPING = {
 
 #: The factor by which the size of an image should be reduced for plotting.
 #: This helps reducing the amount of data that has to be send to the client.
-IMAGE_RESIZE_FACTOR = 4
+IMAGE_RESIZE_FACTOR = 10
 
 
 def _check_position_argument(position):
@@ -221,13 +221,13 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
     )
 
 
-def create_gradient_image_plot(image, position, colorscale=None):
-    '''Creates a heatmap plot for a gradient image.
+def create_float_image_plot(image, position, colorscale=None):
+    '''Creates a heatmap plot for a floating point image.
 
     Paramters
     ---------
     image: numpy.ndarray[numpy.float]
-        2D gradient image
+        2D floating point image
     position: str
         one-based figure coordinate that defines the relative position of the
         plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
@@ -257,7 +257,9 @@ def create_gradient_image_plot(image, position, colorscale=None):
     )
 
     if colorscale is None:
-        colorscale = create_colorscale('YlOrBr')
+        colorscale = create_colorscale(
+            'YlOrBr', add_background=True, background_color='white'
+        )
     return plotly.graph_objs.Heatmap(
         z=ds_img,
         # Only show pixel intensities upon mouse hover.
@@ -265,7 +267,6 @@ def create_gradient_image_plot(image, position, colorscale=None):
         # Background should be black and pixel intensities encode
         # as grey values.
         colorscale=colorscale,
-        # Rescale pixel intensity values for display.
         zauto=False,
         colorbar=dict(
             thickness=10,
@@ -713,5 +714,4 @@ def create_colorscale(name, n=256, permute=False, add_background=False,
                 'Argument "background_color" can be either "black" or "white"'
             )
 
-    print colors
     return colors
