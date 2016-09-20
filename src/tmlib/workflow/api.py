@@ -535,11 +535,20 @@ class ClusterRoutines(BasicClusterRoutines):
             with JsonWriter(batch_file) as f:
                 f.write(batch)
 
-    def _build_init_command(self, batch_args):
+    def _build_init_command(self, batch_args, extra_args):
         logger.debug('build "init" command')
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment_id)
+        for arg in extra_args.iterargs():
+            value = getattr(extra_args, arg.name)
+            if arg.type == bool:
+                if ((value and not arg.default) or
+                    (not value and arg.default)):
+                    command.append('--%s' % arg.name)
+            else:
+                if value is not None:
+                    command.extend(['--%s' % arg.name, str(value)])
         command.append('init')
         for arg in batch_args.iterargs():
             value = getattr(batch_args, arg.name)
@@ -548,7 +557,7 @@ class ClusterRoutines(BasicClusterRoutines):
                     (not value and arg.default)):
                     command.append('--%s' % arg.name)
             else:
-                if arg.value is not None:
+                if value is not None:
                     command.extend(['--%s' % arg.name, str(value)])
         return command
 
@@ -753,7 +762,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return job_collection
 
     def create_init_job(self, submission_id, user_name, batch_args,
-            duration='12:00:00', memory=3800, cores=1):
+            extra_args=None, duration='12:00:00', memory=3800, cores=1):
         '''Creates job for the "init" phase of the step.
 
         Parameters
@@ -764,9 +773,10 @@ class ClusterRoutines(BasicClusterRoutines):
             name of the submitting user
         batch_args: tmlib.workflow.args.BatchArguments
             step-specific implementation of
-            :py:class:`tmlib.workflow.args.BatchArguments`, which will be used
-            for the creation of batches of the subsequent "run" and "collect"
-            phases
+            :py:class:`tmlib.workflow.args.BatchArguments`
+        batch_args: tmlib.workflow.args.ExtraArguments, optional
+            step-specific implementation of
+            :py:class:`tmlib.workflow.args.ExtraArguments`
         duration: str, optional
             computational time that should be allocated for the job
             in HH:MM:SS format (default: ``"12:00:00"``)
@@ -789,7 +799,7 @@ class ClusterRoutines(BasicClusterRoutines):
         logger.debug('allocated cores for "init" job: %d', cores)
         job = InitJob(
             step_name=self.step_name,
-            arguments=self._build_init_command(batch_args),
+            arguments=self._build_init_command(batch_args, extra_args),
             output_dir=self.log_location,
             submission_id=submission_id,
             user_name=user_name

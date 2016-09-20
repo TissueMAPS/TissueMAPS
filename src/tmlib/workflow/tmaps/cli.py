@@ -2,6 +2,7 @@ import argparse
 import inspect
 import logging
 
+import tmlib.models as tm
 from tmlib import __version__
 from tmlib.utils import same_docstring_as
 from tmlib.workflow.tmaps import logo
@@ -94,7 +95,12 @@ class Tmaps(SubmissionManager):
         api = self.api_instance
         store = create_gc3pie_sql_store()
         task_id = self.get_task_id_of_last_submission()
+        with tm.utils.MainSession() as session:
+            experiment_ref = session.query(tm.ExperimentReference).\
+                get(self.experiment_id)
+            workflow_description = experiment_ref.workflow_description
         workflow = store.load(task_id)
+        workflow.update_description(workflow_description)
         stage_names = [s.name for s in workflow.description.stages]
         try:
             start_index = stage_names.index(stage)
