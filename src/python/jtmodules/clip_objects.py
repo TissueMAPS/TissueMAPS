@@ -35,4 +35,4 @@ def main(outer_mask, inner_mask, plot=False):
     else:
         figure = str()
 
-    return Outputs(clipped_mask, figure)
+    return Output(clipped_mask, figure)
