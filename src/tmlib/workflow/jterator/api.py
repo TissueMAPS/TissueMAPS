@@ -497,10 +497,17 @@ class ImageAnalysisPipeline(ClusterRoutines):
             mapobject_ids = dict()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
 
+                layer = session.query(tm.ChannelLayer).first()
                 logger.debug('add mapobject type "%s"', obj_name)
                 mapobject_type = session.get_or_create(
                     tm.MapobjectType, name=obj_name
                 )
+                min_poly_zoom = layer.maxzoom_level_index - 4
+                mapobject_type.min_poly_zoom = \
+                    0 if min_poly_zoom < 0 else min_poly_zoom
+                max_poly_zoom = layer.min_poly_zoom_index - 2
+                mapobject_type.max_poly_zoom = \
+                    0 if max_poly_zoom < 0 else max_poly_zoom
 
                 # Delete existing mapobjects for this site when they were
                 # generated in a previous run of the same pipeline. In case
