@@ -27,4 +27,4 @@ def main(label_image, as_polygons=True):
     -------
     jtmodules.register_objects.Output
     '''
-    return (label_image, as_polygons)
+    return Output(label_image, as_polygons)
