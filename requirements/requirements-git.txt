@@ -1,1 +1,4 @@
+git+https://github.com/tissuemaps/tmtoolbox@master
 git+https://github.com/tissuemaps/tmlibrary@master
+git+https://github.com/tissuemaps/jtlibrary@master
+git+https://github.com/dtheodor/flask-sqlalchemy-session

@@ -4,6 +4,9 @@ TissueMAPS server
 REST API design
 ---------------
 
+**DEPRECATED**: Update this section for the changed API design that is again based on
+the structure `/api/experiments/XXXX/channel-layers/YYYY`.
+
 The TissueMAPS server provides a REST API that is used by the TissueMAPS
 client. The structure of the API is as follows and should be kept when
 adding any functionality. As an example, consider the `Experiment` resource:
@@ -55,15 +58,13 @@ consult [https://github.com/TissueMAPS/TmLibrary](https://github.com/TissueMAPS/
     
 You also need to do the following:
 
-    sudo ln -s /Applications/Postgres.app/Contents/Versions/9.4/lib/libpq.5.dylib /usr/lib
+    sudo ln -s /Applications/Postgres.app/Contents/Versions/9.5/lib/libpq.5.dylib /usr/lib
 
 Add the command line tools to the PATH:
 
-    echo 'export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/9.4/bin' >> ~/.bash_profile
+    echo 'export PATH=$PATH:/Applications/Postgres.app/Contents/Versions/9.5/bin' >> ~/.bash_profile
 
-For a management GUI install pgAdmin from [](http://www.postgresql.org/ftp/pgadmin3/release/v1.20.0/osx/).
-
-Add a new connection with "File > Add Server" and insert `localhost` as the host and your system user name and passwort for the db user.
+For a GUI-based management tool install [pgAdmin](http://www.postgresql.org/ftp/pgadmin3/release/v1.20.0/osx/) or [postico](https://eggerapps.at/postico/).
 
 #### Via brew
 
@@ -82,12 +83,11 @@ This starts postgres with the default config file at `/usr/local/var/postgres/po
 ### Create the config file
 
 You now have to create a new config file where all the settings for the
-TissueMAPS server are stored. All possible options are listed in the
-default config file which provides the default values.
-This file is located under `tmaps/defaultconfig.py`.
-It is a good idea to copy this file and edit it according to your setup.
+TissueMAPS server are stored. 
+This file is located under `tmaps/dev.py.template`.
+Copy this file and edit it according to your setup.
 
-    $ cp tmaps/defaultconfig.py devconfig.py
+    $ cp config/dev.py.template config/dev.py
     
 Fill in the content of this file as needed. Then, set the environment
 variable `TMAPS_SETTINGS` to point to this config file.
