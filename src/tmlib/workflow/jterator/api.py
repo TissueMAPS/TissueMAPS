@@ -505,7 +505,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 min_poly_zoom = layer.maxzoom_level_index - 4
                 mapobject_type.min_poly_zoom = \
                     0 if min_poly_zoom < 0 else min_poly_zoom
-                max_poly_zoom = layer.min_poly_zoom_index - 2
+                max_poly_zoom = mapobject_type.min_poly_zoom - 2
                 mapobject_type.max_poly_zoom = \
                     0 if max_poly_zoom < 0 else max_poly_zoom
 
