@@ -11,7 +11,7 @@ VERSION = '0.0.1'
 Output = collections.namedtuple('Output', ['objects', 'as_polygons'])
 
 
-def main(label_image, as_polygon=True):
+def main(label_image, as_polygons=True):
     '''Registeres segmented objects in a labeled image for use by other
     (measurement) modules downstream in the pipeline.
 
@@ -19,7 +19,7 @@ def main(label_image, as_polygon=True):
     ----------
     label_image: numpy.ndarray[int32]
         labeled image where pixel values encode objects IDs
-    as_polygon: boolean, optional
+    as_polygons: boolean, optional
         whether objects should be represented as polygons;
         if ``False`` they will be represented as lines (default: ``True``)
 
