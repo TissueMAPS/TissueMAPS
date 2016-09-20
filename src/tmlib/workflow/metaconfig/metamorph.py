@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 #: Regular expression pattern to identify image files
 # TODO: how are time points encoded?
-IMAGE_FILE_REGEX_PATTERN = '.+_?(?P<w>[A-Z]\d{2})_s(?P<s>\d+)_w(?P<c>\d{1})'
+IMAGE_FILE_REGEX_PATTERN = '.+_?(?P<w>[A-Z]\d{2})_s(?P<s>\d+)_w(?P<c>\d{1})[^_thumb]'
 
 #: Supported extensions for metadata files
 METADATA_FILE_REGEX_PATTERN = r'(?!.*)'
