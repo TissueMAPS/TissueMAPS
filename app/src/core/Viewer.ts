@@ -44,6 +44,10 @@ class Viewer {
             if (channels) {
                 this.viewport.initMap(channels[0].layers[0].imageSize)
                 channels.forEach((ch) => {
+                    // The mapSize attribute is important for SegmentationLayers
+                    this.viewport.mapSize = {
+                        height: ch.height, width: ch.width
+                    };
                     this.channels.push(ch);
                     this.viewport.addLayer(ch);
                 });
