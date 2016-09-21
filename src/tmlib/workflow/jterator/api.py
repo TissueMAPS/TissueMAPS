@@ -502,7 +502,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 mapobject_type = session.get_or_create(
                     tm.MapobjectType, name=obj_name
                 )
-                min_poly_zoom = layer.maxzoom_level_index - 4
+                # We will update this in collect phase, but we need to set some
+                # limits in case the user already starts viewing objects on the
+                # map. Without any contraints the user interface might explode.
+                min_poly_zoom = layer.maxzoom_level_index - 3
                 mapobject_type.min_poly_zoom = \
                     0 if min_poly_zoom < 0 else min_poly_zoom
                 max_poly_zoom = mapobject_type.min_poly_zoom - 2
@@ -517,7 +520,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     'mapobject_types', list()
                 )
                 if mapobject_type.name not in inputs:
-                    prior_mapobject_ids = session.query(tm.Mapobject.id).\
+                    moids = session.query(tm.Mapobject.id).\
                         join(tm.MapobjectSegmentation).\
                         filter(
                             tm.Mapobject.mapobject_type_id == mapobject_type.id,
@@ -525,17 +528,30 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             tm.MapobjectSegmentation.pipeline == self.project.name
                         ).\
                         all()
-                    logger.info(
-                        'delete existing mapobjects of type "%s"',
-                        mapobject_type.name
-                    )
-                    if prior_mapobject_ids:
+                    if moids:
+                        logger.info(
+                            'delete segmentations for existing mapobjects of '
+                            'type "%s"', mapobject_type.name
+                        )
+                        session.query(tm.MapobjectSegmentation).\
+                            filter(
+                                tm.MapobjectSegmentation.mapobject_id.in_(moids)
+                            ).\
+                            delete()
+                        logger.info(
+                            'delete feature values for existing mapobjects of '
+                            'type "%s"', mapobject_type.name
+                        )
+                        session.query(tm.FeatureValue).\
+                            filter(tm.FeatureValue.mapobject_id.in_(moids)).\
+                            delete()
                         session.query(tm.Mapobject).\
-                            filter(tm.Mapobject.id.in_(prior_mapobject_ids)).\
+                            filter(tm.Mapobject.id.in_(moids)).\
                             delete()
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             mapobject_ids = dict()
+            feature_ids = dict()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
 
                 logger.debug('add mapobject type "%s"', obj_name)
@@ -545,7 +561,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # Get existing mapobjects for this site in case they were
                 # created by a previous pipeline or create new mapobjects in
                 # case they didn't exist (or got just deleted).
-                mapobject_ids[mapobject_type.name] = dict()
+                mapobject_ids[obj_name] = dict()
                 for label in segm_objs.labels:
                     logger.debug('add mapobject #%d', label)
                     try:
@@ -561,10 +577,22 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     except NoResultFound:
                         mapobject = tm.Mapobject(mapobject_type.id)
                         session.add(mapobject)
-                        session.flush()
+                        session.commit()
                     except:
                         raise
-                    mapobject_ids[mapobject_type.name][label] = mapobject.id
+                    mapobject_ids[obj_name][label] = mapobject.id
+
+                logger.info(
+                    'add features for mapobject of type "%s"',
+                    mapobject_type.name
+                )
+                feature_ids[obj_name] = dict()
+                for fname in segm_objs.measurements[0].columns:
+                    feature = session.get_or_create(
+                            tm.Feature,
+                            name=fname, mapobject_type_id=mapobject_type.id
+                        )
+                    feature_ids[obj_name][feature_name] = feature.id
 
         # Write the segmentations, i.e. create a polygon for each segmented
         # object based on the cooridinates of their contours.
@@ -578,21 +606,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
             segmentations = list()
             mapobject_segmentations = list()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
-                mapobject_type = session.query(tm.MapobjectType).\
-                    filter_by(name=obj_name).\
-                    one()
                 logger.info(
-                    'add outlines for mapobjects of type "%s"',
-                    mapobject_type.name
+                    'add outlines for mapobjects of type "%s"', obj_name
                 )
                 polygons = segm_objs.to_polygons(y_offset, x_offset)
                 for (t, z, label), outline in polygons.iteritems():
-                    mapobject = session.query(tm.Mapobject).\
-                        get(mapobject_ids[mapobject_type.name][label])
-
                     if outline.is_empty:
                         continue
-
                     logger.debug('add segmentations for mapobject #%d', label)
                     mapobject_segmentations.append(
                         dict(
@@ -602,91 +622,37 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             geom_poly=outline.wkt,
                             geom_centroid=outline.centroid.wkt,
                             site_id=batch['site_id'],
-                            mapobject_id=mapobject.id,
+                            mapobject_id=mapobject_ids[obj_name][label],
                             is_border=bool(segm_objs.is_border[t][label]),
                         )
                     )
 
+                # Create an entry for each measured featured value.
+                # This is quite a heavy write operation, since we have nxp
+                # feature values, where n is the number of mapobjects and
+                # p the number of extracted features.
+                feature_values = list()
+                for fname, fid in feature_ids[obj_name].iteritems():
+                    logger.debug('add value for feature "%s"' % f.name)
+                    for t, measurement in enumerate(segm_objs.measurements):
+                        if measurement.empty:
+                            continue
+                        elif fname not in measurement.columns:
+                            continue
+                        fvalue = measurement.loc[label, f.name]
+                        feature_values.append(
+                            dict(
+                                tpoint=t, feature_id=fid,
+                                mapobject_id=mapobject_ids[obj_name][label],
+                                value=float(fvalue)
+                            )
+                        )
+            logger.info('insert feature values into table')
+            session.bulk_insert_mappings(tm.FeatureValue, feature_values)
+            logger.info('insert segmentations into table')
             session.bulk_insert_mappings(
                 tm.MapobjectSegmentation, mapobject_segmentations
             )
-
-        # Create entries for features
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            for obj_name, segm_objs in store['segmented_objects'].iteritems():
-                mapobject_type = session.query(tm.MapobjectType).\
-                    filter_by(name=obj_name).\
-                    one()
-                logger.info(
-                    'add features for mapobject of type "%s"',
-                    mapobject_type.name
-                )
-                # TODO: get_or_create_all() may fail???
-                # features = session.get_or_create_all(
-                #     tm.Feature,
-                #     [{'name': fname, 'mapobject_type_id': mapobject_type.id}
-                #      for fname in segm_objs.measurements]
-                # )
-                features = list()
-                for fname in segm_objs.measurements[0].columns:
-                    features.append(
-                        session.get_or_create(
-                            tm.Feature,
-                            name=fname, mapobject_type_id=mapobject_type.id
-                        )
-                    )
-
-                logger.debug(
-                    'delete existing feature values for mapobject type "%s"',
-                    mapobject_type.name
-                )
-                fids = [f.id for f in features]
-                mids = mapobject_ids[mapobject_type.name].values()
-                if fids and mids:
-                    feature_values = session.query(tm.FeatureValue).\
-                        filter(
-                            tm.FeatureValue.feature_id.in_(fids),
-                            tm.FeatureValue.mapobject_id.in_(mids)
-                        ).\
-                        delete()
-
-        # Create an entry for each measured featured value.
-        # This is quite a heavy write operation, since we have nxp feature
-        # values, where n is the number of mapobjects and p the number of
-        # extracted features.
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            feature_values = list()
-            for obj_name, segm_objs in store['segmented_objects'].iteritems():
-                mapobject_type = session.query(tm.MapobjectType).\
-                    filter_by(name=obj_name).\
-                    one()
-                logger.info(
-                    'add feature values for mapobjects of type "%s"',
-                    mapobject_type.name
-                )
-                features = session.query(tm.Feature).\
-                    filter_by(mapobject_type_id=mapobject_type.id)
-                for label in segm_objs.labels:
-                    logger.debug('add feature values for mapobject #%d', label)
-                    mapobject = session.query(tm.Mapobject).\
-                        get(mapobject_ids[mapobject_type.name][label])
-                    for f in features:
-                        logger.debug('add value for feature "%s"' % f.name)
-                        for t, measurement in enumerate(segm_objs.measurements):
-                            if measurement.empty:
-                                continue
-                            elif f.name not in measurement.columns:
-                                continue
-                            fvalue = measurement.loc[label, f.name]
-                            feature_values.append(
-                                dict(
-                                    tpoint=t, feature_id=f.id,
-                                    mapobject_id=mapobject.id,
-                                    value=float(fvalue)
-                                )
-                            )
-            logger.info('insert feature values into table')
-            session.bulk_insert_mappings(tm.FeatureValue, feature_values)
 
     def collect_job_output(self, batch):
         '''Performs the following calculations after the pipeline has been

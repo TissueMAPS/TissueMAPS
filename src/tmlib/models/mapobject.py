@@ -156,13 +156,14 @@ class MapobjectType(ExperimentModel, DateMixIn):
             )
 
         outlines = select_stmt.\
-            join(MapobjectSegmentation.mapobject).\
+            join(Mapobject).\
             join(MapobjectType).\
             filter(
                 (MapobjectType.id == self.id) &
                 ((MapobjectType.is_static) |
                  (MapobjectSegmentation.tpoint == tpoint) &
-                 (MapobjectSegmentation.zplane == zplane)) &
+                 (MapobjectSegmentation.zplane == zplane)
+                ) &
                 (MapobjectSegmentation.intersection_filter(x, y, z, maxzoom))
             ).\
             all()
@@ -392,7 +393,9 @@ class Mapobject(ExperimentModel):
         self.parent_id = parent_id
 
     def __repr__(self):
-        return '<Mapobject(id=%d, type=%s)>' % (self.id, mapobject_type.name)
+        return '<Mapobject(id=%d, type=%s)>' % (
+            self.id, self.mapobject_type.name
+        )
 
 
 class MapobjectSegmentation(ExperimentModel):
@@ -575,26 +578,31 @@ class MapobjectSegmentation(ExperimentModel):
         minx, miny, maxx, maxy = MapobjectSegmentation.bounding_box(x, y, z, maxzoom)
         # TODO: use shapely to create objects
         tile = 'POLYGON(({maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
-            minx=minx, maxx=maxx, miny=miny, maxy=maxy)
+            minx=minx, maxx=maxx, miny=miny, maxy=maxy
+        )
         # The outlines should not lie on the top or left border since this
         # would otherwise lead to requests for neighboring tiles receiving
         # the same objects.
         # This in turn leads to overplotting and is noticeable when the objects
         # have a fill color with an opacity != 0 or != 1.
         top_border = 'LINESTRING({minx} {maxy}, {maxx} {maxy})'.format(
-            minx=minx, maxx=maxx, maxy=maxy)
+            minx=minx, maxx=maxx, maxy=maxy
+        )
         left_border = 'LINESTRING({minx} {maxy}, {minx} {miny})'.format(
-            minx=minx, maxy=maxy, miny=miny)
+            minx=minx, maxy=maxy, miny=miny
+        )
 
         spatial_filter = (MapobjectSegmentation.geom_poly.ST_Intersects(tile))
         if x != 0:
             spatial_filter = spatial_filter & \
                 not_(ST_ExteriorRing(MapobjectSegmentation.geom_poly).\
-                     ST_Intersects(left_border))
+                     ST_Intersects(left_border)
+                )
         if y != 0:
             spatial_filter = spatial_filter & \
                 not_(ST_ExteriorRing(MapobjectSegmentation.geom_poly).\
-                     ST_Intersects(top_border))
+                     ST_Intersects(top_border)
+                )
 
         return spatial_filter
 
