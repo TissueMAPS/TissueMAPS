@@ -223,10 +223,9 @@ def get_task_data_from_engine(task, recursion_depth=None):
             'percent_done': 0.0,  # fix later, if possible
             'time': task_.execution.get('duration', None),
             'memory': task_.execution.get('max_used_memory', None),
-            'cpu_time': task_.execution.get('used_cpu_time', None)
+            'cpu_time': task_.execution.get('used_cpu_time', None),
+            'type': type(task_).__name__
         }
-
-        data['type'] = type(task_).__name__
 
         done = 0.0
         if hasattr(task_, 'tasks'):
@@ -354,11 +353,11 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
                 data = {
                     'done': False,
                     'failed': False,
-                    'name': task_info.name,
-                    'state': task_info.state,
+                    'name': task_.name,
+                    'state': task_.state,
                     'live': False,
-                    'memory': task_info.memory,
-                    'type': task_info.type,
+                    'memory': None,
+                    'type': type(task_).__name__,
                     'exitcode': None,
                     'id': None,
                     'submission_id': task_.submission_id,
