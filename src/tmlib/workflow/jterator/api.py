@@ -21,6 +21,7 @@ from tmlib.readers import ImageReader
 from tmlib.writers import TextWriter
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.errors import PipelineDescriptionError
+from tmlib.errors import JobDescriptionError
 from tmlib.logging_utils import map_logging_verbosity
 from tmlib.workflow.jterator.utils import complete_path
 from tmlib.workflow.jterator.utils import get_module_path
@@ -143,15 +144,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
         #     raise PipelineDescriptionError('No pipeline description available')
         return pipeline
 
-    def start_engines(self, plot):
+    def start_engines(self):
         '''Starts engines required by non-Python modules in the pipeline.
         This should be done only once, since engines may have long startup
         times, which would otherwise slow down the execution of the pipeline.
-
-        Parameters
-        ----------
-        plot: bool
-            whether plots should be generated
 
         Note
         ----
@@ -216,14 +212,19 @@ class ImageAnalysisPipeline(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
-        self.check_pipeline()
         job_descriptions = dict()
         job_descriptions['run'] = list()
+        self.check_pipeline()
 
         channel_names = [
             ch['name']
             for ch in self.project.pipe['description']['input']['channels']
         ]
+
+        if args.plot and args.batch_size != 1:
+            raise JobDescriptionError(
+                'Batch size must be 1 when plotting is active.'
+            )
 
         # TODO: parallelize over sub-regions in the image
         # region = self.project.pipe['description']['input']['region']
@@ -233,48 +234,47 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
             sites = session.query(tm.Site).all()
 
+            batches = self._create_batches(sites, args.batch_size)
             if job_ids is None:
-                job_ids = set(range(1, len(sites)+1))
+                job_ids = set(range(1, len(batches)+1))
 
-            for i, site in enumerate(sites):
+            for j, batch in enumerate(batches):
 
-                job_id = i+1  # job IDs are one-based!
+                job_id = j+1  # job IDs are one-based!
 
                 if job_id not in job_ids:
                     continue
 
-                image_file_paths = dict()
-                image_file_ids = dict()
-                for ch_name in channel_names:
-
+                image_file_inputs = list()
+                for i, site in enumerate(batch):
                     image_files = session.query(tm.ChannelImageFile).\
                         join(tm.Channel).\
                         join(tm.Site).\
-                        filter(tm.Channel.name == ch_name).\
+                        filter(tm.Channel.name.in_(channel_names)).\
                         filter(tm.Site.id == site.id).\
                         all()
+                    image_file_inputs.extend([f.location for f in image_files])
 
-                    image_file_paths[ch_name] = [
-                        f.location for f in image_files
-                    ]
-
-                job_descriptions['run'].append({
+                description = {
                     'id': job_id,
-                    'inputs': {
-                        'image_files': image_file_paths
-                    },
-                    'outputs': {
+                    'inputs': {'image_files': image_file_inputs},
+                    'outputs': {},
+                    'site_ids': [s.id for s in batch],
+                    'plot': args.plot,
+                    'debug': False
+                }
+                if args.plot:
+                    # TODO: tack per site and not per job
+                    description['outputs'].update({
                         'figure_files': [
                             module.build_figure_filename(
                                 self.figures_location, job_id
                             )
                             for module in self.pipeline
                         ]
-                    },
-                    'site_id': site.id,
-                    'plot': args.plot,
-                    'debug': False
-                })
+                    })
+                job_descriptions['run'].append(description)
+
         job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
         # TODO: objects
         return job_descriptions
@@ -320,36 +320,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
         command.append('collect')
         return command
 
-    def run_job(self, batch):
-        '''Runs the pipeline, i.e. executes modules sequentially. Once the
-        pipeline has run through, outlines and extracted features of segmented
-        objects are written into the database.
-
-        Parameters
-        ----------
-        batch: dict
-            job description
-        '''
-        # Handle pipeline input
-        # ---------------------
-
-        logger.info('handle pipeline input')
-        checker = PipelineChecker(
-            step_location=self.step_location,
-            pipe_description=self.project.pipe['description'],
-            handles_descriptions=[
-                h['description'] for h in self.project.handles
-            ]
-        )
-        checker.check_all()
-        self._configure_loggers()
-        plot = batch.get('plot', batch['debug'])
-        self.start_engines(plot)
-        job_id = batch.get('id', None)
-
-        # Use an in-memory store for pipeline data and only add outputs
-        # to the database once the whole pipeline has completed successfully.
+    def _load_pipeline_inputs(self, site_id, debug=False):
+        logger.info('load pipeline inputs')
+        # Use an in-memory store for pipeline data and only insert outputs
+        # into the database once the whole pipeline has completed successfully.
         store = {
+            'site_id': site_id,
             'pipe': dict(),
             'current_figure': list(),
             'segmented_objects': dict(),
@@ -360,7 +336,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # NOTE: When the experiment was acquired in "multiplexing" mode,
         # images will be automatically aligned, assuming that this is the
         # desired behavior.
-        channel_input = self.project.pipe['description']['input']['channels']
+        channel_input = self.project.pipe['description']['input'].get(
+            'channels', list()
+        )
         mapobject_type_info = self.project.pipe['description']['input'].get(
             'mapobject_types', list()
         )
@@ -368,20 +346,24 @@ class ImageAnalysisPipeline(ClusterRoutines):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             for item in channel_input:
                 # NOTE: When "path" key is present, the image is loaded from
-                # a file on disk. It is assumed that the image is already
-                # corrected and/or aligned in case this is desired.
+                # a file on disk. The image is not further processed, such as
+                # corrected for illuminatiion artifacts or aligned.
                 images = collections.defaultdict(list)
-                path = item.get('path', None)
-                if path is not None and batch['debug']:
+                if debug:
+                    path = item.get('path', None)
+                    if path is None:
+                        raise JobDescriptionError(
+                            'Input items require key "path" in debug mode.'
+                        )
                     logger.info(
-                        'load images for channel "%s" from file',
-                        item['name']
+                        'load image for channel "%s" from file: %s',
+                        item['name'], path
                     )
                     with ImageReader(path) as f:
                         array = f.read()
                     images = {0: array}
                 else:
-                    site = session.query(tm.Site).get(batch['site_id'])
+                    site = session.query(tm.Site).get(site_id)
                     if item['correct']:
                         logger.info('load illumination statistics')
                         try:
@@ -421,7 +403,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
             # Load outlins of mapobjects of the specified types and reconstruct
             # the label images required by modules.
-            if not batch['debug']:
+            if not debug:
                 for mapobject_type_name in mapobject_type_names:
                     segmentations = session.query(
                             tm.MapobjectSegmentation.tpoint,
@@ -433,7 +415,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         join(tm.MapobjectType).\
                         filter(
                             tm.MapobjectType.name == mapobject_type_name,
-                            tm.MapobjectSegmentation.site_id == batch['site_id']
+                            tm.MapobjectSegmentation.site_id == site_id
                         ).\
                         all()
                     dims = store['pipe'].values()[0].shape
@@ -449,7 +431,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     # The polygon coordinates are global, i.e. relative to the
                     # map overview. Therefore we have to provide the offsets
                     # for each axis.
-                    site = session.query(tm.Site).get(batch['site_id'])
+                    site = session.query(tm.Site).get(site_id)
                     y_offset, x_offset = site.offset
                     y_offset += site.intersection.lower_overhang
                     x_offset += site.intersection.right_overhang
@@ -464,40 +446,35 @@ class ImageAnalysisPipeline(ClusterRoutines):
         for name, img in store['pipe'].iteritems():
             store['pipe'][name] = np.squeeze(img)
 
-        # Run pipeline
-        # ------------
+        return store
 
+    def _run_pipeline(self, store, job_id, plot=False):
         logger.info('run pipeline')
-        headless = not batch.get('plot', False)
-        if not headless:
-            logger.warn('plotting mode active')
         for i, module in enumerate(self.pipeline):
             logger.info('run module "%s"', module.name)
             # When plotting is not deriberately activated it defaults to
             # headless mode
-            module.update_handles(store, headless=headless)
+            module.update_handles(store, headless=not plot)
             module.run(self.engines[module.language])
             store = module.update_store(store)
 
-            if batch['plot']:
+            if plot and module.handles['input']['plot']:
+                # TODO: don't store figures per job_id
                 figure_file = module.build_figure_filename(
                     self.figures_location, job_id
                 )
                 with TextWriter(figure_file) as f:
                     f.write(store['current_figure'])
 
-        # Write output
-        # ------------
-        if batch['debug']:
-            logger.info('debug mode: no output written')
-            sys.exit(0)
+        return store
 
-        logger.info('write database entries for identified objects')
+    def _save_pipeline_outputs(self, store):
+        logger.info('save pipeline outputs')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             mapobject_ids = dict()
+            layer = session.query(tm.ChannelLayer).first()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
 
-                layer = session.query(tm.ChannelLayer).first()
                 logger.debug('add mapobject type "%s"', obj_name)
                 mapobject_type = session.get_or_create(
                     tm.MapobjectType, name=obj_name
@@ -520,22 +497,22 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     'mapobject_types', list()
                 )
                 if mapobject_type.name not in inputs:
-                    moids = session.query(tm.Mapobject.id).\
+                    mids = session.query(tm.Mapobject.id).\
                         join(tm.MapobjectSegmentation).\
                         filter(
                             tm.Mapobject.mapobject_type_id == mapobject_type.id,
-                            tm.MapobjectSegmentation.site_id == batch['site_id'],
+                            tm.MapobjectSegmentation.site_id == store['site_id'],
                             tm.MapobjectSegmentation.pipeline == self.project.name
                         ).\
                         all()
-                    if moids:
+                    if mids:
                         logger.info(
                             'delete segmentations for existing mapobjects of '
                             'type "%s"', mapobject_type.name
                         )
                         session.query(tm.MapobjectSegmentation).\
                             filter(
-                                tm.MapobjectSegmentation.mapobject_id.in_(moids)
+                                tm.MapobjectSegmentation.mapobject_id.in_(mids)
                             ).\
                             delete()
                         logger.info(
@@ -543,10 +520,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             'type "%s"', mapobject_type.name
                         )
                         session.query(tm.FeatureValue).\
-                            filter(tm.FeatureValue.mapobject_id.in_(moids)).\
+                            filter(tm.FeatureValue.mapobject_id.in_(mids)).\
                             delete()
                         session.query(tm.Mapobject).\
-                            filter(tm.Mapobject.id.in_(moids)).\
+                            filter(tm.Mapobject.id.in_(mids)).\
                             delete()
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
@@ -569,7 +546,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             join(tm.MapobjectSegmentation).\
                             filter(
                                 tm.Mapobject.mapobject_type_id == mapobject_type.id,
-                                tm.MapobjectSegmentation.site_id == batch['site_id'],
+                                tm.MapobjectSegmentation.site_id == store['site_id'],
                                 tm.MapobjectSegmentation.label == label,
                                 tm.MapobjectSegmentation.pipeline == self.project.name
                             ).\
@@ -597,7 +574,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # Write the segmentations, i.e. create a polygon for each segmented
         # object based on the cooridinates of their contours.
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            site = session.query(tm.Site).get(batch['site_id'])
+            site = session.query(tm.Site).get(store['site_id'])
             y_offset, x_offset = site.offset
             if site.intersection is not None:
                 y_offset += site.intersection.lower_overhang
@@ -621,7 +598,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             tpoint=t, zplane=z,
                             geom_poly=outline.wkt,
                             geom_centroid=outline.centroid.wkt,
-                            site_id=batch['site_id'],
+                            site_id=store['site_id'],
                             mapobject_id=mapobject_ids[obj_name][label],
                             is_border=bool(segm_objs.is_border[t][label]),
                         )
@@ -653,6 +630,53 @@ class ImageAnalysisPipeline(ClusterRoutines):
             session.bulk_insert_mappings(
                 tm.MapobjectSegmentation, mapobject_segmentations
             )
+
+    def run_job(self, batch):
+        '''Runs the pipeline, i.e. executes modules sequentially. Once the
+        pipeline has run through, outlines and extracted features of segmented
+        objects are written into the database.
+
+        Parameters
+        ----------
+        batch: dict
+            job description
+        '''
+        logger.info('handle pipeline input')
+        checker = PipelineChecker(
+            step_location=self.step_location,
+            pipe_description=self.project.pipe['description'],
+            handles_descriptions=[
+                h['description'] for h in self.project.handles
+            ]
+        )
+        checker.check_all()
+        self._configure_loggers()
+
+        self.start_engines()
+
+        # Enable debugging of pipelines by providing the full path to images.
+        # This requires a work around for "plot" and "job_id" arguments.
+        if batch['debug']:
+            site_ids = [None]
+            plot = False
+            job_id = None
+        else:
+            site_ids = batch['site_ids']
+            plot = batch.get('plot')
+            job_id = batch.get('id')
+
+        for sid in site_ids:
+            logger.info('process site %d', sid)
+            # Load inputs
+            store = self._load_pipeline_inputs(sid, batch['debug'])
+            # Run pipeline
+            store = self._run_pipeline(store, job_id, plot)
+            # Write output
+            if batch['debug']:
+                logger.info('debug mode: no output written')
+                sys.exit(0)
+            else:
+                self._save_pipeline_outputs(store)
 
     def collect_job_output(self, batch):
         '''Performs the following calculations after the pipeline has been

@@ -15,6 +15,11 @@ class JteratorBatchArguments(BatchArguments):
         help='whether plotting should be activated'
     )
 
+    batch_size = Argument(
+        type=int, help='number of sites that should be processed per job',
+        default=1, flag='b'
+    )
+
 
 @register_submission_args('jterator')
 class JteratorSubmissionArguments(SubmissionArguments):

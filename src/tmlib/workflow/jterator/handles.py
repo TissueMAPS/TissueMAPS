@@ -298,22 +298,11 @@ class SegmentedObjects(LabelImage):
         super(SegmentedObjects, self).__init__(name, key, help)
         self._features = collections.defaultdict(list)
         self._attributes = collections.defaultdict(list)
-        self._labels = None
 
     @property
     def labels(self):
         '''List[int]: unique object identifier labels'''
-        if self._labels is not None:
-            return self._labels
-        else:
-            self._labels = np.unique(
-                self.value[self.value > 0]
-            ).astype(int).tolist()
-        return self._labels
-
-    @labels.setter
-    def labels(self, value):
-        self._labels = value
+        return np.unique(self.value[self.value > 0]).astype(int).tolist()
 
     def to_polygons(self, y_offset, x_offset, tolerance=2):
         '''Creates a polygon representation for each segmented object.
