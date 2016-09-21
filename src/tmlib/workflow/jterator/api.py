@@ -232,9 +232,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
 
-            sites = session.query(tm.Site).all()
+            sites = session.query(tm.Site.id).all()
+            site_ids = [s.id for s in sites]
 
-            batches = self._create_batches(sites, args.batch_size)
+            batches = self._create_batches(site_ids, args.batch_size)
             if job_ids is None:
                 job_ids = set(range(1, len(batches)+1))
 
@@ -245,38 +246,29 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 if job_id not in job_ids:
                     continue
 
-                image_file_inputs = list()
-                for i, site in enumerate(batch):
-                    image_files = session.query(tm.ChannelImageFile).\
-                        join(tm.Channel).\
-                        join(tm.Site).\
-                        filter(tm.Channel.name.in_(channel_names)).\
-                        filter(tm.Site.id == site.id).\
-                        all()
-                    image_file_inputs.extend([f.location for f in image_files])
+                image_files = session.query(tm.ChannelImageFile).\
+                    join(tm.Channel).\
+                    join(tm.Site).\
+                    filter(tm.Channel.name.in_(channel_names)).\
+                    filter(tm.Site.id.in_(batch)).\
+                    all()
 
-                description = {
+                job_descriptions['run'].append({
                     'id': job_id,
-                    'inputs': {'image_files': image_file_inputs},
+                    'inputs': {
+                        'image_files': [f.location for f in image_files]
+                    },
                     'outputs': {},
-                    'site_ids': [s.id for s in batch],
+                    'site_ids': batch,
                     'plot': args.plot,
                     'debug': False
-                }
-                if args.plot:
-                    # TODO: tack per site and not per job
-                    description['outputs'].update({
-                        'figure_files': [
-                            module.build_figure_filename(
-                                self.figures_location, job_id
-                            )
-                            for module in self.pipeline
-                        ]
-                    })
-                job_descriptions['run'].append(description)
+                })
 
-        job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
-        # TODO: objects
+        job_descriptions['collect'] = {
+            'inputs': dict(),
+            'outputs': dict()
+        }
+
         return job_descriptions
 
     def delete_previous_job_output(self):
