@@ -347,32 +347,56 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
             gc3libs.Run.State.STOPPED
         }
         with tm.utils.MainSession() as session:
-            task_info = session.query(tm.Task).get(task_.persistent_id)
-            failed = task_info.exitcode != 0 and task_info.exitcode is not None
-            data['done'] = task_info.state == gc3libs.Run.State.TERMINATED
-            data['failed'] = failed
-            data['name'] = task_info.name
-            data['state'] = task_info.state
-            data['live'] = task_info.state in live_states
-            data['memory'] = task_info.memory
-            data['type'] = task_info.type
-            data['exitcode'] = task_info.exitcode
-            data['id'] = task_info.id
-            data['submission_id'] = task_.submission_id
-            data['time'] = task_info.time
+            if not hasattr(task_, 'persistent_id'):
+                # If the task doesn't have a "persistent_id", it means that
+                # it hasn't yet been inserted into the database table and
+                # consequently hasn't yet been processed either.
+                data = {
+                    'done': False,
+                    'failed': False,
+                    'name': task_info.name,
+                    'state': task_info.state,
+                    'live': False,
+                    'memory': task_info.memory,
+                    'type': task_info.type,
+                    'exitcode': None,
+                    'id': None,
+                    'submission_id': task_.submission_id,
+                    'time': None,
+                    'cpu_time': None
+                }
+            else:
+                task_info = session.query(tm.Task).get(task_.persistent_id)
+                failed = (
+                    task_info.exitcode != 0 and task_info.exitcode is not None
+                )
+                data = {
+                    'done': task_info.state == gc3libs.Run.State.TERMINATED,
+                    'failed': failed,
+                    'name': task_info.name,
+                    'state': task_info.state,
+                    'live': task_info.state in live_states,
+                    'memory': task_info.memory,
+                    'type': task_info.type,
+                    'exitcode': task_info.exitcode,
+                    'id': task_info.id,
+                    'submission_id': task_.submission_id,
+                    'time': task_info.time,
+                    'cpu_time': task_info.cpu_time
+                }
             # Convert timedeltas to string to make it JSON serializable
             if data['time'] is not None:
                 data['time'] = str(data['time'])
-            data['cpu_time'] = task_info.cpu_time
             if data['cpu_time'] is not None:
                 data['cpu_time'] = str(data['cpu_time'])
 
             if hasattr(task_, 'tasks'):
                 done = 0.0
                 for t in task_.tasks:
-                    t_info = session.query(tm.Task).get(t.persistent_id)
-                    if t_info.state == gc3libs.Run.State.TERMINATED:
-                        done += 1
+                    if hasattr(t, 'persistent_id'):
+                        t_info = session.query(tm.Task).get(t.persistent_id)
+                        if t_info.state == gc3libs.Run.State.TERMINATED:
+                            done += 1
                 if len(task_.tasks) > 0:
                     data['percent_done'] = done / len(task_.tasks) * 100
                 else:
