@@ -448,8 +448,8 @@ class MapobjectSegmentation(ExperimentModel):
     pipeline = Column(String, index=True)
     tpoint = Column(Integer, index=True)
     zplane = Column(Integer, index=True)
-    geom_poly = Column(Geometry('POLYGON'), index=True)
-    geom_centroid = Column(Geometry('POINT'), index=True)
+    geom_poly = Column(Geometry('POLYGON'))
+    geom_centroid = Column(Geometry('POINT'))
     site_id = Column(
         Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
