@@ -592,7 +592,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             tm.Feature,
                             name=fname, mapobject_type_id=mapobject_type.id
                         )
-                    feature_ids[obj_name][feature_name] = feature.id
+                    feature_ids[obj_name][fname] = feature.id
 
         # Write the segmentations, i.e. create a polygon for each segmented
         # object based on the cooridinates of their contours.
@@ -633,13 +633,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # p the number of extracted features.
                 feature_values = list()
                 for fname, fid in feature_ids[obj_name].iteritems():
-                    logger.debug('add value for feature "%s"' % f.name)
+                    logger.debug('add value for feature "%s"' % fname)
                     for t, measurement in enumerate(segm_objs.measurements):
                         if measurement.empty:
                             continue
                         elif fname not in measurement.columns:
                             continue
-                        fvalue = measurement.loc[label, f.name]
+                        fvalue = measurement.loc[label, fname]
                         feature_values.append(
                             dict(
                                 tpoint=t, feature_id=fid,
