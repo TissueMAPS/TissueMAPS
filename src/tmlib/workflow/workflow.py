@@ -399,6 +399,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
             index for the list of `tasks` (steps)
         '''
         logger.debug('create job descriptions for next step')
+        self.tasks[index].description = self.description.steps[index]
         self.tasks[index].initialize()
 
     def next(self, done):
@@ -517,6 +518,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
 
     def _update_all_steps(self):
         for index, step_description in enumerate(self.description.steps):
+            self.tasks[index].description = step_description
             self.tasks[index].initialize()
 
 
@@ -664,11 +666,12 @@ class Workflow(SequentialTaskCollection, State):
         index: int
             index for the list of `tasks` (stages)
         '''
-        stage_desc = self.description.stages[index]
-        logger.info('update stage #%d: %s', index, stage_desc.name)
+        stage_description = self.description.stages[index]
+        logger.info('update stage #%d: %s', index, stage_description.name)
         if index > len(self.tasks) - 1:
-            stage = self._add_stage(stage_desc)
+            stage = self._add_stage(stage_description)
             self.tasks.append(stage)
+        self.tasks[index].description = stage_description
         if stage_desc.mode == 'sequential':
             self.tasks[index].update_step(0)
         else:
