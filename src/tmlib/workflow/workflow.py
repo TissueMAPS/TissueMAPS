@@ -613,8 +613,8 @@ class Workflow(SequentialTaskCollection, State):
             workflow stages
         '''
         workflow_stages = list()
-        for stage_desc in self.description.stages:
-            stage = self._add_stage(stage_desc)
+        for stage_description in self.description.stages:
+            stage = self._add_stage(stage_description)
             workflow_stages.append(stage)
         return workflow_stages
 
@@ -672,7 +672,7 @@ class Workflow(SequentialTaskCollection, State):
             stage = self._add_stage(stage_description)
             self.tasks.append(stage)
         self.tasks[index].description = stage_description
-        if stage_desc.mode == 'sequential':
+        if stage_description.mode == 'sequential':
             self.tasks[index].update_step(0)
         else:
             self.tasks[index]._update_all_steps()
