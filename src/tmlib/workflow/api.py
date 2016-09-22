@@ -540,15 +540,16 @@ class ClusterRoutines(BasicClusterRoutines):
         command = [self.step_name]
         command.extend(['-v' for x in xrange(self.verbosity)])
         command.append(self.experiment_id)
-        for arg in extra_args.iterargs():
-            value = getattr(extra_args, arg.name)
-            if arg.type == bool:
-                if ((value and not arg.default) or
-                    (not value and arg.default)):
-                    command.append('--%s' % arg.name)
-            else:
-                if value is not None:
-                    command.extend(['--%s' % arg.name, str(value)])
+        if extra_args is not None:
+            for arg in extra_args.iterargs():
+                value = getattr(extra_args, arg.name)
+                if arg.type == bool:
+                    if ((value and not arg.default) or
+                        (not value and arg.default)):
+                        command.append('--%s' % arg.name)
+                else:
+                    if value is not None:
+                        command.extend(['--%s' % arg.name, str(value)])
         command.append('init')
         for arg in batch_args.iterargs():
             value = getattr(batch_args, arg.name)
