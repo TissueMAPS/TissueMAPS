@@ -354,7 +354,7 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
                     'done': False,
                     'failed': False,
                     'name': task_.name,
-                    'state': task_.state,
+                    'state': task_.execution.state,
                     'live': False,
                     'memory': None,
                     'type': type(task_).__name__,
