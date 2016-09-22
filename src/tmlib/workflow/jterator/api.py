@@ -446,6 +446,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             logger.info('run module "%s"', module.name)
             # When plotting is not deriberately activated it defaults to
             # headless mode
+            module.instantiate_handles()
             module.update_handles(store, headless=not plot)
             module.run(self.engines[module.language])
             store = module.update_store(store)
@@ -576,11 +577,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
             mapobject_segmentations = list()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
                 logger.info(
-                    'add outlines for mapobjects of type "%s"', obj_name
+                    'add segmentations for mapobjects of type "%s"', obj_name
                 )
                 polygons = segm_objs.to_polygons(y_offset, x_offset)
                 for (t, z, label), outline in polygons.iteritems():
                     if outline.is_empty:
+                        logger.warn('object without outline')
                         continue
                     logger.debug('add segmentations for mapobject #%d', label)
                     mapobject_segmentations.append(
@@ -600,24 +602,31 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # This is quite a heavy write operation, since we have nxp
                 # feature values, where n is the number of mapobjects and
                 # p the number of extracted features.
+                logger.info(
+                    'add feature values for mapobjects of type "%s"', obj_name
+                )
                 feature_values = list()
                 for fname, fid in feature_ids[obj_name].iteritems():
                     logger.debug('add value for feature "%s"' % fname)
                     for t, measurement in enumerate(segm_objs.measurements):
                         if measurement.empty:
+                            logger.warn('empty "%s" measurement', fname)
                             continue
                         elif fname not in measurement.columns:
                             continue
-                        fvalue = measurement.loc[label, fname]
-                        feature_values.append(
-                            dict(
-                                tpoint=t, feature_id=fid,
-                                mapobject_id=mapobject_ids[obj_name][label],
-                                value=float(fvalue)
+                        for label in measurement.index:
+                            fvalue = measurement.loc[label, fname]
+                            feature_values.append(
+                                dict(
+                                    tpoint=t, feature_id=fid,
+                                    mapobject_id=mapobject_ids[obj_name][label],
+                                    value=float(fvalue)
+                                )
                             )
-                        )
             logger.info('insert feature values into table')
-            session.bulk_insert_mappings(tm.FeatureValue, feature_values)
+            session.bulk_insert_mappings(
+                tm.FeatureValue, feature_values
+            )
             logger.info('insert segmentations into table')
             session.bulk_insert_mappings(
                 tm.MapobjectSegmentation, mapobject_segmentations

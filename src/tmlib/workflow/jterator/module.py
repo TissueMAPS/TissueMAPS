@@ -68,15 +68,19 @@ class ImageAnalysisModule(object):
         '''
         self.name = name
         self.source_file = source_file
-        self.handles = dict()
-        self.handles['input'] = list()
-        for item in description['input']:
-            self.handles['input'].append(hdls.create_handle(**item))
-        self.handles['output'] = list()
-        for item in description['output']:
-            self.handles['output'].append(hdls.create_handle(**item))
+        self.description = description
         self.outputs = dict()
         self.persistent_store = dict()
+
+    def instantiate_handles(self):
+        '''Instantiates a handle for each described parameter.'''
+        self.handles = dict()
+        self.handles['input'] = list()
+        for item in self.description['input']:
+            self.handles['input'].append(hdls.create_handle(**item))
+        self.handles['output'] = list()
+        for item in self.description['output']:
+            self.handles['output'].append(hdls.create_handle(**item))
 
     def build_figure_filename(self, figures_dir, job_id):
         '''Builds name of figure file into which module will write figure
