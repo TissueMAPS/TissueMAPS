@@ -73,7 +73,17 @@ def main(input_label_image, input_image, plot=False):
         lines = mh.labeled.borders(regions)
         regions[lines] = 0
 
-        # Remove objects that are obviously too small, i.e. smaller than the
+        # Close holes in objects.
+        foreground_mask = regions > 0
+        holes = mh.close_holes(foreground_mask) - foreground_mask
+        holes = mh.morph.dilate(holes)
+        holes_labeled, n_holes = mh.label(holes)
+        for i in range(1, n_holes+1):
+            fill_value = np.unique(regions[holes_labeled == i])[-1]
+            fill_value = fill_value[fill_value > 0][0]
+            regions[holes_labeled == i] = fill_value
+
+        # Remove objects that are obviously too small, i.e. smaller than its
         # seeds (this could happen when we remove certain parts of objects
         # after the watershed region growing)
         # TODO: Ensure that mapping of objects is one-to-one, i.e. each primary
