@@ -65,11 +65,12 @@ def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
         )
 
     labeled_image = mh.label(input_mask)[0]
-    feature_image = SUPPORTED_FEATURES[feature](labeled_image)
+    feature_values = SUPPORTED_FEATURES[feature](labeled_image)
+    feature_image = feature_values[labeled_image]
     if lower_threshold is None:
-        lower_threshold = np.min(feature_image.flat)
+        lower_threshold = np.min(feature_values)
     if upper_threshold is None:
-        upper_threshold = np.max(feature_image.flat)
+        upper_threshold = np.max(feature_values)
     logger.info(
         'keep objects with "%s" values in the range [%d, %d]',
         feature, lower_threshold, upper_threshold
@@ -78,9 +79,8 @@ def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
     condition_image = np.logical_and(
         feature_image < lower_threshold, feature_image > upper_threshold
     )
-    filtered_image = mh.labeled.remove_regions_where(
-        labeled_image, condition_image
-    )
+    filtered_image = labeled_image.copy()
+    filtered_image[condition_image] = 0
     output_mask = filtered_image > 0
 
     if plot:
