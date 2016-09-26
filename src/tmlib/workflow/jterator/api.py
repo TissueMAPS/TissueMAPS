@@ -451,7 +451,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
             module.run(self.engines[module.language])
             store = module.update_store(store)
 
-            if plot and module.handles['input']['plot']:
+            plotting_active = [
+                h.value for h in module.handles['input'] if h.name == 'plot'
+            ][0]
+            if plot and plotting_active:
                 # TODO: don't store figures per job_id
                 figure_file = module.build_figure_filename(
                     self.figures_location, job_id
@@ -574,6 +577,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 x_offset += site.intersection.right_overhang
 
             segmentations = list()
+            feature_values = list()
             mapobject_segmentations = list()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
                 logger.info(
@@ -605,7 +609,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 logger.info(
                     'add feature values for mapobjects of type "%s"', obj_name
                 )
-                feature_values = list()
                 for fname, fid in feature_ids[obj_name].iteritems():
                     logger.debug('add value for feature "%s"' % fname)
                     for t, measurement in enumerate(segm_objs.measurements):
