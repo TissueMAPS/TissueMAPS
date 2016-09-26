@@ -132,6 +132,6 @@ class Site(ExperimentModel, DateMixIn):
 
     def __repr__(self):
         return (
-            '<Site(id=%r, well=%r, y=%r, x=%r)>'
-            % (self.id, self.well.name, self.y, self.x)
+            '<Site(id=%r, well_id=%r, y=%r, x=%r)>'
+            % (self.id, self.well_id, self.y, self.x)
         )
