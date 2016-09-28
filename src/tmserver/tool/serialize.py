@@ -18,7 +18,6 @@ def encode_tool_result(obj, encoder):
 def encode_label_layer(obj, encoder):
     return {
         'id': encode_pk(obj.id),
-        'name': 'TODO:NAME',
         'type': obj.type,
         'attributes': obj.attributes
     }

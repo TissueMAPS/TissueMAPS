@@ -109,9 +109,11 @@ class GC3Pie(object):
         logger.debug('insert jobs into tasks table')
         persistent_id = self._store.save(jobs)
         logger.debug('update submissions table')
-        with tm.utils.MainSession() as session:
-            submission = session.query(tm.Submission).get(jobs.submission_id)
-            submission.top_task_id = persistent_id
+        if hasattr(jobs, 'submission_id'):
+            with tm.utils.MainSession() as session:
+                submission = session.query(tm.Submission).\
+                    get(jobs.submission_id)
+                submission.top_task_id = persistent_id
 
     def retrieve_jobs(self, experiment_id, program):
         """Retrieves the top level job for the given `experiment`
@@ -206,7 +208,10 @@ class GC3Pie(object):
         """
         logger.info('update jobs in engine')
         # We need to remove the jobs first, simple addition doesn't update them!
-        self._engine.remove(jobs)
+        try:
+            self._engine.remove(jobs)
+        except:
+            pass
         # self._engine.add(jobs)
         logger.info('redo jobs')
         self._engine.redo(jobs, index)

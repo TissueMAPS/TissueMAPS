@@ -269,6 +269,7 @@ class BgEngine(object):
             self._q.append((self._engine.add, (task,), {}))
 
     def redo(self, task, index):
+        logger.debug('redo task "%s" at %d', task.persistent_id, index)
         with self._q_locked:
             self._q.append((self._engine.redo, (task, index,), {}))
 
