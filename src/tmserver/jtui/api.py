@@ -759,6 +759,7 @@ def run_jobs(experiment_id, project_name):
     # 2. Build jobs
     batch_args_cls, submit_args_cls, _ = get_step_args('jterator')
     batch_args = batch_args_cls()
+    batch_args.batch_size = 1  # only one site per job
     batch_args.plot = True
     # In "run" mode only a few selected jobs will be submitted
     job_descriptions = jt.create_batches(batch_args, job_ids)
