@@ -15,7 +15,6 @@ input:
         - area
         - eccentricity
         - perimeter
-        - solidity
         - roundness
       help: >
         Name of the feature based on which objects in "input_mask" should be
