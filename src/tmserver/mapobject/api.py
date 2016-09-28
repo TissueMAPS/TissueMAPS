@@ -44,8 +44,8 @@ def get_mapobjects_tile(experiment_id, object_name):
     tpoint = request.args.get('tpoint', type=int)
 
     logger.debug(
-        'get mapobject tile: x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
-        x, y, z, zplane, tpoint
+        'get tile for mapobject of type "%s": x=%d, y=%d, z=%d, zplane=%d, '
+        'tpoint=%d', object_name, x, y, z, zplane, tpoint
     )
 
     if object_name == 'DEBUG_TILE':
@@ -76,17 +76,18 @@ def get_mapobjects_tile(experiment_id, object_name):
         mapobject_type = session.query(tm.MapobjectType).\
             filter_by(name=object_name).\
             one()
-        query_res = mapobject_type.get_mapobject_outlines_within_tile(
+        query = mapobject_type.get_mapobject_outlines_within_tile(
             x, y, z, tpoint, zplane
         )
 
     features = []
-    if len(query_res) > 0:
+    if len(query) > 0:
         # Try to estimate how many points there are in total within
         # the polygons of this tile.
         # TODO: Make this more light weight by sending binary coordinates
         # without GEOJSON overhead. Requires a hack on the client side.
-        for mapobject_id, geom_geojson_str in query_res:
+        for mapobject_id, geom_geojson_str in query:
+            logger.debug('include geometry of mapobject %d', mapobject_id)
             feature = {
                 "type": "Feature",
                 "id": mapobject_id,
