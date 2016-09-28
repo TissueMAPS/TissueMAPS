@@ -453,7 +453,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
             plotting_active = [
                 h.value for h in module.handles['input'] if h.name == 'plot'
-            ][0]
+            ]
+            if len(plotting_active) > 0:
+                plotting_active = plotting_active[0]
+            else:
+                plotting_active = False
             if plot and plotting_active:
                 # TODO: don't store figures per job_id
                 figure_file = module.build_figure_filename(
