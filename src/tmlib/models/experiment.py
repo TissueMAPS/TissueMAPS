@@ -113,6 +113,11 @@ class ExperimentReference(MainModel, DateMixIn):
         '''str: location where workflow data are stored'''
         return os.path.join(self.location, 'workflow')
 
+    @autocreate_directory_property
+    def tools_location(self):
+        '''str: location where tool data are stored'''
+        return os.path.join(self.location, 'tools')
+
     @property
     def _workflow_descriptor_file(self):
         return os.path.join(
