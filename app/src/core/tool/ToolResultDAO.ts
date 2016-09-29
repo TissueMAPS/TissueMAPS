@@ -16,6 +16,7 @@ interface SerializedToolResult {
     id: string;
     name: string;
     layer: SerializedLabelLayer;
+    submission_id: number;
     plots: SerializedPlot[];
     experiment_id: string;
 }
@@ -29,6 +30,7 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
     fromJSON(data: SerializedToolResult) {
         return new ToolResult({
             id: data.id,
+            submissionId: data.submission_id,
             name: data.name,
             layer: this._createLabelLayer(data.layer),
             plots: data.plots.map((p) => {
