@@ -9,6 +9,7 @@ def encode_tool_result(obj, encoder):
     return {
         'id': encode_pk(obj.id),
         'name': obj.name,
+        'submission_id': obj.submission_id,
         'layer': obj.layer,
         'plots': map(encoder.default, obj.plots)
     }

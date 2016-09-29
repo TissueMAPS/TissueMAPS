@@ -14,7 +14,7 @@ class ToolJob(Job):
             submission_id, user_name):
         self.tool_name = tool_name
         super(ToolJob, self).__init__(
-            arguments, output_dir, submission_id, user_name
+            self.name, arguments, output_dir, submission_id, user_name
         )
 
     @property
