@@ -91,7 +91,7 @@ class Submission(MainModel, DateMixIn):
 
 #     # Table columns
 #     name = Column(String, index=True)
-#     job_description = Column(JSONB)
+#     description = Column(JSONB)
 #     submission_id = Column(
 #         Integer,
 #         ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE')
@@ -103,13 +103,13 @@ class Submission(MainModel, DateMixIn):
 #         backref=backref('batches', cascade='all, delete-orphan')
 #     )
 
-#     def __init__(self, name, job_description, submission_id):
+#     def __init__(self, name, description, submission_id):
 #         '''
 #         Parameters
 #         ----------
 #         name: str
 #             name of the corresponding task
-#         job_description: dict
+#         description: dict
 #             specification of inputs and outputs (and potentially other
 #             parameters)
 #         submission_id: int
@@ -120,7 +120,7 @@ class Submission(MainModel, DateMixIn):
 #         :py:method:`tmlib.workflow.api.create_batches`
 #         '''
 #         self.name = name
-#         self.job_description = job_description
+#         self.description = description
 #         self.submission_id = submission_id
 
 #     def __repr__(self):

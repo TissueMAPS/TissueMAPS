@@ -15,36 +15,14 @@ logger = logging.getLogger(__name__)
 
 class Job(gc3libs.Application):
 
-    '''Abstract base class for a `TissueMAPS` job.
-
-    Note
-    ----
-    Jobs are constructed based on job descriptions, which persist on disk
-    in form of JSON files.
+    '''Abstract base class for a job, which can be submitted for processing
+    on different cluster backends.
     '''
 
-    # TODO: inherit from RetryableTask(max_retries=1) and implement
-    # re-submission logic by overwriting retry() method:
-    # 
-    #     with open(err_file, 'r') as err:
-    #         if re.search(r'^FAILED', err, re.MULTILINE):
-    #             reason = 'Exception'
-    #         elif re.search(r'^TIMEOUT', err, re.MULTILINE):
-    #             reason = 'Timeout'
-    #         elif re.search(r'^[0-9]*\s*\bKilled\b', err, re.MULTILINE):
-    #             reason = 'Memory'
-    #         else:
-    #             reason = 'Unknown'
-
-    __metaclass__ = ABCMeta
-
-    def __init__(self, step_name, arguments, output_dir,
-            submission_id, user_name):
+    def __init__(self, arguments, output_dir, submission_id, user_name):
         '''
         Parameters
         ----------
-        step_name: str
-            name of the corresponding TissueMAPS workflow step
         arguments: List[str]
             command line arguments
         output_dir: str
@@ -54,39 +32,37 @@ class Job(gc3libs.Application):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
-
-        See also
-        --------
-        :py:class:`tmlib.models.Submission`
-
-        Note
-        ----
-        When submitting with `SLURM` backend, there must be an existing account
-        for `user_name`.
         '''
         t = create_datetimestamp()
-        self.step_name = step_name
-        self.submission_id = submission_id
         self.user_name = user_name
+        self.submission_id = submission_id
         super(Job, self).__init__(
             jobname=self.name,
             arguments=arguments,
             output_dir=output_dir,
-            inputs=[],
-            outputs=[],
             stdout='%s_%s.out' % (self.name, t),
             stderr='%s_%s.err' % (self.name, t),
+            # Assumes that nodes have access to a shared file system.
+            inputs=[],
+            outputs=[],
         )
 
     def sbatch(self, resource, **kwargs):
-        '''Overwrites the original `sbatch` method to implement fair job
-        scheduling via `SLURM` accounts.
+        '''Overwrites the original `sbatch` method to enable
+        `fair-share scheduling on SLURM backends <http://slurm.schedmd.com/priority_multifactor.html>`_.
 
         See also
         --------
         :py:method:`gc3libs.Application.sbatch`
+
+        Note
+        ----
+        User accounts must be registered in the
+        `SLURM accounting database <http://slurm.schedmd.com/accounting.html>`_.
         '''
-        sbatch, cmdline = super(Job, self).sbatch(resource, **kwargs)
+        sbatch, cmdline = super(WorkflowStepJob, self).sbatch(
+            resource, **kwargs
+        )
         sbatch = sbatch[:1] + ['--account', self.user_name] + sbatch[1:]
         return (sbatch, cmdline)
 
@@ -138,7 +114,65 @@ class Job(gc3libs.Application):
         return self.execution.state == gc3libs.Run.State.NEW
 
 
-class InitJob(Job):
+class WorkflowStepJob(Job):
+
+    '''Abstract base class for an individual job as part of
+    workflow step phase.
+
+    Note
+    ----
+    Jobs are constructed based on job descriptions, which persist on disk
+    in form of JSON files.
+    '''
+
+    # TODO: inherit from RetryableTask(max_retries=1) and implement
+    # re-submission logic by overwriting retry() method:
+    # 
+    #     with open(err_file, 'r') as err:
+    #         if re.search(r'^FAILED', err, re.MULTILINE):
+    #             reason = 'Exception'
+    #         elif re.search(r'^TIMEOUT', err, re.MULTILINE):
+    #             reason = 'Timeout'
+    #         elif re.search(r'^[0-9]*\s*\bKilled\b', err, re.MULTILINE):
+    #             reason = 'Memory'
+    #         else:
+    #             reason = 'Unknown'
+
+    __metaclass__ = ABCMeta
+
+    def __init__(self, step_name, arguments, output_dir,
+            submission_id, user_name):
+        '''
+        Parameters
+        ----------
+        step_name: str
+            name of the corresponding TissueMAPS workflow step
+        arguments: List[str]
+            command line arguments
+        output_dir: str
+            absolute path to the output directory, where log reports will
+            be stored
+        submission_id: int
+            ID of the corresponding submission
+        user_name: str
+            name of the submitting user
+
+        See also
+        --------
+        :py:class:`tmlib.models.Submission`
+
+        Note
+        ----
+        When submitting with `SLURM` backend, there must be an existing account
+        for `user_name`.
+        '''
+        self.step_name = step_name
+        super(WorkflowStepJob, self).__init__(
+            arguments, output_dir, submission_id, user_name
+        )
+
+
+class InitJob(WorkflowStepJob):
 
     '''Class for a *init* jobs, which creates the descriptions for the
     subsequent *run* and *collect* phases.
@@ -180,7 +214,7 @@ class InitJob(Job):
         )
 
 
-class RunJob(Job):
+class RunJob(WorkflowStepJob):
 
     '''
     Class for TissueMAPS run jobs, which can be processed in parallel.
@@ -238,7 +272,7 @@ class RunJob(Job):
         )
 
 
-class CollectJob(Job):
+class CollectJob(WorkflowStepJob):
 
     '''Class for a collect jobs, which can be processed once all
     parallel jobs are successfully completed.
