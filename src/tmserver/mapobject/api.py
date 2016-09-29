@@ -157,6 +157,10 @@ def get_mapobjects_segmentation(experiment_id, object_name):
     zplane = request.args.get('zplane', type=int)
     tpoint = request.args.get('tpoint', type=int)
     label = request.args.get('label', None)
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        experiment_name = experiment.name
+
     with tm.utils.ExperimentSession(experiment_id) as session:
         site = session.query(tm.Site).\
             join(tm.Well).\
@@ -200,16 +204,17 @@ def get_mapobjects_segmentation(experiment_id, object_name):
         y_offset += site.intersection.lower_overhang
         x_offset += site.intersection.right_overhang
 
+        filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
+            experiment_name, site.well.name, site.x, site.y, zplane, tpoint,
+            object_name
+        )
+
     img = SegmentationImage.create_from_polygons(
         polygons, y_offset, x_offset, (height, width)
     )
     f = StringIO()
     f.write(img.encode('png'))
     f.seek(0)
-    filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
-        experiment.name, site.well.name, site.x, site.y, zplane, tpoint,
-        object_name
-    )
     return send_file(
         f,
         attachment_filename=secure_filename(filename),
@@ -225,6 +230,10 @@ def get_mapobjects_segmentation(experiment_id, object_name):
 @jwt_required()
 @decode_query_ids()
 def get_feature_values(experiment_id, object_name):
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        experiment_name = experiment.name
+
     with tm.utils.ExperimentSession(experiment_id) as session:
         mapobject_type = session.query(tm.MapobjectType).\
             filter_by(name=object_name).\
@@ -242,7 +251,7 @@ def get_feature_values(experiment_id, object_name):
             'Features and metadata must have the same index.'
         )
     basename = secure_filename(
-        '%s_%s_features' % (experiment.name, object_name)
+        '%s_%s_features' % (experiment_name, object_name)
     )
     data_filename = '%s_data.csv' % basename
     metadata_filename = '%s_metadata.csv' % basename
