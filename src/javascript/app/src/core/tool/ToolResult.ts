@@ -1,6 +1,7 @@
 interface ToolResultArgs {
     id: string;
     name: string;
+    submissionId: number;
     layer: LabelLayer;
     plots: Plot[];
     visible?: boolean;
@@ -9,6 +10,7 @@ interface ToolResultArgs {
 class ToolResult {
 
     id: string;
+    submissionId: number;
     name: string;
     layer: LabelLayer;
     legend: Legend;

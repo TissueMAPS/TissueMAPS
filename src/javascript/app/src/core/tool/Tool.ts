@@ -22,9 +22,7 @@ interface ServerToolRequest {
  * be processed client-side (e.g. visualized as a LabelResultLayer).
  */
 interface ServerToolResponse {
-    tool_name: string;
-    session_uuid: any;
-    result: SerializedToolResult;
+    data: SerializedToolResult;
 }
 
 /**

@@ -18,6 +18,7 @@ class Viewer {
 
     private _$http: ng.IHttpService;
     private _$q: ng.IQService;
+    private _$interval: ng.IIntervalService;
 
     mapObjectSelectionHandler: MapObjectSelectionHandler;
     tools: ng.IPromise<Tool[]>;
@@ -31,6 +32,7 @@ class Viewer {
 
         this._$http = $injector.get<ng.IHttpService>('$http');
         this._$q = $injector.get<ng.IQService>('$q');
+        this._$interval = $injector.get<ng.IIntervalService>('$interval');
 
         this.id = makeUUID();
         this.experiment = experiment;
@@ -68,6 +70,8 @@ class Viewer {
                 });
             }
         })
+
+        this._startMonitoringJobs(2000);
 
         //// DEBUG
         // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
@@ -136,6 +140,10 @@ class Viewer {
         this._currentResult = null;
     }
 
+    hasCurrentResult() {
+        return this._currentResult !== null;
+    }
+
     get currentTpoint() {
         return this._currentTpoint;
     }
@@ -179,18 +187,110 @@ class Viewer {
         this.viewport.update();
     }
 
-    // serialize(): ng.IPromise<SerializedViewer> {
-    //     return $injector.get<ng.IQService>('$q').all({
-    //         experiment: this.experiment.serialize(),
-    //         viewport: this.viewport.serialize()
-    //     }).then((res: any) => {
-    //         return res;
-    //     });
+    /**
+     * Handle the result of a successful tool response.
+     * @param data The response that was received by the client.
+     * This object also contains the tool-specific result object.
+     */
+    private _handleSuccessfulToolResult(res: SerializedToolResult) {
+        // TODO: Send event to Viewer messagebox
+        // var sessionUUID = data.session_uuid;
+        console.log('ToolService: HANDLE REQUEST.');
+        var result = (new ToolResultDAO(this.experiment.id)).fromJSON(res);
+        result.attachToViewer(this);
+        // session.isRunning = false;
+        // session.results.push(result);
+        this.currentResult = result;
+        result.visible = true;
+        // TODO: Send event to Viewer messagebox
+        console.log('ToolService: DONE.');
+    }
+
+    /**
+     * Start long-polling the server for a tool result.
+     * @param jobId The id of the job processing the tool request.
+     * @param session The tool session from which the original request was sent.
+     * @type ng.IPromise<any>
+     */
+    // private _startMonitoringToolResponseStatus(jobId: String, session: ToolSession) {
+    //     var delayMs = 2000;
+    //     var promise = this._$interval(() => {
+    //         this._$http.get('/api/experiments/' + this.experiment.id + '/jobs/' + jobId)
+    //         .then((resp: any) => {
+    //             var jobStatus = resp.data.jobStatus;
+    //             if (jobStatus == 'TERMINATED') {
+    //                 this._$interval.cancel(promise);
+    //                 this._handleSuccessfulToolResponse(resp.data, session);
+    //             } else if (jobStatus == 'ERROR') {
+    //                 this._$interval.cancel(promise);
+    //             } else {
+    //                 console.log('Job' + jobId + ' status: ' + jobStatus + ')');
+    //             }
+    //         })
+
+    //     }, delayMs);
+    //     return promise;
     // }
 
+    private _startMonitoringJobs(delayMs: number) {
+        var promise = this._$interval(() => {
+            // Query the server for job statuses
+            this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status')
+            .then((resp: any) => {
+                var jobStati = resp.data.data;
+                var allExistingResults = this.savedResults.concat([this._currentResult]);
+                var isSubmissionHandled = {};
+                _(allExistingResults).each((res) => {
+                    if (res !== null) {
+                        isSubmissionHandled[res.submissionId] = true;
+                    }
+                });
+                _(jobStati).each((st) => { 
+                    if (st.state == 'TERMINATED' && st.exitcode == 0 && !isSubmissionHandled[st.submission_id]) {
+                        this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + st.submission_id)
+                        .then((resp: any) => {
+                            this._handleSuccessfulToolResult(resp.data.data);
+                        });
+                    }
+                });
+                // var jobs = resp.jobs;
+                // _(jobs).each((job) => {
+                //     if (job.status == 'TERMINATED') {
+                //         var resultId = job.result_id;
+                //         var alreadyHandled = _(this.savedResults).some((res) => {
+                //             res.id == resultId;
+                //         });
+                //         if (!alreadyHandled) {
+                //             this._$http.get('/api/experiments/' + this.experiment.id + '/tool-results/' + resultId)
+                //             .then((resp) => {
+                //                 this._handleSuccessfulToolResponse(resp.data);
+                //             });
+                //         }
+                //     } else if (job.status == 'ERROR') {
+                //         this._$interval.cancel(promise);
+                //     } else {
+                //         console.log('Job' + jobId + ' status: ' + job.status + ')');
+                //     }
+                // });
+            });
+
+        }, delayMs);
+        return promise;
+    }
+
+    /**
+     * Send a request to the server-side tool to start a processing job.
+     * The server will respond with a JSON object that containts a 'status'
+     * property. If this property evaluates to 'SUCCESS' then the processing
+     * was started successfully and the server should be queried for a tool
+     * result by long-polling.
+     * @param session The tool session
+     * @param payload An object containing information that is understood by
+     * the a particular server-side tool.
+     * @type ng.IPromise<boolean>
+     */
     sendToolRequest(session: ToolSession, payload: any) {
         var url = '/api/experiments/' + this.experiment.id + '/tools/request';
-        // TODO: Send event to Viewer messagebox
         var $http = $injector.get<ng.IHttpService>('$http');
         var request: ServerToolRequest = {
             session_uuid: session.uuid,
@@ -198,35 +298,18 @@ class Viewer {
             tool_name: session.tool.name
         };
         console.log('ToolService: START REQUEST.');
-        session.isRunning = true;
-        var timeoutInMinutes = 120;
-        return $http.post(url, request, {
-            timeout: timeoutInMinutes * 1000 * 60
-        }).then(
-        (resp) => {
-            // TODO: Send event to Viewer messagebox
-            // vpScope.$broadcast('toolRequestDone');
-            // vpScope.$broadcast('toolRequestSuccess');
-            var data = <ServerToolResponse> resp.data;
-            var sessionUUID = data.session_uuid;
-            console.log('ToolService: HANDLE REQUEST.');
-            var result = (new ToolResultDAO(this.experiment.id)).fromJSON(data.result);
-            result.attachToViewer(this);
-            session.isRunning = false;
-            session.results.push(result);
-            this.currentResult = result;
-            result.visible = true;
-
-            console.log('ToolService: DONE.');
-            return data.result;
+        return $http.post(url, request).then(
+        (resp: any) => {
+            if (resp.data.status == 'SUCCESS') {
+                // this._startMonitoringToolResponseStatus(resp.data.job_id, session);
+                console.log('Successfully started job server-side.');
+            } else {
+                console.log('Error: failed to start job server-side.');
+            }
+            return true;
         },
         (err) => {
-            // this.viewer.viewport.elementScope.then((vpScope) => {
-                // TODO: Send event to Viewer messagebox
-                // vpScope.$broadcast('toolRequestDone');
-                // vpScope.$broadcast('toolRequestFailed', err.data);
-            // });
-            return err.data;
+            return false;
         });
 
     }
