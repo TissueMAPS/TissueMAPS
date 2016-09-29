@@ -50,6 +50,8 @@ def set_logging_level(level):
     wsgi_logger.setLevel(logging_levels[level])
     gc3pie_logger = logging.getLogger('gc3.gc3libs')
     gc3pie_logger.setLevel(logging.CRITICAL)
+    apscheduler_logger = logging.getLogger('apscheduler')
+    apscheduler_logger.setLevel(logging.CRITICAL)
 
 app = create_app()
 
