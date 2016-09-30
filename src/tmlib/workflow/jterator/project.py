@@ -513,7 +513,7 @@ class AvailableModules(object):
             languages.append(mapping[s])
         return languages
 
-    def _get_corresponding_handles_file(self, module_name):
+    def _get_handles_file(self, module_name):
         handles_dir = os.path.join(self.repo_dir, 'handles')
         search_string = '^%s\%s$' % (module_name, HANDLES_SUFFIX)
         regexp_pattern = re.compile(search_string)
@@ -544,14 +544,13 @@ class AvailableModules(object):
         '''
         handles = list()
         for name in self.module_names:
-            with YamlReader(self._get_corresponding_handles_file(name)) as f:
+            with YamlReader(self._get_handles_file(name)) as f:
                 handles.append({'name': name, 'description': f.read()})
         return handles
 
     @property
     def pipe_registration(self):
-        '''
-        Build pipeline elements for registration in the UI
+        '''Build pipeline elements for registration in the UI
         in the format excepted in the "pipeline" section in the `.pipe` file.
 
         Returns
@@ -567,7 +566,11 @@ class AvailableModules(object):
             name = self.module_names[i]
             filename = os.path.basename(self.module_files[i])
             if name in available_modules:
-                repo_handles_path = self._get_corresponding_handles_file(name)
+                try:
+                    repo_handles_path = self._get_handles_file(name)
+                except:
+                    logger.error('no handles file found for module "%s"', name)
+                    continue
                 # We have to provide the path to handles files for the
                 # currently processed project
                 new_handles_path = os.path.join(
