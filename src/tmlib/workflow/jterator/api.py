@@ -700,11 +700,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
         batch: dict
             job description
         '''
-        logger.info('clean-up mapobjects with invalid geometry')
+        logger.info('clean-up mapobjects with invalid or missing segmentations')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             ids = session.query(tm.Mapobject.id).\
                 join(tm.MapobjectSegmentation).\
                 filter(~tm.MapobjectSegmentation.geom_poly.ST_IsValid()).\
+                all()
+            ids += session.query(tm.Mapobject.id).\
+                filter(~tm.Mapobject.segmentations.any()).\
                 all()
             if ids:
                 session.query(tm.Mapobject).\
