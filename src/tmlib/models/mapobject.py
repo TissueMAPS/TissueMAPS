@@ -380,6 +380,12 @@ class Mapobject(ExperimentModel):
         backref=backref('mapobjects', cascade='all, delete-orphan')
     )
 
+    segmentations = relationship(
+        'MapobjectSegmentation',
+        backref=backref(
+            'mapobject', cascade='all, delete-orphan', single_parent=True
+        )
+    )
     def __init__(self, mapobject_type_id, parent_id=None):
         '''
         Parameters
@@ -468,12 +474,12 @@ class MapobjectSegmentation(ExperimentModel):
             'mapobject_segmentations', cascade='all, delete-orphan'
         )
     )
-    mapobject= relationship(
-        'Mapobject',
-        backref=backref(
-            'segmentations', cascade='all, delete-orphan'
-        )
-    )
+    # mapobject= relationship(
+    #     'Mapobject',
+    #     backref=backref(
+    #         'segmentations', cascade='all, delete-orphan'
+    #     )
+    # )
 
     def __init__(self, geom_poly, geom_centroid, mapobject_id, label=None,
             is_border=None, tpoint=None, zplane=None, pipeline=None, site_id=None):
