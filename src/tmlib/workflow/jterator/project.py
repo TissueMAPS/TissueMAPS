@@ -544,8 +544,11 @@ class AvailableModules(object):
         '''
         handles = list()
         for name in self.module_names:
-            with YamlReader(self._get_handles_file(name)) as f:
-                handles.append({'name': name, 'description': f.read()})
+            try:
+                with YamlReader(self._get_handles_file(name)) as f:
+                    handles.append({'name': name, 'description': f.read()})
+            except:
+                continue
         return handles
 
     @property
