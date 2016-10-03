@@ -60,7 +60,7 @@ class Job(gc3libs.Application):
         User accounts must be registered in the
         `SLURM accounting database <http://slurm.schedmd.com/accounting.html>`_.
         '''
-        sbatch, cmdline = super(WorkflowStepJob, self).sbatch(
+        sbatch, cmdline = super(Job, self).sbatch(
             resource, **kwargs
         )
         sbatch = sbatch[:1] + ['--account', self.user_name] + sbatch[1:]
