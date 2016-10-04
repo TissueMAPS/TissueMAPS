@@ -152,7 +152,7 @@ def get_tool_result(experiment_id):
         tool_result = session.query(ToolResult).\
             filter_by(submission_id=submission_id).\
             one()
-        return jsonify(result=tool_result)
+        return jsonify(data=tool_result)
 
 
 @api.route(
@@ -162,7 +162,7 @@ def get_tool_result(experiment_id):
 def get_tool_job_status(experiment_id):
     logger.info('get status of tool jobs for experiment %d', experiment_id)
     with tm.utils.MainSession() as session:
-        tool_job_status = session.query(
+        tool_job_status_ = session.query(
                 tm.Task.state, tm.Task.submission_id, tm.Task.exitcode
             ).\
             join(tm.Submission).\
@@ -171,7 +171,11 @@ def get_tool_job_status(experiment_id):
                 tm.Submission.experiment_id == experiment_id
             ).\
             all()
-        return jsonify(status=dict(tool_job_status))
+        tool_job_status = \
+            [{'state': st[0], 'submission_id': st[1], 'exitcode': st[2]}
+             for st in tool_job_status_]
+
+        return jsonify(data=tool_job_status)
 
 
 @api.route(
