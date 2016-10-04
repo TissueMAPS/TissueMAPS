@@ -212,8 +212,8 @@ class GC3Pie(object):
             self._engine.remove(jobs)
         except:
             pass
-        # self._engine.add(jobs)
-        logger.info('redo jobs')
+        self._engine.add(jobs)
+        logger.info('redo jobs "%s"', jobs.jobname)
         self._engine.redo(jobs, index)
 
     def get_status_of_submitted_jobs(self, jobs):
