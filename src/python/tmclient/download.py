@@ -51,7 +51,7 @@ class DownloadService(ExperimentService):
             raise OSError('Download directory does not exist: %s', directory)
         filepath = os.path.join(directory, filename)
         logger.info('write file: %s', filepath)
-        with open(filepath, 'w') as f:
+        with open(filepath, 'wb') as f:
             f.write(data)
 
     def _download_channel_image(self, channel_name, plate_name,
