@@ -69,7 +69,12 @@ class OnlineStatistics(object):
             # The other statistics require float data type
             array = pixels.astype(float)
             if log_transform:
+                is_zero = array == 0
+                if np.any(is_zero):
+                    logger.warn('image contains zero values')
                 array = np.log10(array)
+                # The log10 transform sets zero pixel values to -inf
+                array[is_zero] = 0
             if np.any(np.isinf(array)):
                 logger.warn('skip image because it contains infinite values')
                 continue
