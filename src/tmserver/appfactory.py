@@ -19,7 +19,7 @@ from tmserver.serialize import TmJSONEncoder
 logger = logging.getLogger(__name__)
 
 
-def create_app(config_overrides={}):
+def create_app(config_overrides={}, config_file_location=None, log_level=None):
     """Create a Flask application object that registers all the blueprints on
     which the actual routes are defined.
 
@@ -32,21 +32,21 @@ def create_app(config_overrides={}):
     # Load the default settings
     app.config.from_object(defaultconfig)
 
-    settings_location = os.environ.get('TMAPS_SETTINGS')
-
-    if not settings_location:
-        print (
-            'You need to supply the location of a config file via the '
-            'environment variable `TMAPS_SETTINGS`!')
-        sys.exit(1)
-    else:
-        app.config.from_envvar('TMAPS_SETTINGS')
+    if config_file_location is None:
+        try:
+            config_file_location = os.environ['TMAPS_SETTINGS']
+            app.config.from_envvar('TMAPS_SETTINGS')
+        except KeyError:
+            raise OSError(
+                'You need to supply the location of a config file via the '
+                'environment variable `TMAPS_SETTINGS`!'
+            )
 
     app.config.update(config_overrides)
 
-
     ## Configure logging
-    log_level = app.config.get('LOG_LEVEL', logging.INFO)
+    if log_level is None:
+        log_level = app.config.get('LOG_LEVEL', logging.INFO)
     app.logger.setLevel(log_level)
 
     # Remove standard handlers
@@ -57,27 +57,46 @@ def create_app(config_overrides={}):
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    if app.debug:
-        # If debug mode is activated, set a console logger
-        stdout_handler = logging.StreamHandler(stream=sys.stdout)
-        stdout_handler.setFormatter(formatter)
-        flask_jwt_logger = logging.getLogger('flask_jwt')
-        app.logger.addHandler(stdout_handler)
-        flask_jwt_logger.addHandler(stdout_handler)
-
     # If production mode is activated, set a file logger
     file_handler = logging.handlers.RotatingFileHandler(
         app.config['LOG_FILE'],
         maxBytes=app.config['LOG_MAX_BYTES'],
         backupCount=app.config['LOG_N_BACKUPS'])
     file_handler.setFormatter(formatter)
+    stdout_handler = logging.StreamHandler(stream=sys.stdout)
+    stdout_handler.setFormatter(formatter)
     app.logger.addHandler(file_handler)
+    app.logger.addHandler(stdout_handler)
     werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(log_level)
     werkzeug_logger.addHandler(file_handler)
+    werkzeug_logger.addHandler(stdout_handler)
     flask_jwt_logger = logging.getLogger('flask_jwt')
+    flask_jwt_logger.setLevel(log_level)
     flask_jwt_logger.addHandler(file_handler)
+    flask_jwt_logger.addHandler(stdout_handler)
+    tmserver_logger = logging.getLogger('tmserver')
+    tmserver_logger.setLevel(log_level)
+    tmserver_logger.addHandler(file_handler)
+    tmserver_logger.addHandler(stdout_handler)
+    wsgi_logger = logging.getLogger('wsgi')
+    wsgi_logger.setLevel(log_level)
+    wsgi_logger.addHandler(file_handler)
+    wsgi_logger.addHandler(stdout_handler)
+    tmlib_logger = logging.getLogger('tmlib')
+    tmlib_logger.setLevel(log_level)
+    tmlib_logger.addHandler(file_handler)
+    tmlib_logger.addHandler(stdout_handler)
+    gc3pie_logger = logging.getLogger('gc3.gc3libs')
+    gc3pie_logger.setLevel(logging.WARN)
+    gc3pie_logger.addHandler(file_handler)
+    gc3pie_logger.addHandler(stdout_handler)
+    apscheduler_logger = logging.getLogger('apscheduler')
+    apscheduler_logger.setLevel(logging.CRITICAL)
+    apscheduler_logger.addHandler(file_handler)
+    apscheduler_logger.addHandler(stdout_handler)
 
-    app.logger.info('Loaded config: "%s"' % settings_location)
+    app.logger.info('Loaded config: "%s"' % config_file_location)
 
     ## Set the JSON encoder
     app.json_encoder = TmJSONEncoder

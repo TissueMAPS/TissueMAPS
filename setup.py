@@ -134,8 +134,18 @@ class bdist_egg(_bdist_egg):
 
 
 def find_scripts():
-    return [s for s in setuptools.findall('scripts/')
-            if os.path.splitext(s)[1] != '.pyc']
+    bin_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'bin'
+    )
+    scripts = list()
+    for f in os.listdir(bin_path):
+        if not f.endswith('pyc'):
+            script_path = os.path.relpath(
+                os.path.join(bin_path, f),
+                os.path.abspath(os.path.dirname(__file__))
+            )
+            scripts.append(script_path)
+    return scripts
 
 
 def package_to_path(package):
