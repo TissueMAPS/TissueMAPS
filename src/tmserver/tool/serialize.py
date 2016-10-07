@@ -1,5 +1,5 @@
 from tmserver.serialize import json_encoder
-from tmserver.util import encode_pk
+from tmserver.model import encode_pk
 
 from tmtoolbox.result import ToolResult, LabelLayer, Plot
 
