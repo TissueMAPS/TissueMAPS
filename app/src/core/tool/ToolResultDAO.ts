@@ -27,7 +27,7 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
     constructor(experimentId: string) {
         // TODO: session
         super('/api/experiments/' + experimentId + '/tools/results')
-        this.experimentId = experimentId;
+        this._experimentId = experimentId;
     }
 
     fromJSON(data: SerializedToolResult) {
@@ -52,7 +52,7 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
                 attributes: layer.attributes,
                 tpoint: 0,
                 zplane: 0,
-                experimentId: this.experimentId
+                experimentId: this._experimentId
             });
         } else {
             throw new Error(
