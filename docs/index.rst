@@ -14,9 +14,9 @@ Contents:
    introduction
    installation
    configuration
-   testing
-   .. user_guide
-   .. developer_guide
+   implemented_workflow_steps
+   user_guide
+   developer_guide
 
 
 
