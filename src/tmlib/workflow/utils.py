@@ -63,7 +63,7 @@ def create_gc3pie_sql_store():
             table_columns['submission_id']:
                 lambda task: task.submission_id,
             table_columns['is_collection']:
-                lambda task: len(task.tasks) > 0,
+                lambda task: hasattr(task, 'tasks'),
             table_columns['type']:
                 lambda task: type(task).__name__
         }
