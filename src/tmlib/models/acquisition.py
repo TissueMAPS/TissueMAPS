@@ -1,7 +1,7 @@
 import os
 import logging
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
-from sqlalchemy.dialects.postgres import JSONB
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Session

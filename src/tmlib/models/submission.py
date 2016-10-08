@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, LargeBinary, Interval, ForeignKey
-from sqlalchemy.dialects.postgres import JSONB
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
 
 from tmlib.models.base import MainModel, DateMixIn

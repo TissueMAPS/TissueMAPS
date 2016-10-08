@@ -419,6 +419,11 @@ class _Session(object):
             self.__class__._session_factories[self._db_uri] = \
                 create_db_session_factory(self.__class__._engines[self._db_uri])
 
+    @property
+    def engine(self):
+        '''sqlalchemy.engine: engine object for the currently used database'''
+        return self.__class__._engines[self._db_uri]
+
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory())
