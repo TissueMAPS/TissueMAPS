@@ -401,13 +401,47 @@ def resubmit_workflow(experiment_id):
     })
 
 
-@api.route('/experiments/<experiment_id>/workflow/status', methods=['GET']) 
+@api.route(
+    '/experiments/<experiment_id>/workflow/status', methods=['GET']
+)
 @jwt_required()
 @decode_query_ids()
 def get_workflow_status(experiment_id):
     logger.info('get workflow status for experiment %d', experiment_id)
     workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
-    status = gc3pie.get_status_of_submitted_jobs(workflow)
+    status = gc3pie.get_status_of_submitted_jobs(workflow, 2)
+    return jsonify({
+        'data': status
+    })
+
+
+@api.route(
+    '/experiments/<experiment_id>/workflow/status/jobs', methods=['GET']
+)
+@jwt_required()
+@assert_query_params('step_name', 'batch')
+@decode_query_ids()
+def get_jobs_status(experiment_id, stage_name, step_name):
+    step_name = request.args.get('step_name')
+    batch = request.args.get('batch', type=int)
+    batch_size = request.args.get('batch_size', type=int, 50)
+    logger.info(
+        'get status of jobs (batch #%d) of step "%s" for experiment %d',
+        batch, step_name, experiment_id
+    )
+    submission_id = gc3pie.get_id_of_last_submission(experiment_id, 'workflow')
+    with tm.utils.MainSession() as session:
+        tasks = session.query(tm.Task).\
+            filter(
+                tm.Task.submission_id == submission_id,
+                tm.Task.name.like('{step}_%'.format(step=step_name)),
+                ~is_collection
+            ).\
+            order_by(tm.Task.id).\
+            limit(batch_size).\
+            offset(batch*batch_size).\
+            all()
+        status = [t.status for t in tasks]
     return jsonify({
         'data': status
     })
