@@ -62,6 +62,8 @@ def create_gc3pie_sql_store():
                 lambda task: get_time(task, 'used_cpu_time'),
             table_columns['submission_id']:
                 lambda task: task.submission_id,
+            table_columns['is_collection']:
+                lambda task: len(task.tasks) > 0,
             table_columns['type']:
                 lambda task: type(task).__name__
         }
@@ -165,143 +167,6 @@ def format_timestamp(elapsed_time):
     )
 
 
-def get_task_data_from_engine(task, recursion_depth=None):
-    '''Provides the following data for each task and recursively for each
-    subtask in form of a mapping:
-
-        * ``"name"`` (*str*): name of task
-        * ``"state"`` (*g3clibs.Run.State*): state of the task
-        * ``"live"`` (*bool*): whether the task is currently processed
-        * ``"done"`` (*bool*): whether the task is done
-        * ``"failed"`` (*bool*): whether the task failed, i.e. terminated
-          with non-zero exitcode
-        * ``"exitcode"`` (*int*): status code returned by the program
-        * ``"percent_done"`` (*float*): percent of subtasks that are *done*
-        * ``"time"`` (*str*): duration as "HH:MM:SS"
-        * ``"memory"`` (*float*): amount of used memory in MB
-        * ``"cpu_time"`` (*str*): used cpu time as "HH:MM:SS"
-        * ``"type"`` (*str*): type of the task object
-
-    Parameters
-    ----------
-    task: gc3libs.workflow.TaskCollection or gc3libs.Task
-        submitted GC3Pie task that should be monitored
-    recursion_depth: int, optional
-        recursion depth for subtask querying; by default
-        data of all subtasks will be queried (default: ``None``)
-
-    Returns
-    -------
-    dict
-        information about each task and its subtasks
-    '''
-    def get_info(task_, i):
-        data = dict()
-        if recursion_depth is not None:
-            if i > recursion_depth:
-                return data
-
-        live_states = {
-            gc3libs.Run.State.SUBMITTED,
-            gc3libs.Run.State.RUNNING,
-            gc3libs.Run.State.STOPPED
-        }
-        done = task_.execution.state == gc3libs.Run.State.TERMINATED
-        failed = (
-            task_.execution.exitcode != 0 and
-            task_.execution.exitcode is not None
-        )
-        data = {
-            'id': str(task_),
-            'submission_id': task_.submission_id,
-            'name': task_.jobname,
-            'state': task_.execution.state,
-            'live': task_.execution.state in live_states,
-            'done': done,
-            'failed': done and failed,
-            'exitcode': task_.execution.exitcode,
-            'percent_done': 0.0,  # fix later, if possible
-            'time': task_.execution.get('duration', None),
-            'memory': task_.execution.get('max_used_memory', None),
-            'cpu_time': task_.execution.get('used_cpu_time', None),
-            'type': type(task_).__name__
-        }
-
-        done = 0.0
-        if hasattr(task_, 'tasks'):
-            for child in task_.tasks:
-                if (child.execution.state == gc3libs.Run.State.TERMINATED):
-                    done += 1
-            if len(task_.tasks) > 0:
-                if hasattr(task_, '_tasks_to_process'):
-                    # Custom sequential task collection classes build the task
-                    # list dynamically, so we have to use the number of tasks
-                    # that should ultimately be processed to provide an
-                    # accurate "percent_done" value.
-                    total = len(getattr(task_, '_tasks_to_process'))
-                else:
-                    total = len(task_.tasks)
-                data['percent_done'] = done / total * 100
-                data['time'] = np.sum([
-                    t.execution.get(
-                        'duration',
-                        gc3libs.quantity.Duration(0, gc3libs.quantity.seconds)
-                    )
-                    for t in task_.tasks
-                ])
-                if data['time'].amount(gc3libs.quantity.seconds) == 0:
-                    data['time'] = None
-                else:
-                    data['time'] = str(gc3libs.quantity.Duration.to_timedelta(
-                        data['time']
-                    ))
-                data['cpu_time'] = np.sum([
-                    t.execution.get(
-                        'used_cpu_time',
-                        gc3libs.quantity.Duration(0, gc3libs.quantity.seconds)
-                    )
-                    for t in task_.tasks
-                ])
-                if data['cpu_time'].amount(gc3libs.quantity.seconds) == 0:
-                    data['cpu_time'] = None
-                else:
-                    data['cpu_time'] = str(gc3libs.quantity.Duration.to_timedelta(
-                        data['cpu_time']
-                    ))
-            else:
-                data['percent_done'] = 0
-
-        else:
-            # For an individual task it is difficult to estimate to which
-            # extent the task has been completed. For simplicity and
-            # consistency, we just set "percent_done" to 100% once the job
-            # is TERMINATED and 0% otherwise
-            if task_.execution.state == gc3libs.Run.State.TERMINATED:
-                data['percent_done'] = 100
-                if data['time'] is not None:
-                    data['time'] = str(gc3libs.quantity.Duration.to_timedelta(
-                        data['time']
-                    ))
-                if data['cpu_time'] is not None:
-                    data['cpu_time'] = str(gc3libs.quantity.Duration.to_timedelta(
-                        data['cpu_time']
-                    ))
-                if data['memory'] is not None:
-                    data['memory'] = data['memory'].amount(
-                        gc3libs.quantity.Memory.MB
-                    )
-
-        if hasattr(task_, 'tasks'):
-            # loop recursively over subtasks
-            data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
-        else:
-            data['subtasks'] = []
-
-        return data
-
-    return get_info(task, 0)
-
-
 def get_task_data_from_sql_store(task, recursion_depth=None):
     '''Provides the following data for each task and recursively for each
     subtask in form of a mapping:
@@ -339,12 +204,6 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
         if recursion_depth is not None:
             if i > recursion_depth:
                 return
-
-        live_states = {
-            gc3libs.Run.State.SUBMITTED,
-            gc3libs.Run.State.RUNNING,
-            gc3libs.Run.State.STOPPED
-        }
         with tm.utils.MainSession() as session:
             if not hasattr(task_, 'persistent_id'):
                 # If the task doesn't have a "persistent_id", it means that
@@ -366,29 +225,7 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
                 }
             else:
                 task_info = session.query(tm.Task).get(task_.persistent_id)
-                failed = (
-                    task_info.exitcode != 0 and task_info.exitcode is not None
-                )
-                data = {
-                    'done': task_info.state == gc3libs.Run.State.TERMINATED,
-                    'failed': failed,
-                    'name': task_info.name,
-                    'state': task_info.state,
-                    'live': task_info.state in live_states,
-                    'memory': task_info.memory,
-                    'type': task_info.type,
-                    'exitcode': task_info.exitcode,
-                    'id': task_info.id,
-                    'submission_id': task_.submission_id,
-                    'time': task_info.time,
-                    'cpu_time': task_info.cpu_time
-                }
-            # Convert timedeltas to string to make it JSON serializable
-            if data['time'] is not None:
-                data['time'] = str(data['time'])
-            if data['cpu_time'] is not None:
-                data['cpu_time'] = str(data['cpu_time'])
-
+                data = task_info.status
             if hasattr(task_, 'tasks'):
                 done = 0.0
                 for t in task_.tasks:
@@ -407,8 +244,10 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
                     data['percent_done'] = 0
 
             if hasattr(task_, 'tasks'):
+                data['n_subtasks'] = len(task_.tasks)
                 data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
             else:
+                data['n_subtasks'] = 0
                 data['subtasks'] = []
 
         return data
