@@ -76,7 +76,7 @@ def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
         feature, lower_threshold, upper_threshold
     )
 
-    condition_image = np.logical_and(
+    condition_image = np.logical_or(
         feature_image < lower_threshold, feature_image > upper_threshold
     )
     filtered_image = labeled_image.copy()
