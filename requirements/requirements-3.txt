@@ -3,6 +3,7 @@ cached-property>=1.3.0
 decorator==3.4.2
 filemagic==1.6
 FITS-tools
+geoalchemy2>=0.3.0
 h5py>=2.5.0
 image-registration==0.2.1
 ipython>=4.1.2
@@ -27,6 +28,7 @@ pytz==2015.4
 PyYAML>=3.11
 rpy2>=2.7.4
 scikit-image>=0.12.0
+scikit-learn>=0.18
 shapely>=1.5.15
 sphinxcontrib-autoprogram==0.1.2
 sphinxcontrib-matlabdomain==0.2.7
