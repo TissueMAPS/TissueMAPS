@@ -424,7 +424,7 @@ def get_workflow_status(experiment_id):
 def get_jobs_status(experiment_id, stage_name, step_name):
     step_name = request.args.get('step_name')
     batch = request.args.get('batch', type=int)
-    batch_size = request.args.get('batch_size', type=int, 50)
+    batch_size = request.args.get('batch_size', 50, type=int)
     logger.info(
         'get status of jobs (batch #%d) of step "%s" for experiment %d',
         batch, step_name, experiment_id
@@ -435,7 +435,7 @@ def get_jobs_status(experiment_id, stage_name, step_name):
             filter(
                 tm.Task.submission_id == submission_id,
                 tm.Task.name.like('{step}_%'.format(step=step_name)),
-                ~is_collection
+                ~tm.Task.is_collection
             ).\
             order_by(tm.Task.id).\
             limit(batch_size).\
