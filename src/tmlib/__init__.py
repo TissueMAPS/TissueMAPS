@@ -2,6 +2,9 @@ import os
 import glob
 
 from tmlib.version import __version__
+from tmlib.config import LibraryConfig
+
+cfg = LibraryConfig()
 
 
 def get_cli_tools():

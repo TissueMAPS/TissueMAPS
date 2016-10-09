@@ -12,6 +12,7 @@ from tmlib.workflow.jterator.handles import PipeHandle
 from tmlib.workflow.jterator.project import HANDLES_SUFFIX
 from tmlib.readers import YamlReader
 from tmlib.errors import PipelineDescriptionError
+from tmlib import cfg
 
 logger = logging.getLogger(__name__)
 
@@ -135,15 +136,7 @@ class PipelineChecker(object):
     def check_handles(self):
         '''Check handles structure.
         '''
-        lib_path = self.pipe_description.get('lib', None)
-        if lib_path:
-            self.libpath = self.pipe_description['lib']
-            self.libpath = complete_path(self.libpath, self.step_location)
-        else:
-            if 'TMAPS_MODULES_HOME' in os.environ:
-                self.libpath = os.environ['TMAPS_MODULES_HOME']
-            else:
-                raise ValueError('TMAPS_MODULES_HOME environment variable not set.')
+        self.libpath = cfg.modules_home
 
         for i, module in enumerate(self.pipe_description['pipeline']):
             # Check whether executable files exist

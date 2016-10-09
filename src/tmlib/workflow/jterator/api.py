@@ -30,6 +30,7 @@ from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.handles import SegmentedObjects
 from tmlib.workflow.jterator.checkers import PipelineChecker
 from tmlib.workflow import register_api
+from tmlib import cfg
 
 logger = logging.getLogger(__name__)
 
@@ -115,15 +116,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
             when environment variable "TMAPS_MODULES_HOME" would be required but doesn't
             exist
         '''
-        libpath = self.project.pipe['description'].get('lib', None)
-        if not libpath:
-            if 'TMAPS_MODULES_HOME' in os.environ:
-                libpath = os.path.expandvars(
-                    os.path.expanduser(os.environ['TMAPS_MODULES_HOME'])
-                )
-            else:
-                raise OSError('TMAPS_MODULES_HOME environment variable not set.')
-        libpath = complete_path(libpath, self.step_location)
+        libpath = cfg.modules_home
+        # libpath = self.project.pipe['description'].get('lib', None)
+        # libpath = complete_path(libpath, self.step_location)
         pipeline = list()
         for i, element in enumerate(self.project.pipe['description']['pipeline']):
             if not element['active']:

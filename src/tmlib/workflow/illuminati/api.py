@@ -630,9 +630,7 @@ class PyramidBuilder(ClusterRoutines):
                 mapobject_outlines = list()
                 for obj in query:
 
-                    mapobject = tm.Mapobject(
-                        mapobject_type_id=mapobject_type.id
-                    )
+                    mapobject = tm.Mapobject(mapobject_type.id)
                     session.add(mapobject)
                     session.flush()
 
@@ -653,7 +651,7 @@ class PyramidBuilder(ClusterRoutines):
                         )
                     )
                 session.add_all(mapobject_outlines)
-                session.flush()
+                session.commit()
 
                 min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
                     layer.maxzoom_level_index,

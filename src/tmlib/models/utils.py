@@ -11,6 +11,7 @@ from sqlalchemy_utils.functions import drop_database
 from sqlalchemy.event import listens_for
 
 from tmlib.models.base import ExperimentModel, FileSystemModel
+from tmlib.config import LibraryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -18,30 +19,19 @@ _DATABASE_URI = None
 
 
 def get_db_uri():
-    '''Gets a URI for database connections.
-    The host address is determined from the environement variable
-    ``TMAPS_DB_URI``.
+    '''Gets the URI for database connections from the configuration.
 
     Returns
     -------
     str
         database URI
-
-    Raises
-    ------
-    OSError
-        when expected environment variables are not set
     '''
     # TODO: could be done more elegantly
     # http://docs.sqlalchemy.org/en/latest/core/pooling.html#using-a-custom-connection-function
     global _DATABASE_URI
     if _DATABASE_URI is None:
-        try:
-            _DATABASE_URI = os.environ['TMAPS_DB_URI']
-        except KeyError:
-            raise OSError('Environment variable "TMAPS_DB_URI" not set.')
-        except:
-            raise
+        cfg = LibraryConfig()
+        _DATABASE_URI = cfg.db_uri_sqla
     return _DATABASE_URI
 
 

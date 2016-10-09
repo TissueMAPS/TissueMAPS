@@ -577,7 +577,6 @@ class MetadataHandler(object):
         )
 
         planes_per_well = md.groupby(['well_name'])
-        n = planes_per_well.count()
         n_tpoints = len(np.unique(md.tpoint))
         n_channels = len(np.unique(md.channel_name))
         n_zplanes = len(np.unique(md.zplane))
@@ -642,13 +641,15 @@ class MetadataHandler(object):
 
         if not any(stitch_dimensions):
             stitch_dimensions = stitch.guess_stitch_dimensions(
-                                    n_sites, stitch_major_axis)
+                n_sites, stitch_major_axis
+            )
 
         logger.debug('stitch layout: {0}; stitch dimensions: {1}'.format(
                      stitch_layout, stitch_dimensions))
 
         coordinates = stitch.calc_grid_coordinates_from_layout(
-                                    stitch_dimensions, stitch_layout)
+            stitch_dimensions, stitch_layout
+        )
 
         sites = acquisitions_per_well.groups.values()
 

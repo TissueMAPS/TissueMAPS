@@ -117,10 +117,12 @@ class install(_install):
 
     def run(self):
         pip_install_requirements()
+        build_config_file()
         _install.run(self)
 
     def do_egg_install(self):
         pip_install_requirements()
+        build_config_file()
         _install.do_egg_install(self)
 
 
@@ -128,10 +130,12 @@ class bdist_egg(_bdist_egg):
 
     def run(self):
         pip_install_requirements()
+        build_config_file()
         _bdist_egg.run(self)
 
     def do_egg_install(self):
         pip_install_requirements()
+        build_config_file()
         _install.do_egg_install(self)
 
 
@@ -165,6 +169,15 @@ def build_console_scripts():
             )
         )
     return cli_tools
+
+
+# def build_config_file():
+#     src_path = os.path.join(
+#         os.path.abspath(os.path.dirname(__file__)), 'src', 'tmlib')
+#     sys.path = [src_path] + sys.path
+#     import config
+#     cfg = config.LibraryConfig()
+#     cfg.write()
 
 
 def package_to_path(package):
@@ -271,13 +284,14 @@ if console_scripts is None:
 setuptools.setup(
     name='tmlib',
     version=get_version(),
-    description='TissueMAPS library. Distibuted image processing '
-                'routines for TissueMAPS.',
+    description='TissueMAPS library for distibuted image processing routines.',
     author='Markus D. Herrmann and Robin Hafen',
     author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/tmlibrary',
     platforms=['Linux', 'OS-X'],
     classifiers=[
+        'Environment :: Console',
+        'Environment :: Web Environment',
         'Topic :: Scientific/Engineering :: Image Recognition',
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: System :: Emulators',
@@ -287,12 +301,10 @@ setuptools.setup(
         'Programming Language :: Python',
         'Development Status :: 4 - Beta',
         'Operating System :: POSIX :: Linux',
-        'Operating System :: MacOS'
+        'Operating System :: MacOS :: MacOS X'
     ],
     scripts=scripts,
-    entry_points={
-        'console_scripts': console_scripts
-    },
+    entry_points={'console_scripts': console_scripts},
     packages=packages,
     package_dir={'': 'src'},
     package_data={'': ['*.rst']},
