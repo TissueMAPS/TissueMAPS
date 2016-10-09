@@ -49,7 +49,7 @@ if __name__ == '__main__':
     }
     log_level = logging_levels[args.logging_level]
 
-    app = create_app(config_file_location=args.config_file, log_level=log_level)
+    app = create_app(log_level=log_level)
     if args.profile:
         app.config['PROFILE'] = True
         app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
