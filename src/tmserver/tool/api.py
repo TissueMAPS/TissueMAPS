@@ -120,13 +120,27 @@ def process_tool_request(experiment_id):
     batch_location = os.path.join(tool_batch_dir, batch_filename)
     with JsonWriter(batch_location) as f:
         f.write(payload)
+
     # Create and submit tool job for asynchronous processing on the cluster
-    args = [
+    if cfg.use_spark:
+        args = ['spark-submit', '--master', cfg.spark_master]
+        if cfg.spark_master == 'yarn':
+            args.extend(['--deploy-mode', 'client'])
+        # TODO: ship Python dependencies
+        # args.extend([
+        #     '--py-files', cfg.spark_tmtoolbox_egg
+        # ])
+    else:
+        args = []
+    args.extend([
         'tmtool', str(experiment_id),
         '--tool', tool_name,
         '--submission_id', str(submission_id),
-        '--batch_file', batch_location
-    ]
+        '--batch_file', batch_location,
+    ])
+    if cfg.use_spark:
+        args.append('--use_spark')
+
     job = ToolJob(
         tool_name=tool_name,
         arguments=args,

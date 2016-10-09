@@ -38,7 +38,7 @@ def make_payload(user):
     """Create the token payload for some user"""
     iat = datetime.datetime.utcnow()
     exp = iat + current_app.config.get('JWT_EXPIRATION_DELTA')
-    nbf = iat + current_app.config.get('JWT_NOT_BEFORE_DELTA')
+    nbf = iat + datetime.timedelta(seconds=0)
 
     return {
         'uid': user.id,

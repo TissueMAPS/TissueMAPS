@@ -10,16 +10,16 @@ from tmlib.models.utils import (
     create_db_engine, create_db_session_factory, set_db_uri
 )
 
-from tmserver import defaultconfig
 from tmserver.extensions import jwt
 from tmserver.extensions import redis_store
 from tmserver.serialize import TmJSONEncoder
+from tmserver import cfg
 
 
 logger = logging.getLogger(__name__)
 
 
-def create_app(config_overrides={}, config_file_location=None, log_level=None):
+def create_app(config_overrides={}, log_level=None):
     """Create a Flask application object that registers all the blueprints on
     which the actual routes are defined.
 
@@ -29,25 +29,14 @@ def create_app(config_overrides={}, config_file_location=None, log_level=None):
     """
     app = Flask('wsgi')
 
-    # Load the default settings
-    app.config.from_object(defaultconfig)
-
-    if config_file_location is None:
-        try:
-            config_file_location = os.environ['TMAPS_SETTINGS']
-            app.config.from_envvar('TMAPS_SETTINGS')
-        except KeyError:
-            raise OSError(
-                'You need to supply the location of a config file via the '
-                'environment variable `TMAPS_SETTINGS`!'
-            )
+    if log_level is not None:
+        cfg.log_level = log_level
 
     app.config.update(config_overrides)
+    app.config['JWT_EXPIRATION_DELTA'] = cfg.jwt_expiration_delta
 
     ## Configure logging
-    if log_level is None:
-        log_level = app.config.get('LOG_LEVEL', logging.INFO)
-    app.logger.setLevel(log_level)
+    app.logger.setLevel(cfg.log_level)
 
     # Remove standard handlers
     app.logger.handlers = []
@@ -59,9 +48,10 @@ def create_app(config_overrides={}, config_file_location=None, log_level=None):
 
     # If production mode is activated, set a file logger
     file_handler = logging.handlers.RotatingFileHandler(
-        app.config['LOG_FILE'],
-        maxBytes=app.config['LOG_MAX_BYTES'],
-        backupCount=app.config['LOG_N_BACKUPS'])
+        cfg.log_file,
+        maxBytes=cfg.log_max_bytes,
+        backupCount=cfg.log_n_backups
+    )
     file_handler.setFormatter(formatter)
     stdout_handler = logging.StreamHandler(stream=sys.stdout)
     stdout_handler.setFormatter(formatter)
@@ -96,50 +86,24 @@ def create_app(config_overrides={}, config_file_location=None, log_level=None):
     apscheduler_logger.addHandler(file_handler)
     apscheduler_logger.addHandler(stdout_handler)
 
-    app.logger.info('Loaded config: "%s"' % config_file_location)
-
     ## Set the JSON encoder
     app.json_encoder = TmJSONEncoder
 
-    if not app.config.get('SQLALCHEMY_DATABASE_URI'):
-        app.logger.critical(
-            'No database URI specified! The application config needs to have '
-            'the entry SQLALCHEMY_DATABASE_URI = '
-            'postgresql://USER:PASS@HOST:PORT/DBNAME')
-        sys.exit(1)
-
-    secret_key = app.config.get('SECRET_KEY')
-    if not secret_key:
+    if not cfg.secret_key:
         app.logger.critical('Specify a secret key for this application!')
         sys.exit(1)
-    if secret_key == 'default_secret_key':
+    if cfg.secret_key == 'default_secret_key':
         app.logger.warn('The application will run with the default secret key!')
-
-    app.logger.info(
-        'Starting mode: %s' % (
-        'DEBUG' if app.config['DEBUG'] else (
-            'TESTING' if app.config['TESTING'] else 'PRODUCTION'
-        )))
-
-    if 'TMAPS_STORAGE_HOME' in app.config:
-        os.environ['TMAPS_STORAGE_HOME'] = app.config['TMAPS_STORAGE_HOME']
-        app.logger.info(
-            'Setting TMAPS_STORAGE_HOME to: %s' % app.config['TMAPS_STORAGE_HOME']
-        )
+    app.config['SECRET_KEY'] = cfg.secret_key
 
     ## Initialize Plugins
     jwt.init_app(app)
     redis_store.init_app(app)
 
     # Create a session scope for interacting with the main database
-    db_uri = set_db_uri(app.config['SQLALCHEMY_DATABASE_URI'])
-    engine = create_db_engine(db_uri)
+    engine = create_db_engine(cfg.db_uri_sqla)
     session_factory = create_db_session_factory(engine)
     session = flask_scoped_session(session_factory, app)
-
-    if app.config.get('USE_SPARK', False):
-        from tmserver.extensions import spark
-        spark.init_app(app)
 
     from tmserver.extensions import gc3pie
     gc3pie.init_app(app)
