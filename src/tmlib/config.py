@@ -149,6 +149,7 @@ class LibraryConfig(TmapsConfig):
         super(LibraryConfig, self).__init__()
         self.modules_home = '%(home)s/jtmodules'
         self.storage_home = '%(home)s/experiments'
+        self.read()
 
     @property
     def modules_home(self):
