@@ -65,6 +65,7 @@ class ToolResult {
         }
         this.plots = args.plots !== undefined ? args.plots : [];
         this.visible = args.visible !== undefined ? args.visible : false;
+        this.submissionId = args.submissionId;
     }
 
     attachToViewer(viewer: Viewer) {
