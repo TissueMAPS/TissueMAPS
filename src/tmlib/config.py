@@ -45,9 +45,10 @@ class TmapsConfig(object):
         self._config = SafeConfigParser({'home': os.environ['HOME']})
         self._section = self.__class__.__module__.split('.')[0]
         self._config.add_section(self._section)
-        self.db_user = 'postgres'
-        self.db_host = 'localhost'
-        self.db_port = 5432
+        default_file = os.path.abspath(
+            os.path.join(__file__, '..', '..', 'etc', 'default.cfg')
+        )
+        self._config.read(default_file)
         self.read()
 
     def read(self):
@@ -67,7 +68,7 @@ class TmapsConfig(object):
 
     @property
     def db_user(self):
-        '''str: database user (default: ``"postgres"``)'''
+        '''str: database user'''
         return self._config.get('DEFAULT', 'db_user')
 
     @db_user.setter
@@ -93,7 +94,7 @@ class TmapsConfig(object):
 
     @property
     def db_host(self):
-        '''str: database host (default: ``"localhost"``)'''
+        '''str: database host'''
         return self._config.get('DEFAULT', 'db_host')
 
     @db_host.setter
@@ -106,7 +107,7 @@ class TmapsConfig(object):
 
     @property
     def db_port(self):
-        '''str: database host (default: ``5432``)'''
+        '''str: database host'''
         return self._config.getint('DEFAULT', 'db_port')
 
     @db_port.setter
@@ -147,24 +148,18 @@ class LibraryConfig(TmapsConfig):
 
     def __init__(self):
         super(LibraryConfig, self).__init__()
-        self.modules_home = '%(home)s/jtmodules'
-        self.storage_home = '%(home)s/experiments'
+        default_file = os.path.abspath(
+            os.path.join(__file__, '..', '..', 'etc', 'tmlib.cfg')
+        )
+        self._config.read(default_file)
         self.read()
 
     @property
     def modules_home(self):
         '''str: absolute path to root directory of local copy of `JtModules`
-        repository (default: ``os.path.expanduser("$HOME/jtmodules")``)
+        repository
         '''
-        env_var = 'TMAPS_MODULES_HOME'
-        if env_var in os.environ:
-            logger.debug(
-                'config parameter "modules_home" set by environment variable %s',
-                env_var
-            )
-            return os.environ[env_var]
-        else:
-            return self._config.get(self._section, 'modules_home')
+        return self._config.get(self._section, 'modules_home')
 
     @modules_home.setter
     def modules_home(self, value):
@@ -176,18 +171,8 @@ class LibraryConfig(TmapsConfig):
 
     @property
     def storage_home(self):
-        '''str: absolute path to root directory of file system storage
-        (default: ``os.path.expanduser("$HOME/experiments")``)
-        '''
-        env_var = 'TMAPS_storage_home'
-        if env_var in os.environ:
-            logger.debug(
-                'config parameter "storage_home" set by environment variable %s',
-                env_var
-            )
-            return os.environ[env_var]
-        else:
-            return self._config.get(self._section, 'storage_home')
+        '''str: absolute path to root directory of file system storage'''
+        return self._config.get(self._section, 'storage_home')
 
     @storage_home.setter
     def storage_home(self, value):
