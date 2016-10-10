@@ -4,7 +4,7 @@ class Job {
     phase: string;
     status: JobStatus;
 
-    constructor(args: StatusArgs) {
+    constructor(args: JobStatusArgs) {
         var startIdx = args.name.lastIndexOf('_') + 1;
         this.id = Number(args.name.substring(startIdx));
         this.dbId = args.id;

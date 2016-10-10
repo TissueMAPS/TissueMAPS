@@ -1,4 +1,4 @@
-interface StatusArgs {
+interface JobStatusArgs {
     name: string;
     done: boolean;
     failed: boolean;
@@ -22,7 +22,7 @@ class JobCollectionStatus {
     state: string;
     percentDone: number;
 
-    constructor(args: StatusArgs) {
+    constructor(args: JobStatusArgs) {
         if (args == null) {
             this.done = false;
             this.failed = false;
@@ -47,7 +47,7 @@ class JobStatus {
     cpu_time: string;
     exitcode: number;
 
-    constructor(args: StatusArgs) {
+    constructor(args: JobStatusArgs) {
         this.done = args.done;
         this.failed = args.failed;
         this.state = args.state;
