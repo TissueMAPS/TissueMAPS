@@ -38,23 +38,23 @@ class WorkflowStep extends JobCollection {
             });
         }
         this.jobs = [];
-        if (workflowStepStatus != null) {
-            workflowStepStatus.subtasks.map((phase, index) => {
-                if (phase.subtasks.length > 0) {
-                    phase.subtasks.map((subphase, index) => {
-                        if (subphase.subtasks.length > 0) {
-                            subphase.subtasks.map((job) => {
-                                this.jobs.push(new Job(job));
-                            });
-                        } else {
-                            this.jobs.push(new Job(subphase));
-                        }
-                    });
-                } else {
-                    this.jobs.push(new Job(phase));
-                }
-            });
-        }
+        // if (workflowStepStatus != null) {
+        //     workflowStepStatus.subtasks.map((phase, index) => {
+        //         if (phase.subtasks.length > 0) {
+        //             phase.subtasks.map((subphase, index) => {
+        //                 if (subphase.subtasks.length > 0) {
+        //                     subphase.subtasks.map((job) => {
+        //                         this.jobs.push(new Job(job));
+        //                     });
+        //                 } else {
+        //                     this.jobs.push(new Job(subphase));
+        //                 }
+        //             });
+        //         } else {
+        //             this.jobs.push(new Job(phase));
+        //         }
+        //     });
+        // }
     }
 
     getDescription(): WorkflowStepDescription {
