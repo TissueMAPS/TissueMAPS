@@ -19,7 +19,6 @@ from tmserver.util import assert_query_params, assert_form_params
 from tmserver.tool.job import ToolJob
 from tmserver.extensions import gc3pie
 
-from tmtoolbox.session import ToolSession
 from tmtoolbox.result import ToolResult, LabelLayer
 from tmtoolbox import SUPPORTED_TOOLS
 from tmtoolbox import get_tool_class

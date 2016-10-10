@@ -167,8 +167,9 @@ class GC3Pie(object):
         # task_id = submission_manager.get_task_id_for_last_submission()
         submission_id = self.get_id_of_last_submission(experiment_id, program)
         if submission_id is not None:
-            submission = session.query(tm.Submission).get(last_submission_id)
-            job_id = submission.top_task_id
+            with tm.utils.MainSession() as session:
+                submission = session.query(tm.Submission).get(submission_id)
+                job_id = submission.top_task_id
             return self._store.load(job_id)
         else:
             return None

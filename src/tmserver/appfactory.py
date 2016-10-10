@@ -14,6 +14,7 @@ from tmserver.extensions import jwt
 from tmserver.extensions import redis_store
 from tmserver.serialize import TmJSONEncoder
 from tmserver import cfg
+from tmlib import cfg as libcfg
 
 
 logger = logging.getLogger(__name__)
@@ -58,27 +59,27 @@ def create_app(config_overrides={}, log_level=None):
     app.logger.addHandler(file_handler)
     app.logger.addHandler(stdout_handler)
     werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.setLevel(log_level)
+    werkzeug_logger.setLevel(cfg.log_level)
     werkzeug_logger.addHandler(file_handler)
     werkzeug_logger.addHandler(stdout_handler)
     flask_jwt_logger = logging.getLogger('flask_jwt')
-    flask_jwt_logger.setLevel(log_level)
+    flask_jwt_logger.setLevel(cfg.log_level)
     flask_jwt_logger.addHandler(file_handler)
     flask_jwt_logger.addHandler(stdout_handler)
     tmserver_logger = logging.getLogger('tmserver')
-    tmserver_logger.setLevel(log_level)
+    tmserver_logger.setLevel(cfg.log_level)
     tmserver_logger.addHandler(file_handler)
     tmserver_logger.addHandler(stdout_handler)
     wsgi_logger = logging.getLogger('wsgi')
-    wsgi_logger.setLevel(log_level)
+    wsgi_logger.setLevel(cfg.log_level)
     wsgi_logger.addHandler(file_handler)
     wsgi_logger.addHandler(stdout_handler)
     tmlib_logger = logging.getLogger('tmlib')
-    tmlib_logger.setLevel(log_level)
+    tmlib_logger.setLevel(cfg.log_level)
     tmlib_logger.addHandler(file_handler)
     tmlib_logger.addHandler(stdout_handler)
     gc3pie_logger = logging.getLogger('gc3.gc3libs')
-    gc3pie_logger.setLevel(logging.WARN)
+    gc3pie_logger.setLevel(logging.CRITICAL)
     gc3pie_logger.addHandler(file_handler)
     gc3pie_logger.addHandler(stdout_handler)
     apscheduler_logger = logging.getLogger('apscheduler')
