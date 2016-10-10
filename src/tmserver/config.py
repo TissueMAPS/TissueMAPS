@@ -13,14 +13,10 @@ class ServerConfig(TmapsConfig):
 
     def __init__(self):
         super(ServerConfig, self).__init__()
-        self.log_file = '%(home)s/.tmaps/tmserver.log'
-        self.log_level = logging.INFO
-        self.log_max_bytes = 2048000
-        self.log_n_backups = 10
-        self.secret_key = 'default_secret_key'
-        self.jwt_expiration_delta = datetime.timedelta(hours=6)
-        self.use_spark = False
-        self.spark_master = 'local'
+        default_file = os.path.abspath(
+            os.path.join(__file__, '..', '..', 'etc', 'tmserver.cfg')
+        )
+        self._config.read(default_file)
         self.read()
 
     @property
