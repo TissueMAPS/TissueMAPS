@@ -21,6 +21,7 @@ class ServerConfig(TmapsConfig):
         self.jwt_expiration_delta = datetime.timedelta(hours=6)
         self.use_spark = False
         self.spark_master = 'local'
+        self.read()
 
     @property
     def log_file(self):
