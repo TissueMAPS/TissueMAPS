@@ -22,9 +22,12 @@ interface SerializedToolResult {
 }
 
 class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
+    private _experimentId: string;
+
     constructor(experimentId: string) {
         // TODO: session
         super('/api/experiments/' + experimentId + '/tools/results')
+        this._experimentId = experimentId;
     }
 
     fromJSON(data: SerializedToolResult) {
@@ -48,7 +51,8 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
                 name: layer.name,
                 attributes: layer.attributes,
                 tpoint: 0,
-                zplane: 0
+                zplane: 0,
+                experimentId: this._experimentId
             });
         } else {
             throw new Error(

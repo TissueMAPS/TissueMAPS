@@ -11,7 +11,7 @@ interface LabelLayerArgs {
     tpoint: number;
     zplane: number;
     visible?: boolean;
-    experiment_id: string;
+    experimentId: string;
 }
 
 abstract class LabelLayer extends VectorTileLayer {
@@ -78,7 +78,7 @@ abstract class LabelLayer extends VectorTileLayer {
                 throw new Error('Unknown geometry type for feature');
             }
         };
-        var url = '/api/experiments/' + args.experiment_id +
+        var url = '/api/experiments/' + args.experimentId +
             '/labellayers/' + args.id +
             '/tiles?x={x}&y={y}&z={z}' + '&zplane=' + args.zplane +
             '&tpoint=' + args.tpoint;
