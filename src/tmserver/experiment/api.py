@@ -16,6 +16,7 @@ from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.image import PyramidTile
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
+from tmlib import cfg
 
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
@@ -533,7 +534,7 @@ def create_experiment():
             name=name,
             description=description,
             user_id=current_identity.id,
-            root_directory=current_app.config['TMAPS_STORAGE_HOME']
+            root_directory=cfg.storage_home
         )
         # TODO: raise error with meaningfull message in case of integrity error
         session.add(experiment_ref)

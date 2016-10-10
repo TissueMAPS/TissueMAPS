@@ -14,6 +14,7 @@ from tmserver.extensions import jwt
 from tmserver.extensions import redis_store
 from tmserver.serialize import TmJSONEncoder
 from tmserver import cfg
+from tmlib import cfg as libcfg
 
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ def create_app(config_overrides={}, log_level=None):
     tmlib_logger.addHandler(file_handler)
     tmlib_logger.addHandler(stdout_handler)
     gc3pie_logger = logging.getLogger('gc3.gc3libs')
-    gc3pie_logger.setLevel(logging.WARN)
+    gc3pie_logger.setLevel(logging.CRITICAL)
     gc3pie_logger.addHandler(file_handler)
     gc3pie_logger.addHandler(stdout_handler)
     apscheduler_logger = logging.getLogger('apscheduler')
