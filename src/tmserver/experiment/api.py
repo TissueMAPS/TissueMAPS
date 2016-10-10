@@ -422,7 +422,7 @@ def get_workflow_status(experiment_id):
 @jwt_required()
 @assert_query_params('step_name', 'batch')
 @decode_query_ids()
-def get_jobs_status(experiment_id, stage_name, step_name):
+def get_jobs_status(experiment_id):
     step_name = request.args.get('step_name')
     batch = request.args.get('batch', type=int)
     batch_size = request.args.get('batch_size', 50, type=int)
