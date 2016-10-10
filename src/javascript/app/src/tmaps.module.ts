@@ -48,6 +48,7 @@
         'ngColorPicker',
         'ngSanitize',
         'ngWebsocket',
+        'infinite-scroll',
 
         'jtui'
     ]);
