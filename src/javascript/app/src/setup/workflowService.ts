@@ -150,23 +150,23 @@ class WorkflowService {
                                 workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex]
                             );
                             step.jobs = [];
-                            workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex].subtasks.map((phase, index) => {
-                                if (phase.subtasks.length > 0) {
-                                    // run jobs
-                                    phase.subtasks.map((subphase, index) => {
-                                        if (subphase.subtasks.length > 0) {
-                                            subphase.subtasks.map((job) => {
-                                                step.jobs.push(new Job(job));
-                                            });
-                                        } else {
-                                            step.jobs.push(new Job(subphase));
-                                        }
-                                    });
-                                } else {
-                                    // collect job
-                                    step.jobs.push(new Job(phase));
-                                }
-                            });
+                            // workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex].subtasks.map((phase, index) => {
+                            //     if (phase.subtasks.length > 0) {
+                            //         // run jobs
+                            //         phase.subtasks.map((subphase, index) => {
+                            //             if (subphase.subtasks.length > 0) {
+                            //                 subphase.subtasks.map((job) => {
+                            //                     step.jobs.push(new Job(job));
+                            //                 });
+                            //             } else {
+                            //                 step.jobs.push(new Job(subphase));
+                            //             }
+                            //         });
+                            //     } else {
+                            //         // collect job
+                            //         step.jobs.push(new Job(phase));
+                            //     }
+                            // });
                         }
                     });
                 }
