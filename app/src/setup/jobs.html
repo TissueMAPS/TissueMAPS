@@ -1,11 +1,9 @@
-<table st-table="stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex].jobs"
-  class="table table-striped">
+<table class="table table-striped">
 
   <thead>
     <tr>
       <th></th>
-      <th>phase</th>
-      <th>id</th>
+      <th>name</th>
       <th>state</th>
       <th>exitcode</th>
       <th>memory (MB)</th>
@@ -14,8 +12,8 @@
     </tr>
   </thead>
 
-  <tbody>
-    <tr ng-repeat="job in stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex].jobs">
+  <tbody infinite-scroll="stepCtrl.requestNextNJobStati()" infinite-scroll-distance="10">
+    <tr ng-repeat="job in stepCtrl.jobs">
       <td>
         <i class="fa fa-exclamation-circle" aria-hidden="true" style="color: red;"
           ng-show="job.status.failed">
@@ -24,12 +22,12 @@
           ng-hide="job.status.failed">
         </i>
       </td>
-      <td>{{ job.phase }}</td>
+      <td>{{ job.name }}</td>
       <td>{{ job.id }}</td>
-      <td>{{ job.status.state }}</td>
-      <td>{{ job.status.exitcode }}</td>
-      <td>{{ job.status.memory }}</td>
-      <td>{{ job.status.time }}</td>
+      <td>{{ job.state }}</td>
+      <td>{{ job.exitcode }}</td>
+      <td>{{ job.memory }}</td>
+      <td>{{ job.time }}</td>
       <td>
         <button class="btn btn-default" ng-click="setupCtrl.getLogOutput(job)">
           <i class="fa fa-terminal"></i>
