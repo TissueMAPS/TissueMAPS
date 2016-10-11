@@ -443,40 +443,22 @@ def get_jobs_status(experiment_id):
         'get status of jobs starting from index #%d of step "%s" for experiment %d',
         index, step_name, experiment_id
     )
-    # FIXME: Test this code, client side only tested with dummy data (see below)
-    # submission_id = gc3pie.get_id_of_last_submission(experiment_id, 'workflow')
-    # with tm.utils.MainSession() as session:
-    #     tasks = session.query(tm.Task).\
-    #         filter(
-    #             tm.Task.submission_id == submission_id,
-    #             tm.Task.name.like('{step}_%'.format(step=step_name)),
-    #             ~tm.Task.is_collection
-    #         ).\
-    #         order_by(tm.Task.id).\
-    #         limit(batch_size).\
-    #         offset(index).\
-    #         all()
-    #     status = [t.status for t in tasks]
-
-    # FIXME: This is only dummy data to test the client code
-    import random, string
-    tasks = []
-    for i in xrange(batch_size):
-        task = {
-            'name': 'job %d' % (index + i),
-            'state': 'RUNNING',
-            'exitcode': random.choice([0, 1]),
-            'time': '1h 30min',
-            'memory': random.choice([2 ** x for x in range(5, 15)]),
-            'cpu_time': '1h 15min',
-            'type': 'SomeClass',
-            'submission_id': random.choice(range(10)),
-            'data': 'ASDKLA'  # TODO: Should probably get rid off before sending back to client
-        }
-        tasks.append(task)
+    submission_id = gc3pie.get_id_of_last_submission(experiment_id, 'workflow')
+    with tm.utils.MainSession() as session:
+        tasks = session.query(tm.Task).\
+            filter(
+                tm.Task.submission_id == submission_id,
+                tm.Task.name.like('{step}_%'.format(step=step_name)),
+                ~tm.Task.is_collection
+            ).\
+            order_by(tm.Task.id).\
+            limit(batch_size).\
+            offset(index).\
+            all()
+        status = [t.status for t in tasks]
 
     return jsonify({
-        'data': tasks
+        'data': status
     })
 
 
