@@ -41,14 +41,20 @@ class StepCtrl {
 
     jobsDataSource = {
         get: (index, count, success) => {
-            console.log(index);
+            // console.log(index);
             var experimentId = this._experiment.id;
             var stepName = this._$state.params.stepName;
             var url = '/api/experiments/' + experimentId + '/workflow/status/jobs' +
                       '?index=' + index + '&step_name=' + stepName + '&batch_size=' + count;
             this._$http.get(url).then((resp) => {
                 var jobs = resp.data.data;
-                success(jobs);
+                if (jobs.length == 0) {
+                    // If there are now jobs, this means the step has been 
+                    // resubmitted. In this case, we want to clear the list
+                    // of jobs.
+                } else {
+                    success(jobs);
+                }
             });
         }
     };

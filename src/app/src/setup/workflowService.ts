@@ -229,6 +229,8 @@ class WorkflowService {
         return this._$http.post('/api/experiments/' + experiment.id + '/workflow/resubmit', data)
         .then((resp) => {
             // console.log(resp)
+            // TODO: remove jobs from stepCtrl.jobsDataSource upon
+            // successful resubmission
             return resp;
         })
         .catch((resp) => {

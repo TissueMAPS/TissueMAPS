@@ -465,7 +465,7 @@ class SetupCtrl {
 
     getLogOutput(job: Job) {
         console.log('get log output')
-        this._workflowService.getLogOutput(this.experiment, job.dbId)
+        this._workflowService.getLogOutput(this.experiment, job.id)
         .then((res) => {
             var result = {
                 success: res.status == 200,
