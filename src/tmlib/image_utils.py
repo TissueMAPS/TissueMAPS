@@ -271,9 +271,10 @@ def correct_illumination(img, mean, std, log_transform=True):
 
     # Do all computations with type float
     img = img.astype(np.float64)
-    img[img == 0] = 1
+    is_zero = img == 0
     if log_transform:
         img = np.log10(img)
+        img[is_zero] = 0
     img = (img - mean) / std
     img = (img * np.mean(std)) + np.mean(mean)
     if log_transform:
