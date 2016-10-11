@@ -34,7 +34,7 @@
         'bower_components/ng-file-upload/ng-file-upload.min.js',
         'bower_components/angular-ui-router-breadcrumbs/dist/angular-ui-router-breadcrumbs.min.js',
         'bower_components/plotlyjs/plotly.js',
-        'bower_components/ngInfiniteScroll/build/ng-infinite-scroll.min.js',
+        'bower_components/angular-ui-scroll/dist/ui-scroll.min.js',
 
         /**
          * JtUI

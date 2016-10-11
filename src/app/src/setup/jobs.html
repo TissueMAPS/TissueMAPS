@@ -1,6 +1,5 @@
-<table class="table table-striped">
-
-  <thead>
+<div ui-scroll-viewport style="height: 300px;">
+  <table class="table table-striped">
     <tr>
       <th></th>
       <th>name</th>
@@ -10,10 +9,7 @@
       <th>time (HH:MM:SS)</th>
       <th>log</th>
     </tr>
-  </thead>
-
-  <tbody infinite-scroll="stepCtrl.requestNextNJobStati()" infinite-scroll-distance="10">
-    <tr ng-repeat="job in stepCtrl.jobs">
+    <tr ui-scroll="job in stepCtrl.jobsDataSource" buffer-size="50" start-index="0">
       <td>
         <i class="fa fa-exclamation-circle" aria-hidden="true" style="color: red;"
           ng-show="job.status.failed">
@@ -23,7 +19,6 @@
         </i>
       </td>
       <td>{{ job.name }}</td>
-      <td>{{ job.id }}</td>
       <td>{{ job.state }}</td>
       <td>{{ job.exitcode }}</td>
       <td>{{ job.memory }}</td>
@@ -34,7 +29,6 @@
         </button>
       </td>
     </tr>
-  </tbody>
 
-</table>
-
+  </table>
+</div>

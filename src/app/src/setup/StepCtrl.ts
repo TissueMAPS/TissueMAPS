@@ -2,9 +2,6 @@ class StepCtrl {
 
     currentStageIndex: number;
     currentStepIndex: number;
-    jobs: any[] = [];
-
-    private _currentJobBatchNr = 0;
 
     static $inject = ['workflow', 'workflowService', '$state', '$scope', '$uibModal', 'experiment', '$http'];
 
@@ -28,8 +25,6 @@ class StepCtrl {
                 });
             }
         });
-        // Get the frist N jobs
-        this.requestNextNJobStati();
     }
 
     hasExtraArgs() {
@@ -44,19 +39,19 @@ class StepCtrl {
         }
     }
 
-    requestNextNJobStati() {
-        var experimentId = this._experiment.id;
-        var stepName = this._$state.params.stepName;
-        var url = '/api/experiments/' + experimentId + '/workflow/status/jobs' +
-                  '?batch=' + this._currentJobBatchNr + '&step_name=' + stepName;
-        this._$http.get(url).then((resp) => {
-            resp.data.data.forEach((job) => {
-                this.jobs.push(job);
+    jobsDataSource = {
+        get: (index, count, success) => {
+            console.log(index);
+            var experimentId = this._experiment.id;
+            var stepName = this._$state.params.stepName;
+            var url = '/api/experiments/' + experimentId + '/workflow/status/jobs' +
+                      '?index=' + index + '&step_name=' + stepName + '&batch_size=' + count;
+            this._$http.get(url).then((resp) => {
+                var jobs = resp.data.data;
+                success(jobs);
             });
-            this._currentJobBatchNr += 1;
-        });
-
-    }
+        }
+    };
 
 }
 

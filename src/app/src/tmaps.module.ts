@@ -41,6 +41,7 @@
         'ui.bootstrap',
         'ui.sortable',
         'ui.slider',
+        'ui.scroll',
 
         'angular-loading-bar',
         'perfect_scrollbar',
@@ -48,7 +49,6 @@
         'ngColorPicker',
         'ngSanitize',
         'ngWebsocket',
-        'infinite-scroll',
 
         'jtui'
     ]);
