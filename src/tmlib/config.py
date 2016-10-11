@@ -14,7 +14,7 @@ class TmapsConfig(object):
 
     `TissueMAPS` code is distributed across mutliple Python packages,
     but configuration settings are bundeled in one global config file
-    (:py:constant:`tmlib.config.CONFIG_FILE`)
+    (:constant:`tmlib.config.CONFIG_FILE`)
     with an `INI <https://en.wikipedia.org/wiki/INI_file>`_-like file format.
 
     The environment variable ``TMAPS_CONFIG_FILE`` can be used to overwrite

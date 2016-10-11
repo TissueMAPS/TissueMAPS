@@ -34,7 +34,7 @@ def is_image_file(filename):
 
     See also
     --------
-    :py:const:`tmlib.image.SUPPORTED_IMAGE_FILE_EXTENSIONS`
+    :const:`tmlib.image.SUPPORTED_IMAGE_FILE_EXTENSIONS`
     '''
     return os.path.splitext(filename)[1] in SUPPORTED_IMAGE_FILE_EXTENSIONS
 
@@ -639,7 +639,7 @@ class SegmentationImage(Image):
     @classmethod
     def create_from_polygons(cls, polygons, y_offset, x_offset, dimensions,
             metadata=None):
-        '''Creates an object of class :py:class:`tmlib.image.SegmentationImage`
+        '''Creates an object of class :class:`tmlib.image.SegmentationImage`
         based on coordinates of object contours.
 
         Parameters
@@ -830,10 +830,10 @@ class BrightfieldImage(Image):
         ----------
         separation_mat: numpy.ndarray
             stain separation matrix as available in
-            :py:mod:`skimage.color`, for information on how to create custom
+            :mod:`skimage.color`, for information on how to create custom
             matrices see G. Landini's description for the corresponding
             `Fiji plugin <http://www.mecourse.com/landinig/software/cdeconv/cdeconv.html>`_
-            (default: :py:attr:`skimage.color.hed_from_rgb`)
+            (default: :attr:`skimage.color.hed_from_rgb`)
 
         Returns
         -------

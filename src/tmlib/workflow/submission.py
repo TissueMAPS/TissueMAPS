@@ -46,12 +46,12 @@ class SubmissionManager(object):
         -------
         Ensure that the "submissions" table get updated once the jobs
         were submitted, i.e. added to a running `GC3Pie` engine.
-        To this end, use the :py:method:`tmlib.workflow.api.update_submission`
+        To this end, use the :method:`tmlib.workflow.api.update_submission`
         method.
 
         See also
         --------
-        :py:class:`tmlib.models.Submission`
+        :class:`tmlib.models.Submission`
         '''
         if program_name is None:
             program_name = self.program_name
@@ -75,7 +75,7 @@ class SubmissionManager(object):
 
         See also
         --------
-        :py:class:`tmlib.models.Submission`
+        :class:`tmlib.models.Submission`
 
         Raises
         ------

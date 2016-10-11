@@ -534,7 +534,7 @@ class JavaBridge(object):
 class BFImageReader(object):
 
     '''Class for reading data from vendor-specific image file formats as
-    :py:class:`numpy.ndarray` objects using the
+    :class:`numpy.ndarray` objects using the
     `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_
     library.
 
@@ -549,7 +549,7 @@ class BFImageReader(object):
 
     See also
     --------
-    :py:class:`tmlib.readers.JavaBridge`
+    :class:`tmlib.readers.JavaBridge`
     '''
     # TODO: reimplement the whole BioFormats approach using Py4J
     # I don't like the way python-bioformats is implemented!
@@ -652,7 +652,7 @@ class BFOmeXmlReader(object):
 class ImageReader(Reader):
 
     '''Class for reading pixel data from standard image file formats as
-    :py:class:`numpy.ndarray` objects.
+    :class:`numpy.ndarray` objects.
     '''
 
     @same_docstring_as(Reader.__init__)

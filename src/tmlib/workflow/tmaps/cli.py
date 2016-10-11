@@ -183,7 +183,7 @@ class Tmaps(SubmissionManager):
         Raises
         ------
         SystemExit
-            exitcode ``1`` when the call raises an :py:class:`Exception`
+            exitcode ``1`` when the call raises an :class:`Exception`
 
         Warning
         -------

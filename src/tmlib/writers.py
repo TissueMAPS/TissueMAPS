@@ -157,7 +157,7 @@ class YamlWriter(Writer):
 
 class ImageWriter(Writer):
 
-    '''Class for writing :py:class:`numpy.ndarray` objects to image files
+    '''Class for writing :class:`numpy.ndarray` objects to image files
     using the `OpenCV <http://docs.opencv.org>`_ library.
     '''
 
@@ -636,7 +636,7 @@ class DatasetWriter(Writer):
     def append(self, path, data):
         '''Appends data to an existing one-dimensional dataset.
         The dataset needs to be created first using the
-        :py:func:`tmlib.writers.DatasetWriter.create` method and the
+        :func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the vertical dimension needs to be
         set to ``None``.
 
@@ -682,7 +682,7 @@ class DatasetWriter(Writer):
     def vstack(self, path, data):
         '''Vertically appends data to an existing multi-dimensional dataset.
         The dataset needs to be created first using the
-        :py:func:`tmlib.writers.DatasetWriter.create` method and the
+        :func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the vertical dimension needs to be
         set to ``None``.
 
@@ -740,7 +740,7 @@ class DatasetWriter(Writer):
     def hstack(self, path, data):
         '''Horizontally appends data to an existing multi-dimensional dataset.
         The dataset needs to be created first using the
-        :py:func:`tmlib.writers.DatasetWriter.create` method and the
+        :func:`tmlib.writers.DatasetWriter.create` method and the
         `max_dims` entry for the horizontal dimension needs to be
         set to ``None``.
 

@@ -75,7 +75,7 @@ def get_microscope_type_regex(microscope_type):
 
 def metadata_reader_factory(microscope_type):
     '''Gets the implementation
-    of the :py:class:`tmlib.workflow.metaconfig.default.MetadataReader`
+    of the :class:`tmlib.workflow.metaconfig.default.MetadataReader`
     abstract base class for the given microscope type.
 
     Parameters
@@ -94,7 +94,7 @@ def metadata_reader_factory(microscope_type):
 
 def metadata_handler_factory(microscope_type):
     '''Gets the implementation of the
-    :py:class:`tmlib.workflow.metaconfig.default.MetadataHandler`
+    :class:`tmlib.workflow.metaconfig.default.MetadataHandler`
     abstract base class for the given microscope type.
 
     Parameters

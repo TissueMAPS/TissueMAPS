@@ -41,7 +41,7 @@ class Argument(object):
             (default: ``False``)
         get_choices: function, optional
             function that takes an object
-            of type :py:class:`tmlib.models.Experiment` and returns the
+            of type :class:`tmlib.models.Experiment` and returns the
             choices in case they need to (and can) be determined dynamically
             (default: ``None``)
 
@@ -207,7 +207,7 @@ def __str__(self):
 class ArgumentMeta(ABCMeta):
 
     '''Metaclass for adding class attributes of type
-    :py:class:`tmlib.workflow.args.Argument` as descriptors to instances of
+    :class:`tmlib.workflow.args.Argument` as descriptors to instances of
     the class.
     '''
 
@@ -229,13 +229,13 @@ class ArgumentCollection(object):
 
     '''Abstract base class for an argument collection. The collection serves
     as a container for arguments that can be parsed to methods of 
-    :py:class:`tmlib.workflow.cli.CommandLineInterface`.
+    :class:`tmlib.workflow.cli.CommandLineInterface`.
 
     Implementations of the class can be instantiated without having to
     implement a constructor, i.e. an `__init__` method. The constructor
     accepts keyword arguments and strips the values from those arguments
     that are implemented as class attributes with type
-    :py:class:`tmlib.workflow.args.Argument` and replaces any default values.
+    :class:`tmlib.workflow.args.Argument` and replaces any default values.
     When there is no default value specified, the argument has to be provided
     as a key-value pair. Derived classes can explicitly implement a constructor
     if required.
@@ -299,7 +299,7 @@ class ArgumentCollection(object):
     @classmethod
     def iterargs(cls):
         '''Iterates over the class attributes of type
-        :py:class:`tmlib.workflow.arg.Argument`.
+        :class:`tmlib.workflow.arg.Argument`.
 
         Warning
         -------
@@ -348,7 +348,7 @@ class ArgumentCollection(object):
 
     def as_list(self):
         '''Returns class attributes of type
-        :py:class:`tmlib.workflow.args.Argument` as an array of key-value pairs.
+        :class:`tmlib.workflow.args.Argument` as an array of key-value pairs.
 
         Returns
         -------
@@ -402,8 +402,8 @@ class BatchArguments(ArgumentCollection):
     for parallel processing on the cluster.
 
     These arguments can be passed to a step-specific implementation of
-    :py:method:`tmlib.workflow.cli.CommandLineInterface.init` and are
-    required by :py:method:`tmlib.workflow.api.ClusterRoutines.create_batches`.
+    :method:`tmlib.workflow.cli.CommandLineInterface.init` and are
+    required by :method:`tmlib.workflow.api.ClusterRoutines.create_batches`.
 
     Note
     ----
@@ -418,8 +418,8 @@ class SubmissionArguments(ArgumentCollection):
     jobs to the cluster.
 
     These arguments can be passed to a step-specific implementation of
-    :py:method:`tmlib.workflow.cli.CommandLineInterface.submit` and are
-    required by :py:method:`tmlib.workflow.api.ClusterRoutines.create_jobs`.
+    :method:`tmlib.workflow.cli.CommandLineInterface.submit` and are
+    required by :method:`tmlib.workflow.api.ClusterRoutines.create_jobs`.
 
     Note
     ----
@@ -456,7 +456,7 @@ class ExtraArguments(ArgumentCollection):
 
     '''Collection of arguments that can be passed to the constructor of
     API classes, i.e. a step-specific implementation of
-    :py:class:`tmlib.workflow.api.ClusterRoutines`, in addition to the default
+    :class:`tmlib.workflow.api.ClusterRoutines`, in addition to the default
     arguments `experiment_id` and `verbosity`.
 
     Note
@@ -469,11 +469,11 @@ class CliMethodArguments(ArgumentCollection):
 
     '''Collection of arguments that can be passed to a method of
     a step-specific implemenation of
-    :py:class:`tmlib.workflow.cli.CommandLineInterface`.
+    :class:`tmlib.workflow.cli.CommandLineInterface`.
 
     Note
     ----
     This class is automatically implemented for each method by the
-    :py:function:`tmlib.workflow.registry.climethod` decorator.
+    :function:`tmlib.workflow.registry.climethod` decorator.
     '''
 

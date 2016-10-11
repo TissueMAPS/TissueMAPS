@@ -205,8 +205,8 @@ class PyramidBuilder(ClusterRoutines):
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :py:class:`tm.ChannelLayer` and instances of class
-        :py:class:`tm.MapobjectType` where ``is_static == True``
+        :class:`tm.ChannelLayer` and instances of class
+        :class:`tm.MapobjectType` where ``is_static == True``
         as well as all children instances for the processed experiment.
         '''
         logger.debug('delete existing channel layers and pyramid tile files')
@@ -589,11 +589,11 @@ class PyramidBuilder(ClusterRoutines):
             self._create_lower_zoom_level_tiles(batch)
 
     def collect_job_output(self, batch):
-        '''Creates default instances of :py:class:`tm.MapobjectType`
-        for :py:class:`tm.Site`, :py:class:`tm.Well`,
-        and :py:class:`tm.Plate` and creates for each instance an
-        instance of :py:class:`tm.Mapobject` and the corresponding
-        :py:class:`tm.MapobjectSegmentation`.
+        '''Creates default instances of :class:`tm.MapobjectType`
+        for :class:`tm.Site`, :class:`tm.Well`,
+        and :class:`tm.Plate` and creates for each instance an
+        instance of :class:`tm.Mapobject` and the corresponding
+        :class:`tm.MapobjectSegmentation`.
 
         batch: dict
             job description

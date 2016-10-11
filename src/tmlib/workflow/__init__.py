@@ -9,13 +9,13 @@ account.
 Each `step` represents a subpackage, which must implement the following
 modules:
 
-    * **api**: must implement :py:class:`tmlib.workflow.api.ClusterRoutines`
-    and decorate it with :py:function:`tmlib.workflow.registry.api`
-    * **args**: must implement :py:class`tmlib.workflow.args.BatchArguments` and
-    :py:class:`tmlib.workflow.args.SubmissionArguments` and decorate them with
-    :py:function:`tmlib.workflow.registry.batch_args` and
-    :py:function:`tmlib.workflow.registry.submission_args`, respectively
-    * **cli**: must implement :py:class:`tmlib.workflow.cli.CommandLineInterface`
+    * **api**: must implement :class:`tmlib.workflow.api.ClusterRoutines`
+    and decorate it with :function:`tmlib.workflow.registry.api`
+    * **args**: must implement :class`tmlib.workflow.args.BatchArguments` and
+    :class:`tmlib.workflow.args.SubmissionArguments` and decorate them with
+    :function:`tmlib.workflow.registry.batch_args` and
+    :function:`tmlib.workflow.registry.submission_args`, respectively
+    * **cli**: must implement :class:`tmlib.workflow.cli.CommandLineInterface`
 
 This automatically registers each step and enables using it via the
 command line and/or integrating it into a workflow.
@@ -40,7 +40,7 @@ _workflow_register = collections.defaultdict(dict)
 
 def register_api(step_name):
     '''Class decorator to register a derived class of
-    :py:class:`tmlib.workflow.api.ClusterRoutines` as an API for use in
+    :class:`tmlib.workflow.api.ClusterRoutines` as an API for use in
     command line interface and workflow.
 
     Parameters
@@ -56,7 +56,7 @@ def register_api(step_name):
     ------
     TypeError
         when decorated class is not derived from
-        :py:class:`tmlib.workflow.api.ClusterRoutines`
+        :class:`tmlib.workflow.api.ClusterRoutines`
     '''
     from tmlib.workflow.api import ClusterRoutines
     def decorator(cls):
@@ -72,7 +72,7 @@ def register_api(step_name):
 
 def register_workflow_type(name):
     '''Class decorator to register a derived class of
-    :py:class:`tmlib.workflow.description.WorkflowDependencies` for use in
+    :class:`tmlib.workflow.description.WorkflowDependencies` for use in
     command line interface and workflow.
 
     Parameters
@@ -88,7 +88,7 @@ def register_workflow_type(name):
     ------
     TypeError
         when decorated class is not derived from
-        :py:class:`tmlib.workflow.dependencies.WorkflowDependencies`
+        :class:`tmlib.workflow.dependencies.WorkflowDependencies`
     '''
     from tmlib.workflow.dependencies import WorkflowDependencies
     def decorator(cls):
@@ -125,10 +125,10 @@ def climethod(help, **kwargs):
         when registered function is not a method
     TypeError
         when the class of the registered method is not derived from
-        :py:class:`tmlib.workflow.cli.CommandLineInterface`
+        :class:`tmlib.workflow.cli.CommandLineInterface`
     TypeError
         when the value specified by a keyword argument doesn't have type
-        :py:class:`tmlib.workflow.args.Argument`
+        :class:`tmlib.workflow.args.Argument`
     ValueError
         when the key of an keyword argument doesn't match a parameter
         of the method
@@ -177,7 +177,7 @@ def climethod(help, **kwargs):
 
 def register_batch_args(step_name):
     '''Class decorator to register a derived class of
-    :py:class:`tmlib.workflow.args.BatchArguments` for a workflow
+    :class:`tmlib.workflow.args.BatchArguments` for a workflow
     step to use it via the command line or within a workflow.
 
     Parameters
@@ -193,7 +193,7 @@ def register_batch_args(step_name):
     ------
     TypeError
         when decorated class is not derived from
-        :py:class:`tmlib.workflow.args.BatchArguments`
+        :class:`tmlib.workflow.args.BatchArguments`
     '''
     from tmlib.workflow.args import BatchArguments
     def decorator(cls):
@@ -209,7 +209,7 @@ def register_batch_args(step_name):
 
 def register_submission_args(step_name):
     '''Class decorator to register a derived class of
-    :py:class:`tmlib.workflow.args.SubmissionArguments` for a worklow
+    :class:`tmlib.workflow.args.SubmissionArguments` for a worklow
     step to use it via the command line or within a worklow.
 
     Parameters
@@ -225,7 +225,7 @@ def register_submission_args(step_name):
     ------
     TypeError
         when decorated class is not derived from
-        :py:class:`tmlib.workflow.args.SubmissionArguments`
+        :class:`tmlib.workflow.args.SubmissionArguments`
     '''
     from tmlib.workflow.args import SubmissionArguments
     def decorator(cls):
@@ -241,7 +241,7 @@ def register_submission_args(step_name):
 
 def register_extra_args(step_name):
     '''Class decorator to register a derived class of
-    :py:class:`tmlib.workflow.args.ExtraArguments` for a worklow
+    :class:`tmlib.workflow.args.ExtraArguments` for a worklow
     step to use it via the command line or within a worklow.
 
     Parameters
@@ -257,7 +257,7 @@ def register_extra_args(step_name):
     ------
     TypeError
         when decorated class is not derived from
-        :py:class:`tmlib.workflow.args.ExtraArguments`
+        :class:`tmlib.workflow.args.ExtraArguments`
     '''
     from tmlib.workflow.args import ExtraArguments
     def decorator(cls):

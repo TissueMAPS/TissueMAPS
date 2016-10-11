@@ -181,7 +181,7 @@ class MapobjectType(ExperimentModel, DateMixIn):
         maxzoom_level: int
             maximum zoom level of the pyramid
         segmentation_ids: List[int]
-            IDs of instances of :py:class:`tmlib.models.MapobjectSegmentation`
+            IDs of instances of :class:`tmlib.models.MapobjectSegmentation`
         n_sample: int, optional
             number of tiles that should be sampled (default: ``10``)
         n_points_per_tile_limit: int, optional

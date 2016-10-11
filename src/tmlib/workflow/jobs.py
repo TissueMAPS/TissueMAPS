@@ -53,7 +53,7 @@ class Job(gc3libs.Application):
 
         See also
         --------
-        :py:method:`gc3libs.Application.sbatch`
+        :method:`gc3libs.Application.sbatch`
 
         Note
         ----
@@ -157,7 +157,7 @@ class WorkflowStepJob(Job):
 
         See also
         --------
-        :py:class:`tmlib.models.Submission`
+        :class:`tmlib.models.Submission`
 
         Note
         ----
@@ -444,7 +444,7 @@ class CliJobCollection(SequentialTaskCollection, JobCollection):
 
     '''Class for manual submission of the *run* and *collect* phases of a
     workflow steps via
-    :py:method:`tmlib.workflow.cli.CommandLineInterface.submit`.
+    :method:`tmlib.workflow.cli.CommandLineInterface.submit`.
     '''
 
     def __init__(self, step_name, submission_id, jobs=None):

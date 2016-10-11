@@ -30,8 +30,8 @@ class WorkflowDescription(object):
 
     See also
     --------
-    :py:class:`tmlib.workflow.description.WorkflowStageDescription`
-    :py:class:`tmlib.workflow.description.WorkflowStepDescription`
+    :class:`tmlib.workflow.description.WorkflowStageDescription`
+    :class:`tmlib.workflow.description.WorkflowStepDescription`
     '''
 
     def __init__(self, type, stages=None):
@@ -72,7 +72,7 @@ class WorkflowDescription(object):
         ------
         TypeError
             when `stage_description` doesn't have type
-            :py:class:`tmlib.workflow.description.WorkflowStageDescription`
+            :class:`tmlib.workflow.description.WorkflowStageDescription`
         '''
         if not isinstance(stage_description, WorkflowStageDescription):
             raise TypeError(
@@ -231,7 +231,7 @@ class WorkflowStageDescription(object):
         ------
         TypeError
             when `step_description` doesn't have type
-            :py:class:`tmlib.workflow.description.WorkflowStepDescription`
+            :class:`tmlib.workflow.description.WorkflowStepDescription`
         '''
         if not isinstance(step_description, WorkflowStepDescription):
             raise TypeError(

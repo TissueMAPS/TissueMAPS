@@ -513,7 +513,7 @@ def notimplemented(func):
 
     Note
     ----
-    Derived classes of :py:class:`tmlib.workflow.api.ClusterRoutines`
+    Derived classes of :class:`tmlib.workflow.api.ClusterRoutines`
     must decorate the method `collect_job_output` in case the corresponding
     step doesn't have a `collect` phase.
     '''

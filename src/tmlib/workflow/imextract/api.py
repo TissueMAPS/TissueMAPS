@@ -188,7 +188,7 @@ class ImageExtractor(ClusterRoutines):
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :py:class:`tm.ChannelImageFile` as well as all children for
+        :class:`tm.ChannelImageFile` as well as all children for
         the processed experiment.
         '''
         logger.info('delete existing channel image files')

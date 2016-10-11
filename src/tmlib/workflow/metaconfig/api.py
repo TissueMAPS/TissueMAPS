@@ -100,8 +100,8 @@ class MetadataConfigurator(ClusterRoutines):
         return job_descriptions
 
     def delete_previous_job_output(self):
-        '''Deletes all instances of class :py:class:`tm.Cycle`,
-        :py:class:`tm.Well`, and :py:class:`tm.Channel` as
+        '''Deletes all instances of class :class:`tm.Cycle`,
+        :class:`tm.Well`, and :class:`tm.Channel` as
         well as all children for the processed experiment.
         '''
         with tm.utils.ExperimentSession(self.experiment_id) as session:
@@ -125,7 +125,7 @@ class MetadataConfigurator(ClusterRoutines):
         metadata files and/or user input.
 
         The actual processing is done by an implementation of the
-        :py:class:`tmlib.workflow.metaconfig.default.MetadataHandler` abstract
+        :class:`tmlib.workflow.metaconfig.default.MetadataHandler` abstract
         base class. Some file formats require additional customization,
         either because the `Bio-Formats` library does not fully support them or
         because the microscopes provides insufficient information in the files.
@@ -137,15 +137,15 @@ class MetadataConfigurator(ClusterRoutines):
         handlers can be further extended by creating a new module in the
         `metaconfig` package with the same name as the corresponding file
         format. The module must contain a custom implementation of
-        :py:class:`tmlib.workflow.metaconfig.default.MetadataHandler`,
+        :class:`tmlib.workflow.metaconfig.default.MetadataHandler`,
         whose name has to be pretended with the capitalized name of the file
         format.
 
         See also
         --------
-        :py:mod:`tmlib.workflow.metaconfig.default`
-        :py:mod:`tmlib.workflow.metaconfig.cellvoyager`
-        :py:mod:`tmlib.workflow.metaconfig.visiview`
+        :mod:`tmlib.workflow.metaconfig.default`
+        :mod:`tmlib.workflow.metaconfig.cellvoyager`
+        :mod:`tmlib.workflow.metaconfig.visiview`
         '''
         MetadataReader = metadata_reader_factory(batch['microscope_type'])
 
@@ -285,7 +285,7 @@ class MetadataConfigurator(ClusterRoutines):
 
         Whether acquisition time points will be interpreted as actual
         time points in a time series depends on the value of
-        :py:attribute:`tm.Experiment.plate_acquisition_mode`.
+        :attribute:`tm.Experiment.plate_acquisition_mode`.
 
         Parameters
         ----------

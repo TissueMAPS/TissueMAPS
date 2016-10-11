@@ -586,7 +586,7 @@ class IllumstatsFile(FileModel, DateMixIn):
         ------
         ValueError
             when `name` doesn't match pattern specified by
-            :py:attribute:`tmlib.files.ILLUMSTATS_FILENAME_FORMAT`
+            :attribute:`tmlib.files.ILLUMSTATS_FILENAME_FORMAT`
         '''
         self.channel_id = channel_id
         self.cycle_id = cycle_id

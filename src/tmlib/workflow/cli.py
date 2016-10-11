@@ -154,24 +154,24 @@ class CommandLineInterface(SubmissionManager):
 
     Each workflow step must implement this class. This will automatically
     provide derived classes with command line interface functionality
-    in form of an instance of :py:class:`argparse.ArgumentParser`.
+    in form of an instance of :class:`argparse.ArgumentParser`.
     The docstring of the derived class is also used for the `description`
     attribute of the parser for display in the command line.
     A separate subparser is added for each method of the derived class that is
-    decorated with :py:func:`tmlib.workflow.climethod`. The decorator provides
+    decorated with :func:`tmlib.workflow.climethod`. The decorator provides
     descriptions of the method arguments, which are also added to the
     corresponding subparser.
 
-    The :py:method:`tmlib.workflow.cli.CommandLineInterface.init`
-    and :py:method:`tmlib.workflow.cli.CommandLineInterace.submit` methods
+    The :method:`tmlib.workflow.cli.CommandLineInterface.init`
+    and :method:`tmlib.workflow.cli.CommandLineInterace.submit` methods
     require additional step-specific arguments that are passed to the *API*
-    methods :py:method:`tmlib.workflow.api.ClusterRoutines.create_batches` and
-    :py:method:`tmlib.workflow.api.ClusterRoutines.create_run_jobs`,
+    methods :method:`tmlib.workflow.api.ClusterRoutines.create_batches` and
+    :method:`tmlib.workflow.api.ClusterRoutines.create_run_jobs`,
     respectively. These arguments are handled separately, since they also need
     to be accessible outside the scope of the command line interace.
     They are provided by step-specific implementations of
-    :py:class:`tmlib.workflow.args.BatchArguments` and
-    :py:class:`tmlib.workflow.args.SubmissionArguments` and added to the
+    :class:`tmlib.workflow.args.BatchArguments` and
+    :class:`tmlib.workflow.args.SubmissionArguments` and added to the
     corresponding `init` and `submit` subparsers, respectively.
     '''
 
@@ -210,7 +210,7 @@ class CommandLineInterface(SubmissionManager):
         Raises
         ------
         SystemExit
-            exitcode ``1`` when the call raises an :py:class:`Exception`
+            exitcode ``1`` when the call raises an :class:`Exception`
 
         Warning
         -------

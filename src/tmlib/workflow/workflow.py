@@ -301,7 +301,7 @@ class WorkflowStage(State):
         ------
         TypeError
             when `description` doesn't have type
-            :py:class:`tmlib.workflow.tmaps.description.WorkflowStageDescription`
+            :class:`tmlib.workflow.tmaps.description.WorkflowStageDescription`
         '''
         self.name = name
         self.experiment_id = experiment_id
@@ -554,7 +554,7 @@ class Workflow(SequentialTaskCollection, State):
 
         See also
         --------
-        :py:class:`tmlib.workflow.WorkflowStage`
+        :class:`tmlib.workflow.WorkflowStage`
         '''
         self.experiment_id = experiment_id
         self.verbosity = verbosity
@@ -585,7 +585,7 @@ class Workflow(SequentialTaskCollection, State):
         ------
         TypeError
             when `description` doesn't have type
-            :py:class:`tmlib.tmaps.description.WorkflowDescription`
+            :class:`tmlib.tmaps.description.WorkflowDescription`
 
         '''
         logger.info('update workflow description')

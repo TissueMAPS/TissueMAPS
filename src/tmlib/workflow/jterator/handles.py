@@ -543,7 +543,7 @@ class SegmentedObjects(LabelImage):
 
         See also
         --------
-        :py:attrbute:`tmlib.jterator.handles.Attribute`
+        :attrbute:`tmlib.jterator.handles.Attribute`
         '''
         if not isinstance(attribute, Attribute):
             raise TypeError(
@@ -576,7 +576,7 @@ class SegmentedObjects(LabelImage):
 
         See also
         --------
-        :py:attrbute:`tmlib.jterator.handles.Measurement`
+        :attrbute:`tmlib.jterator.handles.Measurement`
         '''
         if not isinstance(measurement, Measurement):
             raise TypeError(
@@ -956,13 +956,13 @@ class Figure(OutputHandle):
 
 def create_handle(type, **kwargs):
     '''Factory function to create an instance of an implementation of the
-    :py:class:`tmlib.workflow.jterator.handles.Handle` abstract base class.
+    :class:`tmlib.workflow.jterator.handles.Handle` abstract base class.
 
     Parameters
     ----------
     type: str
         type of the handle item; must match a name of one of the
-        implemented classes in :py:module:`tmlib.workflow.jterator.handles`
+        implemented classes in :module:`tmlib.workflow.jterator.handles`
     **kwargs: dict
         keyword arguments that are passed to the constructor of the class
 

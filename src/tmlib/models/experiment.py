@@ -50,7 +50,7 @@ class ExperimentReference(MainModel, DateMixIn):
 
     See also
     --------
-    :py:class:`tmlib.models.Experiment`
+    :class:`tmlib.models.Experiment`
     '''
 
     #: str: name of the corresponding database table
@@ -140,7 +140,7 @@ class ExperimentReference(MainModel, DateMixIn):
         ----
         When no description is available from file, a default description is
         provided. The type of the workflow will be determined based on the
-        :py:attribute:`tmlib.Experiment.plate_acquisition_mode`.
+        :attribute:`tmlib.Experiment.plate_acquisition_mode`.
         '''
         if not os.path.exists(self._workflow_descriptor_file):
             logger.warn('no persistent workflow description found')
@@ -310,9 +310,9 @@ class Experiment(DirectoryModel):
 
         See also
         --------
-        :py:attr:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
-        :py:attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
-        :py:attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
+        :attr:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
+        :attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
+        :attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
         '''
         self.location = location
         self.zoom_factor = zoom_factor

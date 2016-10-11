@@ -107,7 +107,7 @@ def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
 
 def create_db_session_factory(engine):
     '''Creates a factory for creating a scoped database session that will use
-    :py:class:`tmlib.models.utils.Query` to query the database.
+    :class:`tmlib.models.utils.Query` to query the database.
 
     Parameters
     ----------
@@ -216,7 +216,7 @@ class Query(sqlalchemy.orm.query.Query):
 class SQLAlchemy_Session(object):
 
     '''A wrapper around an instance of
-    :py:class:`sqlalchemy.orm.session.Session` that manages persistence of
+    :class:`sqlalchemy.orm.session.Session` that manages persistence of
     database model objects.
     '''
 
@@ -252,12 +252,12 @@ class SQLAlchemy_Session(object):
         Parameters
         ----------
         model: type
-            an implementation of the :py:class:`tmlib.models.model`
+            an implementation of the :class:`tmlib.models.model`
             abstract base class
         **kwargs: dict
             keyword arguments for the instance that can be passed to the
             constructor of `model` or to
-            :py:method:`sqlalchemy.orm.query.query.filter_by`
+            :method:`sqlalchemy.orm.query.query.filter_by`
 
         Returns
         -------
@@ -345,12 +345,12 @@ class SQLAlchemy_Session(object):
         Parameters
         ----------
         model: type
-            an implementation of the :py:class:`tmlib.models.ExperimentModel`
-            or :py:class:`tmlib.models.MainModel` abstract base class
+            an implementation of the :class:`tmlib.models.ExperimentModel`
+            or :class:`tmlib.models.MainModel` abstract base class
         args: List[dict]
             keyword arguments for each instance that can be passed to the
             constructor of `model` or to
-            :py:method:`sqlalchemy.orm.query.Query.filter_by`
+            :method:`sqlalchemy.orm.query.Query.filter_by`
 
         Returns
         -------
@@ -385,9 +385,9 @@ class _Session(object):
 
     '''
     It provide access to all methods and attributes of
-    :py:class:`sqlalchemy.orm.session.Session` and additional
+    :class:`sqlalchemy.orm.session.Session` and additional
     custom methods implemented in
-    :py:class:`tmlib.models.utils.SQLAlchemy_Session`.
+    :class:`tmlib.models.utils.SQLAlchemy_Session`.
 
     Note
     ----
@@ -433,7 +433,7 @@ class _Session(object):
         self._engines[self._db_uri].dispose()
 
     def _after_bulk_delete_callback(self, delete_context):
-        '''Deletes locations defined by instances of :py:class`tmlib.Model`
+        '''Deletes locations defined by instances of :class`tmlib.Model`
         after they have been deleted en bulk.
 
         Parameters
@@ -465,7 +465,7 @@ class MainSession(_Session):
 
     See also
     --------
-    :py:class:`tmlib.models.MainModel`
+    :class:`tmlib.models.MainModel`
     '''
 
     def __init__(self, db_uri=None):
@@ -509,7 +509,7 @@ class ExperimentSession(_Session):
 
     See also
     --------
-    :py:class:`tmlib.models.ExperimentModel`
+    :class:`tmlib.models.ExperimentModel`
     '''
 
     def __init__(self, experiment_id, db_uri=None):

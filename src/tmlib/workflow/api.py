@@ -59,7 +59,7 @@ class BasicClusterRoutines(object):
 
 class _ApiMeta(ABCMeta):
 
-    '''Metaclass for :py:class:`tmlib.workflow.api.ClusterRoutines`.
+    '''Metaclass for :class:`tmlib.workflow.api.ClusterRoutines`.
 
     The metaclass inspects the method `collect_job_output` of derived classes
     to dynamically determine whether the given step has implemented the
@@ -87,14 +87,14 @@ class ClusterRoutines(BasicClusterRoutines):
     for large-scale image processing on a batch cluster.
 
     Each workflow step must implement this class and decorate it with
-    :py:function:`tmlib.workflow.register_api` to register it for use
+    :function:`tmlib.workflow.register_api` to register it for use
     within a worklow.
 
     Note
     ----
     Classes that don't implement the *collect* phase must decorate the
     implemented `collect_job_output` method with
-    :py:func:`tmlib.utils.notimplemented`.
+    :func:`tmlib.utils.notimplemented`.
     '''
 
     __metaclass__ = _ApiMeta
@@ -164,7 +164,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Raises
         ------
-        :py:exc:`IOError`
+        :exc:`IOError`
             when no job descriptor files are found
         '''
         batches = dict()
@@ -774,10 +774,10 @@ class ClusterRoutines(BasicClusterRoutines):
             name of the submitting user
         batch_args: tmlib.workflow.args.BatchArguments
             step-specific implementation of
-            :py:class:`tmlib.workflow.args.BatchArguments`
+            :class:`tmlib.workflow.args.BatchArguments`
         batch_args: tmlib.workflow.args.ExtraArguments, optional
             step-specific implementation of
-            :py:class:`tmlib.workflow.args.ExtraArguments`
+            :class:`tmlib.workflow.args.ExtraArguments`
         duration: str, optional
             computational time that should be allocated for the job
             in HH:MM:SS format (default: ``"12:00:00"``)

@@ -20,7 +20,7 @@ class Formats(object):
     #: Some file formats require additional metadata files, which are not
     #: directly supported by Bio-Formats.
     #: For more information, please refer to
-    #: :py:meth:`tmlib.metaconfig.default.configure_ome_metadata_from_additional_files`
+    #: :meth:`tmlib.metaconfig.default.configure_ome_metadata_from_additional_files`
     SUPPORT_FOR_ADDITIONAL_FILES = {'cellvoyager', 'visiview'}
 
     @property

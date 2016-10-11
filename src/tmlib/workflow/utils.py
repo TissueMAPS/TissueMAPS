@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def create_gc3pie_sql_store():
     '''Creates a `Store` instance for job persistence in the PostgreSQL table
-    :py:class:`tmlib.models.Tasks`.
+    :class:`tmlib.models.Tasks`.
 
     Returns
     -------
@@ -131,12 +131,12 @@ def format_stats_data(stats):
     Parameters
     ----------
     stats: gc3libs.core.Engine
-        as returned by :py:meth:`gc3libs.core.Engine.stats()`
+        as returned by :meth:`gc3libs.core.Engine.stats()`
 
     Returns
     -------
     dict
-        global statistics about the jobs in the :py:class:`Engine`
+        global statistics about the jobs in the :class:`Engine`
     '''
     data = {}
     tot = stats['total']

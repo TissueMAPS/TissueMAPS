@@ -263,7 +263,7 @@ class ImageAnalysisModule(object):
         Note
         ----
         This method must be called BEFORE calling
-        :py:method:`tmlib.jterator.module.Module.run`.
+        :method:`tmlib.jterator.module.Module.run`.
         '''
         for handle in self.handles['input']:
             if isinstance(handle, hdls.PipeHandle):
@@ -354,7 +354,7 @@ class ImageAnalysisModule(object):
         Note
         ----
         This method must be called AFTER calling
-        :py:method:`tmlib.jterator.module.Module.run`.
+        :method:`tmlib.jterator.module.Module.run`.
         '''
         for i, handle in enumerate(self.handles['output']):
             if isinstance(handle, hdls.Figure):
@@ -384,7 +384,7 @@ class ImageAnalysisModule(object):
     def run(self, engine=None):
         '''Executes a module, i.e. evaluate the corresponding function with
         the keyword arguments provided by
-        :py:class:`tmlib.workflow.jterator.handles`.
+        :class:`tmlib.workflow.jterator.handles`.
 
         Parameters
         ----------
@@ -393,9 +393,9 @@ class ImageAnalysisModule(object):
 
         Note
         ----
-        Call :py:method:`tmlib.jterator.module.Module.update_handles` before
+        Call :method:`tmlib.jterator.module.Module.update_handles` before
         calling this method and
-        :py:method:`tmlib.jterator.module.Module.update_store` afterwards.
+        :method:`tmlib.jterator.module.Module.update_store` afterwards.
         '''
         if self.language == 'Python':
             return self._exec_py_module()
