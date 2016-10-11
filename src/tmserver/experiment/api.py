@@ -420,15 +420,28 @@ def get_workflow_status(experiment_id):
     '/experiments/<experiment_id>/workflow/status/jobs', methods=['GET']
 )
 @jwt_required()
-@assert_query_params('step_name', 'batch')
+@assert_query_params('step_name', 'index')
 @decode_query_ids()
 def get_jobs_status(experiment_id):
     step_name = request.args.get('step_name')
-    batch = request.args.get('batch', type=int)
+    index = request.args.get('index', type=int)
     batch_size = request.args.get('batch_size', 50, type=int)
+    logger.info(index)
+
+    # If the index is negative don't send `batch_size` jobs.
+    # For example, if the index is -5 and the batch_size 50,
+    # send the first 45 jobs back.
+    if index < 0:
+        batch_size = batch_size + index
+        index = 0
+        if batch_size <= 0:
+            return jsonify({
+                'data': []
+            })
+
     logger.info(
-        'get status of jobs (batch #%d) of step "%s" for experiment %d',
-        batch, step_name, experiment_id
+        'get status of jobs starting from index #%d of step "%s" for experiment %d',
+        index, step_name, experiment_id
     )
     # FIXME: Test this code, client side only tested with dummy data (see below)
     # submission_id = gc3pie.get_id_of_last_submission(experiment_id, 'workflow')
@@ -441,7 +454,7 @@ def get_jobs_status(experiment_id):
     #         ).\
     #         order_by(tm.Task.id).\
     #         limit(batch_size).\
-    #         offset(batch*batch_size).\
+    #         offset(index).\
     #         all()
     #     status = [t.status for t in tasks]
 
@@ -450,7 +463,7 @@ def get_jobs_status(experiment_id):
     tasks = []
     for i in xrange(batch_size):
         task = {
-            'name': ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(6)),
+            'name': 'job %d' % (index + i),
             'state': 'RUNNING',
             'exitcode': random.choice([0, 1]),
             'time': '1h 30min',
