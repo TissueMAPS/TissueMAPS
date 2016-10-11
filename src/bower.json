@@ -15,7 +15,6 @@
     "test",
     "tests"
   ],
-  "directory": "libs/bower",
   "dependencies": {
     "jquery": "~2.1.3",
     "angular-ui-slider": "~0.1.0",
