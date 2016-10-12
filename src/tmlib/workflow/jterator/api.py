@@ -377,12 +377,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         all()
 
                     for f in image_files:
-                        logger.info('load image "%s"', f.name)
+                        logger.info('load image %d', f.id)
                         img = f.get()
                         if item['correct']:
-                            logger.info('correct image "%s"', f.name)
+                            logger.info('correct image %d', f.id)
                             img = img.correct(stats)
-                        logger.debug('align image "%s"', f.name)
+                        logger.debug('align image %d', f.id)
                         img = img.align()  # shifted and cropped!
                         images[f.tpoint].append(img.array)
 

@@ -5,6 +5,7 @@ from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
+from cached_property import cached_property
 
 from tmlib.utils import assert_type
 from tmlib.utils import notimplemented
@@ -42,24 +43,21 @@ class MicroscopeImageFile(FileModel, DateMixIn):
         parent acquisition to which the file belongs
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'microscope_image_files'
 
     __table_args__ = (UniqueConstraint('name', 'acquisition_id'), )
 
     __distribute_by_hash__ = 'id'
 
-    # Table columns
-    name = Column(String, index=True)
+    name = Column(String(50), index=True)
     omexml = Column(Text)
-    status = Column(String, index=True)
+    status = Column(String(20), index=True)
     acquisition_id = Column(
         Integer,
         ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
     acquisition = relationship(
         'Acquisition',
         backref=backref('microscope_image_files', cascade='all, delete-orphan')
@@ -81,9 +79,11 @@ class MicroscopeImageFile(FileModel, DateMixIn):
     @property
     def location(self):
         '''str: location of the file'''
-        return os.path.join(
-            self.acquisition.microscope_images_location, self.name
-        )
+        if self._location is None:
+            self._location = os.path.join(
+                self.acquisition.microscope_images_location, self.name
+            )
+        return self._location
 
     @notimplemented
     def get(self):
@@ -135,8 +135,8 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
     __distribute_by_hash__ = 'id'
 
     # Table columns
-    name = Column(String, index=True)
-    status = Column(String, index=True)
+    name = Column(String(50), index=True)
+    status = Column(String(20), index=True)
     acquisition_id = Column(
         Integer,
         ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -167,9 +167,11 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
     @property
     def location(self):
         '''str: location of the file'''
-        return os.path.join(
-            self.acquisition.microscope_metadata_location, self.name
-        )
+        if self._location is None:
+            self._location = os.path.join(
+                self.acquisition.microscope_metadata_location, self.name
+            )
+        return self._location
 
     @notimplemented
     def get(self):
@@ -233,8 +235,6 @@ class ChannelImageFile(FileModel, DateMixIn):
     __distribute_by_hash__ = 'id'
 
     # Table columns
-    _name = Column('name', String, index=True)
-    # name = Column(String, index=True)
     tpoint = Column(Integer, index=True)
     _n_planes = Column('n_planes', Integer, index=True)
     n_planes = Column(Integer, index=True)
@@ -269,7 +269,7 @@ class ChannelImageFile(FileModel, DateMixIn):
     )
 
     #: Format string for filenames
-    FILENAME_FORMAT = 'channel_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_c{c:0>3}.h5'
+    FILENAME_FORMAT = 'channel_image_file_{id}.h5'
 
     def __init__(self, tpoint, site_id, cycle_id, channel_id):
         '''
@@ -303,7 +303,6 @@ class ChannelImageFile(FileModel, DateMixIn):
         tmlib.image.ChannelImage
             image stored in the file
         '''
-        logger.debug('get data from channel image file: %s', self.name)
         metadata = ChannelImageMetadata(
             channel_id=self.channel_id,
             site_id=self.site_id,
@@ -349,7 +348,6 @@ class ChannelImageFile(FileModel, DateMixIn):
         When no `z` index is provided, the file will be truncated and all
         planes replaced.
         '''
-        logger.debug('put data to channel image file: %s', self.name)
         if z is not None:
             if image.dimensions[2] > 1:
                 raise ValueError('Image must be a 2D pixels plane.')
@@ -363,17 +361,6 @@ class ChannelImageFile(FileModel, DateMixIn):
             self.n_planes = image.dimensions[2]
 
     @hybrid_property
-    def name(self):
-        '''str: name of the file'''
-        if self._name is None:
-            self._name = self.FILENAME_FORMAT.format(
-                t=self.tpoint, w=self.site.well.name,
-                y=self.site.y, x=self.site.x,
-                c=self.channel.index
-            )
-        return self._name
-
-    @hybrid_property
     def n_planes(self):
         '''int: number of planes stored in the file'''
         return self._n_planes
@@ -385,7 +372,12 @@ class ChannelImageFile(FileModel, DateMixIn):
     @property
     def location(self):
         '''str: location of the file'''
-        return os.path.join(self.cycle.channel_images_location, self.name)
+        if self._location is None:
+            self._location = os.path.join(
+                self.cycle.channel_images_location,
+                self.FILENAME_FORMAT.format(id=self.id)
+            )
+        return self._location
 
     def __repr__(self):
         return '<%s(id=%r, tpoint=%r, well=%r, y=%r, x=%r, channel=%r)>' % (
@@ -394,131 +386,6 @@ class ChannelImageFile(FileModel, DateMixIn):
             self.site.x, self.channel.index
         )
 
-
-# @remove_location_upon_delete
-# @distribute_by_hash('id')
-# class ProbabilityImageFile(FileModel, DateMixIn):
-
-#     '''A *probability image file* holds a single 2D pixels plane that was extracted
-#     from a microscope image file.
-
-#     Attributes
-#     ----------
-#     name: str
-#         name of the file
-#     tpoint: int
-#         zero-based time point index in the time series
-#     site_id: int
-#         ID of the parent site
-#     site: tmlib.models.Site
-#         parent site to which the image file belongs
-#     mapobject_type_id: int
-#         ID of the parent mapobject type
-#     mapobject_type: tmlib.models.MapobjectType
-#         parent channel to which the image file belongs
-#     '''
-
-#     #: str: name of the corresponding database table
-#     __tablename__ = 'probability_image_files'
-
-#     __table_args__ = (
-#         UniqueConstraint('tpoint', 'site_id', 'mapobject_type_id'),
-#     )
-
-#     # Table columns
-#     name = Column(String, index=True)
-#     tpoint = Column(Integer, index=True)
-#     site_id = Column(Integer, ForeignKey('sites.id'))
-#     mapobject_type_id = Column(
-#         Integer,
-#         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE')
-#     )
-
-#     # Relationships to other tables
-#     site = relationship(
-#         'Site',
-#         backref=backref(
-#             'probability_image_files', cascade='all, delete-orphan'
-#         )
-#     )
-#     mapobject_type = relationship(
-#         'MapobjectType',
-#         backref=backref(
-#             'probability_image_files', cascade='all, delete-orphan'
-#         )
-#     )
-
-#     FILENAME_FORMAT = 'probability_image_t{t:0>3}_{w}_y{y:0>3}_x{x:0>3}_m{m:0>3}.tif'
-
-#     def __init__(self, tpoint, site_id, mapobject_type_id):
-#         '''
-#         Parameters
-#         ----------
-#         tpoint: int
-#             zero-based time point index in the time series
-#         site_id: int
-#             ID of the parent site
-#         site: tmlib.models.Site
-#             parent site to which the image file belongs
-#         mapobject_type_id: int
-#             ID of the parent mapobject type
-#         '''
-#         self.tpoint = tpoint
-#         self.site_id = site_id
-#         self.mapobject_type_id = mapobject_type_id
-#         self.name = self.FILENAME_FORMAT.format(
-#             t=self.tpoint, w=self.site.well, y=self.site.y, x=self.site.x,
-#             m=self.mapobject_type_id
-#         )
-
-#     def get(self):
-#         '''Get image from store.
-
-#         Returns
-#         -------
-#         tmlib.image.ProbabilityImage
-#             image stored in the file
-#         '''
-#         # TODO
-#         logger.debug('get data from probability image file: %s', self.name)
-#         with ImageReader(self.location) as f:
-#             pixels = f.read()
-#         # metadata = ProbabilityImageMetadata(
-#         #     name=self.name,
-#         #     tpoint=self.tpoint,
-#         #     zplane=self.zplane,
-#         #     mapobject_type_id=self.mapobject_type_id,
-#         #     site_id=self.site_id,
-#         # )
-#         metadata = None
-#         return ProbabilityImage(pixels, metadata)
-
-#     @assert_type(image='tmlib.image.ProbabilityImage')
-#     def put(self, image):
-#         '''Put image to store.
-
-#         Parameters
-#         ----------
-#         image: tmlib.image.ProbabilityImage
-#             data that should be stored in the image file
-#         '''
-#         logger.debug('put data to probability image file: %s', self.name)
-#         with ImageWriter(self.location) as f:
-#             f.write(image.array)
-
-#     @property
-#     def location(self):
-#         '''str: location of the file'''
-#         return os.path.join(self.mapobject_type.location, self.name)
-
-#     def __repr__(self):
-#         return (
-#             '<ProbabilityImageFile('
-#                 'id=%r, tpoint=%r, mapobject_type=%r, well=%r, y=%r, x=%r'
-#             ')>'
-#             % (self.id, self.tpoint, self.mapobject_type.name,
-#                self.site.well, self.site.y, self.site.x)
-#         )
 
 
 @remove_location_upon_delete
@@ -530,8 +397,6 @@ class IllumstatsFile(FileModel, DateMixIn):
 
     Attributes
     ----------
-    name: str
-        name of the file
     channel_id: int
         ID of the parent channel
     channel: tmlib.models.Channel
@@ -543,15 +408,13 @@ class IllumstatsFile(FileModel, DateMixIn):
     '''
 
     #: str: format string to build filename
-    FILENAME_FORMAT = 'illumstats_{channel_id}.h5'
+    FILENAME_FORMAT = 'illumstats_file_{id}.h5'
 
-    #: str: name of the corresponding database table
     __tablename__ = 'illumstats_files'
 
     __table_args__ = (UniqueConstraint('channel_id', 'cycle_id'), )
 
     # Table columns
-    name = Column(String, index=True)
     channel_id = Column(
         Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -581,18 +444,9 @@ class IllumstatsFile(FileModel, DateMixIn):
             ID of the parent channel
         cycle_id: int
             ID of the parent cycle
-
-        Raises
-        ------
-        ValueError
-            when `name` doesn't match pattern specified by
-            :attribute:`tmlib.files.ILLUMSTATS_FILENAME_FORMAT`
         '''
         self.channel_id = channel_id
         self.cycle_id = cycle_id
-        self.name = self.FILENAME_FORMAT.format(
-            channel_id=self.channel_id
-        )
 
     def get(self):
         '''Get illumination statistics images from store.
@@ -636,10 +490,15 @@ class IllumstatsFile(FileModel, DateMixIn):
     @property
     def location(self):
         '''str: location of the file'''
-        return os.path.join(self.cycle.illumstats_location, self.name)
+        if self._location is None:
+            self._location = os.path.join(
+                self.cycle.illumstats_location,
+                self.FILENAME_FORMAT.format(id=self.id)
+            )
+        return self._location
 
     def __repr__(self):
         return (
-            '<IllumstatsFile(id=%r, channel=%r)>'
+            '<IllumstatsFile(id=%r, channel_id=%r)>'
             % (self.id, self.channel_id)
         )

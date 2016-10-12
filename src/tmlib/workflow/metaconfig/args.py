@@ -25,11 +25,6 @@ class MetaconfigBatchArguments(BatchArguments):
         '''
     )
 
-    stitch_major_axis = Argument(
-        type=str, default='vertical', choices={'vertical', 'horizontal'},
-        help='longer axis of the stitched well overview mosaic image'
-    )
-
     n_vertical = Argument(
         type=int,
         help='''number of images along the vertical axis of the stitched well

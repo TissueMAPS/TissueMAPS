@@ -168,6 +168,7 @@ def build_console_scripts():
                 name=name, cls=name.capitalize()
             )
         )
+    cli_tools.append('tmaps = tmlib.workflow.tmaps:Tmaps.main')
     return cli_tools
 
 

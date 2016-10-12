@@ -5,18 +5,26 @@ import logging
 import tmlib.models as tm
 from tmlib import __version__
 from tmlib.utils import same_docstring_as
-from tmlib.workflow.tmaps import logo
 from tmlib.logging_utils import map_logging_verbosity
 from tmlib.logging_utils import configure_logging
 from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.utils import create_gc3pie_sql_store
+from tmlib.workflow.workflow import Workflow
 from tmlib.workflow.submission import SubmissionManager
-from tmlib.workflow.tmaps.api import WorkflowManager
 from tmlib.errors import NotSupportedError
 from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow import cli
 
 logger = logging.getLogger(__name__)
+
+
+LOGO = '''
+     _        _        _        _        _
+   _( )__   _( )__   _( )__   _( )__   _( )__
+ _|     _|_|     _|_|     _|_|     _|_|     _|        tmaps (tmlib %s)
+(_ T _ (_(_ M _ (_(_ A _ (_(_ P _ (_(_ S _ (_         TissueMAPS workflow manager
+  |_( )__| |_( )__| |_( )__| |_( )__| |_( )__|        https://github.com/TissueMAPS/TmLibrary
+''' % __version__
 
 
 class Tmaps(SubmissionManager):
@@ -25,39 +33,55 @@ class Tmaps(SubmissionManager):
     `TissueMAPS` workflows.
     '''
 
-    def __init__(self, api_instance):
+    def __init__(self, experiment_id, verbosity):
         '''
         Parameters
         ----------
-        api_instance: tmlib.workflow.tmaps.WorkflowManager
-            instance of API class to which processing is delegated
+        experiment_id: int
+            ID of the processed experiment
+        verbosity: int
+            logging verbosity level
         '''
-        self.api_instance = api_instance
-        super(Tmaps, self).__init__(self.api_instance.experiment_id, self.name)
+        self.experiment_id = experiment_id
+        self.verbosity = verbosity
+        super(Tmaps, self).__init__(self.experiment_id, 'workflow')
 
     @staticmethod
     def _print_logo():
-        print logo
+        print LOGO
 
-    @property
-    def name(self):
-        '''str: name of the step (command line program)'''
-        return 'workflow'
-        # return self.__class__.__name__.lower()
-
-    def submit(self, monitoring_depth, monitoring_interval):
+    def submit(self, monitoring_depth, monitoring_interval, force=False):
         '''Create workflow, submit it to the cluster and monitor its progress.
 
         Parameters
         ----------
         monitoring_depth: int
             number of child tasks that should be monitored
+        monitoring_interval: int
+            query status of jobs every `monitoring_interval` seconds
+        force: bool, opional
+            whether inactivated stages and steps should be submitted anyways
         '''
         self._print_logo()
         logger.info('submit workflow')
-        api = self.api_instance
         submission_id, user_name = self.register_submission('workflow')
-        workflow = api.create_workflow(submission_id, user_name)
+        with tm.utils.MainSession() as session:
+            experiment = session.query(tm.ExperimentReference).\
+                get(self.experiment_id)
+            workflow_description = experiment.workflow_description
+        if force:
+            for stage in workflow_description.stages:
+                stage.active = True
+                for step in stage.steps:
+                    step.active = True
+        workflow = Workflow(
+            experiment_id=self.experiment_id,
+            verbosity=self.verbosity,
+            submission_id=submission_id,
+            user_name=user_name,
+            description=workflow_description,
+            waiting_time=0,
+        )
         store = create_gc3pie_sql_store()
         store.save(workflow)
         self.update_submission(workflow)
@@ -92,7 +116,6 @@ class Tmaps(SubmissionManager):
             stage at which workflow should be submitted
         '''
         self._print_logo()
-        api = self.api_instance
         store = create_gc3pie_sql_store()
         task_id = self.get_task_id_of_last_submission()
         with tm.utils.MainSession() as session:
@@ -202,6 +225,7 @@ class Tmaps(SubmissionManager):
         )
         subparsers = parser.add_subparsers(dest='method', help='methods')
         subparsers.required = True
+
         submit_help = '''create a workflow, submit it to the cluster and
             monitor its status
         '''
@@ -215,6 +239,11 @@ class Tmaps(SubmissionManager):
             '--monitoring_interval', '-i', type=int, default=10,
             help='interval for monitoring interations (default: 10)'
         )
+        submit_parser.add_argument(
+            '--force', '-f', action='store_true',
+            help='also submit inactivated stages and steps'
+        )
+
         resubmit_help = '''resubmit a previously created workflow to the
             cluster and monitor its status
         '''
@@ -244,6 +273,5 @@ class Tmaps(SubmissionManager):
         gc3libs_logger = logging.getLogger('gc3.gc3libs')
         gc3libs_logger.setLevel(logging.CRITICAL)
 
-        api_instance = WorkflowManager(args.experiment_id, args.verbosity)
-        cli_instance = cls(api_instance)
+        cli_instance = cls(args.experiment_id, args.verbosity)
         cli_instance(args)

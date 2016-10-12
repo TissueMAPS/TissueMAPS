@@ -593,7 +593,7 @@ class MetadataHandler(object):
         return self.metadata
 
     def determine_grid_coordinates_from_layout(self, stitch_layout,
-            stitch_major_axis, stitch_dimensions=None):
+            stitch_dimensions):
         '''Determines the coordinates of each image acquisition site within the
         continuous acquisition grid (slide or well in a plate)
         based on a provided layout.
@@ -604,12 +604,9 @@ class MetadataHandler(object):
             layout of the acquisition grid
             (options: ``"horizontal"``, ``"zigzag_horizontal"``, ``"vertical"``,
              or ``"zigzag_vertical"``)
-        stitch_major_axis: str
-            longer axis of the acquisition grid
-            (options: ``"vertical"`` or ``"horizontal"``)
-        stitch_dimensions: Tuple[int], optional
+        stitch_dimensions: Tuple[int]
             dimensions of the acquisition grid, i.e. number of images
-            along each axis
+            along the vertical and horizontal axis of the acquired area
 
         Returns
         -------
@@ -618,7 +615,6 @@ class MetadataHandler(object):
 
         See also
         --------
-        :func:`illuminati.stitch.guess_stitch_dimensions`
         :func:`illuminati.stitch.calc_grid_coordinates_from_layout`
         '''
         md = self.metadata
@@ -638,11 +634,6 @@ class MetadataHandler(object):
             )
 
         n_sites = n_acquisitions_per_well[0]
-
-        if not any(stitch_dimensions):
-            stitch_dimensions = stitch.guess_stitch_dimensions(
-                n_sites, stitch_major_axis
-            )
 
         logger.debug('stitch layout: {0}; stitch dimensions: {1}'.format(
                      stitch_layout, stitch_dimensions))

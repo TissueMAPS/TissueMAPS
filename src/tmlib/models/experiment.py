@@ -281,7 +281,6 @@ class Experiment(DirectoryModel):
     vertical_site_displacement = Column(Integer)
     horizontal_site_displacement = Column(Integer)
     well_spacer_size = Column(Integer)
-    location = Column(String)
 
     def __init__(self, microscope_type, plate_format, plate_acquisition_mode,
             location, zoom_factor=2, well_spacer_size=500,
@@ -314,7 +313,7 @@ class Experiment(DirectoryModel):
         :attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
         :attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
         '''
-        self.location = location
+        self._location = location
         self.zoom_factor = zoom_factor
         self.well_spacer_size = well_spacer_size
         # TODO: we may be able to calculate this automatically from OMEXML
@@ -340,6 +339,11 @@ class Experiment(DirectoryModel):
                 % '", "'.join(SUPPORTED_PLATE_AQUISITION_MODES)
             )
         self.plate_acquisition_mode = plate_acquisition_mode
+
+    @property
+    def location(self):
+        '''str: location of the experiment'''
+        return self._location
 
     @autocreate_directory_property
     def plates_location(self):

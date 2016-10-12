@@ -258,7 +258,7 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
         return get_info(task, 0)
 
 
-def print_task_status(task_data, monitoring_depth):
+def print_task_status(task_data):
     '''Pretty prints the status of a submitted GC3Pie tasks to the console in
     table format.
 
@@ -266,10 +266,11 @@ def print_task_status(task_data, monitoring_depth):
     ----------
     task_data: dict
         information about each task and its subtasks
-    monitoring_depth: int
-        recursion depth for subtask querying
+
+    See also
+    --------
+    :func:`tmlib.workflow.utils.get_task_data_from_sql_store`
     '''
-    # TODO: this could be read from the "tasks" table directly
     def add_row_recursively(data, table, i):
         table.add_row([
             data['name'],
@@ -282,9 +283,8 @@ def print_task_status(task_data, monitoring_depth):
             data['cpu_time'] if data['cpu_time'] is not None else '',
             data['id']
         ])
-        if i < monitoring_depth:
-            for subtd in data.get('subtasks', list()):
-                add_row_recursively(subtd, table, i+1)
+        for subtd in data.get('subtasks', list()):
+            add_row_recursively(subtd, table, i+1)
     x = PrettyTable([
             'Name', 'Type', 'State', 'Done (%)', 'ExitCode',
             'Time (HH:MM:SS)', 'Memory (MB)', 'CPU Time (HH:MM:SS)', 'ID'

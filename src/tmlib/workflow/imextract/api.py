@@ -90,20 +90,7 @@ class ImageExtractor(ClusterRoutines):
                             for fmap in fmappings
                         ]
                     },
-                    'outputs': {
-                        'channel_image_files': [
-                            os.path.join(
-                                fmap.cycle.channel_images_location,
-                                tm.ChannelImageFile.FILENAME_FORMAT.format(
-                                    t=fmap.tpoint,
-                                    w=fmap.site.well.name,
-                                    y=fmap.site.y, x=fmap.site.x,
-                                    c=fmap.channel.index
-                                )
-                            )
-                            for fmap in fmappings
-                        ]
-                    },
+                    'outputs': {},
                     'image_file_mapping_ids': ids,
                     'mip': args.mip
                 })
@@ -183,7 +170,7 @@ class ImageExtractor(ClusterRoutines):
                         if batch['mip']:
                             logger.info('perform intensity projection')
                             img = img.project()
-                        logger.info('store image file: %s', image_file.name)
+                        logger.info('store image file: %d', image_file.id)
                         image_file.put(img)
 
     def delete_previous_job_output(self):
