@@ -1,7 +1,26 @@
+interface UIScrollingAdapter {
+     // - a boolean value indicating whether there are any pending load requests.
+    isLoading?: boolean;
+    // - a reference to the item currently in the topmost visible position.
+    topVisible?: boolean;
+    // - a reference to the DOM element currently in the topmost visible position.
+    topVisibleElement?: any;
+    // - a reference to the scope created for the item currently in the topmost visible position.
+    topVisibleScope?: any;
+    // - setting disabled to true disables scroller's scroll/resize events handlers. This can be useful if you have multiple scrollers within the same scrollViewport and you want to prevent some of them from responding to the events.
+    disabled?: boolean;
+
+    isBOF?: () => boolean;
+    isEOF?: () => boolean;
+    reload?: () => void;
+}
+
+
 class StepCtrl {
 
     currentStageIndex: number;
     currentStepIndex: number;
+    uiScrollingAdapter: UIScrollingAdapter = {};
 
     static $inject = ['workflow', 'workflowService', '$state', '$scope', '$uibModal', 'experiment', '$http'];
 
@@ -48,7 +67,14 @@ class StepCtrl {
                       '?index=' + index + '&step_name=' + stepName + '&batch_size=' + count;
             this._$http.get(url).then((resp) => {
                 var jobs = resp.data.data;
-                success(jobs);
+                // If there are no jobs, this means the step has been 
+                // resubmitted. In this case, we want to clear the list
+                // of jobs.
+                if (jobs === null) {
+                    this.uiScrollingAdapter.reload();
+                } else {
+                    success(jobs);
+                }
             });
         }
     };
