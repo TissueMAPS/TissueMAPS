@@ -2,10 +2,11 @@
 import os
 import logging
 from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
-from sqlalchemy import Column, DateTime, Integer
+from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy import func
 from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.dialects import registry
 from abc import ABCMeta
 from abc import abstractmethod
@@ -16,9 +17,9 @@ from tmlib import utils
 logger = logging.getLogger(__name__)
 
 
-class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
+class DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
 
-    '''Metaclass for abstract declarative base classes.'''
+    '''Metaclass for declarative base classes.'''
 
     def __init__(self, name, bases, d):
         distribute_by = (
@@ -41,11 +42,11 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
 
 
 _MainBase = declarative_base(
-    name='MainBase', metaclass=_DeclarativeABCMeta
+    name='MainBase', metaclass=DeclarativeABCMeta
 )
 
 _ExperimentBase = declarative_base(
-    name='ExperimentBase', metaclass=_DeclarativeABCMeta
+    name='ExperimentBase', metaclass=DeclarativeABCMeta
 )
 
 
@@ -107,13 +108,22 @@ class FileSystemModel(ExperimentModel):
 
     '''Abstract base class for model classes, which refer to data
     stored on disk outside of the database.
+
+    Devired classes must implement :meth:`location` as :func:`sqlalchemy.ext.hybrid.hyprid_property`
     '''
 
     __abstract__ = True
 
+    _location = Column('location', String(200))
+
     @abstractproperty
     def location(self):
+        '''str: location of the file/directory/container'''
         pass
+
+    @location.setter
+    def location(self, value):
+        self._location = value
 
 
 class DirectoryModel(FileSystemModel):

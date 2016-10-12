@@ -376,7 +376,7 @@ class PyramidBuilder(ClusterRoutines):
                 layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
 
                 file = session.query(tm.ChannelImageFile).get(fid)
-                logger.info('process image "%s"', file.name)
+                logger.info('process image %d', file.id)
                 tiles = layer.map_image_to_base_tiles(file)
                 image_store = dict()
                 image = file.get(z=layer.zplane)
@@ -389,7 +389,7 @@ class PyramidBuilder(ClusterRoutines):
                 if not image.is_uint8:
                     image = image.clip(clip_below, clip_above)
                     image = image.scale(clip_below, clip_above)
-                image_store[file.name] = image
+                image_store[file.id] = image
 
                 extra_file_map = layer.map_base_tile_to_images(file.site)
                 channel_layer_tiles = list()
@@ -402,7 +402,7 @@ class PyramidBuilder(ClusterRoutines):
                         level, row, column
                     )
                     tile = layer.extract_tile_from_image(
-                        image_store[file.name], t['y_offset'], t['x_offset']
+                        image_store[file.id], t['y_offset'], t['x_offset']
                     )
 
                     # Determine files that contain overlapping pixels,
@@ -415,7 +415,7 @@ class PyramidBuilder(ClusterRoutines):
                     for efid in extra_file_ids:
                         extra_file = session.query(tm.ChannelImageFile).\
                             get(efid)
-                        if extra_file.name not in image_store:
+                        if extra_file.id not in image_store:
                             image = extra_file.get(z=layer.zplane)
                             if batch['illumcorr']:
                                 logger.debug('correct image')
@@ -426,14 +426,14 @@ class PyramidBuilder(ClusterRoutines):
                             if not image.is_uint8:
                                 image = image.clip(clip_below, clip_above)
                                 image = image.scale(clip_below, clip_above)
-                            image_store[extra_file.name] = image
+                            image_store[extra_file.id] = image
 
                         extra_file_coordinate = np.array((
                             extra_file.site.y, extra_file.site.x
                         ))
 
                         condition = file_coordinate > extra_file_coordinate
-                        pixels = image_store[extra_file.name]
+                        pixels = image_store[extra_file.id]
                         if all(condition):
                             logger.debug('insert pixels from top left image')
                             y = file.site.image_size[0] - abs(t['y_offset'])

@@ -160,8 +160,8 @@ class SubmissionManager(object):
             logger.info('progress...')
             engine.progress()
 
-            status_data = get_task_data_from_sql_store(jobs)
-            print_task_status(status_data, monitoring_depth)
+            status_data = get_task_data_from_sql_store(jobs, monitoring_depth)
+            print_task_status(status_data)
 
             if break_next:
                 break

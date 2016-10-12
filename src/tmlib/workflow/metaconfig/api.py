@@ -78,14 +78,13 @@ class MetadataConfigurator(ClusterRoutines):
                             for f in acq.microscope_metadata_files
                         ]
                     },
-                    'outputs': dict(),
+                    'outputs': {},
                     'microscope_image_file_ids': [
                         f.id for f in acq.microscope_image_files
                     ],
                     'microscope_type': experiment.microscope_type,
                     'regex': args.regex,
                     'acquisition_id': acq.id,
-                    'stitch_major_axis': args.stitch_major_axis,
                     'n_vertical': args.n_vertical,
                     'n_horizontal': args.n_horizontal,
                     'stitch_layout': args.stitch_layout
@@ -220,7 +219,6 @@ class MetadataConfigurator(ClusterRoutines):
             )
             mdhandler.determine_grid_coordinates_from_layout(
                 stitch_layout=batch['stitch_layout'],
-                stitch_major_axis=batch['stitch_major_axis'],
                 stitch_dimensions=(batch['n_vertical'], batch['n_horizontal'])
             )
 

@@ -74,17 +74,7 @@ class IllumstatsCalculator(ClusterRoutines):
                                 f.location for f in files
                             ]
                         },
-                        'outputs': {
-                            'illumstats_files': [
-                                os.path.join(
-                                    cycle.illumstats_location,
-                                    tm.IllumstatsFile.
-                                    FILENAME_FORMAT.format(
-                                        channel_id=channel.id
-                                    )
-                                )
-                            ]
-                        },
+                        'outputs': {},
                         'channel_image_files_ids': [
                             f.id for f in files
                         ],
@@ -119,7 +109,7 @@ class IllumstatsCalculator(ClusterRoutines):
         for fid in file_ids:
             with tm.utils.ExperimentSession(self.experiment_id) as session:
                 file = session.query(tm.ChannelImageFile).get(fid)
-                logger.info('update statistics for image: %s', file.name)
+                logger.info('update statistics for image: %d', file.id)
                 for z in xrange(file.n_planes):
                     img = file.get(z=z)
                     stats.update(img)

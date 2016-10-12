@@ -81,7 +81,7 @@ class MetadataExtractor(ClusterRoutines):
                         'inputs': {
                             'microscope_image_files': file_map.values()
                         },
-                        'outputs': dict(),
+                        'outputs': {},
                         'microscope_image_file_ids': file_map.keys()
                     })
 
@@ -123,7 +123,7 @@ class MetadataExtractor(ClusterRoutines):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             for fid in batch['microscope_image_file_ids']:
                 img_file = session.query(tm.MicroscopeImageFile).get(fid)
-                logger.info('process image "%s"' % img_file.name)
+                logger.info('process image %d' % img_file.id)
                 # The "showinf" command line tool writes the extracted OMEXML
                 # to standard output.
                 command = [

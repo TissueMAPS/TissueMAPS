@@ -5,6 +5,8 @@ import time
 import logging
 import numpy as np
 import datetime
+import inspect
+import sqlalchemy.orm
 from natsort import natsorted
 from abc import ABCMeta
 from abc import abstractmethod
@@ -20,6 +22,7 @@ from tmlib.writers import JsonWriter
 from tmlib.errors import JobDescriptionError
 from tmlib.errors import WorkflowError
 from tmlib.errors import WorkflowDescriptionError
+from tmlib.errors import WorkflowTransitionError
 from tmlib.workflow import get_step_args
 from tmlib.workflow.jobs import InitJob
 from tmlib.workflow.jobs import RunJob
@@ -28,6 +31,29 @@ from tmlib.workflow.jobs import CollectJob
 from tmlib.workflow import WorkflowStep
 
 logger = logging.getLogger(__name__)
+
+
+def _is_sqla_mapper_class(obj):
+    try:
+        class_mapper(obj)
+        return True
+    except:
+        return False
+
+
+def _is_model_class(obj):
+    return (
+        _inspect.isclass(obj) and
+        _is_sqla_mapper_class(obj) and
+        tm.ExperimentModel in inspect.getmro(self.generated_outputs)
+    )
+
+
+def _is_model_class_attr(obj):
+    return (
+        _is_model_class(obj.__class__) and
+        isinstance(obj, sqlalchemy.orm.attributes.InstrumentedAttribute)
+    )
 
 
 class BasicClusterRoutines(object):
@@ -591,9 +617,58 @@ class ClusterRoutines(BasicClusterRoutines):
 
     @abstractmethod
     def delete_previous_job_output(self):
-        '''Deletes the output of a previous submission.
+        '''Deletes the output of a previous submission based on the value
+        provided by the step-specific implementation of
+        :attr:`tmlib.workflow.api.ClusterRoutines.generated_outputs`.
         '''
-        pass
+        with tmlib.utils.ExperimentSession(self.experiment_id) as session:
+            if isinstance(self.generated_outputs, dict):
+                for obj, ids in self.generated_outputs.iteritems():
+                    if _is_model_class(obj):
+                        logger.info('remove "%s" outputs', obj.__name__)
+                        session.query(obj).\
+                            filter(obj.id.in_(ids)).\
+                            delete()
+                    elif _is_model_class_attr(obj):
+                        logger.info(
+                            'remove "%s" outputs', obj.__class__.__name__
+                        )
+                        q = session.query(obj.__class__).\
+                            filter(obj.__class__.id.in_(ids))
+                        for instance in q:
+                            setattr(instance, obj.name, None)
+                    else:
+                        raise TypeError(
+                            'Key "%s" of mapping provided by the'
+                            '"generated_outputs" property must be either a '
+                            'class derived from tmlib.models.ExperimentModel '
+                            'or an attribute of a class derived from '
+                            'tmlib.models.ExperimentModel.'
+                        )
+            elif isinstance(self.generated_outputs, set):
+                for obj in self.generated_outputs:
+                    if _is_model_class(obj):
+                        logger.info('remove "%s" outputs', obj.__name__)
+                        session.drop_and_recreate(obj)
+                    elif _is_model_class_attr(obj):
+                        logger.info(
+                            'remove "%s" outputs', obj.__class__.__name__
+                        )
+                        for instance in session.query(obj.__class__):
+                            setattr(instance, obj.name, None)
+                    else:
+                        raise TypeError(
+                            'Elements of the set provided by the '
+                            '"generated_outputs" property must be either a '
+                            'class derived from tmlib.models.ExperimentModel '
+                            'or an attribute of a class derived from '
+                            'tmlib.models.ExperimentModel.'
+                        )
+            else:
+                raise TypeError(
+                    'The value provided by "generated_outpus" property '
+                    'must be either a dictionary or a set.'
+                )
 
     @abstractmethod
     def collect_job_output(self, batch):
@@ -618,12 +693,15 @@ class ClusterRoutines(BasicClusterRoutines):
         args: tmlib.args.Args
             an instance of an implemented subclass of the `Args` base class
 
-        There are two phases:
-            * *run* phase: collection of tasks that are processed in parallel
-            * *collect* phase: a single task that is processed once the
-              *run* phase is terminated successfully
+        There are three phases:
+            * *init*: a single task that asserts the presence of required inputs,
+              deletes outputs of previous runs and builds the tasks for the
+              subsequent phases
+            * *run*: collection of tasks that are processed in parallel
+            * *collect* (optional): a single task that may be required to
+              aggregate outputs of individual *run* tasks
 
-        Each batch (element of the *run* batches) must provide the
+        Each batch is a mapping that must provide the
         following key-value pairs:
             * "id": one-based job identifier number (*int*)
             * "inputs": absolute paths to input files required to run the job
