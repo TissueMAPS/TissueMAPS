@@ -2,3 +2,5 @@ git+https://github.com/cellprofiler/python-bioformats
 git+https://github.com/jmcgeheeiv/pyfakefs
 git+https://github.com/tissuemaps/gc3pie@master
 git+https://github.com/tissuemaps/sqlalchemy-utils@master
+git+https://tmcloner:b9efa88384a20967cc912a16b5c2095577812d47@github.com/tissuemaps/tmmodules
+git+https://tmcloner:b9efa88384a20967cc912a16b5c2095577812d47@github.com/tissuemaps/tmtoolbox
