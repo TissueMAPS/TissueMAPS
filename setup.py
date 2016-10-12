@@ -118,12 +118,10 @@ class install(_install):
 
     def run(self):
         pip_install_requirements()
-        build_config_file()
         _install.run(self)
 
     def do_egg_install(self):
         pip_install_requirements()
-        build_config_file()
         _install.do_egg_install(self)
 
 
@@ -131,12 +129,10 @@ class bdist_egg(_bdist_egg):
 
     def run(self):
         pip_install_requirements()
-        build_config_file()
         _bdist_egg.run(self)
 
     def do_egg_install(self):
         pip_install_requirements()
-        build_config_file()
         _install.do_egg_install(self)
 
 
@@ -171,15 +167,6 @@ def build_console_scripts():
         )
     cli_tools.append('tmaps = tmlib.workflow.tmaps:Tmaps.main')
     return cli_tools
-
-
-# def build_config_file():
-#     src_path = os.path.join(
-#         os.path.abspath(os.path.dirname(__file__)), 'src', 'tmlib')
-#     sys.path = [src_path] + sys.path
-#     import config
-#     cfg = config.LibraryConfig()
-#     cfg.write()
 
 
 def package_to_path(package):
