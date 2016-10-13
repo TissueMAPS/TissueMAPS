@@ -121,6 +121,8 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
        'Cython>=0.22.1',
+       # Some packages try to import Numpy in the setup.py.
+       # It may have to be installed first: pip install numpy
        'numpy>=1.10.1',
        'scipy>=0.16.0',
        'cached-property>=1.3.0',
@@ -142,6 +144,10 @@ setuptools.setup(
        'prettytable>=0.7.2',
        'pyparsing==2.0.3',
        'pypng==0.0.17',
+       # Python-bioformats installs javabridge, which requires Java
+       # Ubuntu:
+       # sudo apt-get -y install openjdk-7-jdk
+       # export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
        'python-bioformats>=1.0.9',
        'python-dateutil==2.4.2',
        'pytest>=2.9.1',
@@ -149,6 +155,7 @@ setuptools.setup(
        'PyYAML>=3.11',
        'scikit-image>=0.12.0',
        'scikit-learn>=0.18',
+       # Ubuntu: sudo apt-get -y install libgeos-dev
        'shapely>=1.5.15',
        'sqlalchemy>=0.9',
        'sqlalchemy-utils>=0.32.9',
@@ -157,7 +164,7 @@ setuptools.setup(
        'pyfakefs',
        'gc3pie',
        'sqlalchemy_utils',
-       # Ubuntu: sudo apt-get install libxml2-dev libxslt1-dev zlib1g-dev
+       # Ubuntu: sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        # 'rpy2>=2.7.4'
     ],
