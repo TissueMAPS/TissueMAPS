@@ -1,6 +1,6 @@
-##################
-TissueMAPS Modules
-##################
+################
+Jterator Modules
+################
 
 .. _introduction:
 
