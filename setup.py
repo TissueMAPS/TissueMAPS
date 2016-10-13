@@ -16,9 +16,6 @@ logger = logging.getLogger(__name__)
 # fallback to setuptools if distribute isn't found
 setup_tools_fallback = True
 
-# # don't include subdir named 'tests' in package_data
-# skip_tests = False
-
 # print some extra debugging info
 debug = True
 
@@ -126,19 +123,14 @@ setuptools.setup(
        'Cython>=0.22.1',
        'numpy>=1.10.1',
        'scipy>=0.16.0',
-       'apscheduler>=3.0.4',
        'cached-property>=1.3.0',
        'decorator==3.4.2',
-       'filemagic==1.6',
        'FITS-tools',
        'geoalchemy2>=0.3.0',
        'h5py>=2.5.0',
        'image-registration==0.2.1',
-       'ipython>=4.1.2',
-       'julia==0.1.1',
        'mahotas>=1.4.1',
        'matlab-wrapper==0.9.6',
-       'matplotlib>=1.5.0',
        'mock==1.0.1',
        'natsort==4.0.3',
        'nose>=1.3.7',
@@ -147,7 +139,6 @@ setuptools.setup(
        'passlib>=1.6.5',
        'paramiko==1.15.3',
        'parsedatetime==1.5',
-       'Pillow==2.9.0',
        'prettytable>=0.7.2',
        'pyparsing==2.0.3',
        'pypng==0.0.17',
@@ -156,21 +147,19 @@ setuptools.setup(
        'pytest>=2.9.1',
        'pytz==2015.4',
        'PyYAML>=3.11',
-       'rpy2>=2.7.4',
        'scikit-image>=0.12.0',
        'scikit-learn>=0.18',
        'shapely>=1.5.15',
-       'sphinxcontrib-autoprogram==0.1.2',
-       'sphinxcontrib-matlabdomain==0.2.7',
-       'sphinx-pyreverse==0.0.12',
        'sqlalchemy>=0.9',
        'sqlalchemy-utils>=0.32.9',
        'tables>=3.2.2',
        'ruamel.yaml>=0.10.11'
-       'lxml',
        'pyfakefs',
        'gc3pie',
        'sqlalchemy_utils',
+       # Ubuntu: sudo apt-get install libxml2-dev libxslt1-dev zlib1g-dev
+       'lxml',
+       # 'rpy2>=2.7.4'
     ],
     dependency_links=[
         'git+https://github.com/jmcgeheeiv/pyfakefs#egg=pyfakefs',
