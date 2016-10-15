@@ -118,7 +118,7 @@ setuptools.setup(
         'python-editor==0.4',
     ],
     dependency_links=[
-        'git+https://github.com/dtheodor/flask-sqlalchemy-session/master#egg=flask_sqlalchemy_session',
+        'git+https://github.com/dtheodor/flask-sqlalchemy-session/tarball/master#egg=flask_sqlalchemy_session-1.1',
     ]
 )
 
