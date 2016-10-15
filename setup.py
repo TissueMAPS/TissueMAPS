@@ -169,9 +169,11 @@ setuptools.setup(
        # 'rpy2>=2.7.4'
     ],
     dependency_links=[
-        'git+https://github.com/jmcgeheeiv/pyfakefs/master#egg=pyfakefs',
-        'git+https://github.com/tissuemaps/gc3pie/master#egg=gc3pie-2.5.dev',
-        'git+https://github.com/tissuemaps/sqlalchemy-utils/master#egg=sqlalchemy_utils'
+        # The dependency_links functionality has been deprecated, but it can
+        # be activaeted via --process-dependency-links
+        'https://github.com/jmcgeheeiv/pyfakefs/tarball/master#egg=pyfakefs',
+        'https://github.com/tissuemaps/gc3pie/tarball/master#egg=gc3pie-2.5.dev',
+        'https://github.com/tissuemaps/sqlalchemy-utils/tarball/master#egg=sqlalchemy_utils'
         # TODO: include TissueMAPS repos once they are public
-    ]
+    ],
 )
