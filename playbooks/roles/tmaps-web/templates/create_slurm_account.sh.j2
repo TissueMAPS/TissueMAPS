@@ -1,0 +1,11 @@
+#!/bin/bash
+USERNAME=$1
+
+SLURMUSER={{ deploy_user }}
+
+if [ "$USERNAME" == "" ]; then
+    echo "No username specified." && exit
+fi
+
+sudo sacctmgr add account $USERNAME
+sudo sacctmgr add user $SLURMUSER Account=$USERNAME

@@ -1,0 +1,22 @@
+---
+- template:
+    src=pgpass.j2
+    dest="{{ deploy_home_folder }}/.pgpass"
+    owner="{{ deploy_user }}"
+    mode="u=rw"
+
+- name: Place script for recreating the database
+  template: src=resetdb.sql dest="{{ deploy_home_folder }}/resetdb.sql"
+  tags:
+    - db
+
+- name: Create database tables
+  shell: tm_create_tables
+    #python manage.py db createtables
+  tags:
+    - db
+
+- name: Create or reset DB
+  shell: "psql -h {{ db_host }} {{ db_user }} {{ deploy_user }} < ~/resetdb.sql"
+  tags:
+    - db

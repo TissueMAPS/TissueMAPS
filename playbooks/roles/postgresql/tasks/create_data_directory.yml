@@ -1,0 +1,95 @@
+- name: stop postgresql
+  become: yes
+  service: name=postgresql state=stopped
+  tags:
+    - postgresql
+
+- name: Format attached volumne (create filesystem)
+  become: yes
+  shell: mkfs.ext4 /dev/vdb
+  tags:
+    - postgresql
+
+- name: Mount the created file system on mount point /data
+  become: yes
+  shell: mount /dev/vdb /data
+  tags:
+    - postgresql
+
+# Symlink /var/lib/postgresql -> /data/storage/postgresql/
+- name: Create data directory (source for symlink) at /var/lib
+  become: yes
+  file: path=/var/lib/postgresql
+    state=absent
+  tags:
+    - postgresql
+
+- name: Create data directory (target for symlink) on mounted filesystem
+  become: yes
+  file: path=/data/storage/postgresql/data
+    state=directory
+    owner=postgres
+  tags:
+    - postgresql
+
+- name: Symlink data directory to mounted filesystem
+  become: yes
+  file: src=/data/storage/postgresql/data
+    dest=/var/lib/postgresql
+    state=link
+    force=yes
+    owner=postgres
+    group=postgres
+  tags:
+    - postgresql
+
+- name: Create version-specific data subdirectory
+  become: yes
+  file: path=/var/lib/postgresql/{{postgres_version}}/main
+    state=directory
+    owner=postgres
+  tags:
+    - postgresql
+
+- name: Change ownership for data directory (give permissions to postgres user)
+  become: yes
+  file: path=/var/lib/postgresql/
+    recurse=yes
+    owner=postgres
+  tags:
+    - postgresql
+
+- name: Create log directory (source for symlink) at /var/log/postgresql
+  become: yes
+  file: path=/var/log/postgresql
+    state=absent
+  tags:
+    - postgresql
+
+- name: Create log directory (target for symlink) on mounted filesystem
+  become: yes
+  file: path=/data/storage/postgresql/logs
+    state=directory
+    owner=postgres
+  tags:
+    - postgresql
+
+- name: Symlink log directory to mounted filesystem
+  become: yes
+  file: src=/data/storage/postgresql/logs
+    dest=/var/log/postgresql
+    state=link
+    force=yes
+    owner=postgres
+    group=postgres
+  notify:
+    - restart postgresql
+  tags:
+    - postgresql
+
+- name: Initialize database cluster at created data directory
+  become: yes
+  become_user: postgres
+  shell: /usr/lib/postgresql/{{postgres_version}}/bin/initdb -D /var/lib/postgresql/{{postgres_version}}/main
+  tags:
+    - postgresql

@@ -1,0 +1,46 @@
+---
+- name: Update all packages to the latest version (Ubunutu)
+  become: yes
+  apt: upgrade=safe update_cache=yes cache_valid_time=3600
+  tags:
+    - spark
+    - tmtoolbox
+
+- name: Install Spark dependencies (Ubuntu)
+  become: yes
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - openjdk-7-jdk
+    - maven
+  tags:
+    - spark
+    - tmtoolbox
+
+- name: Download Spark source code
+  get_url:
+    url: "http://d3kbcqa49mib13.cloudfront.net/spark-{{ spark_version }}.tgz"
+    dest: "{{ deploy_home_folder }}"
+  tags:
+    - spark
+    - tmtoolbox
+
+- name: Unarchive downloaded Spark source code
+  unarchive:
+    src: "spark-{{ spark_version }}.tgz"
+    dest: spark
+  tags:
+    - spark
+    - tmtoolbox
+
+- name: Install Spark from source
+  shell: "./build/mvn -Pyarn -Phadoop-{{ hadoop_distribution }} -Dhadoop.version={{ hadoop_version }} -Phive -Phive-thriftserver -DskipTests clean package"
+  args:
+    chdir: "{{ deploy_home_folder }}/spark"
+  environment:
+    JAVA_HOME: "/usr/lib/jvm/java-1.7.0-openjdk-amd64"
+    MAVEN_OPTS: "-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
+  tags:
+    - spark
+    - tmtoolbox

@@ -1,0 +1,63 @@
+---
+- name: Install apt packages required by TissueMAPS Python packages
+  sudo: yes
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    # h5py:
+    - libhdf5-dev
+    - hdf5-tools
+    # lxml:
+    - libxml2-dev
+    - libxslt1-dev
+    # javabridge
+    - openjdk-7-jdk
+    # matplotlib:
+    - pyqt4-dev-tools
+    - libfreetype6-dev
+    # shapely:
+    - libgeos-dev
+  tags:
+    - python
+    - tissuemaps
+
+- name: Install jtlibrary package
+  pip: name='git+{{ tm_github_url }}/jtmodules' extra_args='--user'
+  tags:
+    - python
+    - tissuemaps
+    - git
+
+- name: Install jtmodules package
+  pip: name='git+{{ tm_github_url }}/jtmodules' extra_args='--user'
+  tags:
+    - python
+    - tissuemaps
+    - git
+
+- name: Install tmlibrary package
+  pip: name='git+{{ tm_github_url }}/tmlibrary' extra_args='--user'
+  tags:
+    - python
+    - tissuemaps
+    - git
+
+- name: Install tmtoolbox package
+  pip: name='git+{{ tm_github_url }}/tmtoolbox' extra_args='--user'
+  tags:
+    - python
+    - tissuemaps
+    - git
+
+- name: Create directory for TissueMAPS related files
+  file: path={{ deploy_home_folder }}/.tmaps state=directory
+    - tissuemaps
+    - config
+
+- name: Create TissuMAPS library part of the configuration
+  shell: tm_create_config
+    - tissuemaps
+    - python
+    - config
+

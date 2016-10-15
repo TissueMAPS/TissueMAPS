@@ -1,0 +1,86 @@
+- name: Make postgres listen on all network interfaces
+  become: yes
+  lineinfile:
+    dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+    state=present
+    regexp="^listen_addresses"
+    line="listen_addresses = '*'"
+  tags:
+    - postgresql
+
+# https://wiki.postgresql.org/wiki/Tuning_Your_PostgreSQL_Server
+- name: Increase number of connections
+  become: yes
+  lineinfile:
+    dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+    state=present
+    regexp="^max_connections"
+    line="max_connections = {{ max_connections }}"
+  tags:
+    - postgresql
+
+- name: Increase shared buffers
+  become: yes
+  lineinfile:
+    dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+    state=present
+    regexp="^shared_buffers"
+    line="shared_buffers = {{ shared_buffers}}"
+  tags:
+    - postgresql
+
+- name: Increase effective chache size
+  become: yes
+  lineinfile:
+    dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+    state=present
+    regexp="^effective_cache_size"
+    line="effective_cache_size = {{ effective_cache_size }}"
+  tags:
+    - postgresql
+
+- name: Increase number of maximal worker processes
+  become: yes
+  lineinfile:
+    dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+    state=present
+    regexp="^max_worker_processes"
+    line="max_worker_processes = {{ max_worker_processes }}"
+  tags:
+    - postgresql
+
+- name: Increase number of maximal parallel worker processes
+  become: yes
+  lineinfile:
+    dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+    state=present
+    regexp="^max_parallel_workers_per_gather"
+    line="max_parallel_workers_per_gather = {{ max_parallel_workers_per_gather }}"
+  tags:
+    - postgresql
+
+- name: Fix PostgreSQL pg_hba conf
+  become: yes
+  lineinfile:
+    dest="/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    state=present
+    regexp="^host    all             all             0.0.0.0/0               md5"
+    line="host    all             all             0.0.0.0/0               md5"
+  notify:
+    - restart postgresql
+  tags:
+    - postgresql
+
+- name: Increase kernel limits for semaphores
+  become: yes
+  shell: sysctl -w kernel.sem="250 60000 32 250"
+  tags:
+    - postgresql
+
+- name: Increaese limit for number of open files
+  become: yes
+  lineinfile:
+    dest="/etc/security/limits.conf"
+    line="postgres soft nofile 10000"
+  tags:
+    - postgresql

@@ -1,0 +1,15 @@
+---
+- name: Install tmserver package
+  pip: name='git+{{ tm_github_url }}/tmserver' extra_args='--user'
+  tags:
+    - python
+    - tissuemaps
+    - git
+    - web
+
+- name: Create TissuMAPS server part of the configuration
+  shell: tm_create_config --server
+  tags:
+    - tissuemaps
+    - python
+    - web

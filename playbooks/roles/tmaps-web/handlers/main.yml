@@ -1,0 +1,16 @@
+---
+- name: restart redis
+  become: yes
+  service: name=redis-server state=restarted
+
+- name: restart postgresql
+  become: yes
+  service: name=postgresql state=restarted
+
+- name: restart uwsgi
+  become: yes
+  service: name=uwsgi state=restarted
+
+- name: restart nginx
+  become: yes
+  service: name=nginx state=restarted

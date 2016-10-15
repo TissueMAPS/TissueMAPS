@@ -1,0 +1,53 @@
+# See https://github.com/jcupitt/libvips/blob/master/python/README.md#install
+
+# - name: Install VIPS dependencies via apt
+#   sudo: yes
+#   apt:
+#     name: "{{ item }}"
+#     state: installed
+#   with_items:
+#     - build-essential
+#     - libglib2.0-dev
+#     - pkg-config
+#     - libxml2-dev
+#     - python-gi-dev
+#     - libgirepository1.0-dev
+#     - gobject-introspection
+#     - python-gobject
+#     - libtiff5-dev
+#     - libjpeg-turbo8-dev
+#     - libgsf-1-dev
+#     - swig
+#     - gtk-doc-tools
+#     - openslide-tools
+#     - python-openslide
+#     - libopenslide-dev
+#     - openexr
+
+# - name: Get the latest VIPS code
+#   git: repo="https://github.com/jcupitt/libvips.git"
+#        dest="{{ deploy_home_folder }}/libvips"
+#        accept_hostkey=yes
+#        update=yes
+#        clone=yes
+#        force=yes
+#   when: libvips_installed.stat.exists == False
+#   tags:
+#     - vips
+
+# - name: Configure and compile VIPS
+#   shell: |
+#     ./bootstrap.sh
+#     CFLAGS="-g -Wall" CXXFLAGS="-g -Wall" ./configure --prefix={{ deploy_home_folder }}/libvips/build --enable-debug
+#     make && make install
+#   args:
+#     chdir: "{{ deploy_home_folder }}/libvips"
+#   when: libvips_installed.stat.exists == False
+#   tags:
+#     - vips
+
+# - name: Copy Vips.py into gi introspection overrides
+#   sudo: yes
+#   shell: 'cp {{ deploy_home_folder }}/libvips/lib/python2.7/site-packages/gi/overrides/Vips.py  /usr/lib/python2.7/dist-packages/gi/overrides'
+#   tags:
+#     - vips

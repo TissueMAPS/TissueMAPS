@@ -1,0 +1,7 @@
+---
+# (Optional) Minor adjustments to ScienceCLoud images
+
+- name: Fix issues with ScienceCloud images
+  hosts: all
+  roles:
+    - sciencecloud

@@ -1,0 +1,11 @@
+[uwsgi]
+module = tmserver.wsgi:app
+http-socket = :8080
+logto = $(HOME)/.tmaps/uwsgi.log
+socket = $(HOME)/.tmaps/uwsgi.sock
+chmod-socket = 666
+vacuum = true
+master = true
+processes = 16
+gevent = 100
+die-on-term = true

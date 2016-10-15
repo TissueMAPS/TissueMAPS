@@ -1,0 +1,2 @@
+---
+deploy_home_folder: "{{ ansible_env.HOME }}"

@@ -1,0 +1,47 @@
+---
+- name: Place env for tissuemaps (include this in bash_profile)
+  template: src=bash_profile.j2 dest="{{ deploy_home_folder }}/.bash_profile"
+
+- file: path="{{ deploy_home_folder }}/.bash_login" state=touch
+
+- lineinfile: dest="{{ deploy_home_folder }}/.bash_login" state=present regexp='source {{ deploy_home_folder }}/.bash_profile' line='source {{ deploy_home_folder }}/.bash_profile'
+
+- name: Update apt packages
+  become: yes
+  tags:
+    - update
+  apt: upgrade=safe update_cache=yes cache_valid_time=3600
+
+- name: Install generally required apt packages
+  become: yes
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - vim
+    - git
+    - csh
+    - parallel
+    - zlib1g-dev
+    - cifs-utils
+    - libopenblas-dev
+
+- include: ssh.yml
+
+- include: python.yml
+
+- include: r.yml
+
+- include: opencv.yml
+
+- include: bioformats_cli_tools.yml
+
+- include: postgresql_client.yaml
+
+- include: tissuemaps.yml
+
+- include: gc3pie.yml
+
+- include: spark.yml
+
+- include: yarn_client.yml

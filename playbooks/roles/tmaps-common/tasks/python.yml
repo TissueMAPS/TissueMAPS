@@ -1,0 +1,36 @@
+---
+- name: Add apt-get repository for latest version of Python2.7
+  become: yes
+  apt_repository: repo="ppa:fkrull/deadsnakes-python2.7"
+  tags:
+    - python
+
+- name: Update apt-get packages
+  become: yes
+  apt: upgrade=safe update_cache=yes cache_valid_time=3600
+  tags:
+    - update
+
+- name: Install latest version of Python2.7
+  become: yes
+  apt: name="python.2.7"
+
+- name: Install apt packages required for Python
+  become: yes
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - python-dev
+    - python-pip
+    - python-setuptools
+    - build-essential
+
+- name: Upgrade pip
+  pip: name=pip extra_args='--upgrade' editable=false
+  become: yes
+
+- name: Upgrade setuptools
+  pip: name=setuptools extra_args='--upgrade' editable=false
+  become: yes
+

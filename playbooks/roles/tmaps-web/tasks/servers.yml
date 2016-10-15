@@ -1,0 +1,112 @@
+---
+- name: Update all packages to the latest version
+  become: yes
+  apt: upgrade=safe update_cache=yes cache_valid_time=3600
+  tags:
+    - nginx
+    - web
+
+- name: Install NGINX
+  become: yes
+  apt: name=nginx state=installed
+  tags:
+    - web
+    - nginx
+
+# - name: Install uWSGI
+#   become: yes
+#   apt:
+#     name: "{{ item }}"
+#     state: installed
+#   with_items:
+#     - uwsgi
+#     - uwsgi-plugin-python
+#   tags:
+#     - web
+#     - uwsgi
+
+- name: Install latest uWSGI packages
+  become: yes
+  pip: name=uwswi editable=false
+  tags:
+    - uwsgi
+    - web
+
+- name: Place uwsgi.ini
+  template: src=uwsgi.ini.j2 dest="{{ deploy_home_folder }}/.tmaps/uwsgi.ini"
+  tags:
+    - web
+    - uwsgi
+
+- name: Place flask uwsgi wrapper
+  template: src=uwsgi.sh.j2 dest="{{ deploy_home_folder }}/.tmaps/uwsgi.sh"
+  tags:
+    - web
+    - uwsgi
+
+- name: Create an upstart scripts
+  sudo: yes
+  template: src=uwsgi.conf.j2 dest="/etc/init/uwsgi.conf"
+  notify:
+    - restart uwsgi
+  tags:
+    - web
+    - uwsgi
+
+- name: Create nginx site
+  sudo: yes
+  template: src=nginx_site.j2 dest="/etc/nginx/sites-available/tissuemaps"
+  notify:
+    - restart nginx
+  tags:
+    - nginx
+    - web
+
+- name: Put nginx conf.d
+  sudo: yes
+  template: src=nginx_conf.j2 dest="/etc/nginx/conf.d/tmaps.conf"
+  notify:
+    - restart nginx
+  tags:
+    - nginx
+    - web
+
+# Check syntax of the nginx file:
+# $ sudo nginx -t
+
+- name: Enable nginx site
+  sudo: yes
+  shell: |
+    if [ ! -s /etc/nginx/sites-enabled/tissuemaps ]; then
+      ln -s /etc/nginx/sites-available/tissuemaps /etc/nginx/sites-enabled/tissuemaps
+    fi
+    if [ -s /etc/nginx/sites-enabled/default ]; then
+      rm /etc/nginx/sites-enabled/default
+    fi
+  notify:
+    - restart nginx
+    - restart tmapsuwsgi
+  tags:
+    - nginx
+    - web
+
+- name: Add redis repo
+  become: yes
+  apt_repository: repo='ppa:chris-lea/redis-server' validate_certs=no
+  tags:
+    - redis
+    - web
+
+- name: Update all packages to the latest version
+  become: yes
+  apt: upgrade=safe update_cache=yes cache_valid_time=3600
+  tags:
+    - redis
+    - web
+
+- name: Install redis server
+  become: true
+  apt: name=redis-server state=installed
+  tags:
+    - redis
+    - web

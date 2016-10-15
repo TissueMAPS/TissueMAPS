@@ -1,0 +1,10 @@
+# Install SSL certificate
+# 
+---
+- name: Install Debian package for creating certificates
+  become: yes
+  apt: pkg=ssl-cert state=present
+
+- name: Create self-signed certificate in default location
+  become: yes
+  command: make-ssl-cert generate-default-snakeoil

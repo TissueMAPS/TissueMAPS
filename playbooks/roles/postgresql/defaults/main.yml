@@ -1,0 +1,18 @@
+---
+create_db_with_ansible: yes
+
+postgresql_version: 9.6
+postgis_version: 2.2
+
+db_user: postgres
+db_port: 5432
+db_host: localhost
+db_name: tissuemaps
+
+# These are the PostgreSQL default values in postgresql.conf
+# Override them according to node flavor used for server
+shared_buffers: 128MB               # 20-40% of total memory
+effective_cache_size: 4GB           # 50-75% of total memory
+max_connections: 100                # at least: number of nodes x pool size
+max_worker_processes: 4
+max_parallel_workers_per_gather: 0  # 0 turns off parallization of select queries

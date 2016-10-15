@@ -1,0 +1,24 @@
+server {
+    listen 80;
+
+    {% if public_host_name is defined %}
+    server_name {{ public_host_name }}
+    {% endif %}
+
+    access_log /var/log/nginx/tissuemaps-access.log;
+    error_log /var/log/nginx/tissuemaps-error.log;
+
+    # all non-api requests are file requests and should be served
+    # from the built client dir
+    root {{ deploy_home_folder }}/tmui/src/build;
+    location / {
+        try_files $uri $uri/ @proxy;
+    }
+
+    # all other request (e.g. with /api or /auth prefix) to uwsgi
+    # listening on the unix socket nginx-comm.sock
+    location @proxy {
+        include uwsgi_params;
+        uwsgi_pass unix:{{ deploy_home_folder }}/.tmaps/uwsgi.sock;
+    }
+}

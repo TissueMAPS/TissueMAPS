@@ -1,0 +1,16 @@
+---
+- include: install.yml
+
+- include: configure.yml
+
+- include: create_data_directory.yml
+
+- include: create_database.yml
+  when: create_db_with_ansible
+
+- name: restart postgresql
+  become: yes
+  service: name=postgresql state=restarted
+
+- name: Set password for postgres user
+  shell: echo "ALTER USER {{ db_user }} WITH PASSWORD '{{ db_password }}'" | sudo -u {{ db_user }} psql

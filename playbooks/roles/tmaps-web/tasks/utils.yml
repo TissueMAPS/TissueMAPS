@@ -1,0 +1,5 @@
+---
+- name: Place script for creation of slurm users
+  template:
+    src=create_slurm_account.sh.j2
+    dest="{{ deploy_home_folder }}/create_slurm_account.sh"

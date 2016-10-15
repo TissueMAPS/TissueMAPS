@@ -1,0 +1,43 @@
+# Installation of non-Python dependencies (on OSX installed via homebrew):
+#
+#  - bftools
+---
+
+- stat: path="{{ deploy_home_folder }}/bftools.zip"
+  register: bftools_zip
+  tags:
+    - bioformats
+    - java
+    - tmlibrary
+
+- name: Install apt packages for Bioformts commond line tools
+  sudo: yes
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - unzip
+  tags:
+    - bioformats
+    - java
+    - tmlibrary
+
+- name: Get bftools
+  shell: |
+    curl -s -o bftools.zip https://downloads.openmicroscopy.org/bio-formats/{{ bf_version }}/artifacts/bftools.zip
+  when: bftools_zip.stat.exists == False
+  vars:
+    bf_version: 5.2.3
+  tags:
+    - bioformats
+    - java
+    - tmlibrary
+
+- name: Unpack bftools
+  shell: rm -rf bftools && unzip bftools.zip
+  args:
+    chdir: "{{ deploy_home_folder }}"
+  tags:
+    - bioformats
+    - java
+    - tmlibrary

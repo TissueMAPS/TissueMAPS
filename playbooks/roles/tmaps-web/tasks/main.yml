@@ -1,0 +1,14 @@
+---
+- include: ssl_cert.yml
+
+- include: servers.yml
+- include: stop_servers.yml
+
+- include: tissuemaps_server.yml
+- include: tissuemaps_client.yml
+
+- include: postgres_database.yml
+
+- include: config.yml
+
+- include: utils.yml

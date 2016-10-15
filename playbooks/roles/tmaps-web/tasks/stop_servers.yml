@@ -1,0 +1,14 @@
+---
+- name: Stop NGINX web server
+  sudo: yes
+  service: name=nginx state=stopped
+  ignore_errors: True
+  tags:
+    - web
+
+- name: Stop uWSGI web server
+  sudo: yes
+  service: name=tmaps-uwsgi state=stopped
+  ignore_errors: True
+  tags:
+    - web

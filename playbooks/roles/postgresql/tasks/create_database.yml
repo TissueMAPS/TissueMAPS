@@ -1,0 +1,42 @@
+# - name: Init Postgres database cluster
+#   become: yes
+#   become_user: postgres
+#   service: name=postgresql state=started enabled=yes
+
+- name: Ensure the PostgreSQL service is running
+  become: yes
+  service: name=postgresql state=started enabled=yes
+  tags:
+    - postgresql
+
+- name: Create database
+  become: yes
+  become_user: postgres
+  vars:
+      ansible_ssh_pipelining: true
+  postgresql_db: name={{ db_name }}
+  tags:
+    - db
+
+- name: Init postgis extension
+  become: yes
+  become_user: postgres
+  vars:
+      ansible_ssh_pipelining: true
+  shell: "echo 'CREATE EXTENSION postgis;' | psql tissuemaps "
+  args:
+    executable: /bin/bash
+  tags:
+    - db
+
+# - name: Increase db connections limit
+#   become: yes
+#   become_user: postgres
+#   vars:
+#       ansible_ssh_pipelining: true
+#   shell: "echo 'ALTER DATABASE tissuemaps WITH CONNECTION LIMIT -1;' | psql tissuemaps "
+#   args:
+#     executable: /bin/bash
+#   tags:
+#     - tmapsdb
+#     - db
