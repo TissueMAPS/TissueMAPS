@@ -170,7 +170,7 @@ setuptools.setup(
     ],
     dependency_links=[
         'git+https://github.com/jmcgeheeiv/pyfakefs/master#egg=pyfakefs',
-        'git+https://github.com/tissuemaps/gc3pie/master#egg=gc3pie-2.5.dev',
+        'git+https://github.com/uzh/gc3pie/master#egg=gc3pie-2.5.dev',
         'git+https://github.com/tissuemaps/sqlalchemy-utils/master#egg=sqlalchemy_utils'
         # TODO: include TissueMAPS repos once they are public
     ]
