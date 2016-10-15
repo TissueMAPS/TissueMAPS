@@ -151,7 +151,7 @@ setuptools.setup(
        'python-bioformats>=1.0.9',
        'python-dateutil==2.4.2',
        'pytest>=2.9.1',
-       'pytz==2015.4',
+       'pytz>=2015.7',
        'PyYAML>=3.11',
        'scikit-image>=0.12.0',
        'scikit-learn>=0.18',
@@ -162,16 +162,16 @@ setuptools.setup(
        'tables>=3.2.2',
        'ruamel.yaml>=0.10.11'
        'pyfakefs',
-       'gc3pie',
+       'gc3pie==2.5.dev',
        'sqlalchemy_utils',
        # Ubuntu: sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        # 'rpy2>=2.7.4'
     ],
     dependency_links=[
-        'git+https://github.com/jmcgeheeiv/pyfakefs#egg=pyfakefs',
-        'git+https://github.com/tissuemaps/gc3pie#egg=gc3libs',
-        'git+https://github.com/tissuemaps/sqlalchemy-utils#egg=sqlalchemy_utils'
+        'git+https://github.com/jmcgeheeiv/pyfakefs/master#egg=pyfakefs',
+        'git+https://github.com/tissuemaps/gc3pie/master#egg=gc3pie-2.5.dev',
+        'git+https://github.com/tissuemaps/sqlalchemy-utils/master#egg=sqlalchemy_utils'
         # TODO: include TissueMAPS repos once they are public
     ]
 )
