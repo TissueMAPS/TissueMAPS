@@ -1,0 +1,24 @@
+[submodule "src/tmlibrary"]
+	path = src/tmlibrary
+	url = https://tmcloner:c10ad73261ca71885cf536864cb483e305c31e1b@github.com/TissueMAPS/tmlibrary
+	branch = master
+[submodule "src/tmserver"]
+	path = src/tmserver
+	url = https://tmcloner:c10ad73261ca71885cf536864cb483e305c31e1b@github.com/TissueMAPS/tmserver
+	branch = master
+[submodule "src/tmtoolbox"]
+	path = src/tmtoolbox
+	url = https://tmcloner:c10ad73261ca71885cf536864cb483e305c31e1b@github.com/TissueMAPS/tmtoolbox
+	branch = master
+[submodule "src/tmclient"]
+	path = src/tmclient
+	url = https://tmcloner:c10ad73261ca71885cf536864cb483e305c31e1b@github.com/TissueMAPS/tmclient
+	branch = master
+[submodule "src/jtlibrary"]
+	path = src/jtlibrary
+	url = https://tmcloner:c10ad73261ca71885cf536864cb483e305c31e1b@github.com/TissueMAPS/jtlibrary
+	branch = master
+[submodule "src/jtmodules"]
+	path = src/jtmodules
+	url = https://tmcloner:c10ad73261ca71885cf536864cb483e305c31e1b@github.com/TissueMAPS/jtmodules
+	branch = master

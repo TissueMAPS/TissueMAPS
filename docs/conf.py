@@ -30,15 +30,16 @@
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    # 'sphinx.ext.autodoc',
-    # 'sphinx.ext.intersphinx',
+    'sphinx.ext.autodoc',
     'sphinx.ext.ifconfig',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    # 'sphinxcontrib.autoprogram',
+    'sphinxcontrib.autoprogram',
     'sphinx.ext.inheritance_diagram',
-    'sphinxcontrib.sqlalchemyviz'
+    'sphinxcontrib.sqlalchemyviz',
+    'numpydoc',
+    'sphinx.ext.intersphinx',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -280,7 +281,7 @@ latex_documents = [
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
 #
-latex_logo = '_static/logo.png'
+latex_logo = '_static/tmaps_logo.png'
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.
@@ -325,7 +326,8 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'TissueMAPS', u'TissueMAPS Documentation',
-     author, 'TissueMAPS', 'One line description of project.',
+     author, 'TissueMAPS',
+     'Interactive visualization and analysis of large microscopy images.',
      'Miscellaneous'),
 ]
 
