@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+from tmlib.logging_utils import configure_logging
 
 
 def create_lib_config():
@@ -27,6 +28,8 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
+
+    configure_logging()
 
     create_lib_config()
 

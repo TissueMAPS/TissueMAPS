@@ -3,6 +3,7 @@ import os
 import argparse
 
 import tmlib.models as tm
+from tmlib.logging_utils import configure_logging
 from tmlib import cfg
 
 
@@ -29,5 +30,7 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
+
+    configure_logging()
 
     create_tables(args.db_uri)
