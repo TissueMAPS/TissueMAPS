@@ -1,8 +1,6 @@
 ---
 - name: Clone TmServer and TmUI repositories and install packages
-  hosts:
-    - tissuemaps_web
-  remote_user: "{{ ansible_ssh_user }}"
+  hosts: tissuemaps_web
   roles:
     - tmaps-web
   tags:

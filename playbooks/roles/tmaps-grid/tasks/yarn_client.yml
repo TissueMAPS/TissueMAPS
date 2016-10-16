@@ -1,0 +1,6 @@
+---
+- name: Download Hadoop configuration files from YARN cluster
+  synchronize:
+    mode: pull
+    src: "rsync://{{ yarn_master_ssh_host }}/etc/hadoop/conf"
+    dest: /etc/hadoop/conf

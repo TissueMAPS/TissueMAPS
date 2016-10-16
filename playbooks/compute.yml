@@ -1,10 +1,8 @@
 ---
 # Cooks images used to launch VMs of frontend and compute nodes.
 - name: Install TmToolbox, TmLibrary, JtModules, and JtLibrary packages
-  hosts:
-    - tissuemaps_compute
+  hosts: tissuemaps_compute
   roles:
-    - tmaps-common
     - tmaps-compute
   tags:
     - tissuemaps

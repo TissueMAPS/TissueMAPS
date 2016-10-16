@@ -1,0 +1,10 @@
+---
+- include: compute.yml
+
+- include: web.yml
+
+- include: database.yml
+
+- include: postconfig.yml
+  vars:
+    yarn_cluster_exists: no
