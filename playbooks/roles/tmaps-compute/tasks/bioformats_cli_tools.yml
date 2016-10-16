@@ -1,0 +1,30 @@
+---
+- stat: path="{{ deploy_home_folder }}/bftools.zip"
+  register: bftools_zip
+  tags:
+    - bioformats
+    - java
+
+- name: Install apt packages for Bioformts commond line tools
+  become: yes
+  apt: name=unzip state=installed
+  tags:
+    - bioformats
+    - java
+
+- name: Get bftools
+  get_url:
+    url: "https://downloads.openmicroscopy.org/bio-formats/{{ bf_version }}/artifacts/bftools.zip"
+    dest: "{{ deploy_home_folder }}"
+  # shell: |
+  #   curl -s -o bftools.zip https://downloads.openmicroscopy.org/bio-formats/{{ bf_version }}/artifacts/bftools.zip
+  when: bftools_zip.stat.exists == False
+  tags:
+    - bioformats
+    - java
+
+- name: Unpack bftools
+  unarchive: src={{ deploy_home_folder }}/bftools.zip dest={{ deploy_home_folder }}
+  tags:
+    - bioformats
+    - java

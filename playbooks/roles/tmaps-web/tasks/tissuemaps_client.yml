@@ -1,76 +1,52 @@
 ---
 - name: Install apt packages
-  sudo: yes
+  become: yes
   apt:
     name: "{{ item }}"
     state: installed
   with_items:
     - nodejs
-    # - npm
+    - npm
   tags:
     - tissuemaps
     - client
     - web
 
-# - name: Corrections for nodejs
-#   sudo: yes
-#   file: src=/usr/bin/nodejs dest=/usr/bin/node state=link
+- name: Corrections for nodejs
+  become: yes
+  file: src=/usr/bin/nodejs dest=/usr/bin/node state=link
+  tags:
+    - tmserver
+    - web
+
+# - name: Install npm packages
+#   become: yes
+#   npm: name={{ item }} state=present global=yes
+#   with_items:
+#     - bower
+#     - gulp
 #   tags:
-#     - tmserver
+#     - tissuemaps
+#     - client
 #     - web
 
-- name: Install npm packages
-  sudo: yes
-  npm:
-    name: "{{ item }}"
-    state: present
-    global: yes
-  with_items:
-    - bower
-    - gulp
-  tags:
-    - tissuemaps
-    - client
-    - web
-
-- name: Delete tmui folder
-  sudo: yes
-  file: path="{{ deploy_home_folder }}/tmui" state=absent
-  tags:
-    - git
-    - tissuemaps
-    - client
-    - web
-
 - name: Get the latest tmui code
-  shell: "git clone --recursive {{ tm_github_url }}/tmui {{ deploy_home_folder }}/tmui && cd {{ deploy_home_folder }}/tmui && git checkout {{ tmui_branch }}"
+  git: repo={{ tm_github_url }}/tmui version={{ tmui_branch }} recursive=yes dest={{ deploy_home_folder }}/tmui
   tags:
-    - git
-    - tissuemaps
-    - client
-    - web
-
-- name: Get submodules of tissuemaps client code
-  shell: "cd {{ deploy_home_folder }}/tmclient && git submodule update --recursive --init && git submodule foreach 'git checkout master'"
-  tags:
-    - git
     - tissuemaps
     - client
     - web
 
 - name: Update npm
-  sudo: yes
-  shell: npm install npm -g
+  become: yes
+  command: npm install npm -g
   tags:
     - web
     - tissuemaps
     - client
 
-- name: Install npm files
-  shell: source {{ deploy_home_folder }}/.tmapsrc.sh && npm install
-  args:
-    executable: /bin/bash
-    chdir: "{{ deploy_home_folder }}/tmclient/src/javascript"
+- name: Install npm dependencies
+  npm: path={{ deploy_home_folder }}/tmui/src/app state=present
   tags:
     - web
     - tissuemaps
@@ -84,18 +60,19 @@
 #     regexp: '^.*/TmAuth.git\"'
 #     line: '    "tmauth": \"{{ tmaps_git_url }}/TmAuth.git"'
 
-- name: Install bower files
-  shell: source {{ deploy_home_folder }}/.tmapsrc.sh && bower install
-  args:
-    executable: /bin/bash
-    chdir: "{{ deploy_home_folder }}/tmclient/src/javascript"
+- name: Install bower dependencies
+  bower: path={{ deploy_home_folder }}/tmui/src/app state=present
   tags:
     - web
+    - tissuemaps
+    - client
 
-- name: Build gulp dist
-  shell: source {{ deploy_home_folder }}/.tmapsrc.sh && gulp build --prod
+- name: Build client code for production deployment
+  shell: gulp build --prod
   args:
     executable: /bin/bash
-    chdir: "{{ deploy_home_folder }}/tmclient/src/javascript"
+    chdir: "{{ deploy_home_folder }}/tmui/src"
   tags:
     - web
+    - tissuemaps
+    - client

@@ -4,27 +4,36 @@
     - update
   apt: upgrade=safe update_cache=yes cache_valid_time=3600
 
-- name: Add postgresql repo (url)
-  lineinfile: "dest=/etc/apt/sources.list.d/pgdg.list state=present create=yes regexp='^deb http\\:\\/\\/apt.postgresql' line='deb http://apt.postgresql.org/pub/repos/apt/ {{ansible_distribution_release}}-pgdg main'"
+- name: Add postgresql repo (key)
   become: yes
-  register: pgs_aptrepo
+  apt_key: id=ACCC4CF8 url=https://www.postgresql.org/media/keys/ACCC4CF8.asc state=present #validate_certs=no
+  register: pgs_aptkey
   tags:
     - postgresql
 
-- name: Add postgresql repo (key)
-  become: yes
-  apt_key: url=https://www.postgresql.org/media/keys/ACCC4CF8.asc state=present validate_certs=no
-  register: pgs_aptkey
+- name: Add postgresql repo (url)
+  apt_repository: repo='deb http://apt.postgresql.org/pub/repos/apt/ {{ansible_distribution_release}}-pgdg main'
+  register: pgs_aptrepo
   tags:
     - postgresql
 
 - name: Update packages to add postgresql
   become: yes
+  apt: update_cache=yes
+  # shell: "aptitude update"
+  # when: pgs_aptkey.changed or pgs_aptrepo.changed
   tags:
     - update
     - postgresql
-  shell: "aptitude update"
-  when: pgs_aptkey.changed or pgs_aptrepo.changed
+
+- name: Install PostgreSQL package
+  become: yes
+  apt:
+    name: postgresql-{{ postgresql_version }}
+    state: installed
+  tags:
+    - postgresql
+
 
 - name: Install apt packages
   become: yes
@@ -32,8 +41,7 @@
     name: "{{ item }}"
     state: installed
   with_items:
-    - postgresql-{{ postgresql_version }}
-    - postgresql-{{ postgresql_version }}-postgis-{{ postgis_version }}
+    # - postgresql-{{ postgresql_version }}-postgis-{{ postgis_version }}
     - postgresql-{{ postgresql_version }}-postgis-scripts
     - postgresql-contrib-{{ postgresql_version }}
     - postgresql-server-dev-all

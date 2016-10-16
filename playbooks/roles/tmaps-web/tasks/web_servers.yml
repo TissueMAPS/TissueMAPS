@@ -27,7 +27,7 @@
 
 - name: Install latest uWSGI packages
   become: yes
-  pip: name=uwswi editable=false
+  pip: name=uwsgi editable=false
   tags:
     - uwsgi
     - web
@@ -45,7 +45,7 @@
     - uwsgi
 
 - name: Create an upstart scripts
-  sudo: yes
+  become: yes
   template: src=uwsgi.conf.j2 dest="/etc/init/uwsgi.conf"
   notify:
     - restart uwsgi
@@ -54,7 +54,7 @@
     - uwsgi
 
 - name: Create nginx site
-  sudo: yes
+  become: yes
   template: src=nginx_site.j2 dest="/etc/nginx/sites-available/tissuemaps"
   notify:
     - restart nginx
@@ -63,7 +63,7 @@
     - web
 
 - name: Put nginx conf.d
-  sudo: yes
+  become: yes
   template: src=nginx_conf.j2 dest="/etc/nginx/conf.d/tmaps.conf"
   notify:
     - restart nginx
@@ -72,10 +72,10 @@
     - web
 
 # Check syntax of the nginx file:
-# $ sudo nginx -t
+# $ become nginx -t
 
 - name: Enable nginx site
-  sudo: yes
+  become: yes
   shell: |
     if [ ! -s /etc/nginx/sites-enabled/tissuemaps ]; then
       ln -s /etc/nginx/sites-available/tissuemaps /etc/nginx/sites-enabled/tissuemaps
@@ -85,7 +85,7 @@
     fi
   notify:
     - restart nginx
-    - restart tmapsuwsgi
+    - restart uwsgi
   tags:
     - nginx
     - web

@@ -3,9 +3,7 @@
   hosts:
     - tissuemaps_web
   remote_user: "{{ ansible_ssh_user }}"
-  tags:
-    - image
-    - web
   roles:
-    - tissuemaps
+    - tmaps-web
+  tags:
     - web

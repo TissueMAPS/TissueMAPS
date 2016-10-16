@@ -23,12 +23,12 @@
 
 - name: Configure PostgreSQL database server
   hosts:
-    - postgresql_server
+    - tissuemaps_database
   remote_user: "{{ ansible_ssh_user }}"
   vars:
-    create_db_with_ansible: no
+    create_db_with_ansible: yes
   roles:
-    - postgresql
+    - tmaps-database
   tags:
     - db
 

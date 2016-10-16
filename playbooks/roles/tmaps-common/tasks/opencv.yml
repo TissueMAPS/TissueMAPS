@@ -12,37 +12,25 @@
     - cmake
     - libboost-python-dev
     - libopencv-dev
-    # NODE this might conflict with TisssueMAPs deps
-    # - python-numpy-dev
   tags:
     - opencv
-    - tmlibrary
-    - tmclient
-    - jtmodules
-    - tmserver
+    - python
 
 - name: Check if OpenCV was built
   stat: path="{{ deploy_home_folder }}/opencv/lib/python2.7/dist-packages/cv2.so"
   register: opencv_was_built
   tags:
     - opencv
-    - tmlibrary
-    - tmclient
-    - jtmodules
-    - tmserver
+    - python
 
-- name: Install numpy into user space
-  become: yes
-  shell: pip install {{ item }}
+- name: Install numpy Python package
+  pip: name={{ item }} extra_args='--user'
   with_items:
     - numpy
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
-    - tmlibrary
-    - tmclient
-    - jtmodules
-    - tmserver
+    - python
 
 - name: Get the latest OpenCV code
   git: repo="https://github.com/Itseez/opencv.git"
@@ -57,19 +45,13 @@
     opencv_version: 3.1.0
   tags:
     - opencv
-    - tmlibrary
-    - tmclient
-    - jtmodules
-    - tmserver
+    - python
 
 - file: path="{{ deploy_home_folder }}/opencv/build" state=directory
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
-    - tmlibrary
-    - tmclient
-    - jtmodules
-    - tmserver
+    - python
 
 - name: Configure and compile OpenCV
   shell: |
@@ -81,10 +63,7 @@
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
-    - tmlibrary
-    - tmclient
-    - jtmodules
-    - tmserver
+    - python
 
 - name: Install OpenCV (system wide)
   become: yes
@@ -94,10 +73,7 @@
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
-    - tmlibrary
-    - tmclient
-    - jtmodules
-    - tmserver
+    - python
 
 - name: "Sanity check if cv2_so was installed into opencv folders"
   stat: path="/usr/local/lib/python2.7/dist-packages/cv2.so"
@@ -106,7 +82,4 @@
   when: cv2_so_installed.stat.exists == False
   tags:
     - opencv
-    - tmlibrary
-    - tmclient
-    - jtmodules
-    - tmserver
+    - python

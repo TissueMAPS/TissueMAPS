@@ -30,18 +30,11 @@
 
 - include: python.yml
 
-- include: r.yml
-
 - include: opencv.yml
 
-- include: bioformats_cli_tools.yml
-
-- include: postgresql_client.yaml
+- include: postgresql_client.yml
 
 - include: tissuemaps.yml
 
 - include: gc3pie.yml
 
-- include: spark.yml
-
-- include: yarn_client.yml

@@ -3,3 +3,11 @@ tm_github_url: https://github.com/TissueMAPS
 
 tmserver_branch: master
 tmui_branch: master
+
+tm_admins: []  # Github user names of TissueMAPS system administrators
+tm_users: []   # Github user names of TissueMAPS users
+
+db_user: postgres
+db_port: 5432
+db_name: tissuemaps
+db_host: localhost

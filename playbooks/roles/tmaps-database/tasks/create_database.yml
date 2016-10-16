@@ -1,3 +1,4 @@
+---
 # - name: Init Postgres database cluster
 #   become: yes
 #   become_user: postgres

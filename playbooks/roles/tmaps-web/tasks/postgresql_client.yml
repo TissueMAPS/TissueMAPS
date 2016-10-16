@@ -1,0 +1,33 @@
+---
+- template:
+    src=pgpass.j2
+    dest={{ deploy_home_folder }}/.pgpass
+    group={{ deploy_user }}
+    owner={{ deploy_user }}
+    mode=600
+    # mode="u=rw"
+
+- name: Place script for recreating the database
+  template: src=resetdb.sql.j2 dest={{ deploy_home_folder }}/resetdb.sql
+  tags:
+    - db
+
+- name: Update db password to TissueMAPS configuration
+  lineinfile:
+    dest={{ tmaps_config_file }}
+    state=present
+    regexp="^db_password"
+    line="db_password = {{ db_password }}"
+  tags:
+    - db
+    - tissuemaps
+
+- name: Change db host in TissueMAPS configuration
+  lineinfile:
+    dest={{ tmaps_config_file }}
+    state=present
+    regexp="^db_host"
+    line="db_host = {{ db_host }}"
+  tags:
+    - db
+    - tissuemaps

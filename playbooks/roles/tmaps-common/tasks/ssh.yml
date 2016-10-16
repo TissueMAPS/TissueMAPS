@@ -1,23 +1,6 @@
 ---
 # Warning, this is not safe.
-- file: path="{{ deploy_home_folder }}/.ssh" state=directory
+- file: path={{ deploy_home_folder }}/.ssh state=directory
 
 - name: Enable confirmation-free outgoing ssh connections
-  template: src=ssh_config.j2 dest="{{ deploy_home_folder }}/.ssh/config"
-
-- name: Drop sysadmin SSH keys and ensure they are authorized for `root` user
-  become: yes
-  authorized_key: user=root key={{ item }}
-  with_file:
-    - "../files/ssh_keys/XXX"
-  tags:
-    - ssh
-
-- name: Drop user SSH keys to ensure they are authorized
-  become: yes
-  authorized_key: user={{ deploy_user }} key={{ item }}
-  with_file:
-    - "../files/ssh_keys/XXX"
-  tags:
-    - ssh
-
+  template: src=ssh_config.j2 dest={{ deploy_home_folder }}/.ssh/config

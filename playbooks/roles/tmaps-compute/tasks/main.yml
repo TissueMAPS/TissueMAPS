@@ -1,2 +1,6 @@
 ---
-- include: yarn_client.yml
+- include: spark.yml
+
+- include: bioformats_cli_tools.yml
+
+- include: r.yml

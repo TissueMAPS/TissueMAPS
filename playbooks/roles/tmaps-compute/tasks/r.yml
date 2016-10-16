@@ -1,27 +1,26 @@
 ---
 # Make sure to have verison 3.2.1+ of R
-- name: Add the Public Keys for R repo
+- name: Add apt key for R repo
   become: yes
-  shell: |
-    gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
-    gpg -a --export E084DAB9 | become apt-key add -
+  apt_key: id="E084DAB9" keyserver="keyserver.ubuntu.com" state=present
+  # shell: |
+  #   gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 \
+  #   gpg -a --export E084DAB9 | become apt-key add -
   tags:
     - r
 
 - name: Add R repo
   become: yes
-  apt_repository: repo="deb http://cran.rstudio.com/bin/linux/ubuntu {{ ansible_distribution_release }}/"
+  apt_repository: repo="deb http://cran.rstudio.com/bin/linux/ubuntu {{ ansible_distribution_release|lower }}/"
   #validate_certs=no
   tags:
     - r
 
 - name: Update all packages to the latest version
   become: yes
-  tags:
-    - update
-    - redis
   apt: upgrade=safe update_cache=yes cache_valid_time=3600
   tags:
+    - update
     - r
 
 - name: Install latest R

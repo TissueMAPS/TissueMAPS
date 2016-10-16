@@ -4,7 +4,6 @@
   apt: upgrade=safe update_cache=yes cache_valid_time=3600
   tags:
     - spark
-    - tmtoolbox
 
 - name: Install Spark dependencies (Ubuntu)
   become: yes
@@ -16,7 +15,6 @@
     - maven
   tags:
     - spark
-    - tmtoolbox
 
 - name: Download Spark source code
   get_url:
@@ -24,18 +22,22 @@
     dest: "{{ deploy_home_folder }}"
   tags:
     - spark
-    - tmtoolbox
 
 - name: Unarchive downloaded Spark source code
   unarchive:
-    src: "spark-{{ spark_version }}.tgz"
-    dest: spark
+    src: "{{ deploy_home_folder }}/spark-{{ spark_version }}.tgz"
+    dest: "{{ deploy_home_folder }}"
+    copy: no
   tags:
     - spark
-    - tmtoolbox
+
+- name: Move unarchived Spark code into "spark" directory
+  command: mv {{ deploy_home_folder }}/spark-{{ spark_version }} {{ deploy_home_folder }}/spark
+  tags:
+    - spark
 
 - name: Install Spark from source
-  shell: "./build/mvn -Pyarn -Phadoop-{{ hadoop_distribution }} -Dhadoop.version={{ hadoop_version }} -Phive -Phive-thriftserver -DskipTests clean package"
+  shell: "{{ deploy_home_folder }}/spark/build/mvn -Pyarn -Phadoop-{{ hadoop_distribution }} -Dhadoop.version={{ hadoop_version }} -Phive -Phive-thriftserver -DskipTests clean package"
   args:
     chdir: "{{ deploy_home_folder }}/spark"
   environment:
@@ -43,4 +45,3 @@
     MAVEN_OPTS: "-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
   tags:
     - spark
-    - tmtoolbox

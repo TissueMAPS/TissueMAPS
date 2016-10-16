@@ -1,14 +1,28 @@
 ---
 - include: ssl_cert.yml
 
-- include: servers.yml
-- include: stop_servers.yml
+- include: web_servers.yml
+
+- name: Stop NGINX web server
+  become: yes
+  service: name=nginx state=stopped
+  ignore_errors: True
+  tags:
+    - web
+
+- name: Stop uWSGI web server
+  become: yes
+  service: name=uwsgi state=stopped
+  ignore_errors: True
+  tags:
+    - web
 
 - include: tissuemaps_server.yml
-- include: tissuemaps_client.yml
 
-- include: postgres_database.yml
+- include: tissuemaps_client.yml
 
 - include: config.yml
 
 - include: utils.yml
+
+- include: postgresql_client.yml
