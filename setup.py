@@ -163,6 +163,7 @@ setuptools.setup(
        'ruamel.yaml>=0.10.11'
        'pyfakefs',
        'gc3pie==2.5.dev',
+       'APScheduler>=3.0.5',
        'sqlalchemy_utils',
        # Ubuntu: sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
