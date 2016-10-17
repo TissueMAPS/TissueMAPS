@@ -171,10 +171,10 @@ def get_mapobjects_segmentation(experiment_id, object_name):
                 tm.Site.x == x, tm.Site.y == y
             ).\
             one()
-        mapobject_type = db.session.query(tm.MapobjectType).\
+        mapobject_type = session.query(tm.MapobjectType).\
             filter_by(name=object_name).\
             one()
-        segmentations = db.session.query(
+        segmentations = session.query(
                 tm.MapobjectSegmentation.label,
                 tm.MapobjectSegmentation.geom_poly
             ).\
