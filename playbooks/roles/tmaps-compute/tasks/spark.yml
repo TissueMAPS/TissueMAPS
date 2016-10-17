@@ -7,9 +7,7 @@
 
 - name: Install Spark dependencies (Ubuntu)
   become: yes
-  apt:
-    name: "{{ item }}"
-    state: installed
+  apt: name={{ item }} state=installed
   with_items:
     - openjdk-7-jdk
     - maven
@@ -24,17 +22,17 @@
 
 - name: Download Spark source code
   get_url:
-    url: "http://d3kbcqa49mib13.cloudfront.net/spark-{{ spark_version }}.tgz"
-    dest: "{{ ansible_env.HOME }}"
+    url="http://d3kbcqa49mib13.cloudfront.net/spark-{{ spark_version }}.tgz"
+    dest={{ ansible_env.HOME }}
   when: spark_folder.stat.exists == false
   tags:
     - spark
 
 - name: Unarchive downloaded Spark source code
   unarchive:
-    src: "{{ ansible_env.HOME }}/spark-{{ spark_version }}.tgz"
-    dest: "{{ ansible_env.HOME }}"
-    copy: no
+    src={{ ansible_env.HOME }}/spark-{{ spark_version }}.tgz
+    dest={{ ansible_env.HOME }}
+    copy=no
   when: spark_folder.stat.exists == false
   tags:
     - spark
@@ -45,12 +43,18 @@
   tags:
     - spark
 
+- name: Remove Spark code archive
+  file: path={{ ansible_env.HOME }}/spark-{{ spark_version }}.tgz state=absent
+  when: spark_folder.stat.exists == false
+  tags:
+    - spark
+
 - name: Install Spark from source
   shell: "{{ ansible_env.HOME }}/spark/build/mvn -Pyarn -Phadoop-{{ hadoop_distribution }} -Dhadoop.version={{ hadoop_version }} -Phive -Phive-thriftserver -DskipTests clean package"
   args:
-    chdir: "{{ ansible_env.HOME }}/spark"
+    chdir={{ ansible_env.HOME }}/spark
   environment:
-    JAVA_HOME: "/usr/lib/jvm/java-1.7.0-openjdk-amd64"
-    MAVEN_OPTS: "-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
+    JAVA_HOME="/usr/lib/jvm/java-1.7.0-openjdk-amd64"
+    MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
   tags:
     - spark

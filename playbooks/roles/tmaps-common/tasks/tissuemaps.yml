@@ -20,7 +20,6 @@
     - libgeos-dev
   tags:
     - tissuemaps
-    - tmlibrary
 
 - name: Install numpy and cython Python packages
   become: yes
@@ -28,52 +27,105 @@
   # Using the pip module doesn't work???
   # pip: name=cython
   tags:
-    - tmlibrary
+    - tissuemaps
+
+- name: Clone JtLibrary repository
+  git:
+    repo={{ tm_github_url }}/jtlibrary
+    dest={{ ansible_env.HOME }}/jtlibrary
+    version={{ jtlibrary_branch }}
+  tags:
     - tissuemaps
 
 - name: Install jtlibrary package
-  pip:
-    name: "git+{{ tm_github_url }}/jtlibrary@{{ jtlibrary_branch }}#egg=jtlibrary"
-    extra_args: "--user --process-dependency-links"
+  shell: pip install -e . --user --process-dependency-links
+  args:
+    chdir={{ ansible_env.HOME }}/jtlibrary
   tags:
     - tissuemaps
-    - jtlibrary
+
+# - name: Install jtlibrary package
+#   pip:
+#     name: "git+{{ tm_github_url }}/jtlibrary@{{ jtlibrary_branch }}#egg=jtlibrary"
+#     extra_args: "--user --process-dependency-links"
+#   tags:
+#     - tissuemaps
+
+- name: Clone JtModules repository
+  git:
+    repo={{ tm_github_url }}/jtmodules
+    dest={{ ansible_env.HOME }}/jtmodules
+    version={{ jtmodules_branch }}
+  tags:
+    - tissuemaps
 
 - name: Install jtmodules package
-  pip:
-    name: "git+{{ tm_github_url }}/jtmodules@{{ jtmodules_branch }}#egg=jtmodules"
-    extra_args: "--user --process-dependency-links"
+  shell: pip install -e . --user --process-dependency-links
+  args:
+    chdir={{ ansible_env.HOME }}/jtmodules
   tags:
     - tissuemaps
-    - tmlibrary
+
+# - name: Install jtmodules package
+#   pip:
+#     name: "git+{{ tm_github_url }}/jtmodules@{{ jtmodules_branch }}#egg=jtmodules"
+#     extra_args: "--user --process-dependency-links"
+#   tags:
+#     - tissuemaps
+
+- name: Clone TmLibrary repository
+  git:
+    repo={{ tm_github_url }}/tmlibrary
+    dest={{ ansible_env.HOME }}/tmlibrary
+    version={{ tmlibrary_branch }}
+  tags:
+    - tissuemaps
 
 - name: Install tmlibrary package
-  pip:
-    name: "git+{{ tm_github_url }}/tmlibrary@{{ tmlibrary_branch }}#egg=tmlibrary"
-    extra_args: "--user --process-dependency-links"
+  shell: pip install -e . --user --process-dependency-links
+  args:
+    chdir={{ ansible_env.HOME }}/tmlibrary
   tags:
     - tissuemaps
-    - tmlibrary
+
+# - name: Install tmlibrary package
+#   pip:
+#     name: "git+{{ tm_github_url }}/tmlibrary@{{ tmlibrary_branch }}#egg=tmlibrary"
+#     extra_args: "--user --process-dependency-links"
+#   tags:
+#     - tissuemaps
+
+- name: Clone TmToolbox repository
+  git:
+    repo={{ tm_github_url }}/tmtoolbox
+    dest={{ ansible_env.HOME }}/tmtoolbox
+    version={{ tmtoolbox_branch }}
+  tags:
+    - tissuemaps
 
 - name: Install tmtoolbox package
-  pip:
-    name: "git+{{ tm_github_url }}/tmtoolbox@{{ tmtoolbox_branch }}#egg=tmtoolbox"
-    extra_args: "--user --process-dependency-links"
+  shell: pip install -e . --user --process-dependency-links
+  args:
+    chdir={{ ansible_env.HOME }}/tmtoolbox
   tags:
     - tissuemaps
-    - tmtoolbox
+
+# - name: Install tmtoolbox package
+#   pip:
+#     name: "git+{{ tm_github_url }}/tmtoolbox@{{ tmtoolbox_branch }}#egg=tmtoolbox"
+#     extra_args: "--user --process-dependency-links"
+#   tags:
+#     - tissuemaps
 
 - name: Create directory for TissueMAPS related files
   file: path={{ ansible_env.HOME }}/.tmaps state=directory
   tags:
     - tissuemaps
-    - tmlibrary
     - config
 
 - name: Create TissuMAPS library part of the configuration
   shell: "{{ tmaps_install_location }}/tm_create_config"
   tags:
     - tissuemaps
-    - tmlibrary
     - config
 

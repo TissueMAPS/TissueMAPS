@@ -1,14 +1,26 @@
 ---
-- name: Install tmserver package
-  pip:
-    name: "git+{{ tm_github_url }}/tmserver@{{ tmserver_branch }}#egg=tmserver"
-    extra_args: "--user --process-dependency-links"
+- name: Clone TmServer repository
+  git:
+    repo={{ tm_github_url }}/tmserver
+    dest={{ ansible_env.HOME }}/tmserver
+    version={{ tmserver_branch }}
   tags:
     - tissuemaps
-    - tmserver
 
-# - name: Remove existing TissuMAPS configuration files
-#   file: path={{ tmaps_config_file }} state=absent
+- name: Install tmserver package
+  shell: pip install -e . --user --process-dependency-links
+  args:
+    chdir={{ ansible_env.HOME }}/tmserver
+  tags:
+    - tissuemaps
+
+# - name: Install tmserver package
+#   pip:
+#     name: "git+{{ tm_github_url }}/tmserver@{{ tmserver_branch }}#egg=tmserver"
+#     extra_args: "--user --process-dependency-links"
+#   tags:
+#     - tissuemaps
+#     - tmserver
 
 - name: Add server config to TissuMAPS configuration file
   command: "{{ tmaps_install_location }}/tm_create_config --server"
