@@ -8,9 +8,9 @@ from zipfile import ZipFile
 from geoalchemy2.shape import to_shape
 import skimage.draw
 
-from flask.ext.jwt import jwt_required
-from flask.ext.jwt import current_identity
-from flask.ext.jwt import jwt_required
+from flask_jwt import jwt_required
+from flask_jwt import current_identity
+from flask_jwt import jwt_required
 from flask import jsonify, request, send_file
 from sqlalchemy.sql import text
 from werkzeug import secure_filename

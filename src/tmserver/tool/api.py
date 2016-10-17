@@ -3,7 +3,7 @@ import json
 import logging
 from flask import jsonify, request, current_app
 from flask_jwt import jwt_required
-from flask.ext.jwt import current_identity
+from flask_jwt import current_identity
 
 import tmlib.models as tm
 from tmlib.writers import JsonWriter

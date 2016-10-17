@@ -5,8 +5,8 @@ import logging
 
 import numpy as np
 from flask import jsonify, send_file, current_app, request
-from flask.ext.jwt import jwt_required
-from flask.ext.jwt import current_identity
+from flask_jwt import jwt_required
+from flask_jwt import current_identity
 from werkzeug import secure_filename
 
 import tmlib.models as tm

@@ -10,8 +10,8 @@ import subprocess
 
 from natsort import natsorted
 from flask import send_file, jsonify, request, Blueprint, current_app
-from flask.ext.jwt import jwt_required
-from flask.ext.jwt import current_identity
+from flask_jwt import jwt_required
+from flask_jwt import current_identity
 
 import tmlib.models as tm
 from tmlib.utils import flatten

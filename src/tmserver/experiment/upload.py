@@ -6,7 +6,7 @@ import logging
 import re
 
 from flask import request
-from flask.ext.jwt import jwt_required
+from flask_jwt import jwt_required
 from werkzeug import secure_filename
 from sqlalchemy.orm.exc import MultipleResultsFound
 

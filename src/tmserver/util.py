@@ -1,7 +1,7 @@
 import functools
 
 from flask import request, current_app
-from flask.ext.jwt import current_identity
+from flask_jwt import current_identity
 
 import tmlib.models as tm
 
