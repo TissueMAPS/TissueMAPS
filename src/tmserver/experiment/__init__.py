@@ -1,3 +1,1 @@
-from tmlib.models import Experiment, Channel, ChannelLayer
-
-import serialize
+import tmserver.experiment.serialize

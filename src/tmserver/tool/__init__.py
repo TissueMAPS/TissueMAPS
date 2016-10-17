@@ -1,1 +1,1 @@
-import serialize
+import tmserver.tool.serialize

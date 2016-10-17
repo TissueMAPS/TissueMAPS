@@ -12,11 +12,12 @@ from werkzeug import secure_filename
 import tmlib.models as tm
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
-from tmlib.workflow.tmaps.api import WorkflowManager
+from tmlib.workflow.workflow import Workflow
 from tmlib.image import PyramidTile
+from tmlib.logging_utils import LEVELS_TO_VERBOSITY
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
-from tmlib import cfg
+from tmlib import cfg as lib_cfg
 
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
@@ -31,6 +32,8 @@ from tmserver.error import (
     ResourceNotFoundError,
     NotAuthorizedError
 )
+from tmserver import cfg as server_cfg
+
 
 logger = logging.getLogger(__name__)
 
@@ -260,7 +263,7 @@ def get_microscope_types():
 
     See also
     --------
-    :py:class:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
+    :class:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
     """
     logger.info('get list of implemented microscope types')
     return jsonify({
@@ -281,7 +284,7 @@ def get_acquisition_modes():
 
     See also
     --------
-    :py:class:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
+    :class:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
     """
     logger.info('get list of supported plate acquisition modes')
     return jsonify({
@@ -368,11 +371,15 @@ def submit_workflow(experiment_id):
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         experiment.persist_workflow_description(workflow_description)
-    workflow_manager = WorkflowManager(experiment_id, 1)
     submission_manager = SubmissionManager(experiment_id, 'workflow')
     submission_id, user_name = submission_manager.register_submission()
-    workflow = workflow_manager.create_workflow(
-        submission_id, user_name, workflow_description
+    verbosity = LEVELS_TO_VERBOSITY[server_cfg.log_level]
+    workflow = Workflow(
+        experiment_id=experiment_id,
+        verbosity=verbosity,
+        submission_id=submission_id,
+        user_name=user_name,
+        description=workflow_description
     )
     gc3pie.store_jobs(workflow)
     gc3pie.submit_jobs(workflow)
@@ -444,18 +451,43 @@ def get_jobs_status(experiment_id):
         index, step_name, experiment_id
     )
     submission_id = gc3pie.get_id_of_last_submission(experiment_id, 'workflow')
+    # TODO: Upon reload, the submission_id of tasks doesn't get updated.
+    # While this makes sense to track tasks belonging to the same collection
+    # it doesn't allow the differentiation of submissions (as the name implies).
     with tm.utils.MainSession() as session:
-        tasks = session.query(tm.Task).\
+        step_task_id = session.query(tm.Task.id).\
             filter(
                 tm.Task.submission_id == submission_id,
-                tm.Task.name.like('{step}_%'.format(step=step_name)),
-                ~tm.Task.is_collection
+                tm.Task.name == step_name,
+                tm.Task.is_collection
             ).\
-            order_by(tm.Task.id).\
-            limit(batch_size).\
-            offset(index).\
-            all()
-        status = [t.status for t in tasks]
+            one_or_none()
+        if step_task_id is None:
+            status = []
+        else:
+            step = gc3pie.retrieve_single_job(step_task_id)
+            if len(step.tasks) == 0:
+                status = []
+            else:
+                task_ids = []
+                for phase in step.tasks:
+                    if hasattr(phase, 'tasks'):
+                        print phase.name
+                        print phase.tasks
+                        task_ids.extend([t.persistent_id for t in phase.tasks])
+                    else:
+                        print phase.name
+                        task_ids.append(phase.persistent_id)
+                tasks = session.query(tm.Task).\
+                    filter(
+                        tm.Task.id.in_(task_ids),
+                        ~tm.Task.is_collection
+                    ).\
+                    order_by(tm.Task.id).\
+                    limit(batch_size).\
+                    offset(index).\
+                    all()
+                status = [t.status for t in tasks]
 
     return jsonify({
         'data': status
@@ -548,7 +580,7 @@ def create_experiment():
             name=name,
             description=description,
             user_id=current_identity.id,
-            root_directory=cfg.storage_home
+            root_directory=lib_cfg.storage_home
         )
         # TODO: raise error with meaningfull message in case of integrity error
         session.add(experiment_ref)

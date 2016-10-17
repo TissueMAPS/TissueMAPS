@@ -103,8 +103,8 @@ class GC3Pie(object):
 
         See also
         --------
-        :py:class:`tmlib.models.Submission`
-        :py:class:`tmlib.models.Task`
+        :class:`tmlib.models.Submission`
+        :class:`tmlib.models.Task`
         """
         logger.debug('insert jobs into tasks table')
         persistent_id = self._store.save(jobs)
@@ -160,8 +160,8 @@ class GC3Pie(object):
 
         See also
         --------
-        :py:class:`tmlib.models.Submission`
-        :py:class:`tmlib.models.Task`
+        :class:`tmlib.models.Submission`
+        :class:`tmlib.models.Task`
         """
         # submission_manager = SubmissionManager(experiment.id, 'workflow')
         # task_id = submission_manager.get_task_id_for_last_submission()
@@ -250,6 +250,6 @@ class GC3Pie(object):
 
         See also
         --------
-        :py:function:`tmlib.workflow.utils.get_task_data_from_sql_store`
+        :function:`tmlib.workflow.utils.get_task_data_from_sql_store`
         '''
         return get_task_data_from_sql_store(jobs, recursion_depth)

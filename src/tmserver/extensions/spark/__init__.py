@@ -171,7 +171,7 @@ class Spark(object):
 
         Note
         ----
-        Caches the :py:class:`pyspark.sql.DataFrame` to speed up computations.
+        Caches the :class:`pyspark.sql.DataFrame` to speed up computations.
 
         """
         return self.df_reader(table=table_name).cache()

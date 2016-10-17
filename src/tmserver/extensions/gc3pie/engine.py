@@ -126,9 +126,9 @@ class BgEngine(object):
             library for scheduler, either ``"threading"`` or ``"gevent"``
         args: list, optional
             additional arguments as array, the first and only element must be
-            an instance of :py:class:`gc3lib.core.Engine`
+            an instance of :class:`gc3lib.core.Engine`
         kwargs: dict, optional
-            additional arguments that can be parsed to the :py:class:`Engine`
+            additional arguments that can be parsed to the :class:`Engine`
             instance as a mapping of key-value pairs
         """
         sched_factory, lock_factory = _get_scheduler_and_lock_factory(lib)
@@ -192,7 +192,7 @@ class BgEngine(object):
 
         Note
         ----
-        Call :py:meth:`start` to resume running.
+        Call :meth:`start` to resume running.
         """
         gc3libs.log.info(
             "Stopping background execution of Engine %s ...", self._engine

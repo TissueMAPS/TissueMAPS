@@ -13,11 +13,6 @@ from flask import send_file, jsonify, request, Blueprint, current_app
 from flask.ext.jwt import jwt_required
 from flask.ext.jwt import current_identity
 
-from tmserver.extensions import websocket
-from tmserver.util import decode_query_ids
-from tmserver.util import assert_form_params, assert_query_params
-from tmserver.extensions import gc3pie
-
 import tmlib.models as tm
 from tmlib.utils import flatten
 from tmlib.workflow import get_step_args
@@ -29,6 +24,11 @@ from tmlib.logging_utils import configure_logging
 from tmlib.workflow.jterator.project import list_projects
 from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.project import AvailableModules
+
+from tmserver.extensions import websocket
+from tmserver.util import decode_query_ids
+from tmserver.util import assert_form_params, assert_query_params
+from tmserver.extensions import gc3pie
 
 
 jtui = Blueprint('jtui', __name__)

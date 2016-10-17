@@ -1,7 +1,7 @@
 import sqlalchemy.orm
 
 from tmlib.models import MainModel, ExperimentModel
-from utils import *
+from tmserver.model.utils import *
 
 
 def _get_with_hash(self, h):
