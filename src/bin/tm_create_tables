@@ -13,7 +13,7 @@ def create_tables(db_uri=None):
 
     Parameters
     ----------
-    db_uri: str
+    db_uri: str, optional
         URI of the database
     '''
     if db_uri is None:
