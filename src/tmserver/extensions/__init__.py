@@ -6,10 +6,10 @@ spark = Spark()
 from gc3pie import GC3Pie
 gc3pie = GC3Pie()
 
-from flask.ext.uwsgi_websocket import GeventWebSocket
+from flask_uwsgi_websocket import GeventWebSocket
 websocket = GeventWebSocket()
 
-from flask.ext.redis import FlaskRedis
+from flask_redis import FlaskRedis
 redis_store = FlaskRedis()
 
 
