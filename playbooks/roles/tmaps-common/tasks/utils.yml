@@ -1,0 +1,14 @@
+---
+- name: Install generally required Apt packages
+  become: yes
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - vim
+    - git
+    - csh
+    - parallel
+    - zlib1g-dev
+    - cifs-utils
+    - libopenblas-dev
