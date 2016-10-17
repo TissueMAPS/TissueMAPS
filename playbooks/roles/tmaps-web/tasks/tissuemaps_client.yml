@@ -31,7 +31,11 @@
     - web
 
 - name: Get the latest tmui code
-  git: repo={{ tm_github_url }}/tmui version={{ tmui_branch }} recursive=yes dest={{ ansible_env.HOME }}/tmui
+  git:
+    repo={{ tm_github_url }}/tmui
+    version={{ tmui_branch }}
+    recursive=yes
+    dest={{ ansible_env.HOME }}/tmui
   tags:
     - tissuemaps
     - client

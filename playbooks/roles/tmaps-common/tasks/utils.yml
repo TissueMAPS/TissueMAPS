@@ -1,9 +1,7 @@
 ---
 - name: Install generally required Apt packages
   become: yes
-  apt:
-    name: "{{ item }}"
-    state: installed
+  apt: name={{ item }} state=installed
   with_items:
     - vim
     - git
@@ -12,3 +10,11 @@
     - zlib1g-dev
     - cifs-utils
     - libopenblas-dev
+
+- name: Add apt repository for Vim8
+  apt_repository: repo="ppa:jonathonf/vim" state=present
+  become: yes
+
+- name: Install Vim8
+  apt: name=vim state=installed update_cache=yes
+  become: yes

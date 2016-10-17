@@ -1,11 +1,14 @@
 ---
-- template:
+- name: Create pgpass file
+  template:
     src=pgpass.j2
     dest={{ ansible_env.HOME }}/.pgpass
     group={{ deploy_user }}
     owner={{ deploy_user }}
     mode=600
     # mode="u=rw"
+  tags:
+    - db
 
 - name: Place script for recreating the database
   template: src=resetdb.sql.j2 dest={{ ansible_env.HOME }}/resetdb.sql
@@ -21,7 +24,6 @@
     value={{ db_password }}
   tags:
     - db
-    - config
     - tissuemaps
 
 - name: Change db host in TissueMAPS configuration
@@ -33,5 +35,4 @@
     value={{ db_host }}
   tags:
     - db
-    - config
     - tissuemaps

@@ -5,7 +5,7 @@
   tags:
     - python
 
-- name: Update apt-get packages
+- name: Update apt packages
   become: yes
   apt: upgrade=safe update_cache=yes cache_valid_time=3600
   tags:
@@ -17,9 +17,7 @@
 
 - name: Install apt packages required for Python
   become: yes
-  apt:
-    name: "{{ item }}"
-    state: installed
+  apt: name={{ item }} state=installed
   with_items:
     - python-dev
     - python-pip

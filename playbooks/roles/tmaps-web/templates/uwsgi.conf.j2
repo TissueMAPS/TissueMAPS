@@ -6,5 +6,5 @@ stop on runlevel [!2345]
 setuid {{ deploy_user }}
 setgid {{ deploy_user }}
 
-chdir {{ deploy_home_folder }}/.tmaps
-exec env HOME={{ deploy_home_folder }} bash uwsgi.sh
+chdir {{ ansible_env.HOME }}/.tmaps
+exec env HOME={{ ansible_env.HOME }} bash uwsgi.sh

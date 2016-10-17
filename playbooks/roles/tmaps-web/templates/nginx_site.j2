@@ -10,7 +10,7 @@ server {
 
     # all non-api requests are file requests and should be served
     # from the built client dir
-    root {{ deploy_home_folder }}/tmui/src/build;
+    root {{ ansible_env.HOME }}/tmui/src/build;
     location / {
         try_files $uri $uri/ @proxy;
     }
@@ -19,6 +19,6 @@ server {
     # listening on the unix socket nginx-comm.sock
     location @proxy {
         include uwsgi_params;
-        uwsgi_pass unix:{{ deploy_home_folder }}/.tmaps/uwsgi.sock;
+        uwsgi_pass unix:{{ ansible_env.HOME }}/.tmaps/uwsgi.sock;
     }
 }

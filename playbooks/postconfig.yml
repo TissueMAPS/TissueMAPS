@@ -8,9 +8,7 @@
         - db
         - tissuemaps
   vars:
-    deploy_user: "{{ ansible_ssh_user }}"
-    deploy_home_folder: "{{ ansible_env.HOME }}"
-    tmaps_install_location: "{{ deploy_home_folder }}/.local/bin"
+    tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"
 
 - name: Configuration of YARN clients
   hosts: tissuemaps_compute
