@@ -1,14 +1,14 @@
 ---
 - template:
     src=pgpass.j2
-    dest={{ deploy_home_folder }}/.pgpass
+    dest={{ ansible_env.HOME }}/.pgpass
     group={{ deploy_user }}
     owner={{ deploy_user }}
     mode=600
     # mode="u=rw"
 
 - name: Place script for recreating the database
-  template: src=resetdb.sql.j2 dest={{ deploy_home_folder }}/resetdb.sql
+  template: src=resetdb.sql.j2 dest={{ ansible_env.HOME }}/resetdb.sql
   tags:
     - db
 

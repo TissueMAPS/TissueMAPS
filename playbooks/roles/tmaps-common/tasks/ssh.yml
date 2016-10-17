@@ -1,6 +1,11 @@
 ---
 # Warning, this is not safe.
-- file: path={{ deploy_home_folder }}/.ssh state=directory
+- name: Create SSH directory in case it doesn't exist
+  file: path={{ ansible_env.HOME }}/.ssh state=directory
 
 - name: Enable confirmation-free outgoing ssh connections
-  template: src=ssh_config.j2 dest={{ deploy_home_folder }}/.ssh/config
+  # TODO: templates don't work with relative path when included in a playbook
+  # outside of the role (ansible 2.1.2)
+  template:
+    src={{ playbook_dir }}/roles/tmaps-common/templates/ssh_config.j2
+    dest={{ ansible_env.HOME }}/.ssh/config

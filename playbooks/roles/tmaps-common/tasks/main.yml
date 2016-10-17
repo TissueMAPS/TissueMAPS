@@ -1,12 +1,12 @@
 ---
 - name: Place env for tissuemaps (include this in bash_profile)
-  template: src=bash_profile.j2 dest="{{ deploy_home_folder }}/.bash_profile"
+  template: src=bash_profile.j2 dest="{{ ansible_env.HOME }}/.bash_profile"
 
 - name: Create .bash_login file
-  file: path="{{ deploy_home_folder }}/.bash_login" state=touch
+  file: path="{{ ansible_env.HOME }}/.bash_login" state=touch
 
 - name: Source .bash_profile in .bash_login
-  lineinfile: dest="{{ deploy_home_folder }}/.bash_login" state=present regexp='source {{ deploy_home_folder }}/.bash_profile' line='source {{ deploy_home_folder }}/.bash_profile'
+  lineinfile: dest="{{ ansible_env.HOME }}/.bash_login" state=present regexp='source {{ ansible_env.HOME }}/.bash_profile' line='source {{ ansible_env.HOME }}/.bash_profile'
 
 - name: Update apt packages
   become: yes

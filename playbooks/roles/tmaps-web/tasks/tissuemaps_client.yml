@@ -31,7 +31,7 @@
     - web
 
 - name: Get the latest tmui code
-  git: repo={{ tm_github_url }}/tmui version={{ tmui_branch }} recursive=yes dest={{ deploy_home_folder }}/tmui
+  git: repo={{ tm_github_url }}/tmui version={{ tmui_branch }} recursive=yes dest={{ ansible_env.HOME }}/tmui
   tags:
     - tissuemaps
     - client
@@ -46,7 +46,7 @@
     - client
 
 - name: Install npm dependencies
-  npm: path={{ deploy_home_folder }}/tmui/src/app state=present
+  npm: path={{ ansible_env.HOME }}/tmui/src/app state=present
   tags:
     - web
     - tissuemaps
@@ -55,13 +55,13 @@
 # Patch private git url in bower.json
 # - name: Patch bower files
 #   lineinfile:
-#     dest: "{{ deploy_home_folder }}/tmclient/src/bower.json"
+#     dest: "{{ ansible_env.HOME }}/tmclient/src/bower.json"
 #     state: present
 #     regexp: '^.*/TmAuth.git\"'
 #     line: '    "tmauth": \"{{ tmaps_git_url }}/TmAuth.git"'
 
 - name: Install bower dependencies
-  bower: path={{ deploy_home_folder }}/tmui/src state=present
+  bower: path={{ ansible_env.HOME }}/tmui/src state=present
   tags:
     - web
     - tissuemaps
@@ -71,7 +71,7 @@
   shell: gulp build --prod
   args:
     executable: /bin/bash
-    chdir: "{{ deploy_home_folder }}/tmui/src"
+    chdir: "{{ ansible_env.HOME }}/tmui/src"
   tags:
     - web
     - tissuemaps

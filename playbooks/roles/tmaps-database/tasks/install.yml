@@ -53,6 +53,6 @@
     - postgresql
 
 - name: Add postgres executable to PATH
-  lineinfile: dest="{{ deploy_home_folder }}/.bash_profile" line='export PATH=/usr/lib/postgresql/{{ postgresql_version }}/bin:$PATH'
+  lineinfile: dest="{{ ansible_env.HOME }}/.bash_profile" line='export PATH=/usr/lib/postgresql/{{ postgresql_version }}/bin:$PATH'
   tags:
     - postgresql

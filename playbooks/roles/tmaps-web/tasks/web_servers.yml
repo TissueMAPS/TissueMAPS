@@ -33,13 +33,13 @@
     - web
 
 - name: Place uwsgi.ini
-  template: src=uwsgi.ini.j2 dest="{{ deploy_home_folder }}/.tmaps/uwsgi.ini"
+  template: src=uwsgi.ini.j2 dest="{{ ansible_env.HOME }}/.tmaps/uwsgi.ini"
   tags:
     - web
     - uwsgi
 
 - name: Place flask uwsgi wrapper
-  template: src=uwsgi.sh.j2 dest="{{ deploy_home_folder }}/.tmaps/uwsgi.sh"
+  template: src=uwsgi.sh.j2 dest="{{ ansible_env.HOME }}/.tmaps/uwsgi.sh"
   tags:
     - web
     - uwsgi

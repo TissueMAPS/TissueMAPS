@@ -17,7 +17,7 @@
     - spark
 
 - name: Register "spark" directory
-  stat: path={{ deploy_home_folder }}/spark
+  stat: path={{ ansible_env.HOME }}/spark
   register: spark_folder
   tags:
     - spark
@@ -25,30 +25,30 @@
 - name: Download Spark source code
   get_url:
     url: "http://d3kbcqa49mib13.cloudfront.net/spark-{{ spark_version }}.tgz"
-    dest: "{{ deploy_home_folder }}"
+    dest: "{{ ansible_env.HOME }}"
   when: spark_folder.stat.exists == false
   tags:
     - spark
 
 - name: Unarchive downloaded Spark source code
   unarchive:
-    src: "{{ deploy_home_folder }}/spark-{{ spark_version }}.tgz"
-    dest: "{{ deploy_home_folder }}"
+    src: "{{ ansible_env.HOME }}/spark-{{ spark_version }}.tgz"
+    dest: "{{ ansible_env.HOME }}"
     copy: no
   when: spark_folder.stat.exists == false
   tags:
     - spark
 
 - name: Move unarchived Spark code into "spark" directory
-  command: mv {{ deploy_home_folder }}/spark-{{ spark_version }} {{ deploy_home_folder }}/spark
+  command: mv {{ ansible_env.HOME }}/spark-{{ spark_version }} {{ ansible_env.HOME }}/spark
   when: spark_folder.stat.exists == false
   tags:
     - spark
 
 - name: Install Spark from source
-  shell: "{{ deploy_home_folder }}/spark/build/mvn -Pyarn -Phadoop-{{ hadoop_distribution }} -Dhadoop.version={{ hadoop_version }} -Phive -Phive-thriftserver -DskipTests clean package"
+  shell: "{{ ansible_env.HOME }}/spark/build/mvn -Pyarn -Phadoop-{{ hadoop_distribution }} -Dhadoop.version={{ hadoop_version }} -Phive -Phive-thriftserver -DskipTests clean package"
   args:
-    chdir: "{{ deploy_home_folder }}/spark"
+    chdir: "{{ ansible_env.HOME }}/spark"
   environment:
     JAVA_HOME: "/usr/lib/jvm/java-1.7.0-openjdk-amd64"
     MAVEN_OPTS: "-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"

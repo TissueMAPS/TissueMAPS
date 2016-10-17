@@ -9,7 +9,7 @@
       become: yes
       pip: name=virtualenv
     - name: Create "tmaps_setup" virtualenv
-      command: virtualenv {{ ansible_env.HOME }}/.virtualenvs/tmaps_setup -p python2.7 creates="{{ ansible_env.HOME }}/.virutalenvs/tmaps_setup" 
+      command: virtualenv {{ ansible_env.HOME }}/.virtualenvs/tmaps_setup -p python2.7 creates="{{ ansible_env.HOME }}/.virutalenvs/tmaps_setup"
     - name: Install elasticluster requirements
       become: yes
       apt: name={{ item }}

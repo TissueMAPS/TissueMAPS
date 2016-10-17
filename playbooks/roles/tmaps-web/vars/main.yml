@@ -1,6 +1,5 @@
 ---
 deploy_user: "{{ ansible_ssh_user }}"
-deploy_home_folder: "{{ ansible_env.HOME }}"
 
-tmaps_config_file: "{{ deploy_home_folder }}/.tmaps/tissuemaps.cfg"
-tmaps_install_location: "{{ deploy_home_folder }}/.local/bin"
+tmaps_config_file: "{{ ansible_env.HOME }}/.tmaps/tissuemaps.cfg"
+tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"

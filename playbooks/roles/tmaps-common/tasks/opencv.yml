@@ -17,7 +17,7 @@
     - python
 
 - name: Check if OpenCV was built
-  stat: path="{{ deploy_home_folder }}/opencv/lib/python2.7/dist-packages/cv2.so"
+  stat: path="{{ ansible_env.HOME }}/opencv/lib/python2.7/dist-packages/cv2.so"
   register: opencv_was_built
   tags:
     - opencv
@@ -34,7 +34,7 @@
 
 - name: Get the latest OpenCV code
   git: repo="https://github.com/Itseez/opencv.git"
-       dest="{{ deploy_home_folder }}/opencv"
+       dest="{{ ansible_env.HOME }}/opencv"
        accept_hostkey=yes
        update=yes
        clone=yes
@@ -47,7 +47,7 @@
     - opencv
     - python
 
-- file: path="{{ deploy_home_folder }}/opencv/build" state=directory
+- file: path="{{ ansible_env.HOME }}/opencv/build" state=directory
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
@@ -59,7 +59,7 @@
       -D CMAKE_INSTALL_PREFIX=/usr/local ../
     make -j4
   args:
-    chdir: "{{ deploy_home_folder }}/opencv/build"
+    chdir: "{{ ansible_env.HOME }}/opencv/build"
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
@@ -69,7 +69,7 @@
   become: yes
   shell: "make install && ldconfig"
   args:
-    chdir: "{{ deploy_home_folder }}/opencv/build"
+    chdir: "{{ ansible_env.HOME }}/opencv/build"
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv

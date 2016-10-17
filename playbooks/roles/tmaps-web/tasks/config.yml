@@ -2,5 +2,5 @@
 - name: Append (extend) existing bash_profile
   template:
     src=extend_bash_profile.j2
-    dest="{{ deploy_home_folder }}/.bash_profile"
+    dest="{{ ansible_env.HOME }}/.bash_profile"
 

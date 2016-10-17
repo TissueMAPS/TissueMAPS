@@ -64,7 +64,7 @@
     - tmtoolbox
 
 - name: Create directory for TissueMAPS related files
-  file: path={{ deploy_home_folder }}/.tmaps state=directory
+  file: path={{ ansible_env.HOME }}/.tmaps state=directory
   tags:
     - tissuemaps
     - tmlibrary
