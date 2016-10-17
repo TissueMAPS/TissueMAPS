@@ -12,7 +12,6 @@
     deploy_home_folder: "{{ ansible_env.HOME }}"
     tmaps_install_location: "{{ deploy_home_folder }}/.local/bin"
 
-
 - name: Configuration of YARN clients
   hosts: tissuemaps_compute
   tasks:
@@ -21,4 +20,7 @@
         mode: pull
         src: "rsync://{{ yarn_master_ssh_host }}/etc/hadoop/conf"
         dest: /etc/hadoop/conf
-  when: yarn_master_ssh_host is defined
+      tags:
+        - spark
+        - tissuemaps
+      when: yarn_master_ssh_host is defined

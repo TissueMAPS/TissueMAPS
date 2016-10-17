@@ -13,21 +13,25 @@
     - db
 
 - name: Update db password to TissueMAPS configuration
-  lineinfile:
+  ini_file:
     dest={{ tmaps_config_file }}
+    section=DEFAULT
     state=present
-    regexp="^db_password"
-    line="db_password = {{ db_password }}"
+    option=db_password
+    value={{ db_password }}
   tags:
     - db
+    - config
     - tissuemaps
 
 - name: Change db host in TissueMAPS configuration
-  lineinfile:
+  ini_file:
     dest={{ tmaps_config_file }}
+    section=DEFAULT
     state=present
-    regexp="^db_host"
-    line="db_host = {{ db_host }}"
+    option=db_host
+    value={{ db_host }}
   tags:
     - db
+    - config
     - tissuemaps

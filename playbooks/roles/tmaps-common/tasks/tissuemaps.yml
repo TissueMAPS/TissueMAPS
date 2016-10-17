@@ -19,64 +19,61 @@
     # shapely:
     - libgeos-dev
   tags:
-    - python
     - tissuemaps
+    - tmlibrary
 
 - name: Install numpy and cython Python packages
   become: yes
-  pip: name={{ item }} extra_args='--user'
-  with_items:
-    - numpy
-    - cython
+  command: "/usr/local/bin/pip install cython --upgrade"
+  # Using the pip module doesn't work???
+  # pip: name=cython
   tags:
-    - python
+    - tmlibrary
+    - tissuemaps
 
 - name: Install jtlibrary package
   pip:
     name: "git+{{ tm_github_url }}/jtlibrary@{{ jtlibrary_branch }}#egg=jtlibrary"
     extra_args: "--user --process-dependency-links"
   tags:
-    - python
     - tissuemaps
-    - git
+    - jtlibrary
 
 - name: Install jtmodules package
   pip:
     name: "git+{{ tm_github_url }}/jtmodules@{{ jtmodules_branch }}#egg=jtmodules"
     extra_args: "--user --process-dependency-links"
   tags:
-    - python
     - tissuemaps
-    - git
+    - tmlibrary
 
 - name: Install tmlibrary package
   pip:
     name: "git+{{ tm_github_url }}/tmlibrary@{{ tmlibrary_branch }}#egg=tmlibrary"
     extra_args: "--user --process-dependency-links"
   tags:
-    - python
     - tissuemaps
-    - git
+    - tmlibrary
 
 - name: Install tmtoolbox package
   pip:
     name: "git+{{ tm_github_url }}/tmtoolbox@{{ tmtoolbox_branch }}#egg=tmtoolbox"
     extra_args: "--user --process-dependency-links"
   tags:
-    - python
     - tissuemaps
-    - git
+    - tmtoolbox
 
 - name: Create directory for TissueMAPS related files
   file: path={{ deploy_home_folder }}/.tmaps state=directory
   tags:
     - tissuemaps
+    - tmlibrary
     - config
 
 - name: Create TissuMAPS library part of the configuration
   shell: "{{ tmaps_install_location }}/tm_create_config"
   tags:
     - tissuemaps
-    - python
+    - tmlibrary
     - config
 

@@ -3,14 +3,12 @@
   register: bftools_zip
   tags:
     - bioformats
-    - java
 
 - name: Install apt packages for Bioformts commond line tools
   become: yes
   apt: name=unzip state=installed
   tags:
     - bioformats
-    - java
 
 - name: Get bftools
   get_url:
@@ -21,10 +19,8 @@
   when: bftools_zip.stat.exists == False
   tags:
     - bioformats
-    - java
 
 - name: Unpack bftools
-  unarchive: src={{ deploy_home_folder }}/bftools.zip dest={{ deploy_home_folder }}
+  unarchive: src={{ deploy_home_folder }}/bftools.zip dest={{ deploy_home_folder }} copy=no
   tags:
     - bioformats
-    - java

@@ -4,16 +4,14 @@
     name: "git+{{ tm_github_url }}/tmserver@{{ tmserver_branch }}#egg=tmserver"
     extra_args: "--user --process-dependency-links"
   tags:
-    - python
     - tissuemaps
-    - web
+    - tmserver
 
-- name: Remove existing TissuMAPS configuration files
-  file: path={{ tmaps_config_file_path }} state=absent
+# - name: Remove existing TissuMAPS configuration files
+#   file: path={{ tmaps_config_file }} state=absent
 
-- name: Recreate TissuMAPS configuration (including server part)
+- name: Add server config to TissuMAPS configuration file
   command: "{{ tmaps_install_location }}/tm_create_config --server"
   tags:
     - tissuemaps
-    - python
-    - web
+    - tmserver

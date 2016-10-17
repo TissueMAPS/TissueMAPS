@@ -16,10 +16,17 @@
   tags:
     - spark
 
+- name: Register "spark" directory
+  stat: path={{ deploy_home_folder }}/spark
+  register: spark_folder
+  tags:
+    - spark
+
 - name: Download Spark source code
   get_url:
     url: "http://d3kbcqa49mib13.cloudfront.net/spark-{{ spark_version }}.tgz"
     dest: "{{ deploy_home_folder }}"
+  when: spark_folder.stat.exists == false
   tags:
     - spark
 
@@ -28,11 +35,13 @@
     src: "{{ deploy_home_folder }}/spark-{{ spark_version }}.tgz"
     dest: "{{ deploy_home_folder }}"
     copy: no
+  when: spark_folder.stat.exists == false
   tags:
     - spark
 
 - name: Move unarchived Spark code into "spark" directory
   command: mv {{ deploy_home_folder }}/spark-{{ spark_version }} {{ deploy_home_folder }}/spark
+  when: spark_folder.stat.exists == false
   tags:
     - spark
 

@@ -19,16 +19,16 @@
     - tmserver
     - web
 
-# - name: Install npm packages
-#   become: yes
-#   npm: name={{ item }} state=present global=yes
-#   with_items:
-#     - bower
-#     - gulp
-#   tags:
-#     - tissuemaps
-#     - client
-#     - web
+- name: Install npm packages
+  become: yes
+  npm: name={{ item }} state=present global=yes
+  with_items:
+    - bower
+    - gulp
+  tags:
+    - tissuemaps
+    - client
+    - web
 
 - name: Get the latest tmui code
   git: repo={{ tm_github_url }}/tmui version={{ tmui_branch }} recursive=yes dest={{ deploy_home_folder }}/tmui
@@ -61,7 +61,7 @@
 #     line: '    "tmauth": \"{{ tmaps_git_url }}/TmAuth.git"'
 
 - name: Install bower dependencies
-  bower: path={{ deploy_home_folder }}/tmui/src/app state=present
+  bower: path={{ deploy_home_folder }}/tmui/src state=present
   tags:
     - web
     - tissuemaps
