@@ -1,8 +1,0 @@
----
-- include: compute.yml
-
-- include: web.yml
-
-- include: database.yml
-
-- include: postconfig.yml

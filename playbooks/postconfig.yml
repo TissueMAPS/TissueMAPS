@@ -10,6 +10,18 @@
   vars:
     tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"
 
+- name: Populate "tissuemaps" database
+  hosts: tissuemaps_web
+  tasks:
+    - name: Create default user "testuser"
+      command: "{{ tmaps_install_location }}/tm_create_user --name testuser --password {{ tm_testuser_password }} --email testuser@tissuemaps.org"
+      tags:
+        - db
+        - tissuemaps
+      when: tm_testuser_password is defined
+  vars:
+    tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"
+
 - name: Configuration of YARN clients
   hosts: tissuemaps_compute
   tasks:

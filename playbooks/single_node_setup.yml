@@ -1,0 +1,14 @@
+---
+- include: openstack.yml
+  when: (cloud_provider|string) == 'openstack'
+
+- include: gce.yml
+  when: (cloud_provider|string) == 'gce'
+
+- include: ec2.yml
+  when: (cloud_provider|string) == 'ec2'
+
+- include: compute.yml
+- include: web.yml
+- include: database.yml
+- include: postconfig.yml

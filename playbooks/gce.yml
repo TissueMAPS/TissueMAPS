@@ -1,0 +1,31 @@
+---
+- name: Deploy TissueMAPS on Google Compute Engine (GCE)
+  hosts: tissuemaps_monitoring
+  tasks:
+    - name: Create instance
+      gce:
+        state: present
+        name: "{{ cloud_host_name }}"
+        credentials_file: "{{ cloud_credentials_file }}"
+        project_id: "{{ cloud_project_id }}"
+        image: "{{ cloud_image }}"
+        machine_type: "{{ cloud_flavor }}"
+        # disks:
+        network: "{{ cloud_network }}"
+      register: instance
+
+    - name: Add instance to inventory
+      add_host:
+         name: "{{ cloud_host_name }}"
+         groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
+         ansible_ssh_host: "{{ instance.instance_data[0].public_ip }}"
+         ansible_ssh_user: ubuntu
+         ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/tmaps_setup.pem"
+
+    - name: Wait for instance
+      wait_for:
+        host: "{{ instance.instance_data[0].public_ip }}"
+        port: 22
+        delay: 10
+        timeout: 60
+        state: started

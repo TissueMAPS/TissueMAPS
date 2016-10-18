@@ -1,0 +1,40 @@
+---
+- name: Deploy TissueMAPS on OpenStack
+  hosts: tissuemaps_monitoring
+  tasks:
+    - name: Create instance
+      os_server:
+        name: "{{ cloud_host_name }}"
+        state: present
+        auth:
+          auth_url={{ cloud_auth_url }}
+          username={{ cloud_username }}
+          password={{ cloud_password }}
+          project_name={{ cloud_project_name }}
+        key_name: tmaps_setup
+        security_groups:
+          - default
+          - web
+        image: "{{ cloud_image }}"
+        flavor: "{{ cloud_flavor }}"
+        timeout: 200
+        auto_ip: yes
+        # volumes: 
+        network: "{{ cloud_network }}"
+      register: instance
+
+    - name: Add instance to inventory
+      add_host:
+        name: "{{ cloud_host_name }}"
+        groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
+        ansible_ssh_host: "{{ instance.openstack.public_v4 }}"
+        ansible_ssh_user: ubuntu
+        ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/tmaps_setup.pem"
+
+    - name: Wait for instance
+      wait_for:
+        host: "{{ instance.openstack.public_v4 }}"
+        port: 22
+        delay: 10
+        timeout: 60
+        state: started
