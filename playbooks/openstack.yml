@@ -1,30 +1,44 @@
 ---
-# Playbook for creating an instance on OpenStack (OS).
+# Playbook for creating a virtual machine instance on OpenStack (OS).
 #
 # Requires the following environment variables:
+#  - OS_AUTH_URL
 #  - OS_USERNAME
 #  - OS_PASSWORD
-#  - OS_TENANT_NAME
-#  - OS_AUTH_URL
+#  - OS_PROJECT_NAME
 - name: Provisioning an instance within OpenStack (OS)
   hosts: tissuemaps_monitoring
   connection: local
   tasks:
+    - name: Create volume
+      os_volume:
+        display_name: "{{ cloud_instance_name }}-storage"
+        state: present
+        # volume_type:
+        wait: yes
+        timeout: 300
+        size: "{{ cloud_volume }}"
+        region_name: "{{ cloud_region }}"
+      register: volume
+
     - name: Create instance
       os_server:
         name: "{{ cloud_instance_name }}"
         state: present
-        key_name: tmaps_setup
-        security_groups:
-          - default
-          - web
+        key_name: "{{ cloud_key_name }}"
+        security_groups: "{{ cloud_groups }}"
         image: "{{ cloud_image }}"
         flavor: "{{ cloud_flavor }}"
-        timeout: 200
         auto_ip: yes
         wait: yes
-        # volumes: 
+        timeout: 300
+        volumes:
+          - "{{ cloud_instance_name }}-storage"
+        # boot_from_volume: "{{ cloud_volume is defined }}"
+        # volume_size: "{{ cloud_volume }}"
+        # terminate_volume: yes
         network: "{{ cloud_network }}"
+        region_name: "{{ cloud_region }}"
       register: instance
 
     - name: Add instance to inventory
@@ -39,6 +53,6 @@
       wait_for:
         host: "{{ instance.openstack.public_v4 }}"
         port: 22
-        delay: 10
-        timeout: 60
+        delay: 30
+        timeout: 300
         state: started

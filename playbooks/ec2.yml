@@ -1,5 +1,5 @@
 ---
-# Playbook for creating an instance on AWS Elastic Compute Cloud 2 (EC2).
+# Playbook for creating a virtual machine instance on Elastic Compute Cloud 2 (EC2).
 #
 # Requires the following environment variables:
 #  - AWS_ACCESS_KEY_ID
@@ -11,36 +11,41 @@
     - name: Create instance
       ec2:
         state: present
-        key_name: tmaps_setup
-        group: test
+        key_name: "{{ cloud_key_name }}"
         image: "{{ cloud_image }}"
         instance_type: "{{ cloud_flavor }}"
-        wait: true
         count: 1
         instance_tags:
            Name: "{{ cloud_instance_name }}"
-        groups:
-          - default
-          - web
-        timeout: 300
-        assign_public_ip: yes
-        # volumes
-        # ebs_optimized
-        vpc_subnet_id: "{{ cloud_network }}"
+        groups: "{{ cloud_groups }}"
+        wait: true
+        wait_timeout: 300
+        volumes:
+          - device_name: /dev/sda1
+            volume_size: 30
+          - device_name: /dev/sdb
+            volume_type: standard
+            # iops: 100
+            volume_size: "{{ cloud_volume }}"
+            delete_on_termination: yes
+        # ebs_optimized: no
+        # assign_public_ip: yes
+        # vpc_subnet_id: "{{ cloud_network }}"
+        region: "{{ cloud_region }}"
       register: instance
 
     - name: Add instance to inventory
       add_host:
         name: "{{ cloud_instance_name }}"
         groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
-        ansible_ssh_host: "{{ instance.openstack.public_v4 }}"
+        ansible_ssh_host: "{{ instance.instances[0].public_ip }}"
         ansible_ssh_user: ubuntu
         ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/tmaps_setup.pem"
 
     - name: Wait for instance
       wait_for:
-        host: "{{ instance.openstack.public_v4 }}"
+        host: "{{ instance.instances[0].public_ip }}"
         port: 22
-        delay: 10
-        timeout: 60
+        delay: 30
+        timeout: 300
         state: started
