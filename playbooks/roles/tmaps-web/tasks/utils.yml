@@ -1,5 +1,18 @@
 ---
 - name: Place script for creation of slurm users
   template:
-    src=create_slurm_account.sh.j2
-    dest="{{ ansible_env.HOME }}/create_slurm_account.sh"
+    src={{ playbook_dir }}/roles/tmaps-web/templates/create_slurm_account.sh.j2
+    dest={{ ansible_env.HOME }}/create_slurm_account.sh
+    mode="u+x"
+
+- name: Place script for starting TissueMAPS server (web and application servers)
+  template:
+    src={{ playbook_dir }}/roles/tmaps-web/templates/start_server.sh.j2
+    dest={{ ansible_env.HOME }}/start_server.sh
+    mode="u+x"
+
+- name: Place script for stopping TissueMAPS server (web and application servers)
+  template:
+    src={{ playbook_dir }}/roles/tmaps-web/templates/stop_server.sh.j2
+    dest={{ ansible_env.HOME }}/stop_server.sh
+    mode="u+x"

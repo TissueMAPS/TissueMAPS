@@ -1,5 +1,5 @@
 ---
-- include: spark.yml
+# - include: spark.yml
 
 - include: bioformats_cli_tools.yml
 

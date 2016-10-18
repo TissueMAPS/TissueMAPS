@@ -1,4 +1,6 @@
 ---
+cluster_mode: no
+
 opencv_version: 3.1.0
 
 matlab_version: R2016a

@@ -1,6 +1,0 @@
----
-- file: state=directory path="{{ ansible_env.HOME }}/.gc3"
-
-- name: Drop in a cluster config
-  template: src="../templates/gc3pie.conf.j2" dest="{{ ansible_env.HOME }}/.gc3/gc3pie.conf"
-

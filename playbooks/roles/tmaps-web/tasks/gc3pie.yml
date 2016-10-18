@@ -1,0 +1,11 @@
+---
+- name: Create directory for GC3Pie data
+  file: state=directory path="{{ ansible_env.HOME }}/.gc3"
+
+- name: Drop GC3Pie configuration file
+  template:
+    src={{ playbook_dir }}/roles/tmaps-web/templates/gc3pie.conf.j2
+    dest={{ ansible_env.HOME }}/.gc3/gc3pie.conf
+  tags:
+    - gc3pie
+

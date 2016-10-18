@@ -8,9 +8,10 @@
     - tissuemaps
 
 - name: Install tmserver package
-  shell: pip install -e . --user --process-dependency-links
+  shell: pip install -e {{ ansible_env.HOME }}/tmserver --user --process-dependency-links
   args:
     chdir={{ ansible_env.HOME }}/tmserver
+    executable=/bin/bash
   tags:
     - tissuemaps
 

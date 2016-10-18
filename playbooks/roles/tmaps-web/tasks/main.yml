@@ -21,6 +21,8 @@
 
 - include: tissuemaps_client.yml
 
+- include: gc3pie.yml
+
 - include: config.yml
 
 - include: utils.yml

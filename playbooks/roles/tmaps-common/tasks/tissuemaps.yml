@@ -23,7 +23,7 @@
 
 - name: Install numpy and cython Python packages
   become: yes
-  command: "/usr/local/bin/pip install cython --upgrade"
+  command: /usr/local/bin/pip install cython --upgrade
   # Using the pip module doesn't work???
   # pip: name=cython
   tags:
@@ -38,9 +38,10 @@
     - tissuemaps
 
 - name: Install jtlibrary package
-  shell: pip install -e . --user --process-dependency-links
+  shell: pip install -e {{ ansible_env.HOME }}/jtlibrary --user --process-dependency-links
   args:
-    chdir={{ ansible_env.HOME }}/jtlibrary
+    chdir={{ ansible_env.HOME }}/jtlibrary/
+    executable=/bin/bash
   tags:
     - tissuemaps
 
@@ -60,9 +61,10 @@
     - tissuemaps
 
 - name: Install jtmodules package
-  shell: pip install -e . --user --process-dependency-links
+  shell: pip install -e {{ ansible_env.HOME }}/jtmodules --user --process-dependency-links
   args:
-    chdir={{ ansible_env.HOME }}/jtmodules
+    chdir={{ ansible_env.HOME }}/jtmodules/
+    executable=/bin/bash
   tags:
     - tissuemaps
 
@@ -82,9 +84,10 @@
     - tissuemaps
 
 - name: Install tmlibrary package
-  shell: pip install -e . --user --process-dependency-links
+  shell: pip install -e {{ ansible_env.HOME }}/tmlibrary --user --process-dependency-links
   args:
-    chdir={{ ansible_env.HOME }}/tmlibrary
+    chdir={{ ansible_env.HOME }}/tmlibrary/
+    executable=/bin/bash
   tags:
     - tissuemaps
 
@@ -104,9 +107,10 @@
     - tissuemaps
 
 - name: Install tmtoolbox package
-  shell: pip install -e . --user --process-dependency-links
+  shell: pip install -e {{ ansible_env.HOME }}/tmtoolbox --user --process-dependency-links
   args:
-    chdir={{ ansible_env.HOME }}/tmtoolbox
+    chdir={{ ansible_env.HOME }}/tmtoolbox/
+    executable=/bin/bash
   tags:
     - tissuemaps
 

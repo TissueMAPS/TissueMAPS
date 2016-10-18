@@ -1,0 +1,44 @@
+[auth/noauth]
+type=none
+
+[auth/tmaps]
+type=ssh
+username=tmaps
+
+[resource/localhost]
+# change the following to `enabled=no` to quickly disable
+enabled={{ (not cluster_mode)|lower }}
+type=shellcmd
+auth=noauth
+transport=local
+# where the GNU `time` command is located;
+# the default is fine on almost any Linux distribution;
+# you might need to change this for MacOSX
+#time_cmd=/usr/bin/time
+# max_cores sets a limit on the number of cuncurrently-running jobs
+max_cores=4
+max_cores_per_job=4
+# adjust the following to match the features of your local computer
+max_memory_per_core=4 GB
+max_walltime=48 hours
+architecture=x64_64
+# When `override` is set to ``yes``, the shellcmd backend will try to
+# discover the actual architecture, number of cores and the total
+# memory of the machine and only use the values found on the
+# configuration file as a fallback. Default for the `override` option
+# is ``no``.
+override = true
+
+[resource/slurmtmaps]
+enabled={{ cluster_mode|lower }}
+type=slurm
+transport=local
+# Not used if transport != ssh
+frontend=frontend001
+auth=tmaps
+architecture=x86_64
+max_cores=80
+max_cores_per_job=8
+max_memory_per_core=1 TB
+max_walltime=10 days
+
