@@ -1,16 +1,6 @@
 ---
-# Playbook that creates a virtual machine in the cloud (using one of the
-# following providers: 'os', 'gce', 'ec2') and configures it such that
+# Playbook for configuring an already existing virtual machine instance such that
 # it provides all components required to host TissueMAPS.
-- include: openstack.yml
-  when: (cloud_provider|string) == 'os'
-
-- include: gce.yml
-  when: (cloud_provider|string) == 'gce'
-
-- include: ec2.yml
-  when: (cloud_provider|string) == 'ec2'
-
 - include: compute.yml
 - include: web.yml
 - include: database.yml
