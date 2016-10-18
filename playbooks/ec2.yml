@@ -1,1 +1,46 @@
 ---
+# Playbook for creating an instance on AWS Elastic Compute Cloud 2 (EC2).
+#
+# Requires the following environment variables:
+#  - AWS_ACCESS_KEY_ID
+#  - AWS_SECRET_ACCESS_KEY
+- name: Provision instance within AWS Elastic Compute Cloud 2 (EC2)
+  hosts: tissuemaps_monitoring
+  connection: local
+  tasks:
+    - name: Create instance
+      ec2:
+        state: present
+        key_name: tmaps_setup
+        group: test
+        image: "{{ cloud_image }}"
+        instance_type: "{{ cloud_flavor }}"
+        wait: true
+        count: 1
+        instance_tags:
+           Name: "{{ cloud_instance_name }}"
+        groups:
+          - default
+          - web
+        timeout: 300
+        assign_public_ip: yes
+        # volumes
+        # ebs_optimized
+        vpc_subnet_id: "{{ cloud_network }}"
+      register: instance
+
+    - name: Add instance to inventory
+      add_host:
+        name: "{{ cloud_instance_name }}"
+        groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
+        ansible_ssh_host: "{{ instance.openstack.public_v4 }}"
+        ansible_ssh_user: ubuntu
+        ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/tmaps_setup.pem"
+
+    - name: Wait for instance
+      wait_for:
+        host: "{{ instance.openstack.public_v4 }}"
+        port: 22
+        delay: 10
+        timeout: 60
+        state: started

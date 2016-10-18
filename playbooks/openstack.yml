@@ -1,16 +1,19 @@
 ---
-- name: Deploy TissueMAPS on OpenStack
+# Playbook for creating an instance on OpenStack (OS).
+#
+# Requires the following environment variables:
+#  - OS_USERNAME
+#  - OS_PASSWORD
+#  - OS_TENANT_NAME
+#  - OS_AUTH_URL
+- name: Provisioning an instance within OpenStack (OS)
   hosts: tissuemaps_monitoring
+  connection: local
   tasks:
     - name: Create instance
       os_server:
-        name: "{{ cloud_host_name }}"
+        name: "{{ cloud_instance_name }}"
         state: present
-        auth:
-          auth_url={{ cloud_auth_url }}
-          username={{ cloud_username }}
-          password={{ cloud_password }}
-          project_name={{ cloud_project_name }}
         key_name: tmaps_setup
         security_groups:
           - default
@@ -19,13 +22,14 @@
         flavor: "{{ cloud_flavor }}"
         timeout: 200
         auto_ip: yes
+        wait: yes
         # volumes: 
         network: "{{ cloud_network }}"
       register: instance
 
     - name: Add instance to inventory
       add_host:
-        name: "{{ cloud_host_name }}"
+        name: "{{ cloud_instance_name }}"
         groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
         ansible_ssh_host: "{{ instance.openstack.public_v4 }}"
         ansible_ssh_user: ubuntu

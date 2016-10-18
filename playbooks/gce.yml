@@ -1,30 +1,36 @@
 ---
-- name: Deploy TissueMAPS on Google Compute Engine (GCE)
+# Playbook for creating an instance on Gooble Compute Engine (GCE).
+#
+# Requires the following environment variables:
+#  - GCE_EMAIL
+#  - GCE_PROJECT
+#  - GCE_CREDENTIALS_FILE_PATH
+- name: Provision instance within Google Compute Engine (GCE)
   hosts: tissuemaps_monitoring
+  connection: local
   tasks:
     - name: Create instance
       gce:
         state: present
-        name: "{{ cloud_host_name }}"
-        credentials_file: "{{ cloud_credentials_file }}"
-        project_id: "{{ cloud_project_id }}"
+        name: "{{ cloud_instance_name }}"
         image: "{{ cloud_image }}"
         machine_type: "{{ cloud_flavor }}"
+        status: started
         # disks:
         network: "{{ cloud_network }}"
       register: instance
 
     - name: Add instance to inventory
       add_host:
-         name: "{{ cloud_host_name }}"
+         name: "{{ cloud_instance_name }}"
          groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
-         ansible_ssh_host: "{{ instance.instance_data[0].public_ip }}"
+         ansible_ssh_host: "{{ instance.instances[0].public_ip }}"
          ansible_ssh_user: ubuntu
          ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/tmaps_setup.pem"
 
-    - name: Wait for instance
+    - name: Wait for instance to come up
       wait_for:
-        host: "{{ instance.instance_data[0].public_ip }}"
+        host: "{{ instance.instances[0].public_ip }}"
         port: 22
         delay: 10
         timeout: 60
