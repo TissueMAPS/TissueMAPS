@@ -1,10 +1,14 @@
 ---
 - include: ec2.yml
+  vars:
+    cloud_volume_device: /dev/sdf
   when: (cloud_provider|string) == 'ec2'
 
 - include: gce.yml
   when: (cloud_provider|string) == 'gce'
 
 - include: os.yml
+  vars:
+    cloud_volume_name: /dev/vdb
   when: (cloud_provider|string) == 'os'
 

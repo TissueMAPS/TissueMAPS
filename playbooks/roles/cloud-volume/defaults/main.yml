@@ -1,5 +1,4 @@
 ---
-volume_device: /dev/vdb  # different for every cloud!!
 volume_mount_point: /data
 volume_group: root
 volume_user: root

@@ -14,7 +14,7 @@
   tags:
     - volume
 
-- name: Ensure the mount point exists
+- name: Ensure mount point exists and has correct permissions
   become: yes
   file:
     path={{ volume_mount_point }}
@@ -31,7 +31,7 @@
     fs_type={{ volume_fs_type }}
     # opts={{ item.mount_options }}
     passno=0
-    src={{ volume_device_name }}1
+    src={{ volume_device_name }}
     state=mounted
   tags:
     - volume

@@ -6,62 +6,56 @@
 #  - OS_USERNAME
 #  - OS_PASSWORD
 #  - OS_PROJECT_NAME
-- name: Provisioning an instance within OpenStack (OS)
-  hosts: tissuemaps_monitoring
-  connection: local
-  vars:
-    - cloud_volume_name: "{{ cloud_instance_name }}-storage"
-  tasks:
-    - name: Create volume
-      os_volume:
-        display_name: "{{ cloud_volume_name }}"
-        state: present
-        volume_type: default
-        wait: yes
-        timeout: 300
-        size: "{{ cloud_volume_size }}"
-        region_name: "{{ cloud_region }}"
-      register: volume
+- name: Create volume
+  os_volume:
+    display_name: "{{ cloud_volume_name }}"
+    state: present
+    volume_type: default
+    wait: yes
+    timeout: 300
+    size: "{{ cloud_volume_size }}"
+    region_name: "{{ cloud_region }}"
+  register: volume
 
-    - name: Create instance
-      os_server:
-        name: "{{ cloud_instance_name }}"
-        state: present
-        key_name: "{{ cloud_key_name }}"
-        security_groups: "{{ cloud_security_groups }}"
-        image: "{{ cloud_image }}"
-        flavor: "{{ cloud_flavor }}"
-        auto_ip: yes
-        wait: yes
-        timeout: 300
-        boot_from_volume: yes
-        volume_size: "{{ cloud_disk_size }}"
-        terminate_volume: yes
-        network: "{{ cloud_network }}"
-        region_name: "{{ cloud_region }}"
-      register: instance
+- name: Create instance
+  os_server:
+    name: "{{ cloud_instance_name }}"
+    state: present
+    key_name: "{{ cloud_key_name }}"
+    security_groups: "{{ cloud_security_groups }}"
+    image: "{{ cloud_image }}"
+    flavor: "{{ cloud_flavor }}"
+    auto_ip: yes
+    wait: yes
+    timeout: 300
+    boot_from_volume: yes
+    volume_size: "{{ cloud_disk_size }}"
+    terminate_volume: yes
+    network: "{{ cloud_network }}"
+    region_name: "{{ cloud_region }}"
+  register: instance
 
-    - name: Attach volume to instance
-      os_server_volume:
-        state: present
-        server: "{{ cloud_instance_name }}"
-        volume: "{{ cloud_volume_name }}"
-        device: "{{ cloud_volume_device }}"
-        wait: yes
-        timeout: 300
+- name: Attach volume to instance
+  os_server_volume:
+    state: present
+    server: "{{ cloud_instance_name }}"
+    volume: "{{ cloud_volume_name }}"
+    device: "{{ cloud_volume_device }}"
+    wait: yes
+    timeout: 300
 
-    - name: Add instance to inventory
-      add_host:
-        name: "{{ cloud_instance_name }}"
-        groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
-        ansible_ssh_host: "{{ instance.openstack.public_v4 }}"
-        ansible_ssh_user: ubuntu
-        ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/tmaps_setup.pem"
+- name: Add instance to inventory
+  add_host:
+    name: "{{ cloud_instance_name }}"
+    groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
+    ansible_ssh_host: "{{ instance.openstack.public_v4 }}"
+    ansible_ssh_user: ubuntu
+    ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/{{ cloud_key_name }}.pem"
 
-    - name: Wait for instance
-      wait_for:
-        host: "{{ instance.openstack.public_v4 }}"
-        port: 22
-        delay: 30
-        timeout: 300
-        state: started
+- name: Wait for instance
+  wait_for:
+    host: "{{ instance.openstack.public_v4 }}"
+    port: 22
+    delay: 30
+    timeout: 300
+    state: started

@@ -1,13 +1,19 @@
 ---
-- name: Format disk
+- name: Check if device exists
+  command: if [ -e {{ volume_device_name }}]; then exit 0; else exit 1; fi
+  register: device
+  tags:
+    - volume
+
+- fail:  msg=Device {{ volume_device_name }} does not exist
+  when: device.rc == 1
+  tags:
+    - volume
+
+- name: Format attached volume (make filesystem)
   become: yes
-  shell: |
-    if
-        [ -e {{ volume_device_name }}1 ]
-    then
-        [[ `blkid | grep {{ volume_device_name }}1 | grep {{ volume_fs_type }}` ]] || mkfs.{{ volume_fs_type }} {{ volume_device_name }}1
-    fi
-  args:
-    executable=/bin/bash
+  shell: mkfs.{{ volume_fs_type }} {{ volume_device_name }}
+  args: executable=/bin/bash
+  when: device.rc == 0
   tags:
     - volume

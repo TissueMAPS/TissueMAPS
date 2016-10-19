@@ -1,7 +1,7 @@
 ---
 # Playbook for configuring an already existing virtual machine instance such that
 # it provides all components required to host TissueMAPS.
-- include: volume.yml
+# - include: volume.yml
 - include: compute.yml
 - include: web.yml
 - include: database.yml

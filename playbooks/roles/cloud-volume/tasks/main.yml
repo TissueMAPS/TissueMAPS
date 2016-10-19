@@ -1,15 +1,13 @@
 ---
-- name: Check if the volume has already been formateed and mounted
+- name: Check if the volume has already been formatted and mounted
   command: mountpoint -q {{ volume_mount_point }}
-  register: db_volume
-  failed_when: False
-  changed_when: False
+  register: mount_point
   tags:
     - volume
 
 - debug:
     msg: Mountpoint {{ volume_mount_point }} is already mounted!
-  when: db_volume.rc == 0
+  when: mount_point.rc == 0
 
 - name: Install required packages
   become: yes
@@ -24,7 +22,7 @@
     - volume
 
 - include: format.yml
-  when: db_volume.rc == 1
+  when: mount_point.rc == 1
 
 - include: mount.yml
-  when: db_volume.rc == 1
+  when: mount_point.rc == 1

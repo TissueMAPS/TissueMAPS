@@ -1,2 +1,2 @@
 ---
-cloud_volume_device: /dev/vdb
+cloud_volume_name: "{{ cloud_instance_name }}-storage"
