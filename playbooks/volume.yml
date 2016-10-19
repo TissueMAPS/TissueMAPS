@@ -1,0 +1,8 @@
+---
+- name: Format and mount the storage volume
+  hosts: tissuemaps_compute, tissuemaps_web, tissuemaps_database
+  roles:
+    - storage-volume
+  tags:
+    - tissuemaps
+    - compute

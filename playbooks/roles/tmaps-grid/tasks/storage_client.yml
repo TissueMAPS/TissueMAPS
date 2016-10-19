@@ -1,0 +1,16 @@
+---
+- name: Update data location in TissueMAPS configuration
+  ini_file:
+    dest={{ tmaps_config_file }}
+    section=tmlib
+    state=present
+    option=storage_home
+    value={{ volume_mount_point }}/experiments
+  tags:
+    - config
+    - tissuemaps
+
+- name: Ensure TissueMAPS storage directory exists
+  file: path={{ volume_mount_point }}/experiments state=directory
+  tags:
+    - tissuemaps
