@@ -1,0 +1,30 @@
+---
+- name: Check if the volume has already been formateed and mounted
+  command: mountpoint -q {{ volume_mount_point }}
+  register: db_volume
+  failed_when: False
+  changed_when: False
+  tags:
+    - volume
+
+- debug:
+    msg: Mountpoint {{ volume_mount_point }} is already mounted!
+  when: db_volume.rc == 0
+
+- name: Install required packages
+  become: yes
+  apt:
+    name={{ item }}
+    state=present
+  with_items:
+    - util-linux
+    - parted
+    - lvm2
+  tags:
+    - volume
+
+- include: format.yml
+  when: db_volume.rc == 1
+
+- include: mount.yml
+  when: db_volume.rc == 1

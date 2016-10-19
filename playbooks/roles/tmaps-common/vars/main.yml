@@ -1,4 +1,2 @@
 ---
-deploy_user: "{{ ansible_ssh_user }}"
-
 tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"

@@ -8,7 +8,7 @@
 
 - name: Drop SSH keys of authorized users
   become: yes
-  authorized_key: user={{ deploy_user }} key=https://github.com/{{ item }}.keys
+  authorized_key: user={{ ansible_ssh_user }} key=https://github.com/{{ item }}.keys
   with_items: {{ tm_users }}
   tags:
     - ssh

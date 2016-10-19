@@ -9,15 +9,17 @@
 - name: Provisioning an instance within OpenStack (OS)
   hosts: tissuemaps_monitoring
   connection: local
+  vars:
+    - cloud_volume_name: "{{ cloud_instance_name }}-storage"
   tasks:
     - name: Create volume
       os_volume:
-        display_name: "{{ cloud_instance_name }}-storage"
+        display_name: "{{ cloud_volume_name }}"
         state: present
-        # volume_type:
+        volume_type: default
         wait: yes
         timeout: 300
-        size: "{{ cloud_volume }}"
+        size: "{{ cloud_volume_size }}"
         region_name: "{{ cloud_region }}"
       register: volume
 
@@ -26,20 +28,27 @@
         name: "{{ cloud_instance_name }}"
         state: present
         key_name: "{{ cloud_key_name }}"
-        security_groups: "{{ cloud_groups }}"
+        security_groups: "{{ cloud_security_groups }}"
         image: "{{ cloud_image }}"
         flavor: "{{ cloud_flavor }}"
         auto_ip: yes
         wait: yes
         timeout: 300
-        volumes:
-          - "{{ cloud_instance_name }}-storage"
-        # boot_from_volume: "{{ cloud_volume is defined }}"
-        # volume_size: "{{ cloud_volume }}"
-        # terminate_volume: yes
+        boot_from_volume: yes
+        volume_size: "{{ cloud_disk_size }}"
+        terminate_volume: yes
         network: "{{ cloud_network }}"
         region_name: "{{ cloud_region }}"
       register: instance
+
+    - name: Attach volume to instance
+      os_server_volume:
+        state: present
+        server: "{{ cloud_instance_name }}"
+        volume: "{{ cloud_volume_name }}"
+        device: "{{ cloud_volume_device }}"
+        wait: yes
+        timeout: 300
 
     - name: Add instance to inventory
       add_host:

@@ -1,7 +1,7 @@
 #!/bin/bash
 USERNAME=$1
 
-SLURMUSER={{ deploy_user }}
+SLURMUSER={{ ansible_ssh_user }}
 
 if [ "$USERNAME" == "" ]; then
     echo "No username specified." && exit

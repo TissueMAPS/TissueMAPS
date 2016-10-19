@@ -1,0 +1,13 @@
+---
+- name: Format disk
+  become: yes
+  shell: |
+    if
+        [ -e {{ volume_device_name }}1 ]
+    then
+        [[ `blkid | grep {{ volume_device_name }}1 | grep {{ volume_fs_type }}` ]] || mkfs.{{ volume_fs_type }} {{ volume_device_name }}1
+    fi
+  args:
+    executable=/bin/bash
+  tags:
+    - volume

@@ -1,0 +1,38 @@
+---
+- name: Ensure that group exists
+  become: yes
+  group: name={{ volume_group }}
+  tags:
+    - volume
+
+- name: Ensure that user exist
+  become: yes
+  user:
+      name={{ volume_user }}
+      group={{ volume_group }}
+      shell=/bin/bash
+  tags:
+    - volume
+
+- name: Ensure the mount point exists
+  become: yes
+  file:
+    path={{ volume_mount_point }}
+    owner={{ volume_user }}
+    group={{ volume_group }}
+    state=directory
+  tags:
+    - volume
+
+- name: Mount volume
+  become: yes
+  mount:
+    name={{ volume_mount_point }}
+    fs_type={{ volume_fs_type }}
+    # opts={{ item.mount_options }}
+    passno=0
+    src={{ volume_device_name }}1
+    state=mounted
+  tags:
+    - volume
+

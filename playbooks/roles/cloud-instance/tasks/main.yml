@@ -1,0 +1,10 @@
+---
+- include: ec2.yml
+  when: (cloud_provider|string) == 'ec2'
+
+- include: gce.yml
+  when: (cloud_provider|string) == 'gce'
+
+- include: os.yml
+  when: (cloud_provider|string) == 'os'
+

@@ -4,10 +4,8 @@
 - include: configure.yml
 
 - include: create_data_directory.yml
-  when: "{{ attach_volume }}"
 
 - include: create_database.yml
-  when: "{{ create_db_with_ansible }}"
 
 - name: restart postgresql
   become: yes

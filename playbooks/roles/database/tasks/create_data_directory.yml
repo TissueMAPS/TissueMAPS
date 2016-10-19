@@ -4,17 +4,17 @@
   tags:
     - postgresql
 
-- name: Format attached volumne (create filesystem)
-  become: yes
-  shell: mkfs.ext4 /dev/vdb
-  tags:
-    - postgresql
+# - name: Format attached volumne (create filesystem)
+#   become: yes
+#   shell: mkfs.ext4 /dev/vdb
+#   tags:
+#     - postgresql
 
-- name: Mount the created file system on mount point /data
-  become: yes
-  shell: mount /dev/vdb /data
-  tags:
-    - postgresql
+# - name: Mount the created file system on mount point /data
+#   become: yes
+#   shell: mount /dev/vdb /data
+#   tags:
+#     - postgresql
 
 # Symlink /var/lib/postgresql -> /data/storage/postgresql/
 - name: Create data directory (source for symlink) at /var/lib
@@ -26,7 +26,7 @@
 
 - name: Create data directory (target for symlink) on mounted filesystem
   become: yes
-  file: path=/data/storage/postgresql/data
+  file: path={{ volume_mount_point }}/storage/postgresql/data
     state=directory
     owner=postgres
   tags:
@@ -34,7 +34,7 @@
 
 - name: Symlink data directory to mounted filesystem
   become: yes
-  file: src=/data/storage/postgresql/data
+  file: src={{ volume_mount_point }}/storage/postgresql/data
     dest=/var/lib/postgresql
     state=link
     force=yes
@@ -68,7 +68,7 @@
 
 - name: Create log directory (target for symlink) on mounted filesystem
   become: yes
-  file: path=/data/storage/postgresql/logs
+  file: path={{ volume_mount_point }}/storage/postgresql/logs
     state=directory
     owner=postgres
   tags:
@@ -76,7 +76,7 @@
 
 - name: Symlink log directory to mounted filesystem
   become: yes
-  file: src=/data/storage/postgresql/logs
+  file: src={{ volume_mount_point }}/storage/postgresql/logs
     dest=/var/log/postgresql
     state=link
     force=yes

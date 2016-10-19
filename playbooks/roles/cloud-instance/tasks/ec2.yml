@@ -7,6 +7,8 @@
 - name: Provision instance within AWS Elastic Compute Cloud 2 (EC2)
   hosts: tissuemaps_monitoring
   connection: local
+  vars:
+    cloud_volume_device: /dev/sbf
   tasks:
     - name: Create instance
       ec2:
@@ -17,22 +19,36 @@
         count: 1
         instance_tags:
            Name: "{{ cloud_instance_name }}"
-        groups: "{{ cloud_groups }}"
+        groups: "{{ cloud_security_groups }}"
         wait: true
         wait_timeout: 300
         volumes:
+          # SSD device for root file system
           - device_name: /dev/sda1
-            volume_size: 30
-          - device_name: /dev/sdb
-            volume_type: standard
-            # iops: 100
-            volume_size: "{{ cloud_volume }}"
-            delete_on_termination: yes
+            volume_size: "{{ cloud_disk_size }}"
+            volume_type: gp2
+          # - device_name: "{{ cloud_volume_device }}"
+          #   volume_type: standard
+          #   volume_name: "{{ cloud_volume_name }}"
+          #   # iops: 100
+          #   volume_size: "{{ cloud_volume_size }}"
+          #   delete_on_termination: yes
         # ebs_optimized: no
         # assign_public_ip: yes
         # vpc_subnet_id: "{{ cloud_network }}"
         region: "{{ cloud_region }}"
       register: instance
+
+    - name: Create volume and attach it to the instance
+      ec2_vol:
+        state: present
+        device_name: "{{ cloud_volume_device }}"
+        instance: "{{ instance.instances[0].public_ip }}"
+        delete_on_termination: yes
+        name: "{{ cloud_volume_name }}"
+        region: "{{ cloud_region }}"
+        volume_type: standard
+        volume_size: "{{ cloud_volume_size }}"
 
     - name: Add instance to inventory
       add_host:

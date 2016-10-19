@@ -15,7 +15,7 @@
     dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
     state=present
     regexp="^max_connections"
-    line="max_connections = {{ max_connections }}"
+    line="max_connections = {{ pg_max_connections }}"
   tags:
     - postgresql
 
@@ -25,7 +25,7 @@
     dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
     state=present
     regexp="^shared_buffers"
-    line="shared_buffers = {{ shared_buffers}}"
+    line="shared_buffers = {{ pg_shared_buffers}}"
   tags:
     - postgresql
 
@@ -35,7 +35,7 @@
     dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
     state=present
     regexp="^effective_cache_size"
-    line="effective_cache_size = {{ effective_cache_size }}"
+    line="effective_cache_size = {{ pg_effective_cache_size }}"
   tags:
     - postgresql
 
@@ -45,7 +45,7 @@
     dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
     state=present
     regexp="^max_worker_processes"
-    line="max_worker_processes = {{ max_worker_processes }}"
+    line="max_worker_processes = {{ pg_max_worker_processes }}"
   tags:
     - postgresql
 
@@ -55,7 +55,7 @@
     dest="/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
     state=present
     regexp="^max_parallel_workers_per_gather"
-    line="max_parallel_workers_per_gather = {{ max_parallel_workers_per_gather }}"
+    line="max_parallel_workers_per_gather = {{ pg_max_parallel_workers_per_gather }}"
   tags:
     - postgresql
 

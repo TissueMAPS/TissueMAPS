@@ -1,0 +1,5 @@
+---
+cloud_disk_size: 30
+cloud_volume_size: 100
+cloud_instance_name: tissuemaps
+cloud_security_groups: default
