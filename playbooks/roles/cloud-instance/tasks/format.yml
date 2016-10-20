@@ -1,0 +1,8 @@
+---
+- name: Format attached storage volume
+  become: yes
+  filesystem:
+    fstype: "{{ cloud_volume_fstype }}"
+    dev: "{{ cloud_volume_device[cloud_provider] }}"
+  tags:
+    - volume

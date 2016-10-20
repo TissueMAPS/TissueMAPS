@@ -1,0 +1,6 @@
+---
+- name: Provision virtual machine instances
+  hosts: vm_instances
+  connection: local
+  roles:
+    - cloud-instance

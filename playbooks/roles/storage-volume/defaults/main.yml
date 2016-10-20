@@ -1,4 +1,0 @@
----
-volume_mount_point: /data
-volume_group: root
-volume_user: root

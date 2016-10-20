@@ -12,7 +12,7 @@
     instance_type: "{{ cloud_flavor }}"
     count: 1
     instance_tags:
-       Name: "{{ cloud_instance_name }}"
+       Name: "{{ item }}"
     groups: "{{ cloud_security_groups }}"
     wait: true
     wait_timeout: 300
@@ -22,12 +22,6 @@
         volume_size: "{{ cloud_disk_size }}"
         volume_type: gp2
         delete_on_termination: yes
-      # - device_name: "{{ cloud_volume_device }}"
-      #   volume_type: standard
-      #   volume_name: "{{ cloud_volume_name }}"
-      #   # iops: 100
-      #   volume_size: "{{ cloud_volume_size }}"
-      #   delete_on_termination: yes
     # ebs_optimized: no
     # assign_public_ip: yes
     # vpc_subnet_id: "{{ cloud_network }}"
@@ -37,21 +31,17 @@
 - name: Create volume and attach it to the instance
   ec2_vol:
     state: present
-    device_name: "{{ cloud_volume_device }}"
+    device_name: "{{ cloud_volume_device[cloud_provider] }}"
     instance: "{{ instance.instances[0].id }}"
     delete_on_termination: yes
     name: "{{ cloud_volume_name }}"
     region: "{{ cloud_region }}"
     volume_type: standard
     volume_size: "{{ cloud_volume_size }}"
+  when: cloud_volume_size is defined
 
-- name: Add instance to inventory
-  add_host:
-    name: "{{ cloud_instance_name }}"
-    groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
-    ansible_ssh_host: "{{ instance.instances[0].public_ip }}"
-    ansible_ssh_user: ubuntu
-    ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/{{ cloud_key_name }}.pem"
+- debug:
+    msg: Created instance {{ instance.instances[0].public_ip }}
 
 - name: Wait for instance
   wait_for:
@@ -60,3 +50,16 @@
     delay: 30
     timeout: 300
     state: started
+
+- name: Add instance to inventory
+  add_host:
+    name: "{{ item }}"
+    ansible_ssh_host: "{{ instance.instances[0].public_ip }}"
+    ansible_ssh_user: ubuntu
+    ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/{{ cloud_key_name }}.pem"
+
+- include: format.yml
+  when: cloud_volue_size is defined
+
+- include: mount.yml
+  when: cloud_volue_size is defined

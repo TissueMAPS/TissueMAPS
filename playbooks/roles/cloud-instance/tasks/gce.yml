@@ -7,58 +7,68 @@
 #  - GCE_CREDENTIALS_FILE_PATH: path to an credentials file in JSON format
 #    (https://developers.google.com/identity/protocols/application-default-credentials)
 - name: Create boot disk
+  delegate_to: localhost
   gce_pd:
     state: present
-    zone: "{{ cloud_region }}"
+    disk_type: pd-standard
+    image: "{{ cloud_image }}"
+    name: "{{ item }}"
     size_gb: "{{ cloud_disk_size }}"
-    name: "{{ cloud_instance_name }}"
-    mode: READ_WRITE
-
-- name: Create volume
-  gce_pd:
-    state: present
     zone: "{{ cloud_region }}"
-    size_gb: "{{ cloud_volume_size }}"
-    name: "{{ cloud_volume_name }}"
-    mode: READ_WRITE
 
 - name: Create instance
   vars:
     ssh_key: "{{ lookup('file', '~/.ssh/{{ cloud_key_name }}.pub') }}"
+  delegate_to: localhost
   gce:
-    state: present
-    name: "{{ cloud_instance_name }}"
+    state: active
+    name: "{{ item }}"
     image: "{{ cloud_image }}"
     machine_type: "{{ cloud_flavor }}"
     external_ip: ephemeral
-    disks:
-      - name: "{{ cloud_instance_name }}"
-        mode: READ_WRITE
-      - name: "{{ cloud_volume_name }}"
-        mode: READ_WRITE
-        device-name: "{{ cloud_volume_device }}"
     network: "{{ cloud_network }}"
     zone: "{{ cloud_region }}"
+    disks:
+      - name: "{ item }"
+        mode: READ_WRITE
     metadata:
       ssh-keys: "ubuntu:{{ ssh_key }}"
     disk_auto_delete: yes
   register: instance
 
+- name: Create storage volume and attach it to instance
+  delegate_to: localhost
+  gce_pd:
+    state: active
+    zone: "{{ cloud_region }}"
+    name: "{{ cloud_volume_name }}"
+    instance_name: "{{ item }}"
+    size_gb: "{{ cloud_volume_size }}"
+    mode: READ_WRITE
+  when: cloud_volume_size is defined
+
 - debug:
     msg: Created instance {{ instance.instance_data[0].public_ip }}
 
-- name: Add instance to inventory
-  add_host:
-     name: "{{ cloud_instance_name }}"
-     groups: tissuemaps_compute, tissuemaps_web, tissuemaps_database
-     ansible_ssh_host: "{{ instance.instance_data[0].public_ip }}"
-     ansible_ssh_user: ubuntu
-     ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/{{ cloud_key_name }}.pub"
-
 - name: Wait for instance to come up
+  delegate_to: localhost
   wait_for:
     host: "{{ instance.instance_data[0].public_ip }}"
     port: 22
     delay: 10
-    timeout: 60
+    timeout: 300
     state: started
+
+- name: Add instance to inventory
+  delegate_to: localhost
+  add_host:
+     name: "{{ item }}"
+     ansible_ssh_host: "{{ instance.instance_data[0].public_ip }}"
+     ansible_ssh_user: ubuntu
+     ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/{{ cloud_key_name }}.pub"
+
+- include: format.yml
+  when: cloud_volue_size is defined
+
+- include: mount.yml
+  when: cloud_volue_size is defined

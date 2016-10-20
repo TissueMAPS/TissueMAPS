@@ -1,2 +1,7 @@
 ---
+cloud_volume_fstype: ext4
 cloud_volume_name: "{{ cloud_instance_name }}-storage"
+cloud_volume_device:
+  os: /dev/vdb
+  ec2: /dev/sdf
+  gce: /dev/disk/by-id/google-{{ cloud_volume_name }}

@@ -1,0 +1,37 @@
+---
+- name: Ensure that group exists for storage volume
+  become: yes
+  group: name={{ cloud_volume_group }}
+  tags:
+    - volume
+
+- name: Ensure that user exist for storage volume
+  become: yes
+  user:
+      name={{ cloud_volume_user }}
+      group={{ cloud_volume_group }}
+      shell=/bin/bash
+  tags:
+    - volume
+
+- name: Ensure mount point for storage volume exists and has correct permissions
+  become: yes
+  file:
+    path={{ cloud_volume_mountpoint }}
+    owner={{ cloud_volume_user }}
+    group={{ cloud_volume_group }}
+    state=directory
+  tags:
+    - volume
+
+- name: Mount storage volume
+  become: yes
+  mount:
+    name={{ cloud_volume_mountpoint }}
+    fs_type={{ cloud_volume_fstype }}
+    passno=0
+    src={{ cloud_volume_device[cloud_provider] }}
+    state=mounted
+    # opts={{ item.mount_options }}
+  tags:
+    - volume

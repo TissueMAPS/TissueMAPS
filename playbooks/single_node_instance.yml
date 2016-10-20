@@ -1,6 +1,0 @@
----
-- name: Provision single instance within a Cloud to host TissueMAPS
-  hosts: localhost
-  connection: local
-  roles:
-    - cloud-instance
