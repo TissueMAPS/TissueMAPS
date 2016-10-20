@@ -1,19 +1,22 @@
 ---
 - name: Check if device exists
-  command: if [ -e {{ volume_device_name }}]; then exit 0; else exit 1; fi
+  become: yes
+  command: "if [ -e {{ volume_device_name }}]; then exit 0; else exit 1; fi"
   register: device
   tags:
     - volume
 
-- fail:  msg=Device {{ volume_device_name }} does not exist
-  when: device.rc == 1
+- fail:
+    msg: "Device {{ volume_device_name }} does not exist"
+  when: (device.rc|int) == 1
   tags:
     - volume
 
-- name: Format attached volume (make filesystem)
+- name: Format attached volume make filesystem
   become: yes
-  shell: mkfs.{{ volume_fs_type }} {{ volume_device_name }}
-  args: executable=/bin/bash
-  when: device.rc == 0
+  shell: "mkfs.{{ volume_fs_type }} {{ volume_device_name }}"
+  args:
+    executable: /bin/bash
+  when: (device.rc|int) == 0
   tags:
     - volume

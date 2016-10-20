@@ -6,21 +6,21 @@
 #  - GCE_PROJECT
 #  - GCE_CREDENTIALS_FILE_PATH: path to an credentials file in JSON format
 #    (https://developers.google.com/identity/protocols/application-default-credentials)
-# - name: Create boot disk
-#   gce_pd:
-#     state: present
-#     zone: "{{ cloud_region }}"
-#     size_gb: "{{ cloud_disk_size }}"
-#     name: "{{ cloud_instance_name }}"
-#     mode: READ_WRITE
+- name: Create boot disk
+  gce_pd:
+    state: present
+    zone: "{{ cloud_region }}"
+    size_gb: "{{ cloud_disk_size }}"
+    name: "{{ cloud_instance_name }}"
+    mode: READ_WRITE
 
-# - name: Create volume
-#   gce_pd:
-#     state: present
-#     zone: "{{ cloud_region }}"
-#     size_gb: "{{ cloud_volume_size }}"
-#     name: "{{ cloud_volume_name }}"
-#     mode: READ_WRITE
+- name: Create volume
+  gce_pd:
+    state: present
+    zone: "{{ cloud_region }}"
+    size_gb: "{{ cloud_volume_size }}"
+    name: "{{ cloud_volume_name }}"
+    mode: READ_WRITE
 
 - name: Create instance
   vars:
@@ -31,17 +31,21 @@
     image: "{{ cloud_image }}"
     machine_type: "{{ cloud_flavor }}"
     external_ip: ephemeral
-    # disks:
-    #   - name: "{{ cloud_instance_name }}"
-    #     mode: READ_WRITE
-    #   - name: "{{ cloud_volume_name }}"
-    #     mode: READ_WRITE
+    disks:
+      - name: "{{ cloud_instance_name }}"
+        mode: READ_WRITE
+      - name: "{{ cloud_volume_name }}"
+        mode: READ_WRITE
+        device-name: "{{ cloud_volume_device }}"
     network: "{{ cloud_network }}"
     zone: "{{ cloud_region }}"
     metadata:
       ssh-keys: "ubuntu:{{ ssh_key }}"
     disk_auto_delete: yes
   register: instance
+
+- debug:
+    msg: Created instance {{ instance.instance_data[0].public_ip }}
 
 - name: Add instance to inventory
   add_host:

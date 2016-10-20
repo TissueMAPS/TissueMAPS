@@ -10,5 +10,5 @@
 - include: os.yml
   vars:
     cloud_volume_name: /dev/vdb
-  when: (cloud_provider|string) == 'os'
+  when: (cloud_provider|string) == 'openstack'
 

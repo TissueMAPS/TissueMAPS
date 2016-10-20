@@ -29,10 +29,10 @@
   mount:
     name={{ volume_mount_point }}
     fs_type={{ volume_fs_type }}
-    # opts={{ item.mount_options }}
     passno=0
     src={{ volume_device_name }}
     state=mounted
+    # opts={{ item.mount_options }}
   tags:
     - volume
 

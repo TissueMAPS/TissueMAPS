@@ -28,7 +28,7 @@
   vars:
     create_db_with_ansible: yes
   roles:
-    - database
+    - tmaps-database
   tags:
     - db
 
