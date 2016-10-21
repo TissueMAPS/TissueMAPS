@@ -1,0 +1,41 @@
+---
+cloud_provider: os
+cloud_region: RegionOne
+key_name: tmaps_setup
+grid: test
+clusters:
+  - name: postgresql
+    classes:
+      - name: server
+        count: 1
+        groups:
+          - tissuemaps_database
+        vars:
+          cloud_volume_size: 100
+          cloud_disk_size: 100
+          cloud_image: Ubuntu Server 14.04.04 LTS (2016-05-19)
+          cloud_flavor: 1cpu-4ram-hpc
+          cloud_security_group: default
+          cloud_network: uzh-only
+  - name: slurm
+    classes:
+      - name: master
+        count: 1
+        groups:
+          - tissuemaps_web
+        vars:
+          cloud_disk_size: 100
+          cloud_image: Matlab-R2016a - ubuntu 14.04.4 x86-64 - (2016-03-17)
+          cloud_flavor: 1cpu-4ram-hpc
+          cloud_security_group: default
+          cloud_network: uzh-only
+      - name: worker
+        count: 4
+        groups:
+          - tissuemaps_compute
+        vars:
+          cloud_disk_size: 100
+          cloud_image: Matlab-R2016a - ubuntu 14.04.4 x86-64 - (2016-03-17)
+          cloud_flavor: 1cpu-4ram-hpc
+          cloud_security_group: default
+          cloud_network: uzh-only
