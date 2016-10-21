@@ -6,64 +6,50 @@
 #  - OS_USERNAME
 #  - OS_PASSWORD
 #  - OS_PROJECT_NAME
-- name: Create storage volume
-  os_volume:
-    display_name: "{{ cloud_volume_name }}"
-    state: present
-    volume_type: default
-    wait: yes
-    timeout: 300
-    size: "{{ cloud_volume_size }}"
-    region_name: "{{ cloud_region }}"
-  register: volume
-  when: cloud_volume_size is defined
-
-- name: Create instance
-  os_server:
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
+  local_action: os_server
+  args:
     name: "{{ inventory_hostname }}"
-    state: present
-    key_name: "{{ cloud_key_name }}"
-    security_groups: "{{ cloud_security_groups }}"
-    image: "{{ cloud_image }}"
-    flavor: "{{ cloud_flavor }}"
+    state: "{{ instance_state }}"
+    key_name: "{{ key_name }}"
+    security_groups: "{{ security_groups }}"
+    image: "{{ image }}"
+    flavor: "{{ flavor }}"
     auto_ip: yes
     wait: yes
     timeout: 300
     boot_from_volume: yes
-    volume_size: "{{ cloud_disk_size }}"
+    volume_size: "{{ disk_size }}"
     terminate_volume: yes
-    network: "{{ cloud_network }}"
-    region_name: "{{ cloud_region }}"
-    # meta:
-    #   ansible_host_vars:
-    #   ansible_host_groups: tissuemaps_compute
+    network: "{{ network }}"
+    region_name: "{{ region }}"
   register: instance
 
-- name: Attach storage volume to instance
-  os_server_volume:
-    state: present
-    server: "{{ inventory_hostname }}"
-    volume: "{{ cloud_volume_name }}"
-    device: "{{ cloud_volume_device[cloud_provider] }}"
+- name: Register IP address of created instance
+  set_fact:
+    instance_public_ip: "{{ instance.openstack.public_v4 }}"
+
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume"
+  local_action: os_volume
+  args:
+    display_name: "{{ volume_name }}"
+    state: "{{ instance_state }}"
+    volume_type: default
     wait: yes
     timeout: 300
-  when: cloud_volume_size is defined
+    size: "{{ volume_size }}"
+    region_name: "{{ region }}"
+  register: volume
+  when: volume_size is defined
 
-- debug:
-    msg: Created instance {{ instance.openstack.public_v4 }}
-
-- name: Wait for instance
-  wait_for:
-    host: "{{ instance.openstack.public_v4 }}"
-    port: 22
-    delay: 30
+- name: Attach storage volume to instance
+  local_action: os_server_volume
+  args:
+    state: "{{ instance_state }}"
+    server: "{{ inventory_hostname }}"
+    volume: "{{ volume_name }}"
+    device: "{{ volume_device[provider] }}"
+    wait: yes
     timeout: 300
-    state: started
+  when: (volume_size is defined) and (instance_state == 'present')
 
-- name: Add instance to inventory
-  add_host:
-    groups: tissuemaps_monitoring
-    name: "{{ inventory_hostname }}"
-    ansible_ssh_host: "{{ instance.openstack.public_v4 }}"
-    ansible_ssh_user: ubuntu
-    ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/{{ cloud_key_name }}.pem"

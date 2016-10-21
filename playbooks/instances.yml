@@ -1,0 +1,22 @@
+---
+# Ansible playbook for creating, terminating, starting and stopping virtual
+# machine instsances in the cloud. The state of instances is controlled via the
+# "instance_state" variable. Note that not all states are provided for all
+# implemented providers.
+- name: Provision virtual machine instances
+  hosts: all
+  # connection: local
+  vars:
+    instance_state: present
+  roles:
+    - cloud-instance
+
+# - name: Format and mount volumes attached to provisioned instances
+#   hosts: all
+#   tasks:
+#     - debug:
+#         msg: "{{ inventory_hostname }}: {{ ansible_ssh_host }}"
+#     - include: roles/cloud-instance/tasks/format.yml
+#       when: volume_size is defined
+#     - include: roles/cloud-instance/tasks/mount.yml
+#       when: volume_size is defined

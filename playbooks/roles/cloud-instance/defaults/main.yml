@@ -1,9 +1,9 @@
 ---
-cloud_disk_size: 30
-cloud_instance_name: tissuemaps
-cloud_security_groups: default
-cloud_network: default
+disk_size: 30
+instance_name: tissuemaps
+security_groups: default
+network: default
+volume_mountpoint: /data
 
-cloud_volume_mountpoint: /data
-cloud_volume_group: root
-cloud_volume_user: root
+volume_group: root
+volume_user: root

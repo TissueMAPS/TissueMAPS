@@ -1,8 +1,21 @@
 ---
+- name: Check if the volume has already been formatted and mounted
+  command: mountpoint -q {{ volume_mountpoint }}
+  failed_when: False
+  changed_when: False
+  register: mountpoint
+  tags:
+    - volume
+
+- debug:
+    msg: Mountpoint {{ volume_mountpoint }} is already mounted!
+  when: (mountpoint.rc|int) == 0
+
 - name: Format attached storage volume
   become: yes
   filesystem:
-    fstype: "{{ cloud_volume_fstype }}"
-    dev: "{{ cloud_volume_device[cloud_provider] }}"
+    fstype: "{{ volume_fstype }}"
+    dev: "{{ volume_device[provider] }}"
   tags:
     - volume
+  when: (mountpoint.rc|int) == 1

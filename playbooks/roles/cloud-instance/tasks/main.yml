@@ -1,2 +1,43 @@
 ---
-- include: "{{cloud_provider}}.yml"
+- include: "{{provider}}.yml"
+
+- debug:
+    msg: Created instance {{ instance_public_ip }}
+  when: instance_state == "present"
+
+- name: Add host IP address to host_vars file
+  local_action: yedit
+  args:
+    src: "{{ host_vars_dir }}/{{ inventory_hostname }}"
+    key: ansible_ssh_host
+    value: "{{ instance_public_ip }}"
+  when: instance_state == "present"
+
+- name: Remove host IP address from host_vars file
+  local_action: yedit
+  args:
+    src: "{{ host_vars_dir }}/{{ inventory_hostname }}"
+    key: ansible_ssh_host
+    value: ""
+  when: instance_state == "absent"
+
+- name: Wait for instance
+  local_action: wait_for
+  args:
+    host: "{{ instance_public_ip }}"
+    port: 22
+    delay: 30
+    timeout: 300
+    state: started
+  when: instance_state == "present"
+
+- meta: refresh_inventory
+
+- debug:
+    msg: "{{ inventory_hostname }}: {{ ansible_ssh_host }}"
+
+- include: roles/cloud-instance/tasks/format.yml
+  when: (volume_size is defined) and (instance_state == "present")
+
+- include: roles/cloud-instance/tasks/mount.yml
+  when: (volume_size is defined) and (instance_state == "present")

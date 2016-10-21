@@ -9,66 +9,43 @@
 - name: Create boot disk
   delegate_to: localhost
   gce_pd:
-    state: present
     disk_type: pd-standard
-    image: "{{ cloud_image }}"
-    name: "{{ item }}"
-    size_gb: "{{ cloud_disk_size }}"
-    zone: "{{ cloud_region }}"
+    image: "{{ image }}"
+    name: "{{ inventory_hostname }}"
+    size_gb: "{{ disk_size }}"
+    zone: "{{ region }}"
 
-- name: Create instance
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
   vars:
-    ssh_key: "{{ lookup('file', '~/.ssh/{{ cloud_key_name }}.pub') }}"
+    ssh_key: "{{ lookup('file', key_file) }}"
   delegate_to: localhost
   gce:
-    state: active
-    name: "{{ item }}"
-    image: "{{ cloud_image }}"
-    machine_type: "{{ cloud_flavor }}"
+    state: "{{ instance_state }}"
+    name: "{{ inventory_hostname }}"
+    image: "{{ image }}"
+    machine_type: "{{ flavor }}"
     external_ip: ephemeral
-    network: "{{ cloud_network }}"
-    zone: "{{ cloud_region }}"
+    network: "{{ network }}"
+    zone: "{{ region }}"
     disks:
-      - name: "{ item }"
+      - name: "{{ inventory_hostname }}"
         mode: READ_WRITE
     metadata:
       ssh-keys: "ubuntu:{{ ssh_key }}"
     disk_auto_delete: yes
   register: instance
 
-- name: Create storage volume and attach it to instance
+- name: Register IP address of created instance
+  set_fact:
+    instance_public_ip: "{{ instance.instance_data[0].public_ip }}"
+
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume and attach it to instance"
   delegate_to: localhost
   gce_pd:
-    state: active
-    zone: "{{ cloud_region }}"
-    name: "{{ cloud_volume_name }}"
-    instance_name: "{{ item }}"
-    size_gb: "{{ cloud_volume_size }}"
+    state: "{{ instance_state }}"
+    zone: "{{ region }}"
+    name: "{{ volume_name }}"
+    instance_name: "{{ inventory_hostname }}"
+    size_gb: "{{ volume_size }}"
     mode: READ_WRITE
-  when: cloud_volume_size is defined
-
-- debug:
-    msg: Created instance {{ instance.instance_data[0].public_ip }}
-
-- name: Wait for instance to come up
-  delegate_to: localhost
-  wait_for:
-    host: "{{ instance.instance_data[0].public_ip }}"
-    port: 22
-    delay: 10
-    timeout: 300
-    state: started
-
-- name: Add instance to inventory
-  delegate_to: localhost
-  add_host:
-     name: "{{ item }}"
-     ansible_ssh_host: "{{ instance.instance_data[0].public_ip }}"
-     ansible_ssh_user: ubuntu
-     ansible_ssh_private_key_file: "{{ ansible_env.HOME }}/.ssh/{{ cloud_key_name }}.pub"
-
-- include: format.yml
-  when: cloud_volue_size is defined
-
-- include: mount.yml
-  when: cloud_volue_size is defined
+  when: volume_size is defined
