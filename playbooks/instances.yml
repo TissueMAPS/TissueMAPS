@@ -5,18 +5,7 @@
 # implemented providers.
 - name: Provision virtual machine instances
   hosts: all
-  # connection: local
   vars:
     instance_state: present
   roles:
     - cloud-instance
-
-# - name: Format and mount volumes attached to provisioned instances
-#   hosts: all
-#   tasks:
-#     - debug:
-#         msg: "{{ inventory_hostname }}: {{ ansible_ssh_host }}"
-#     - include: roles/cloud-instance/tasks/format.yml
-#       when: volume_size is defined
-#     - include: roles/cloud-instance/tasks/mount.yml
-#       when: volume_size is defined

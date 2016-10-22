@@ -1,0 +1,10 @@
+---
+# Playbook for deployment of all TissueMAPS components on already existing
+# virtual machine instance(s).
+- include: compute.yml
+- include: web.yml
+- include: database.yml
+- include: storage.yml
+- include: glue.yml
+
+# TODO: include storage.yml and spark.yml
