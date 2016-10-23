@@ -68,7 +68,7 @@ def find_scripts():
 
 def build_console_scripts():
     src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src'
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'lib'
     )
     sys.path = [src_path] + sys.path
     import tmlib
@@ -86,7 +86,7 @@ def build_console_scripts():
 
 def get_version():
     src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'tmlib')
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'lib', 'tmlib')
     sys.path = [src_path] + sys.path
     import version
     return version.__version__
@@ -96,7 +96,7 @@ setuptools.setup(
     name='tmlibrary',
     version=get_version(),
     description='TissueMAPS library for distibuted image processing routines.',
-    author='Markus D. Herrmann and Robin Hafen',
+    author='Markus D. Herrmann',
     author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/tmlibrary',
     platforms=['Linux', 'OS-X'],
@@ -116,8 +116,8 @@ setuptools.setup(
     ],
     scripts=find_scripts(),
     entry_points={'console_scripts': build_console_scripts()},
-    packages=setuptools.find_packages('src'),
-    package_dir={'': 'src'},
+    packages=setuptools.find_packages(os.path.join('src', 'lib')),
+    package_dir={'': os.path.join('src', 'lib')},
     include_package_data=True,
     install_requires=[
        'Cython>=0.22.1',
@@ -164,7 +164,6 @@ setuptools.setup(
        'pyfakefs',
        'gc3pie==2.5.dev',
        'APScheduler>=3.0.5',
-       'sqlalchemy_utils',
        # Ubuntu: sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        # 'rpy2>=2.7.4'
@@ -174,7 +173,7 @@ setuptools.setup(
         # be activaeted via --process-dependency-links
         'https://github.com/jmcgeheeiv/pyfakefs/tarball/master#egg=pyfakefs',
         'https://github.com/tissuemaps/gc3pie/tarball/master#egg=gc3pie-2.5.dev',
-        'https://github.com/tissuemaps/sqlalchemy-utils/tarball/master#egg=sqlalchemy_utils'
+        # 'https://github.com/tissuemaps/sqlalchemy-utils/tarball/master#egg=sqlalchemy_utils'
         # TODO: include TissueMAPS repos once they are public
     ],
 )
