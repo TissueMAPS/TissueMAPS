@@ -4,7 +4,8 @@ import argparse
 import subprocess
 import sys
 
-from tmsetup.description import load_setup
+from tmsetup.config import load_setup
+from tmsetup.config import load_inventory
 
 
 def run(command):
@@ -13,60 +14,90 @@ def run(command):
         sys.stdout.write(c)
 
 
-def main(args):
-    verbosity = '-%s' % (args.verbosity * 'v')
-    inventory_file = os.path.abspath(
+def build_ansible_commands(args):
+    setup = load_setup()
+    dynamic_inventory_file = os.path.abspath(
         os.path.join(__file__, '..', 'inventory.py')
     )
-    # TODO: let inventory save playbook locations into file
-    import ipdb; ipdb.set_trace()
-    variables = str()
-    if args.mode == 'manage':
+    inventory = load_inventory()
+    commands = list()
+    for cluster in setup['grid']['clusters']:
+        for category in cluster['categories']:
+            for group in category['groups']:
+                excluded_hosts = list()
+                if args.host in inventory.items(group['name']):
+                    excluded_hosts += args.host
+                elif (args.cluster == cluster['name'] or
+                        args.group == group['name']):
+                    if (args.category is None or
+                            args.category == category['name']):
+                        excluded_hosts += [
+                            item[0]
+                            for item in inventory.items(group['name'])
+                        ]
+                if args.mode == 'deploy':
+                    # NOTE: variables are already provided via group_vars
+                    # files
+                    cmd = _build_command(
+                        args.verbosity, dynamic_inventory_file,
+                        group['playbook'], dict(), excluded_hosts
+                    )
+                    commands.append(cmd)
+
+    if args.mode in {'launch', 'terminate', 'start', 'stop'}:
         playbook_file = os.path.abspath(
             os.path.join(__file__, '..', 'playbooks', 'instances.yml')
         )
-        if args.launch:
-            variables = 'instance_state=present'
-        elif args.terminate:
-            variables = 'instance_state=absent'
-        elif args.start:
+        if args.mode == 'launch':
+            variables = {'instance_state': 'present'}
+        elif args.mode == 'terminate':
+            variables = {'instance_state': 'absent'}
+        elif args.mode == 'start':
             # TODO: dependent on cloud provider
             # ec2: started
             # gce: running
             # os: -
             raise ValueError('Starting VMs is not yet supported')
             # variables = 'instance_state=running'
-        elif args.stop:
+        elif args.mode == 'stop':
             # TODO: dependent on cloud provider
             # ec2: stopped
             # gce: stopped
             # os: -
             raise ValueError('Stopping VMs is not yet supported')
             # variables = 'instance_state=stopped'
-        # TODO: limit
-    else:
-        playbook_file = ''
-    command = [
+            cmd = _build_command(
+                args.verbosity, dynamic_inventory_file,
+                playbook_file, variables, excluded_hosts
+            )
+            commands.append(cmd)
+
+    return commands
+
+
+def _build_command(verbosity, inventory, playbook, variables, hosts):
+    var_string = str()
+    for k, v in variables.iteritems():
+        var_string = ','.join([var_string, '='.join([k, v])])
+    cmd = [
         'ansible-playbook',
-        verbosity,
-        '-i', inventory_file,
-        playbook_file,
+        '-%s' % (verbosity * 'v'),
+        '-i', inventory,
+        playbook,
     ]
     if variables:
-        command.extend(['-e', variables])
-    if args.host is not None:
-        # TODO: check if host exists
-        command.extend(['--limit', args.host])
-    if args.cluster is not None:
-        # TODO: retrieve hosts from setup
-        hosts = ''
-        command.extend(['--limit', hosts])
-    if getattr(args, 'group', None) is not None:
-        # TODO: retrieve hosts from setup
-        hosts = ''
-        command.extend(['--limit', args.group])
+        cmd.extend(['-e', var_string])
+    if hosts:
+        cmd.extend(['--limit', ','.join(hosts)])
+    return cmd
 
-    # run(command)
+
+def main(args):
+    # TODO: let inventory save playbook locations into file
+    commands = build_ansible_commands(args)
+    for cmd in commands:
+        print ' '.join(cmd)
+        # run(cmd)
 
 
 if __name__ == '__main__':
@@ -91,75 +122,47 @@ if __name__ == '__main__':
         '--verbosity', '-v', action='count', default=0,
         help='increase logging verbosity'
     )
-
-    subparsers = parser.add_subparsers(dest='mode', help='mode')
-    subparsers.required = True
-
-    manage_subparser = subparsers.add_parser(
-        'manage',
-        help='manage virtual machine (VM) instances'
-    )
-    manage_subparser.set_defaults(method='manage')
-
-    action_group = manage_subparser.add_argument_group('actions')
-    action_group = action_group.add_mutually_exclusive_group(required=True)
-    action_group.add_argument(
-        '--launch', action='store_true',
-        help='launch VMs'
-    )
-    action_group.add_argument(
-        '--terminate', action='store_true',
-        help='terminate VMs'
-    )
-    action_group.add_argument(
-        '--start', action='store_true',
-        help='start VMs'
-    )
-    action_group.add_argument(
-        '--stop', action='store_true',
-        help='stop VMs'
-    )
-
-    manage_target_group = manage_subparser.add_mutually_exclusive_group()
-    manage_target_group.add_argument(
+    target_group = parser.add_mutually_exclusive_group()
+    target_group.add_argument(
         '--host', metavar='HOST_NAME', type=str,
         help='limit action to single VM instance'
     )
-    manage_target_group.add_argument(
+    target_group.add_argument(
         '--cluster', metavar='CLUSTER_NAME', type=str,
         help='limit action to VM instances of a single cluster'
     )
-    manage_subparser.add_argument(
+    target_group.add_argument(
+        '--group', metavar='GROUP_NAME', type=str,
+        help='limit action to VM instances of an Ansible group'
+    )
+    parser.add_argument(
         '--category', dest='category', type=str,
         action=check_dependency('cluster'),
         help='limit action to VM instances of a single cluster category'
     )
+
+    subparsers = parser.add_subparsers(dest='mode', help='mode')
+    subparsers.required = True
+
+    launch_subparser = subparsers.add_parser(
+        'launch',
+        help='launch virtual machine (VM) instances'
+    )
+    launch_subparser.set_defaults(method='launch')
+
+    terminate_subparser = subparsers.add_parser(
+        'launch',
+        help='launch virtual machine (VM) instances'
+    )
+    terminate_subparser.set_defaults(method='terminate')
+
+    # TODO: start/stop subparsers
 
     deploy_subparser = subparsers.add_parser(
         'deploy',
         help='deploy application on virtual machine (VM) instances'
     )
     deploy_subparser.set_defaults(method='deploy')
-
-    deploy_target_group = deploy_subparser.add_mutually_exclusive_group()
-    deploy_target_group.add_argument(
-        '--host', metavar='HOST_NAME', type=str,
-        help='limit action to single VM instance'
-    )
-    deploy_target_group.add_argument(
-        '--cluster', metavar='CLUSTER_NAME', type=str,
-        help='limit action to VM instances of a single cluster'
-    )
-    deploy_target_group.add_argument(
-        '--group', metavar='GROUP_NAME', type=str,
-        help='limit action to VM instances of an Ansible group'
-    )
-    deploy_subparser.add_argument(
-        '--category', dest='category', type=str,
-        action=check_dependency('cluster'),
-        help='limit action to VM instances of a single cluster category'
-    )
-
 
     args = parser.parse_args()
     main(args)

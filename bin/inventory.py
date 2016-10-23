@@ -7,9 +7,9 @@ import sys
 import logging
 from ConfigParser import SafeConfigParser
 
-from tmsetup.utils import write_yaml_file, read_yaml_file
-from tmsetup.description import load_setup
-from tmsetup.description import CONFIG_DIR
+from tmsetup.utils import write_yaml_file, read_yaml_file, to_json
+from tmsetup.config import load_setup, load_inventory, save_inventory
+from tmsetup.config import CONFIG_DIR, GROUP_VARS_DIR, HOST_VARS_DIR
 
 
 def build_inventory(setup):
@@ -51,20 +51,17 @@ def main(args):
 
     setup = load_setup()
 
-    group_vars_dir = os.path.join(CONFIG_DIR, 'group_vars')
-    if not os.path.exists(group_vars_dir):
-        os.mkdir(group_vars_dir)
-    host_vars_dir = os.path.join(CONFIG_DIR, 'host_vars')
-    if not os.path.exists(host_vars_dir):
-        os.mkdir(host_vars_dir)
+    if not os.path.exists(GROUP_VARS_DIR):
+        os.mkdir(GROUP_VARS_DIR)
+    if not os.path.exists(HOST_VARS_DIR):
+        os.mkdir(HOST_VARS_DIR)
 
     inventory = build_inventory(setup)
     inventory['all']['vars']['host_vars_dir'] = host_vars_dir
 
     # Create the main ansible inventory file
-    inventory_file = os.path.join(CONFIG_DIR, 'hosts')
-    inventory_file_content = SafeConfigParser(allow_no_value=True)
-    for group, group_content in inventory.iteritems():
+    persistent_inventory = load_inventory()
+    for group, group_content in persistent_inventory.iteritems():
         if group == '_meta':
             continue
 
@@ -76,15 +73,16 @@ def main(args):
         if group == 'all':
             continue
 
-        inventory_file_content.add_section(group)
+        if not persistent_inventory.has_section(group):
+            persistent_inventory.add_section(group)
         for host in inventory[group]['hosts']:
-            inventory_file_content.set(group, host)
+            persistent_inventory.set(group, host)
             # Create a separte variable file in YAML format for each host
             host_vars_file = os.path.join(host_vars_dir, host)
             key_file = os.path.expanduser(setup['cloud']['key_file'])
             if not os.path.exists(host_vars_file):
                 host_vars = {
-                    'ansible_ssh_host': '',
+                    'ansible_ssh_host': None,
                     'ansible_ssh_user': 'ubuntu',
                     'ansible_ssh_private_key_file': key_file
                 }
@@ -110,9 +108,7 @@ def main(args):
                 os.remove(host_vars_file)
 
     # Create (or update) the main ansible inventory file in INI format
-    inventory_file_content.read(inventory_file)
-    with open(inventory_file, 'w') as f:
-        inventory_file_content.write(f)
+    save_inventory(persistent_inventory)
 
     # Prin the inventory to standard output as required for a dynamic
     # ansible inventory:

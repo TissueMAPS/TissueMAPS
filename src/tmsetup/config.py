@@ -1,6 +1,8 @@
-# TODO: create setup based on description in grid.yml file
-
 CONFIG_DIR = os.path.expanduser('~/.tmaps/setup')
+GROUP_VARS_DIR = os.path.join(CONFIG_DIR, 'group_vars')
+HOST_VARS_DIR = os.path.join(CONFIG_DIR, 'host_vars')
+HOSTS_FILE = os.path.join(CONFIG_DIR, 'hosts')
+SETUP_FILE = os.path.join(CONFIG_DIR, 'grid.yml')
 
 
 def check_setup_description(setup):
@@ -106,10 +108,44 @@ def check_setup_description(setup):
 
 
 def load_setup():
-    setup_file = os.path.join(CONFIG_DIR, 'grid.yml')
-    if not os.path.exists(setup_file):
-        raise OSError(
-            'Setup file "%s" does not exist!' % setup_file
-        )
-    return read_yaml_file(setup_file)
+    '''Loads TissueMAPS grid setup from file.
 
+    Returns
+    -------
+    tmsetup.config.Setup
+    '''
+    if not os.path.exists(SETUP_FILE):
+        raise OSError(
+            'Setup file "%s" does not exist!' % SETUP_FILE
+        )
+    setup_description = read_yaml_file(SETUP_FILE)
+    check_setup_description(setup_description)
+    # TODO: make nice class
+    return setup_description
+
+
+def load_inventory():
+    '''Loads Ansible inventory from file.
+
+    Returns
+    -------
+    ConfigParser.SafeConfigParser
+    '''
+    if not os.path.exists(HOSTS_FILE):
+        raise OSError(
+            'Setup file "%s" does not exist!' % HOSTS_FILE
+        )
+    inventory = SafeConfigParser(allow_no_value=True)
+    inventory.read(HOSTS_FILE)
+    return inventory
+
+
+def save_inventory(inventory):
+    '''Saves Ansible inventory to file.
+
+    Parameters
+    ----------
+    inventory: ConfigParser.SafeConfigParser
+    '''
+    with open(HOSTS_FILE, 'w') as f:
+        inventory.write(f)
