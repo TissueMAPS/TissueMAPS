@@ -46,7 +46,7 @@ def build_ansible_commands(args):
 
     if args.mode in {'launch', 'terminate', 'start', 'stop'}:
         playbook_file = os.path.abspath(
-            os.path.join(__file__, '..', 'playbooks', 'instances.yml')
+            os.path.join(__file__, '..', '..', 'playbooks', 'instances.yml')
         )
         if args.mode == 'launch':
             variables = {'instance_state': 'present'}

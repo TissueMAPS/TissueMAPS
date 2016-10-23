@@ -104,8 +104,8 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=find_scripts(),
-    packages=setuptools.find_packages(os.path.join('src', 'lib')),
-    package_dir={'tmsetup': os.path.join('src', 'lib')},
+    packages=setuptools.find_packages(os.path.join('src')),
+    package_dir={'': os.path.join('src', 'lib')},
     package_data={'': ['*.rst']},
     include_package_data=True,
     install_requires=[
