@@ -8,7 +8,7 @@ grid:
   name: test
   clusters:
     - name: postgresql
-      classes:
+      categories:
         - name: server
           count: 1
           groups:
@@ -23,7 +23,7 @@ grid:
             security_group: default
             network: uzh-only
     - name: slurm
-      classes:
+      categories:
         - name: master
           count: 1
           groups:

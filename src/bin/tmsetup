@@ -35,7 +35,7 @@ def build_ansible_commands(args):
                             item[0]
                             for item in inventory.items(group['name'])
                         ]
-                if args.mode == 'deploy':
+                if args.action == 'deploy':
                     # NOTE: variables are already provided via group_vars
                     # files
                     cmd = _build_command(
@@ -44,41 +44,41 @@ def build_ansible_commands(args):
                     )
                     commands.append(cmd)
 
-    if args.mode in {'launch', 'terminate', 'start', 'stop'}:
+    if args.action in {'launch', 'terminate', 'start', 'stop'}:
         playbook_file = os.path.abspath(
             os.path.join(__file__, '..', '..', 'playbooks', 'instances.yml')
         )
-        if args.mode == 'launch':
+        if args.action == 'launch':
             variables = {'instance_state': 'present'}
-        elif args.mode == 'terminate':
+        elif args.action == 'terminate':
             variables = {'instance_state': 'absent'}
-        elif args.mode == 'start':
+        elif args.action == 'start':
             # TODO: dependent on cloud provider
             # ec2: started
             # gce: running
             # os: -
             raise ValueError('Starting VMs is not yet supported')
             # variables = 'instance_state=running'
-        elif args.mode == 'stop':
+        elif args.action == 'stop':
             # TODO: dependent on cloud provider
             # ec2: stopped
             # gce: stopped
             # os: -
             raise ValueError('Stopping VMs is not yet supported')
             # variables = 'instance_state=stopped'
-            cmd = _build_command(
-                args.verbosity, dynamic_inventory_file,
-                playbook_file, variables, excluded_hosts
-            )
-            commands.append(cmd)
+        cmd = _build_command(
+            args.verbosity, dynamic_inventory_file,
+            playbook_file, variables, excluded_hosts
+        )
+        commands.append(cmd)
 
     return commands
 
 
 def _build_command(verbosity, inventory, playbook, variables, hosts):
-    var_string = str()
+    var_strings = list()
     for k, v in variables.iteritems():
-        var_string = ','.join([var_string, '='.join([k, v])])
+        var_strings.append('='.join([k, v]))
     cmd = [
         'ansible-playbook',
         '-%s' % (verbosity * 'v'),
@@ -86,7 +86,7 @@ def _build_command(verbosity, inventory, playbook, variables, hosts):
         playbook,
     ]
     if variables:
-        cmd.extend(['-e', var_string])
+        cmd.extend(['-e', '"%s"' % ','.join(var_strings)])
     if hosts:
         cmd.extend(['--limit', ','.join(hosts)])
     return cmd
@@ -95,6 +95,7 @@ def _build_command(verbosity, inventory, playbook, variables, hosts):
 def main(args):
     # TODO: let inventory save playbook locations into file
     commands = build_ansible_commands(args)
+    import ipdb; ipdb.set_trace()
     for cmd in commands:
         print ' '.join(cmd)
         # run(cmd)
@@ -102,18 +103,26 @@ def main(args):
 
 if __name__ == '__main__':
 
-    def check_dependency(arg):
-        class ArgumentDependency(argparse.Action):
+    def check_dependency(required_arg, forbidden_args={}):
+        class ArgumentDependencyAction(argparse.Action):
             def __call__(self, parser, namespace, values, option_string=None):
-                if getattr(namespace, arg) is None:
+                if getattr(namespace, required_arg) is None:
                     parser.error(
                         'Argument "--%s" also requires "--%s".' % (
-                            self.dest, arg
+                            self.dest, required_arg
                         )
                     )
+                elif forbidden_args:
+                    for arg in forbidden_args:
+                        if getattr(namespace, arg) is not None:
+                            parser.error(
+                                'Argument "--%s" cannot be used together with '
+                                ' "--%s".' % (self.dest, arg)
+                            )
                 else:
                     setattr(namespace, self.dest, values)
-        return ArgumentDependency
+        return ArgumentDependencyAction
+
 
     parser = argparse.ArgumentParser(
         description='Setup TissueMAPS on Ubuntu.'
@@ -125,23 +134,23 @@ if __name__ == '__main__':
     target_group = parser.add_mutually_exclusive_group()
     target_group.add_argument(
         '--host', metavar='HOST_NAME', type=str,
-        help='limit action to single VM instance'
+        help='limit action to single VM'
     )
     target_group.add_argument(
         '--cluster', metavar='CLUSTER_NAME', type=str,
-        help='limit action to VM instances of a single cluster'
+        help='limit action to VMs of a cluster'
     )
     target_group.add_argument(
         '--group', metavar='GROUP_NAME', type=str,
-        help='limit action to VM instances of an Ansible group'
+        help='limit action to VMs of an Ansible group'
     )
     parser.add_argument(
         '--category', dest='category', type=str,
-        action=check_dependency('cluster'),
-        help='limit action to VM instances of a single cluster category'
+        action=check_dependency('cluster', {'group', 'host'}),
+        help='limit action to VMs of a cluster category'
     )
 
-    subparsers = parser.add_subparsers(dest='mode', help='mode')
+    subparsers = parser.add_subparsers(dest='action', help='action')
     subparsers.required = True
 
     launch_subparser = subparsers.add_parser(
@@ -149,12 +158,14 @@ if __name__ == '__main__':
         help='launch virtual machine (VM) instances'
     )
     launch_subparser.set_defaults(method='launch')
+    launch_subparser.description = 'Launch virtual machine instances.'
 
     terminate_subparser = subparsers.add_parser(
-        'launch',
-        help='launch virtual machine (VM) instances'
+        'terminate',
+        help='terminate virtual machine (VM) instances'
     )
     terminate_subparser.set_defaults(method='terminate')
+    terminate_subparser.description = 'Terminate virtual machine instances.'
 
     # TODO: start/stop subparsers
 
@@ -163,6 +174,9 @@ if __name__ == '__main__':
         help='deploy application on virtual machine (VM) instances'
     )
     deploy_subparser.set_defaults(method='deploy')
+    deploy_subparser.description = '''
+        Deploy application on virtual machine instances.
+    '''
 
     args = parser.parse_args()
     main(args)

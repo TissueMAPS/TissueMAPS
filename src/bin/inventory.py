@@ -8,7 +8,7 @@ import logging
 from ConfigParser import SafeConfigParser
 
 from tmsetup.utils import write_yaml_file, read_yaml_file, to_json
-from tmsetup.config import load_setup, load_inventory, save_inventory
+from tmsetup.config import Setup, load_inventory, save_inventory
 from tmsetup.config import CONFIG_DIR, GROUP_VARS_DIR, HOST_VARS_DIR
 
 
@@ -19,14 +19,14 @@ def build_inventory(setup):
     inventory['_meta']['hostvars'] = collections.defaultdict(dict)
 
     for cluster in setup['grid']['clusters']:
-        for cls in cluster['classes']:
+        for category in cluster['categories']:
             class_name = '%s-%s-%s' % (
-                setup['grid']['name'], cluster['name'], cls['name']
+                setup['grid']['name'], cluster['name'], category['name']
             )
-            for i in range(cls['count']):
+            for i in range(category['count']):
                 host_name = '%s-%.3d' % (class_name, i+1)
-                inventory['_meta']['hostvars'][host_name] = cls['vars']
-                for group in cls['groups']:
+                inventory['_meta']['hostvars'][host_name] = category['vars']
+                for group in category['groups']:
                     if group['name'] not in inventory:
                         inventory[group['name']] = {'hosts': list()}
                     inventory[group['name']]['hosts'].append(host_name)
@@ -49,7 +49,7 @@ def main(args):
             'Configuration directory "%s" does not exist!' % CONFIG_DIR
         )
 
-    setup = load_setup()
+    setup = Setup()
 
     if not os.path.exists(GROUP_VARS_DIR):
         os.mkdir(GROUP_VARS_DIR)

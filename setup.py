@@ -111,7 +111,7 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
        'ansible>=2.1.2.0',
-       'apache-libcloud>=1.3.0'
+       'apache-libcloud>=1.3.0',
        'PyYAML>=3.11',
        'shade>=1.12.1',
     ]
