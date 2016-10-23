@@ -3,7 +3,7 @@ from abc import ABCMeta
 from abc import abstractproperty
 from ConfigParser import SafeConfigParser
 
-from tmsetup.utils import read_yaml_file
+from tmsetup.utils import read_yaml_file, to_json
 from tmsetup.errors import SetupDescriptionError, SetupEnvironmentError
 
 
@@ -16,16 +16,21 @@ SETUP_FILE = os.path.join(CONFIG_DIR, 'grid.yml')
 
 class SetupSection(object):
 
+    '''Abstract base class for a section of the `TissueMAPS` setup description.
+    '''
     __meta__ = ABCMeta
 
     def __init__(self, description):
         if not isinstance(description, dict):
+            print self.__class__.__name__
             raise SetupDescriptionError(
                 'Section "%s" of setup description must be a mapping.' %
                 self._section_name
             )
         possible_attrs = set([
-            attr for attr in dir(self) if not attr.startswith('_')
+            attr for attr in dir(self)
+            if not attr.startswith('_') and
+            isinstance(getattr(self.__class__, attr), property)
         ])
         if hasattr(self.__class__, '_OPTIONAL_ATTRS'):
             required_attrs = possible_attrs - self.__class__._OPTIONAL_ATTRS
@@ -80,10 +85,42 @@ class SetupSection(object):
                 )
             )
 
+    def to_dict(self):
+        '''Represents the setup section in form of key-value pairs.
+
+        Returns
+        -------
+        dict
+        '''
+        mapping = dict()
+        for attr in dir(self):
+            if attr.startswith('_'):
+                continue
+            if not isinstance(getattr(self.__class__, attr), property):
+                continue
+            if attr in self._OPTIONAL_ATTRS:
+                try:
+                    mapping[attr] = getattr(self, attr)
+                except:
+                    pass
+            else:
+                mapping[attr] = getattr(self, attr)
+        return mapping
+
+    def __repr__(self):
+        return '%s setup section:\n%s' % (
+            self._section_name, to_json(self.to_dict())
+        )
+
 class CloudSection(SetupSection):
 
-    def __init__(description):
-        super(_CloudSection).__init__(self, description)
+    '''Class for the section of the `TissueMAPS` setup description that provides
+    information about the cloud infrastructure where the application should be
+    deployed.
+    '''
+
+    def __init__(self, description):
+        super(CloudSection, self).__init__(description)
 
     @property
     def _section_name(self):
@@ -141,22 +178,44 @@ class CloudSection(SetupSection):
         self._key_name = value
 
     @property
-    def key_file(self):
-        '''str: name of the key-pair used to connect to virtual machines'''
-        return self._key_name
+    def key_file_private(self):
+        '''str: path to the private key used to connect to virtual machines'''
+        return self._key_file_private
 
-    @key_file.setter
-    def key_file(self, value):
-        self._check_value_type(value, 'key_file', str)
-        if value.endswith('.pem'):
+    @key_file_private.setter
+    def key_file_private(self, value):
+        self._check_value_type(value, 'key_file_private', str)
+        value = os.path.expanduser(value)
+        if value.endswith('.pub'):
             raise SetupDescriptionError(
-                'Value of "key_file" must point to a public key file.' % value
+                'Value of "key_file_private" must point to a private key: %s' %
+                value
+            )
+        if not os.path.exists(value):
+            raise SetupDescriptionError(
+                'Private key file "%s" does not exist.' % value
+            )
+        self._key_file_private = value
+
+    @property
+    def key_file_public(self):
+        '''str: path to the public key used to connect to virtual machines'''
+        return self._key_file_public
+
+    @key_file_public.setter
+    def key_file_public(self, value):
+        self._check_value_type(value, 'key_file_public', str)
+        value = os.path.expanduser(value)
+        if not value.endswith('.pub'):
+            raise SetupDescriptionError(
+                'Value of "key_file_public" must point to a public key: %s' %
+                value
             )
         if not os.path.exists(value):
             raise SetupDescriptionError(
                 'Public key file "%s" does not exist.' % value
             )
-        self._key_name = value
+        self._key_file_public = value
 
     @property
     def region(self):
@@ -170,6 +229,11 @@ class CloudSection(SetupSection):
 
 
 class GridSection(SetupSection):
+
+    '''Class for the section of the `TissueMAPS` setup description that provides
+    information about the grid architecture, i.e. the layout of computational
+    resources.
+    '''
 
     def __init__(self, description):
         super(GridSection, self).__init__(description)
@@ -186,6 +250,7 @@ class GridSection(SetupSection):
     @name.setter
     def name(self, value):
         self._check_value_type(value, 'name', str)
+        self._name = value
 
     @property
     def clusters(self):
@@ -200,10 +265,13 @@ class GridSection(SetupSection):
         for i, item in enumerate(value):
             self._check_subsection_type(value, 'clusters', dict, index=i)
             self._clusters.append(ClusterSection(item))
-        return self._clusters
 
 
 class ClusterSection(SetupSection):
+
+    '''Class for the section of the `TissueMAPS` setup description that provides
+    information about an individual cluster of virtual machine instances.
+    '''
 
     def __init__(self, description):
         super(ClusterSection, self).__init__(description)
@@ -220,6 +288,7 @@ class ClusterSection(SetupSection):
     @name.setter
     def name(self, value):
         self._check_value_type(value, 'name', str)
+        self._name = value
 
     @property
     def categories(self):
@@ -235,10 +304,14 @@ class ClusterSection(SetupSection):
         for i, item in enumerate(value):
             self._check_subsection_type(value, 'categories', dict, index=i)
             self._categories.append(ClusterCategorySection(item))
-        return self._categories
 
 
 class ClusterCategorySection(SetupSection):
+
+    '''Class for the section of the `TissueMAPS` setup description that provides
+    information about a particular category of virtual machine instances that
+    belong to the same cluster (e.g. master vs. worker nodes).
+    '''
 
     _OPTIONAL_ATTRS = {'vars'}
 
@@ -257,22 +330,24 @@ class ClusterCategorySection(SetupSection):
     @name.setter
     def name(self, value):
         self._check_value_type(value, 'name', str)
+        self._name = value
 
     @property
     def count(self):
         '''int: number of virtual machines'''
-        return self._name
+        return self._count
 
     @count.setter
     def count(self, value):
         self._check_value_type(value, 'count', int)
+        self._count = value
 
     @property
     def vars(self):
         '''AnsibleHostVariableSection: variables required for managing the
         virtual machine instances via Ansible (optional)
         '''
-        return self._name
+        return self._vars
 
     @vars.setter
     def vars(self, value):
@@ -294,10 +369,14 @@ class ClusterCategorySection(SetupSection):
         for i, item in enumerate(value):
             self._check_subsection_type(value, 'groups', dict, index=i)
             self._groups.append(AnsibleGroupSection(item))
-        return self._groups
 
 
 class AnsibleGroupSection(SetupSection):
+
+    '''Class for the section of the `TissueMAPS` setup description that provides
+    information about an Ansible host group, corresponding to a set of
+    virtual machine instances that get configured the same way.
+    '''
 
     def __init__(self, description):
         super(AnsibleGroupSection, self).__init__(description)
@@ -314,6 +393,7 @@ class AnsibleGroupSection(SetupSection):
     @name.setter
     def name(self, value):
         self._check_value_type(value, 'name', str)
+        self._name = value
 
     @property
     def playbook(self):
@@ -325,11 +405,13 @@ class AnsibleGroupSection(SetupSection):
         self._playbook = os.path.expanduser(value)
         if not os.path.isabs(self._playbook):
             self._playbook = os.path.abspath(
-                os.path.join(__file__, '..', '..', '..', 'playbooks', value)
+                os.path.join(
+                    __file__, '..', '..', '..', '..', 'playbooks', value
+                )
             )
-        if not os.path.exists(value):
+        if not os.path.exists(self._playbook):
             raise SetupDescriptionError(
-                'Playbook "%s" does not exist.' % value
+                'Playbook does not exist: %s' % self._playbook
             )
 
     @property
@@ -347,6 +429,11 @@ class AnsibleGroupSection(SetupSection):
 
 
 class AnsibleHostVariableSection(SetupSection):
+
+    '''Class for the section of the `TissueMAPS` setup description that provides
+    variables that determine how virtual machine instances belonging to the
+    given cluster category are created.
+    '''
 
     _OPTIONAL_ATTRS = {'disk_size', 'volume_size'}
 
@@ -426,8 +513,11 @@ class AnsibleHostVariableSection(SetupSection):
         self._check_value_type(value, 'network', str)
         self._network = value
 
+    # TODO: ansible_ssh_user, ...
 
 class Setup(object):
+
+    '''`TissueMAPS` setup.'''
 
     def __init__(self, description_file=SETUP_FILE):
         if not os.path.exists(description_file):
@@ -439,9 +529,14 @@ class Setup(object):
         for k, v in description.iteritems():
             if k not in dir(self):
                 raise SetupDescriptionError(
-                    'Setup description requires key "%s".' % k
+                    'Key "%s" is not supported for setup description.' % k
                 )
             setattr(self, k, v)
+        for k in {'cloud', 'grid'}:
+            if k not in description:
+                raise SetupDescriptionError(
+                    'Setup description requires key "%s"' % k
+                 )
 
     def _load_description(self):
         description = read_yaml_file(SETUP_FILE)

@@ -10,13 +10,6 @@ import logging
 import shutil
 
 logger = logging.getLogger(__name__)
-# ----- overrides -----
-
-# set these to anything but None to override the automatic defaults
-packages = None
-package_name = None
-package_data = None
-# ---------------------
 
 
 # ----- control flags -----
@@ -41,7 +34,7 @@ else:
 try:
     import distribute_setup
     distribute_setup.use_setuptools()
-    logger.info("distribute_setup.py imported and used")
+    logger.info('distribute_setup.py imported and used')
 except ImportError:
     # falback to setuptools?
     # distribute_setup.py was not in this directory
@@ -49,14 +42,14 @@ except ImportError:
         import setuptools
         if not (hasattr(setuptools, '_distribute')
                 and setuptools._distribute):
-            raise ImportError("distribute was not found and fallback to "
-                              "setuptools was not allowed")
+            raise ImportError('distribute was not found and fallback to '
+                              'setuptools was not allowed')
         else:
-            logger.debug("distribute_setup.py not found, defaulted to "
-                          "system distribute")
+            logger.debug('distribute_setup.py not found, defaulted to '
+                          'system distribute')
     else:
-        logger.debug("distribute_setup.py not found, defaulting to system "
-                      "setuptools")
+        logger.debug('distribute_setup.py not found, defaulting to system '
+                      'setuptools')
 
 
 import setuptools
@@ -95,19 +88,26 @@ setuptools.setup(
     url='https://github.com/tissuemaps/tmclient',
     platforms=['Linux', 'OS-X'],
     classifiers=[
-        'Topic :: Scientific/Engineering :: Information Analysis',
-        'Topic :: System :: Emulators',
         'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
         'Intended Audience :: System Administrators',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
         'Development Status :: 4 - Beta',
         'Operating System :: POSIX :: Linux',
-        'Operating System :: MacOS'
+        'Operating System :: MacOS',
+        'Operating System :: POSIX :: Other',
+        'Environment :: Console',
+        'Topic :: System :: Clustering',
+        'Topic :: Scientific/Engineering',
+        'Topic :: System :: Distributed Computing',
+
     ],
     scripts=find_scripts(),
     packages=setuptools.find_packages(os.path.join('src', 'lib')),
     package_dir={'': os.path.join('src', 'lib')},
-    package_data={'': ['*.rst']},
     include_package_data=True,
     install_requires=[
        'ansible>=2.1.2.0',

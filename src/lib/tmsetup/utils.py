@@ -11,10 +11,11 @@ def from_json(description):
 
 
 def to_yaml(description):
-    return yaml.dumps(content, explicit_start=True, default_flow_style=False)
+    return yaml.dump(description, explicit_start=True, default_flow_style=False)
+
 
 def from_yaml(description):
-    return yaml.loads(description)
+    return yaml.load(description)
 
 
 def read_yaml_file(filename):

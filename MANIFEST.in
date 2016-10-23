@@ -1,0 +1,3 @@
+recursive-include src/etc *
+recursive-include playbooks *
+include src/lib
