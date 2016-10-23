@@ -1,0 +1,11 @@
+src/bin/inventory.py
+src/bin/tmsetup
+src/lib/tmsetup/__init__.py
+src/lib/tmsetup/config.py
+src/lib/tmsetup/utils.py
+src/lib/tmsetup/version.py
+src/lib/tmsetup.egg-info/PKG-INFO
+src/lib/tmsetup.egg-info/SOURCES.txt
+src/lib/tmsetup.egg-info/dependency_links.txt
+src/lib/tmsetup.egg-info/requires.txt
+src/lib/tmsetup.egg-info/top_level.txt

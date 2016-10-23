@@ -77,6 +77,7 @@ def find_scripts():
 
 
 def get_version():
+    logger.info('get package version')
     src_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), 'src', 'lib', 'tmsetup'
     )
@@ -104,12 +105,15 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=find_scripts(),
-    packages=setuptools.find_packages(os.path.join('src')),
+    packages=setuptools.find_packages(os.path.join('src', 'lib')),
     package_dir={'': os.path.join('src', 'lib')},
     package_data={'': ['*.rst']},
     include_package_data=True,
     install_requires=[
-       'PyYAML>=3.11'
+       'ansible>=2.1.2.0',
+       'apache-libcloud>=1.3.0'
+       'PyYAML>=3.11',
+       'shade>=1.12.1',
     ]
 )
 
