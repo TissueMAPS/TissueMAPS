@@ -63,7 +63,7 @@ import setuptools
 
 def find_scripts():
     bin_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'python', 'bin'
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'bin'
     )
     scripts = list()
     for f in os.listdir(bin_path):
@@ -79,14 +79,11 @@ def find_scripts():
 def get_version():
     src_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
-        'src', 'python', 'tmclient'
+        'src', 'lib', 'python', 'tmclient'
     )
     sys.path = [src_path] + sys.path
     import version
     return version.__version__
-
-
-setuptools.find_packages(os.path.join('src', 'python'))
 
 
 setuptools.setup(
@@ -108,8 +105,8 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=find_scripts(),
-    packages=setuptools.find_packages(os.path.join('src', 'python')),
-    package_dir={'': 'src/python'},
+    packages=setuptools.find_packages(os.path.join('src', 'lib', 'python')),
+    package_dir={'': os.path.join('src', 'lib', 'python')},
     package_data={'': ['*.rst']},
     include_package_data=True,
     install_requires=[
