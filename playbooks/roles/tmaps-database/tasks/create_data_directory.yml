@@ -29,6 +29,7 @@
   file: path={{ volume_mount_point }}/storage/postgresql/data
     state=directory
     owner=postgres
+    group=postgres
   tags:
     - postgresql
 
@@ -48,6 +49,7 @@
   file: path=/var/lib/postgresql/{{postgresql_version}}/main
     state=directory
     owner=postgres
+    group=postgres
   tags:
     - postgresql
 
@@ -56,6 +58,7 @@
   file: path=/var/lib/postgresql/
     recurse=yes
     owner=postgres
+    group=postgres
   tags:
     - postgresql
 
@@ -71,6 +74,7 @@
   file: path={{ volume_mount_point }}/storage/postgresql/logs
     state=directory
     owner=postgres
+    group=postgres
   tags:
     - postgresql
 
@@ -87,9 +91,19 @@
   tags:
     - postgresql
 
+- name: Install setfacl support
+  become: yes
+  apt:
+    pkg=acl
+    state=installed
+  tags:
+    - postgresql
+
 - name: Initialize database cluster at created data directory
   become: yes
   become_user: postgres
-  shell: /usr/lib/postgresql/{{postgresql_version}}/bin/initdb -D /var/lib/postgresql/{{postgresql_version}}/main
+  shell: "/usr/lib/postgresql/{{ postgresql_version }}/bin/initdb -D /var/lib/postgresql/{{ postgresql_version }}/main"
+  args:
+    creates: /var/lib/postgresql/{{ postgresql_version }}/main/base
   tags:
     - postgresql
