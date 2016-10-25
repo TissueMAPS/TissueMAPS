@@ -1,6 +1,5 @@
 ---
 disk_size: 30
-instance_name: tissuemaps
 security_groups: default
 network: default
 volume_mountpoint: /data

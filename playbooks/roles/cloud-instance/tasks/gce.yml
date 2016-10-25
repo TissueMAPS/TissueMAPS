@@ -11,7 +11,7 @@
   gce_pd:
     disk_type: pd-standard
     image: "{{ image }}"
-    name: "{{ inventory_hostname }}"
+    name: "{{ instance_name }}"
     size_gb: "{{ disk_size }}"
     zone: "{{ region }}"
 
@@ -21,14 +21,14 @@
   delegate_to: localhost
   gce:
     state: "{{ instance_state }}"
-    name: "{{ inventory_hostname }}"
+    name: "{{ instance_name }}"
     image: "{{ image }}"
     machine_type: "{{ flavor }}"
     external_ip: ephemeral
     network: "{{ network }}"
     zone: "{{ region }}"
     disks:
-      - name: "{{ inventory_hostname }}"
+      - name: "{{ instance_name }}"
         mode: READ_WRITE
     metadata:
       ssh-keys: "ubuntu:{{ ssh_key }}"
@@ -45,7 +45,7 @@
     state: "{{ instance_state }}"
     zone: "{{ region }}"
     name: "{{ volume_name }}"
-    instance_name: "{{ inventory_hostname }}"
+    instance_name: "{{ instance_name }}"
     size_gb: "{{ volume_size }}"
     mode: READ_WRITE
   when: volume_size is defined

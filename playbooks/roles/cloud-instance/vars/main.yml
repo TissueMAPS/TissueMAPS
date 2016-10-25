@@ -1,5 +1,6 @@
 ---
 volume_fstype: ext4
+instance_name: "{{ inventory_hostname }}"
 volume_name: "{{ instance_name }}-storage"
 volume_device:
   os: /dev/vdb

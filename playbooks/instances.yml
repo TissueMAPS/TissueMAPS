@@ -7,5 +7,24 @@
   hosts: all
   vars:
     instance_state: present
+  connection: local
   roles:
     - cloud-instance
+
+# NOTE: This should be included in the above play. However, the "delegate_to"
+# Ansible module is broken, which prevents a combination of local and remote
+# tasks in the play at the moment.
+- name: Format and mount volumes attached to provisioned instances
+  hosts: all
+  vars:
+    instance_state: present
+  connection: ssh
+  tasks:
+    - name: Include defaults defined in "cloud-instance" role
+      include_vars: roles/cloud-instance/defaults/main.yml
+    - name: Include variables defined in "cloud-instance" role
+      include_vars: roles/cloud-instance/vars/main.yml
+    - include: roles/cloud-instance/tasks/format.yml
+      when: (volume_size is defined) and (instance_state == "present")
+    - include: roles/cloud-instance/tasks/mount.yml
+      when: (volume_size is defined) and (instance_state == "present")

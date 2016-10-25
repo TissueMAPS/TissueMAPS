@@ -9,7 +9,7 @@
   local_action: yedit
   args:
     src: "{{ host_vars_dir }}/{{ inventory_hostname }}"
-    key: ansible_ssh_host
+    key: ansible_host
     value: "{{ instance_public_ip }}"
   when: instance_state == "present"
 
@@ -17,7 +17,7 @@
   local_action: yedit
   args:
     src: "{{ host_vars_dir }}/{{ inventory_hostname }}"
-    key: ansible_ssh_host
+    key: ansible_host
     value: ""
   when: instance_state == "absent"
 
@@ -34,10 +34,14 @@
 - meta: refresh_inventory
 
 - debug:
-    msg: "{{ inventory_hostname }}: {{ ansible_ssh_host }}"
+    msg: "{{ inventory_hostname }}: {{ ansible_host }}"
 
-- include: roles/cloud-instance/tasks/format.yml
-  when: (volume_size is defined) and (instance_state == "present")
+# - include: roles/cloud-instance/tasks/format.yml
+#   delegate_to: "{{ instance_public_ip }}"
+#   delegate_facts: yes
+#   when: (volume_size is defined) and (instance_state == "present")
 
-- include: roles/cloud-instance/tasks/mount.yml
-  when: (volume_size is defined) and (instance_state == "present")
+# - include: roles/cloud-instance/tasks/mount.yml
+#   delegate_to: "{{ instance_public_ip }}"
+#   delegate_facts: yes
+#   when: (volume_size is defined) and (instance_state == "present")

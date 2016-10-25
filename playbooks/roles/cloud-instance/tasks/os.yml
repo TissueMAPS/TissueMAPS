@@ -9,7 +9,7 @@
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
   local_action: os_server
   args:
-    name: "{{ inventory_hostname }}"
+    name: "{{ instance_name }}"
     state: "{{ instance_state }}"
     key_name: "{{ key_name }}"
     security_groups: "{{ security_groups }}"
@@ -46,7 +46,7 @@
   local_action: os_server_volume
   args:
     state: "{{ instance_state }}"
-    server: "{{ inventory_hostname }}"
+    server: "{{ instance_name }}"
     volume: "{{ volume_name }}"
     device: "{{ volume_device[provider] }}"
     wait: yes
