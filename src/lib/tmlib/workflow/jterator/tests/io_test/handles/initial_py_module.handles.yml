@@ -1,0 +1,18 @@
+# module input arguments
+input:
+
+    - name: ImageFilename
+      class: pipeline
+      value: myLayer
+      type: str
+      help: Input file.
+
+# module output arguments
+output:
+
+    - name: OutputImage
+      class: pipeline
+      value: InitialPythonModule.OutputImage
+      help: Loaded image.
+
+plot: false

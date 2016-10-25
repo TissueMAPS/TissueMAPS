@@ -1,0 +1,35 @@
+input:
+    
+    - name: labeled_image
+      class: pipeline
+      value: 150820-Testset-CV-1-1.filled
+      help: Labeled image in which objects should be filtered.
+
+    - name: feature
+      class: parameter
+      value: area
+      help: >
+        Name of the region property based on which the image should be filtered.
+
+    - name: threshold
+      class: parameter
+      value: 500
+      help: Threshold level.
+
+    - name: keep
+      class: parameter
+      value: above
+      help: Whether values "above" or "below" threshold level should be kept.
+
+    - name: relabel
+      class: parameter
+      value: No
+      options: [Yes, No]
+      help: Whether objects should be relabeled after filtering.
+
+output:
+
+    - name: filtered_objects
+      class: pipeline
+      value: 
+      help: Filtered label image.
