@@ -24,7 +24,7 @@ def main(label_image, plot=False):
 
     See also
     --------
-    :py:class:`jtlib.features.Zernike`
+    class:`jtlib.features.Zernike`
     '''
     f = jtlib.features.Zernike(label_image=label_image)
 

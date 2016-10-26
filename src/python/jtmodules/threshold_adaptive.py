@@ -15,7 +15,7 @@ def main(image, kernel_size, fill=True, plot=False):
     '''Thresholds an image using an adaptive method, where different thresholds
     get applied to different regions of the image.
     For more information on the algorithmic implementation see
-    :py:func:`cv2.adaptiveThreshold`.
+    func:`cv2.adaptiveThreshold`.
 
     Additional parameters allow correction of the calculated fixed threshold
     level or restriction of it to a defined range. This may be useful to prevent

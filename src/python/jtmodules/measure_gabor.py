@@ -26,7 +26,7 @@ def main(label_image, intensity_image, plot=False):
 
     See also
     --------
-    :py:class:`jtlib.features.Gabor`
+    class:`jtlib.features.Gabor`
     '''
     f = jtlib.features.Gabor(
         label_image=label_image, intensity_image=intensity_image

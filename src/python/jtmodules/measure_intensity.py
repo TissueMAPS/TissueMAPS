@@ -26,7 +26,7 @@ def main(label_image, intensity_image, plot=False):
 
     See also
     --------
-    :py:class:`jtlib.features.Intensity`
+    class:`jtlib.features.Intensity`
     '''
     f = jtlib.features.Intensity(
         label_image=label_image, intensity_image=intensity_image

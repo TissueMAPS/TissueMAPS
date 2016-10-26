@@ -14,7 +14,7 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
         fill=True, plot=False):
     '''Thresholds an image with Otsu's method.
     For more information on the algorithmic implementation see
-    :py:func:`mahotas.otsu`.
+    func:`mahotas.otsu`.
 
     Additional parameters allow correction of the calculated fixed threshold
     level or restriction of it to a defined range. This may be useful to prevent

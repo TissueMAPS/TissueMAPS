@@ -27,7 +27,7 @@ def main(label_image, intensity_image, plot=False):
 
     See also
     --------
-    :py:class:`jtlib.features.TAS`
+    class:`jtlib.features.TAS`
     '''
     f = jtlib.features.TAS(
         label_image=label_image, intensity_image=intensity_image

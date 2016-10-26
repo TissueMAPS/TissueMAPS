@@ -26,7 +26,7 @@ def main(label_image, intensity_image, plot=False):
 
     See also
     --------
-    :py:class:`jtlib.features.Haralick`
+    class:`jtlib.features.Haralick`
     '''
     f = jtlib.features.Haralick(
             label_image=label_image,
