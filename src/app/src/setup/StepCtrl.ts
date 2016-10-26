@@ -22,18 +22,23 @@ class StepCtrl {
     currentStepIndex: number;
     uiScrollingAdapter: UIScrollingAdapter = {};
 
-    static $inject = ['workflow', 'workflowService', '$state', '$scope', '$uibModal', 'experiment', '$http'];
+    static $inject = ['workflow', 'workflowService', '$state', '$scope', '$rootScope', '$uibModal', 'experiment', '$http'];
 
     constructor(public workflow: Workflow,
                 private _workflowService,
                 private _$state,
                 private _$scope,
+                private _$rootScope,
                 private _$uibModal,
                 private _experiment,
                 private _$http) {
         this.workflow = this._workflowService.workflow;
         var stageName = this._$state.params.stageName;
         var stepName = this._$state.params.stepName;
+        this._$rootScope.$on('resubmission', () => {
+            console.log('reload scrolling adapter for step: ', stepName)
+            this.uiScrollingAdapter.reload();
+        })
         this.workflow.stages.map((stage, stageIndex) => {
             if (stage.name == stageName) {
                 this.currentStageIndex = stageIndex;
@@ -67,14 +72,8 @@ class StepCtrl {
                       '?index=' + index + '&step_name=' + stepName + '&batch_size=' + count;
             this._$http.get(url).then((resp) => {
                 var jobs = resp.data.data;
-                // If there are no jobs, this means the step has been 
-                // resubmitted. In this case, we want to clear the list
-                // of jobs.
-                if (jobs === null) {
-                    this.uiScrollingAdapter.reload();
-                } else {
-                    success(jobs);
-                }
+                console.log(jobs)
+                success(jobs);
             });
         }
     };

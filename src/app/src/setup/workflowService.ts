@@ -4,9 +4,9 @@ class WorkflowService {
     private _$http: ng.IHttpService;
     private _$q: ng.IQService;
 
-    static $inject = ['$state'];
+    static $inject = ['$state', '$rootScope'];
 
-    constructor(private _$state) {
+    constructor(private _$state, private _$rootScope) {
         // TODO: inject experiment and plates
         this._$http = $injector.get<ng.IHttpService>('$http');
         this._$q = $injector.get<ng.IQService>('$q');
@@ -145,15 +145,15 @@ class WorkflowService {
                     // since steps are build dynamically upon processing.
                     // Therefore, we recreate the whole step, rather than just
                     // updating its status.
-                    stage.steps.map((step, stepIndex) => {
-                        if (workflowStatus.subtasks[stageIndex - 1] != null) {
-                            var workflowStepDescription = workflowStageDescription.steps[stepIndex];
-                            step.status = new JobCollectionStatus(
-                                workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex]
-                            );
-                            step.jobs = [];
-                        }
-                    });
+                    // stage.steps.map((step, stepIndex) => {
+                    //     if (workflowStatus.subtasks[stageIndex - 1] != null) {
+                    //         var workflowStepDescription = workflowStageDescription.steps[stepIndex];
+                    //         step.status = new JobCollectionStatus(
+                    //             workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex]
+                    //         );
+                    //         step.jobs = [];
+                    //     }
+                    // });
                 }
             });
         });
@@ -226,6 +226,7 @@ class WorkflowService {
             description: this.workflow.getDescription(index),
             index: startIndex
         };
+        this._$rootScope.$emit('resubmission')
         return this._$http.post('/api/experiments/' + experiment.id + '/workflow/resubmit', data)
         .then((resp) => {
             // console.log(resp)

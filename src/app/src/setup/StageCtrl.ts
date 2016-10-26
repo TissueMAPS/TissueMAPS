@@ -24,12 +24,12 @@ class StageCtrl {
                 stageName: this.workflow.stages[stageIdx].name
             });
         } else {
-            var stepIdx;
             this.workflow.stages[stageIdx].steps.map((step, stepIndex) => {
                 if (step.name == stepName) {
-                    stepIdx = stepIndex;
+                    this.currentStepIndex = stepIndex;
                 }
             });
+            var stepIdx = this.currentStepIndex;
             if (this.workflow.stages[stageIdx].name == 'upload') {
                 console.log('YES')
             }

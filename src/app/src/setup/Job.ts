@@ -1,13 +1,11 @@
 class Job {
     id: number;
-    dbId: number;
     phase: string;
     status: JobStatus;
 
     constructor(args: JobStatusArgs) {
         var startIdx = args.name.lastIndexOf('_') + 1;
-        this.id = Number(args.name.substring(startIdx));
-        this.dbId = args.id;
+        this.id = args.id;
         if (args.type == 'RunJob') {
             this.phase = 'run';
         } else if (args.type == 'CollectJob') {
