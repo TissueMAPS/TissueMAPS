@@ -8,8 +8,7 @@ from tmlib.errors import NotSupportedError
 class OpenslideMetadataReader(MetadataReader):
 
     def read(self, filename):
-        '''
-        Read metadata from whole slide images.
+        '''Reads metadata from whole slide images.
 
         For details on reading metadata via openslide from Python, see
         `online documentation <http://openslide.org/api/python/>`_.

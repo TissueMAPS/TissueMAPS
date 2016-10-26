@@ -301,8 +301,6 @@ class MetadataHandler(object):
             return self.metadata
 
         if not regex:
-            regex = self.IMAGE_FILE_REGEX_PATTERN
-        if not regex:
             raise RegexError('No regular expression provided.')
 
         logger.info('configure OMEXML provided by additional files')

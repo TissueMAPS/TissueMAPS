@@ -39,9 +39,6 @@ class VisiviewMetadataHandler(MetadataHandler):
     i.e. placed in another folder.
     '''
 
-    #: Regular expression pattern to identify image files
-    IMAGE_FILE_REGEX_PATTERN = IMAGE_FILE_REGEX_PATTERN
-
     def __init__(self, omexml_images, omexml_metadata=None):
         '''
         Parameters

@@ -7,6 +7,7 @@ import bioformats
 import tmlib.models as tm
 from tmlib.workflow.metaconfig import metadata_handler_factory
 from tmlib.workflow.metaconfig import metadata_reader_factory
+from tmlib.workflow.metaconfig import get_microscope_type_regex
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.errors import MetadataError
 from tmlib.workflow import register_api
@@ -20,18 +21,15 @@ class MetadataConfigurator(ClusterRoutines):
     '''Class for configuration of microscope image metadata.
 
     It provides methods for conversion of metadata extracted from heterogeneous
-    microscope file formats using the
-    `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_
-    library into a custom format. The original metadata has to be available
-    in OMEXML format according to the
+    microscope file formats into a `TissueMAPS`-specific schema.
+    The original metadata has to be available in OMEXML format according to the
     `OME schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_.
 
-    The class further provides methods to complement the automatically
-    retrieved metadata by making use of additional microscope-specific metadata
+    The class further provides methods to complement the metadata retrieved
+    via `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_
+    with information available from of additional microscope-specific metadata
     files and/or user input.
 
-    The metadata corresponding to the final PNG images are stored in a
-    separate JSON file.
     '''
 
     def __init__(self, experiment_id, verbosity, **kwargs):
@@ -48,12 +46,12 @@ class MetadataConfigurator(ClusterRoutines):
         super(MetadataConfigurator, self).__init__(experiment_id, verbosity)
 
     def create_batches(self, args):
-        '''Creates job descriptions for parallel computing.
+        '''Creates job descriptions for parallel processing.
 
         Parameters
         ----------
-        args: tmlib.workflow.metaconfig.args.MetaconfigInitArgs
-            step-specific arguments
+        args: tmlib.workflow.metaconfig.args.MetaconfigBatchArgs
+            step-specific batch arguments
 
         Returns
         -------
@@ -120,34 +118,40 @@ class MetadataConfigurator(ClusterRoutines):
 
     def run_job(self, batch):
         '''Formats OMEXML metadata extracted from microscope image files and
-        complement it with metadata retrieved from additional microscope
+        complements it with metadata retrieved from additional microscope
         metadata files and/or user input.
 
-        The actual processing is done by an implementation of the
-        :class:`tmlib.workflow.metaconfig.default.MetadataHandler` abstract
-        base class. Some file formats require additional customization,
-        either because the `Bio-Formats` library does not fully support them or
-        because the microscopes provides insufficient information in the files.
-        To overcome these limitations, one can create a custom subclass
-        of the `MetaHandler` abstract base class and overwrite its
-        *ome_additional_metadata* property. Custom handlers already exists for
-        the Yokogawa CellVoyager 7000 microscope ("cellvoyager")
-        and Visitron microscopes ("visiview"). The list of custom
-        handlers can be further extended by creating a new module in the
-        `metaconfig` package with the same name as the corresponding file
-        format. The module must contain a custom implementation of
-        :class:`tmlib.workflow.metaconfig.default.MetadataHandler`,
-        whose name has to be pretended with the capitalized name of the file
-        format.
+        The actual processing is delegated to a format-specific implementation
+        of :class:`tmlib.workflow.metaconfig.base.MetadataHandler`.
+
+        Some file formats require additional customization,
+        either because the `Bio-Formats` does not fully support them or
+        because the microscope provides insufficient information in the files.
+        To overcome these limitations, one can register format-specific
+        handlers and readers. Custom handlers and readers already exists for a 
+        variety of microscopes. To further extend the list of supported
+        microscope types, one needs to implement
+        :class:`tmlib.workflow.metaconfig.base.MetadataReader` and
+        :class:`tmlib.workflow.metaconfig.base.MetadataHandler` in a separate
+        module in :module:`tmlib.workflow.metaconfig`. The name of the
+        implemented microscope type is determined from the name of the module.
+
+        Parameters
+        ----------
+        batch: dict
+            job description
 
         See also
         --------
-        :mod:`tmlib.workflow.metaconfig.default`
-        :mod:`tmlib.workflow.metaconfig.cellvoyager`
-        :mod:`tmlib.workflow.metaconfig.visiview`
+        :module:`tmlib.workflow.metaconfig.cellvoyager`
         '''
         MetadataReader = metadata_reader_factory(batch['microscope_type'])
 
+        regexp = batch.get('regex', '')
+        if not regexp:
+            regexp = get_microscope_type_regex(
+                batch['microscope_type'], as_string=True
+            )[0]
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             experiment = session.query(tm.Experiment).one()
             plate_dimensions = experiment.plates[0].dimensions
@@ -169,7 +173,7 @@ class MetadataConfigurator(ClusterRoutines):
         MetadataHandler = metadata_handler_factory(batch['microscope_type'])
         mdhandler = MetadataHandler(omexml_images, omexml_metadata)
         mdhandler.configure_omexml_from_image_files()
-        mdhandler.configure_omexml_from_metadata_files(batch['regex'])
+        mdhandler.configure_omexml_from_metadata_files(regexp)
         missing = mdhandler.determine_missing_metadata()
         if missing:
             logger.warning(

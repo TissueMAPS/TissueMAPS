@@ -1,6 +1,11 @@
 import re
 import importlib
+import inspect
+
 from tmlib import __version__
+from tmlib.workflow.metaconfig.base import MetadataReader
+from tmlib.workflow.metaconfig.base import MetadataHandler
+
 
 __fullname__ = 'Configuration of image metadata'
 
@@ -51,32 +56,38 @@ def import_microscope_type_module(microscope_type):
     return importlib.import_module(module_name)
 
 
-def get_microscope_type_regex(microscope_type):
+def get_microscope_type_regex(microscope_type, as_string=False):
     '''Gets regular expression patterns for the identification of microscope
-    image files and microscope metadata files for a given
-    `microscope_type`.
+    image files and microscope metadata files for a given `microscope_type`.
 
     Paramaters
     ----------
     microscope_type: str
         microscope type
+    as_string: bool, optional
+        whether regex pattern should be returned as strings (default: ``False``)
 
     Returns
     -------
-    Tuple[_sre.SRE_Pattern]
+    Tuple[_sre.SRE_Pattern or str]
         regex pattern for image and metadata files
     '''
     module = import_microscope_type_module(microscope_type)
-    return (
-        re.compile(module.IMAGE_FILE_REGEX_PATTERN),
-        re.compile(module.METADATA_FILE_REGEX_PATTERN)
-    )
+    if as_string:
+        return (
+            module.IMAGE_FILE_REGEX_PATTERN,
+            module.METADATA_FILE_REGEX_PATTERN
+        )
+    else:
+        return (
+            re.compile(module.IMAGE_FILE_REGEX_PATTERN),
+            re.compile(module.METADATA_FILE_REGEX_PATTERN)
+        )
 
 
 def metadata_reader_factory(microscope_type):
-    '''Gets the implementation
-    of the :class:`tmlib.workflow.metaconfig.default.MetadataReader`
-    abstract base class for the given microscope type.
+    '''Gets the `microscope_type`-specific implementation of
+    :class:`tmlib.workflow.metaconfig.base.MetadataReader`.
 
     Parameters
     ----------
@@ -86,16 +97,32 @@ def metadata_reader_factory(microscope_type):
     Returns
     -------
     classobj
+
+    Raises
+    ------
+    AttributeError
+        when the `miroscope_type`-specific module does not implement a reader
+        class
     '''
     module = import_microscope_type_module(microscope_type)
-    class_name = '%sMetadataReader' % microscope_type.capitalize()
-    return getattr(module, class_name)
+    reader_cls = None
+    for k, v in vars(module).iteritems():
+        if inspect.isclass(v):
+            if (MetadataReader in inspect.getmro(v) and
+                    not inspect.isabstract(v)):
+                reader_cls = v
+                break
+    if reader_cls is None:
+        raise AttributeError(
+            'Module "%s" does not implement a MetadataReader class.' %
+            module.__name__
+        )
+    return reader_cls
 
 
 def metadata_handler_factory(microscope_type):
-    '''Gets the implementation of the
-    :class:`tmlib.workflow.metaconfig.default.MetadataHandler`
-    abstract base class for the given microscope type.
+    '''Gets the `microscope_type`-specific implementation of
+    :class:`tmlib.workflow.metaconfig.base.MetadataHandler`.
 
     Parameters
     ----------
@@ -105,7 +132,24 @@ def metadata_handler_factory(microscope_type):
     Returns
     -------
     classobj
+
+    Raises
+    ------
+    AttributeError
+        when the `miroscope_type`-specific module does not implement a handler
+        class
     '''
     module = import_microscope_type_module(microscope_type)
-    class_name = '%sMetadataHandler' % microscope_type.capitalize()
-    return getattr(module, class_name)
+    handler_cls = None
+    for k, v in vars(module).iteritems():
+        if inspect.isclass(v):
+            if (MetadataHandler in inspect.getmro(v) and
+                    not inspect.isabstract(v)):
+                handler_cls = v
+                break
+    if handler_cls is None:
+        raise AttributeError(
+            'Module "%s" does not implement a MetadataHandler class.' %
+            module.__name__
+        )
+    return handler_cls
