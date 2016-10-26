@@ -1,6 +1,14 @@
 tmlib.models package
 ====================
 
+Module contents
+---------------
+
+.. automodule:: tmlib.models
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -160,15 +168,6 @@ tmlib.models.well module
 ------------------------
 
 .. automodule:: tmlib.models.well
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: tmlib.models
     :members:
     :undoc-members:
     :show-inheritance:

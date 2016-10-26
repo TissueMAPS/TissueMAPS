@@ -1,12 +1,13 @@
 tmserver.tool package
 =====================
 
-Subpackages
------------
+Module contents
+---------------
 
-.. toctree::
-
-    tmserver.tool.deprecated_builtin
+.. automodule:: tmserver.tool
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Submodules
 ----------
@@ -35,11 +36,3 @@ tmserver.tool.serialize module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmserver.tool
-    :members:
-    :undoc-members:
-    :show-inheritance:

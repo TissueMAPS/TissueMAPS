@@ -16,9 +16,17 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import os
+import sys
+
+def find_packages():
+    root_dir = os.path.join(os.path.dirname(__file__), '..', 'src')
+    return [
+        x[0] for x in os.walk(root_dir)
+        if '__init__.py' in os.listdir(x[0])
+    ]
+for p in find_packages():
+    sys.path.append(p)
 
 # -- General configuration ------------------------------------------------
 
@@ -30,12 +38,14 @@
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # autoprogram somehow must be included before autodoc due to import shizzle
+    'sphinxcontrib.autoprogram',
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.ifconfig',
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
-    'sphinx.ext.viewcode',
-    'sphinxcontrib.autoprogram',
+    # 'sphinx.ext.viewcode',
     'sphinx.ext.inheritance_diagram',
     'sphinxcontrib.sqlalchemyviz',
     'numpydoc',
@@ -130,16 +140,17 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+# html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
-    'page_width': '100%',
-    'show_powered_by': False,
-    'fixed_sidebar': True
+    # 'page_width': '100%',
+    # 'show_powered_by': False,
+    # 'fixed_sidebar': True
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -157,7 +168,8 @@ html_short_title = u'tmaps'
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 #
-html_logo = '_static/tmaps_logo.png'
+# html_logo = '_static/tmaps_logo.png'
+html_logo = '_static/tmaps_logo_bg.png'
 
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -347,6 +359,15 @@ texinfo_documents = [
 #
 # texinfo_no_detailmenu = False
 
+# # Include documentation for __init__ special member
+# def skip(app, what, name, obj, skip, options):
+#     if name == "__init__":
+#         return False
+#     return skip
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+numpydoc_show_class_members = False
+
+autoclass_content = 'both'

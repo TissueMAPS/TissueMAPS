@@ -1,6 +1,14 @@
 tmlib.workflow.metaconfig package
 =================================
 
+Module contents
+---------------
+
+.. automodule:: tmlib.workflow.metaconfig
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -52,13 +60,8 @@ tmlib.workflow.metaconfig.cli module
     :undoc-members:
     :show-inheritance:
 
-tmlib.workflow.metaconfig.default module
-----------------------------------------
-
-.. automodule:: tmlib.workflow.metaconfig.default
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. autoprogram:: tmlib.workflow.metaconfig.cli:Metaconfig._parser
+    :prog: metaconfig
 
 tmlib.workflow.metaconfig.imc module
 ------------------------------------
@@ -72,14 +75,6 @@ tmlib.workflow.metaconfig.incell module
 ---------------------------------------
 
 .. automodule:: tmlib.workflow.metaconfig.incell
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.workflow.metaconfig.laica module
---------------------------------------
-
-.. automodule:: tmlib.workflow.metaconfig.laica
     :members:
     :undoc-members:
     :show-inheritance:
@@ -108,14 +103,6 @@ tmlib.workflow.metaconfig.omexml module
     :undoc-members:
     :show-inheritance:
 
-tmlib.workflow.metaconfig.openslide module
-------------------------------------------
-
-.. automodule:: tmlib.workflow.metaconfig.openslide
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmlib.workflow.metaconfig.position module
 -----------------------------------------
 
@@ -132,11 +119,3 @@ tmlib.workflow.metaconfig.visiview module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmlib.workflow.metaconfig
-    :members:
-    :undoc-members:
-    :show-inheritance:

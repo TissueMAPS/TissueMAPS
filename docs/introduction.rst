@@ -11,8 +11,7 @@ What is TissueMAPS?
 
 `TissueMAPS` is a computational framework for interactive visualization and analysis of large-scale microscopy image datasets.
 
-High-throughput image-based screens amount to terabytes of image data, which poses challenges on biological researchers.
-The size of the generated datasets make it impractical to store and process data on a local computer, but rather calls for remote solutions.
+High-throughput image-based screens amount to terabytes of image data. The size of the generated datasets make it impractical to store and process data on a local computer, but rather calls for remote solutions.
 
 Most available applications for microscopy image analysis are designed to run on a single desktop computer.
 `TissueMAPS` instead uses a distributed client-server model optimized for processing images in parallel on multiple virtual machines (VMs) in a modern cloud infrastructure.
@@ -25,7 +24,7 @@ Client-server architecture
 .. image:: ./_static/overview.png
     :height: 300px
 
-The software combines a intuitive, user-friendly browser-based frontend with a scalable backend to processing multi-terabyte image datasets in an interactive and responsive manner.
+The software combines a intuitive, user-friendly browser-based frontend with a scalable backend to process multi-terabyte image datasets in an interactive and responsive manner.
 
 The `TissueMAPS` server exposes a `RESTful API <https://en.wikipedia.org/wiki/Representational_state_transfer>`_ that abstracts away the complexity of compute and storage infrastructure. Clients send `HTTP <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_ request messages to the server, who handles the requests and returns response messages. The server processes request asynchronenous by submitting computational tasks to available compute resources.
 
@@ -109,7 +108,7 @@ Canonical workflow
 .. image:: ./_static/canonical_workflow.png
     :height: 300px
 
-Note that "upload" and "download" stages are available in the user interface, but are not part of the actual image processing workflow and handled separately.
+Note that "upload" and "download" stages are available in the user interface, but are not part of the actual image processing workflow and consequently handled separately.
 
 
 .. _image-conversion:
@@ -117,19 +116,11 @@ Note that "upload" and "download" stages are available in the user interface, bu
 Image conversion
 ^^^^^^^^^^^^^^^^
 
-Microscopes usually store pixel data together with related acquisition metadata in vendor-specific formats. These are often not understood by standard readers and generally not optimized for scalable storage in a distributed computing environment. The "image conversion" stage extracts individual pixel planes and associated metadata from microscopic image files and stores them in a consistent way to facilitate downstream processing.
-
 - :doc:`metaextract <tmlib.workflow.metaextract>`: **Extraction of metadata**
-    The `Bio-Formats <https://www.openmicroscopy.org/site/products/bio-formats>`_ Java library is used to extract metadata from heterogeneous image file formats, which is stored in `OMEXML <https://www.openmicroscopy.org/site/support/ome-model/ome-xml/index.html>`_ format according to the standardized `OME <https://www.openmicroscopy.org/site/support/ome-model/>`_ data model.
 
 - :doc:`metaconfig <tmlib.workflow.metaconfig>`: **Configuration of metadata**
-    Extracted metadata is often incomplete. In particular, the relative position of images, which is required for creation of pyramids, is typically not available from individual image files, but needs to be obtained from additional microscope-specific metadata files or user input.
 
 - :doc:`imextract <tmlib.workflow.imextract>`: **Extraction of image data**
-    Image files may contain more than one pixel plane. For example, planes acquired at different *z*-resolutions are often stored in the same file and some microscopes even store all planes in a single file. This is not practical and may even become a bottleneck depending on file access patterns and implemented storage backend.
-    In addition, microscopes typically store images uncompressed, while it is often desirable to apply compression to reduce storage requirements. To meet these ends, each pixel plane is extracted from microscope files and stored separately. Optionally, images acquired at different *z*-resolutions are projected to 2D.
-
-Note that implementation details of the storage backend may be subject to change and files may not necessarily accessible via a POSIX compliant file system! Users are therefore advised to use the `RESTful API` to request images from server.
 
 .. _image-preprocessing:
 
@@ -138,31 +129,29 @@ Image preprocessing
 
 Microscopic images typically contain artifacts that need to be assessed and corrected.
 
-- :doc:`corilla <tmlib.workflow.corilla>`: **Calculation of illumination statistics**
-    Microscopic images generally display illumination illumination. Correction of these artifacts is important for visualization and even more so for quantitative analysis of pixel intensities. Illumination statistics are calculated across all acquisition sites and stored. They can later be applied to individual images to correct illumination artifacts or uniformly rescale intensities across images.
+- :doc:`corilla <tmlib.workflow.corilla>`: Calculation of illumination statistics
 
-- :doc:`align <tmlib.workflow.align>`: **Image registration and alignment**
-    Images acquired at the different time points may exhibit a displacement relative to each other and need to be aligned to overlay them for visualization or analysis. To this end, images are registered between different acquisitions and the computed shifts are stored for subsequent alignment.
+- :doc:`align <tmlib.workflow.align>`: Image registration and alignment
 
 .. _pyramid-creation:
 
 Pyramid creation
 ^^^^^^^^^^^^^^^^
 
-- :doc:`illuminati <tmlib.workflow.illuminati>`: **Image pyramid creation**
-    For efficient zoomable browser-based visualization, images are casted to 8-bit and tiled according the positional information obtained in the `image conversion <image-conversion>`_ *stage*. Users further have the option to correct images for illumination artifacts and align them between acquisitions based on statistics calculated in the `image preprocessing <image-preprocessing>`_ *stage*.
+- :doc:`illuminati <tmlib.workflow.illuminati>`: Image pyramid creation
 
 .. _image-analysis:
 
 Image analysis
 ^^^^^^^^^^^^^^
 
-- :doc:`jterator <tmlib.workflow.jterator>`: **Image segmentation and feature extraction**
-    The objective of image analysis is to identify biologically meaningful objects (e.g. "cells") in the images and extract features for identified objects.
-    To this end, users can combine individual modules available in the `JtModules repository <https://github.com/TissueMAPS/JtModules>`_ into a custom image analysis *pipelines* in a `CellProfiler <http://cellprofiler.org/>`_ like manner. Outlines of segmented objects and extracted features can be stored for further analyis. Once stored, they are automatically available for in the user interface and can be downloaded from the server.
+- :doc:`jterator <tmlib.workflow.jterator>`: Image segmentation and feature extraction
 
 
 .. _distributed-machine-learning:
 
 Distributed machine learning
 ============================
+
+
+.. TODO

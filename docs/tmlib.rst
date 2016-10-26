@@ -1,6 +1,14 @@
 tmlib package
 =============
 
+Module contents
+---------------
+
+.. automodule:: tmlib
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Subpackages
 -----------
 
@@ -116,11 +124,3 @@ tmlib.writers module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmlib
-    :members:
-    :undoc-members:
-    :show-inheritance:

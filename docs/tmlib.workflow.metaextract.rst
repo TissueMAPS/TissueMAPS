@@ -1,6 +1,14 @@
 tmlib.workflow.metaextract package
 ==================================
 
+Module contents
+---------------
+
+.. automodule:: tmlib.workflow.metaextract
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -28,11 +36,5 @@ tmlib.workflow.metaextract.cli module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmlib.workflow.metaextract
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. autoprogram:: tmlib.workflow.metaextract.cli:Metaextract._parser
+    :prog: metaextract

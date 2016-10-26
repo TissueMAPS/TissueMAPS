@@ -1,6 +1,14 @@
 tmtoolbox package
 =================
 
+Module contents
+---------------
+
+.. automodule:: tmtoolbox
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -52,11 +60,3 @@ tmtoolbox.version module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmtoolbox
-    :members:
-    :undoc-members:
-    :show-inheritance:

@@ -1,6 +1,14 @@
 tmserver.user package
 =====================
 
+Module contents
+---------------
+
+.. automodule:: tmserver.user
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -12,11 +20,3 @@ tmserver.user.api module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmserver.user
-    :members:
-    :undoc-members:
-    :show-inheritance:

@@ -1,6 +1,14 @@
 tmlib.workflow.imextract package
 ================================
 
+Module contents
+---------------
+
+.. automodule:: tmlib.workflow.imextract
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -28,11 +36,5 @@ tmlib.workflow.imextract.cli module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmlib.workflow.imextract
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. autoprogram:: tmlib.workflow.imextract.cli:Imextract._parser
+    :prog: imextract

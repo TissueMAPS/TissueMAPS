@@ -1,31 +1,12 @@
-tmlibrary
-=========
-
-.. toctree::
-   :maxdepth: 4
-
-   tmlibrary
-
-tmserver
+Packages
 ========
 
 .. toctree::
-   :maxdepth: 4
+    :maxdepth: 4
 
-   tmserver
-
-tmtoolbox
-=========
-
-.. toctree::
-   :maxdepth: 4
-
-   tmtoolbox
-
-tmclient
-========
-
-.. toctree::
-   :maxdepth: 4
-
-   tmclient
+    tmlib
+    tmserver
+    tmtoolbox
+    tmclient
+    jtmodules
+    jtlib

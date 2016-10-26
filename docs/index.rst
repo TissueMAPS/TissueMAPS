@@ -13,6 +13,7 @@ Contents:
 
    introduction
    installation
+   modules
 
 Indices and tables
 ==================

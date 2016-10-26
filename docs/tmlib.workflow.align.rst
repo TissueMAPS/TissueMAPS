@@ -1,6 +1,14 @@
 tmlib.workflow.align package
 ============================
 
+Module contents
+---------------
+
+.. automodule:: tmlib.workflow.align
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -39,11 +47,3 @@ tmlib.workflow.align.registration module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmlib.workflow.align
-    :members:
-    :undoc-members:
-    :show-inheritance:

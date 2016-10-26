@@ -1,6 +1,14 @@
 tmserver.extensions.gc3pie package
 ==================================
 
+Module contents
+---------------
+
+.. automodule:: tmserver.extensions.gc3pie
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -12,11 +20,3 @@ tmserver.extensions.gc3pie.engine module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmserver.extensions.gc3pie
-    :members:
-    :undoc-members:
-    :show-inheritance:

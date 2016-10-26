@@ -1,6 +1,14 @@
 jtlib package
 =============
 
+Module contents
+---------------
+
+.. automodule:: jtlib
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -28,11 +36,3 @@ jtlib.utils module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: jtlib
-    :members:
-    :undoc-members:
-    :show-inheritance:

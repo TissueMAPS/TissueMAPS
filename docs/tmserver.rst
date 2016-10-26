@@ -1,12 +1,19 @@
 tmserver package
 ================
 
+Module contents
+---------------
+
+.. automodule:: tmserver
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Subpackages
 -----------
 
 .. toctree::
 
-    tmserver.appstate
     tmserver.experiment
     tmserver.extensions
     tmserver.jtui
@@ -82,11 +89,3 @@ tmserver.wsgi module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmserver
-    :members:
-    :undoc-members:
-    :show-inheritance:

@@ -1,13 +1,20 @@
 tmserver.extensions package
 ===========================
 
+Module contents
+---------------
+
+.. automodule:: tmserver.extensions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Subpackages
 -----------
 
 .. toctree::
 
     tmserver.extensions.gc3pie
-    tmserver.extensions.spark
 
 Submodules
 ----------
@@ -20,11 +27,3 @@ tmserver.extensions.auth module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmserver.extensions
-    :members:
-    :undoc-members:
-    :show-inheritance:

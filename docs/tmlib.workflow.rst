@@ -1,6 +1,14 @@
 tmlib.workflow package
 ======================
 
+Module contents
+---------------
+
+.. automodule:: tmlib.workflow
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Subpackages
 -----------
 
@@ -13,7 +21,6 @@ Subpackages
     tmlib.workflow.jterator
     tmlib.workflow.metaconfig
     tmlib.workflow.metaextract
-    tmlib.workflow.tmaps
 
 Submodules
 ----------
@@ -106,11 +113,3 @@ tmlib.workflow.workflow module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmlib.workflow
-    :members:
-    :undoc-members:
-    :show-inheritance:

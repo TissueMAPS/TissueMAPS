@@ -1,6 +1,14 @@
 tmlib.workflow.jterator package
 ===============================
 
+Module contents
+---------------
+
+.. automodule:: tmlib.workflow.jterator
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -36,18 +44,13 @@ tmlib.workflow.jterator.cli module
     :undoc-members:
     :show-inheritance:
 
+.. autoprogram:: tmlib.workflow.jterator.cli:Jterator._parser
+    :prog: jterator
+
 tmlib.workflow.jterator.handles module
 --------------------------------------
 
 .. automodule:: tmlib.workflow.jterator.handles
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.workflow.jterator.join module
------------------------------------
-
-.. automodule:: tmlib.workflow.jterator.join
     :members:
     :undoc-members:
     :show-inheritance:
@@ -76,11 +79,3 @@ tmlib.workflow.jterator.utils module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmlib.workflow.jterator
-    :members:
-    :undoc-members:
-    :show-inheritance:

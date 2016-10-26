@@ -1,6 +1,14 @@
 jtmodules package
 =================
 
+Module contents
+---------------
+
+.. automodule:: jtmodules
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -156,11 +164,3 @@ jtmodules.threshold_fixed module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: jtmodules
-    :members:
-    :undoc-members:
-    :show-inheritance:

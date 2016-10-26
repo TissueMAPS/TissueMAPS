@@ -1,6 +1,14 @@
 tmlib.workflow.illuminati package
 =================================
 
+Module contents
+---------------
+
+.. automodule:: tmlib.workflow.illuminati
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -28,6 +36,9 @@ tmlib.workflow.illuminati.cli module
     :undoc-members:
     :show-inheritance:
 
+.. autoprogram:: tmlib.workflow.illuminati.cli:Illuminati._parser
+    :prog: illuminati
+
 tmlib.workflow.illuminati.stitch module
 ---------------------------------------
 
@@ -36,11 +47,3 @@ tmlib.workflow.illuminati.stitch module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmlib.workflow.illuminati
-    :members:
-    :undoc-members:
-    :show-inheritance:

@@ -1,6 +1,14 @@
 tmserver.model package
 ======================
 
+Module contents
+---------------
+
+.. automodule:: tmserver.model
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -12,11 +20,3 @@ tmserver.model.utils module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmserver.model
-    :members:
-    :undoc-members:
-    :show-inheritance:

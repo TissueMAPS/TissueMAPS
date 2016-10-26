@@ -1,6 +1,14 @@
 tmserver.mapobject package
 ==========================
 
+Module contents
+---------------
+
+.. automodule:: tmserver.mapobject
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -12,11 +20,3 @@ tmserver.mapobject.api module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmserver.mapobject
-    :members:
-    :undoc-members:
-    :show-inheritance:

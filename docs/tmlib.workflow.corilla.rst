@@ -1,6 +1,14 @@
 tmlib.workflow.corilla package
 ==============================
 
+Module contents
+---------------
+
+.. automodule:: tmlib.workflow.corilla
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Submodules
 ----------
 
@@ -28,6 +36,9 @@ tmlib.workflow.corilla.cli module
     :undoc-members:
     :show-inheritance:
 
+.. autoprogram:: tmlib.workflow.corilla.cli:Corilla._parser
+    :prog: corilla
+
 tmlib.workflow.corilla.stats module
 -----------------------------------
 
@@ -36,11 +47,3 @@ tmlib.workflow.corilla.stats module
     :undoc-members:
     :show-inheritance:
 
-
-Module contents
----------------
-
-.. automodule:: tmlib.workflow.corilla
-    :members:
-    :undoc-members:
-    :show-inheritance:
