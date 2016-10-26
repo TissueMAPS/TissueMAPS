@@ -241,7 +241,7 @@ class VisiviewMetadataReader(MetadataReader):
             for i in xrange(len(sites))
         ]
         lookup = defaultdict(list)
-        r = re.compile(VisiviewMetadataHandler.IMAGE_FILE_REGEX_PATTERN)
+        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
         for f in microscope_image_files:
             matches = r.search(f)
             # NOTE: We assume that the "site" id is global per plate

@@ -113,7 +113,7 @@ class CellvoyagerMetadataReader(MetadataReader):
             if e.attrib['{%s}Type' % mlf_ns] != 'ERR'
         ])
         lookup = defaultdict(list)
-        r = re.compile(CellvoyagerMetadataHandler.IMAGE_FILE_REGEX_PATTERN)
+        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
 
         count = 0
         for e in mlf_elements:
