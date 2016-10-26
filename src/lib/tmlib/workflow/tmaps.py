@@ -44,6 +44,7 @@ class Tmaps(SubmissionManager):
         '''
         self.experiment_id = experiment_id
         self.verbosity = verbosity
+        self.name = 'workflow'
         super(Tmaps, self).__init__(self.experiment_id, 'workflow')
 
     @staticmethod
