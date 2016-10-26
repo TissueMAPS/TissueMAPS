@@ -1,8 +1,5 @@
 from auth import jwt
 
-from spark import Spark
-spark = Spark()
-
 from gc3pie import GC3Pie
 gc3pie = GC3Pie()
 

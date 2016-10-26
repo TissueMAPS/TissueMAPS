@@ -472,11 +472,8 @@ def get_jobs_status(experiment_id):
                 task_ids = []
                 for phase in step.tasks:
                     if hasattr(phase, 'tasks'):
-                        print phase.name
-                        print phase.tasks
                         task_ids.extend([t.persistent_id for t in phase.tasks])
                     else:
-                        print phase.name
                         task_ids.append(phase.persistent_id)
                 tasks = session.query(tm.Task).\
                     filter(

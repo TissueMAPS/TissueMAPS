@@ -65,7 +65,7 @@ def find_scripts():
 
 def get_version():
     src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'tmserver'
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'lib', 'tmserver'
     )
     sys.path = [src_path] + sys.path
     import version
@@ -92,8 +92,8 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=find_scripts(),
-    packages=setuptools.find_packages('src'),
-    package_dir={'': 'src'},
+    packages=setuptools.find_packages(os.path.join('src', 'lib')),
+    package_dir={'': os.path.join('src', 'lib')},
     include_package_data=True,
     install_requires=[
         'alembic>=0.8.3',
@@ -115,9 +115,6 @@ setuptools.setup(
         'pyparsing>=2.0.5',
         'python-dateutil>=2.4.2',
         'python-editor>=0.4',
-    ],
-    # dependency_links=[
-    #     'git+https://github.com/dtheodor/flask-sqlalchemy-session/tarball/master#egg=flask_sqlalchemy_session-1.1',
-    # ]
+    ]
 )
 
