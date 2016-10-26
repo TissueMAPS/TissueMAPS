@@ -2,11 +2,34 @@ import re
 import types
 import logging
 import inspect
+import argparse
 from abc import ABCMeta
 
 from tmlib.utils import assert_type
 
 logger = logging.getLogger(__name__)
+
+
+def _check_dependency(required_arg, required_value=None):
+    class ArgumentDependencyAction(argparse.Action):
+        def __call__(self, parser, namespace, values, option_string=None):
+            if getattr(namespace, required_arg) is None:
+                parser.error(
+                    'Argument "%s" also requires "%s".' % (
+                        self.dest, required_arg
+                    )
+                )
+            if required_value is not None:
+                if getattr(namespace, required_arg) != required_value:
+                    parser.error(
+                        'Argument "%s" can only be used when value of '
+                        '"%s" is %s.' % (
+                            self.dest, required_arg, str(required_value)
+                        )
+                    )
+            setattr(namespace, self.dest, values)
+    return ArgumentDependencyAction
+
 
 
 class Argument(object):
@@ -16,10 +39,11 @@ class Argument(object):
     @assert_type(
         type='type', help='basestring',
         choices=['set', 'list', 'types.NoneType'],
-        flag=['basestring', 'types.NoneType']
+        flag=['basestring', 'types.NoneType'],
+        dependency=['tuple']
     )
     def __init__(self, type, help, default=None, choices=None, flag=None,
-            required=False, disabled=False, get_choices=None):
+            required=False, disabled=False, get_choices=None, dependency=()):
         '''
         Parameters
         ----------
@@ -44,6 +68,8 @@ class Argument(object):
             of type :class:`tmlib.models.Experiment` and returns the
             choices in case they need to (and can) be determined dynamically
             (default: ``None``)
+        dependency: tuple, optional
+            name-value pair of an argument the given argument depends on
 
         Note
         ----
@@ -101,10 +127,18 @@ class Argument(object):
         else:
             if self.type == bool:
                 self.choices = {True, False}
+        if flag is not None:
+            if not(flag.isalpha() and len(flag) == 1):
+                raise ValueError('Argument "flag" must be a letter.')
         self.flag = flag
         formatted_help_message = self.help.replace('\n', ' ').split(' ')
         formatted_help_message[0] = formatted_help_message[0].lower()
         formatted_help_message = ' '.join(formatted_help_message)
+        if len(dependency) > 2:
+            raise ValueError(
+                'Dependency must be a single name-value pair.'
+            )
+        self.dependency = dependency
         self.__doc__ = '%s: %s' % (self.type.__name__, formatted_help_message)
 
     @property
@@ -181,10 +215,12 @@ class Argument(object):
         argparse.ArgumentParser
             `parser` with added arguments
         '''
+        # flags = [self.name]
         flags = ['--%s' % self.name]
         kwargs = dict()
         if self.flag is not None:
             flags.append('-%s' % self.flag)
+        kwargs['dest'] = self.name
         kwargs['help'] = re.sub(r'\s+', ' ', self.help).strip()
         if self.type == bool:
             if self.default:
@@ -198,6 +234,13 @@ class Argument(object):
             if self.default is not None:
                 kwargs['help'] += ' (default: %s)' % self.default
         kwargs['required'] = self.required
+        if len(self.dependency) > 0:
+            k = self.dependency[0]
+            try:
+                v = self.dependency[1]
+            except IndexError:
+                v = None
+            kwargs['action'] = _check_dependency(k, v)
         parser.add_argument(*flags, **kwargs)
 
 def __str__(self):

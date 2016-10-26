@@ -367,11 +367,11 @@ class CommandLineInterface(SubmissionManager):
     @climethod(
         help='prints the description of a given batch job to the console',
         phase=Argument(
-                type=str, default='run', choices={'run', 'collect'},
-                help='phase of the workflow step to which the job belongs'
+            type=str, flag='p', choices={'run', 'collect'},
+            help='phase of the workflow step to which the job belongs'
         ),
         job_id=Argument(
-            type=int, flag='j',
+            type=int, flag='j', dependency=('phase', 'run'),
             help='ID of the job for which information should be displayed'
         )
     )
@@ -403,7 +403,7 @@ class CommandLineInterface(SubmissionManager):
             help='phase of the workflow step to which the job belongs'
         ),
         job_id=Argument(
-            type=int, flag='j',
+            type=int, flag='j', dependency=('phase', 'run'),
             help='ID of the job for which log output should be shown'
         )
     )
