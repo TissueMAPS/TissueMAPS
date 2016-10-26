@@ -177,8 +177,8 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
 
     See also
     --------
-    :py:function:`jtlib.plotting.create_intensity_image_plot`
-    :py:function:`jtlib.plotting.create_intensity_overlay_image_plot`
+    function:`jtlib.plotting.create_intensity_image_plot`
+    function:`jtlib.plotting.create_intensity_overlay_image_plot`
     '''
 
     _check_position_argument(position)
@@ -243,8 +243,8 @@ def create_float_image_plot(image, position, colorscale=None):
 
     See also
     --------
-    :py:function:`jtlib.plotting.create_intensity_image_plot`
-    :py:function:`jtlib.plotting.create_colorscale`
+    function:`jtlib.plotting.create_intensity_image_plot`
+    function:`jtlib.plotting.create_colorscale`
     '''
 
     _check_position_argument(position)
@@ -306,8 +306,8 @@ def create_mask_image_plot(mask, position, colorscale=None):
 
     See also
     --------
-    :py:function:`jtlib.plotting.create_intensity_image_plot`
-    :py:function:`jtlib.plotting.create_intensity_overlay_image_plot`
+    function:`jtlib.plotting.create_intensity_image_plot`
+    function:`jtlib.plotting.create_intensity_overlay_image_plot`
     '''
     _check_position_argument(position)
     # if not mask.dtype == np.bool or not mask.dtype == np.int32:
@@ -371,7 +371,7 @@ def create_intensity_overlay_image_plot(image, mask, position,
         (default: ``None``)
     color: str, optional
         color of the mask outline; defaults to
-        :py:attribute:`jtlib.plotting.OBJECT_COLOR` in case no color
+        attribute:`jtlib.plotting.OBJECT_COLOR` in case no color
         is specified (default: ``None``)
 
     Returns
@@ -380,8 +380,8 @@ def create_intensity_overlay_image_plot(image, mask, position,
 
     See also
     --------
-    :py:function:`jtlib.plotting.create_intensity_image_plot`
-    :py:function:`jtlib.plotting.create_mask_image_plot`
+    function:`jtlib.plotting.create_intensity_image_plot`
+    function:`jtlib.plotting.create_mask_image_plot`
     '''
 
     _check_position_argument(position)
@@ -461,7 +461,7 @@ def create_mask_overlay_image_plot(mask, mask2, position, color=None):
         right, ``'ll'`` lower left, ``'lr'`` -> lower right
     color: str, optional
         color of the mask outline; defaults to
-        :py:attribute:`jtlib.plotting.OBJECT_COLOR` in case no color
+        attribute:`jtlib.plotting.OBJECT_COLOR` in case no color
         is specified (default: ``None``)
 
     Returns
@@ -470,7 +470,7 @@ def create_mask_overlay_image_plot(mask, mask2, position, color=None):
 
     See also
     --------
-    :py:function:`jtlib.plotting.create_mask_image_plot`
+    function:`jtlib.plotting.create_mask_image_plot`
     '''
 
     _check_position_argument(position)
@@ -690,7 +690,7 @@ def create_colorscale(name, n=256, permute=False, add_background=False,
     Note
     ----
     You can invert a colorscale in a `plotly` graph using the
-    :py:attr:`reversescale` argument.
+    attr:`reversescale` argument.
     '''
     cmap = cm.get_cmap(name)
     if add_background:

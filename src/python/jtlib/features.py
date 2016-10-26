@@ -139,7 +139,7 @@ class Features(object):
     @cached_property
     def bboxes(self):
         '''List[numpy.ndarray]: bounding boxes for each object in
-        :py:attr:`jtlib.features.Features.label_image`
+        attr:`jtlib.features.Features.label_image`
         '''
         return mh.labeled.bbox(self.label_image)
 
@@ -323,7 +323,7 @@ class Haralick(Features):
 
         See also
         --------
-        :py:func:`mahotas.features.haralick`
+        func:`mahotas.features.haralick`
         '''
         # Create an empty dataset in case no objects were detected
         logger.info('extract Haralick features')
@@ -396,7 +396,7 @@ class TAS(Features):
 
         See also
         --------
-        :py:func:`mahotas.features.haralick`
+        func:`mahotas.features.haralick`
         '''
         # Create an empty dataset in case no objects were detected
         logger.info('extract Threshold Adjacency Statistics features')
@@ -467,8 +467,8 @@ class Gabor(Features):
 
         See also
         --------
-        :py:class:`cellprofiler.modules.measuretexture.MeasureTexture`
-        :py:func:`centrosome.filter.gabor`
+        class:`cellprofiler.modules.measuretexture.MeasureTexture`
+        func:`centrosome.filter.gabor`
         '''
         # Create an empty dataset in case no objects were detected
         logger.info('extract Gabor features')
@@ -636,7 +636,7 @@ class Zernike(Features):
 
 #     See also
 #     --------
-#     :py:func:`mahotas.features.surf`
+#     func:`mahotas.features.surf`
 #     '''
 #     if not im.shape == mask.shape:
 #         raise ValueError('Images must have the same size.')

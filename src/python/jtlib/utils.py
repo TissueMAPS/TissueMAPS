@@ -50,7 +50,7 @@ def extract_bbox_image(im, bbox, pad=0):
 
     Note
     ----
-    The bounding box can be created by :py:meth:`mahotas.labeled.bbox`.
+    The bounding box can be created by meth:`mahotas.labeled.bbox`.
     '''
     cropped_im = im[bbox[0]:bbox[1], bbox[2]:bbox[3]]
     if pad:
