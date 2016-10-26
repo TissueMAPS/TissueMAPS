@@ -525,7 +525,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
 class Workflow(SequentialTaskCollection, State):
 
     '''A *workflow* represents a computational pipeline that processes a
-    sequence of *workflow stages* on a cluster.
+    sequence of *stages* on a cluster.
     '''
 
     def __init__(self, experiment_id, verbosity, submission_id, user_name,

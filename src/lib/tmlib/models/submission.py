@@ -118,7 +118,7 @@ class Submission(MainModel, DateMixIn):
 
 #         See also
 #         --------
-#         :method:`tmlib.workflow.api.create_batches`
+#         ::meth:`tmlib.workflow.api.create_batches`
 #         '''
 #         self.name = name
 #         self.description = description

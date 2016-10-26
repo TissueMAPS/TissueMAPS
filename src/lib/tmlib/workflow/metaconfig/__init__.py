@@ -1,3 +1,23 @@
+'''Workflow step for configuration of microscopy image metadata.
+
+Metadata available from the microscope image files is often incomplete, either
+because the format is not fully supported by the `Bio-Formats` library or
+simply because the microscope provides insufficient information in the files.
+In particular, the relative position of images, required for overview creation,
+is typically not available from individual image files. The `metaconfig` step
+configures metadata extracted from image files in the
+:mod:`tmlib.workflow.metaextract` step and tries to obtain any missing
+information from microscope-specific metadata files or user input.
+
+This is achieved via microscope-specific implementations of
+:class:`tmlib.workflow.metaconfig.base.MetadataReader` and
+:class:`tmlib.workflow.metaconfig.base.MetadataHanlder`. The step already
+supports a variety of microscopes. New microscope types can be registered by
+by implementing :class:`tmlib.workflow.metaconfig.base.MetadataReader` and
+:class:`tmlib.workflow.metaconfig.base.MetadataHandler` in a separate module
+(the name of the microscope type is determined from the name of the module).
+
+'''
 import re
 import importlib
 import inspect
@@ -6,6 +26,8 @@ from tmlib import __version__
 from tmlib.workflow.metaconfig.base import MetadataReader
 from tmlib.workflow.metaconfig.base import MetadataHandler
 
+
+__dependencies__ = {'metaextract'}
 
 __fullname__ = 'Configuration of image metadata'
 
@@ -60,7 +82,7 @@ def get_microscope_type_regex(microscope_type, as_string=False):
     '''Gets regular expression patterns for the identification of microscope
     image files and microscope metadata files for a given `microscope_type`.
 
-    Paramaters
+    Parameters
     ----------
     microscope_type: str
         microscope type

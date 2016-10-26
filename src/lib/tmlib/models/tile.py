@@ -10,12 +10,10 @@ from sqlalchemy import UniqueConstraint
 from tmlib.image import PyramidTile
 from tmlib.metadata import PyramidTileMetadata
 from tmlib.models import ExperimentModel
-from tmlib.models.utils import remove_location_upon_delete
 
 logger = logging.getLogger(__name__)
 
 
-@remove_location_upon_delete
 class ChannelLayerTile(ExperimentModel):
 
     '''A *channel layer tile* is a component of an image pyramid. Each tile

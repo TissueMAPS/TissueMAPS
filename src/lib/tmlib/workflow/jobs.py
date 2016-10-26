@@ -53,7 +53,7 @@ class Job(gc3libs.Application):
 
         See also
         --------
-        :method:`gc3libs.Application.sbatch`
+        :meth:`gc3libs.Application.sbatch`
 
         Note
         ----
@@ -124,7 +124,7 @@ class WorkflowStepJob(Job):
     '''
 
     # TODO: inherit from RetryableTask(max_retries=1) and implement
-    # re-submission logic by overwriting retry() method:
+    # re-submission logic by overwriting retry() :meth:
     # 
     #     with open(err_file, 'r') as err:
     #         if re.search(r'^FAILED', err, re.MULTILINE):
@@ -157,7 +157,7 @@ class WorkflowStepJob(Job):
 
         See also
         --------
-        :class:`tmlib.models.Submission`
+        :class:`tmlib.models.submission.Submission`
 
         Note
         ----
@@ -444,7 +444,7 @@ class CliJobCollection(SequentialTaskCollection, JobCollection):
 
     '''Class for manual submission of the *run* and *collect* phases of a
     workflow steps via
-    :method:`tmlib.workflow.cli.CommandLineInterface.submit`.
+    :meth:`tmlib.workflow.cli.CommandLineInterface.submit`.
     '''
 
     def __init__(self, step_name, submission_id, jobs=None):

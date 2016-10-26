@@ -823,8 +823,8 @@ class BrightfieldImage(Image):
 
     def split_bands(self, separation_mat=skimage.color.hed_from_rgb):
         '''Split different colors of a immunohistochemistry stain
-        into separate channels based on
-        Ruifrok and Johnston's color deconvolution method [1]_.
+        into separate channels based on Ruifrok and Johnston's color
+        deconvolution method [1]_.
 
         Parameters
         ----------

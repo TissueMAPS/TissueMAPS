@@ -601,7 +601,7 @@ class MetadataHandler(object):
         stitch_layout: str
             layout of the acquisition grid
             (options: ``"horizontal"``, ``"zigzag_horizontal"``, ``"vertical"``,
-             or ``"zigzag_vertical"``)
+            or ``"zigzag_vertical"``)
         stitch_dimensions: Tuple[int]
             dimensions of the acquisition grid, i.e. number of images
             along the vertical and horizontal axis of the acquired area

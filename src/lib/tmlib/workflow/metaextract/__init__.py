@@ -1,5 +1,18 @@
+'''Workflow step for extraction of microscope image metadata.
+
+Microscopes typically write metadata about the image acquisition process into
+the header of the generated image files. Unfortunately, almost every vendor
+uses a custom file format. The `metaextract` step uses the
+`Bio-Formats <https://www.openmicroscopy.org/site/products/bio-formats>`_
+library to extract metadata from heterogeneous image file formats in form of
+`OMEXML <https://www.openmicroscopy.org/site/support/ome-model/ome-xml/index.html>`_
+according to the standardized
+`OME <https://www.openmicroscopy.org/site/support/ome-model/>`_ data model.
+
+'''
 from tmlib import __version__
 
+__dependencies__ = {}
 
 __fullname__ = 'Extraction of image metadata'
 

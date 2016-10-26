@@ -7,7 +7,7 @@ from tmlib.models.base import MainModel, DateMixIn
 
 class User(MainModel, DateMixIn):
 
-    '''A *user*.
+    '''A `TissueMAPS` *user*.
 
     Attributes
     ----------

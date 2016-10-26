@@ -65,7 +65,7 @@ class Argument(object):
             (default: ``False``)
         get_choices: function, optional
             function that takes an object
-            of type :class:`tmlib.models.Experiment` and returns the
+            of type :class:`tmlib.models.experiment.Experiment` and returns the
             choices in case they need to (and can) be determined dynamically
             (default: ``None``)
         dependency: tuple, optional
@@ -371,7 +371,7 @@ class ArgumentCollection(object):
         '''Adds each argument to an argument parser for use in a command line
         interface.
 
-        Parametere
+        Parameters
         ----------
         parser: argparse.ArgumentParser
             argument parser
@@ -445,8 +445,8 @@ class BatchArguments(ArgumentCollection):
     for parallel processing on the cluster.
 
     These arguments can be passed to a step-specific implementation of
-    :method:`tmlib.workflow.cli.CommandLineInterface.init` and are
-    required by :method:`tmlib.workflow.api.ClusterRoutines.create_batches`.
+    :meth:`tmlib.workflow.cli.CommandLineInterface.init` and are
+    required by :meth:`tmlib.workflow.api.ClusterRoutines.create_batches`.
 
     Note
     ----
@@ -461,8 +461,8 @@ class SubmissionArguments(ArgumentCollection):
     jobs to the cluster.
 
     These arguments can be passed to a step-specific implementation of
-    :method:`tmlib.workflow.cli.CommandLineInterface.submit` and are
-    required by :method:`tmlib.workflow.api.ClusterRoutines.create_jobs`.
+    :meth:`tmlib.workflow.cli.CommandLineInterface.submit` and are
+    required by :meth:`tmlib.workflow.api.ClusterRoutines.create_jobs`.
 
     Note
     ----

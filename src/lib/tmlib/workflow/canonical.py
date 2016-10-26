@@ -1,4 +1,3 @@
-import collections
 import logging
 
 from tmlib.workflow.dependencies import WorkflowDependencies
@@ -28,7 +27,7 @@ class CanonicalWorkflowDependencies(WorkflowDependencies):
     }
 
     #: collections.OrderedDict[str, List[str]]: names of steps within each stage
-    STEPS_PER_STAGE = collections.OrderedDict({
+    STEPS_PER_STAGE = {
         'image_conversion':
             ['metaextract', 'metaconfig', 'imextract'],
         'image_preprocessing':
@@ -37,10 +36,10 @@ class CanonicalWorkflowDependencies(WorkflowDependencies):
             ['illuminati'],
         'image_analysis':
             ['jterator']
-    })
+    }
 
     #: collections.OrderedDict[str, Set[str]]: dependencies between workflow stages
-    INTER_STAGE_DEPENDENCIES = collections.OrderedDict({
+    INTER_STAGE_DEPENDENCIES = {
         'image_conversion': {
 
         },
@@ -53,7 +52,7 @@ class CanonicalWorkflowDependencies(WorkflowDependencies):
         'image_analysis': {
             'image_conversion', 'image_preprocessing'
         }
-    })
+    }
 
     #: Dict[str, Set[str]: dependencies between workflow steps within one stage
     INTRA_STAGE_DEPENDENCIES = {

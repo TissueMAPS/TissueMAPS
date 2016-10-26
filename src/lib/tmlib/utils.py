@@ -479,7 +479,12 @@ class autocreate_directory_property(object):
             )
         if not os.path.exists(value):
             logger.debug('create directory: %s', value)
-            os.mkdir(value)
+            try:
+                os.mkdir(value)
+            except OSError as err:
+                if err.errno != 17:
+                    raise
+                pass
         return value
 
 

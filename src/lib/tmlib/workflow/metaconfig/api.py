@@ -117,24 +117,12 @@ class MetadataConfigurator(ClusterRoutines):
             session.drop_and_recreate(tm.ImageFileMapping)
 
     def run_job(self, batch):
-        '''Formats OMEXML metadata extracted from microscope image files and
+        '''Configures OMEXML metadata extracted from microscope image files and
         complements it with metadata retrieved from additional microscope
         metadata files and/or user input.
 
         The actual processing is delegated to a format-specific implementation
         of :class:`tmlib.workflow.metaconfig.base.MetadataHandler`.
-
-        Some file formats require additional customization,
-        either because the `Bio-Formats` does not fully support them or
-        because the microscope provides insufficient information in the files.
-        To overcome these limitations, one can register format-specific
-        handlers and readers. Custom handlers and readers already exists for a 
-        variety of microscopes. To further extend the list of supported
-        microscope types, one needs to implement
-        :class:`tmlib.workflow.metaconfig.base.MetadataReader` and
-        :class:`tmlib.workflow.metaconfig.base.MetadataHandler` in a separate
-        module in :module:`tmlib.workflow.metaconfig`. The name of the
-        implemented microscope type is determined from the name of the module.
 
         Parameters
         ----------
@@ -143,7 +131,7 @@ class MetadataConfigurator(ClusterRoutines):
 
         See also
         --------
-        :module:`tmlib.workflow.metaconfig.cellvoyager`
+        :mod:`tmlib.workflow.metaconfig.cellvoyager`
         '''
         MetadataReader = metadata_reader_factory(batch['microscope_type'])
 
@@ -287,7 +275,7 @@ class MetadataConfigurator(ClusterRoutines):
 
         Whether acquisition time points will be interpreted as actual
         time points in a time series depends on the value of
-        :attribute:`tm.Experiment.plate_acquisition_mode`.
+        :attr:`tm.Experiment.plate_acquisition_mode`.
 
         Parameters
         ----------

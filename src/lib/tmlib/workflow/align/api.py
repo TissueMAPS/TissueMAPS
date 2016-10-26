@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 @register_api('align')
 class ImageRegistrator(ClusterRoutines):
 
-    '''Class for registering and aligning images between cycles.
+    '''Class for registeration and alignment of images between multiplexing
+    cycles.
     '''
 
     def __init__(self, experiment_id, verbosity):

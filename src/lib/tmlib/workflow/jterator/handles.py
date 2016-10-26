@@ -543,7 +543,7 @@ class SegmentedObjects(LabelImage):
 
         See also
         --------
-        :attrbute:`tmlib.jterator.handles.Attribute`
+        :attr:`tmlib.jterator.handles.Attribute`
         '''
         if not isinstance(attribute, Attribute):
             raise TypeError(
@@ -576,7 +576,7 @@ class SegmentedObjects(LabelImage):
 
         See also
         --------
-        :attrbute:`tmlib.jterator.handles.Measurement`
+        :attr:`tmlib.jterator.handles.Measurement`
         '''
         if not isinstance(measurement, Measurement):
             raise TypeError(
@@ -962,7 +962,7 @@ def create_handle(type, **kwargs):
     ----------
     type: str
         type of the handle item; must match a name of one of the
-        implemented classes in :module:`tmlib.workflow.jterator.handles`
+        implemented classes in :mod:`tmlib.workflow.jterator.handles`
     **kwargs: dict
         keyword arguments that are passed to the constructor of the class
 

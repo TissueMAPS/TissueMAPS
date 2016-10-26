@@ -162,11 +162,11 @@ class CommandLineInterface(SubmissionManager):
     descriptions of the method arguments, which are also added to the
     corresponding subparser.
 
-    The :method:`tmlib.workflow.cli.CommandLineInterface.init`
-    and :method:`tmlib.workflow.cli.CommandLineInterace.submit` methods
+    The :meth:`tmlib.workflow.cli.CommandLineInterface.init`
+    and :meth:`tmlib.workflow.cli.CommandLineInterace.submit` methods
     require additional step-specific arguments that are passed to the *API*
-    methods :method:`tmlib.workflow.api.ClusterRoutines.create_batches` and
-    :method:`tmlib.workflow.api.ClusterRoutines.create_run_jobs`,
+    methods :meth:`tmlib.workflow.api.ClusterRoutines.create_batches` and
+    :meth:`tmlib.workflow.api.ClusterRoutines.create_run_jobs`,
     respectively. These arguments are handled separately, since they also need
     to be accessible outside the scope of the command line interace.
     They are provided by step-specific implementations of

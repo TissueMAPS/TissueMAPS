@@ -683,7 +683,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     def collect_job_output(self, batch):
         '''Performs the following calculations after the pipeline has been
-        run for all jobs::
+        run for all jobs:
+
             - Zoom level at which mapobjects should be represented on the map
               by centroid points rather than the outline polygons.
             - Statistics over features of child mapobjects, i.e. mapobjects

@@ -263,7 +263,7 @@ class ImageAnalysisModule(object):
         Note
         ----
         This method must be called BEFORE calling
-        :method:`tmlib.jterator.module.Module.run`.
+        ::meth:`tmlib.jterator.module.Module.run`.
         '''
         for handle in self.handles['input']:
             if isinstance(handle, hdls.PipeHandle):
@@ -354,7 +354,7 @@ class ImageAnalysisModule(object):
         Note
         ----
         This method must be called AFTER calling
-        :method:`tmlib.jterator.module.Module.run`.
+        ::meth:`tmlib.jterator.module.Module.run`.
         '''
         for i, handle in enumerate(self.handles['output']):
             if isinstance(handle, hdls.Figure):
@@ -393,9 +393,9 @@ class ImageAnalysisModule(object):
 
         Note
         ----
-        Call :method:`tmlib.jterator.module.Module.update_handles` before
+        Call ::meth:`tmlib.jterator.module.Module.update_handles` before
         calling this method and
-        :method:`tmlib.jterator.module.Module.update_store` afterwards.
+        ::meth:`tmlib.jterator.module.Module.update_store` afterwards.
         '''
         if self.language == 'Python':
             return self._exec_py_module()

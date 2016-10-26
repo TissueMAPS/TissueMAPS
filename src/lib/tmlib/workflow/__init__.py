@@ -1,24 +1,60 @@
-'''A  `workflow` is a sequence of computational tasks
-that should be processed on a cluster computer.
-It is composed of one or more `stages`, which are themselves composed of one
-or more `steps`. A `step` represents a collection of batch jobs that
-should be processed in parallel. A `stage` bundles mutliple `steps` into a
-logical processing unit taking potential dependencies between `steps` into
-account.
+'''`TissueMAPS` workflow.
 
-Each `step` represents a subpackage, which must implement the following
-modules:
+A `workflow` is a sequence of distributed computational tasks
+(`steps`). Each `step` represents a collection of batch jobs that can be
+processed in parallel. It is comprised of the following phases:
 
-    * **api**: must implement :class:`tmlib.workflow.api.ClusterRoutines`
-    and decorate it with :function:`tmlib.workflow.registry.api`
-    * **args**: must implement :class`tmlib.workflow.args.BatchArguments` and
-    :class:`tmlib.workflow.args.SubmissionArguments` and decorate them with
-    :function:`tmlib.workflow.registry.batch_args` and
-    :function:`tmlib.workflow.registry.submission_args`, respectively
-    * **cli**: must implement :class:`tmlib.workflow.cli.CommandLineInterface`
+    * **init**: Paritioning of the computational task into smaller batches
+      based on user provided arguments.
+    * **run**: Scheduled parallel processing of individual batches according to
+      user defined resource allocation.
+    * **collect** (optional): Postprocessing of results obtained by individual
+      batch jobs.
 
-This automatically registers each step and enables using it via the
-command line and/or integrating it into a workflow.
+A `step` is implemented as a subpackage of `tmlib.workflow` containing
+three modules:
+
+    * **args**: Must implemement :class:`tmlib.workflow.args.BatchArguments` and
+      :class:`tmlib.workflow.args.SubmissionArguments` and decorate them with
+      :func:`tmlib.workflow.register_batch_args` and
+      :func:`tmlib.workflow.register_submission_args`, respectively. These
+      classes provide `step`-specific arguments that control the
+      partitioning of the given computational task into separate batch jobs
+      and the amount of computational resources, which should get allocated
+      to each batch job.
+    * **api**: Must implement :class:`tmlib.workflow.api.ClusterRoutines` and
+      decorate it with :func:`tmlib.workflow.register_api`. This class
+      provides the active programming interface (API) with methods for
+      creation and management of batch jobs. The methods
+      :meth:`tmlib.workflow.api.ClusterRoutines.create_batches`,
+      :meth:`tmlib.workflow.api.ClusterRoutines.run_job` and
+      :meth:`tmlib.workflow.api.ClusterRoutines.collect_job_output` implemented
+      by derived classes are responsible for the `step`-specific processing
+      behaviour and controlled via the `batch` and `submission` arguments
+      described above.
+    * **cli**: Must implement :class:`tmlib.workflow.cli.CommandLineInterface`.
+      This class provides the command line interface (CLI) and main entry points
+      for the program. It supplies high-level methods for the different
+      `phases`, which delegate processing to the respective API methods.
+
+This implementation automatically registers a `step` and makes it available
+for integration into larger workflows.
+To this end, `steps` are further combined into abstract task collections
+referred to as `stages`. A `stage` bundles one ore more `steps`
+into a logical processing unit taking potential dependencies between them
+into account.
+
+A :class:`tmlib.workflow.workflow.Workflow` is dynamically build from `steps`
+based on :class:`tmlib.workflow.description.WorkflowDescription` - a description
+provided by users as a mapping in `YAML` format.
+The `workflow` structure, i.e. the sequence of `stages` and `steps` and their
+interdependencies, is defined by its `type`, which is determined based on an
+implementation of :class:`tmlib.workflow.dependencies.WorkflowDependencies`.
+To make a `type` available for use, the derived class must be
+registered via :func:`register_workflow_type`. An example is the "canonical"
+`type` declared by
+:class:`tmlib.workflow.canonical.CanonicalWorkflowDependencies`.
+
 '''
 import os
 import glob
@@ -352,16 +388,17 @@ def get_step_information(name):
 
 
 def get_workflow_dependencies(name):
-    '''Gets an implementation of a workflow dependency declaration.
+    '''Gets a specific implementation of
+    :class:`tmlib.workflow.dependencies.WorkflowDependencies`.
 
     Parameters
     ----------
     name: str
-        name of a workflow type
+        name of the workflow type
 
     Returns
     -------
-    tmlib.workflow.description.WorkflowDependencies
+    classobj
     '''
     module_name = '%s.%s' % (__name__, name)
     try:

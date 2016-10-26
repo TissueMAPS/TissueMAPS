@@ -70,7 +70,7 @@ class TextWriter(Writer):
         super(TextWriter, self).__init__(filename)
 
     def write(self, data):
-        '''Write data to file.
+        '''Writes data to file.
 
         Parameters
         ----------
@@ -90,8 +90,7 @@ class XmlWriter(Writer):
         super(XmlWriter, self).__init__(filename)
 
     def write(self, data):
-        '''
-        Write data to XML file.
+        '''Writes data to XML file.
 
         Parameters
         ----------
@@ -111,8 +110,7 @@ class JsonWriter(Writer):
         super(JsonWriter, self).__init__(filename)
 
     def write(self, data):
-        '''
-        Write data to JSON file.
+        '''Writes data to JSON file.
 
         Parameters
         ----------
@@ -136,7 +134,7 @@ class YamlWriter(Writer):
         super(YamlWriter, self).__init__(filename)
 
     def write(self, data):
-        '''Write data to YAML file.
+        '''Writes data to YAML file.
 
         Parameters
         ----------
@@ -169,9 +167,9 @@ class ImageWriter(Writer):
         '''Writes pixels array data to image file.
 
         The format depends on the file extension:
-            - *.png for PNG (8-bit and 16-bit)
-            - *.tiff or *.tif for TIFF (8-bit and 16-bit)
-            - *.jpeg or *.jpg for JPEG (only supports 8-bit)
+            - \*.png for PNG (8-bit and 16-bit)
+            - \*.tiff or \*.tif for TIFF (8-bit and 16-bit)
+            - \*.jpeg or \*.jpg for JPEG (only supports 8-bit)
 
         Parameters
         ----------

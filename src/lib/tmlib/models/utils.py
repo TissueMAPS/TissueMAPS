@@ -2,6 +2,7 @@ import os
 import shutil
 import random
 import logging
+import inspect
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.pool
@@ -16,6 +17,10 @@ from tmlib.config import LibraryConfig
 logger = logging.getLogger(__name__)
 
 _DATABASE_URI = None
+
+#: Dict[str, sqlalchemy.engine.base.Engine]: mapping of chached database
+#: engine objects for reuse within the current Python process hashable by URL
+DATABASE_ENGINES = {}
 
 
 def get_db_uri():
@@ -69,19 +74,25 @@ def create_db_engine(db_uri):
 
     Warning
     -------
-    The engine should only be created once for each Python process.
+    The engine gets cached in :attr:`tmlib.models.utils.DATABASE_ENGINES`
+    and reused within the same Python process.
     '''
-    logger.debug('create database engine for process %d', os.getpid())
-    return sqlalchemy.create_engine(
-        db_uri, poolclass=sqlalchemy.pool.QueuePool,
-        pool_size=5, max_overflow=10,
-        # PostgreSQL uses autocommit by default. SQLAlchemy
-        # (or actually psycopg2) makes use of multi-statement transactions
-        # using BEGIN and COMMIT/ROLLBACK. This may cause problems when sharding
-        # tables with Citusdata, for example. We may want to  turn it off to
-        # use the Postgres default mode:
-        # https://gist.github.com/carljm/57bfb8616f11bceaf865
-    )
+    if db_uri not in DATABASE_ENGINES:
+        logger.debug('create database engine for process %d', os.getpid())
+        DATABASE_ENGINES[db_uri] = sqlalchemy.create_engine(
+            db_uri, poolclass=sqlalchemy.pool.QueuePool,
+            pool_size=5, max_overflow=10,
+            # PostgreSQL uses autocommit by default. SQLAlchemy
+            # (or actually psycopg2) makes use of multi-statement transactions
+            # using BEGIN and COMMIT/ROLLBACK. This may cause problems when sharding
+            # tables with Citusdata, for example. We may want to  turn it off to
+            # use the Postgres default mode:
+            # https://gist.github.com/carljm/57bfb8616f11bceaf865
+        )
+    else:
+        logger.debug('reuse cached database engine for process %d', os.getpid())
+    return DATABASE_ENGINES[db_uri]
+
 
 
 @listens_for(sqlalchemy.pool.Pool, 'connect')
@@ -125,8 +136,8 @@ def create_db_session_factory(engine):
 def delete_location(path):
     '''Deletes a location on disk.
 
-    Parameter
-    ---------
+    Parameters
+    ----------
     path: str
         absolute path to directory or file
     '''
@@ -139,32 +150,44 @@ def delete_location(path):
 
 
 def remove_location_upon_delete(cls):
-    '''Decorator function for a database model class that automatically removes
-    the location that represents an instance of the class on the filesystem
-    once the corresponding row is deleted from the database table.
+    '''Decorator function for an database model class that
+    automatically removes the `location` that represents an instance of the
+    class on the filesystem once the corresponding row is deleted from the
+    database table.
 
-    Examples
-    --------
-    from tmlib.models import Model
-    from tmlib.models.utils import remove_location_upon_delete
+    Parameters
+    ----------
+    cls: tmlib.models.base.DeclarativeABCMeta
+       implemenation of :class:`tmlib.models.base.FileSystemModel`
 
-    @remove_location_upon_delete
-    class SomeClassWithALocationOnDisk(Model):
-        """A database model class"""
-
+    Raises
+    ------
+    AttributeError
+        when decorated class doesn't have a "location" attribute
     '''
     def after_delete_callback(mapper, connection, target):
         delete_location(target.location)
 
+    if not hasattr(cls, 'location'):
+        raise AttributeError(
+            'Decorated class must have a "location" attribute'
+        )
     sqlalchemy.event.listen(cls, 'after_delete', after_delete_callback)
     return cls
 
 
 def exec_func_after_insert(func):
-    '''
+    '''Decorator function for a database model class that calls the
+    decorated function after an `insert` event.
+
+    Parameters
+    ----------
+    func: function
+
+    Examples
+    --------
     @exec_func_after_insert(lambda target: do_something())
     SomeClass(db.Model):
-    ...
 
     '''
     def class_decorator(cls):
@@ -177,7 +200,7 @@ def exec_func_after_insert(func):
 
 class Query(sqlalchemy.orm.query.Query):
 
-    '''A query class with custom methods.'''
+    '''A custom query class.'''
 
     def __init__(self, *args, **kwargs):
         super(Query, self).__init__(*args, **kwargs)
@@ -252,12 +275,12 @@ class SQLAlchemy_Session(object):
         Parameters
         ----------
         model: type
-            an implementation of the :class:`tmlib.models.model`
-            abstract base class
+            an implementation of :class:`tmlib.models.base.MainModel` or
+            :class:`tmlib.models.base.ExperimentModel`
         **kwargs: dict
             keyword arguments for the instance that can be passed to the
             constructor of `model` or to
-            :method:`sqlalchemy.orm.query.query.filter_by`
+            :meth:`sqlalchemy.orm.query.query.filter_by`
 
         Returns
         -------
@@ -346,11 +369,11 @@ class SQLAlchemy_Session(object):
         ----------
         model: type
             an implementation of the :class:`tmlib.models.ExperimentModel`
-            or :class:`tmlib.models.MainModel` abstract base class
+            or :class:`tmlib.models.base.MainModel` abstract base class
         args: List[dict]
             keyword arguments for each instance that can be passed to the
             constructor of `model` or to
-            :method:`sqlalchemy.orm.query.Query.filter_by`
+            ::meth:`sqlalchemy.orm.query.Query.filter_by`
 
         Returns
         -------
@@ -383,8 +406,7 @@ class SQLAlchemy_Session(object):
 
 class _Session(object):
 
-    '''
-    It provide access to all methods and attributes of
+    '''Class that provides access to all methods and attributes of
     :class:`sqlalchemy.orm.session.Session` and additional
     custom methods implemented in
     :class:`tmlib.models.utils.SQLAlchemy_Session`.
@@ -398,21 +420,19 @@ class _Session(object):
     -------
     This is *not* thread-safe!
     '''
-    _engines = dict()
     _session_factories = dict()
 
     def __init__(self, db_uri):
         self._db_uri = db_uri
         if self._db_uri not in self.__class__._session_factories:
-            self.__class__._engines[self._db_uri] = \
-                create_db_engine(self._db_uri)
+            engine = create_db_engine(self._db_uri)
             self.__class__._session_factories[self._db_uri] = \
-                create_db_session_factory(self.__class__._engines[self._db_uri])
+                create_db_session_factory(engine)
 
     @property
     def engine(self):
         '''sqlalchemy.engine: engine object for the currently used database'''
-        return self.__class__._engines[self._db_uri]
+        return DATABASE_ENGINES[self._db_uri]
 
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
@@ -430,7 +450,7 @@ class _Session(object):
                 'after_bulk_delete', self._after_bulk_delete_callback
             )
         self._session.close()
-        self._engines[self._db_uri].dispose()
+        DATABASE_ENGINES[self._db_uri].dispose()
 
     def _after_bulk_delete_callback(self, delete_context):
         '''Deletes locations defined by instances of :class`tmlib.Model`
@@ -449,23 +469,20 @@ class _Session(object):
 class MainSession(_Session):
 
     '''Session scopes for interaction with the main `TissueMAPS` database.
-
-    Examples
-    --------
-    from tmlib.models.utils import Session
-    from tmlib.models import Experiment
-
-    with MainSession() as session:
-        print session.query(Experiment).all()
-
-    Note
-    ----
     All changes get automatically committed at the end of the interaction.
     In case of an error, a rollback is issued.
 
+    Examples
+    --------
+    from tmlib.models.utils import MainSession
+    from tmlib.models import ExperimentReference
+
+    with MainSession() as session:
+        print session.query(ExperimentReference).all()
+
     See also
     --------
-    :class:`tmlib.models.MainModel`
+    :class:`tmlib.models.base.MainModel`
     '''
 
     def __init__(self, db_uri=None):
@@ -482,7 +499,8 @@ class MainSession(_Session):
         # if not database_exists(db_uri):
         #     raise ValueError('Database does not exist: %s' % db_uri)
         try:
-            connection = self.__class__._engines[self._db_uri].connect()
+            engine = create_db_engine(self._db_uri)
+            connection = engine.connect()
             connection.close()
         except sqlalchemy.exc.OperationalError:
             raise ValueError('Database does not exist: %s' % self._db_uri)
@@ -491,25 +509,21 @@ class MainSession(_Session):
 
 class ExperimentSession(_Session):
 
-    '''Session scopes for interaction with an experiment-secific `TissueMAPS`
-    database.
+    '''Session scopes for interaction with an experiment-secific database.
+    All changes get automatically committed at the end of the interaction.
+    In case of an error, a rollback is issued.
 
     Examples
     --------
-    from tmlib.models.utils import Session
+    from tmlib.models.utils import ExperimentSession
     from tmlib.models import Plate
 
     with ExperimentSession(experiment_id=1) as session:
         print session.query(Plate).all()
 
-    Note
-    ----
-    All changes get automatically committed at the end of the interaction.
-    In case of an error, a rollback is issued.
-
     See also
     --------
-    :class:`tmlib.models.ExperimentModel`
+    :class:`tmlib.models.base.ExperimentModel`
     '''
 
     def __init__(self, experiment_id, db_uri=None):
@@ -533,14 +547,14 @@ class ExperimentSession(_Session):
             )
         super(ExperimentSession, self).__init__(db_uri)
         try:
-            connection = self.__class__._engines[self._db_uri].connect()
+            connection = DATABASE_ENGINES[self._db_uri].connect()
             connection.close()
         except sqlalchemy.exc.OperationalError:
             logger.debug(
                 'create database for experiment %d', self.experiment_id
             )
             create_database(self._db_uri)
-            engine = self.__class__._engines[self._db_uri]
+            engine = DATABASE_ENGINES[self._db_uri]
             # TODO: create template with postgis extension already created
             logger.debug(
                 'create postgis extension in database for experiment %d',

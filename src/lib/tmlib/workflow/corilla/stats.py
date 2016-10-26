@@ -1,10 +1,8 @@
-'''
-Calculation of illumination statistics, which can subsequently be applied
+'''Calculation of illumination statistics, which can subsequently be applied
 to individual images in order to correct them for illumination artifacts [1]_.
 
 References
 ----------
-
 .. _[1]: Stoeger T, Battich N, Herrmann MD, Yakimovich Y, Pelkmans L. 2015. "Computer vision for image-based transcriptomics". Methods.
 '''
 

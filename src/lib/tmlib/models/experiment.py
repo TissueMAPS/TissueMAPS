@@ -50,7 +50,7 @@ class ExperimentReference(MainModel, DateMixIn):
 
     See also
     --------
-    :class:`tmlib.models.Experiment`
+    :class:`tmlib.models.experiment.Experiment`
     '''
 
     #: str: name of the corresponding database table

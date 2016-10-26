@@ -46,12 +46,12 @@ class SubmissionManager(object):
         -------
         Ensure that the "submissions" table get updated once the jobs
         were submitted, i.e. added to a running `GC3Pie` engine.
-        To this end, use the :method:`tmlib.workflow.api.update_submission`
+        To this end, use the ::meth:`tmlib.workflow.api.update_submission`
         method.
 
         See also
         --------
-        :class:`tmlib.models.Submission`
+        :class:`tmlib.models.submission.Submission`
         '''
         if program_name is None:
             program_name = self.program_name
@@ -68,14 +68,14 @@ class SubmissionManager(object):
 
         Sets the value for "top_task" column in the "submissions" table.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
             submitted tasks
 
         See also
         --------
-        :class:`tmlib.models.Submission`
+        :class:`tmlib.models.submission.Submission`
 
         Raises
         ------

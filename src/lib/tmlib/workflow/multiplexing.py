@@ -1,4 +1,3 @@
-import collections
 import logging
 
 from tmlib.workflow.canonical import CanonicalWorkflowDependencies
@@ -10,10 +9,12 @@ logger = logging.getLogger(__name__)
 @register_workflow_type('multiplexing')
 class MultiplexingWorkflowDependencies(CanonicalWorkflowDependencies):
 
-    '''Declaration of dependencies for the multiplexing workflow.'''
+    '''Declaration of dependencies for a multiplexing workflow, which includes
+    the :module:`tmlib.workflow.align` step.
+    '''
 
-    #: collections.OrderedDict[str, List[str]]: names of steps within each stage
-    STEPS_PER_STAGE = collections.OrderedDict({
+    #: Dict[str, List[str]]: names of steps within each stage
+    STEPS_PER_STAGE = {
         'image_conversion':
             ['metaextract', 'metaconfig', 'imextract'],
         'image_preprocessing':
@@ -22,4 +23,4 @@ class MultiplexingWorkflowDependencies(CanonicalWorkflowDependencies):
             ['illuminati'],
         'image_analysis':
             ['jterator']
-    })
+    }

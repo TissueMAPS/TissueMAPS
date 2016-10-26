@@ -480,7 +480,9 @@ class IllumstatsFile(FileModel, DateMixIn):
         data: IllumstatsContainer
             illumination statistics
         '''
-        logger.debug('put data to illumination statistics file: %s', self.name)
+        logger.debug(
+            'put data to illumination statistics file: %s', self.location
+        )
         with DatasetWriter(self.location, truncate=True) as f:
             f.write('mean', data.mean.array)
             f.write('std', data.std.array)

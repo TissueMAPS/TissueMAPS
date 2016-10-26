@@ -113,7 +113,7 @@ class ClusterRoutines(BasicClusterRoutines):
     for large-scale image processing on a batch cluster.
 
     Each workflow step must implement this class and decorate it with
-    :function:`tmlib.workflow.register_api` to register it for use
+    :func:`tmlib.workflow.register_api` to register it for use
     within a worklow.
 
     Note
@@ -688,12 +688,8 @@ class ClusterRoutines(BasicClusterRoutines):
         '''Creates job descriptions with information required for the creation
         and processing of individual jobs.
 
-        Parameters
-        ----------
-        args: tmlib.args.Args
-            an instance of an implemented subclass of the `Args` base class
-
         There are three phases:
+
             * *init*: a single task that asserts the presence of required inputs,
               deletes outputs of previous runs and builds the tasks for the
               subsequent phases
@@ -701,8 +697,8 @@ class ClusterRoutines(BasicClusterRoutines):
             * *collect* (optional): a single task that may be required to
               aggregate outputs of individual *run* tasks
 
-        Each batch is a mapping that must provide the
-        following key-value pairs:
+        Each batch is a mapping that must provide the following key-value pairs:
+
             * "id": one-based job identifier number (*int*)
             * "inputs": absolute paths to input files required to run the job
               (Dict[*str*, List[*str*]])
@@ -711,6 +707,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         In case a *collect* job is required, the corresponding batch must
         provide the following key-value pairs:
+
             * "inputs": absolute paths to input files required to *collect* job
               output of the *run* phase (Dict[*str*, List[*str*]])
             * "outputs": absolute paths to output files produced by the job
@@ -737,6 +734,11 @@ class ClusterRoutines(BasicClusterRoutines):
                         "outputs": ,       # list or dict
                     }
             }
+
+        Parameters
+        ----------
+        args: tmlib.args.Args
+            an instance of an implemented subclass of the `Args` base class
 
         Returns
         -------
@@ -861,7 +863,7 @@ class ClusterRoutines(BasicClusterRoutines):
             in HH:MM:SS format (default: ``"12:00:00"``)
         memory: int, optional
             amount of memory in Megabyte that should be allocated for the job
-            (default: ``3800)
+            (default: ``3800``)
         cores: int, optional
             number of CPU cores that should be allocated for the job
             (default: ``1``)
@@ -911,7 +913,7 @@ class ClusterRoutines(BasicClusterRoutines):
             in HH:MM:SS format (default: ``"06:00:00"``)
         memory: int, optional
             amount of memory in Megabyte that should be allocated for a single
-            (default: ``3800)
+            (default: ``3800``)
         cores: int, optional
             number of CPU cores that should be allocated for a single job
             (default: ``1``)
