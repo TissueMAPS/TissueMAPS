@@ -93,7 +93,7 @@ setuptools.setup(
         'cython>=0.24',
         'scikit-image>=0.11.3',
         'mahotas>=1.4.0',
-        'centrosome>=1.0.3',
+        'centrosome>=1.0.5',
         'pytest>=2.8.2',
         'tox>=2.3.1'
     ]
