@@ -433,7 +433,6 @@ def get_jobs_status(experiment_id):
     step_name = request.args.get('step_name')
     index = request.args.get('index', type=int)
     batch_size = request.args.get('batch_size', 50, type=int)
-    logger.info(index)
 
     # If the index is negative don't send `batch_size` jobs.
     # For example, if the index is -5 and the batch_size 50,

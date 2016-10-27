@@ -1,6 +1,7 @@
 import os
 import logging
 import datetime
+from pkg_resources import resource_string
 
 from tmlib.config import TmapsConfig
 
@@ -13,10 +14,10 @@ class ServerConfig(TmapsConfig):
 
     def __init__(self):
         super(ServerConfig, self).__init__()
-        default_file = os.path.abspath(
-            os.path.join(__file__, '..', '..', 'etc', 'tmserver.cfg')
+        tmserver_file = resource_string(
+            __name__, os.path.join('..', 'etc', 'tmserver.cfg')
         )
-        self._config.read(default_file)
+        self._config.read(tmserver_file)
         self.read()
 
     @property

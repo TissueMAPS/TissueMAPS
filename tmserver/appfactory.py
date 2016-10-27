@@ -58,10 +58,6 @@ def create_app(config_overrides={}, log_level=None):
     stdout_handler.setFormatter(formatter)
     app.logger.addHandler(file_handler)
     app.logger.addHandler(stdout_handler)
-    werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.setLevel(cfg.log_level)
-    werkzeug_logger.addHandler(file_handler)
-    werkzeug_logger.addHandler(stdout_handler)
     flask_jwt_logger = logging.getLogger('flask_jwt')
     flask_jwt_logger.setLevel(cfg.log_level)
     flask_jwt_logger.addHandler(file_handler)
@@ -86,6 +82,10 @@ def create_app(config_overrides={}, log_level=None):
     apscheduler_logger.setLevel(logging.CRITICAL)
     apscheduler_logger.addHandler(file_handler)
     apscheduler_logger.addHandler(stdout_handler)
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.CRITICAL)
+    werkzeug_logger.addHandler(file_handler)
+    werkzeug_logger.addHandler(stdout_handler)
 
     ## Set the JSON encoder
     app.json_encoder = TmJSONEncoder

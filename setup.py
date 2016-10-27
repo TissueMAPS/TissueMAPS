@@ -49,9 +49,7 @@ import setuptools
 
 
 def find_scripts():
-    bin_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'bin'
-    )
+    bin_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'bin')
     scripts = list()
     for f in os.listdir(bin_path):
         if not f.endswith('pyc'):
@@ -65,7 +63,7 @@ def find_scripts():
 
 def get_version():
     src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'lib', 'tmserver'
+        os.path.abspath(os.path.dirname(__file__)), 'tmserver'
     )
     sys.path = [src_path] + sys.path
     import version
@@ -92,8 +90,7 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=find_scripts(),
-    packages=setuptools.find_packages(os.path.join('src', 'lib')),
-    package_dir={'': os.path.join('src', 'lib')},
+    packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
         'alembic>=0.8.3',
