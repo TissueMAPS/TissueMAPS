@@ -15,6 +15,18 @@ def register_error(cls):
     return cls
 
 
+@api.errorhandler(sqlalchemy.orm.exc.NoResultFound)
+def handle_no_result_found(error):
+    response = jsonify(error={
+        'message': error.message,
+        'status_code': 404,
+        'type': error.__class__.__name__
+    })
+    current_app.logger.error('NoResultFound: ' + error.message)
+    response.status_code = 404
+    return response
+
+
 @api.errorhandler(sqlalchemy.exc.IntegrityError)
 def handle_integrity_error(error):
     response = jsonify(error={
