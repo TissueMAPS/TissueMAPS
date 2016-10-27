@@ -1,2 +1,2 @@
-recursive-include src/etc *.cfg
-recursive-include src/tmlib/formats *
+recursive-include etc *.cfg
+recursive-include tmlib/formats *

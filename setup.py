@@ -52,9 +52,7 @@ import setuptools
 
 
 def find_scripts():
-    bin_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'bin'
-    )
+    bin_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'bin')
     scripts = list()
     for f in os.listdir(bin_path):
         if not f.endswith('pyc'):
@@ -67,9 +65,7 @@ def find_scripts():
 
 
 def build_console_scripts():
-    src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'lib'
-    )
+    src_path = os.path.abspath(os.path.dirname(__file__))
     sys.path = [src_path] + sys.path
     import tmlib
     names = tmlib.get_cli_tools()
@@ -85,8 +81,7 @@ def build_console_scripts():
 
 
 def get_version():
-    src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'lib', 'tmlib')
+    src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'tmlib')
     sys.path = [src_path] + sys.path
     import version
     return version.__version__
