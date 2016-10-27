@@ -1,23 +1,5 @@
 *.py[cod]
 
-src/javascript/build
-src/javascript/tasks
-src/javascript/scripts
-src/javascript/package.json
-src/javascript/app/assets/libs/bower_components
-# src/javascript/app/index.html
-src/javascript/_build/style-main.css
-src/javascript/_build/style-tools.css
-src/javascript/app/assets/css/style-main.css
-src/javascript/app/assets/css/style-tools.css
-src/javascript/coverage
-src/javascript/app/build
-expdata
-testdata
-!expdata/.gitkeep
-src/javascript/node_modules
-src/javascript/app/src/toolwindow/index.html
-
 # Build directores (sphinx, grunt etc.)
 _build
 _prod
@@ -45,6 +27,7 @@ develop-eggs/
 dist/
 downloads/
 eggs/
+lib/
 lib64/
 parts/
 sdist/
