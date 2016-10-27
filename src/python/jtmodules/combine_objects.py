@@ -1,7 +1,7 @@
 '''Jterator module for combining objects from two binary mask images into one.
 '''
 import numpy as np
-import logger
+import logging
 import collections
 
 logger = logging.getLogger(__name__)

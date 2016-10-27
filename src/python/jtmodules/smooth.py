@@ -48,7 +48,7 @@ def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
     ValueError
         when `filter_name` is not
         ``"avarage"``, ``"gaussian"``, ``"median"``, ``"gaussian-bilateral"``
-        or ``"gaussian-bilateral"
+        or ``"gaussian-bilateral"``
     '''
     if filter_name == 'average':
         logger.info('apply "average" filter')
