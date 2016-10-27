@@ -16,6 +16,7 @@ class ServerConfig(TmapsConfig):
         self.log_file = '~/.tmaps/tmserver.log'
         self.log_level = logging.INFO
         self.log_max_bytes = 2048000
+        self.log_n_backups = 10
         self.secret_key = 'default_secret_key'
         self.jwt_expiration_delta = datetime.timedelta(hours=6)
         self.use_spark = False
