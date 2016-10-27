@@ -155,8 +155,8 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
     '''Creates a heatmap plot for an intensity image.
     Intensity values will be encode with greyscale colors.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     image: numpy.ndarray[numpy.uint8 or numpy.uint16]
         2D intensity image
     position: str
@@ -224,8 +224,8 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
 def create_float_image_plot(image, position, colorscale=None):
     '''Creates a heatmap plot for a floating point image.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     image: numpy.ndarray[numpy.float]
         2D floating point image
     position: str
@@ -286,8 +286,8 @@ def create_mask_image_plot(mask, position, colorscale=None):
     '''Creates a heatmap plot for a mask image.
     Unique object labels will be encoded with RGB colors.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     mask: numpy.ndarray[numpy.bool or numpy.int32]
         binary or labeled 2D mask image
     position: str

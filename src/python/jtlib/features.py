@@ -507,8 +507,8 @@ class Hu(Features):
 
     '''Class for calculating Hu moments based on Hu [1]_.
 
-    Refernces
-    ---------
+    References
+    ----------
     ..[1] M. K. Hu (1962): "Visual Pattern Recognition by Moment Invariants", IRE Trans. Info. Theory
     '''
 
