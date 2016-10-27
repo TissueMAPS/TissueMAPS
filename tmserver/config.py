@@ -1,7 +1,6 @@
 import os
 import logging
 import datetime
-from pkg_resources import resource_string
 
 from tmlib.config import TmapsConfig
 
@@ -14,18 +13,23 @@ class ServerConfig(TmapsConfig):
 
     def __init__(self):
         super(ServerConfig, self).__init__()
-        tmserver_file = resource_string(
-            __name__, os.path.join('..', 'etc', 'tmserver.cfg')
-        )
-        self._config.read(tmserver_file)
+        self.log_file = '~/.tmaps/tmserver.log'
+        self.log_level = logging.INFO
+        self.log_max_bytes = 2048000
+        self.secret_key = 'default_secret_key'
+        self.jwt_expiration_delta = datetime.timedelta(hours=6)
+        self.use_spark = False
+        self.spark_master = 'local'
         self.read()
 
     @property
     def log_file(self):
         '''str: absolute path to file for the TissueMAPS server application log
-        (default: ``os.path.expanduser("$HOME/.tmaps/tmserver.log")``)
+        (default: ``"~/.tmaps/tmserver.log"``)
         '''
-        return self._config.get(self._section, 'log_file')
+        return os.path.expanduser(os.path.expandvars(
+            self._config.get(self._section, 'log_file')
+        ))
 
     @log_file.setter
     def log_file(self, value):
@@ -33,7 +37,10 @@ class ServerConfig(TmapsConfig):
             raise TypeError(
                 'Configuration parameter "log_file" must have type str.'
             )
-        self._config.set(self._section, 'log_file', str(value))
+        self._config.set(
+            self._section, 'log_file',
+            os.path.expanduser(os.path.expandvars(str(value)))
+        )
 
     @property
     def log_level(self):
