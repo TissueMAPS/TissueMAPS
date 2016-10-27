@@ -13,6 +13,7 @@ interface UIScrollingAdapter {
     isBOF?: () => boolean;
     isEOF?: () => boolean;
     reload?: () => void;
+    applyUpdates?: (number, []) => void;
 }
 
 
@@ -35,10 +36,6 @@ class StepCtrl {
         this.workflow = this._workflowService.workflow;
         var stageName = this._$state.params.stageName;
         var stepName = this._$state.params.stepName;
-        this._$rootScope.$on('resubmission', () => {
-            console.log('reload scrolling adapter for step: ', stepName)
-            this.uiScrollingAdapter.reload();
-        })
         this.workflow.stages.map((stage, stageIndex) => {
             if (stage.name == stageName) {
                 this.currentStageIndex = stageIndex;
@@ -65,16 +62,19 @@ class StepCtrl {
 
     jobsDataSource = {
         get: (index, count, success) => {
-            console.log(index);
             var experimentId = this._experiment.id;
             var stepName = this._$state.params.stepName;
             var url = '/api/experiments/' + experimentId + '/workflow/status/jobs' +
                       '?index=' + index + '&step_name=' + stepName + '&batch_size=' + count;
             this._$http.get(url).then((resp) => {
                 var jobs = resp.data.data;
-                console.log(jobs)
+                // console.log('received job status for step ', stepName, ' : ', jobs)
                 success(jobs);
             });
+            this._$rootScope.$on('updateJobStatus', () => {
+                // console.log('update job status for step: ', stepName)
+                this.uiScrollingAdapter.reload();
+            })
         }
     };
 

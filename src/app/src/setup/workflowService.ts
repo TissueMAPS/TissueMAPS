@@ -145,15 +145,17 @@ class WorkflowService {
                     // since steps are build dynamically upon processing.
                     // Therefore, we recreate the whole step, rather than just
                     // updating its status.
-                    // stage.steps.map((step, stepIndex) => {
-                    //     if (workflowStatus.subtasks[stageIndex - 1] != null) {
-                    //         var workflowStepDescription = workflowStageDescription.steps[stepIndex];
-                    //         step.status = new JobCollectionStatus(
-                    //             workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex]
-                    //         );
-                    //         step.jobs = [];
-                    //     }
-                    // });
+                    stage.steps.map((step, stepIndex) => {
+                        if (workflowStatus.subtasks[stageIndex - 1] != null) {
+                            var workflowStepDescription = workflowStageDescription.steps[stepIndex];
+                            step.status = new JobCollectionStatus(
+                                workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex]
+                            );
+                            // TODO: don't just reload the whole datasource,
+                            // but only some jobs selectively
+                            this._$rootScope.$emit('updateJobStatus', step.name);
+                        }
+                    });
                 }
             });
         });
@@ -226,7 +228,7 @@ class WorkflowService {
             description: this.workflow.getDescription(index),
             index: startIndex
         };
-        this._$rootScope.$emit('resubmission')
+        this._$rootScope.$emit('updateJobStatus')
         return this._$http.post('/api/experiments/' + experiment.id + '/workflow/resubmit', data)
         .then((resp) => {
             // console.log(resp)

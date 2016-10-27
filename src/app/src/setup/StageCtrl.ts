@@ -1,4 +1,5 @@
 class StageCtrl {
+
     currentStageIndex: number
     currentStepIndex: number;
 
@@ -30,9 +31,6 @@ class StageCtrl {
                 }
             });
             var stepIdx = this.currentStepIndex;
-            if (this.workflow.stages[stageIdx].name == 'upload') {
-                console.log('YES')
-            }
             if (this.workflow.stages[stageIdx].steps[stepIdx] != undefined) {
                 var selectedStep = this.workflow.stages[stageIdx].steps[stepIdx];
             } else {
