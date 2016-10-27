@@ -112,7 +112,6 @@ setuptools.setup(
     scripts=find_scripts(),
     entry_points={'console_scripts': build_console_scripts()},
     packages=setuptools.find_packages(),
-    # package_dir={'': 'tmlib'},
     include_package_data=True,
     install_requires=[
        'Cython>=0.22.1',

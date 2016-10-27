@@ -2,6 +2,7 @@ import os
 from abc import ABCMeta
 import logging
 from ConfigParser import SafeConfigParser
+from ConfigParser import NoOptionError
 from pkg_resources import resource_string
 
 logger = logging.getLogger(__name__)
@@ -46,9 +47,11 @@ class TmapsConfig(object):
             )
         self._config = SafeConfigParser({'home': os.environ['HOME']})
         self._section = self.__class__.__module__.split('.')[0]
-        self._config.add_section(self._section)
-        default_file = resource_string(__name__, os.path.join('..', 'etc', 'default.cfg'))
-        self._config.read(default_file)
+        if not self._config.has_section(self._section):
+            self._config.add_section(self._section)
+        self.db_user = 'postgres'
+        self.db_host = 'localhost'
+        self.db_port = 5432
         self.read()
 
     def read(self):
@@ -59,7 +62,10 @@ class TmapsConfig(object):
         tmlib.config.CONFIG_FILE
         '''
         logger.info('read config file: "%s"', self._config_file)
-        self._config.read(self._config_file)
+        try:
+            self._config.read(self._config_file)
+        except OSError:
+            logger.warn('no configuration file found')
 
     def write(self):
         '''Writes the configuration to a file'''
@@ -68,7 +74,7 @@ class TmapsConfig(object):
 
     @property
     def db_user(self):
-        '''str: database user'''
+        '''str: database user (default: ``"postgres"``)'''
         return self._config.get('DEFAULT', 'db_user')
 
     @db_user.setter
@@ -82,7 +88,13 @@ class TmapsConfig(object):
     @property
     def db_password(self):
         '''str: database password'''
-        return self._config.get('DEFAULT', 'db_password')
+        try:
+            return self._config.get('DEFAULT', 'db_password')
+        except NoOptionError:
+            raise ValueError(
+                'Parameter "db_password" is required in "DEFAULT" '
+                'section of configuration file.'
+            )
 
     @db_password.setter
     def db_password(self, value):
@@ -94,7 +106,7 @@ class TmapsConfig(object):
 
     @property
     def db_host(self):
-        '''str: database host'''
+        '''str: database host (default: ``"localhost"``)'''
         return self._config.get('DEFAULT', 'db_host')
 
     @db_host.setter
@@ -107,7 +119,7 @@ class TmapsConfig(object):
 
     @property
     def db_port(self):
-        '''str: database host'''
+        '''str: database port (default: ``5432``)'''
         return self._config.getint('DEFAULT', 'db_port')
 
     @db_port.setter
@@ -148,16 +160,18 @@ class LibraryConfig(TmapsConfig):
 
     def __init__(self):
         super(LibraryConfig, self).__init__()
-        tmlib_file = resource_string(__name__, os.path.join('..', 'etc', 'tmlib.cfg'))
-        self._config.read(tmlib_file)
+        self.modules_home = '~/jtmodules'
+        self.storage_home = '/data/experiments'
         self.read()
 
     @property
     def modules_home(self):
         '''str: absolute path to root directory of local copy of `JtModules`
-        repository
+        repository (default: ``"~/jtmodules"``)
         '''
-        return self._config.get(self._section, 'modules_home')
+        return os.path.expandvars(os.path.expanduser(
+            self._config.get(self._section, 'modules_home')
+        ))
 
     @modules_home.setter
     def modules_home(self, value):
@@ -165,12 +179,18 @@ class LibraryConfig(TmapsConfig):
             raise TypeError(
                 'Configuration parameter "modules_home" must have type str.'
             )
-        self._config.set(self._section, 'modules_home', str(value))
+        self._config.set(
+            self._section, 'modules_home',
+            os.path.expandvars(os.path.expanduser(str(value)))
+        )
 
     @property
     def storage_home(self):
-        '''str: absolute path to root directory of file system storage'''
-        return self._config.get(self._section, 'storage_home')
+        '''str: absolute path to root directory of file system storage
+        (default: ``"/data/experiments"``)'''
+        return os.path.expandvars(os.path.expanduser(
+            self._config.get(self._section, 'storage_home')
+        ))
 
     @storage_home.setter
     def storage_home(self, value):
