@@ -47,7 +47,7 @@ class TmapsConfig(object):
         self._config = SafeConfigParser({'home': os.environ['HOME']})
         self._section = self.__class__.__module__.split('.')[0]
         self._config.add_section(self._section)
-        default_file = resource_string(__name__, 'default.conf')
+        default_file = resource_string(__name__, os.path.join('..', 'etc', 'default.cfg'))
         self._config.read(default_file)
         self.read()
 
@@ -148,7 +148,7 @@ class LibraryConfig(TmapsConfig):
 
     def __init__(self):
         super(LibraryConfig, self).__init__()
-        tmlib_file = resource_string(__name__, 'tmlib.conf')
+        tmlib_file = resource_string(__name__, os.path.join('..', 'etc', 'tmlib.cfg'))
         self._config.read(tmlib_file)
         self.read()
 
