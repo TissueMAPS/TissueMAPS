@@ -48,13 +48,13 @@ def _raise_error_when_missing(arg):
 @decode_query_ids()
 def get_channel_layer_tile(experiment_id, channel_layer_id):
     """
-    .. http:get:: /api/experiments/(experiment_id)/channel_layer/(channel_layer_id)/tiles
+    .. http:get:: /api/experiments/(string:experiment_id)/channel_layer/(string:channel_layer_id)/tiles
 
         Sends a pyramid tile image for a specific channel layer.
 
-    :query x: zero-based `x` coordinate
-    :query y: zero-based `y` coordinate
-    :query z: zero-based zoom level index
+        :query x: zero-based `x` coordinate
+        :query y: zero-based `y` coordinate
+        :query z: zero-based zoom level index
 
     """
     logger.info(
@@ -96,6 +96,29 @@ def get_channel_layer_tile(experiment_id, channel_layer_id):
 @assert_query_params('plate_name', 'cycle_index')
 @decode_query_ids()
 def get_cycle_id(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/cycles/id
+
+        Get the hashed database id of a cycle with a given index and plate name.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "id": "MQ=="
+            }
+
+        :query plate_name: the name of the plate (required)
+        :query cycle_index: the cycle's index (required)
+
+        :statuscode 200: no error
+        :statuscode 404: no matching cycle found
+
+    """
     logger.info('get ID of cycle from experiment %d', experiment_id)
     experiment_name = experiment.name
     plate_name = request.args.get('plate_name')
@@ -117,6 +140,48 @@ def get_cycle_id(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def get_channels(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/channels
+
+        Get all channels for a specific experiment.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "name": "Channel 1",
+                        "bit_depth": 8,
+                        "layers": [
+                            {
+                                "id": "MQ==",
+                                "max_zoom": 12,
+                                "tpoint": 0,
+                                "zplane": 0,
+                                "max_intensity": 6056,
+                                "min_intensity": 0,
+                                "experiment_id": "MQ==",
+                                "image_size": {
+                                    "width": 22000,
+                                    "height": 10000
+                                }
+                            },
+                            ...
+                        ]
+                    },
+                    ...
+                ]
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('get all channels from experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         channels = session.query(tm.Channel).all()
@@ -127,6 +192,38 @@ def get_channels(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def get_mapobject_types(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobject_types
+
+        Get the supported mapobject types for a specific experiment.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "name": "Cells",
+                        "features": [
+                            {
+                                "id": "MQ==",
+                                "name": "Cell_Area"
+                            },
+                            ...
+                        ]
+                    },
+                    ...
+                ]
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('get all mapobject types from experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         mapobject_types = session.query(tm.MapobjectType).all()
@@ -138,6 +235,28 @@ def get_mapobject_types(experiment_id):
 @assert_query_params('channel_name')
 @decode_query_ids()
 def get_channel_id(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/channels/id
+
+        Get the id of a channel given its parent experiment id and its name.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "id": "MQ=="
+            }
+
+        :query channel_name: the name of the channel (required)
+
+        :statuscode 200: no error
+        :statuscode 404: no matching channel found
+
+    """
     logger.info('get ID of channel from experiment %d', experiment_id)
     channel_name = request.args.get('channel_name')
     with tm.utils.ExperimentSession(experiment_id) as session:
@@ -154,6 +273,30 @@ def get_channel_id(experiment_id):
 @assert_query_params('channel_name', 'tpoint', 'zplane')
 @decode_query_ids()
 def get_channel_layer_id(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/channel_layers/id
+
+        Get the id of a channel layer given its parent experiment id, the associated channel's name as well as the specific time point and zplane.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "id": "MQ=="
+            }
+
+        :query channel_name: the name of the channel (required)
+        :query tpoint: the time point associated with this layer (required)
+        :query zplane: the zplane of this layer (required)
+
+        :statuscode 200: no error
+        :statuscode 404: no matching layer found
+
+    """
     logger.info('get ID of channel layer from experiment %d', experiment_id)
     channel_name = request.args.get('channel_name')
     tpoint = request.args.get('tpoint', type=int)
@@ -182,6 +325,31 @@ def get_channel_layer_id(experiment_id):
 )
 @decode_query_ids()
 def get_channel_image(experiment_id, channel_name):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/channels/(string:channel_name)/image-files
+
+        Get a specific image belonging to a channel.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: image/png
+
+        :query plate_name: the name of the plate (required)
+        :query cycle_index: the cycle's index (required)
+        :query well_name: the name of the well (required)
+        :query x: the x-coordinate (required)
+        :query y: the y-coordinate (required)
+        :query tpoint: the time point (required)
+        :query zplane: the z-plane (required)
+
+        :statuscode 200: no error
+        :statuscode 404: no matching image found
+        :statuscode 400: not all query parameters provided
+
+    """
     logger.info(
         'get image of channel "%s" from experiment %d',
         channel_name, experiment_id
@@ -253,17 +421,31 @@ def get_channel_image(experiment_id, channel_name):
 @api.route('/microscope_types', methods=['GET'])
 @jwt_required()
 def get_microscope_types():
-    """Gets all implemented microscope types.
+    """
+    .. http:get:: /api/microscope_types
 
-    Response
-    --------
-    {
-        "data": list of microscope types,
-    }
+        Get a list of all supported microscope types for which images can be processed.
 
-    See also
-    --------
-    :class:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    "visiview", "cellvoyager", "axio", "default",
+                    "metamorph", "niselements", "incell", "imc"
+                ]
+            }
+
+        :statuscode 200: no error
+
+        .. seealso::
+
+            :class:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
+
     """
     logger.info('get list of implemented microscope types')
     return jsonify({
@@ -274,17 +456,28 @@ def get_microscope_types():
 @api.route('/acquisition_modes', methods=['GET'])
 @jwt_required()
 def get_acquisition_modes():
-    """Gets all implemented plate acquisition modes.
+    """
+    .. http:get:: /api/acquisition_modes
 
-    Response
-    --------
-    {
-        "data": list of plate acquisition modes,
-    }
+        Get a list of all implemented plate acquisition modes.
 
-    See also
-    --------
-    :class:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": ["basic", "multiplexing"]
+            }
+
+        :statuscode 200: no error
+
+        .. seealso::
+
+            :class:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
+
     """
     logger.info('get list of supported plate acquisition modes')
     return jsonify({
@@ -490,7 +683,7 @@ def get_jobs_status(experiment_id):
     })
 
 
-@api.route('/experiments/<experiment_id>/workflow/description', methods=['GET']) 
+@api.route('/experiments/<experiment_id>/workflow/description', methods=['GET'])
 @jwt_required()
 @decode_query_ids()
 def get_workflow_description(experiment_id):
