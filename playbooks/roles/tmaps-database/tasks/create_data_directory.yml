@@ -4,18 +4,6 @@
   tags:
     - postgresql
 
-# - name: Format attached volumne (create filesystem)
-#   become: yes
-#   shell: mkfs.ext4 /dev/vdb
-#   tags:
-#     - postgresql
-
-# - name: Mount the created file system on mount point /data
-#   become: yes
-#   shell: mount /dev/vdb /data
-#   tags:
-#     - postgresql
-
 # Symlink /var/lib/postgresql -> /data/storage/postgresql/
 - name: Create data directory (source for symlink) at /var/lib
   become: yes
@@ -96,9 +84,19 @@
   tags:
     - postgresql
 
+- name: Install setfacl support
+  become: yes
+  apt:
+    pkg=acl
+    state=installed
+  tags:
+    - postgresql
+
 - name: Initialize database cluster at created data directory
   become: yes
   become_user: postgres
   shell: "/usr/lib/postgresql/{{ postgresql_version }}/bin/initdb -D /var/lib/postgresql/{{ postgresql_version }}/main"
+  args:
+    creates: /var/lib/postgresql/{{ postgresql_version }}/main/base
   tags:
     - postgresql

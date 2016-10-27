@@ -56,7 +56,7 @@
 - name: Ensure ".bash_profile" file exists
   file:
     path={{ ansible_env.HOME }}/.bash_profile
-    state=exists
+    state=touch
   tags:
     - postgresql
 
