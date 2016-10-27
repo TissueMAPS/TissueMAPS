@@ -1,0 +1,38 @@
+# Template for setting up TissueMAPS on a single node on the OpenStack-based
+# ScienceCloud at University of Zurich.
+#
+# The configuration assumes a "web" security group, which should allow
+# incombing HTTP access.
+# The "uzh-only" network allows access only from within the University network.
+---
+cloud:
+  provider: os
+  region: RegionOne
+  key_name: tmaps_setup
+  key_file_private: ~/.ssh/tmaps_setup
+  key_file_public: ~/.ssh/tmaps_setup.pub
+grid:
+  name: tissuemaps
+  clusters:
+    - name: singlenode
+      node_types:
+        - name: server
+          count: 1
+          groups:
+            - name: tissuemaps_compute
+              playbook: compute.yml
+            - name: tissuemaps_web
+              playbook: web.yml
+              vars:
+                db_password: XXX
+            - name: tissuemaps_database
+              playbook: database.yml
+              vars:
+                db_password: XXX
+          instance:
+            volume_size: 1000
+            disk_size: 100
+            image: Matlab-R2016a - ubuntu 14.04.4 x86-64 - (2016-03-17)
+            flavor: 16cpu-64ram-hpc
+            security_group: web
+            network: uzh-only

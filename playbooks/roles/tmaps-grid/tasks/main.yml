@@ -1,7 +1,0 @@
----
-- include: yarn_client.yml
-  when: "{{ yarn_cluster_exists }}"
-
-- include: postgresql_client.yml
-
-- include: storage_client.yml

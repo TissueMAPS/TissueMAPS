@@ -11,13 +11,16 @@ CONFIG_DIR = os.path.expanduser('~/.tmaps/setup')
 GROUP_VARS_DIR = os.path.join(CONFIG_DIR, 'group_vars')
 HOST_VARS_DIR = os.path.join(CONFIG_DIR, 'host_vars')
 HOSTS_FILE = os.path.join(CONFIG_DIR, 'hosts')
-SETUP_FILE = os.path.join(CONFIG_DIR, 'grid.yml')
+SETUP_FILE = os.path.join(CONFIG_DIR, 'setup.yml')
+
+HOSTNAME_FORMAT = '{grid}-{cluster}-{node_type}-{index:03X}'
 
 
 class SetupSection(object):
 
     '''Abstract base class for a section of the `TissueMAPS` setup description.
     '''
+
     __meta__ = ABCMeta
 
     def __init__(self, description):
@@ -185,7 +188,7 @@ class CloudSection(SetupSection):
     @key_file_private.setter
     def key_file_private(self, value):
         self._check_value_type(value, 'key_file_private', str)
-        value = os.path.expanduser(value)
+        value = os.path.expandvars(os.path.expanduser(value))
         if value.endswith('.pub'):
             raise SetupDescriptionError(
                 'Value of "key_file_private" must point to a private key: %s' %
@@ -205,7 +208,7 @@ class CloudSection(SetupSection):
     @key_file_public.setter
     def key_file_public(self, value):
         self._check_value_type(value, 'key_file_public', str)
-        value = os.path.expanduser(value)
+        value = os.path.expandvars(os.path.expanduser(value))
         if not value.endswith('.pub'):
             raise SetupDescriptionError(
                 'Value of "key_file_public" must point to a public key: %s' %
@@ -291,36 +294,34 @@ class ClusterSection(SetupSection):
         self._name = value
 
     @property
-    def categories(self):
-        '''List[tmsetup.config.ClusterCategorySection]: category of virtual
-        machines the cluster is comprised of
+    def node_types(self):
+        '''List[tmsetup.config.ClusterNodeTypeSection]: different types of
+        virtual machines the cluster is comprised of
         '''
-        return self._categories
+        return self._node_types
 
-    @categories.setter
-    def categories(self, value):
-        self._categories = list()
-        self._check_subsection_type(value, 'categories', list)
+    @node_types.setter
+    def node_types(self, value):
+        self._node_types = list()
+        self._check_subsection_type(value, 'node_types', list)
         for i, item in enumerate(value):
-            self._check_subsection_type(value, 'categories', dict, index=i)
-            self._categories.append(ClusterCategorySection(item))
+            self._check_subsection_type(value, 'node_types', dict, index=i)
+            self._node_types.append(ClusterCategorySection(item))
 
 
-class ClusterCategorySection(SetupSection):
+class ClusterNodeTypeSection(SetupSection):
 
     '''Class for the section of the `TissueMAPS` setup description that provides
-    information about a particular category of virtual machine instances that
-    belong to the same cluster (e.g. master vs. worker nodes).
+    information about a particular set of virtual machine instances belonging
+    to the same cluster (e.g. master or worker nodes).
     '''
 
-    _OPTIONAL_ATTRS = {'vars'}
-
     def __init__(self, description):
-        super(ClusterCategorySection, self).__init__(description)
+        super(ClusterNodeTypeSection, self).__init__(description)
 
     @property
     def _section_name(self):
-        return 'categories'
+        return 'node_types'
 
     @property
     def name(self):
@@ -343,16 +344,16 @@ class ClusterCategorySection(SetupSection):
         self._count = value
 
     @property
-    def vars(self):
+    def instance(self):
         '''AnsibleHostVariableSection: variables required for managing the
         virtual machine instances via Ansible (optional)
         '''
-        return self._vars
+        return self._instance
 
-    @vars.setter
-    def vars(self, value):
-        self._check_value_type(value, 'vars', dict)
-        self._vars = AnsibleHostVariableSection(value)
+    @instance.setter
+    def instance(self, value):
+        self._check_value_type(value, 'instance', dict)
+        self._instance = AnsibleHostVariableSection(value)
 
     @property
     def groups(self):
@@ -402,7 +403,7 @@ class AnsibleGroupSection(SetupSection):
     @playbook.setter
     def playbook(self, value):
         self._check_value_type(value, 'playbook', str)
-        self._playbook = os.path.expanduser(value)
+        self._playbook = os.path.expandvars(os.path.expanduser(value))
         if not os.path.isabs(self._playbook):
             self._playbook = os.path.abspath(
                 os.path.join(

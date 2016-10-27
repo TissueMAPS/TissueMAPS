@@ -12,6 +12,7 @@
     - postgresql
 
 - name: Add postgresql repo (url)
+  become: yes
   apt_repository: repo='deb http://apt.postgresql.org/pub/repos/apt/ {{ansible_distribution_release}}-pgdg main'
   register: pgs_aptrepo
   tags:
@@ -52,7 +53,16 @@
   tags:
     - postgresql
 
+- name: Ensure ".bash_profile" file exists
+  file:
+    path={{ ansible_env.HOME }}/.bash_profile
+    state=exists
+  tags:
+    - postgresql
+
 - name: Add postgres executable to PATH
-  lineinfile: dest="{{ ansible_env.HOME }}/.bash_profile" line='export PATH=/usr/lib/postgresql/{{ postgresql_version }}/bin:$PATH'
+  lineinfile:
+    dest={{ ansible_env.HOME }}/.bash_profile
+    line='export PATH=/usr/lib/postgresql/{{ postgresql_version }}/bin:$PATH'
   tags:
     - postgresql

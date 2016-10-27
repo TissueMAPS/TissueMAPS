@@ -1,5 +1,11 @@
 ---
 # Cooks images used to launch VMs of frontend and compute nodes.
+
+# - name: Ensure required variables are defined
+#   fail:
+#     msg: Variable {{ item }} is not defined!
+#   with_items:
+
 - name: Install TmToolbox, TmLibrary, JtModules, and JtLibrary packages
   hosts: tissuemaps_compute
   roles:

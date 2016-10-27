@@ -10,6 +10,7 @@ from ConfigParser import SafeConfigParser
 from tmsetup.utils import write_yaml_file, read_yaml_file, to_json
 from tmsetup.config import Setup, load_inventory, save_inventory
 from tmsetup.config import CONFIG_DIR, GROUP_VARS_DIR, HOST_VARS_DIR
+from tmsetup.config import HOSTNAME_FORMAT
 
 
 def build_inventory(setup):
@@ -19,14 +20,15 @@ def build_inventory(setup):
     inventory['_meta']['hostvars'] = collections.defaultdict(dict)
 
     for cluster in setup.grid.clusters:
-        for category in cluster.categories:
-            class_name = '%s-%s-%s' % (
-                setup.grid.name, cluster.name, category.name
-            )
-            for i in range(category.count):
-                host_name = '%s-%.3d' % (class_name, i+1)
-                inventory['_meta']['hostvars'][host_name] = category.vars.to_dict()
-                for group in category.groups:
+        for node_type in cluster.node_types:
+            for i in range(node_type.count):
+                host_name = HOSTNAME_FORMAT.format(
+                    grid=setup.grid.name, cluster=cluster.name,
+                    node_type=node_type.name, index=i+1
+                )
+                inventory['_meta']['hostvars'][host_name] = \
+                    node_type.instance.to_dict()
+                for group in node_type.groups:
                     if group.name not in inventory:
                         inventory[group.name] = {'hosts': list()}
                     inventory[group.name]['hosts'].append(host_name)
@@ -35,8 +37,10 @@ def build_inventory(setup):
                     inventory['all']['vars'] = {
                         'provider': setup.cloud.provider,
                         'key_name': setup.cloud.key_name,
-                        'key_file': os.path.expanduser(
-                            setup.cloud.key_file_public
+                        'key_file': os.path.expandvars(
+                            os.path.expanduser(
+                                setup.cloud.key_file_public
+                            )
                         ),
                         'region': setup.cloud.region,
                     }
@@ -81,7 +85,9 @@ def main(args):
             persistent_inventory.set(group, host)
             # Create a separte variable file in YAML format for each host
             host_vars_file = os.path.join(HOST_VARS_DIR, host)
-            private_key_file = os.path.expanduser(setup.cloud.key_file_private)
+            private_key_file = os.path.expandvars(
+                os.path.expanduser(setup.cloud.key_file_private)
+            )
             if not os.path.exists(host_vars_file):
                 host_vars = {
                     'ansible_host': '',

@@ -1,7 +1,0 @@
----
-# TODO: tmtoolbox tables
-- name: Create tables in "tissuemaps" database
-  command: "{{ tmaps_install_location }}/tm_create_tables"
-  tags:
-    - db
-    - tissuemaps

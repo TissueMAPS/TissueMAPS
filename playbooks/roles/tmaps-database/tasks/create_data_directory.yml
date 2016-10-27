@@ -19,22 +19,25 @@
 # Symlink /var/lib/postgresql -> /data/storage/postgresql/
 - name: Create data directory (source for symlink) at /var/lib
   become: yes
-  file: path=/var/lib/postgresql
+  file:
+    path=/var/lib/postgresql
     state=absent
   tags:
     - postgresql
 
 - name: Create data directory (target for symlink) on mounted filesystem
   become: yes
-  file: path={{ volume_mount_point }}/storage/postgresql/data
+  file:
+    path={{ volume_mountpoint }}/storage/postgresql/data
     state=directory
     owner=postgres
+    group=postgres
   tags:
     - postgresql
 
 - name: Symlink data directory to mounted filesystem
   become: yes
-  file: src={{ volume_mount_point }}/storage/postgresql/data
+  file: src={{ volume_mountpoint }}/storage/postgresql/data
     dest=/var/lib/postgresql
     state=link
     force=yes
@@ -48,6 +51,7 @@
   file: path=/var/lib/postgresql/{{postgresql_version}}/main
     state=directory
     owner=postgres
+    group=postgres
   tags:
     - postgresql
 
@@ -56,27 +60,32 @@
   file: path=/var/lib/postgresql/
     recurse=yes
     owner=postgres
+    group=postgres
   tags:
     - postgresql
 
 - name: Create log directory (source for symlink) at /var/log/postgresql
   become: yes
-  file: path=/var/log/postgresql
+  file:
+    path=/var/log/postgresql
     state=absent
   tags:
     - postgresql
 
 - name: Create log directory (target for symlink) on mounted filesystem
   become: yes
-  file: path={{ volume_mount_point }}/storage/postgresql/logs
+  file:
+    path={{ volume_mountpoint }}/storage/postgresql/logs
     state=directory
     owner=postgres
+    group=postgres
   tags:
     - postgresql
 
 - name: Symlink log directory to mounted filesystem
   become: yes
-  file: src={{ volume_mount_point }}/storage/postgresql/logs
+  file:
+    src={{ volume_mountpoint }}/storage/postgresql/logs
     dest=/var/log/postgresql
     state=link
     force=yes
@@ -90,6 +99,6 @@
 - name: Initialize database cluster at created data directory
   become: yes
   become_user: postgres
-  shell: /usr/lib/postgresql/{{postgresql_version}}/bin/initdb -D /var/lib/postgresql/{{postgresql_version}}/main
+  shell: "/usr/lib/postgresql/{{ postgresql_version }}/bin/initdb -D /var/lib/postgresql/{{ postgresql_version }}/main"
   tags:
     - postgresql

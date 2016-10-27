@@ -1,8 +1,8 @@
 ---
-volume_mount_point: /data
+volume_mountpoint: /data
 
-postgresql_version: 9.6
-postgis_version: 2.2
+postgresql_version: "9.6"
+postgis_version: "2.2"
 
 db_user: postgres
 db_port: 5432

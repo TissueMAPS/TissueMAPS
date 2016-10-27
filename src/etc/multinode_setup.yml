@@ -1,0 +1,88 @@
+# Template for setting up TissueMAPS in a multi-node environment on an OpenStack
+# cloud.
+#
+# The configuration assumes a "web" security group, which should allow
+# incombing HTTP access.
+# The "private" network restricts access to the TissueMAPS grid (this is highly
+# recommended). For production, the node hosting the web server
+# (in this case "tissuemaps-slurm-master-001") should get a floating IP
+# assigned to.
+#
+# This setup depends on playbooks provided by Elasticluster.
+# Set the environment variable ELASTICLUSTER_PLAYBOOKS such that it points
+# to the elasticluster/share/playbooks/roles subdirectory of your local copy of
+# the elasticluster repository.
+---
+cloud:
+  provider: os
+  region: RegionOne
+  key_name: tmaps_setup
+  key_file_private: ~/.ssh/tmaps_setup
+  key_file_public: ~/.ssh/tmaps_setup.pub
+grid:
+  name: tissuemaps
+  clusters:
+    - name: postgresql
+      node_types:
+        - name: server
+          count: 1
+          groups:
+            - name: tissuemaps_database
+              vars:
+                db_password: XXX
+              playbook: database.yml
+            - name: ganglia_client
+          instance:
+            volume_size: 10000
+            disk_size: 100
+            image: Ubuntu Server 14.04.04 LTS (2016-05-19)
+            flavor: 16cpu-64ram-hpc
+            security_group: default
+            network: private
+    - name: glusterfs
+      node_types:
+        - name: server
+          count: 2
+          groups:
+            - name: glusterfs_server
+              vars:
+                gluster_replicas: 2
+                gluster_strips: 2
+            - name: ganglia_client
+          instance:
+            volume_size: 10000
+            disk_size: 100
+            image: Ubuntu Server 14.04.04 LTS (2016-05-19)
+            flavor: 2cpu-8ram-hpc
+            security_group: default
+            network: private
+    - name: slurm
+      node_types:
+        - name: master
+          count: 1
+          groups:
+            - name: tissuemaps_web
+              vars:
+                db_password: XXX
+            - name: slurm_master
+            - name: glusterfs_client
+            - name: ganglia_client
+          instance:
+            disk_size: 100
+            image: Matlab-R2016a - ubuntu 14.04.4 x86-64 - (2016-03-17)
+            flavor: 16cpu-64ram-hpc
+            security_group: web
+            network: private
+        - name: worker
+          count: 4
+          groups:
+            - name: tissuemaps_compute
+            - name: slurm_workers
+            - name: glusterfs_client
+            - name: ganglia_client
+          instance:
+            disk_size: 100
+            image: Matlab-R2016a - ubuntu 14.04.4 x86-64 - (2016-03-17)
+            flavor: 4cpu-16ram-hpc
+            security_group: default
+            network: private

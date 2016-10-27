@@ -1,2 +1,0 @@
----
-tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"
