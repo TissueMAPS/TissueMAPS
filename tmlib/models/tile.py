@@ -35,7 +35,6 @@ class ChannelLayerTile(ExperimentModel):
         binary image data encoded as JPEG
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'channel_layer_tiles'
 
     __table_args__ = (
@@ -50,19 +49,27 @@ class ChannelLayerTile(ExperimentModel):
 
     __distribute_by_hash__ = 'id'
 
-    # Table columns
-    level = Column(Integer)
-    row = Column(Integer)
-    column = Column(Integer)
     _pixels = Column('pixels', BYTEA)
+
+    #: int: zero-based zoom level (z) index
+    level = Column(Integer)
+
+    #: int: zero-baesed vertical (y) index
+    row = Column(Integer)
+
+    #: int: zero-baesed horizontal (x) index
+    column = Column(Integer)
+
     #ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;
+
+    #: int: ID of parent channel layer
     channel_layer_id = Column(
         Integer,
         ForeignKey('channel_layers.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.layer.ChannelLayer: parent channel layer
     channel_layer = relationship(
         'ChannelLayer',
         backref=backref('pyramid_tile_files', cascade='all, delete-orphan')

@@ -5,13 +5,14 @@ from sqlalchemy.types import TypeDecorator, UnicodeText
 from geoalchemy2 import Geometry
 from geoalchemy2.functions import GenericFunction
 
+
 class XML(TypeDecorator):
 
     '''XML data column type.
 
     Note
     ----
-    Uses the `lxml <http://lxml.de/>`_ packages for processing.
+    Uses the `lxml <http://lxml.de/>`_ package for processing.
     '''
 
     impl = UnicodeText
@@ -42,3 +43,14 @@ class ST_Expand(GenericFunction):
 
     name = 'ST_Expand'
     type = Geometry
+
+
+class ST_ExteriorRing(GenericFunction):
+
+    '''Implementation of the Postgis function
+    `ST_ExteriorRing <http://postgis.net/docs/ST_ExteriorRing.html>`_.
+    '''
+
+    name = 'ST_ExteriorRing'
+    type = Geometry
+

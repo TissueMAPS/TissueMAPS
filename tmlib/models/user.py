@@ -19,14 +19,19 @@ class User(MainModel, DateMixIn):
         password
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'users'
 
-    # Table columns
+    #: str: username
     name = Column(String, index=True, unique=True, nullable=False)
+
+    #: str: email
     email = Column(String, unique=True, nullable=False)
+
+    #: str: encoded password
     password = Column(String, nullable=False)
 
+    #: List[tmlib.models.experiment.ExperimentReferences]: references to
+    #: owned experiments
     experiments = relationship('ExperimentReference', back_populates='user')
 
     def __init__(self, name, email, password):

@@ -17,49 +17,43 @@ class Site(ExperimentModel, DateMixIn):
 
     Attributes
     ----------
-    y: int
-        zero-based row index of the image within the well
-    x: int
-        zero-based column index of the image within the well
-    height: int
-        number of pixels along the vertical axis of the site
-    width: int
-        number of pixels along the horizontal axis of the site
-    well_id: int
-        ID of the parent well
-    well: tmlib.well.Well
-        parent well to which the site belongs
     shifts: [tmlib.models.SiteShifts]
-        shifts that belong to the site
+        shifts belonging to the site
     intersection: tmlib.models.SiteIntersection
-        intersection that belongs to the site
+        intersection belongings to the site
     channel_image_files: List[tmlib.models.ChannelImageFile]
-        channel image files that belong to the site
+        channel image files belonging to the site
     mapobject_segmentations: List[tmlib.models.MapobjectSegmentation]
-        segmentations that belong to the site
-    omitted: bool
-        whether the image file is considered empty, i.e. consisting only of
-        background pixels without having biologically relevant information
+        segmentations belonging to the site
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'sites'
 
     __table_args__ = (UniqueConstraint('x', 'y', 'well_id'), )
 
-    # Table columns
+    #: int: zero-based row index of the image within the well
     y = Column(Integer, index=True)
+
+    #: int: zero-based column index of the image within the well
     x = Column(Integer, index=True)
+
+    #: int: number of pixels along the vertical axis of the image
     height = Column(Integer, index=True)
+
+    #: int: number of pixels along the horizontal axis of the image
     width = Column(Integer, index=True)
+
+    #: bool: whether the site should be omitted from further analysis
     omitted = Column(Boolean, index=True)
+
+    #: int: ID of parent well
     well_id = Column(
         Integer,
         ForeignKey('wells.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.well.Well: parent well
     well = relationship(
         'Well',
         backref=backref('sites', cascade='all, delete-orphan')

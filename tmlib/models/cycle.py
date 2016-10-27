@@ -24,35 +24,30 @@ class Cycle(DirectoryModel, DateMixIn):
 
     Attributes
     ----------
-    index: int
-        index of the cycle (based on the order of acquisition)
-    tpoint: int
-        time point of the cycle
-    plate_id: int
-        ID of the parent plate
-    plate: tmlib.models.Plate
-        parent plate to which the cycle belongs
-    channel_image_files: List[tmlib.models.ChannelImageFile]
-        channel image files that belong to the cycle
-    site_shifts: List[tmlib.models.SiteShift]
-        shifts that belong to the cycle
+    channel_image_files: List[tmlib.models.file.ChannelImageFile]
+        channel image files belonging to the cycle
+    site_shifts: List[tmlib.models.site.SiteShift]
+        shifts belonging to the cycle
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'cycles'
 
     __table_args__ = (UniqueConstraint('tpoint', 'index', 'plate_id'), )
 
-    # Table columns
+    #: int: zero-based index in the time series
     tpoint = Column(Integer, index=True)
+
+    #: int: zero-based index in the acquisition sequence
     index = Column(Integer, index=True)
+
+    #: int: ID of parent plate
     plate_id = Column(
         Integer,
         ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.plate.Plate: parent plate
     plate = relationship(
         'Plate',
         backref=backref('cycles', cascade='all, delete-orphan')
@@ -75,7 +70,7 @@ class Cycle(DirectoryModel, DateMixIn):
 
     @autocreate_directory_property
     def location(self):
-        '''str: location were the acquisition content is stored'''
+        '''str: location were cycle content is stored'''
         if self.id is None:
             raise AttributeError(
                 'Cycle "%s" doesn\'t have an entry in the database yet. '

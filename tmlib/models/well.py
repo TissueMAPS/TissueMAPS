@@ -30,20 +30,21 @@ class Well(ExperimentModel, DateMixIn):
         parent plate to which the well belongs
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'wells'
 
     __table_args__ = (UniqueConstraint('name', 'plate_id'), )
 
-    # Table columns
+    #: str: name assinged by the application, e.g. ``"A01"``
     name = Column(String, index=True)
+
+    #: int: ID of parent plate
     plate_id = Column(
         Integer,
         ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.plate.Plate: parent plate
     plate = relationship(
         'Plate',
         backref=backref('wells', cascade='all, delete-orphan')

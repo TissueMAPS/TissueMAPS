@@ -17,42 +17,32 @@ class Channel(ExperimentModel, DateMixIn):
     '''A *channel* represents all *images* across different time points and
     spatial positions that were acquired with the same illumination and
     microscope filter settings.
-
-    Attributes
-    ----------
-    name: str
-        name of the plate
-    root_directory: str
-        absolute path to root directory where channel is located on disk
-    wavelength: str
-        name of the corresponding wavelength
-    layers: List[tmlib.models.ChannelLayer]
-        layers belonging to the channel
-    illumstats_files: List[tmlib.model.IllumstatsFile]
-        illumination statistics files that belongs to the channel
-    experiment_id: int
-        ID of the parent experiment
-    experiment: tmlib.models.Experiment
-        parent experiment
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'channels'
 
     __table_args__ = (UniqueConstraint('name'), UniqueConstraint('index'))
 
-    # Table columns
+    #: str: name given by the microscope or user
     name = Column(String, index=True)
+
+    #: int: zero-based channel index
     index = Column(Integer, index=True)
+
+    #: str: name of wavelength
     wavelength = Column(String, index=True)
+
+    #: int: number of bytes used to encode intensity
     bit_depth = Column(Integer)
+
+    #: int: ID of the parent experiment
     experiment_id = Column(
         Integer,
         ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.experiment.Experiment: parent experiment
     experiment = relationship(
         'Experiment',
         backref=backref('channels', cascade='all, delete-orphan')

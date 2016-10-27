@@ -32,47 +32,37 @@ class ChannelLayer(ExperimentModel):
     belonging to a given *channel*, *z-plane* and *time point*.
     as a pyramid in `Zoomify <http://www.zoomify.com/>`_ format.
 
-    Attributes
-    ----------
-    tpoint: int
-        zero-based time series index
-    zplane: int
-        zero-based z-resolution index
-    height: int
-        number of pixels along the vertical axis
-    width: int
-        number of pixels along the horizontal axis
-    max_intensity: int
-        maximum intensity value at which channel images were clipped
-        at the original bit depth
-    min_intensity: int
-        minimum intensity value at which channel images were clipped at
-        original bit depth
-    channel_id: int
-        ID of the parent channel
-    channel: tmlib.models.Channel
-        parent channel to which the plate belongs
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'channel_layers'
 
     __table_args__ = (UniqueConstraint('zplane', 'tpoint', 'channel_id'), )
 
-    # Table columns
-    zplane = Column(Integer, index=True)
-    tpoint = Column(Integer, index=True)
     _height = Column('height', Integer)
     _width = Column('width', Integer)
+
+    #: int: zero-based index in z stack
+    zplane = Column(Integer, index=True)
+
+    #: int: zero-based index in time series
+    tpoint = Column(Integer, index=True)
+
+    #: int: maximum intensity value at which images get clipped at original
+    #: bit depth before rescaling to 8-bit
     max_intensity = Column(Integer)
+
+    #: int: minimum intensity value at which images get clipped at original
+    #: bit depth before rescaling to 8-bit
     min_intensity = Column(Integer)
+
+    #: int: ID of parent channel
     channel_id = Column(
         Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.channel.Channel: parent channel
     channel = relationship(
         'Channel',
         backref=backref('layers', cascade='all, delete-orphan')
@@ -114,8 +104,7 @@ class ChannelLayer(ExperimentModel):
 
     @property
     def tile_size(self):
-        '''int: maximal number of pixels along an axis of a tile
-        '''
+        '''int: maximal number of pixels along an axis of a tile'''
         return 256
 
     @property

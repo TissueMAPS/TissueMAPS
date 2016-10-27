@@ -54,18 +54,14 @@ class DateMixIn(object):
 
     '''Mixin class to automatically add columns with datetime stamps to a
     database table.
-
-    Attributes
-    ----------
-    created_at: datetime.datetime
-        date and time when the row was inserted into the column
-    updated_at: datetime.datetime
-        date and time when the row was last updated
     '''
 
+    #: date and time when the row was inserted into the column
     created_at = Column(
         DateTime, default=func.now()
     )
+
+    #: date and time when the row was last updated
     updated_at = Column(
         DateTime, default=func.now(), onupdate=func.now()
     )
@@ -75,13 +71,9 @@ class IdMixIn(object):
 
     '''Mixin class to automatically add an ID column to a database table
     with primary key constraint.
-
-    Attributes
-    ----------
-    id: int
-        unique identifier number
     '''
 
+    #: int: ID of the object
     id = Column(Integer, primary_key=True)
 
     @property
@@ -109,7 +101,6 @@ class FileSystemModel(ExperimentModel):
     '''Abstract base class for model classes, which refer to data
     stored on disk outside of the database.
 
-    Devired classes must implement :meth:`location` as :func:`sqlalchemy.ext.hybrid.hyprid_property`
     '''
 
     __abstract__ = True
@@ -118,7 +109,11 @@ class FileSystemModel(ExperimentModel):
 
     @abstractproperty
     def location(self):
-        '''str: location of the file/directory/container'''
+        '''str: location on disk
+
+        Devired classes must implement `location` as
+        :func:`sqlalchemy.ext.hybrid.hyprid_property`.
+        '''
         pass
 
     @location.setter

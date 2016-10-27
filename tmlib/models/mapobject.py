@@ -7,7 +7,6 @@ import collections
 import pandas as pd
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
-from geoalchemy2.functions import GenericFunction
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, not_
 from sqlalchemy.orm import relationship, backref
@@ -15,56 +14,46 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import ExperimentModel, DateMixIn
+from tmlib.models.types import ST_ExteriorRing
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
 
 
-class ST_ExteriorRing(GenericFunction):
-    name = 'ST_ExteriorRing'
-    type = Geometry
-
-
 class MapobjectType(ExperimentModel, DateMixIn):
 
-    '''A *map object type* represent a conceptual group of *map objects*
+    '''A *mapobject type* represents a conceptual group of *mapobjects*
     (segmented objects) that reflect different biological entities,
     such as "cells" or "nuclei" for example.
 
     Attributes
     ----------
-    name: str
-        name of the map objects type
-    max_poly_zoom: int
-        zoom level where mapobjects are no longer visualized
-    min_poly_zoom: int
-        zoom level where visualization should switch from centroids
-        to outlines
-    mapobjects: List[tmlib.models.Mapobject]
-        mapobjects that belong to the mapobject type
-    experiment_id: int
-        ID of the parent experiment
-    experiment: tmlib.models.Experiment
-        parent experiment
+    mapobjects: List[tmlib.models.mapobject.Mapobject]
+        mapobjects belonging to the mapobject type
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'mapobject_types'
 
     __table_args__ = (UniqueConstraint('name'), )
 
-    # Table columns
-    name = Column(String, index=True, nullable=False)
-    is_static = Column(Boolean, index=True)
     _max_poly_zoom = Column('max_poly_zoom', Integer)
     _min_poly_zoom = Column('min_poly_zoom', Integer)
+
+    #: str: name given by user
+    name = Column(String, index=True, nullable=False)
+
+    #: bool: whether object outlines are static, i.e. don't depend on
+    #: image analysis (examples are "plates" or "wells")
+    is_static = Column(Boolean, index=True)
+
+    #: int: ID of parent experiment
     experiment_id = Column(
         Integer,
         ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.experiment.Experiment: parent experiment
     experiment = relationship(
         'Experiment',
         backref=backref('mapobject_types', cascade='all, delete-orphan')
@@ -349,16 +338,8 @@ class Mapobject(ExperimentModel):
 
     Attributes
     ----------
-    mapobject_type_id: int
-        ID of the parent mapobject
-    mapobject_type: tmlib.models.MapobjectType
-        parent mapobject type to which the mapobject belongs
-    parent_id: int, optional
-        ID of the parent mapobject
-    segmentations: List[tmlib.models.MapobjectSegmentations]
-        segmentations that belong to the mapobject
     feature_values: List[tmlib.models.FeatureValues]
-        feature values that belong to the mapobject
+        feature values belonging to the mapobject
     '''
 
     #: str: name of the corresponding database table
@@ -366,26 +347,32 @@ class Mapobject(ExperimentModel):
 
     __distribute_by_hash__ = 'id'
 
-    # Table columns
+    #: int: ID of another mapobject from which the object is derived from
+    #: (relevent for tracking of proliferating cells for example)
     parent_id = Column(Integer, index=True)
+
+    #: int: ID of parent mapobject type
     mapobject_type_id = Column(
         Integer,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.mapobject.MapobjecType: parent mapobject type
     mapobject_type = relationship(
         'MapobjectType',
         backref=backref('mapobjects', cascade='all, delete-orphan')
     )
 
+    #: List[tmlib.models.MapobjectSegmentation]: segmentations belonging to
+    #: the mapobject
     segmentations = relationship(
         'MapobjectSegmentation',
         backref=backref(
             'mapobject', cascade='all, delete-orphan', single_parent=True
         )
     )
+
     def __init__(self, mapobject_type_id, parent_id=None):
         '''
         Parameters
@@ -412,34 +399,10 @@ class MapobjectSegmentation(ExperimentModel):
 
     Attributes
     ----------
-    tpoint: int
-        time point index
-    zplane: int
-        z-plane index
-    geom_poly: str
-        EWKT polygon geometry
-    geom_centroid: str
-        EWKT point geometry
-    pipeline: str
-            name of the corresponding Jterator pipeline in which the objects
-            were segmented
-    site_id: int
-        ID of the parent site
-    site: tmlib.models.Site
-        site to which the segmentation belongs
-    is_border: bool
-        whether the object touches at the border of a *site* and is
-        therefore only partially represented on the corresponding image
-    label: int
-        one-based object identifier number which is unique per site
-    mapobject_id: int
-        ID of parent mapobject
     mapobject: tmlib.models.Mapobject
         parent mapobject to which the outline belongs
-
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'mapobject_segmentations'
 
     __table_args__ = (
@@ -448,38 +411,49 @@ class MapobjectSegmentation(ExperimentModel):
 
     __distribute_by_hash__ = 'mapobject_id'
 
-    # Table columns
+    #: bool: whether the object lies at the border of an image
     is_border = Column(Boolean, index=True)
+
+    #: int: value assigned to the object in a label image
     label = Column(Integer, index=True)
+
+    #: str: name of the corresponding Jterator pipeline that created the
+    #: segmentation
     pipeline = Column(String, index=True)
+
+    #: int: zero-based index in time series
     tpoint = Column(Integer, index=True)
+
+    #: int: zero-based index in z stack
     zplane = Column(Integer, index=True)
+
+    #: EWKT polygon geometry
     geom_poly = Column(Geometry('POLYGON'))
+
+    #: EWKT entroid geometry
     geom_centroid = Column(Geometry('POINT'))
+
+    #: int: ID of parent site
     site_id = Column(
         Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
+
+    #: int: ID of parent mapobject
     mapobject_id = Column(
         Integer,
         ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.site.Site: parent site
     site = relationship(
         'Site',
         backref=backref(
             'mapobject_segmentations', cascade='all, delete-orphan'
         )
     )
-    # mapobject= relationship(
-    #     'Mapobject',
-    #     backref=backref(
-    #         'segmentations', cascade='all, delete-orphan'
-    #     )
-    # )
 
     def __init__(self, geom_poly, geom_centroid, mapobject_id, label=None,
             is_border=None, tpoint=None, zplane=None, pipeline=None, site_id=None):

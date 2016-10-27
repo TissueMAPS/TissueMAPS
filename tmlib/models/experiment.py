@@ -35,36 +35,31 @@ class ExperimentReference(MainModel, DateMixIn):
 
     Attributes
     ----------
-    name: str
-        name given to the experiment
-    root_directory: str
-        absolute path to root directory where experiment is located on disk
-    description: str
-        description of the experimental setup
-    user_id: int
-        ID of the owner
-    user: tmlib.models.User
-        the user who owns the experiment
-    submissions: List[tmlib.models.Submission]
-        submissions that belong to the experiment
+    submissions: List[tmlib.models.submission.Submission]
+        submissions belonging to the experiment
 
     See also
     --------
     :class:`tmlib.models.experiment.Experiment`
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'experiment_references'
 
     __table_args__ = (UniqueConstraint('name', 'user_id'), )
 
-    # Table columns
+    #: str: name given by the user
     name = Column(String, index=True)
+
+    #: str: description provided by the user
     description = Column(Text)
+
+    #: absolute path to the directory where experiments are located
     root_directory = Column(String)
+
+    #: int: ID of the owner
     user_id = Column(Integer, ForeignKey('users.id'), index=True)
 
-    # Relationships to other tables
+    #: tmlib.models.user.User: user that owns the experiment
     user = relationship('User', back_populates='experiments')
 
     def __init__(self, name, user_id, root_directory, description=''):
@@ -188,11 +183,6 @@ class ExperimentReference(MainModel, DateMixIn):
         with YamlWriter(self._workflow_descriptor_file) as f:
             f.write(description.as_dict())
 
-    @property
-    def session_location(self):
-        '''str: location where submission data are stored'''
-        return os.path.join(self.workflow_location, 'session')
-
     def belongs_to(self, user):
         '''Determines whether the experiment belongs to a given `user`.
 
@@ -208,32 +198,6 @@ class ExperimentReference(MainModel, DateMixIn):
         '''
         return self.user_id == user.id
 
-    def get_mapobject_type(self, name):
-        '''Returns a mapobject type belonging to this experiment by name.
-
-        Parameters
-        ----------
-        name : str
-            the name of the mapobject_type to be returned
-
-        Returns
-        -------
-        tmlib.models.MapobjectType
-
-        Raises
-        ------
-        sqlalchemy.orm.exc.MultipleResultsFound
-           when multiple mapobject types with this name were found
-        sqlalchemy.orm.exc.NoResultFound
-           when no mapobject type with this name was found
-
-        '''
-        from tmlib.models import MapobjectType
-        session = Session.object_session(self)
-        return session.query(MapobjectType).\
-            filter_by(name=name, experiment_id=self.id).\
-            one()
-
     def __repr__(self):
         return '<ExperimentReference(id=%r, name=%r)>' % (self.id, self.name)
 
@@ -246,40 +210,37 @@ class Experiment(DirectoryModel):
 
     Attributes
     ----------
-    microscope_type: str
-        microscope that was used to acquire the images
-    plate_format: int
-        number of wells in the plate, e.g. 384
-    plate_acquisition_mode: str
-        the way plates were acquired with the microscope
-    location: str
-        absolute path to the location of the experiment on disk
-    zoom_factor: int
-        zoom factor between pyramid levels
-    vertical_site_displacement: int, optional
-        displacement of neighboring sites within a well along the
-        vertical axis in pixels
-    horizontal_site_displacement: int
-        displacement of neighboring sites within a well along the
-        horizontal axis in pixels
-    well_spacer_size: int
-        gab between neighboring wells in pixels
-    plates: List[tmlib.models.Plate]
-        all plates belonging to the experiment
-    channels: List[tmlib.models.Channel]
-        all channels belonging to the experiment
-    mapobject_types: List[tmlib.models.MapobjectType]
-        all mapobject types belonging to the experiment
+    plates: List[tmlib.models.plate.Plate]
+        plates belonging to the experiment
+    channels: List[tmlib.models.channel.Channel]
+        channels belonging to the experiment
+    mapobject_types: List[tmlib.models.mapobject.MapobjectType]
+        mapobject types belonging to the experiment
     '''
 
     __tablename__ = 'experiment'
 
+    #: str: microscope that was used to acquire the images
     microscope_type = Column(String, index=True)
+
+    #: int: number of wells in the plate, e.g. 384
     plate_format = Column(Integer)
+
+    #: str: the order in which plates were acquired via the microscope
     plate_acquisition_mode = Column(String)
+
+    #: int: zoom factor between pyramid levels
     zoom_factor = Column(Integer)
+
+    #: displacement of neighboring sites within a well along the
+    #: vertical axis in pixels
     vertical_site_displacement = Column(Integer)
+
+    #: displacement of neighboring sites within a well along the
+    #: horizontal axis in pixels
     horizontal_site_displacement = Column(Integer)
+
+    #: int: gab introduced between neighbooring wells in pixels
     well_spacer_size = Column(Integer)
 
     def __init__(self, microscope_type, plate_format, plate_acquisition_mode,
@@ -375,3 +336,29 @@ class Experiment(DirectoryModel):
         for i, (y, x) in enumerate(cooridinates):
             grid[y, x] = self.plates[i].id
         return grid
+
+    def get_mapobject_type(self, name):
+        '''Returns a mapobject type belonging to this experiment by name.
+
+        Parameters
+        ----------
+        name : str
+            the name of the mapobject_type to be returned
+
+        Returns
+        -------
+        tmlib.models.MapobjectType
+
+        Raises
+        ------
+        sqlalchemy.orm.exc.MultipleResultsFound
+           when multiple mapobject types with this name were found
+        sqlalchemy.orm.exc.NoResultFound
+           when no mapobject type with this name was found
+
+        '''
+        from tmlib.models import MapobjectType
+        session = Session.object_session(self)
+        return session.query(MapobjectType).\
+            filter_by(name=name, experiment_id=self.id).\
+            one()

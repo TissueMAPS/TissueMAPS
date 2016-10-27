@@ -27,21 +27,24 @@ class Feature(ExperimentModel):
         values that belong to the feature
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'features'
 
     __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
 
-    # Table columns
+    #: str: name given to the feature (e.g. by jterator)
     name = Column(String, index=True)
+
+    #: bool: whether the feature is an aggregate of child object features
     is_aggregate = Column(Boolean, index=True)
+
+    #: int: ID of parent mapobject type
     mapobject_type_id = Column(
         Integer,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
     mapobject_type = relationship(
         'MapobjectType',
         backref=backref('features', cascade='all, delete-orphan')
@@ -72,21 +75,8 @@ class FeatureValue(ExperimentModel):
     '''An individual value of a *feature* that was measured for a given
     *map object*.
 
-    Attributes
-    ----------
-    value: float
-        the actual measurement
-    tpoint: int
-        time point index
-    feature: tmlib.models.Feature
-        parent feature to which the feature belongs
-    mapobject_id: int
-        ID of the parent mapobject
-    mapobject: tmlib.models.MapobjectType
-        parent mapobject to which the feature belongs
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'feature_values'
 
     __table_args__ = (
@@ -95,25 +85,34 @@ class FeatureValue(ExperimentModel):
 
     __distribute_by_hash__ = 'mapobject_id'
 
-    # Table columns
+    #: float: the actual extracted feature value
     value = Column(Float(precision=15))
+
+    #: int: zero-based time point index
     tpoint = Column(Integer, index=True)
+
+    #: int: ID of the parent feature
     feature_id = Column(
         Integer,
         ForeignKey('features.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
+
+    #: int: ID of the parent mapobject
     mapobject_id = Column(
         Integer,
         ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.feature.Feature: parent feature
     feature = relationship(
         'Feature',
         backref=backref('values', cascade='all, delete-orphan')
     )
+
+    #: tmlib.models.mapobject.Mapobject: parent mapobject
+    #: for which the feature was extracted
     mapobject = relationship(
         'Mapobject',
         backref=backref('feature_values', cascade='all, delete-orphan')
@@ -123,14 +122,14 @@ class FeatureValue(ExperimentModel):
         '''
         Parameters
         ----------
-        feature: tmlib.models.Feature
-            parent feature to which the feature belongs
+        feature_id: int
+            ID of parent feature
         mapobject_id: int
-            ID of the parent mapobject
+            ID of parent mapobject
         value: float, optional
-            the actual measurement (default: ``None``)
+            actual measurement (default: ``None``)
         tpoint: int, optional
-            time point index (default: ``None``)
+            zero-based time point index (default: ``None``)
         '''
         self.tpoint = tpoint
         self.feature_id = feature_id

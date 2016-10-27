@@ -13,8 +13,6 @@ class Submission(MainModel, DateMixIn):
 
     Attributes
     ----------
-    task: gc3libs.Task
-        submitted task
     experiment_id: int
         ID of the parent experiment
     experiment: tmlib.experiment.Experiment
@@ -25,11 +23,12 @@ class Submission(MainModel, DateMixIn):
         parent user to which the submission belongs
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'submissions'
 
-    # Table columns
+    #: str: name of the program that submitted the tasks
     program = Column(String, index=True)
+
+    #: int: ID of the parent experiment
     experiment_id = Column(
         Integer,
         ForeignKey(
@@ -37,13 +36,15 @@ class Submission(MainModel, DateMixIn):
         ),
         index=True
     )
+
+    #: int: ID of the top task in the submitted collection of tasks
     top_task_id = Column(
         Integer,
         index=True
     )
     # TODO: make top_task_id a foreign key and create a relationship
 
-    # Relationships to other tables
+    #: tmlib.models.experiment.Experimment: parent experiment
     experiment = relationship(
         'ExperimentReference',
         backref=backref('submissions', cascade='all, delete-orphan')
@@ -136,50 +137,50 @@ class Task(MainModel):
     '''A *task* represents a computational job that can be submitted to a
     cluster for processing. Its state will be monitored while being processed.
 
-    Attributes
-    ----------
-    name: str
-        name of the job
-    state: gc3libs.Run.State
-        processing state of the task
-    exitcode: int
-        return value of the submitted program
-    time: datetime.timedelta
-        duration of the task
-    memory: int
-        memory used by the task in MB
-    cpu_time: datetime.timedelta
-        cpu time used by the task
-    type: str
-        type of the task (name of the Python class)
-    submission_id: int
-        ID of the parent submission
-    submission: tmlib.models.Submission
-        parent submission to which the batch belongs
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'tasks'
 
     __distribute_by_hash__ = 'id'
 
-    # Table columns
+    #: str: procssing state, e.g. ``"RUNNING"`` or ``"TERMINATED"``
     state = Column(String, index=True)
+
+    #: str: name given by application
     name = Column(String, index=True)
+
+    #: int: exitcode
     exitcode = Column(Integer, index=True)
+
+    #: datetime.timedelta: total time of task (sum of all subtasks in case
+    #: of a task collection)
     time = Column(Interval, index=True)
+
+    #: int: total memory in MG of task (sum of all subtasks in case
+    #: of a task collection)
     memory = Column(Integer, index=True)
+
+    #: datetime.timedelta: total CPU time of task (sum of all subtasks in case
+    #: of a task collection)
     cpu_time = Column(Interval, index=True)
+
+    #: str: name of the corresponding Python object
     type = Column(String, index=True)
+
+    #: bool: whether the task is a collection of tasks
     is_collection = Column(Boolean, index=True)
+
+    #: Pickeled Python `gc3libs.Task` or `gc3libs.workflow.TaskCollection` object
     data = Column(LargeBinary)
+
+    #: int: ID of parent submission
     submission_id = Column(
         Integer,
         ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.submission.Submission: parent submission
     submission = relationship(
         'Submission',
         backref=backref('tasks', cascade='all, delete-orphan')

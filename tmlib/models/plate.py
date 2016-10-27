@@ -67,37 +67,32 @@ class Plate(DirectoryModel, DateMixIn):
 
     Attributes
     ----------
-    name: str
-        name of the plate
-    description: str
-        description of the plate
-    experiment_id: int
-        ID of the experiment reference
-    experiment: tmlib.models.ExperimentReference
-        experiment reference
     cycles: List[tmlib.model.Cycle]
-        cycles that belong to the plate
+        cycles belonging to the plate
     acquisitions: List[tmlib.model.Acqusition]
-        acquisitions that belong to the plate
+        acquisitions belonging to the plate
     wells: List[tmlib.model.Well]
-        wells that belong to the plate
+        wells belonging to the plate
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'plates'
 
     __table_args__ = (UniqueConstraint('name'), )
 
-    # Table columns
+    #: str: name given by user
     name = Column(String, index=True)
+
+    #: str: description provided by user
     description = Column(Text)
+
+    #: int: ID of parent experiment
     experiment_id = Column(
         Integer,
         ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.experiment.Experiment: parent experiment
     experiment = relationship(
         'Experiment',
         backref=backref('plates', cascade='all, delete-orphan')

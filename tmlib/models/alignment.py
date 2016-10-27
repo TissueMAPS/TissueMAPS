@@ -10,53 +10,44 @@ logger = logging.getLogger(__name__)
 
 class SiteShift(ExperimentModel):
 
-    '''A *site* may be shifted between different *cycles* and needs to be
-    aligned between them.
+    '''Translation of a given *site* acquired at a given *cycle*
+    relative to the corresponding *site* of the reference *cycle*.'''
 
-    Attributes
-    ----------
-    x: int
-        shift in pixels along the x-axis relative to the corresponding
-        site of the reference cycle
-        (positive value -> right, negative value -> left)
-    y: int
-        shift in pixels along the y-axis relative to the corresponding
-        site of the reference cycle
-        (positive value -> down, negative value -> up)
-    site_id: int
-        ID of the parent site
-    site: tmlib.models.Site
-        parent site to which the site belongs
-    cycle_id: int
-        ID of the parent cycle
-    cycle: tmlib.models.Cycle
-        parent cycle to which the site belongs
-    '''
-
-    #: str: name of the corresponding database table
     __tablename__ = 'site_shifts'
 
     __distribute_by_hash__ = 'id'
 
-    # Table columns
+    #: int: horizontal translation in pixels relative to the corresponding
+    #: site of the reference cycle
+    #: (positive value -> right, negative value -> left)
     y = Column(Integer)
+
+    #: int: vertical translation in pixels relative to the corresponding
+    #: site of the reference cycle
+    #: (positive value -> down, negative value -> up)
     x = Column(Integer)
+
+    #: int: ID of the parent site
     site_id = Column(
         Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
+
+    #: int: ID of the parent cycle
     cycle_id = Column(
         Integer,
         ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.site.Site: parent site for which the shift was calculated
     site = relationship(
         'Site',
         backref=backref('shifts', cascade='all, delete-orphan')
     )
+
+    #: tmlib.models.cycle.Cycle: parent cycle for which the shift was calculated
     cycle = relationship(
         'Cycle',
         backref=backref('site_shifts', cascade='all, delete-orphan')
@@ -93,49 +84,40 @@ class SiteShift(ExperimentModel):
 
 class SiteIntersection(ExperimentModel):
 
-    '''When *sites* are shifted between *cycles*, they only have a subset
-    of pixels in common. In order to be able to overlay images acquired at the
-    same *site* but different *cycles*, images need to be cropped such that
-    the intersecting pixels get aligned.
-    Overhang values are relative to the reference site used for registration.
+    '''Intersection of a given *site* acquired at a given *cycle* with all
+    corresponding *sites* of the other *cycles*.
 
-    Attributes
-    ----------
-    upper_overhang: int
-        number of overhanging pixels at the top, which need to be cropped at
-        the bottom for overlay
-    lower_overhang: int
-        number of overhanging pixels at the bottom, which need to be cropped
-        at the top for overlay
-    right_overhang: int
-        number of overhanging pixels at the right side, which need to be
-        cropped from the left for overlay
-    left_overhang: int
-        number of overhanging pixels at the left side, which need to be cropped
-        at the right for overlay
-    site_id: int
-        ID of the parent site
-    site: tmlib.models.Site
-        parent site to which the site belongs
     '''
 
-    #: str: name of the corresponding database table
     __tablename__ = 'site_intersections'
 
     __distribute_by_hash__ = 'id'
 
-    # Table columns
+    #: number of overhanging pixels at the top, which would need to be cropped
+    #: at the bottom for overlay
     upper_overhang = Column(Integer)
+
+    #: number of overhanging pixels at the bottom, which would need to be
+    #: cropped at the bottom for overlay
     lower_overhang = Column(Integer)
+
+    #: number of overhanging pixels at the right side, which would need to
+    #: be cropped at the left side for overlay
     right_overhang = Column(Integer)
+
+    #: number of overhanging pixels at the left side, which would need to
+    #: be cropped at the right side for overlay
     left_overhang = Column(Integer)
+
+    #: int: ID of parent site
     site_id = Column(
         Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    # Relationships to other tables
+    #: tmlib.models.site.Site: parent site for which intersections were
+    #: calculated
     site = relationship(
         'Site',
         backref=backref(
