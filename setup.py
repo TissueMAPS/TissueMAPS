@@ -10,14 +10,6 @@ import logging
 import shutil
 
 logger = logging.getLogger(__name__)
-# ----- overrides -----
-
-# set these to anything but None to override the automatic defaults
-packages = None
-package_name = None
-package_data = None
-# ---------------------
-
 
 # ----- control flags -----
 
@@ -63,7 +55,7 @@ import setuptools
 
 def find_scripts():
     bin_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'bin'
+        os.path.abspath(os.path.dirname(__file__)), 'bin'
     )
     scripts = list()
     for f in os.listdir(bin_path):
@@ -78,8 +70,7 @@ def find_scripts():
 
 def get_version():
     src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)),
-        'src', 'lib', 'python', 'tmclient'
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'python', 'tmclient'
     )
     sys.path = [src_path] + sys.path
     import version
@@ -105,8 +96,8 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=find_scripts(),
-    packages=setuptools.find_packages(os.path.join('src', 'lib', 'python')),
-    package_dir={'': os.path.join('src', 'lib', 'python')},
+    packages=setuptools.find_packages(os.path.join('src', 'python')),
+    package_dir={'': os.path.join('src', 'python')},
     package_data={'': ['*.rst']},
     include_package_data=True,
     install_requires=[
