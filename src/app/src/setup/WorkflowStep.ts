@@ -15,7 +15,6 @@ class WorkflowStep extends JobCollection {
     batch_args: Argument[];
     submission_args: Argument[];
     extra_args: Argument[];
-    jobs: Job[];
     fullname: string;
     help: string;
 
@@ -37,7 +36,6 @@ class WorkflowStep extends JobCollection {
                 return new Argument(arg);
             });
         }
-        this.jobs = [];
     }
 
     getDescription(): WorkflowStepDescription {

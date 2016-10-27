@@ -1,14 +1,35 @@
+interface UIScrollingAdapter {
+     // - a boolean value indicating whether there are any pending load requests.
+    isLoading?: boolean;
+    // - a reference to the item currently in the topmost visible position.
+    topVisible?: boolean;
+    // - a reference to the DOM element currently in the topmost visible position.
+    topVisibleElement?: any;
+    // - a reference to the scope created for the item currently in the topmost visible position.
+    topVisibleScope?: any;
+    // - setting disabled to true disables scroller's scroll/resize events handlers. This can be useful if you have multiple scrollers within the same scrollViewport and you want to prevent some of them from responding to the events.
+    disabled?: boolean;
+
+    isBOF?: () => boolean;
+    isEOF?: () => boolean;
+    reload?: () => void;
+    applyUpdates?: (number, []) => void;
+}
+
+
 class StepCtrl {
 
     currentStageIndex: number;
     currentStepIndex: number;
+    uiScrollingAdapter: UIScrollingAdapter = {};
 
-    static $inject = ['workflow', 'workflowService', '$state', '$scope', '$uibModal', 'experiment', '$http'];
+    static $inject = ['workflow', 'workflowService', '$state', '$scope', '$rootScope', '$uibModal', 'experiment', '$http'];
 
     constructor(public workflow: Workflow,
                 private _workflowService,
                 private _$state,
                 private _$scope,
+                private _$rootScope,
                 private _$uibModal,
                 private _experiment,
                 private _$http) {
@@ -41,21 +62,19 @@ class StepCtrl {
 
     jobsDataSource = {
         get: (index, count, success) => {
-            // console.log(index);
             var experimentId = this._experiment.id;
             var stepName = this._$state.params.stepName;
             var url = '/api/experiments/' + experimentId + '/workflow/status/jobs' +
                       '?index=' + index + '&step_name=' + stepName + '&batch_size=' + count;
             this._$http.get(url).then((resp) => {
                 var jobs = resp.data.data;
-                if (jobs.length == 0) {
-                    // If there are now jobs, this means the step has been 
-                    // resubmitted. In this case, we want to clear the list
-                    // of jobs.
-                } else {
-                    success(jobs);
-                }
+                // console.log('received job status for step ', stepName, ' : ', jobs)
+                success(jobs);
             });
+            this._$rootScope.$on('updateJobStatus', () => {
+                // console.log('update job status for step: ', stepName)
+                this.uiScrollingAdapter.reload();
+            })
         }
     };
 

@@ -1,0 +1,31 @@
+src/build
+src/tasks
+src/scripts
+src/package.json
+src/app/assets/libs/bower_components
+# src/app/index.html
+src/_build/style-main.css
+src/_build/style-tools.css
+src/app/assets/css/style-main.css
+src/app/assets/css/style-tools.css
+src/coverage
+src/app/build
+expdata
+testdata
+!expdata/.gitkeep
+src/node_modules
+src/bower_components
+src/app/src/toolwindow/index.html
+
+# Build directores (sphinx, grunt etc.)
+_build
+_prod
+.tmp
+
+# Other dirs
+.cache/
+src/_dist
+src/_prod
+
+.DS_Store
+

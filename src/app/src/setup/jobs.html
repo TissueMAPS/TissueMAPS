@@ -9,7 +9,7 @@
       <th>time (HH:MM:SS)</th>
       <th>log</th>
     </tr>
-    <tr ui-scroll="job in stepCtrl.jobsDataSource" buffer-size="50" start-index="0">
+    <tr ui-scroll="job in stepCtrl.jobsDataSource" buffer-size="50" start-index="0" adapter="stepCtrl.uiScrollingAdapter">
       <td>
         <i class="fa fa-exclamation-circle" aria-hidden="true" style="color: red;"
           ng-show="job.status.failed">

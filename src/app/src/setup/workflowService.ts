@@ -4,9 +4,9 @@ class WorkflowService {
     private _$http: ng.IHttpService;
     private _$q: ng.IQService;
 
-    static $inject = ['$state'];
+    static $inject = ['$state', '$rootScope'];
 
-    constructor(private _$state) {
+    constructor(private _$state, private _$rootScope) {
         // TODO: inject experiment and plates
         this._$http = $injector.get<ng.IHttpService>('$http');
         this._$q = $injector.get<ng.IQService>('$q');
@@ -151,7 +151,9 @@ class WorkflowService {
                             step.status = new JobCollectionStatus(
                                 workflowStatus.subtasks[stageIndex - 1].subtasks[stepIndex]
                             );
-                            step.jobs = [];
+                            // TODO: don't just reload the whole datasource,
+                            // but only some jobs selectively
+                            this._$rootScope.$emit('updateJobStatus', step.name);
                         }
                     });
                 }
@@ -226,6 +228,7 @@ class WorkflowService {
             description: this.workflow.getDescription(index),
             index: startIndex
         };
+        this._$rootScope.$emit('updateJobStatus')
         return this._$http.post('/api/experiments/' + experiment.id + '/workflow/resubmit', data)
         .then((resp) => {
             // console.log(resp)
