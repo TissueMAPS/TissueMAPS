@@ -1,3 +1,5 @@
+"""Serialization for experiment-related types"""
+
 import tmlib.models as tm
 from tmserver.serialize import json_encoder
 from tmserver.model import encode_pk

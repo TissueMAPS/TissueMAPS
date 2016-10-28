@@ -1,3 +1,8 @@
+"""
+Module to import all view functions such that they are registered with the
+appropriate blueprint.
+
+"""
 from flask import Blueprint
 
 api = Blueprint('api', __name__)

@@ -1,3 +1,4 @@
+"""JWT-based authentication mechanism for TissueMAPS."""
 import datetime
 
 from flask import current_app, request

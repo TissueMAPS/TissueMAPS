@@ -1,3 +1,8 @@
+"""
+API view functions for querying resources related to mapobjects
+like their polygonal outlines or feature data.
+
+"""
 import os.path as p
 import json
 import logging

@@ -1,3 +1,4 @@
+"""API view functions for file upload during the setup process"""
 import os.path as p
 import json
 import datetime

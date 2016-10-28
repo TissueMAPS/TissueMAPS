@@ -1,3 +1,9 @@
+"""
+Custom exception types and associated serializers.
+When raised these exceptions will be automatically handled and serialized by
+the flask error handler and sent to the client.
+
+"""
 import sqlalchemy
 from flask import jsonify, current_app
 
@@ -6,6 +12,8 @@ from api import api
 
 
 def register_error(cls):
+    """Decorator to register exception classes as errors that can be
+    serialized to JSON"""
     @api.errorhandler(cls)
     def handle_invalid_usage(error):
         current_app.logger.error(error)
