@@ -239,7 +239,7 @@ def get_project(experiment_id, project_name):
         verbosity=logging.INFO,
         pipeline=project_name,
     )
-    serialized_project = yaml.safe_dump(jt.project.as_dict())
+    serialized_project = yaml.safe_dump(jt.project.to_dict())
     return jsonify(jtproject=serialized_project)
 
 
@@ -294,7 +294,7 @@ def get_available_modules():
             ' location of the Jterator modules.'
         )
     modules = AvailableModules(repo_location)
-    return jsonify(jtmodules=modules.as_dict())
+    return jsonify(jtmodules=modules.to_dict())
 
 
 @jtui.route('/available_pipelines')
@@ -597,7 +597,7 @@ def create_jtproject(experiment_id, project_name):
         skel_dir = None
     repo_dir = current_app.config.get('TMAPS_MODULES_HOME')
     jt.project.create(repo_dir=repo_dir, skel_dir=skel_dir)
-    serialized_jtproject = yaml.safe_dump(jt.project.as_dict())
+    serialized_jtproject = yaml.safe_dump(jt.project.to_dict())
     return jsonify(jtproject=serialized_jtproject)
 
 

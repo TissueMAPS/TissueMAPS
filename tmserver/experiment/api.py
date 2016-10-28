@@ -499,7 +499,7 @@ def get_workflow_description(experiment_id):
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         description = experiment.workflow_description
     return jsonify({
-        'data': description.as_dict()
+        'data': description.to_dict()
     })
 
 
