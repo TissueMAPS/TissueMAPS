@@ -148,13 +148,14 @@ def _get_host_ip_gce(region, host_name, host_vars):
 
 def get_host_ip(provider, region, host_name, host_vars):
     if provider == 'os':
-        return _get_host_ip_os(region, host_name, host_vars)
+        ip = _get_host_ip_os(region, host_name, host_vars)
     elif provider == 'ec2':
-        return _get_host_ip_ec2(region, host_name, host_vars)
+        ip = _get_host_ip_ec2(region, host_name, host_vars)
     elif provider == 'gce':
-        return _get_host_ip_gce(region, host_name, host_vars)
+        ip = _get_host_ip_gce(region, host_name, host_vars)
     else:
         raise ValueError('Provider "%s" is not supported.' % provider)
+    return str(ip)
 
 
 def build_inventory(setup):
