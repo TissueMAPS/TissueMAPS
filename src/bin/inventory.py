@@ -235,7 +235,6 @@ def main(args):
             )
             host_vars = read_yaml_file(host_vars_file)
             default_host_vars = {
-                'ansible_become': 'yes',
                 'ansible_user': 'ubuntu',
                 'ansible_ssh_private_key_file': private_key_file
             }
