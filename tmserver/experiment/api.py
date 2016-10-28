@@ -1,3 +1,5 @@
+"""API view functions for experiment and related resources"""
+
 import json
 import os
 from cStringIO import StringIO
@@ -48,13 +50,13 @@ def _raise_error_when_missing(arg):
 @decode_query_ids()
 def get_channel_layer_tile(experiment_id, channel_layer_id):
     """
-    .. http:get:: /api/experiments/(experiment_id)/channel_layer/(channel_layer_id)/tiles
+    .. http:get:: /api/experiments/(string:experiment_id)/channel_layer/(string:channel_layer_id)/tiles
 
         Sends a pyramid tile image for a specific channel layer.
 
-    :query x: zero-based `x` coordinate
-    :query y: zero-based `y` coordinate
-    :query z: zero-based zoom level index
+        :query x: zero-based `x` coordinate
+        :query y: zero-based `y` coordinate
+        :query z: zero-based zoom level index
 
     """
     logger.info(
@@ -96,6 +98,29 @@ def get_channel_layer_tile(experiment_id, channel_layer_id):
 @assert_query_params('plate_name', 'cycle_index')
 @decode_query_ids()
 def get_cycle_id(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/cycles/id
+
+        Get the hashed database id of a cycle with a given index and plate name.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "id": "MQ=="
+            }
+
+        :query plate_name: the name of the plate (required)
+        :query cycle_index: the cycle's index (required)
+
+        :statuscode 200: no error
+        :statuscode 404: no matching cycle found
+
+    """
     logger.info('get ID of cycle from experiment %d', experiment_id)
     experiment_name = experiment.name
     plate_name = request.args.get('plate_name')
@@ -117,6 +142,48 @@ def get_cycle_id(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def get_channels(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/channels
+
+        Get all channels for a specific experiment.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "name": "Channel 1",
+                        "bit_depth": 8,
+                        "layers": [
+                            {
+                                "id": "MQ==",
+                                "max_zoom": 12,
+                                "tpoint": 0,
+                                "zplane": 0,
+                                "max_intensity": 6056,
+                                "min_intensity": 0,
+                                "experiment_id": "MQ==",
+                                "image_size": {
+                                    "width": 22000,
+                                    "height": 10000
+                                }
+                            },
+                            ...
+                        ]
+                    },
+                    ...
+                ]
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('get all channels from experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         channels = session.query(tm.Channel).all()
@@ -127,6 +194,38 @@ def get_channels(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def get_mapobject_types(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobject_types
+
+        Get the supported mapobject types for a specific experiment.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "name": "Cells",
+                        "features": [
+                            {
+                                "id": "MQ==",
+                                "name": "Cell_Area"
+                            },
+                            ...
+                        ]
+                    },
+                    ...
+                ]
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('get all mapobject types from experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         mapobject_types = session.query(tm.MapobjectType).all()
@@ -138,6 +237,28 @@ def get_mapobject_types(experiment_id):
 @assert_query_params('channel_name')
 @decode_query_ids()
 def get_channel_id(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/channels/id
+
+        Get the id of a channel given its parent experiment id and its name.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "id": "MQ=="
+            }
+
+        :query channel_name: the name of the channel (required)
+
+        :statuscode 200: no error
+        :statuscode 404: no matching channel found
+
+    """
     logger.info('get ID of channel from experiment %d', experiment_id)
     channel_name = request.args.get('channel_name')
     with tm.utils.ExperimentSession(experiment_id) as session:
@@ -154,6 +275,30 @@ def get_channel_id(experiment_id):
 @assert_query_params('channel_name', 'tpoint', 'zplane')
 @decode_query_ids()
 def get_channel_layer_id(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/channel_layers/id
+
+        Get the id of a channel layer given its parent experiment id, the associated channel's name as well as the specific time point and zplane.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "id": "MQ=="
+            }
+
+        :query channel_name: the name of the channel (required)
+        :query tpoint: the time point associated with this layer (required)
+        :query zplane: the zplane of this layer (required)
+
+        :statuscode 200: no error
+        :statuscode 404: no matching layer found
+
+    """
     logger.info('get ID of channel layer from experiment %d', experiment_id)
     channel_name = request.args.get('channel_name')
     tpoint = request.args.get('tpoint', type=int)
@@ -182,6 +327,31 @@ def get_channel_layer_id(experiment_id):
 )
 @decode_query_ids()
 def get_channel_image(experiment_id, channel_name):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/channels/(string:channel_name)/image-files
+
+        Get a specific image belonging to a channel.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: image/png
+
+        :query plate_name: the name of the plate (required)
+        :query cycle_index: the cycle's index (required)
+        :query well_name: the name of the well (required)
+        :query x: the x-coordinate (required)
+        :query y: the y-coordinate (required)
+        :query tpoint: the time point (required)
+        :query zplane: the z-plane (required)
+
+        :statuscode 200: no error
+        :statuscode 404: no matching image found
+        :statuscode 400: not all query parameters provided
+
+    """
     logger.info(
         'get image of channel "%s" from experiment %d',
         channel_name, experiment_id
@@ -253,17 +423,31 @@ def get_channel_image(experiment_id, channel_name):
 @api.route('/microscope_types', methods=['GET'])
 @jwt_required()
 def get_microscope_types():
-    """Gets all implemented microscope types.
+    """
+    .. http:get:: /api/microscope_types
 
-    Response
-    --------
-    {
-        "data": list of microscope types,
-    }
+        Get a list of all supported microscope types for which images can be processed.
 
-    See also
-    --------
-    :class:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    "visiview", "cellvoyager", "axio", "default",
+                    "metamorph", "niselements", "incell", "imc"
+                ]
+            }
+
+        :statuscode 200: no error
+
+        .. seealso::
+
+            :class:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
+
     """
     logger.info('get list of implemented microscope types')
     return jsonify({
@@ -274,17 +458,28 @@ def get_microscope_types():
 @api.route('/acquisition_modes', methods=['GET'])
 @jwt_required()
 def get_acquisition_modes():
-    """Gets all implemented plate acquisition modes.
+    """
+    .. http:get:: /api/acquisition_modes
 
-    Response
-    --------
-    {
-        "data": list of plate acquisition modes,
-    }
+        Get a list of all implemented plate acquisition modes.
 
-    See also
-    --------
-    :class:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": ["basic", "multiplexing"]
+            }
+
+        :statuscode 200: no error
+
+        .. seealso::
+
+            :class:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
+
     """
     logger.info('get list of supported plate acquisition modes')
     return jsonify({
@@ -295,13 +490,33 @@ def get_acquisition_modes():
 @api.route('/experiments', methods=['GET'])
 @jwt_required()
 def get_experiments():
-    """Gets all experiments for the current user.
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)
 
-    Response
-    --------
-    {
-        "data": list of experiment objects,
-    }
+        Get all experiments for the currently logged in user.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "name": "Experiment XY",
+                        "description": "Optional experiment description",
+                        "user": "Testuser"
+                    },
+                    ...
+                ]
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 404: no such experiment found
 
     """
     logger.info('get all experiments')
@@ -318,13 +533,30 @@ def get_experiments():
 @jwt_required()
 @decode_query_ids()
 def get_experiment(experiment_id):
-    """Gets an experiment by id.
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)
 
-    Response
-    --------
-    {
-        "data": an experiment object serialized to json
-    }
+        Get the experiment with the hashed id ``experiment_id``.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "id": "MQ==",
+                    "name": "Experiment XY",
+                    "description": "Optional experiment description",
+                    "user": "Testuser"
+                }
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 404: no such experiment found
 
     """
     logger.info('get experiment %d', experiment_id)
@@ -339,13 +571,27 @@ def get_experiment(experiment_id):
 @jwt_required()
 @assert_query_params('experiment_name')
 def get_experiment_id():
-    """Gets the ID of an experiment given its name.
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)
 
-    Response
-    --------
-    {
-        "data": an experiment ID serialized to json
-    }
+        Get an experiment's id given its name.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "id": "MQ=="
+            }
+
+        :query experiment_name: the experiment's name (required)
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 404: no such experiment found
 
     """
     experiment_name = request.args.get('experiment_name')
@@ -364,6 +610,36 @@ def get_experiment_id():
 @assert_form_params('description')
 @decode_query_ids()
 def submit_workflow(experiment_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/workflow/submit
+
+        Submit a workflow based on a ``WorkflowDescription``.
+        Please refer to the respective class documention for more details on how to
+        structure such a description object.
+
+        **Example request**:
+
+            Content-Type: application/json
+
+            {
+                "description": {...}
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok",
+                "submission_id": 1
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('submit workflow for experiment %d', experiment_id)
     data = request.get_json()
     # data = json.loads(request.data)
@@ -395,6 +671,36 @@ def submit_workflow(experiment_id):
 @assert_form_params('description')
 @decode_query_ids()
 def resubmit_workflow(experiment_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/workflow/resubmit
+
+        Resubmit a workflow for an experiment providing a new ``WorkflowDescription``.
+        Please refer to the respective class documention for more details on how to
+        structure such a description object.
+
+        **Example request**:
+
+            Content-Type: application/json
+
+            {
+                "description": {...}
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok",
+                "submission_id": 1
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('resubmit workflow for experiment %d', experiment_id)
     data = json.loads(request.data)
     index = data.get('index', 0)
@@ -415,6 +721,25 @@ def resubmit_workflow(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def get_workflow_status(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/workflow/status
+
+        Query the status for the currently running workflow for the specified experiment.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": status # TODO
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('get workflow status for experiment %d', experiment_id)
     workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
     status = gc3pie.get_status_of_submitted_jobs(workflow, 2)
@@ -430,6 +755,39 @@ def get_workflow_status(experiment_id):
 @assert_query_params('step_name', 'index')
 @decode_query_ids()
 def get_jobs_status(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/workflow/jobs
+
+        Query the status of n jobs currently associated with step starting from a
+        given index.
+
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "name": "Job X1",
+                        "state": "RUNNING",
+                        "exitcode": null,
+                        "memory": 1024,
+                        "time": "1:21:33"
+                    },
+                    ...
+                ]
+            }
+
+        :query step_name: the name of the step (required)
+        :query index: the index of the first job queried (required)
+        :query batch_size: the amount of job stati to return starting from ``index``.
+        :statuscode 200: no error
+
+    """
     step_name = request.args.get('step_name')
     index = request.args.get('index', type=int)
     batch_size = request.args.get('batch_size', 50, type=int)
@@ -490,10 +848,31 @@ def get_jobs_status(experiment_id):
     })
 
 
-@api.route('/experiments/<experiment_id>/workflow/description', methods=['GET']) 
+@api.route('/experiments/<experiment_id>/workflow/description', methods=['GET'])
 @jwt_required()
 @decode_query_ids()
 def get_workflow_description(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/workflow/description
+
+        Get the workflow description for the experiment with id ``experiment_id``.
+        Please refer to the respective documentation to see how such description objects
+        are structured.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": {...}
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('get workflow description for experiment %d', experiment_id)
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
@@ -508,6 +887,33 @@ def get_workflow_description(experiment_id):
 @assert_form_params('description')
 @decode_query_ids()
 def save_workflow_description(experiment_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/workflow/description
+
+        Save a new workflow description for the specified experiment.
+
+        **Example request**:
+
+            Content-Type: application/json
+
+            {
+                "description": {...}
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('save workflow description for experiment %d', experiment_id)
     data = request.get_json()
     workflow_description = WorkflowDescription(**data['description'])
@@ -524,6 +930,25 @@ def save_workflow_description(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def kill_workflow(experiment_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/workflow/kill
+
+        Kill all jobs of the currently running workflow.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('kill workflow for experiment %d', experiment_id)
     workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
     gc3pie.kill_jobs(workflow)
@@ -537,6 +962,27 @@ def kill_workflow(experiment_id):
 @assert_form_params('job_id')
 @decode_query_ids()
 def get_job_log_output(experiment_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/workflow/log
+
+        Get the log file for a specific job.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok",
+                "stdout": string,
+                "stderr": string
+            }
+
+        :statuscode 200: no error
+
+    """
     data = request.get_json()
     job_id = data['job_id']
     logger.info(
@@ -564,6 +1010,41 @@ def get_job_log_output(experiment_id):
     'name', 'microscope_type', 'plate_format', 'plate_acquisition_mode'
 )
 def create_experiment():
+    """
+    .. http:post:: /api/experiments
+
+        Create a new experiment.
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "name": "Experiment XY",
+                "description": "Optional description",
+                "plate_format": "0",
+                "plate_acquisition_mode": "multiplexing",
+                "microscope_type": "cellvoyager"
+            }
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "id": "MQ==",
+                "name": "Experiment XY",
+                "description": "Optional description",
+                "user": "Testuser"
+            }
+
+        :statuscode 200: no error
+
+    """
     data = request.get_json()
     name = data.get('name')
     microscope_type = data.get('microscope_type')
@@ -608,13 +1089,22 @@ def create_experiment():
 @jwt_required()
 @decode_query_ids()
 def delete_experiment(experiment_id):
-    """Delete an experiment for the current user.
+    """
+    .. http:delete:: /api/experiments/(string:experiment_id)
 
-    Response
-    --------
-    {
-        "message": 'Deletion ok'
-    }
+        Delete a specific experiment.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :statuscode 200: no error
 
     """
     logger.info('delete experiment %d', experiment_id)
@@ -629,6 +1119,39 @@ def delete_experiment(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def get_plate(experiment_id, plate_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/plates/(string:plate_id)
+
+        Get a plate given its id and the it of its parent experiment.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "id": "MQ==",
+                    "name": "Plate XY",
+                    "description": "Optional description",
+                    "acquisitions": [
+                        {
+                            "id": "MQ==",
+                            "name": "Acquisition XY",
+                            "description": "",
+                            "status": "UPLOADING" | "COMPLETE" | "WAITING"
+                        },
+                        ...
+                    ],
+                    "status": "UPLOADING" | "COMPLETE" | "WAITING"
+                }
+            }
+
+        :statuscode 200: no error
+        :statuscode 404: no such plate or experiment
+
+    """
     logger.info('get plate %d from experiment %d', plate_id, experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         plate = session.query(tm.Plate).get(plate_id)
@@ -639,6 +1162,41 @@ def get_plate(experiment_id, plate_id):
 @jwt_required()
 @decode_query_ids()
 def get_plates(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/plates
+
+        Get all plates for the specified experiment.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "name": "Plate XY",
+                        "description": "Optional description",
+                        "acquisitions": [
+                            {
+                                "id": "MQ==",
+                                "name": "Acquisition XY",
+                                "description": "",
+                                "status": "UPLOADING" | "COMPLETE" | "WAITING"
+                            },
+                            ...
+                        ],
+                        "status": "UPLOADING" | "COMPLETE" | "WAITING"
+                    },
+                    ...
+                ]
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('get all plates for experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         plates = session.query(tm.Plate).all()
@@ -649,6 +1207,24 @@ def get_plates(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def delete_plate(experiment_id, plate_id):
+    """
+    .. http:delete:: /api/experiments/(string:experiment_id)/plates/(string:plate_id)
+
+        Delete a specific plate.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info('delete plate %d from experiment %d', plate_id, experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         session.query(tm.Plate).filter_by(id=plate_id).delete()
@@ -661,21 +1237,39 @@ def delete_plate(experiment_id, plate_id):
 @decode_query_ids()
 def create_plate(experiment_id):
     """
-    Create a new plate for the experiment with id `experiment_id`.
+    .. http:post:: /api/experiments/(string:experiment_id)/plates
 
-    Request
-    -------
+        Create a new plate.
 
-    {
-        name: string,
-        description: string,
-        experiment_id: string
-    }
+        **Example request**:
 
-    Response
-    --------
+        .. sourcecode:: http
 
-    Plate object
+            Content-Type: application/json
+
+            {
+                "name": "Plate XY",
+                "description": "Optional description"
+            }
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "id": "MQ==",
+                    "name": "Plate XY",
+                    "description": "Optional description",
+                    "acquisitions": [],
+                    "status": "WAITING"
+                },
+                "experiment_id": "MQ=="
+            }
+
+        :statuscode 200: no error
 
     """
     data = request.get_json()
@@ -698,6 +1292,28 @@ def create_plate(experiment_id):
 @assert_query_params('plate_name')
 @decode_query_ids()
 def get_plate_id(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/plates/id
+
+        Get the id of a plate given its name.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "id": "MQ=="
+            }
+
+        :query plate_name: the plates's name (required)
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 404: no such experiment found
+
+    """
     plate_name = request.args.get('plate_name')
     logger.info(
         'get ID of plate "%s" from experiment %d',
@@ -719,19 +1335,38 @@ def get_plate_id(experiment_id):
 @decode_form_ids()
 def create_acquisition(experiment_id):
     """
-    Create a new acquisition for the plate with id `plate_id`.
+    .. http:post:: /api/experiments/(string:experiment_id)/acquisitions
 
-    Request
-    {
-        name: string,
-        description: string,
-        plate_id: string
-    }
+        Create an acquisition for a specified plate.
 
-    Response
-    --------
+        **Example request**:
 
-    Acquisition object
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "name": "Acquisition XY",
+                "plate_name": "Plate XY"
+            }
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "id": "MQ==",
+                    "name": "Plate XY",
+                    "description": "Optional description"
+                    "status": "WAITING"
+                }
+            }
+
+        :statuscode 200: no error
+        :statuscode 404: no plate found under that name
 
     """
     data = request.get_json()
@@ -764,6 +1399,24 @@ def create_acquisition(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def delete_acquisition(experiment_id, acquisition_id):
+    """
+    .. http:delete:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)
+
+        Delete a specific acquisition.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :statuscode 200: no error
+
+    """
     logger.info(
         'delete acquisition %d from experiment %d',
         acquisition_id, experiment_id
@@ -780,6 +1433,32 @@ def delete_acquisition(experiment_id, acquisition_id):
 @jwt_required()
 @decode_query_ids()
 def get_acquisition(experiment_id, acquisition_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)
+
+        Get a specific acquisition object.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "data":
+                    {
+                        "id": "MQ==",
+                        "name": "Acquisition XY",
+                        "description": "",
+                        "status": "UPLOADING" | "COMPLETE" | "WAITING"
+                    }
+                }
+            }
+
+        :statuscode 200: no error
+        :statuscode 404: no acquisition found with that id
+
+    """
     logger.info(
         'get acquisition %d from experiment %d',
         acquisition_id, experiment_id
@@ -794,6 +1473,29 @@ def get_acquisition(experiment_id, acquisition_id):
 @assert_query_params('plate_name', 'acquisition_name')
 @decode_query_ids()
 def get_acquisition_id(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/plates/id
+
+        Get the id of an acquistion given its name.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "id": "MQ=="
+            }
+
+        :query plate_name: the plates's name (required)
+        :query acquisition_name: the acquistion's name (required)
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 404: no such experiment found
+
+    """
     plate_name = request.args.get('plate_name')
     acquisition_name = request.args.get('acquisition_name')
     logger.info(
@@ -820,6 +1522,31 @@ def get_acquisition_id(experiment_id):
 @jwt_required()
 @decode_query_ids()
 def get_acquisition_image_files(experiment_id, acquisition_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/image-files
+
+        Get all files currently uploaded for the specified acquisition.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "name": "some-file-name.png",
+                        "status": "UPLOADING" | "WAITING" | "COMPLETE" | "FAILED"
+                    },
+                    ...
+                ]
+            }
+
+        :statuscode 200: no error
+        :statuscode 404: no matching acquisition found
+
+    """
     logger.info(
         'get microscope image files for acquisition %d from experiment %d',
         acquisition_id, experiment_id
@@ -838,6 +1565,31 @@ def get_acquisition_image_files(experiment_id, acquisition_id):
 @jwt_required()
 @decode_query_ids()
 def get_acquisition_metadata_files(experiment_id, acquisition_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/metadata-files
+
+        Get all metadata files currently uploaded for the specified acquisition.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "name": "some-file-name.png",
+                        "status": "UPLOADING" | "WAITING" | "COMPLETE" | "FAILED"
+                    },
+                    ...
+                ]
+            }
+
+        :statuscode 200: no error
+        :statuscode 404: no matching acquisition found
+
+    """
     logger.info(
         'get microscope metadata files for acquisition %d from experiment %d',
         acquisition_id, experiment_id

@@ -1,3 +1,4 @@
+"""API view functions for file upload during the setup process"""
 import os.path as p
 import json
 import datetime
@@ -33,20 +34,34 @@ logger = logging.getLogger(__name__)
 @decode_query_ids()
 def register_upload(experiment_id, acquisition_id):
     """
-    Tell the server that an upload for this acquisition is imminent.
-    The client should wait for this response before uploading files.
+    .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/upload/register
 
-    Request
-    -------
+        Notify the server that an upload for this acquisition is imminent.
+        The client has to wait for this response before uploading files.
 
-    {
-        files: Array<string>
-    }
+        **Example request**:
 
-    Response
-    --------
+            .. sourcecode:: http
 
-    Response 200 or 500
+            Content-Type: application/json
+
+            {
+                files: ["file1.png", "file2.png", ...]
+            }
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "data": ["file1.png", "file2.png", ...]
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 500: server error
 
     """
     data = request.get_json()
@@ -108,6 +123,38 @@ def register_upload(experiment_id, acquisition_id):
 @assert_form_params('files')
 @decode_query_ids()
 def file_validity_check(experiment_id, acquisition_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/upload/validity-check
+
+        Check if a collection of image or metadata file names have the correct format
+        for the experiment's microscope type. If this is not the case, the files can't be analyzed
+        and shouldn't be uploaded.
+
+        **Example request**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                files: ["right_format_1.png", "right_format_2.png", "wrong_format.png"...]
+            }
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "is_valid": [true, true, false, ...]
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 500: server error
+
+    """
     data = json.loads(request.data)
     if not 'files' in data:
         raise MalformedRequestError()
@@ -139,6 +186,27 @@ def file_validity_check(experiment_id, acquisition_id):
 @jwt_required()
 @decode_query_ids()
 def upload_file(experiment_id, acquisition_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/upload/upload-file
+
+        Upload a single file via HTTP.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 400: malformed request or file not registered for upload
+        :statuscode 500: server error during upload
+
+    """
     # TODO: shouldn't this be a PUT request?
     f = request.files.get('file')
 
@@ -176,6 +244,7 @@ def upload_file(experiment_id, acquisition_id):
                 % filename
             )
 
+        # TODO: Status codes
         if file_obj.status == FileUploadStatus.COMPLETE:
             logger.info('file "%s" already uploaded')
             return jsonify(message='File already uploaded')
@@ -207,6 +276,25 @@ def upload_file(experiment_id, acquisition_id):
 @jwt_required()
 @decode_query_ids()
 def get_uploaded_file_count(experiment_id, acquisition_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/upload/count
+
+        Get the count of already uploaded files.
+
+        **Example response**:
+
+            .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "data": 132
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+
+    """
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
         n_imgfiles = session.query(tm.MicroscopeImageFile).\

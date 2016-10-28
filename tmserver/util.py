@@ -1,5 +1,9 @@
-import functools
+"""
+Various utility functions used by view functions and other parts of the
+server application.
 
+"""
+import functools
 from flask import request, current_app
 from flask_jwt import current_identity
 

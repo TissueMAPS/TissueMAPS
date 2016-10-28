@@ -1,3 +1,4 @@
+"""API view functions that deal with data analysis tools and their results"""
 import os
 import json
 import logging
@@ -53,6 +54,34 @@ def _create_mapobject_feature(mapobject_id, geometry_description):
 @api.route('/tools', methods=['GET'])
 @jwt_required()
 def get_tools():
+    """
+    .. http:get:: /api/tools
+
+        Get a list of supported tools.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "name": "Cluster Tool",
+                        "icon": "<span>CLU</span>",
+                        "description",
+                        "methods": [...]
+                    },
+                    ...
+                ]
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+
+    """
     tool_descriptions = list()
     for name in SUPPORTED_TOOLS:
         tool_cls = get_tool_class(name)
@@ -72,19 +101,36 @@ def get_tools():
 @decode_query_ids()
 @assert_form_params('payload', 'session_uuid', 'tool_name')
 def process_tool_request(experiment_id):
-    """Processes a generic tool request sent by the client.
-    POST payload should have the format:
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/tools/request
 
-    {
-        payload: dict,
-        session_uuid: str
-    }
+        Processes a generic tool request sent by the client.
 
-    Returns:
+        **Example request**:
 
-    {
-        return_value: object
-    }
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "tool_name": "Cluster Tool",
+                "payload": any object,
+                "session_uuid": string
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
 
     """
     data = request.get_json()
@@ -159,6 +205,40 @@ def process_tool_request(experiment_id):
 @decode_query_ids()
 @assert_query_params('submission_id')
 def get_tool_result(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/tools/result
+
+        Get the result of a previous tool request including a label layer that
+        can be queried for tiled cell labels as well as optional plots.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "id": "MQ==",
+                    "name": "Cluster Result 1",
+                    "submission_id": 1,
+                    "layer": {
+                        "id": "MQ==",
+                        "type": "HeatmapLayer",
+                        "attributes": {
+                            "min": 0,
+                            "max": 2414
+                        }
+                    },
+                    "plots": []
+                }
+            }
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+
+    """
     submission_id = request.args.get('submission_id', type=int)
     logger.info('get tool result for submission %d', submission_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
@@ -173,6 +253,33 @@ def get_tool_result(experiment_id):
 )
 @decode_query_ids()
 def get_tool_job_status(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/tools/status
+
+        Get the status of a job processing a tool request.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "state": string,
+                        "submission_id": number,
+                        "exitcode": number
+                    },
+                    ...
+                ]
+            }
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+
+    """
     logger.info('get status of tool jobs for experiment %d', experiment_id)
     with tm.utils.MainSession() as session:
         tool_job_status_ = session.query(
@@ -198,8 +305,45 @@ def get_tool_job_status(experiment_id):
 @decode_query_ids()
 @assert_query_params('x', 'y', 'z', 'zplane', 'tpoint')
 def get_label_layer_tiles(experiment_id, label_layer_id):
-    """Get all mapobjects together with the labels that were assigned to them
-    for a given tool result and tile coordinate.
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/labellayers/(string:label_layer_id)/tiles
+
+        Get all mapobjects together with the labels that were assigned to them
+        for a given tool result and tile coordinate.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            [x1, y1], [x2, y2], ...
+                        ]]
+                    },
+                    "properties": {
+                        "label": 123
+                        "id": id
+                    }
+                    ...
+                ]
+            }
+
+        :query x: zero-based `x` coordinate
+        :query y: zero-based `y` coordinate
+        :query z: zero-based zoom level index
+        :query zplane: the zplane of the associated layer
+        :query tpoint: the time point of the associated layer
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
 
     """
     # The coordinates of the requested tile

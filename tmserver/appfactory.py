@@ -21,11 +21,21 @@ logger = logging.getLogger(__name__)
 
 
 def create_app(config_overrides={}, log_level=None):
-    """Create a Flask application object that registers all the blueprints on
+    """
+    Create a Flask application object that registers all the blueprints on
     which the actual routes are defined.
 
-    The default settings for this app are contained in 'config/default.py'.
-    Additional can be supplied to this method as a dict-like config argument.
+    Parameters
+    ----------
+    config_overrides : dict
+        Config options to programatically override the user config.
+    log_level : str
+        Log level to override the one specified by the config.
+
+    Returns
+    -------
+    flask.Flask
+        Flask application
 
     """
     app = Flask('wsgi')
