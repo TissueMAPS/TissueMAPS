@@ -70,7 +70,7 @@ class Channel(ExperimentModel, DateMixIn):
     def __repr__(self):
         return '<Channel(id=%r, name=%r)>' % (self.id, self.name)
 
-    def as_dict(self):
+    def to_dict(self):
         '''
         Return attributes as key-value pairs.
 
@@ -81,5 +81,5 @@ class Channel(ExperimentModel, DateMixIn):
         return {
             'id': self.id,
             'name': self.name,
-            'layers': [l.as_dict() for l in self.layers]
+            'layers': [l.to_dict() for l in self.layers]
         }

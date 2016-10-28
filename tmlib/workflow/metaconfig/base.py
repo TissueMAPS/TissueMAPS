@@ -781,7 +781,7 @@ class MetadataHandler(object):
         md = self.metadata
         mapper = dict()
         for item in self._file_mapper_list:
-            mapper[item.ref_index] = item.as_dict()
+            mapper[item.ref_index] = item.to_dict()
         return mapper
 
 

@@ -121,7 +121,7 @@ class WorkflowDescription(object):
                 )
         self.stages.append(stage_description)
 
-    def as_dict(self):
+    def to_dict(self):
         '''Returns attributes as key-value pairs.
 
         Returns
@@ -130,7 +130,7 @@ class WorkflowDescription(object):
         '''
         description = dict()
         description['type'] = self.type
-        description['stages'] = [s.as_dict() for s in self.stages]
+        description['stages'] = [s.to_dict() for s in self.stages]
         return description
 
     def jsonify(self):
@@ -142,7 +142,7 @@ class WorkflowDescription(object):
             JSON string encoding the description of the workflow as a
             mapping of key-value pairs
         '''
-        return json.dumps(self.as_dict())
+        return json.dumps(self.to_dict())
 
 
 class WorkflowStageDescription(object):
@@ -255,7 +255,7 @@ class WorkflowStageDescription(object):
                     )
         self.steps.append(step_description)
 
-    def as_dict(self):
+    def to_dict(self):
         '''Returns the attributes as key-value pairs.
 
         Parameters
@@ -266,7 +266,7 @@ class WorkflowStageDescription(object):
         description['name'] = self.name
         description['mode'] = self.mode
         description['active'] = self.active
-        description['steps'] = [s.as_dict() for s in self.steps]
+        description['steps'] = [s.to_dict() for s in self.steps]
         return description
 
     def jsonify(self):
@@ -278,7 +278,7 @@ class WorkflowStageDescription(object):
             JSON string encoding the description of the stage as a
             mapping of key-value pairs
         '''
-        return json.dumps(self.as_dict())
+        return json.dumps(self.to_dict())
 
 
 class WorkflowStepDescription(object):
@@ -368,7 +368,7 @@ class WorkflowStepDescription(object):
             )
         self._submission_args = value
 
-    def as_dict(self):
+    def to_dict(self):
         '''Returns attributes as key-value pairs.
 
         Returns
@@ -397,4 +397,4 @@ class WorkflowStepDescription(object):
             JSON string encoding the description of the step as a
             mapping of key-value pairs
         '''
-        return json.dumps(self.as_dict())
+        return json.dumps(self.to_dict())

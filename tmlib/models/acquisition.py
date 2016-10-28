@@ -115,7 +115,7 @@ class Acquisition(DirectoryModel, DateMixIn):
         else:
             return fus.WAITING
 
-    def as_dict(self):
+    def to_dict(self):
         '''Returns attributes as key-value pairs.
 
         Returns

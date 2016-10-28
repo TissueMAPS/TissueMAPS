@@ -353,7 +353,7 @@ class Project(object):
             if f not in handles_files:
                 os.remove(f)
 
-    def as_dict(self):
+    def to_dict(self):
         '''Returns the attributes as key-value pairs.
 
         Returns
@@ -589,7 +589,7 @@ class AvailableModules(object):
                 self._pipe_registration.append(element)
         return self._pipe_registration
 
-    def as_dict(self):
+    def to_dict(self):
         '''Returns attributes as key-value pairs
 
         Returns

@@ -90,7 +90,7 @@ class MicroscopeImageFile(FileModel, DateMixIn):
     def put(self, data):
         pass
 
-    def as_dict(self):
+    def to_dict(self):
         '''Returns attributes "id", "name" and "status" as key-value pairs.
 
         Returns
@@ -171,7 +171,7 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
     def put(self, data):
         pass
 
-    def as_dict(self):
+    def to_dict(self):
         '''Return attributes "id", "name" and "status" as key-value pairs.
 
         Returns

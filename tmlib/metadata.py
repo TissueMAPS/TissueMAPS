@@ -251,7 +251,7 @@ class ImageFileMapping(object):
             raise TypeError('Attribute "ref_index" must have type int.')
         self._ref_index = value
 
-    def as_dict(self):
+    def to_dict(self):
         '''
         Returns
         -------
@@ -265,7 +265,7 @@ class ImageFileMapping(object):
         >>>ifm.planes = [0, 1]
         >>>ifm.files = ["a", "b"]
         >>>ifm.zlevels = [0, 1]
-        >>>ifm.as_dict()
+        >>>ifm.to_dict()
         {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b'], 'zlevels': [0, 1]}
 
         >>>ifm = ImageFileMapping(
@@ -274,7 +274,7 @@ class ImageFileMapping(object):
         ...    files=["a", "b"],
         ...    zlevels=[0, 1]
         ...)
-        >>>ifm.as_dict()
+        >>>ifm.to_dict()
         {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b'], 'zlevels': [0, 1]}
         '''
         mapping = dict()

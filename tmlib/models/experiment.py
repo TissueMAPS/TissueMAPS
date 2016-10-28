@@ -181,7 +181,7 @@ class ExperimentReference(MainModel, DateMixIn):
             description of the workflow
         '''
         with YamlWriter(self._workflow_descriptor_file) as f:
-            f.write(description.as_dict())
+            f.write(description.to_dict())
 
     def belongs_to(self, user):
         '''Determines whether the experiment belongs to a given `user`.

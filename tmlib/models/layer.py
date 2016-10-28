@@ -568,7 +568,7 @@ class ChannelLayer(ExperimentModel):
 
         return tile
 
-    def as_dict(self):
+    def to_dict(self):
         '''Returns attributes as key-value pairs.
 
         Returns
