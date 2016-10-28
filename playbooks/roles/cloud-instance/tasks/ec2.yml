@@ -17,7 +17,7 @@
     wait: true
     wait_timeout: 300
     volumes:
-      # SSD device for root file system?
+      # TODO: SSD device for root file system?
       - device_name: /dev/sda1
         volume_size: "{{ disk_size }}"
         volume_type: gp2
@@ -25,12 +25,14 @@
     # ebs_optimized: no
     # assign_public_ip: yes
     # vpc_subnet_id: "{{ network }}"
+    network: "{{ network }}"
     region: "{{ region }}"
   register: instance
 
 - name: Register IP address of created instance
   set_fact:
     instance_public_ip: "{{ instance.instances[0].public_ip }}"
+  when: instance_state == 'present'
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume and attach it to instance"
   ec2_vol:

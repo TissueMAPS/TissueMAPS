@@ -86,21 +86,27 @@ def build_ansible_commands(args):
             # gce: stopped
             # os: -
             raise ValueError('Stopping VMs is not yet supported')
-        playbook_files = {
-            os.path.join(PLAYBOOKS_HOME, 'instances.yml')
-        }
+        cmd = _build_command(
+            args.verbosity, dynamic_inventory_file,
+            os.path.join(PLAYBOOKS_HOME, 'instance.yml'), variables,
+            set(groups_to_deploy)
+        )
+        commands.append(cmd)
     elif args.action == 'deploy':
         # This playbook must be called after the individual components have
         # been built.
-        playbook_files = {
-            os.path.join(PLAYBOOKS_HOME, 'site.yml'),
-            os.path.join(ELASTICLUSTER_PLAYBOOKS_HOME, 'site.yml')
-        }
-
-    for playbook in playbook_files:
         cmd = _build_command(
             args.verbosity, dynamic_inventory_file,
-            playbook, variables, set(groups_to_deploy)
+            os.path.join(PLAYBOOKS_HOME, 'site.yml'),
+            variables,
+            set(groups_to_deploy)
+        )
+        commands.append(cmd)
+        cmd = _build_command(
+            args.verbosity, dynamic_inventory_file,
+            os.path.join(ELASTICLUSTER_PLAYBOOKS_HOME, 'site.yml'),
+            variables.update({'ansible_become': 'yes'}),
+            set(groups_to_deploy)
         )
         commands.append(cmd)
 

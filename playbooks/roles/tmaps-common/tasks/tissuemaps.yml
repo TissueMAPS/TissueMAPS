@@ -34,11 +34,12 @@
     repo={{ tm_github_url }}/jtlibrary
     dest={{ ansible_env.HOME }}/jtlibrary
     version={{ jtlibrary_branch }}
+    force=yes
   tags:
     - tissuemaps
 
 - name: Install jtlibrary package
-  shell: pip install -e {{ ansible_env.HOME }}/jtlibrary --user --process-dependency-links
+  shell: pip install -e {{ ansible_env.HOME }}/jtlibrary --user
   args:
     chdir={{ ansible_env.HOME }}/jtlibrary/
     executable=/bin/bash
@@ -57,11 +58,12 @@
     repo={{ tm_github_url }}/jtmodules
     dest={{ ansible_env.HOME }}/jtmodules
     version={{ jtmodules_branch }}
+    force=yes
   tags:
     - tissuemaps
 
 - name: Install jtmodules package
-  shell: pip install -e {{ ansible_env.HOME }}/jtmodules --user --process-dependency-links
+  shell: pip install -e {{ ansible_env.HOME }}/jtmodules --user
   args:
     chdir={{ ansible_env.HOME }}/jtmodules/
     executable=/bin/bash
@@ -75,16 +77,27 @@
 #   tags:
 #     - tissuemaps
 
+# NOTE: When including the GC3Pie dependency via --process-dependency-links
+# upon installation of tmlibrary, I get HTTP erros when installing on multiple
+# hosts simulatneously???
+- name: Install GC3Pie
+  pip:
+    name=git+{{ tm_github_url }}/gc3pie@master#egg=gc3pie
+    extra_args="--user"
+  tags:
+    - tissuemaps
+
 - name: Clone TmLibrary repository
   git:
     repo={{ tm_github_url }}/tmlibrary
     dest={{ ansible_env.HOME }}/tmlibrary
     version={{ tmlibrary_branch }}
+    force=yes
   tags:
     - tissuemaps
 
 - name: Install tmlibrary package
-  shell: pip install -e {{ ansible_env.HOME }}/tmlibrary --user --process-dependency-links
+  shell: pip install -e {{ ansible_env.HOME }}/tmlibrary --user
   args:
     chdir={{ ansible_env.HOME }}/tmlibrary/
     executable=/bin/bash

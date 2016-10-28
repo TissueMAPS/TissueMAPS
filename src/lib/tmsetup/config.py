@@ -2,6 +2,8 @@ import os
 from abc import ABCMeta
 from abc import abstractproperty
 from ConfigParser import SafeConfigParser
+from pkg_resources import resource_string
+
 
 from tmsetup.utils import read_yaml_file, to_json
 from tmsetup.errors import SetupDescriptionError, SetupEnvironmentError
@@ -306,7 +308,7 @@ class ClusterSection(SetupSection):
         self._check_subsection_type(value, 'node_types', list)
         for i, item in enumerate(value):
             self._check_subsection_type(value, 'node_types', dict, index=i)
-            self._node_types.append(ClusterCategorySection(item))
+            self._node_types.append(ClusterNodeTypeSection(item))
 
 
 class ClusterNodeTypeSection(SetupSection):
@@ -325,7 +327,7 @@ class ClusterNodeTypeSection(SetupSection):
 
     @property
     def name(self):
-        '''str: name of the cluster category'''
+        '''str: name of the cluster node type'''
         return self._name
 
     @name.setter
@@ -359,7 +361,7 @@ class ClusterNodeTypeSection(SetupSection):
     def groups(self):
         '''List[tmsetup.config.AnsibleGroupSection]: Ansible host groups
         that should be used for deployment of virtual machines beloning
-        to the cluster category
+        to the cluster node types
         '''
         return self._groups
 
@@ -373,6 +375,8 @@ class ClusterNodeTypeSection(SetupSection):
 
 
 class AnsibleGroupSection(SetupSection):
+
+    _OPTIONAL_ATTRS = {'playbook', 'vars'}
 
     '''Class for the section of the `TissueMAPS` setup description that provides
     information about an Ansible host group, corresponding to a set of
@@ -398,18 +402,13 @@ class AnsibleGroupSection(SetupSection):
 
     @property
     def playbook(self):
-        return self._playbook
+        '''str: path to a playbook file'''
+        return getattr(self, '_playbook', None)
 
     @playbook.setter
     def playbook(self, value):
         self._check_value_type(value, 'playbook', str)
         self._playbook = os.path.expandvars(os.path.expanduser(value))
-        if not os.path.isabs(self._playbook):
-            self._playbook = os.path.abspath(
-                os.path.join(
-                    __file__, '..', '..', '..', '..', 'playbooks', value
-                )
-            )
         if not os.path.exists(self._playbook):
             raise SetupDescriptionError(
                 'Playbook does not exist: %s' % self._playbook
@@ -418,7 +417,7 @@ class AnsibleGroupSection(SetupSection):
     @property
     def vars(self):
         '''dict: mapping of Ansible variable key-value pairs'''
-        return self._vars
+        return getattr(self, '_vars', None)
 
     @vars.setter
     def vars(self, value):
@@ -433,7 +432,7 @@ class AnsibleHostVariableSection(SetupSection):
 
     '''Class for the section of the `TissueMAPS` setup description that provides
     variables that determine how virtual machine instances belonging to the
-    given cluster category are created.
+    given cluster node type are created.
     '''
 
     _OPTIONAL_ATTRS = {'disk_size', 'volume_size'}
