@@ -110,10 +110,11 @@ setuptools.setup(
     package_dir={'': os.path.join('src', 'lib')},
     include_package_data=True,
     install_requires=[
-       'ansible>=2.1.2.0',
+       'ansible==2.1.0',
        'apache-libcloud>=1.3.0',
        'PyYAML>=3.11',
        'shade>=1.12.1',
+       'boto3>=1.4.1'
     ]
 )
 
