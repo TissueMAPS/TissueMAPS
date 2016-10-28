@@ -33,7 +33,49 @@ logger = logging.getLogger(__name__)
 @assert_query_params('x', 'y', 'z', 'zplane', 'tpoint')
 @decode_query_ids()
 def get_mapobjects_tile(experiment_id, object_name):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/tile
 
+        Sends all mapobject outlines as a GeoJSON feature collection
+        that intersect with the tile at position x, y, z.
+        If ``mapobject_type`` is ``DEBUG_TILE`` the outline returned
+        will correspond to the tile boundaries.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    "type": "Feature",
+                    "id": 1,
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            [x1, y1], [x2, y2], ...
+                        ]]
+                    },
+                    "properties": {
+                        "type": "Cells"
+                    }
+                    ...
+                ]
+            }
+
+        :query x: zero-based `x` coordinate
+        :query y: zero-based `y` coordinate
+        :query z: zero-based zoom level index
+        :query zplane: the zplane of the associated layer
+        :query tpoint: the time point of the associated layer
+
+        :statuscode 200: no error
+        :statuscode 400: malformed request
+
+    """
     # The coordinates of the requested tile
     x = request.args.get('x', type=int)
     y = request.args.get('y', type=int)
@@ -108,28 +150,36 @@ def get_mapobjects_tile(experiment_id, object_name):
 @jwt_required()
 @decode_query_ids()
 def get_features(experiment_id):
-    """Sends a list of feature objects.
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/features
 
-    Request
-    -------
+        Get a list of feature objects supported for this experiment.
 
-    Required GET parameters:
-        - experiment_id
+        **Example response**:
 
-    Response
-    --------
+        .. sourcecode:: http
 
-    {
-        "data": {
-            mapobject_type_name: [
-                {
-                    "name": string
-                },
-                ...
-            ],
-            ...
-        }
-    }
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "Cells": [
+                        {
+                            "name": "Cell_Area"
+                        },
+                        ...
+                    ],
+                    "Nuclei": [
+                        ...
+                    ],
+                    ...
+                }
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 400: malformed request
 
     """
     with tm.utils.ExperimentSession(experiment_id) as session:
@@ -149,6 +199,23 @@ def get_features(experiment_id):
 @assert_query_params('plate_name', 'well_name', 'x', 'y', 'zplane', 'tpoint')
 @decode_query_ids()
 def get_mapobjects_segmentation(experiment_id, object_name):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/segmentations
+
+        Get the segmentation image at a specified coordinate.
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 400: malformed request
+
+        :query plate_name: the plate's name
+        :query well_name: the well's name
+        :query x: x-coordinate
+        :query y: y-coordinate
+        :query zplane: the zplane
+        :query tpoint: the time point
+
+    """
     plate_name = request.args.get('plate_name')
     well_name = request.args.get('well_name')
     # TODO: raise MissingGETParameterError when arg missing
@@ -230,6 +297,17 @@ def get_mapobjects_segmentation(experiment_id, object_name):
 @jwt_required()
 @decode_query_ids()
 def get_feature_values(experiment_id, object_name):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/feature-values
+
+        Get all feature values for a given ``mapobject_type`` as a
+        zip-compressed CSV file.
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 400: malformed request
+
+    """
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         experiment_name = experiment.name
