@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+#!/usr/bin/env python 
 import os
 import collections
 import argparse
@@ -11,6 +10,151 @@ from tmsetup.utils import write_yaml_file, read_yaml_file, to_json
 from tmsetup.config import Setup, load_inventory, save_inventory
 from tmsetup.config import CONFIG_DIR, GROUP_VARS_DIR, HOST_VARS_DIR
 from tmsetup.config import HOSTNAME_FORMAT
+
+
+class CloudClientError(Exception):
+    '''Error class for interactions with cloud clients.'''
+
+
+class NoInstanceFoundError(CloudClientError):
+    '''Error class for situations where no matching instance is found.'''
+
+
+class MultipleInstancesFoundError(CloudClientError):
+    '''Error class for situations where multiple matching instances are found.'''
+
+
+def _get_host_ip_os(region, host_name, host_vars):
+    import novaclient.client
+    auth_url = os.getenv('OS_AUTH_URL')
+    username = os.getenv('OS_USERNAME')
+    password = os.getenv('OS_PASSWORD')
+    project = os.getenv('OS_PROJECT_NAME')
+    cloud_client = novaclient.client.Client(
+        '2', username, password, project, auth_url, region_name=region
+    )
+    search_options = {'name': host_name}
+    instances = cloud_client.servers.list(
+        search_opts=search_options, detailed=True
+    )
+    if len(instances) > 1:
+        raise MultipleInstancesFoundError(
+            'More than one instance found with name "%s"' % host_name
+        )
+    elif len(instances) == 0:
+        raise NoInstanceFoundError(
+            'No instance found with name "%s"' % host_name
+        )
+
+    try:
+        addresses = instances[0].addresses[host_vars['network']]
+    except KeyError:
+        raise CloudClientError(
+            'No addresses found for network "%s"' % host_vars['network']
+        )
+    if len(addresses) > 1:
+        raise CloudClientError(
+            'More than one address found for network "%s"' % host_vars['network']
+        )
+    elif len(addresses) == 0:
+        raise CloudClientError(
+            'No address found for network "%s"' % host_vars['network']
+        )
+    return addresses[0]['addr']
+
+
+def _get_host_ip_ec2(region, host_name, host_vars):
+    import boto3
+    access_id = os.getenv('AWS_ACCESS_KEY_ID')
+    access_secret = os.getenv('AWS_SECRET_ACCESS_KEY')
+    try:
+        cloud_client = boto3.resource(
+            'ec2',
+            region_name=region,
+            aws_access_key_id=access_id,
+            aws_secret_access_key=access_secret,
+        )
+    except:
+        raise CloudClientError(
+            'Could not connect to cloud provider in region "%s".' % region
+        )
+    instances = cloud_client.instances.filter(
+        Filters=[{'Name':'tag:Name', 'Values':[host_name]}]
+    )
+    addresses = list()
+    for inst in instances:
+        addresses.append(inst.public_ip_address)
+    if len(addresses) > 1:
+        raise MultipleInstancesFoundError(
+            'More than one instance found with name "%s"' % host_name
+        )
+    elif len(addresses) == 0:
+        raise NoInstanceFoundError(
+            'No instance found with name "%s"' % host_name
+        )
+    return addresses[0]
+
+
+def _get_host_ip_gce(region, host_name, host_vars):
+    import googleapiclient.discovery
+    from oauth2client.client import GoogleCredentials
+    project = os.getenv('GCE_PROJECT')
+    credentials_file = os.getenv('GCE_CREDENTIALS_FILE_PATH')
+    credentials = GoogleCredentials.from_stream(credentials_file)
+    cloud_client = googleapiclient.discovery.build(
+        'compute', 'v1', credentials=credentials
+    )
+    try:
+        instances = cloud_client.instances().list(
+            project=project, zone=region, filter='name eq %s' % host_name
+        ).execute()
+    except:
+        raise CloudClientError(
+            'Could not connect to cloud provider for '
+            'project "%s" in region "%s".' % (project, region)
+        )
+    instances = instances['items']
+    if len(instances) > 1:
+        raise MultipleInstancesFoundError(
+            'More than one instance found with name "%s"' % host_name
+        )
+    elif len(instances) == 0:
+        raise NoInstanceFoundError(
+            'No instance found with name "%s"' % host_name
+        )
+    networks = [
+        net for net in instances[0]['networkInterfaces']
+        if net['name'] == host_vars['network']
+    ]
+    if len(networks) == 0:
+        raise CloudClientError(
+            'No network with name "%s".' % host_vars['network']
+        )
+    elif len(networks) > 1:
+        raise CloudClientError(
+            'More than one network with name "%s".' % host_vars['network']
+        )
+    addresses = [addr['natIP'] for addr in networks[0]['accessConfigs']]
+    if len(addresses) > 1:
+        raise CloudClientError(
+            'More than one address found for network "%s"' % host_vars['network']
+        )
+    elif len(addresses) == 0:
+        raise CloudClientError(
+            'No address found for network "%s"' % host_vars['network']
+        )
+    return addresses[0]
+
+
+def get_host_ip(provider, region, host_name, host_vars):
+    if provider == 'os':
+        return _get_host_ip_os(region, host_name, host_vars)
+    elif provider == 'ec2':
+        return _get_host_ip_ec2(region, host_name, host_vars)
+    elif provider == 'gce':
+        return _get_host_ip_gce(region, host_name, host_vars)
+    else:
+        raise ValueError('Provider "%s" is not supported.' % provider)
 
 
 def build_inventory(setup):
@@ -88,17 +232,27 @@ def main(args):
             private_key_file = os.path.expandvars(
                 os.path.expanduser(setup.cloud.key_file_private)
             )
-            if not os.path.exists(host_vars_file):
-                host_vars = {
-                    'ansible_host': '',
-                    'ansible_user': 'ubuntu',
-                    'ansible_ssh_private_key_file': private_key_file
-                }
-                write_yaml_file(host_vars_file, host_vars)
-            # Update inventory with host and group variables
             host_vars = read_yaml_file(host_vars_file)
-            host_vars['ansible_ssh_private_key_file'] = private_key_file
+            default_host_vars = {
+                'ansible_become': 'yes',
+                'ansible_user': 'ubuntu',
+                'ansible_ssh_private_key_file': private_key_file
+            }
+            host_vars.update(default_host_vars)
+            if 'ansible_host' not in host_vars:
+                host_vars['ansible_host'] = None
+            if args.refresh:
+                try:
+                    host_vars['ansible_host'] = get_host_ip(
+                        setup.cloud.provider, setup.cloud.region, host,
+                        inventory['_meta']['hostvars'][host]
+                    )
+                except NoInstanceFoundError:
+                    host_vars['ansible_host'] = None
+                    logger.warn('no instance found for host "%s"', host_name)
+            # Update inventory with host and group variables
             inventory['_meta']['hostvars'][host].update(host_vars)
+            write_yaml_file(host_vars_file, host_vars)
             # TODO: check whether this host actually exists in the cloud
             # args.refresh
 
