@@ -41,7 +41,7 @@ def register_upload(experiment_id, acquisition_id):
 
         **Example request**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -51,7 +51,7 @@ def register_upload(experiment_id, acquisition_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -132,7 +132,7 @@ def file_validity_check(experiment_id, acquisition_id):
 
         **Example request**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -142,7 +142,7 @@ def file_validity_check(experiment_id, acquisition_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -193,7 +193,7 @@ def upload_file(experiment_id, acquisition_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -283,7 +283,7 @@ def get_uploaded_file_count(experiment_id, acquisition_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 

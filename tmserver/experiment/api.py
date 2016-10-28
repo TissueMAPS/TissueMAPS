@@ -1031,7 +1031,7 @@ def create_experiment():
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1096,7 +1096,7 @@ def delete_experiment(experiment_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1126,7 +1126,7 @@ def get_plate(experiment_id, plate_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1169,7 +1169,7 @@ def get_plates(experiment_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1214,7 +1214,7 @@ def delete_plate(experiment_id, plate_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1254,7 +1254,7 @@ def create_plate(experiment_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1352,7 +1352,7 @@ def create_acquisition(experiment_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1406,7 +1406,7 @@ def delete_acquisition(experiment_id, acquisition_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1440,7 +1440,7 @@ def get_acquisition(experiment_id, acquisition_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1529,7 +1529,7 @@ def get_acquisition_image_files(experiment_id, acquisition_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -1572,7 +1572,7 @@ def get_acquisition_metadata_files(experiment_id, acquisition_id):
 
         **Example response**:
 
-            .. sourcecode:: http
+        .. sourcecode:: http
 
             Content-Type: application/json
 
