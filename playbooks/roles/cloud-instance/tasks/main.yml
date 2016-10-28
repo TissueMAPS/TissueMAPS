@@ -1,25 +1,13 @@
 ---
+# TODO: Create security group (firewall)
+# os: os_security_group
+# ec2: ec2_group
+# gce: gce_net
 - include: "{{provider}}.yml"
 
 - debug:
     msg: Created instance {{ instance_public_ip }}
   when: instance_state == "present"
-
-- name: Add host IP address to host_vars file
-  local_action: yedit
-  args:
-    src: "{{ host_vars_dir }}/{{ inventory_hostname }}"
-    key: ansible_host
-    value: "{{ instance_public_ip }}"
-  when: instance_state == "present"
-
-- name: Remove host IP address from host_vars file
-  local_action: yedit
-  args:
-    src: "{{ host_vars_dir }}/{{ inventory_hostname }}"
-    key: ansible_host
-    value: ""
-  when: instance_state == "absent"
 
 - name: Wait for instance
   local_action: wait_for
@@ -31,6 +19,7 @@
     state: started
   when: instance_state == "present"
 
+# TODO: this does not trigger --refresh
 - meta: refresh_inventory
 
 - debug:

@@ -38,6 +38,7 @@
 - name: Register IP address of created instance
   set_fact:
     instance_public_ip: "{{ instance.instance_data[0].public_ip }}"
+  when: instance_state == 'present'
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume and attach it to instance"
   delegate_to: localhost
