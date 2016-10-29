@@ -126,9 +126,9 @@ def _build_command(verbosity, inventory, playbook, variables=dict(),
     if verbosity > 0:
         cmd.append('-%s' % (verbosity * 'v'))
     if variables:
-        cmd.extend(['-e', '"%s"' % ','.join(var_strings)])
+        cmd.extend(['-e', '%s' % ','.join(var_strings)])
     if hosts:
-        cmd.extend(['--limit', '"%s"' % ','.join(hosts)])
+        cmd.extend(['--limit', '%s' % ','.join(hosts)])
     return cmd
 
 
