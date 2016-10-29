@@ -9,12 +9,19 @@ import collections
 from tmsetup.config import Setup, load_inventory
 from tmsetup.log import configure_logging, map_logging_verbosity
 from tmsetup.config import HOSTNAME_FORMAT
+from tmsetup.errors import SetupDescriptionError
 
 
+# TODO
 PLAYBOOKS_HOME = os.path.abspath(
     os.path.join(__file__, '..', '..', '..', 'playbooks')
 )
 
+ELASTICLUSTER_PLAYBOOKS_HOME = os.path.expanduser(
+    os.path.join(
+        '~', 'elasticluster', 'elasticluster', 'share', 'playbooks'
+    )
+)
 
 def run(command):
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
@@ -63,9 +70,7 @@ def build_ansible_commands(args):
     }
     for group in required_groups:
         if group not in groups_to_deploy:
-            raise SetupDescriptionError(
-                'Required group "%s" is missing!' % group
-            )
+            logger.warn('core group "%s" not provided', group)
 
     if args.action in {'launch', 'terminate', 'start', 'stop'}:
         if args.action == 'launch':
@@ -92,21 +97,25 @@ def build_ansible_commands(args):
             set(groups_to_deploy)
         )
         commands.append(cmd)
+
     elif args.action == 'deploy':
         # This playbook must be called after the individual components have
         # been built.
+        playbook = os.path.join(PLAYBOOKS_HOME, 'site.yml')
+        logger.debug('build command for playbook: %s', playbook)
         cmd = _build_command(
             args.verbosity, dynamic_inventory_file,
-            os.path.join(PLAYBOOKS_HOME, 'site.yml'),
-            variables,
-            set(groups_to_deploy)
+            playbook, variables, set(groups_to_deploy)
         )
         commands.append(cmd)
+
+        playbook = os.path.join(ELASTICLUSTER_PLAYBOOKS_HOME, 'site.yml')
+        logger.debug('build command for playbook: %s', playbook)
+        variables['ansible_become'] = 'yes'
+        logger.debug('run playbook in sudo mode')
         cmd = _build_command(
             args.verbosity, dynamic_inventory_file,
-            os.path.join(ELASTICLUSTER_PLAYBOOKS_HOME, 'site.yml'),
-            variables.update({'ansible_become': 'yes'}),
-            set(groups_to_deploy)
+            playbook, variables, set(groups_to_deploy)
         )
         commands.append(cmd)
 
@@ -170,13 +179,19 @@ if __name__ == '__main__':
         '--verbosity', '-v', action='count', default=0,
         help='increase logging verbosity'
     )
+
+    target_group = parser.add_mutually_exclusive_group()
     parser.add_argument(
         '--cluster', '-c', metavar='CLUSTER', type=str,
         help='limit action to VMs of a particular cluster'
     )
+    # NOTE: There is a bug in argparse that prevents using nargs='*' before
+    # positional arguments (or subparser arguments)
+    # http://bugs.python.org/issue9338
     parser.add_argument(
-        '--groups', '-g', metavar='GROUP', nargs='+', type=str, default=set(),
-        help='limit action to individual Ansible groups'
+        '--group', '-g', metavar='GROUP', type=str,
+        dest='groups', action='append', default=list(),
+        help='limit action to VMs of individual Ansible group(s)'
     )
     parser.add_argument(
         '--node_type', '-n', metavar='NODETYPE', type=str,
