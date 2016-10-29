@@ -22,8 +22,11 @@
 # TODO: this does not trigger --refresh
 - meta: refresh_inventory
 
-- debug:
-    msg: "{{ inventory_hostname }}: {{ ansible_host }}"
+- name: Reset host address
+  set_fact:
+    ansible_host: null
+  when: instance_state == "absent"
+
 
 # - include: roles/cloud-instance/tasks/format.yml
 #   delegate_to: "{{ instance_public_ip }}"
