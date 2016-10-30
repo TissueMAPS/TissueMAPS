@@ -253,10 +253,11 @@ class ImageFileMapping(object):
 
     def to_dict(self):
         '''
+
         Returns
         -------
         dict
-            mapping as key-values
+            attributes as mapping of key-value pairs
 
         Examples
         --------

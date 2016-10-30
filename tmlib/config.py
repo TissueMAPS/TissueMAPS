@@ -3,7 +3,6 @@ from abc import ABCMeta
 import logging
 from ConfigParser import SafeConfigParser
 from ConfigParser import NoOptionError
-from pkg_resources import resource_string
 
 logger = logging.getLogger(__name__)
 
