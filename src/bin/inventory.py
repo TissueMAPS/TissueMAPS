@@ -11,6 +11,7 @@ from tmsetup.config import Setup, load_inventory, save_inventory
 from tmsetup.config import CONFIG_DIR, GROUP_VARS_DIR, HOST_VARS_DIR
 from tmsetup.config import HOSTNAME_FORMAT
 
+logger = logging.getLogger(__name__)
 
 class CloudClientError(Exception):
     '''Error class for interactions with cloud clients.'''
@@ -208,7 +209,6 @@ def main(args):
         os.mkdir(HOST_VARS_DIR)
 
     inventory = build_inventory(setup)
-    inventory['all']['vars']['host_vars_dir'] = HOST_VARS_DIR
 
     # Create the main ansible inventory file
     persistent_inventory = load_inventory()
@@ -239,17 +239,22 @@ def main(args):
                 'ansible_ssh_private_key_file': private_key_file
             }
             host_vars.update(default_host_vars)
-            if 'ansible_host' not in host_vars:
+            # NOTE: --refresh is supposed to be triggered by ansible via
+            # (meta: refresh_inventory), but it's not!
+            # if args.refresh:
+            try:
+                host_vars['ansible_host'] = get_host_ip(
+                    setup.cloud.provider, setup.cloud.region, host,
+                    inventory['_meta']['hostvars'][host]
+                )
+            except NoInstanceFoundError:
+                logger.warn('no instance found for host "%s"', host)
                 host_vars['ansible_host'] = None
-            if args.refresh:
-                try:
-                    host_vars['ansible_host'] = get_host_ip(
-                        setup.cloud.provider, setup.cloud.region, host,
-                        inventory['_meta']['hostvars'][host]
-                    )
-                except NoInstanceFoundError:
-                    host_vars['ansible_host'] = None
-                    logger.warn('no instance found for host "%s"', host_name)
+                logger.debug('remove "ansible_host" variable')
+            except CloudClientError as err:
+                logger.error(
+                    'getting host address from cloud failed: %s', str(err)
+                )
             # Update inventory with host and group variables
             inventory['_meta']['hostvars'][host].update(host_vars)
             write_yaml_file(host_vars_file, host_vars)
