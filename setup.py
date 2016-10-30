@@ -94,6 +94,7 @@ setuptools.setup(
     author='Markus D. Herrmann',
     author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/tmlibrary',
+    license='AGPL-3.0+',
     platforms=['Linux', 'OS-X'],
     classifiers=[
         'Environment :: Console',
