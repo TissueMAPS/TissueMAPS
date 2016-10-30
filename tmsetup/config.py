@@ -4,6 +4,7 @@ from abc import abstractproperty
 from ConfigParser import SafeConfigParser
 
 from tmsetup.errors import SetupDescriptionError, SetupEnvironmentError
+from tmsetup.utils import read_yaml_file
 
 
 CONFIG_DIR = os.path.expanduser('~/.tmaps/setup')
@@ -462,6 +463,10 @@ class AnsibleHostVariableSection(SetupSection):
     def image(self):
         '''str: name or ID of the image from which the virtual machine should
         be booted
+
+        Note
+        ----
+        The image must have the Ubuntu (14.04) operating system installed.
         '''
         return self._image
 

@@ -2,6 +2,7 @@ import os
 import collections
 
 from tmsetup.utils import read_yaml_file, to_json
+from tmsetup.config import CONFIG_DIR, Setup
 
 
 GROUP_VARS_DIR = os.path.join(CONFIG_DIR, 'group_vars')
@@ -53,7 +54,7 @@ def build_inventory_information(setup):
     inventory = dict()
     inventory['all'] = dict()
     inventory['_meta'] = dict()
-    inventory['_meta']['hostvars'] = collections.defaultdict(dict)
+    inventory['_meta']['hostvars'] = dict()
 
     if not isinstance(setup, Setup):
         raise TypeError(

@@ -6,25 +6,31 @@ import subprocess
 import sys
 import collections
 import elasticluster
+from pkg_resources import resource_filename
 
 import tmsetup
-from tmsetup.config import Setup, load_inventory
+from tmsetup.config import Setup
+from tmsetup.inventory import build_inventory_information
 from tmsetup.log import configure_logging, map_logging_verbosity
-from tmsetup.config import HOSTNAME_FORMAT
+from tmsetup.inventory import HOSTNAME_FORMAT
 from tmsetup.errors import SetupDescriptionError
+from tmsetup.utils import to_yaml, to_json
 
 
-PLAYBOOKS_HOME = os.path.abspath(
-    os.path.join(tmsetup.__file__, 'share', 'playbooks')
-)
-
-
-ELASTICLUSTER_PLAYBOOKS_HOME = os.path.abspath(
-    os.path.join(elasticluster.__file__, 'share', 'playbooks')
-)
+def _get_playbooks_dir(pkg_name):
+    rel_path = os.path.join('share', 'playbooks')
+    if not resource_exists(pkg_name, rel_path):
+        raise OSError(
+            'Package "%s" doesn\'t have resource: %s', pkg_name, rel_path
+        )
+    path = os.path.abspath(resource_filename(pkg_name, rel_path))
+    if not os.path.exists(path):
+        raise OSError('Playbooks path does not exist: %s', path)
+    return path
 
 
 def run(command):
+    logger.debug('command: %s' % ' '.join(cmd))
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     for c in iter(lambda: process.stdout.read(1), ''):
         sys.stdout.write(c)
@@ -33,7 +39,6 @@ def run(command):
 def get_deployment_groups(selected_cluster, selected_nodetype, selected_groups):
     logger.info('build Ansible commands')
     setup = Setup()
-    inventory = load_inventory()
     groups_to_deploy = collections.defaultdict(list)
     for cluster in setup.grid.clusters:
         if selected_cluster is not None:
@@ -91,6 +96,7 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
     elif action == 'deploy':
         # This playbook must be called after the individual components have
         # been built.
+        tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
         playbook = os.path.join(PLAYBOOKS_HOME, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
         cmd = _build_command(
@@ -98,7 +104,8 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
         )
         commands.append(cmd)
 
-        playbook = os.path.join(ELASTICLUSTER_PLAYBOOKS_HOME, 'site.yml')
+        elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
+        playbook = os.path.join(elasticluster_playbooks_dir, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
         variables['ansible_become'] = 'yes'
         logger.debug('run playbook in sudo mode')
@@ -106,7 +113,6 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
             verbosity, playbook, variables, set(groups_to_deploy.keys())
         )
         commands.append(cmd)
-
 
         for group, playbooks in groups_to_deploy.iteritems():
             for playbook in plays:
@@ -143,20 +149,20 @@ def manage(args):
     commands = build_ansible_commands(args.action, args.verbosity, groups)
     logger.info('run Ansible commands')
     for cmd in commands:
-        logger.debug(' '.join(cmd))
         run(cmd)
 
 
 def show(args):
     groups = get_deployment_groups(args.cluster, args.node_type, args.groups)
-    print 'bla'
+    setup = Setup()
+    inventory_info = build_inventory_information(setup)
+    print to_yaml(inventory_info)
 
 
 def main(args):
-    # TODO: let inventory save playbook locations into file
     context = globals()
-    method = context.get(args.method)
-    method(args)
+    func = context.get(args.function)
+    func(args)
 
 
 if __name__ == '__main__':
@@ -182,7 +188,7 @@ if __name__ == '__main__':
 
 
     parser = argparse.ArgumentParser(
-        description='Setup TissueMAPS on Ubuntu.'
+        description='Setup and deploy TissueMAPS in the cloud.'
     )
     parser.add_argument(
         '--verbosity', '-v', action='count', default=0,
@@ -190,7 +196,6 @@ if __name__ == '__main__':
     )
 
     target_parser = argparse.ArgumentParser(add_help=False)
-    # target_group = target_parser.add_mutually_exclusive_group()
     target_parser.add_argument(
         '--cluster', '-c', metavar='CLUSTER', type=str,
         help='limit action to VMs of a particular cluster'
@@ -199,8 +204,7 @@ if __name__ == '__main__':
     # positional arguments (or subparser arguments)
     # http://bugs.python.org/issue9338
     target_parser.add_argument(
-        '--group', '-g', metavar='GROUP', type=str,
-        dest='groups', action='append', default=list(),
+        '--groups', '-g', metavar='GROUP', type=str, nargs='*', default=[],
         help='limit action to VMs of individual Ansible group(s)'
     )
     target_parser.add_argument(
@@ -216,7 +220,7 @@ if __name__ == '__main__':
         'launch', parents=[target_parser],
         help='launch new virtual machine (VM) instances'
     )
-    launch_subparser.set_defaults(method='manage')
+    launch_subparser.set_defaults(function='manage')
     launch_subparser.description = '''
         Launch new virtual machine instances.
     '''
@@ -225,7 +229,7 @@ if __name__ == '__main__':
         'terminate', parents=[target_parser],
         help='terminate existing virtual machine (VM) instances'
     )
-    terminate_subparser.set_defaults(method='manage')
+    terminate_subparser.set_defaults(function='manage')
     terminate_subparser.description = '''
         Terminate existing virtual machine instances.
     '''
@@ -236,18 +240,18 @@ if __name__ == '__main__':
         'deploy', parents=[target_parser],
         help='deploy TissueMAPS on existing virtual machine (VM) instances'
     )
-    deploy_subparser.set_defaults(method='manage')
+    deploy_subparser.set_defaults(function='manage')
     deploy_subparser.description = '''
         Deploy TissueMAPS on existing virtual machine instances.
     '''
 
     show_subparser = subparsers.add_parser(
         'show', parents=[target_parser],
-        help='show groups and target hosts defined via setup configuration file'
+        help='show mapping of groups to hosts defined via setup config file'
     )
-    show_subparser.set_defaults(method='show')
+    show_subparser.set_defaults(function='show')
     show_subparser.description = '''
-        Show groups and target hosts defined via setup configuration file.
+        Show mapping of groups to hosts defined via setup configuration file.
     '''
 
     args = parser.parse_args()
