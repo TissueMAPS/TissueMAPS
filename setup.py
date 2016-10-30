@@ -73,11 +73,12 @@ def get_version():
 setuptools.setup(
     name='tmserver',
     version=get_version(),
-    description='TissueMAPS server. Web application for TissueMAPS.',
+    description='TissueMAPS server application.',
     author='Markus D. Herrmann and Robin Hafen',
     author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/tissuemaps',
     platforms=['Linux', 'OS-X'],
+    license='AGPL-3.0+',
     classifiers=[
         'Environment :: Web Environment',
         'Topic :: System :: Emulators',
