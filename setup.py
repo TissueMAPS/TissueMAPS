@@ -55,9 +55,7 @@ except ImportError:
 import setuptools
 
 def find_scripts():
-    bin_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'bin'
-    )
+    bin_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'bin')
     scripts = list()
     for f in os.listdir(bin_path):
         if not f.endswith('pyc'):
@@ -72,7 +70,7 @@ def find_scripts():
 def get_version():
     logger.info('get package version')
     src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'lib', 'tmsetup'
+        os.path.abspath(os.path.dirname(__file__)), 'tmsetup'
     )
     sys.path = [src_path] + sys.path
     import version
@@ -106,15 +104,18 @@ setuptools.setup(
 
     ],
     scripts=find_scripts(),
-    packages=setuptools.find_packages(os.path.join('src', 'lib')),
-    package_dir={'': os.path.join('src', 'lib')},
+    packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
        'ansible==2.1.0',
+       'elasticluster>=1.3.dev',
        'apache-libcloud>=1.3.0',
        'PyYAML>=3.11',
        'shade>=1.12.1',
        'boto3>=1.4.1'
+    ],
+    dependency_links=[
+        'https://github.com/gc3-uzh-ch/elasticluster/tarball/master#egg=elasticluster-1.3.dev',
     ]
 )
 

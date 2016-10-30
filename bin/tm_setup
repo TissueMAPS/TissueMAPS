@@ -18,6 +18,7 @@ PLAYBOOKS_HOME = os.path.abspath(
     os.path.join(tmsetup.__file__, 'share', 'playbooks')
 )
 
+
 ELASTICLUSTER_PLAYBOOKS_HOME = os.path.abspath(
     os.path.join(elasticluster.__file__, 'share', 'playbooks')
 )
