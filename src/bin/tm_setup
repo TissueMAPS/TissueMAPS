@@ -5,23 +5,23 @@ import argparse
 import subprocess
 import sys
 import collections
+import elasticluster
 
+import tmsetup
 from tmsetup.config import Setup, load_inventory
 from tmsetup.log import configure_logging, map_logging_verbosity
 from tmsetup.config import HOSTNAME_FORMAT
 from tmsetup.errors import SetupDescriptionError
 
 
-# TODO
 PLAYBOOKS_HOME = os.path.abspath(
-    os.path.join(__file__, '..', '..', '..', 'playbooks')
+    os.path.join(tmsetup.__file__, 'share', 'playbooks')
 )
 
-ELASTICLUSTER_PLAYBOOKS_HOME = os.path.expanduser(
-    os.path.join(
-        '~', 'elasticluster', 'elasticluster', 'share', 'playbooks'
-    )
+ELASTICLUSTER_PLAYBOOKS_HOME = os.path.abspath(
+    os.path.join(elasticluster.__file__, 'share', 'playbooks')
 )
+
 
 def run(command):
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
@@ -29,83 +29,71 @@ def run(command):
         sys.stdout.write(c)
 
 
-def build_ansible_commands(args):
+def get_deployment_groups(selected_cluster, selected_nodetype, selected_groups):
     logger.info('build Ansible commands')
     setup = Setup()
-    dynamic_inventory_file = os.path.abspath(
-        os.path.join(__file__, '..', 'inventory.py')
-    )
     inventory = load_inventory()
-    commands = list()
-    variables = dict()
-    groups_to_deploy = list()
+    groups_to_deploy = collections.defaultdict(list)
     for cluster in setup.grid.clusters:
-        if args.cluster is not None:
-            if cluster.name != args.cluster:
+        if selected_cluster is not None:
+            if cluster.name != selected_cluster:
                 continue
         for node_type in cluster.node_types:
-            if args.node_type is not None:
-                if node_type.name != args.node_type:
+            if selected_nodetype is not None:
+                if node_type.name != selected_nodetype:
                     continue
             for group in node_type.groups:
-                if args.groups:
-                    if group.name not in args.groups:
+                if selected_groups:
+                    if group.name not in selected_groups:
                         continue
                 logger.info('include Ansible group: %s', group.name)
-                groups_to_deploy.append(group.name)
-                if args.action == 'deploy':
-                    if group.playbook is not None:
-                        cmd = _build_command(
-                            args.verbosity, dynamic_inventory_file,
-                            group.playbook
-                        )
-                        commands.append(cmd)
-                    # # NOTE: variables are already provided via group_vars files
-                    # if group.vars is not None:
-                    #     for k, v in group.vars.iteritems():
-                    #         variables[k] = v
+                groups_to_deploy[group.name].append(group.playbook)
 
     required_groups = {
         'tissuemaps_web', 'tissuemaps_compute', 'tissuemaps_database'
     }
     for group in required_groups:
-        if group not in groups_to_deploy:
+        if group not in groups_to_deploy.keys():
             logger.warn('core group "%s" not provided', group)
 
-    if args.action in {'launch', 'terminate', 'start', 'stop'}:
-        if args.action == 'launch':
+    return groups_to_deploy
+
+
+def build_ansible_commands(action, verbosity, groups_to_deploy):
+    commands = list()
+    variables = dict()
+    if action in {'launch', 'terminate', 'start', 'stop'}:
+        if action == 'launch':
             logger.info('launch virtual machines')
             variables['instance_state'] = 'present'
-        elif args.action == 'terminate':
+        elif action == 'terminate':
             logger.info('terminate virtual machines')
             variables['instance_state'] = 'absent'
-        elif args.action == 'start':
+        elif action == 'start':
             # TODO: dependent on cloud provider
             # ec2: started
             # gce: running
             # os: -
             raise ValueError('Starting VMs is not yet supported')
-        elif args.action == 'stop':
+        elif action == 'stop':
             # TODO: dependent on cloud provider
             # ec2: stopped
             # gce: stopped
             # os: -
             raise ValueError('Stopping VMs is not yet supported')
         cmd = _build_command(
-            args.verbosity, dynamic_inventory_file,
-            os.path.join(PLAYBOOKS_HOME, 'instance.yml'), variables,
+            verbosity, os.path.join(PLAYBOOKS_HOME, 'instance.yml'), variables,
             set(groups_to_deploy)
         )
         commands.append(cmd)
 
-    elif args.action == 'deploy':
+    elif action == 'deploy':
         # This playbook must be called after the individual components have
         # been built.
         playbook = os.path.join(PLAYBOOKS_HOME, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
         cmd = _build_command(
-            args.verbosity, dynamic_inventory_file,
-            playbook, variables, set(groups_to_deploy)
+            verbosity, playbook, variables, set(groups_to_deploy.keys())
         )
         commands.append(cmd)
 
@@ -114,24 +102,32 @@ def build_ansible_commands(args):
         variables['ansible_become'] = 'yes'
         logger.debug('run playbook in sudo mode')
         cmd = _build_command(
-            args.verbosity, dynamic_inventory_file,
-            playbook, variables, set(groups_to_deploy)
+            verbosity, playbook, variables, set(groups_to_deploy.keys())
         )
         commands.append(cmd)
+
+
+        for group, playbooks in groups_to_deploy.iteritems():
+            for playbook in plays:
+                if playbook is not None:
+                    cmd = _build_command(
+                        verbosity, playbook
+                    )
+                    commands.append(cmd)
+            # # NOTE: variables are already provided via group_vars files
+            # if group.vars is not None:
+            #     for k, v in group.vars.iteritems():
+            #         variables[k] = v
 
     return commands
 
 
-def _build_command(verbosity, inventory, playbook, variables=dict(),
-        hosts=set()):
+def _build_command(verbosity, playbook, variables=dict(), hosts=set()):
     var_strings = list()
     for k, v in variables.iteritems():
         var_strings.append('='.join([k, v]))
-    cmd = [
-        'ansible-playbook',
-        '-i', inventory,
-        playbook,
-    ]
+    # The "tm_inventory" script should be on the path upon installation.
+    cmd = ['ansible-playbook', '-i', 'tm_inventory', playbook]
     if verbosity > 0:
         cmd.append('-%s' % (verbosity * 'v'))
     if variables:
@@ -141,13 +137,25 @@ def _build_command(verbosity, inventory, playbook, variables=dict(),
     return cmd
 
 
-def main(args):
-    # TODO: let inventory save playbook locations into file
-    commands = build_ansible_commands(args)
+def manage(args):
+    groups = get_deployment_groups(args.cluster, args.node_type, args.groups)
+    commands = build_ansible_commands(args.action, args.verbosity, groups)
     logger.info('run Ansible commands')
     for cmd in commands:
         logger.debug(' '.join(cmd))
         run(cmd)
+
+
+def show(args):
+    groups = get_deployment_groups(args.cluster, args.node_type, args.groups)
+    print 'bla'
+
+
+def main(args):
+    # TODO: let inventory save playbook locations into file
+    context = globals()
+    method = context.get(args.method)
+    method(args)
 
 
 if __name__ == '__main__':
@@ -180,20 +188,21 @@ if __name__ == '__main__':
         help='increase logging verbosity'
     )
 
-    target_group = parser.add_mutually_exclusive_group()
-    parser.add_argument(
+    target_parser = argparse.ArgumentParser(add_help=False)
+    # target_group = target_parser.add_mutually_exclusive_group()
+    target_parser.add_argument(
         '--cluster', '-c', metavar='CLUSTER', type=str,
         help='limit action to VMs of a particular cluster'
     )
     # NOTE: There is a bug in argparse that prevents using nargs='*' before
     # positional arguments (or subparser arguments)
     # http://bugs.python.org/issue9338
-    parser.add_argument(
+    target_parser.add_argument(
         '--group', '-g', metavar='GROUP', type=str,
         dest='groups', action='append', default=list(),
         help='limit action to VMs of individual Ansible group(s)'
     )
-    parser.add_argument(
+    target_parser.add_argument(
         '--node_type', '-n', metavar='NODETYPE', type=str,
         action=check_dependency('cluster'),
         help='limit action to VMs of a partiuclar cluster node_type'
@@ -203,19 +212,19 @@ if __name__ == '__main__':
     subparsers.required = True
 
     launch_subparser = subparsers.add_parser(
-        'launch',
+        'launch', parents=[target_parser],
         help='launch new virtual machine (VM) instances'
     )
-    launch_subparser.set_defaults(method='launch')
+    launch_subparser.set_defaults(method='manage')
     launch_subparser.description = '''
         Launch new virtual machine instances.
     '''
 
     terminate_subparser = subparsers.add_parser(
-        'terminate',
+        'terminate', parents=[target_parser],
         help='terminate existing virtual machine (VM) instances'
     )
-    terminate_subparser.set_defaults(method='terminate')
+    terminate_subparser.set_defaults(method='manage')
     terminate_subparser.description = '''
         Terminate existing virtual machine instances.
     '''
@@ -223,12 +232,21 @@ if __name__ == '__main__':
     # TODO: start/stop subparsers
 
     deploy_subparser = subparsers.add_parser(
-        'deploy',
+        'deploy', parents=[target_parser],
         help='deploy TissueMAPS on existing virtual machine (VM) instances'
     )
-    deploy_subparser.set_defaults(method='deploy')
+    deploy_subparser.set_defaults(method='manage')
     deploy_subparser.description = '''
         Deploy TissueMAPS on existing virtual machine instances.
+    '''
+
+    show_subparser = subparsers.add_parser(
+        'show', parents=[target_parser],
+        help='show groups and target hosts defined via setup configuration file'
+    )
+    show_subparser.set_defaults(method='show')
+    show_subparser.description = '''
+        Show groups and target hosts defined via setup configuration file.
     '''
 
     args = parser.parse_args()

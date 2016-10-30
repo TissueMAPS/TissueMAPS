@@ -25,6 +25,7 @@ def read_json_file(filename):
     with open(filename) as f:
         return json.load(f)
 
+
 def read_yaml_file(filename):
     if not os.path.exists(filename):
         raise OSError('File does not exist: %s', filename)

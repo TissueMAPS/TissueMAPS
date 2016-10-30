@@ -2,20 +2,13 @@ import os
 from abc import ABCMeta
 from abc import abstractproperty
 from ConfigParser import SafeConfigParser
-from pkg_resources import resource_string
 
-
-from tmsetup.utils import read_yaml_file, to_json
 from tmsetup.errors import SetupDescriptionError, SetupEnvironmentError
 
 
 CONFIG_DIR = os.path.expanduser('~/.tmaps/setup')
-GROUP_VARS_DIR = os.path.join(CONFIG_DIR, 'group_vars')
-HOST_VARS_DIR = os.path.join(CONFIG_DIR, 'host_vars')
-HOSTS_FILE = os.path.join(CONFIG_DIR, 'hosts')
 SETUP_FILE = os.path.join(CONFIG_DIR, 'setup.yml')
 
-HOSTNAME_FORMAT = '{grid}-{cluster}-{node_type}-{index:03X}'
 
 
 class SetupSection(object):
@@ -563,30 +556,3 @@ class Setup(object):
     @grid.setter
     def grid(self, value):
         self._grid = GridSection(value)
-
-
-def load_inventory():
-    '''Loads Ansible inventory from file.
-
-    Returns
-    -------
-    ConfigParser.SafeConfigParser
-    '''
-    if not os.path.exists(HOSTS_FILE):
-        raise OSError(
-            'Setup file "%s" does not exist!' % HOSTS_FILE
-        )
-    inventory = SafeConfigParser(allow_no_value=True)
-    inventory.read(HOSTS_FILE)
-    return inventory
-
-
-def save_inventory(inventory):
-    '''Saves Ansible inventory to file.
-
-    Parameters
-    ----------
-    inventory: ConfigParser.SafeConfigParser
-    '''
-    with open(HOSTS_FILE, 'w') as f:
-        inventory.write(f)
