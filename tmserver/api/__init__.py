@@ -21,6 +21,7 @@ from flask import Blueprint
 api = Blueprint('api', __name__)
 
 import tmserver.api.experiment
+import tmserver.api.workflow
 import tmserver.api.upload
 import tmserver.api.tools
 import tmserver.api.user
