@@ -35,10 +35,24 @@ class Heatmap(Tool):
     '''
 
     @same_docstring_as(Tool.__init__)
-    def __init__(self, experiment_id, submission_id, use_spark=False):
-        super(Heatmap, self).__init__(experiment_id, submission_id, use_spark)
+    def __init__(self, experiment_id):
+        super(Heatmap, self).__init__(experiment_id)
 
     def process_request(self, payload):
+        '''Processes a client tool request.
+        The `payload` is expected to have the following form::
+
+            {
+                "choosen_object_type": str,
+                "selected_feature": str
+            }
+
+
+        Parameters
+        ----------
+        payload: dict
+            description of the tool job
+        '''
         mapobject_type_name = payload['chosen_object_type']
         selected_feature = payload['selected_feature']
 

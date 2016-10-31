@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import glob
+from pkg_resources import resource_filename
 
 from tmlib.version import __version__
 from tmlib.config import LibraryConfig
@@ -23,14 +24,14 @@ cfg = LibraryConfig()
 
 
 def get_cli_tools():
-    '''Lists implemented command line interfaces (cli).
+    '''Lists command line interfaces for implemented steps.
 
     Returns
     -------
     List[str]
         names of cli tools
     '''
-    root = os.path.join(os.path.dirname(__file__), 'workflow')
+    root = resource_filename(__name__, 'workflow')
     def _is_package(d):
         # A step is defined as a subpackage that implements the following
         # modules: api, cli, args

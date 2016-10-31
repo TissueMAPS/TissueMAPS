@@ -340,7 +340,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return files
 
     def build_batch_filename_for_run_job(self, job_id):
-        '''Builds the name of a batch file for a run job.
+        '''Builds the path to a batch file for a run job.
 
         Parameters
         ----------
@@ -363,7 +363,7 @@ class ClusterRoutines(BasicClusterRoutines):
         )
 
     def build_batch_filename_for_collect_job(self):
-        '''Builds the name of a batch file for a "collect" job.
+        '''Builds the path to a batch file for a "collect" job.
 
         Returns
         -------
@@ -433,12 +433,12 @@ class ClusterRoutines(BasicClusterRoutines):
         return batch
 
     def read_batch_file(self, filename):
-        '''Read batches from JSON file.
+        '''Reads job description from JSON file.
 
         Parameters
         ----------
         filename: str
-            absolute path to the *.job* file that contains the description
+            absolute path to the file that contains the description
             of a single job
 
         Returns
@@ -448,7 +448,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Raises
         ------
-        tmlib.errors.WorkflowError
+        OSError
             when `filename` does not exist
 
         Note
@@ -456,14 +456,14 @@ class ClusterRoutines(BasicClusterRoutines):
         The relative paths for "inputs" and "outputs" are made absolute.
         '''
         if not os.path.exists(filename):
-            raise WorkflowError(
+            raise OSError(
                 'Job description file does not exist: %s.\n'
                 'Initialize the step first by calling the "init" method.'
                 % filename
             )
         with JsonReader(filename) as f:
             batch = f.read()
-            return self._make_paths_absolute(batch)
+        return self._make_paths_absolute(batch)
 
     @staticmethod
     def _check_io_description(batches):
@@ -551,7 +551,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return batch
 
     def write_batch_files(self, batches):
-        '''Write batches to files as JSON.
+        '''Writes job descriptions to files in JSON format.
 
         Parameters
         ----------

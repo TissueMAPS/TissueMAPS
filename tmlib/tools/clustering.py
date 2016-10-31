@@ -36,22 +36,20 @@ class Clustering(Classifier):
     __methods__ = ['kmeans']
 
     @same_docstring_as(Tool.__init__)
-    def __init__(self, experiment_id, submission_id, use_spark=False):
-        super(Clustering, self).__init__(
-            experiment_id, submission_id, use_spark
-        )
+    def __init__(self, experiment_id):
+        super(Clustering, self).__init__(experiment_id)
 
-    def classify_sklearn(self, feature_data, k, method):
+    def classify(self, feature_data, k, method):
         '''Clusters mapobjects based on `feature_data` using the
         machine learning library.
 
         Parameters
         ----------
-        feature_data: pandas.DataFrame
+        feature_data: pyspark.sql.DataFrame or pandas.DataFrame
             feature values
         k: int
             number of classes
-        :meth: str
+        method: str
             model to use for clustering
 
         Returns
@@ -59,6 +57,12 @@ class Clustering(Classifier):
         List[Tuple[int, str]]
             ID and predicted label for each mapobject
         '''
+        if self.spark:
+            return self._classify_spark(feature_data, k, method)
+        else:
+            return self._classify_sklearn(feature_data, k, method)
+
+    def _classify_sklearn(self, feature_data, k, method):
         from sklearn.cluster import KMeans
 
         models = {
@@ -76,24 +80,7 @@ class Clustering(Classifier):
         mapobject_ids = feature_data.index.astype(int).tolist()
         return zip(mapobject_ids, predictions)
 
-    def classify_spark(self, feature_data, k, method):
-        '''Clusters mapobjects based on `feature_data` using the
-        machine learning library.
-
-        Parameters
-        ----------
-        feature_data: pyspark.sql.DataFrame
-            feature values
-        k: int
-            number of classes
-        :meth: str
-            model to use for clustering
-
-        Returns
-        -------
-        List[Tuple[int, str]]
-            ID and predicted label for each mapobject
-        '''
+    def _classify_spark(self, feature_data, k, method):
         from pyspark.ml.clustering import KMeans
         models = {
             'kmeans': KMeans
@@ -109,6 +96,23 @@ class Clustering(Classifier):
         return [(r.mapobject_id, r.prediction) for r in result]
 
     def process_request(self, payload):
+        '''Processes a client tool request and inserts the generated results
+        into the database.
+        The `payload` is expected to have the following form::
+
+            {
+                "choosen_object_type": str,
+                "selected_features": [str, ...],
+                "method": str,
+                "k": int
+            }
+
+
+        Parameters
+        ----------
+        payload: dict
+            description of the tool job
+        '''
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
         k = payload['k']
@@ -117,16 +121,10 @@ class Clustering(Classifier):
         if method not in self.__methods__:
             raise ValueError('Unknown method "%s".' % method)
 
-        if self.use_spark:
-            feature_data = self.format_feature_data_spark(
-                mapobject_type_name, feature_names
-            )
-            predicted_labels = self.classify_spark(feature_data, k, method)
-        else:
-            feature_data = self.format_feature_data_sklearn(
-                mapobject_type_name, feature_names
-            )
-            predicted_labels = self.classify_sklearn(feature_data, k, method)
+        feature_data = self.format_feature_data(
+            mapobject_type_name, feature_names
+        )
+        predicted_labels = self.classify(feature_data, k, method)
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             mapobject_type = session.query(tm.MapobjectType).\
