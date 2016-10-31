@@ -68,6 +68,7 @@
 
     tmaps.config(['$httpProvider', function($httpProvider) {
         $httpProvider.interceptors.push('authInterceptor');
+        $httpProvider.interceptors.push('errorInterceptor');
     }]);
 
     tmaps.run(['$injector', function($injector) {

@@ -182,6 +182,8 @@
         "app/src/setup/uploadfiles/PlateCreateCtrl.ts",
         "app/src/setup/uploadfiles/PlateDetailCtrl.ts",
         "app/src/setup/uploadfiles/AcquisitionDetailCtrl.ts",
-        "app/src/setup/uploadfiles/AcquisitionCreateCtrl.ts"
+        "app/src/setup/uploadfiles/AcquisitionCreateCtrl.ts",
+
+        "app/src/errorInterceptor.ts"
     ]
 }
