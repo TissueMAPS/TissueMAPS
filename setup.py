@@ -93,7 +93,7 @@ def get_version():
 setuptools.setup(
     name='tmlibrary',
     version=get_version(),
-    description='TissueMAPS library for distibuted image processing routines.',
+    description='TissueMAPS library for distibuted image analysis routines.',
     author='Markus D. Herrmann',
     author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/tmlibrary',

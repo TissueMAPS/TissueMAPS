@@ -1,4 +1,4 @@
-# TmLibrary - TissueMAPS library for distibuted image processing routines.
+# TmLibrary - TissueMAPS library for distibuted image analysis routines.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
 #
 # This program is free software: you can redistribute it and/or modify
