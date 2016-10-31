@@ -34,15 +34,16 @@ logger = logging.getLogger(__name__)
 
 
 LOGO = '''
-     _        _        _        _        _
-   _( )__   _( )__   _( )__   _( )__   _( )__
- _|     _|_|     _|_|     _|_|     _|_|     _|        tmaps (tmlib %s)
-(_ T _ (_(_ M _ (_(_ A _ (_(_ P _ (_(_ S _ (_         TissueMAPS workflow manager
-  |_( )__| |_( )__| |_( )__| |_( )__| |_( )__|        https://github.com/TissueMAPS/TmLibrary
+     _        _        _        _        _        _        _        _
+   _( )__   _( )__   _( )__   _( )__   _( )__   _( )__   _( )__   _( )__
+ _|     _|_|     _|_|     _|_|     _|_|     _|_|     _|_|     _|_|     _|      TissueMAPS workflow manager (tmlib %s)
+(_ W _ (_(_ O _ (_(_ R _ (_(_ K _ (_(_ F _ (_(_ L _ (_(_ O _ (_(_ W _ (_       https://github.com/TissueMAPS/TmLibrary
+  |_( )__| |_( )__| |_( )__| |_( )__| |_( )__| |_( )__| |_( )__| |_( )__|
+
 ''' % __version__
 
 
-class Tmaps(SubmissionManager):
+class WorkflowManager(SubmissionManager):
 
     '''Command line interface for building, submitting, and monitoring
     `TissueMAPS` workflows.
@@ -60,7 +61,7 @@ class Tmaps(SubmissionManager):
         self.experiment_id = experiment_id
         self.verbosity = verbosity
         self.name = 'workflow'
-        super(Tmaps, self).__init__(self.experiment_id, 'workflow')
+        super(WorkflowManager, self).__init__(self.experiment_id, 'workflow')
 
     @staticmethod
     def _print_logo():
