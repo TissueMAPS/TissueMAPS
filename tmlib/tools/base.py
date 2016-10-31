@@ -24,6 +24,7 @@ from abc import abstractproperty
 
 import tmlib.models as tm
 from tmlib import cfg
+from tmlib import __version__
 from tmlib.utils import same_docstring_as, autocreate_directory_property
 from tmlib.readers import JsonReader
 from tmlib.logging_utils import configure_logging, map_logging_verbosity
@@ -31,6 +32,18 @@ from tmlib.tools import SUPPORTED_TOOLS
 from tmlib.tools import get_tool_class
 
 logger = logging.getLogger(__name__)
+
+
+LOGO = '''
+    )           (
+ ( /(           )\
+ )\()) (    (  ((_)
+(_))/  )\   )\  _     TissueMAPS tool request manager (tmlib %s)
+| |_  ((_) ((_)| |    https://github.com/TissueMAPS/TmLibrary
+|  _|/ _ \/ _ \| |
+ \__|\___/\___/|_|
+
+''' % __version__
 
 
 class _ToolMeta(ABCMeta):
@@ -384,6 +397,7 @@ class Tool(object):
         tool_cls = get_tool_class(args.name)
         tool = tool_cls(args.experiment_id)
         payload = tool.read_batch_file(args.submission_id)
+        print LOGO
         tool.process_request(payload)
 
 
