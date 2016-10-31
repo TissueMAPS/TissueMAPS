@@ -118,7 +118,7 @@ class ResourceNotFoundError(APIException):
     def __init__(self, model):
         super(ResourceNotFoundError, self).__init__(
             message=(
-                'The requested resource with type %s was not found.' % model
+                'The requested resource with type "%s" was not found.' % model.__name__
             ),
             status_code=404
         )
