@@ -81,8 +81,7 @@ class Job(gc3libs.Application):
 
     @abstractproperty
     def name(self):
-        '''str: name of the job
-        '''
+        '''str: name of the job'''
         pass
 
     def retry(self):
@@ -126,10 +125,49 @@ class Job(gc3libs.Application):
         '''
         return self.execution.state == gc3libs.Run.State.NEW
 
+    def __repr__(self):
+        return (
+            '<%s(name=%r, submission_id=%r)>'
+            % (self.__class__.__name__, self.name, self.submission_id)
+        )
+
+class ToolJob(Job):
+
+    '''Class for a tool job, which can be submitted to a cluster for
+    asynchronous processing of a client tool request.
+    '''
+
+    def __init__(self, tool_name, arguments, output_dir,
+            submission_id, user_name):
+        '''
+        Parameters
+        ----------
+        tool_name: str
+            name of the respective tool
+        arguments: List[str]
+            command line arguments
+        output_dir: str
+            absolute path to the output directory, where log reports will
+            be stored
+        submission_id: int
+            ID of the corresponding submission
+        user_name: str
+            name of the submitting user
+        '''
+        self.tool_name = tool_name
+        super(ToolJob, self).__init__(
+            self.name, arguments, output_dir, submission_id, user_name
+        )
+
+    @property
+    def name(self):
+        '''str:name of the job'''
+        return 'tool_%s' % self.tool_name
+
 
 class WorkflowStepJob(Job):
 
-    '''Abstract base class for an individual job as part of
+    '''Abstract base class for an individual job as part of a
     workflow step phase.
 
     Note
@@ -220,12 +258,6 @@ class InitJob(WorkflowStepJob):
         '''str:name of the job'''
         return '%s_init' % self.step_name
 
-    def __repr__(self):
-        return (
-            '<%s(name=%r, submission_id=%r)>'
-            % (self.__class__.__name__, self.name, self.submission_id)
-        )
-
 
 class RunJob(WorkflowStepJob):
 
@@ -278,12 +310,6 @@ class RunJob(WorkflowStepJob):
                 '%s_run-%.2d_%.6d' % (self.step_name, self.index, self.job_id)
             )
 
-    def __repr__(self):
-        return (
-            '<%s(name=%r, submission_id=%r)>'
-            % (self.__class__.__name__, self.name, self.submission_id)
-        )
-
 
 class CollectJob(WorkflowStepJob):
 
@@ -320,16 +346,10 @@ class CollectJob(WorkflowStepJob):
         '''str:name of the job'''
         return '%s_collect' % self.step_name
 
-    def __repr__(self):
-        return (
-            '<%s(name=%r, submission_id=%r)>'
-            % (self.__class__.__name__, self.name, self.submission_id)
-        )
-
 
 class JobCollection(object):
 
-    '''Abstract base class for job collections.'''
+    '''Abstract base class for collections of individual jobs.'''
 
     __metaclass__ = ABCMeta
 
