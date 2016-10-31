@@ -821,7 +821,7 @@ class HeatmapLabelLayer(ContinuousLabelLayer):
         '''
         session = Session.object_session(self)
         layer = session.query(self.__class__).\
-            filter_by(session_id=self.session_id).\
+            filter_by(tool_result_id=self.tool_result_id).\
             one()
         return dict(
             session.query(

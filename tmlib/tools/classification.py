@@ -24,7 +24,7 @@ from tmlib.tools import register_tool
 logger = logging.getLogger(__name__)
 
 
-@register_tool('classification')
+@register_tool('Classification')
 class Classification(Classifier):
 
     '''Tool for supervised classification.'''
@@ -246,8 +246,8 @@ class Classification(Classifier):
                 (r.mapobject_id, label_mapping[r.prediction]) for r in result
             ]
 
-    def process_request(self, payload):
-        '''Processes a client tool request and inserts the generated results
+    def process_request(self, submission_id, payload):
+        '''Processes a client tool request and inserts the generated result
         into the database.
         The `payload` is expected to have the following form::
 
@@ -268,6 +268,8 @@ class Classification(Classifier):
 
         Parameters
         ----------
+        submission_id: int
+            ID of the corresponding job submission
         payload: dict
             description of the tool job
         '''
@@ -301,7 +303,7 @@ class Classification(Classifier):
                 filter_by(name=mapobject_type_name).\
                 one()
 
-            result = tm.ToolResult(self.submission_id, self.__class__.__name__)
+            result = tm.ToolResult(submission_id, self.__class__.__name__)
             session.add(result)
             session.flush()
 

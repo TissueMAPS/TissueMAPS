@@ -19,12 +19,14 @@ import logging
 
 import tmlib.models as tm
 from tmlib.utils import same_docstring_as
+from tmlib.tools import register_tool
 
 from tmlib.tools.base import Tool
 
 logger = logging.getLogger(__name__)
 
 
+@register_tool('Heatmap')
 class Heatmap(Tool):
 
     __icon__ = 'HMP'
@@ -37,9 +39,9 @@ class Heatmap(Tool):
     def __init__(self, experiment_id):
         super(Heatmap, self).__init__(experiment_id)
 
-    def process_request(self, payload):
-        '''Processes a client tool request.
-        The `payload` is expected to have the following form::
+    def process_request(self, submission_id, payload):
+        '''Processes a client tool request, where the `payload` is expected to
+        have the following form::
 
             {
                 "choosen_object_type": str,
@@ -49,6 +51,8 @@ class Heatmap(Tool):
 
         Parameters
         ----------
+        submission_id: int
+            ID of the corresponding job submission
         payload: dict
             description of the tool job
         '''
@@ -56,20 +60,17 @@ class Heatmap(Tool):
         selected_feature = payload['selected_feature']
 
         logger.info('calculate min/max for rescaling of intensities')
+        feature_values = self.get_feature_values(
+            mapobject_type_name, selected_feature
+        )
         if self.use_spark:
             import pyspark.sql.functions as sp
-            feature_values = self.get_feature_values_spark(
-                mapobject_type_name, selected_feature
-            )
             stats = feature_values.\
                 select(sp.min('value'), sp.max('value')).\
                 collect()
             lower_bound = stats[0][0]
             upper_bound = stats[0][1]
         else:
-            feature_values = self.get_feature_values_sklearn(
-                mapobject_type_name, selected_feature
-            )
             lower_bound = np.min(feature_values.value)
             upper_bound = np.max(feature_values.value)
 
@@ -88,7 +89,7 @@ class Heatmap(Tool):
                 ).\
                 one()
 
-            result = tm.ToolResult(self.submission_id, self.__class__.__name__)
+            result = tm.ToolResult(submission_id, self.__class__.__name__)
             session.add(result)
             session.flush()
 

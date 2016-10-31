@@ -24,11 +24,6 @@ from abc import abstractproperty
 from tmlib import cfg
 import tmlib.models as tm
 from tmlib.utils import same_docstring_as, autocreate_directory_property
-from tmlib.readers import JsonReader
-from tmlib.workflow.jobs import ToolJob
-from tmlib.logging_utils import configure_logging, map_logging_verbosity
-from tmlib.tools import SUPPORTED_TOOLS
-from tmlib.tools import get_tool_class
 
 logger = logging.getLogger(__name__)
 
@@ -165,9 +160,13 @@ class Tool(object):
             each mapobject
         '''
         if self.use_spark:
-            return _get_feature_values_spark(mapobject_type_name, feature_name)
+            return self._get_feature_values_spark(
+                mapobject_type_name, feature_name
+            )
         else:
-            return _get_feature_values_sklearn(mapobject_type_name, feature_name)
+            return self._get_feature_values_sklearn(
+                mapobject_type_name, feature_name
+            )
 
     def _get_feature_values_spark(self, mapobject_type_name, feature_name):
         query = self._build_feature_values_query(
@@ -190,13 +189,15 @@ class Tool(object):
         return pd.DataFrame(feature_values, columns=['mapobject_id', 'value'])
 
     @abstractmethod
-    def process_request(self, payload):
+    def process_request(self, submission_id, payload):
         '''Processes a tool request sent by the client.
 
         Parameters
         ----------
+        submission_id: int
+            ID of the corresponding job submission
         payload: dict
-            an arbitrary mapping sent by the client tool
+            an arbitrary mapping provided by the client that describes the job
 
         '''
         pass
@@ -209,12 +210,12 @@ class Classifier(Tool):
     __abstract__ = True
 
     @same_docstring_as(Tool.__init__)
-    def __init__(self, experiment_id, submission_id):
-        super(Classifier, self).__init__(experiment_id, submission_id)
+    def __init__(self, experiment_id):
+        super(Classifier, self).__init__(experiment_id)
 
     def format_feature_data(self, mapobject_type_name, feature_names):
-        '''Loads feature values from database and bring the dataset into the
-        format required by classifiers.
+        '''Loads feature values from the database and brings the dataset into
+        the format required by classifiers.
 
         Parameters
         ----------
@@ -228,13 +229,21 @@ class Classifier(Tool):
         Returns
         -------
         pyspark.sql.DataFrame or pandas.DataFrame
-            data frame where columns are features and rows are mapobjects
-            indexable by `mapobject_ids` (*pandas* dataframes have a separate
-            column for each feature with the name of the respective feature,
-            while *spark* dataframes have only one column named "feature" with
+            dataframe where columns are features and rows are mapobjects
+            indexable by `mapobject_id` (*pandas* dataframes have a separate
+            column for each feature, while *spark* dataframes have only one
+            column named "feature" with
             :class:`pyspark.mllib.linalg.DenseVector` as required by classifiers
             of the :mod:`pyspark.ml` package)
         '''
+        if self.use_spark:
+            return self._format_feature_data_spark(
+                mapobject_type_name, feature_names
+            )
+        else:
+            return self._format_feature_data_sklearn(
+                mapobject_type_name, feature_names
+            )
 
     def _format_feature_data_sklearn(self, mapobject_type_name, feature_names):
         with tm.utils.ExperimentSession(self.experiment_id) as session:

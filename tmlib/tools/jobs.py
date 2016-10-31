@@ -4,7 +4,6 @@ from tmlib.jobs import Job
 logger = logging.getLogger(__name__)
 
 
-
 class ToolJob(Job):
 
     '''Class for a tool job, which can be submitted to a cluster for
@@ -30,7 +29,7 @@ class ToolJob(Job):
         '''
         self.tool_name = tool_name
         super(ToolJob, self).__init__(
-            self.name, arguments, output_dir, submission_id, user_name
+            arguments, output_dir, submission_id, user_name
         )
 
     @property

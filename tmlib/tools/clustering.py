@@ -18,12 +18,14 @@ import logging
 
 import tmlib.models as tm
 from tmlib.utils import same_docstring_as
+from tmlib.tools import register_tool
 
 from tmlib.tools.base import Tool, Classifier
 
 logger = logging.getLogger(__name__)
 
 
+@register_tool('Clustering')
 class Clustering(Classifier):
 
     __icon__ = 'CLU'
@@ -56,7 +58,7 @@ class Clustering(Classifier):
         List[Tuple[int, str]]
             ID and predicted label for each mapobject
         '''
-        if self.spark:
+        if self.use_spark:
             return self._classify_spark(feature_data, k, method)
         else:
             return self._classify_sklearn(feature_data, k, method)
@@ -94,10 +96,10 @@ class Clustering(Classifier):
         result = predictions.collect()
         return [(r.mapobject_id, r.prediction) for r in result]
 
-    def process_request(self, payload):
-        '''Processes a client tool request and inserts the generated results
-        into the database.
-        The `payload` is expected to have the following form::
+    def process_request(self, submission_id, payload):
+        '''Processes a client tool request and inserts the generated result
+        into the database. The `payload` is expected to have the following
+        form::
 
             {
                 "choosen_object_type": str,
@@ -109,6 +111,8 @@ class Clustering(Classifier):
 
         Parameters
         ----------
+        submission_id: int
+            ID of the corresponding job submission
         payload: dict
             description of the tool job
         '''
@@ -130,7 +134,7 @@ class Clustering(Classifier):
                 filter_by(name=mapobject_type_name).\
                 one()
 
-            result = tm.ToolResult(self.submission_id, self.__class__.__name__)
+            result = tm.ToolResult(submission_id, self.__class__.__name__)
             session.add(result)
             session.flush()
 

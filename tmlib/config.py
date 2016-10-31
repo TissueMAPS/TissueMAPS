@@ -67,7 +67,6 @@ class TmapsConfig(object):
         self.db_user = 'postgres'
         self.db_host = 'localhost'
         self.db_port = 5432
-        self.read()
 
     def read(self):
         '''Reads the configuration from a file
@@ -76,7 +75,7 @@ class TmapsConfig(object):
         --------
         tmlib.config.CONFIG_FILE
         '''
-        logger.info('read config file: "%s"', self._config_file)
+        logger.debug('read config file: "%s"', self._config_file)
         try:
             self._config.read(self._config_file)
         except OSError:

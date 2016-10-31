@@ -451,7 +451,7 @@ class IllumstatsFile(FileModel, DateMixIn):
             illumination statistics images
         '''
         logger.debug(
-            'get data from illumination statistics file: %s', self.name
+            'get data from illumination statistics file: %s', self.location
         )
         metadata = IllumstatsImageMetadata(
             channel_id=self.channel.id,

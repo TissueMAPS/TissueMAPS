@@ -27,7 +27,7 @@ from tmlib.errors import RegistryError
 logger = logging.getLogger(__name__)
 
 
-# TODO: how to do this dynamically: register in database?
+# TODO: how to do this dynamically: import modules
 SUPPORTED_TOOLS = {'Clustering', 'Classification', 'Heatmap'}
 
 _tool_register = dict()
@@ -77,7 +77,7 @@ def get_tool_class(name):
     type
         tool class
     '''
-    module_name = '%s.%s' % (__name__, name)
+    module_name = '%s.%s' % (__name__, name.lower())
     try:
         module = importlib.import_module(module_name)
     except ImportError as error:

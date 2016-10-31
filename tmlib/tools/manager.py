@@ -1,9 +1,21 @@
+import os
 import argparse
+import socket
 import logging
+from gc3libs.quantity import Duration
+from gc3libs.quantity import Memory
 
 from tmlib import __version__
+from tmlib import cfg
+import tmlib.models as tm
 from tmlib.submission import SubmissionManager
 from tmlib.tools.jobs import ToolJob
+from tmlib.tools import SUPPORTED_TOOLS
+from tmlib.tools import get_tool_class
+from tmlib.writers import JsonWriter
+from tmlib.readers import JsonReader
+from tmlib.utils import autocreate_directory_property
+from tmlib.logging_utils import configure_logging, map_logging_verbosity
 
 logger = logging.getLogger(__name__)
 
@@ -13,18 +25,25 @@ class ToolRequestManager(SubmissionManager):
 
     '''Command line interface for handling `TissueMAPS` tool requests.'''
 
-    def __init__(self, experiment_id, verbosity):
+    def __init__(self, experiment_id, tool_name, verbosity):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
+        tool_name: str
+            name of the corresponding tool
         verbosity: int
             logging verbosity level
         '''
         self.experiment_id = experiment_id
         self.verbosity = verbosity
-        super(WorkflowManager, self).__init__(self.experiment_id, 'tool')
+        self.tool_name = tool_name
+        super(ToolRequestManager, self).__init__(self.experiment_id, 'tool')
+        with tm.utils.MainSession() as session:
+            experiment = session.query(tm.ExperimentReference).\
+                get(self.experiment_id)
+            self.tools_location = experiment.tools_location
 
     @staticmethod
     def _print_logo():
@@ -39,13 +58,20 @@ class ToolRequestManager(SubmissionManager):
 
         ''' % __version__
 
-    def _build_batch_filename_for_job(self):
-        batches_location = os.path.join(self.tools_location, 'batches')
-        filename = '%s_%d.json' % (self.__class__.__name__, self.submission_id)
-        return os.path.join(batches_location, filename)
+    @autocreate_directory_property
+    def batches_location(self):
+        return os.path.join(self.tools_location, 'batches')
+
+    @autocreate_directory_property
+    def log_location(self):
+        return os.path.join(self.tools_location, 'logs')
+
+    def _build_batch_filename_for_job(self, submission_id):
+        filename = '%s_%d.json' % (self.__class__.__name__, submission_id)
+        return os.path.join(self.batches_location, filename)
 
     def _build_command(self, submission_id):
-        if self.use_spark:
+        if cfg.use_spark:
             command = ['spark-submit', '--master', cfg.spark_master]
             if cfg.spark_master == 'yarn':
                 command.extend(['--deploy-mode', 'client'])
@@ -54,11 +80,11 @@ class ToolRequestManager(SubmissionManager):
             #     '--py-files', cfg.spark_tmlib.tools_egg
             # ])
         else:
-            args = []
+            command = []
         command.extend([
             'tm_tool', str(self.experiment_id),
-            '--name', tool_name,
-            '--submission_id', str(self.submission_id)
+            '--name', self.tool_name,
+            '--submission_id', str(submission_id)
         ])
         command.extend(['-v' for x in xrange(self.verbosity)])
         return command
@@ -85,7 +111,7 @@ class ToolRequestManager(SubmissionManager):
 
         Returns
         -------
-        tmlib.workflow.jobs.ToolJob
+        tmlib.tools.jobs.ToolJob
             tool job
         '''
         logger.info('create tool job for submission %d', submission_id)
@@ -93,7 +119,8 @@ class ToolRequestManager(SubmissionManager):
         logger.debug('allocated memory for job: %d MB', memory)
         logger.debug('allocated cores for job: %d', cores)
         job = ToolJob(
-            tool_name=self.__class__.__name__,
+            tool_name=self.tool_name,
+            # TODO: tool_name
             arguments=self._build_command(submission_id),
             output_dir=self.log_location,
             submission_id=submission_id,
@@ -221,12 +248,12 @@ class ToolRequestManager(SubmissionManager):
         level = map_logging_verbosity(args.verbosity)
         lib_logger = logging.getLogger('tmlib')
         lib_logger.setLevel(level)
-        tool_logger.debug('processing on node: %s', socket.gethostname())
+        logger.debug('processing on node: %s', socket.gethostname())
 
-        manager = cls(args.experiment_id, args.submission_id)
+        manager = cls(args.experiment_id, args.name, args.verbosity)
         manager._print_logo()
-        payload = manager.read_batch_file()
+        payload = manager.read_batch_file(args.submission_id)
         tool_cls = get_tool_class(args.name)
         tool = tool_cls(args.experiment_id)
-        tool.process_request(payload)
+        tool.process_request(args.submission_id, payload)
 
