@@ -16,7 +16,7 @@
 from tmserver.serialize import json_encoder
 from tmserver.model import encode_pk
 
-from tmtoolbox.result import ToolResult, LabelLayer, Plot
+from tmlib.tools.result import ToolResult, LabelLayer, Plot
 
 
 @json_encoder(ToolResult)

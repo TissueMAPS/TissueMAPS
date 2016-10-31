@@ -22,7 +22,9 @@ from flask_jwt import jwt_required
 from flask_jwt import current_identity
 
 import tmlib.models as tm
+from tmlib import cfg as tmlib_cfg
 from tmlib.writers import JsonWriter
+from tmlib.tools.job import ToolJob
 
 from tmserver.api import api
 from tmserver.error import (
@@ -32,12 +34,11 @@ from tmserver.error import (
 )
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
-from tmserver.tool.job import ToolJob
 from tmserver.extensions import gc3pie
 
-from tmtoolbox.result import ToolResult, LabelLayer
-from tmtoolbox import SUPPORTED_TOOLS
-from tmtoolbox import get_tool_class
+from tmlib.tools.result import ToolResult, LabelLayer
+from tmlib.tools import SUPPORTED_TOOLS
+from tmlib.tools import get_tool_class
 
 
 logger = logging.getLogger(__name__)
@@ -176,30 +177,29 @@ def process_tool_request(experiment_id):
         session = session.get_or_create(ToolSession, uuid=session_uuid)
         session_id = session.id
 
+    # TODO: move this logic into Tool class
     batch_filename = '%s_%d.json' % (tool_name, session_id)
     batch_location = os.path.join(tool_batch_dir, batch_filename)
     with JsonWriter(batch_location) as f:
         f.write(payload)
 
     # Create and submit tool job for asynchronous processing on the cluster
-    if cfg.use_spark:
-        args = ['spark-submit', '--master', cfg.spark_master]
-        if cfg.spark_master == 'yarn':
+    if tmlib_cfg.use_spark:
+        args = ['spark-submit', '--master', tmlib_cfg.spark_master]
+        if tmlib_cfg.spark_master == 'yarn':
             args.extend(['--deploy-mode', 'client'])
         # TODO: ship Python dependencies
         # args.extend([
-        #     '--py-files', cfg.spark_tmtoolbox_egg
+        #     '--py-files', cfg.spark_tmlib.tools_egg
         # ])
     else:
         args = []
     args.extend([
-        'tmtool', str(experiment_id),
-        '--tool', tool_name,
+        'tm_tool', str(experiment_id),
+        '--name', tool_name,
         '--submission_id', str(submission_id),
         '--batch_file', batch_location,
     ])
-    if cfg.use_spark:
-        args.append('--use_spark')
 
     job = ToolJob(
         tool_name=tool_name,
