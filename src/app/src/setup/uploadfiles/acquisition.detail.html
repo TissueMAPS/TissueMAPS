@@ -1,7 +1,7 @@
 <div ng-init="aq = acquisitionDetailCtrl.acquisition">
   <h3>
     Acquisition: {{:: aq.name }}
-    (<span>{{aq.status}}</span>)
+    (<span>{{aq.status}}: {{aq.nFiles}} files</span>)
   </h3>
 
   <div class="row">
@@ -76,7 +76,7 @@
       <div id="upload-list" collapse="uploadListCollapsed" >
         <!-- <div class="well"> -->
         <h3>Upload queue:</h3>
-        Successfully uploaded {{aq.files.length}} files
+        Successfully uploaded {{aq.nFiles}} files
 
         <!-- <div class="pull-right"> -->
         <!--   <button type="button" class="btn btn-warning btn-s" ng-click="fileCtrl.cancelAllUploads()" ng-disabled="!newFiles.length" disabled="disabled"> -->

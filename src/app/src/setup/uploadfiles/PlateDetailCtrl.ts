@@ -49,3 +49,19 @@ angular.module('tmaps.ui')
 .controller('PlateDetailCtrl', PlateDetailCtrl);
 
 
+class AcquisitionTabCtrl {
+
+    nFiles: number;
+
+    static $inject = ['$scope'];
+
+    constructor(private _$scope) {
+        this._$scope.aq.getUploadedFileCount()
+        .then((count) => {
+            this._$scope.nFiles = count;
+        })
+    }
+}
+
+angular.module('tmaps.ui')
+.controller('AcquisitionTabCtrl', AcquisitionTabCtrl);

@@ -20,12 +20,12 @@
     <div class="panel-heading">Acquisitions</div>
     <div class="panel-body">
       <ul class="list-group">
-        <li class="list-group-item" ng-repeat="aq in plate.acquisitions">
+        <li class="list-group-item" ng-controller="AcquisitionTabCtrl" ng-repeat="aq in plate.acquisitions">
 
           <a ui-sref="acquisition.detail({acquisitionid: aq.id})">{{aq.name}}</a>
           <span ng-show="aq.description" style="color: gray;">- {{aq.description}}</span>
 
-          <span>({{aq.status}})</span>
+          <span>({{aq.status}}) - {{nFiles}} files</span>
 
           <button class="btn btn-danger pull-right"
                 ng-click="plateDetailCtrl.deleteAcquisition(aq)">

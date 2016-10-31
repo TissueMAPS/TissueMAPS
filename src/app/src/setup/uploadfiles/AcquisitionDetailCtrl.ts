@@ -2,17 +2,15 @@ class AcquisitionDetailCtrl {
 
     newFiles: MicroscopeFile[] = [];
     filesDropped: boolean;
-    nUploadedFiles: number;
 
     static $inject = ['acquisition', '$state', '$http', '$q', '$stateParams'];
 
     constructor(public acquisition: Acquisition, private _$state,
                 private _$http, private _$q, private _$stateParams) {
         this.filesDropped = false;
-        this.nUploadedFiles = 0;
         acquisition.getUploadedFileCount()
         .then((count) => {
-            this.nUploadedFiles = count;
+            acquisition.nFiles = count;
         })
     }
 

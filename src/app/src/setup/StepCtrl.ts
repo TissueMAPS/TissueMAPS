@@ -12,7 +12,7 @@ interface UIScrollingAdapter {
 
     isBOF?: () => boolean;
     isEOF?: () => boolean;
-    reload?: () => void;
+    reload?: (number) => void;
     applyUpdates?: (number, []) => void;
 }
 
@@ -73,7 +73,10 @@ class StepCtrl {
             });
             this._$rootScope.$on('updateJobStatus', () => {
                 // console.log('update job status for step: ', stepName)
-                this.uiScrollingAdapter.reload();
+                if (this.uiScrollingAdapter.topVisibleScope != undefined) {
+                    var viewIndex = this.uiScrollingAdapter.topVisibleScope.$index;
+                    this.uiScrollingAdapter.reload(viewIndex);
+                }
             })
         }
     };
