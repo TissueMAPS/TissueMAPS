@@ -60,7 +60,7 @@ class TmapsConfig(object):
             logger.warn(
                 'configuration file does not exist: %s' % self._config_file
             )
-        self._config = SafeConfigParser({'home': os.environ['HOME']})
+        self._config = SafeConfigParser()
         self._section = self.__class__.__module__.split('.')[0]
         if not self._config.has_section(self._section):
             self._config.add_section(self._section)

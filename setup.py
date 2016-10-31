@@ -78,7 +78,7 @@ def build_console_scripts():
         )
     cli_tools.extend([
         'tm_workflow = tmlib.workflow.manager:WorkflowManager.main',
-        'tm_tool = tmlib.tools.base:Tool.main',
+        'tm_tool = tmlib.tools.manager:ToolRequestManager.main',
     ])
     return cli_tools
 

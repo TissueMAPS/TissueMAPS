@@ -16,11 +16,11 @@
 from tmlib.workflow.args import Argument
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
-from tmlib.workflow import register_batch_args
-from tmlib.workflow import register_submission_args
+from tmlib.workflow import register_step_batch_args
+from tmlib.workflow import register_step_submission_args
 
 
-@register_batch_args('metaextract')
+@register_step_batch_args('metaextract')
 class MetaextractBatchArguments(BatchArguments):
 
     batch_size = Argument(
@@ -29,6 +29,6 @@ class MetaextractBatchArguments(BatchArguments):
     )
 
 
-@register_submission_args('metaextract')
+@register_step_submission_args('metaextract')
 class MetaextractSubmissionArguments(SubmissionArguments):
     pass 

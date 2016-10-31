@@ -44,7 +44,10 @@ from tmlib.models.user import User
 from tmlib.models.experiment import Experiment, ExperimentReference
 from tmlib.models.well import Well
 from tmlib.models.channel import Channel
-from tmlib.models.layer import ChannelLayer
+from tmlib.models.layer import (
+    ChannelLayer, LabelLayer, ScalarLabelLayer, SupervisedClassifierLabelLayer,
+    ContinuousLabelLayer, HeatmapLabelLayer, LabelLayerValue
+)
 from tmlib.models.tile import ChannelLayerTile
 from tmlib.models.mapobject import (
     MapobjectType, Mapobject, MapobjectSegmentation
@@ -60,3 +63,5 @@ from tmlib.models.file import (
     MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile,
     IllumstatsFile
 )
+from tmlib.models.result import ToolResult
+from tmlib.models.plot import Plot

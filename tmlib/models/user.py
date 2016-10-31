@@ -26,12 +26,8 @@ class User(MainModel, DateMixIn):
 
     Attributes
     ----------
-    name: str
-        user name
-    email: str
-        email address
-    password: str
-        password
+    submissions: List[tmlib.models.submission.Submission]
+        submissions belonging to the user
     '''
 
     __tablename__ = 'users'

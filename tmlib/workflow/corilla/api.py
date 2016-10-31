@@ -22,12 +22,12 @@ from tmlib.image import IllumstatsContainer
 from tmlib.models.utils import delete_location
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.corilla.stats import OnlineStatistics
-from tmlib.workflow import register_api
+from tmlib.workflow import register_step_api
 
 logger = logging.getLogger(__name__)
 
 
-@register_api('corilla')
+@register_step_api('corilla')
 class IllumstatsCalculator(ClusterRoutines):
 
     '''Class for calculating illumination statistics.'''

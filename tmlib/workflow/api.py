@@ -128,7 +128,7 @@ class ClusterRoutines(BasicClusterRoutines):
     for large-scale image processing on a batch cluster.
 
     Each workflow step must implement this class and decorate it with
-    :func:`tmlib.workflow.register_api` to register it for use
+    :func:`tmlib.workflow.register_step_api` to register it for use
     within a worklow.
 
     Note

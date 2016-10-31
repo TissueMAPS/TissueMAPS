@@ -16,11 +16,11 @@
 from tmlib.workflow.args import Argument
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
-from tmlib.workflow import register_batch_args
-from tmlib.workflow import register_submission_args
+from tmlib.workflow import register_step_batch_args
+from tmlib.workflow import register_step_submission_args
 
 
-@register_batch_args('illuminati')
+@register_step_batch_args('illuminati')
 class IlluminatiBatchArguments(BatchArguments):
 
     batch_size = Argument(
@@ -58,7 +58,7 @@ class IlluminatiBatchArguments(BatchArguments):
         default=99.90
     )
 
-@register_submission_args('illuminati')
+@register_step_submission_args('illuminati')
 class IlluminatiSubmissionArguments(SubmissionArguments):
 
     pass

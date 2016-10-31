@@ -41,7 +41,7 @@ from tmlib.workflow.args import Argument
 from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.utils import create_gc3pie_session
 from tmlib.workflow.utils import create_gc3pie_engine
-from tmlib.workflow.submission import SubmissionManager
+from tmlib.workflow.submission import WorkflowSubmissionManager
 from tmlib.workflow.description import WorkflowStepDescription
 from tmlib.workflow.workflow import WorkflowStep
 from tmlib.workflow.jobs import CliJobCollection
@@ -163,7 +163,7 @@ class _CliMeta(ABCMeta):
         return store.load(job_id)
 
 
-class CommandLineInterface(SubmissionManager):
+class CommandLineInterface(WorkflowSubmissionManager):
 
     '''Abstract base class for command line interfaces.
 

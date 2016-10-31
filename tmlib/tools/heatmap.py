@@ -21,7 +21,6 @@ import tmlib.models as tm
 from tmlib.utils import same_docstring_as
 
 from tmlib.tools.base import Tool
-from tmlib.tools.result import ToolResult, HeatmapLabelLayer
 
 logger = logging.getLogger(__name__)
 
@@ -89,11 +88,11 @@ class Heatmap(Tool):
                 ).\
                 one()
 
-            result = ToolResult(self.submission_id, self.__class__.__name__)
+            result = tm.ToolResult(self.submission_id, self.__class__.__name__)
             session.add(result)
             session.flush()
 
-            layer = HeatmapLabelLayer(
+            layer = tm.HeatmapLabelLayer(
                 result.id, mapobject_type.id,
                 feature_id=feature.id, min=lower_bound, max=upper_bound
             )

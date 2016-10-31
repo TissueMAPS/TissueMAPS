@@ -34,20 +34,6 @@ class ChannelLayerTile(ExperimentModel):
     '''A *channel layer tile* is a component of an image pyramid. Each tile
     holds a single 2D 8-bit pixel plane with pre-defined dimensions.
 
-    Attributes
-    ----------
-    level: int
-        zero-based zoom level index
-    row: int
-        zero-based row index of the tile at given `level`
-    column: int
-        zero-based column index of the tile at given zoom `level`
-    channel_layer_id: int
-        ID of the parent channel pyramid
-    channel_pyramid: tmlib.models.ChannelLayer
-        parent channel pyramid to which the tile belongs
-    pixels: tmlib.image.PyramidTile
-        binary image data encoded as JPEG
     '''
 
     __tablename__ = 'channel_layer_tiles'

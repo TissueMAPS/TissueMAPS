@@ -156,3 +156,4 @@ class FeatureValue(ExperimentModel):
             '<FeatureValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
             % (self.id, self.tpoint, self.mapobject_id, self.feature.name)
         )
+

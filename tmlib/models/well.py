@@ -35,14 +35,6 @@ class Well(ExperimentModel, DateMixIn):
     From an imaging point of view, a *well* represents a continuous area of
     image acquisition when projected onto an y,x plane on the *plate* bottom.
 
-    Attributes
-    ----------
-    name: str
-        name of the well
-    plate_id: int
-        ID of the parent plate
-    plate: tmlib.models.Plate
-        parent plate to which the well belongs
     '''
 
     __tablename__ = 'wells'

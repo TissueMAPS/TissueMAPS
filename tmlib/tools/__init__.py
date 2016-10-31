@@ -17,18 +17,51 @@
 
 '''
 import os
+import inspect
 import logging
 import importlib
-from tmlib.tools.classification import Classification
-from tmlib.tools.clustering import Clustering
-from tmlib.tools.heatmap import Heatmap
 
-from tmlib.tools.version import __version__
+from tmlib.version import __version__
+from tmlib.errors import RegistryError
 
 logger = logging.getLogger(__name__)
 
 
+# TODO: how to do this dynamically: register in database?
 SUPPORTED_TOOLS = {'Clustering', 'Classification', 'Heatmap'}
+
+_tool_register = dict()
+
+
+def register_tool(name):
+    '''Class decorator to register a derived class of
+    :class:`tmlib.tools.base.Tool`.
+
+    Parameters
+    ----------
+    name: str
+        name of the tool that should be registered
+
+    Returns
+    -------
+    function
+        decorator
+
+    Raises
+    ------
+    TypeError
+        when decorated class is not derived from
+        :class:`tmlib.tools.base.Tool`
+    '''
+    from tmlib.tools.base import Tool
+    def decorator(cls):
+        if Tool not in inspect.getmro(cls):
+            raise TypeError(
+                'Tool class must be derived from "tmlib.tools.base.Tool"'
+            )
+        _tool_register[name] = cls
+        return cls
+    return decorator
 
 
 def get_tool_class(name):
@@ -44,43 +77,54 @@ def get_tool_class(name):
     type
         tool class
     '''
-    tool_module = import_tool_module(name)
-    logger.debug('get class for tool "%s"', name)
-    return getattr(tool_module, name)
-
-
-def import_tool_module(name):
-    '''Imports the module for an implemented `tool`.
-
-    Parameters
-    ----------
-    name: str
-        name of the tool
-
-    Returns
-    -------
-    module
-        loaded module instance
-
-    Raises
-    ------
-    ValueError
-        when no tool is know for the given `name` or when no respective module
-        is found
-    '''
-    if name not in SUPPORTED_TOOLS:
-        raise ValueError(
-            'Unknown tool "%s".\n'
-            'Supported are: "%s"' % '", "'.join(SUPPORTED_TOOLS)
+    module_name = '%s.%s' % (__name__, name)
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as error:
+        raise ImportError(
+            'Import of module "%s" failed: %s' % (module_name, str(error))
         )
-    name = name.lower()
-    tool_module_filename = '%s.py' % name
-    module_files = [
-        f for f in os.listdir(os.path.dirname(__file__))
-        if f != '__init__.py'
-    ]
-    if tool_module_filename not in module_files:
-        raise ValueError('No module found for tool "%s"', name)
-    module_path = '%s.%s' % (__name__, name)
-    return importlib.import_module(module_path)
+    try:
+        return _tool_register[name]
+    except KeyError:
+        raise RegistryError('Tool "%s" is not registered.' % name)
+    # tool_module = import_tool_module(name)
+    # logger.debug('get class for tool "%s"', name)
+    # return getattr(tool_module, name)
+
+
+# def import_tool_module(name):
+#     '''Imports the module for an implemented `tool`.
+
+#     Parameters
+#     ----------
+#     name: str
+#         name of the tool
+
+#     Returns
+#     -------
+#     module
+#         loaded module instance
+
+#     Raises
+#     ------
+#     ValueError
+#         when no tool is know for the given `name` or when no respective module
+#         is found
+#     '''
+#     if name not in SUPPORTED_TOOLS:
+#         raise ValueError(
+#             'Unknown tool "%s".\n'
+#             'Supported are: "%s"' % '", "'.join(SUPPORTED_TOOLS)
+#         )
+#     name = name.lower()
+#     tool_module_filename = '%s.py' % name
+#     module_files = [
+#         f for f in os.listdir(os.path.dirname(__file__))
+#         if f != '__init__.py'
+#     ]
+#     if tool_module_filename not in module_files:
+#         raise ValueError('No module found for tool "%s"', name)
+#     module_path = '%s.%s' % (__name__, name)
+#     return importlib.import_module(module_path)
 

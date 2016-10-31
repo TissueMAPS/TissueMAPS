@@ -19,11 +19,12 @@ import tmlib.models as tm
 from tmlib.utils import same_docstring_as
 
 from tmlib.tools.base import Tool, Classifier
-from tmlib.tools.result import ToolResult, SupervisedClassifierLabelLayer
+from tmlib.tools import register_tool
 
 logger = logging.getLogger(__name__)
 
 
+@register_tool('classification')
 class Classification(Classifier):
 
     '''Tool for supervised classification.'''
@@ -300,12 +301,12 @@ class Classification(Classifier):
                 filter_by(name=mapobject_type_name).\
                 one()
 
-            result = ToolResult(self.submission_id, self.__class__.__name__)
+            result = tm.ToolResult(self.submission_id, self.__class__.__name__)
             session.add(result)
             session.flush()
 
             unique_labels = np.unique(np.array(predicted_labels)[:, 1]).tolist()
-            layer = SupervisedClassifierLabelLayer(
+            layer = tm.SupervisedClassifierLabelLayer(
                 result.id, mapobject_type.id, unique_labels, color_map
             )
             session.add(layer)
@@ -319,4 +320,4 @@ class Classification(Classifier):
                 }
                 for mapobject_id, value in predicted_labels
             ]
-            session.bulk_insert_mappings(LabelLayerValue, label_objs) 
+            session.bulk_insert_mappings(tm.LabelLayerValue, label_objs) 

@@ -16,11 +16,11 @@
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
 from tmlib.workflow.args import Argument
-from tmlib.workflow import register_batch_args
-from tmlib.workflow import register_submission_args
+from tmlib.workflow import register_step_batch_args
+from tmlib.workflow import register_step_submission_args
 
 
-@register_batch_args('metaconfig')
+@register_step_batch_args('metaconfig')
 class MetaconfigBatchArguments(BatchArguments):
 
     regex = Argument(
@@ -55,7 +55,7 @@ class MetaconfigBatchArguments(BatchArguments):
     )
 
 
-@register_submission_args('metaconfig')
+@register_step_submission_args('metaconfig')
 class MetaconfigSubmissionArguments(SubmissionArguments):
 
     pass

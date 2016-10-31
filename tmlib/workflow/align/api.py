@@ -23,12 +23,12 @@ from tmlib.errors import NotSupportedError
 from tmlib.errors import JobDescriptionError
 from tmlib.workflow.align import registration as reg
 from tmlib.workflow.api import ClusterRoutines
-from tmlib.workflow import register_api
+from tmlib.workflow import register_step_api
 
 logger = logging.getLogger(__name__)
 
 
-@register_api('align')
+@register_step_api('align')
 class ImageRegistrator(ClusterRoutines):
 
     '''Class for registeration and alignment of images between multiplexing

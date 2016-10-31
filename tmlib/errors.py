@@ -105,3 +105,5 @@ class DataIntegrityError(Exception):
     requirements.
     '''
 
+class RegistryError(Exception):
+    '''Error class that is raised when a class is not registered.'''

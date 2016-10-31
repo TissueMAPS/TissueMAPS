@@ -31,14 +31,14 @@ three modules:
 
     * **args**: Must implemement :class:`tmlib.workflow.args.BatchArguments` and
       :class:`tmlib.workflow.args.SubmissionArguments` and decorate them with
-      :func:`tmlib.workflow.register_batch_args` and
-      :func:`tmlib.workflow.register_submission_args`, respectively. These
+      :func:`tmlib.workflow.register_step_batch_args` and
+      :func:`tmlib.workflow.register_step_submission_args`, respectively. These
       classes provide `step`-specific arguments that control the
       partitioning of the given computational task into separate batch jobs
       and the amount of computational resources, which should get allocated
       to each batch job.
     * **api**: Must implement :class:`tmlib.workflow.api.ClusterRoutines` and
-      decorate it with :func:`tmlib.workflow.register_api`. This class
+      decorate it with :func:`tmlib.workflow.register_step_api`. This class
       provides the active programming interface (API) with methods for
       creation and management of batch jobs. The methods
       :meth:`tmlib.workflow.api.ClusterRoutines.create_batches`,
@@ -81,6 +81,7 @@ import types
 import collections
 
 from tmlib import __version__
+from tmlib.errors import RegistryError
 
 logger = logging.getLogger(__name__)
 
@@ -89,14 +90,14 @@ _step_register = collections.defaultdict(dict)
 _workflow_register = collections.defaultdict(dict)
 
 
-def register_api(step_name):
+def register_step_api(name):
     '''Class decorator to register a derived class of
-    :class:`tmlib.workflow.api.ClusterRoutines` as an API for use in
+    :class:`tmlib.workflow.api.ClusterRoutines` as a step API for use in
     command line interface and workflow.
 
     Parameters
     ----------
-    step_name: str
+    name: str
         name of the corresponding worklow step
 
     Returns
@@ -116,7 +117,7 @@ def register_api(step_name):
                 'Api class must be derived from '
                 '"tmlib.workflow.api.ClusterRoutines"'
             )
-        _step_register[step_name]['api'] = cls
+        _step_register[name]['api'] = cls
         return cls
     return decorator
 
@@ -226,14 +227,14 @@ def climethod(help, **kwargs):
     return decorator
 
 
-def register_batch_args(step_name):
+def register_step_batch_args(name):
     '''Class decorator to register a derived class of
     :class:`tmlib.workflow.args.BatchArguments` for a workflow
     step to use it via the command line or within a workflow.
 
     Parameters
     ----------
-    step_name: str
+    name: str
         name of the corresponding workflow step
 
     Returns
@@ -253,19 +254,19 @@ def register_batch_args(step_name):
                 'Registered class must be derived from '
                 'tmlib.workflow.args.BatchArguments'
             )
-        _step_register[step_name]['batch_args'] = cls
+        _step_register[name]['batch_args'] = cls
         return cls
     return decorator
 
 
-def register_submission_args(step_name):
+def register_step_submission_args(name):
     '''Class decorator to register a derived class of
     :class:`tmlib.workflow.args.SubmissionArguments` for a worklow
     step to use it via the command line or within a worklow.
 
     Parameters
     ----------
-    step_name: str
+    name: str
         name of the corresponding workflow step
 
     Returns
@@ -285,19 +286,19 @@ def register_submission_args(step_name):
                 'Registered class must be derived from '
                 'tmlib.workflow.args.SubmissionArguments'
             )
-        _step_register[step_name]['submission_args'] = cls
+        _step_register[name]['submission_args'] = cls
         return cls
     return decorator
 
 
-def register_extra_args(step_name):
+def register_step_extra_args(name):
     '''Class decorator to register a derived class of
     :class:`tmlib.workflow.args.ExtraArguments` for a worklow
     step to use it via the command line or within a worklow.
 
     Parameters
     ----------
-    step_name: str
+    name: str
         name of the corresponding workflow step
 
     Returns
@@ -317,7 +318,7 @@ def register_extra_args(step_name):
                 'Registered class must be derived from '
                 'tmlib.workflow.args.ExtraArguments'
             )
-        _step_register[step_name]['extra_args'] = cls
+        _step_register[name]['extra_args'] = cls
         return cls
     return decorator
 
@@ -346,10 +347,15 @@ def get_step_args(name):
         )
     # Once the module has been loaded, the argument collection classes
     # are available in the register
-    batch_args = _step_register[name]['batch_args']
-    submission_args = _step_register[name]['submission_args']
-    extra_args = _step_register[name].get('extra_args', None)
-    return (batch_args, submission_args, extra_args)
+    try:
+        batch_args = _step_register[name]['batch_args']
+        submission_args = _step_register[name]['submission_args']
+        extra_args = _step_register[name].get('extra_args', None)
+        return (batch_args, submission_args, extra_args)
+    except KeyError:
+        raise RegistryError(
+            'Arguments are not registered for step "%s".' % name
+        )
 
 
 def get_step_api(name):
@@ -374,7 +380,10 @@ def get_step_api(name):
         )
     except:
         raise
-    return _step_register[name]['api']
+    try:
+        return _step_register[name]['api']
+    except KeyError:
+        raise RegistryError('API is not registered for step "%s".' % name)
 
 
 def get_step_information(name):

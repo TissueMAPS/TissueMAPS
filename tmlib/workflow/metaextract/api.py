@@ -20,7 +20,7 @@ import subprocess
 from tmlib.readers import JavaBridge, BFOmeXmlReader
 
 import tmlib.models as tm
-from tmlib.workflow import register_api
+from tmlib.workflow import register_step_api
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.errors import MetadataError
@@ -29,7 +29,7 @@ from tmlib.workflow.api import ClusterRoutines
 logger = logging.getLogger(__name__)
 
 
-@register_api('metaextract')
+@register_step_api('metaextract')
 class MetadataExtractor(ClusterRoutines):
 
     '''Class for extraction of metadata from microscopic image files.

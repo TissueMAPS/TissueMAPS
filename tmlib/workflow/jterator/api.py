@@ -44,13 +44,13 @@ from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.handles import SegmentedObjects
 from tmlib.workflow.jterator.checkers import PipelineChecker
-from tmlib.workflow import register_api
+from tmlib.workflow import register_step_api
 from tmlib import cfg
 
 logger = logging.getLogger(__name__)
 
 
-@register_api('jterator')
+@register_step_api('jterator')
 class ImageAnalysisPipeline(ClusterRoutines):
 
     '''Class for running image processing pipelines.'''
