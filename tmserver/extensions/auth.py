@@ -22,7 +22,6 @@ from passlib.hash import sha256_crypt
 from flask_jwt import JWT
 
 import tmlib.models as tm
-from tmserver.user import User
 
 
 jwt = JWT()

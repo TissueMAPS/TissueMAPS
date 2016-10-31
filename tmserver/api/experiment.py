@@ -13,8 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""API view functions for experiment and related resources"""
-
+"""API view functions for experiment and related resources."""
 import json
 import os
 from cStringIO import StringIO
@@ -1614,3 +1613,4 @@ def get_acquisition_metadata_files(experiment_id, acquisition_id):
         return jsonify({
             'data': acquisition.microscope_metadata_files
         })
+

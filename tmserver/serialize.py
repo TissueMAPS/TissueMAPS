@@ -13,17 +13,18 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-Serialization mechanism for TissueMAPS. Please refer to
-:py:class:`TmJSONEncoder` for further information.
-
-"""
+"""Serialization mechanism for TissueMAPS database model objects."""
 import flask
+
+import tmlib.models as tm
+
+from tmserver.model import encode_pk
 
 _serializers = {}
 
 
 def json_encoder(obj_type):
+    """Decorator for functions that JSON serialiaze objects."""
     def wrap(f):
         _serializers[obj_type] = f
         return f
@@ -31,8 +32,8 @@ def json_encoder(obj_type):
 
 
 class TmJSONEncoder(flask.json.JSONEncoder):
-    """
-    Custom JSON encoder to serialize types defined for TissueMAPS.
+
+    """Custom JSON encoder to serialize types defined for TissueMAPS.
     This serializer will also check supertypes if no matching serializer was
     found.
     Serializers need to be registered with the ``json_encoder`` decorator:
@@ -63,3 +64,147 @@ class TmJSONEncoder(flask.json.JSONEncoder):
             return serialized
         else:
             return flask.json.JSONEncoder.default(self, obj)
+
+
+@json_encoder(tm.ExperimentReference)
+def encode_experiment(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'description': obj.description,
+        'user': obj.user.name
+    }
+
+
+@json_encoder(tm.Channel)
+def encode_channel(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'bit_depth': obj.bit_depth,
+        'layers': [encoder.default(ch) for ch in obj.layers],
+    }
+
+
+@json_encoder(tm.ChannelLayer)
+def encode_channel_layer(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'max_zoom': obj.maxzoom_level_index,
+        'tpoint': obj.tpoint,
+        'zplane': obj.zplane,
+        'max_intensity': obj.max_intensity,
+        'min_intensity': obj.min_intensity,
+        'experiment_id': encode_pk(obj.channel.experiment_id),
+        'image_size': {
+            'width': obj.width,
+            'height': obj.height
+        }
+    }
+
+
+@json_encoder(tm.Plate)
+def encode_plate(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'description': obj.description,
+        'acquisitions': map(encoder.default, obj.acquisitions),
+        'status': obj.status,
+    }
+
+
+@json_encoder(tm.Acquisition)
+def encode_acquisition(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'description': obj.description,
+        'status': obj.status,
+    }
+
+
+@json_encoder(tm.MicroscopeImageFile)
+def enocode_microscope_image_file(obj, encoder):
+    return {
+        'name': obj.name,
+        'status': obj.status
+    }
+
+
+@json_encoder(tm.MicroscopeMetadataFile)
+def enocode_microscope_metadata_file(obj, encoder):
+    return {
+        'name': obj.name,
+        'status': obj.status
+    }
+
+
+@json_encoder(tm.Cycle)
+def encode_cycle(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'plate_id': encode_pk(obj.plate_id),
+    }
+
+
+@json_encoder(tm.Feature)
+def encode_feature(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+    }
+
+
+@json_encoder(tm.MapobjectType)
+def encode_mapobject_type(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'features': map(encoder.default, obj.features),
+    }
+
+
+@json_encoder(tm.MicroscopeImageFile)
+def encode_microscope_image_file(obj, encoder):
+    return {
+        'name': obj.name,
+        'status': obj.status
+    }
+
+
+@json_encoder(tm.MicroscopeMetadataFile)
+def encode_microscope_metadata_file(obj, encoder):
+    return {
+        'name': obj.name,
+        'status': obj.status
+    }
+
+
+@json_encoder(tm.ToolResult)
+def encode_tool_result(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'submission_id': obj.submission_id,
+        'layer': obj.layer,
+        'plots': map(encoder.default, obj.plots)
+    }
+
+
+@json_encoder(tm.LabelLayer)
+def encode_label_layer(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'type': obj.type,
+        'attributes': obj.attributes
+    }
+
+
+@json_encoder(tm.Plot)
+def encode_plot(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'type': obj.type,
+        'attributes': obj.attributes
+    }

@@ -29,6 +29,7 @@ from flask_jwt import jwt_required
 from flask_jwt import current_identity
 
 import tmlib.models as tm
+from tmlib import cfg as tmlib_cfg
 from tmlib.utils import flatten
 from tmlib.workflow import get_step_args
 from tmlib.workflow.jobs import RunJob
@@ -302,7 +303,7 @@ def get_available_modules():
 
     '''
     logger.info('get list of available jterator modules')
-    repo_location = current_app.config.get('TMAPS_MODULES_HOME')
+    repo_location = tmlib_cfg.modules_home
     if repo_location is None:
         raise Exception(
             'You have to set the config `TMAPS_MODULES_HOME` to the '
@@ -325,9 +326,7 @@ def get_available_pipelines():
         array of strings.
     '''
     logger.info('get list of available jterator pipelines')
-    pipes_location = os.path.join(
-        current_app.config.get('TMAPS_MODULES_HOME'), 'pipes'
-    )
+    pipes_location = os.path.join(tmlib_cfg.modules_home, 'pipes')
     pipes = [
         os.path.basename(p)
         for p in list_projects(pipes_location)

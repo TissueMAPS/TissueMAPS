@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""API view functions that deal with data analysis tools and their results"""
+"""API view functions that deal with data analysis tools and their results."""
 import os
 import json
 import logging
@@ -24,7 +24,7 @@ from flask_jwt import current_identity
 import tmlib.models as tm
 from tmlib import cfg as tmlib_cfg
 from tmlib.writers import JsonWriter
-from tmlib.tools.job import ToolJob
+from tmlib.tools.jobs import ToolJob
 
 from tmserver.api import api
 from tmserver.error import (
@@ -36,7 +36,6 @@ from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
 from tmserver.extensions import gc3pie
 
-from tmlib.tools.result import ToolResult, LabelLayer
 from tmlib.tools import SUPPORTED_TOOLS
 from tmlib.tools import get_tool_class
 
@@ -153,61 +152,27 @@ def process_tool_request(experiment_id):
     payload = data.get('payload', {})
     session_uuid = data.get('session_uuid')
     tool_name = data.get('tool_name')
+    user_name = data.get('user_name')
 
-    # Instantiate the correct tool plugin class.
     logger.info('process request of tool "%s"', tool_name)
 
     with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        user_name = experiment.user.name
-        tool_dir = os.path.join(experiment.tools_location, tool_name)
-        submission = tm.Submission(experiment_id, program='tool')
-        session.add(submission)
-        session.flush()
-        submission_id = submission.id
+        user = session.query(tm.User).\
+            filter_by(name=user_name).\
+            one()
+        user_id = user.id
 
-    tool_log_dir = os.path.join(tool_dir, 'logs')
-    tool_batch_dir = os.path.join(tool_dir, 'batches')
-    if not os.path.exists(tool_log_dir):
-        os.makedirs(tool_log_dir)
-    if not os.path.exists(tool_batch_dir):
-        os.makedirs(tool_batch_dir)
+    manager = ToolRequestManager(experiment_id, 1)
+    submission_id, user_name = manager.register_submission(user_id)
 
-    with tm.utils.ExperimentSession(experiment_id) as session:
-        session = session.get_or_create(ToolSession, uuid=session_uuid)
-        session_id = session.id
+    # with tm.utils.ExperimentSession(experiment_id) as session:
+    #     session = session.get_or_create(ToolSession, uuid=session_uuid)
+    #     session_id = session.id
 
-    # TODO: move this logic into Tool class
-    batch_filename = '%s_%d.json' % (tool_name, session_id)
-    batch_location = os.path.join(tool_batch_dir, batch_filename)
-    with JsonWriter(batch_location) as f:
-        f.write(payload)
-
-    # Create and submit tool job for asynchronous processing on the cluster
-    if tmlib_cfg.use_spark:
-        args = ['spark-submit', '--master', tmlib_cfg.spark_master]
-        if tmlib_cfg.spark_master == 'yarn':
-            args.extend(['--deploy-mode', 'client'])
-        # TODO: ship Python dependencies
-        # args.extend([
-        #     '--py-files', cfg.spark_tmlib.tools_egg
-        # ])
-    else:
-        args = []
-    args.extend([
-        'tm_tool', str(experiment_id),
-        '--name', tool_name,
-        '--submission_id', str(submission_id),
-        '--batch_file', batch_location,
-    ])
-
-    job = ToolJob(
-        tool_name=tool_name,
-        arguments=args,
-        output_dir=tool_log_dir,
-        submission_id=submission_id,
-        user_name=user_name
-    )
+    tool_cls = get_tool_class(name)
+    tool = tool_cls(experiment_id)
+    tool.write_batch_file(payload, submission_id)
+    job = tool.create_job(submission_id, user_name)
     gc3pie.store_jobs(job)
     gc3pie.submit_jobs(job)
 
@@ -257,7 +222,7 @@ def get_tool_result(experiment_id):
     submission_id = request.args.get('submission_id', type=int)
     logger.info('get tool result for submission %d', submission_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        tool_result = session.query(ToolResult).\
+        tool_result = session.query(tm.ToolResult).\
             filter_by(submission_id=submission_id).\
             one()
         return jsonify(data=tool_result)
@@ -369,7 +334,7 @@ def get_label_layer_tiles(experiment_id, label_layer_id):
     tpoint = request.args.get('tpoint', type=int)
 
     with tm.utils.ExperimentSession(experiment_id) as session:
-        label_layer = session.query(LabelLayer).get(label_layer_id)
+        label_layer = session.query(tm.LabelLayer).get(label_layer_id)
         logger.info('get result tiles for label layer "%s"', label_layer.type)
         mapobject_type = session.query(tm.MapobjectType).\
             get(label_layer.mapobject_type_id)

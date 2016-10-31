@@ -13,10 +13,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-API view functions for querying resources related to mapobjects
+"""API view functions for querying resources related to mapobjects
 like their polygonal outlines or feature data.
-
 """
 import os.path as p
 import json

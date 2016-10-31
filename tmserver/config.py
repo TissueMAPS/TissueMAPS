@@ -33,8 +33,6 @@ class ServerConfig(TmapsConfig):
         self.log_n_backups = 10
         self.secret_key = 'default_secret_key'
         self.jwt_expiration_delta = datetime.timedelta(hours=6)
-        self.use_spark = False
-        self.spark_master = 'local'
         self.read()
 
     @property
@@ -146,36 +144,3 @@ class ServerConfig(TmapsConfig):
             )
         self._config.set(self._section, 'jwt_expiration_delta', str(value))
 
-    @property
-    def spark_master(self):
-        '''str: URL for `Apache Spark` master node (default: ``"local"``)'''
-        return self._config.get(self._section, 'spark_master')
-
-    @spark_master.setter
-    def spark_master(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError(
-                'Configuration parameter "spark_master" must have type str.'
-            )
-        vals = {'local', 'yarn'}
-        if value not in vals:
-            raise ValueError(
-                'Configuration parameter "spark_master" must be one of the '
-                'following: "%s"' % '", "'.join(vals)
-            )
-        self._config.set(self._section, 'spark_master', str(value))
-
-    @property
-    def use_spark(self):
-        '''bool: whether `Apache Spark` should be used for processing
-        (default: ``False``)
-        '''
-        return self._config.getboolean(self._section, 'use_spark')
-
-    @use_spark.setter
-    def use_spark(self, value):
-        if not isinstance(value, bool):
-            raise TypeError(
-                'Configuration parameter "use_spark" must have type bool.'
-            )
-        self._config.set(self._section, 'use_spark', str(value).lower())

@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""API view functions for file upload during the setup process"""
+"""API view functions for file upload."""
 import os.path as p
 import json
 import datetime

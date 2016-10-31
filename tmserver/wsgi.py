@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TmServer - TissueMAPS server application.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
 #
@@ -14,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
 """
 This module holds an application instance that is passed to a server such as
 gunicorn or uWSGI.
@@ -22,4 +22,3 @@ gunicorn or uWSGI.
 from tmserver.appfactory import create_app
 
 app = create_app()
-

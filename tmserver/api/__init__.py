@@ -13,3 +13,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""RESTful API.
+
+"""
+from flask import Blueprint
+
+api = Blueprint('api', __name__)
+
+import tmserver.api.experiment
+import tmserver.api.upload
+import tmserver.api.tools
+import tmserver.api.user
+import tmserver.api.mapobject
