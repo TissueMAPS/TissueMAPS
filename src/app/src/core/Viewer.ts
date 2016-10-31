@@ -24,6 +24,8 @@ class Viewer {
     tools: ng.IPromise<Tool[]>;
     channels: Channel[] = [];
     mapobjectTypes: MapobjectType[] = [];
+    isSubmissionHandled: any = {};
+
 
     // TODO: A viewer should mayble be creatable without an experiment.
     // The initialization process of loading an experiment would be done by a
@@ -71,7 +73,7 @@ class Viewer {
             }
         })
 
-        this._startMonitoringJobs(2000);
+        this._startMonitoringJobs(3000);
 
         //// DEBUG
         // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
@@ -198,10 +200,27 @@ class Viewer {
         console.log('ToolService: HANDLE REQUEST.');
         var result = (new ToolResultDAO(this.experiment.id)).fromJSON(res);
         result.attachToViewer(this);
+        result.visible = false;
         // session.isRunning = false;
         // session.results.push(result);
-        this.currentResult = result;
-        result.visible = true;
+        if (this.currentResult !== null) {
+            if (result.submissionId > this.currentResult.submissionId) {
+                console.log('update current result: ', result)
+                this.saveCurrentResult();
+                this.currentResult = result;
+            } else {
+                var submissionIds = this.savedResults.map((res) => {
+                    return res.submissionId;
+                })
+                if (!submissionIds.includes(result.submissionId) && result.submissionId != this.currentResult.submissionId) {
+                    console.log('save result: ', result)
+                    this.savedResults.push(result);
+                }
+            }
+        } else {
+            console.log('update current result: ', result)
+            this.currentResult = result;
+        }
         // TODO: Send event to Viewer messagebox
         console.log('ToolService: DONE.');
     }
@@ -212,66 +231,31 @@ class Viewer {
      * @param session The tool session from which the original request was sent.
      * @type ng.IPromise<any>
      */
-    // private _startMonitoringToolResponseStatus(jobId: String, session: ToolSession) {
-    //     var delayMs = 2000;
-    //     var promise = this._$interval(() => {
-    //         this._$http.get('/api/experiments/' + this.experiment.id + '/jobs/' + jobId)
-    //         .then((resp: any) => {
-    //             var jobStatus = resp.data.jobStatus;
-    //             if (jobStatus == 'TERMINATED') {
-    //                 this._$interval.cancel(promise);
-    //                 this._handleSuccessfulToolResponse(resp.data, session);
-    //             } else if (jobStatus == 'ERROR') {
-    //                 this._$interval.cancel(promise);
-    //             } else {
-    //                 console.log('Job' + jobId + ' status: ' + jobStatus + ')');
-    //             }
-    //         })
-
-    //     }, delayMs);
-    //     return promise;
-    // }
-
     private _startMonitoringJobs(delayMs: number) {
         var promise = this._$interval(() => {
             // Query the server for job statuses
             this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status')
             .then((resp: any) => {
-                var jobStati = resp.data.data;
-                var allExistingResults = this.savedResults.concat([this._currentResult]);
-                var isSubmissionHandled = {};
-                _(allExistingResults).each((res) => {
+                _(this.savedResults).each((res) => {
                     if (res !== null) {
-                        isSubmissionHandled[res.submissionId] = true;
+                        this.isSubmissionHandled[res.submissionId] = true;
                     }
                 });
-                _(jobStati).each((st) => { 
-                    if (st.state == 'TERMINATED' && st.exitcode == 0 && !isSubmissionHandled[st.submission_id]) {
-                        this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + st.submission_id)
-                        .then((resp: any) => {
-                            this._handleSuccessfulToolResult(resp.data.data);
-                        });
+                var jobStati = resp.data.data;
+                _(jobStati).each((st) => {
+                    if ((st.state == 'TERMINATING' || st.state == 'TERMINATED') && st.exitcode == 0) {
+                        if (!this.isSubmissionHandled[st.submission_id]) {
+                            this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + st.submission_id)
+                            .then((resp: any) => {
+                                var result = resp.data.data;
+                                this._handleSuccessfulToolResult(result);
+                            });
+                        }
                     }
                 });
-                // var jobs = resp.jobs;
-                // _(jobs).each((job) => {
-                //     if (job.status == 'TERMINATED') {
-                //         var resultId = job.result_id;
-                //         var alreadyHandled = _(this.savedResults).some((res) => {
-                //             res.id == resultId;
-                //         });
-                //         if (!alreadyHandled) {
-                //             this._$http.get('/api/experiments/' + this.experiment.id + '/tool-results/' + resultId)
-                //             .then((resp) => {
-                //                 this._handleSuccessfulToolResponse(resp.data);
-                //             });
-                //         }
-                //     } else if (job.status == 'ERROR') {
-                //         this._$interval.cancel(promise);
-                //     } else {
-                //         console.log('Job' + jobId + ' status: ' + job.status + ')');
-                //     }
-                // });
+                if (this.currentResult !== null) {
+                    this.currentResult.visible = true;
+                }
             });
 
         }, delayMs);
@@ -281,7 +265,7 @@ class Viewer {
     /**
      * Send a request to the server-side tool to start a processing job.
      * The server will respond with a JSON object that containts a 'status'
-     * property. If this property evaluates to 'SUCCESS' then the processing
+     * property. If this property evaluates to 'ok' then the processing
      * was started successfully and the server should be queried for a tool
      * result by long-polling.
      * @param session The tool session
@@ -300,12 +284,12 @@ class Viewer {
         console.log('ToolService: START REQUEST.');
         return $http.post(url, request).then(
         (resp: any) => {
-            if (resp.data.status == 'SUCCESS') {
-                // this._startMonitoringToolResponseStatus(resp.data.job_id, session);
-                console.log('Successfully started job server-side.');
-            } else {
-                console.log('Error: failed to start job server-side.');
-            }
+            // if (resp.data.status == 'ok') {
+            //     // this._startMonitoringToolResponseStatus(resp.data.job_id, session);
+            //     console.log('Successfully started job server-side.');
+            // } else {
+            //     console.log('Error: failed to start job server-side.');
+            // }
             return true;
         },
         (err) => {

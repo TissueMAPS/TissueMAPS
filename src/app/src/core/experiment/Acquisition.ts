@@ -23,6 +23,7 @@ class Acquisition {
     description: string;
     status: string;
     files: MicroscopeFile[] = [];
+    nFiles: number;
     experimentId: string;
 
     private _uploader: any;
@@ -69,6 +70,7 @@ class Acquisition {
             });
             var files = Array.prototype.concat(imageFiles, metaDataFiles)
             this.files = files;
+            this.nFiles = this.files.length;
             return files;
         });
     }
@@ -78,7 +80,7 @@ class Acquisition {
             '/acquisitions/' + this.id + '/upload/count';
         return this._$http.get(url)
         .then((resp: any) => {
-            console.log('number of uploaded files: ', resp.data.data)
+            // console.log('number of uploaded files: ', resp.data.data)
             return resp.data.data;
         });
     }
