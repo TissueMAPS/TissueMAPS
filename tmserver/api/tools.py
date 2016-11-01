@@ -38,6 +38,7 @@ from tmserver.extensions import gc3pie
 
 from tmlib.tools import SUPPORTED_TOOLS
 from tmlib.tools import get_tool_class
+from tmlib.tools.manager import ToolRequestManager
 
 
 logger = logging.getLogger(__name__)
@@ -152,27 +153,18 @@ def process_tool_request(experiment_id):
     payload = data.get('payload', {})
     session_uuid = data.get('session_uuid')
     tool_name = data.get('tool_name')
-    user_name = data.get('user_name')
 
     logger.info('process request of tool "%s"', tool_name)
 
-    with tm.utils.MainSession() as session:
-        user = session.query(tm.User).\
-            filter_by(name=user_name).\
-            one()
-        user_id = user.id
-
-    manager = ToolRequestManager(experiment_id, 1)
-    submission_id, user_name = manager.register_submission(user_id)
+    manager = ToolRequestManager(experiment_id, tool_name, 1)
+    submission_id, user_name = manager.register_submission(current_identity.id)
+    manager.write_batch_file(payload, submission_id)
+    job = manager.create_job(submission_id, user_name)
 
     # with tm.utils.ExperimentSession(experiment_id) as session:
     #     session = session.get_or_create(ToolSession, uuid=session_uuid)
     #     session_id = session.id
 
-    tool_cls = get_tool_class(name)
-    tool = tool_cls(experiment_id)
-    tool.write_batch_file(payload, submission_id)
-    job = tool.create_job(submission_id, user_name)
     gc3pie.store_jobs(job)
     gc3pie.submit_jobs(job)
 

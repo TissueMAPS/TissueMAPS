@@ -310,6 +310,10 @@ def get_uploaded_file_count(experiment_id, acquisition_id):
         :statuscode 200: no error
 
     """
+    logger.info(
+        'get number of uploaded files for acquisition %d of experiment %d',
+        acquisition_id, experiment_id
+    )
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
         n_imgfiles = session.query(tm.MicroscopeImageFile).\

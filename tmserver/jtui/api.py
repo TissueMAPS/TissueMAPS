@@ -783,7 +783,8 @@ def run_jobs(experiment_id, project_name):
     with tm.utils.MainSession() as session:
         submission = tm.Submission(
             experiment_id=experiment_id,
-            program='jtui-{pipeline}'.format(pipeline=jt.project.name)
+            program='jtui-{pipeline}'.format(pipeline=jt.project.name),
+            user_id=current_identity.id
         )
         session.add(submission)
         session.flush()

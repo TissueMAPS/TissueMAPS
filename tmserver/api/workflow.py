@@ -291,10 +291,10 @@ def get_jobs_status(experiment_id):
                         tm.Task.id.in_(task_ids),
                         ~tm.Task.is_collection
                     ).\
-                    order_by(tm.Task.id).\
                     limit(batch_size).\
                     offset(index).\
                     all()
+                # order_by(tm.Task.id).\
                 status = [t.status for t in tasks]
 
     return jsonify({
