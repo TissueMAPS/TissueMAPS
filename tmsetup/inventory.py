@@ -25,7 +25,7 @@ GROUP_VARS_DIR = os.path.join(CONFIG_DIR, 'group_vars')
 HOST_VARS_DIR = os.path.join(CONFIG_DIR, 'host_vars')
 HOSTS_FILE = os.path.join(CONFIG_DIR, 'hosts')
 
-HOSTNAME_FORMAT = '{grid}-{cluster}-{node_type}-{index:03X}'
+HOSTNAME_FORMAT = '{grid}-{cluster}-{node_type}-{index:03d}'
 
 
 def build_inventory_information(setup):

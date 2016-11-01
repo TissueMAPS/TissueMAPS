@@ -6,6 +6,7 @@ import subprocess
 import sys
 import collections
 import elasticluster
+from whichcraft import which
 from pkg_resources import resource_filename, resource_exists
 
 import tmsetup
@@ -135,7 +136,8 @@ def _build_command(verbosity, playbook, variables=dict(), hosts=set()):
     for k, v in variables.iteritems():
         var_strings.append('='.join([k, v]))
     # The "tm_inventory" script should be on the path upon installation.
-    cmd = ['ansible-playbook', '-i', 'tm_inventory', playbook]
+    inventory_file = which('tm_inventory')
+    cmd = ['ansible-playbook', '-i', inventory_file, playbook]
     if verbosity > 0:
         cmd.append('-%s' % (verbosity * 'v'))
     if variables:

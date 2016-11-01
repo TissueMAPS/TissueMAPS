@@ -177,7 +177,11 @@ def update_static_inventory(inventory_info, setup):
             private_key_file = os.path.expandvars(
                 os.path.expanduser(setup.cloud.key_file_private)
             )
-            host_vars = read_yaml_file(host_vars_file)
+            try:
+                host_vars = read_yaml_file(host_vars_file)
+            except OSError:
+                host_vars = {}
+                pass
             default_host_vars = {
                 'ansible_user': 'ubuntu',
                 'ansible_ssh_private_key_file': private_key_file

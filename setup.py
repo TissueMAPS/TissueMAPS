@@ -113,7 +113,8 @@ setuptools.setup(
        'apache-libcloud>=1.3.0',
        'PyYAML>=3.11',
        'shade>=1.12.1',
-       'boto3>=1.4.1'
+       'boto3>=1.4.1',
+       'whichcraft>=0.4.0'
     ],
     dependency_links=[
         'https://github.com/gc3-uzh-ch/elasticluster/tarball/master#egg=elasticluster-1.3.dev',
