@@ -84,6 +84,7 @@ setuptools.setup(
     author='Markus D. Herrmann',
     author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/tmclient',
+    license='GPL-3.0+',
     platforms=['Linux', 'OS-X'],
     classifiers=[
         'Intended Audience :: Developers',
