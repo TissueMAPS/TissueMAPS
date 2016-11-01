@@ -1,6 +1,11 @@
 /* https://github.com/bitprophet/alabaster/blob/master/alabaster/static/alabaster.css_t */
 pre {
+    background: #f2f2f2;
+    padding: 7px 30px;
+    margin: 15px 0px;
+    line-height: 1.3em;
     border: 1px solid #bfbfbf;
+    font-size: 0.7em;
 }
 
 dl dl pre {
@@ -9,9 +14,13 @@ dl dl pre {
 }
 
 dt {
-    background: {{ theme_code_highlight_bg }};
+    background-color: #f2f2f2;
 }
 
-div.highlight {
-    background_color: {{ theme_code_highlight_bg }};
+code {
+    /* color: #703040; */
+    color: #544545;
 }
+
+
+
