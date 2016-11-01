@@ -38,21 +38,22 @@ def register_error(cls):
     return cls
 
 
-# @api.errorhandler(sqlalchemy.orm.exc.NoResultFound)
-# def handle_no_result_found(error):
-#     response = jsonify(error={
-#         'message': error.message,
-#         'status_code': 404,
-#         'type': error.__class__.__name__
-#     })
-#     current_app.logger.error('NoResultFound: ' + error.message)
-#     response.status_code = 404
-#     return response
+@api.errorhandler(sqlalchemy.orm.exc.NoResultFound)
+def handle_no_result_found(error):
+    response = jsonify(error={
+        'message': error.message,
+        'status_code': 404,
+        'type': error.__class__.__name__
+    })
+    current_app.logger.error('NoResultFound: ' + error.message)
+    response.status_code = 404
+    return response
 
 
 @api.errorhandler(sqlalchemy.exc.IntegrityError)
 def handle_integrity_error(error):
     response = jsonify(error={
+        'error': True,
         'message': error.message,
         'status_code': 500,
         'type': error.__class__.__name__
@@ -75,6 +76,7 @@ class APIException(Exception):
 @json_encoder(APIException)
 def encode_api_exception(obj, encoder):
     return {
+        'error': True,
         'message': obj.message,
         'status_code': obj.status_code,
         'type': obj.__class__.__name__
@@ -130,7 +132,7 @@ class ResourceNotFoundError(APIException):
     def __init__(self, model):
         super(ResourceNotFoundError, self).__init__(
             message=(
-                'The requested resource with type %s was not found.' % model
+                'The requested resource with type "%s" was not found.' % model.__name__
             ),
             status_code=404
         )
