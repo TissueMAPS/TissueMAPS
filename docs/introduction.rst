@@ -11,7 +11,7 @@ What is TissueMAPS?
 
 `TissueMAPS` is a computational framework for interactive visualization and analysis of large-scale microscopy image datasets.
 
-High-throughput image-based screens amount to terabytes of image data. The size of the generated datasets make it impractical to store and process data on a local computer, but rather calls for remote solutions.
+High-throughput image-based screens amount to terabytes of image data. The size of these datasets make it impractical to store and process data on a local computer, but rather calls for remote scale-out solutions.
 
 Most available applications for microscopy image analysis are designed to run on a single desktop computer.
 `TissueMAPS` instead uses a distributed client-server model optimized for processing images in parallel on multiple virtual machines (VMs) in a modern cloud infrastructure.
@@ -39,9 +39,9 @@ Client code
 
 Client `HTTP` interfaces are implementated in different languages.
 
-The `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository holds the `Javascript <https://www.javascript.com/>`_ code for the browser-based user interface implemented in form of an `AngularJS <https://angularjs.org/>`_ app. Although it represents client code, this repository is installed server side, since the code is served to clients upon request via the browser.
+The `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository holds the `Javascript <https://www.javascript.com/>`_ code for the browser-based user interface implemented in form of an `AngularJS <https://angularjs.org/>`_ app. Although technically client code, the app gets installed server side, since the code is served to clients upon request via the browser.
 
-The `TmClient <https://github.com/TissueMAPS/TmClient>`_ repository holds `Python <https://www.python.org/>`_, `Matlab <https://mathworks.com/products/matlab/>`_ and `R <https://www.r-project.org/>`_ packages for programmatic interaction with the server, e.g. for upload and download of data. This code gets installed directly on client machines.
+The `TmClient <https://github.com/TissueMAPS/TmClient>`_ repository holds `Python <https://www.python.org/>`_, `Matlab <https://mathworks.com/products/matlab/>`_ and `R <https://www.r-project.org/>`_ packages for programmatic interaction with the server, e.g. for upload and download of data. The code gets installed directly on client machines.
 
 .. _server-code:
 
@@ -50,7 +50,7 @@ Server code
 
 The server backend is implemented in `Python <https://www.python.org/>`_ - a well-established general purpose language with powerful packages for scientific computing (`NumPy <http://www.numpy.org/>`_, `Pandas <http://pandas.pydata.org/>`_), image processing (`Mahotas <http://mahotas.readthedocs.io/en/latest/>`_, `OpenCV <http://docs.opencv.org/3.1.0/d6/d00/tutorial_py_root.html>`_) and machine learning (`Scikit-Learn <http://scikit-learn.org/stable/>`_, `Theano <http://deeplearning.net/software/theano/>`_, `PySpark <http://spark.apache.org/docs/0.9.0/python-programming-guide.html>`_). It is widely used in the scientific community and easy to learn for Biologists.
 
-The `TmServer <https://github.com/TissueMAPS/TmServer>`_ repository holds the server application for handling client requests. The actual processing is delegated to either `TmLibrary <https://github.com/TissueMAPS/TmLibrary>`_ or `TmToolbox <https://github.com/TissueMAPS/TmToolbox>`_, which provide interfaces for distributed image processing workflows and interactive data analysis tools, respectively.
+The `TmServer <https://github.com/TissueMAPS/TmServer>`_ repository holds the server application for handling client requests. The actual processing is delegated to `TmLibrary <https://github.com/TissueMAPS/TmLibrary>`_, which provide interfaces for distributed image processing workflows and interactive data analysis tools, respectively.
 
 `TissueMAPS` represents a compromise between abstraction and performance, emphasizing usability and rapid development, while enabling efficient processing of big datasets. It uses a modular object-oriented design to facilitate extension and customization. The server-client model enforces a strict separation of graphical user interface (GUI) handling and actual processing, resulting in more resource-optimized code for headless execution in a distributed environment.
 
@@ -98,49 +98,41 @@ Distributed image processing
 
 A `TissueMAPS` image processing workflow represents a series of *steps*, each of which comprises a set of computational *jobs* that get distributed across available compute resources for parallel processing. Functionally related *steps* are further grouped into abstract *stages*.
 
-The :doc:`tmlib.workflow <tmlib.workflow>` package provides functionality for defining and managing distributed image processing workflows. The following "canonical" workflow for automated analysis of multi-wellplate screens is already implemented and used here for illustration. To meet specific user requirements, custom workflows can be easily created, either by modifying or extending existing workflows or creating new ones from scratch.
+The :doc:`tmlib.workflow <tmlib.workflow>` package provides functionality for defining and managing distributed image processing workflows. The following "canonical" workflow for automated analysis of multi-wellplate screens is already implemented and used here for illustration. To meet specific user requirements, custom workflows can be easily created, either by modifying or extending existing workflows or creating new ones from scratch. Steps are implemented such that once defined in the library, they are immediately available via command line and browser-based user interface.
 
 .. _canonical-workflow:
 
 Canonical workflow
 ------------------
 
-.. image:: ./_static/canonical_workflow.png
-    :height: 300px
+.. image:: ./_static/canonical_workflow_horizontal.png
+    :height: 200px
 
-Note that "upload" and "download" stages are available in the user interface, but are not part of the actual image processing workflow and consequently handled separately.
+Note that "upload" and "download" stages are available in the user interface, but are not part of the actual image processing workflow and handled separately.
 
-
-.. _image-conversion:
 
 Image conversion
 ^^^^^^^^^^^^^^^^
 
-- :doc:`metaextract <tmlib.workflow.metaextract>`: **Extraction of metadata**
+Image pixel data and metadata are extracted from heterogeneous microscopy file formats and stored in a consistent way.
 
-- :doc:`metaconfig <tmlib.workflow.metaconfig>`: **Configuration of metadata**
+- :doc:`metaextract <tmlib.workflow.metaextract>`: Extraction of metadata
 
-- :doc:`imextract <tmlib.workflow.imextract>`: **Extraction of image data**
+- :doc:`metaconfig <tmlib.workflow.metaconfig>`: Configuration of metadata
 
-.. _image-preprocessing:
+- :doc:`imextract <tmlib.workflow.imextract>`: Extraction of image data
 
 Image preprocessing
 ^^^^^^^^^^^^^^^^^^^
 
-Microscopic images typically contain artifacts that need to be assessed and corrected.
+Global statistics are computed across all images and persisted for use by subsequent image processing steps.
 
 - :doc:`corilla <tmlib.workflow.corilla>`: Calculation of illumination statistics
-
-- :doc:`align <tmlib.workflow.align>`: Image registration and alignment
-
-.. _pyramid-creation:
 
 Pyramid creation
 ^^^^^^^^^^^^^^^^
 
 - :doc:`illuminati <tmlib.workflow.illuminati>`: Image pyramid creation
-
-.. _image-analysis:
 
 Image analysis
 ^^^^^^^^^^^^^^
@@ -153,5 +145,6 @@ Image analysis
 Distributed machine learning
 ============================
 
+The :doc:`tmlib.tools <tmlib.tools>` package provides functionality for defining and managing distributed machine learning and data analysis tasks. Tools for standard tasks, such as clustering, are already build in. Users can, however, easily extend the package with custom tools. These tools also need to be implemented client-side. To this end, the `TmUI` app provides templates, which makes it easy for developers to add new tools to the viewer.
 
 .. TODO

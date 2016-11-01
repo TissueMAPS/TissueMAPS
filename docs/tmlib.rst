@@ -15,6 +15,7 @@ Subpackages
 .. toctree::
 
     tmlib.models
+    tmlib.tools
     tmlib.workflow
 
 Submodules
@@ -68,18 +69,18 @@ tmlib.import_utils module
     :undoc-members:
     :show-inheritance:
 
-tmlib.logging_utils module
---------------------------
+tmlib.jobs module
+-----------------
 
-.. automodule:: tmlib.logging_utils
+.. automodule:: tmlib.jobs
     :members:
     :undoc-members:
     :show-inheritance:
 
-tmlib.manage module
--------------------
+tmlib.logging_utils module
+--------------------------
 
-.. automodule:: tmlib.manage
+.. automodule:: tmlib.logging_utils
     :members:
     :undoc-members:
     :show-inheritance:
@@ -96,6 +97,14 @@ tmlib.readers module
 --------------------
 
 .. automodule:: tmlib.readers
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+tmlib.submission module
+-----------------------
+
+.. automodule:: tmlib.submission
     :members:
     :undoc-members:
     :show-inheritance:

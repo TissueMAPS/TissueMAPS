@@ -81,6 +81,17 @@ tmlib.workflow.jobs module
     :undoc-members:
     :show-inheritance:
 
+tmlib.workflow.manager module
+-----------------------------
+
+.. automodule:: tmlib.workflow.manager
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. autoprogram:: tmlib.workflow.manager:WorkflowManager._get_parser()
+    :prog: tm_workflow
+
 tmlib.workflow.multiplexing module
 ----------------------------------
 
@@ -112,4 +123,3 @@ tmlib.workflow.workflow module
     :members:
     :undoc-members:
     :show-inheritance:
-

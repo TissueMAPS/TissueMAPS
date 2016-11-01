@@ -13,6 +13,13 @@ Contents:
 
    introduction
    installation
+   deployment
+   user_guide
+   support
+   developer_guide
+   contribution
+   faq
+   license
    modules
 
 Indices and tables

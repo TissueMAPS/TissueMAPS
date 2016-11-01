@@ -25,14 +25,6 @@ Subpackages
 Submodules
 ----------
 
-tmserver.api module
--------------------
-
-.. automodule:: tmserver.api
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmserver.appfactory module
 --------------------------
 

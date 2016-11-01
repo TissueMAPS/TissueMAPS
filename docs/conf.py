@@ -48,6 +48,7 @@ extensions = [
     # 'sphinx.ext.viewcode',
     'sphinx.ext.inheritance_diagram',
     'sphinxcontrib.sqlalchemyviz',
+    'sphinxcontrib.httpdomain',
     'numpydoc',
     'sphinx.ext.intersphinx',
 ]
@@ -140,17 +141,17 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-# html_theme = 'alabaster'
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'alabaster'
+# html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
-    # 'page_width': '100%',
-    # 'show_powered_by': False,
-    # 'fixed_sidebar': True
+    'page_width': '100%',
+    'show_powered_by': False,
+    'fixed_sidebar': True,
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
@@ -168,8 +169,8 @@ html_short_title = u'tmaps'
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 #
-# html_logo = '_static/tmaps_logo.png'
-html_logo = '_static/tmaps_logo_bg.png'
+html_logo = '_static/tmaps_logo.png'
+# html_logo = '_static/tmaps_logo_bg.png'
 
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
