@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import collections
+from ConfigParser import SafeConfigParser
 
 from tmsetup.utils import read_yaml_file, to_json
 from tmsetup.config import CONFIG_DIR, Setup

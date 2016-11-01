@@ -153,7 +153,7 @@ def get_host_ip(provider, region, host_name, host_vars):
     return str(ip)
 
 
-def update_static_inventory(inventory_info):
+def update_static_inventory(inventory_info, setup):
     # Create the main ansible inventory file
     persistent_inventory = load_inventory()
     for group, group_content in inventory_info.iteritems():
@@ -170,7 +170,7 @@ def update_static_inventory(inventory_info):
 
         if not persistent_inventory.has_section(group):
             persistent_inventory.add_section(group)
-        for host in inventory[group]['hosts']:
+        for host in inventory_info[group]['hosts']:
             persistent_inventory.set(group, host)
             # Create a separte variable file in YAML format for each host
             host_vars_file = os.path.join(HOST_VARS_DIR, host)
@@ -189,7 +189,7 @@ def update_static_inventory(inventory_info):
             try:
                 host_vars['ansible_host'] = get_host_ip(
                     setup.cloud.provider, setup.cloud.region, host,
-                    inventory['_meta']['hostvars'][host]
+                    inventory_info['_meta']['hostvars'][host]
                 )
             except NoInstanceFoundError:
                 logger.warn('no instance found for host "%s"', host)
@@ -200,7 +200,7 @@ def update_static_inventory(inventory_info):
                     'getting host address from cloud failed: %s', str(err)
                 )
             # Update inventory with host and group variables
-            inventory['_meta']['hostvars'][host].update(host_vars)
+            inventory_info['_meta']['hostvars'][host].update(host_vars)
             write_yaml_file(host_vars_file, host_vars)
 
         # Remove group_vars and host_vars files when the respective group or
@@ -212,7 +212,7 @@ def update_static_inventory(inventory_info):
                 group_vars_file = os.path.join(GROUP_VARS_DIR, group)
                 os.remove(group_vars_file)
         for host in os.listdir(HOST_VARS_DIR):
-            if host not in inventory['_meta']['hostvars']:
+            if host not in inventory_info['_meta']['hostvars']:
                 host_vars_file = os.path.join(HOST_VARS_DIR, host)
                 os.remove(host_vars_file)
 
@@ -236,7 +236,7 @@ def main(args):
 
     inventory_info = build_inventory_information(setup)
 
-    update_static_inventory(inventory_info)
+    update_static_inventory(inventory_info, setup)
 
     # Print the requested inventory information to standard output
     if args.list:

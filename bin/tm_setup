@@ -6,7 +6,7 @@ import subprocess
 import sys
 import collections
 import elasticluster
-from pkg_resources import resource_filename
+from pkg_resources import resource_filename, resource_exists
 
 import tmsetup
 from tmsetup.config import Setup
@@ -30,7 +30,7 @@ def _get_playbooks_dir(pkg_name):
 
 
 def run(command):
-    logger.debug('command: %s' % ' '.join(cmd))
+    logger.debug('command: %s' % ' '.join(command))
     process = subprocess.Popen(command, stdout=subprocess.PIPE)
     for c in iter(lambda: process.stdout.read(1), ''):
         sys.stdout.write(c)
@@ -87,9 +87,10 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
             # gce: stopped
             # os: -
             raise ValueError('Stopping VMs is not yet supported')
+        tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
+        playbook = os.path.join(tmsetup_playbooks_dir, 'instance.yml')
         cmd = _build_command(
-            verbosity, os.path.join(PLAYBOOKS_HOME, 'instance.yml'), variables,
-            set(groups_to_deploy)
+            verbosity, playbook, variables, set(groups_to_deploy)
         )
         commands.append(cmd)
 
@@ -97,7 +98,7 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
         # This playbook must be called after the individual components have
         # been built.
         tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
-        playbook = os.path.join(PLAYBOOKS_HOME, 'site.yml')
+        playbook = os.path.join(tmsetup_playbooks_dir, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
         cmd = _build_command(
             verbosity, playbook, variables, set(groups_to_deploy.keys())
