@@ -14,13 +14,10 @@ Subpackages
 
 .. toctree::
 
-    tmserver.experiment
+    tmserver.api
     tmserver.extensions
     tmserver.jtui
-    tmserver.mapobject
     tmserver.model
-    tmserver.tool
-    tmserver.user
 
 Submodules
 ----------

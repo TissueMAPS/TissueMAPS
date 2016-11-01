@@ -6,7 +6,7 @@ Packages
 
     tmlib
     tmserver
-    tmtoolbox
     tmclient
+    tmsetup
     jtmodules
     jtlib
