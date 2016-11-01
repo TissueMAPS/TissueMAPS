@@ -201,25 +201,7 @@ class ToolRequestManager(SubmissionManager):
             f.write(batch)
 
     @classmethod
-    def main(cls):
-        '''Main entry point for command line interface.
-
-        Parsers the command line arguments and configures logging.
-
-        Returns
-        -------
-        int
-            ``0`` when program completes successfully and ``1`` otherwise
-
-        Raises
-        ------
-        SystemExit
-            exitcode ``1`` when the call raises an :class:`Exception`
-
-        Warning
-        -------
-        Don't do any other logging configuration anywhere else!
-        '''
+    def _get_parser(cls):
         parser = argparse.ArgumentParser()
         parser.description = '''
             TissueMAPS command line interface for asynchronous processing of
@@ -241,7 +223,29 @@ class ToolRequestManager(SubmissionManager):
             '--submission_id', '-s', type=int, required=True,
             help='ID of the corresponding tool job submission'
         )
+        return parser
 
+    @classmethod
+    def main(cls):
+        '''Main entry point for command line interface.
+
+        Parsers the command line arguments and configures logging.
+
+        Returns
+        -------
+        int
+            ``0`` when program completes successfully and ``1`` otherwise
+
+        Raises
+        ------
+        SystemExit
+            exitcode ``1`` when the call raises an :class:`Exception`
+
+        Warning
+        -------
+        Don't do any other logging configuration anywhere else!
+        '''
+        parser = cls._get_parser()
         args = parser.parse_args()
 
         configure_logging()

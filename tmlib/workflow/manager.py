@@ -206,25 +206,7 @@ class WorkflowManager(WorkflowWorkflowWorkflowSubmissionManager):
         method(**method_args)
 
     @classmethod
-    def main(cls):
-        '''Main entry point for command line interface.
-
-        Parsers the command line arguments and configures logging.
-
-        Returns
-        -------
-        int
-            ``0`` when program completes successfully and ``1`` otherwise
-
-        Raises
-        ------
-        SystemExit
-            exitcode ``1`` when the call raises an :class:`Exception`
-
-        Warning
-        -------
-        Don't do any other logging configuration anywhere else!
-        '''
+    def _get_parser(cls):
         parser = argparse.ArgumentParser()
         parser.description = cls.__doc__
         parser.version = __version__
@@ -274,7 +256,29 @@ class WorkflowManager(WorkflowWorkflowWorkflowSubmissionManager):
             '--stage', '-s', type=str, required=True,
             help='stage at which workflow should be resubmitted'
         )
+        return parser
 
+    @classmethod
+    def main(cls):
+        '''Main entry point for command line interface.
+
+        Parsers the command line arguments and configures logging.
+
+        Returns
+        -------
+        int
+            ``0`` when program completes successfully and ``1`` otherwise
+
+        Raises
+        ------
+        SystemExit
+            exitcode ``1`` when the call raises an :class:`Exception`
+
+        Warning
+        -------
+        Don't do any other logging configuration anywhere else!
+        '''
+        parser = cls._get_parser()
         args = parser.parse_args()
 
         configure_logging()
