@@ -257,17 +257,18 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 if job_id not in job_ids:
                     continue
 
-                image_files = session.query(tm.ChannelImageFile).\
+                image_file_locations = session.query(
+                        tm.ChannelImageFile._location
+                    ).\
                     join(tm.Channel).\
-                    join(tm.Site).\
                     filter(tm.Channel.name.in_(channel_names)).\
-                    filter(tm.Site.id.in_(batch)).\
+                    filter(tm.ChannelImageFile.site_id.in_(batch)).\
                     all()
 
                 job_descriptions['run'].append({
                     'id': job_id,
                     'inputs': {
-                        'image_files': [f.location for f in image_files]
+                        'image_files': [f[0] for f in image_files_locations]
                     },
                     'outputs': {},
                     'site_ids': batch,
