@@ -22,3 +22,7 @@
 	path = src/jtmodules
 	url = https://tmcloner:c10ad73261ca71885cf536864cb483e305c31e1b@github.com/TissueMAPS/jtmodules
 	branch = master
+[submodule "src/tmsetup"]
+	path = src/tmsetup
+	url = https://tmcloner:c10ad73261ca71885cf536864cb483e305c31e1b@github.com/TissueMAPS/tmsetup
+	branch = master
