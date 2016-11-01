@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import collections
+import logging
 from ConfigParser import SafeConfigParser
 
 from tmsetup.utils import read_yaml_file, to_json
@@ -26,6 +27,8 @@ HOST_VARS_DIR = os.path.join(CONFIG_DIR, 'host_vars')
 HOSTS_FILE = os.path.join(CONFIG_DIR, 'hosts')
 
 HOSTNAME_FORMAT = '{grid}-{cluster}-{node_type}-{index:03d}'
+
+logger = logging.getLogger(__name__)
 
 
 def build_inventory_information(setup):
@@ -105,28 +108,36 @@ def build_inventory_information(setup):
     return inventory
 
 
-def load_inventory():
+def load_inventory(hosts_file=HOSTS_FILE):
     '''Loads Ansible inventory from file.
+
+    Parameters
+    ----------
+    hosts_file: str, optional
+        path to Ansible hosts file
 
     Returns
     -------
     ConfigParser.SafeConfigParser
+        content of `hosts_file`
     '''
-    if not os.path.exists(HOSTS_FILE):
-        raise OSError(
-            'Setup file "%s" does not exist!' % HOSTS_FILE
-        )
     inventory = SafeConfigParser(allow_no_value=True)
-    inventory.read(HOSTS_FILE)
+    if os.path.exists(hosts_file):
+        inventory.read(hosts_file)
+    else:
+        logger.warn('Inventory file doesn not exist: %s' % hosts_file)
     return inventory
 
 
-def save_inventory(inventory):
+def save_inventory(inventory, hosts_file=HOSTS_FILE):
     '''Saves Ansible inventory to file.
 
     Parameters
     ----------
     inventory: ConfigParser.SafeConfigParser
+        content of the `hosts_file`
+    hosts_file: str, optional
+        path to Ansible hosts file
     '''
-    with open(HOSTS_FILE, 'w') as f:
+    with open(hosts_file, 'w') as f:
         inventory.write(f)
