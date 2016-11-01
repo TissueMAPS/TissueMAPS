@@ -767,7 +767,7 @@ class ContinuousLabelLayer(LabelLayer):
     def __init__(self, tool_result_id, mapobject_type_id, **extra_attributes):
         '''
         Parameters
-        ---------
+        ----------
         tool_result_id: int
             ID of the parent tool result
         mapobject_type_id: int
