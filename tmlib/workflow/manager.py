@@ -25,7 +25,7 @@ from tmlib.logging_utils import configure_logging
 from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.workflow import Workflow
-from tmlib.workflow.submission import WorkflowWorkflowWorkflowSubmissionManager
+from tmlib.workflow.submission import SubmissionManager
 from tmlib.errors import NotSupportedError
 from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow import cli
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 
-class WorkflowManager(WorkflowWorkflowWorkflowSubmissionManager):
+class WorkflowManager(SubmissionManager):
 
     '''Command line interface for building, submitting, and monitoring
     `TissueMAPS` workflows.
