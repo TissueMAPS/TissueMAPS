@@ -83,6 +83,7 @@ setuptools.setup(
     description='TissueMAPS HTTP client.',
     author='Markus D. Herrmann',
     author_email='markusdherrmann@gmail.com',
+    license='Apache-2.0',
     url='https://github.com/tissuemaps/tmclient',
     platforms=['Linux', 'OS-X'],
     classifiers=[
