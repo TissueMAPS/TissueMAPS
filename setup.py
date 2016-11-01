@@ -71,6 +71,7 @@ setuptools.setup(
     author='Markus D. Herrmann and Robin Hafen',
     author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/jtmodules',
+    license='Apache-2.0',
     platforms=['Linux', 'OS-X'],
     classifiers=[
         'Topic :: Scientific/Engineering :: Image Recognition',
