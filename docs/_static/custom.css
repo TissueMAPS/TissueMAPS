@@ -1,0 +1,17 @@
+/* https://github.com/bitprophet/alabaster/blob/master/alabaster/static/alabaster.css_t */
+pre {
+    border: 1px solid #bfbfbf;
+}
+
+dl dl pre {
+    margin-left: 0px;
+    padding-left: 90px;
+}
+
+dt {
+    background: {{ theme_code_highlight_bg }};
+}
+
+div.highlight {
+    background_color: {{ theme_code_highlight_bg }};
+}

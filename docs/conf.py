@@ -152,6 +152,17 @@ html_theme_options = {
     'page_width': '100%',
     'show_powered_by': False,
     'fixed_sidebar': True,
+    'description': 'Interactive visualization and analysis of large microscopy images',
+    'github_user': 'TissueMAPS',
+    'github_repo': 'TissueMAPS',
+    'github_button': True,
+    'github_banner': True,
+    'seealso_bg': '#ebf3f9', # '#d8e7f3',
+    # 'seealso_border': '#377eb8',
+    'warn_bg': '#fce8e8', # '#fad1d2',
+    # 'warn_border': '#f07577',
+    'note_bg': '#edf7ed', # '#dcf0db',
+    # 'note_border': '#95d293'
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
