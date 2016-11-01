@@ -27,6 +27,7 @@ import shapely.ops
 import matlab_wrapper as matlab
 from cached_property import cached_property
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.sql import func
 
 import tmlib.models as tm
 from tmlib.utils import autocreate_directory_property
@@ -736,7 +737,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 filter_by(is_static=False)
 
             for mapobject_type in mapobject_types:
-                logger.info('')
                 segmentation_ids = session.query(tm.MapobjectSegmentation.id).\
                     join(tm.Mapobject).\
                     filter(tm.Mapobject.mapobject_type_id == mapobject_type.id).\
@@ -770,11 +770,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
             parent_types = session.query(tm.MapobjectType).\
                 filter_by(is_static=True)
 
-            moments = {
-                'Mean': np.nanmean, 'Std': np.nanstd, 'Median': np.nanmedian
-            }
+            moments = {'Mean', 'Max', 'Min'}
             for parent_type in parent_types:
-
                 # Moments are computed only over "non-static" mapobjects,
                 # i.e. segmented objects within a pipeline
                 child_types = session.query(tm.MapobjectType).\
@@ -796,7 +793,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     )
                     parent_features = list()
                     for feature in child_type.features:
-                        for statistic in moments.keys():
+                        for statistic in moments:
                             name = '{name}_{statistic}-{type}'.format(
                                 name=feature.name, statistic=statistic,
                                 type=child_type.name
@@ -823,10 +820,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         'mapobjects of type "%s"', child_type.name
                     )
 
-                    tpoints = session.query(tm.FeatureValue.tpoint).\
-                        distinct().\
-                        all()
-                    tpoints = [t[0] for t in tpoints]
                     # For each parent mapobject calculate statistics on
                     # features of children, i.e. mapobjects that are covered
                     # by the parent mapobject
@@ -838,42 +831,51 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         )
                         df = pd.DataFrame(
                             session.query(
-                                tm.FeatureValue.value,
+                                func.avg(tm.FeatureValue.value).label('Mean'),
+                                func.max(tm.FeatureValue.value).label('Max'),
+                                func.min(tm.FeatureValue.value).label('Min'),
+                                func.count(tm.FeatureValue.value).label('Count'),
                                 tm.FeatureValue.feature_id,
-                                tm.FeatureValue.mapobject_id,
                                 tm.FeatureValue.tpoint
                             ).
                             join(
                                 tm.Mapobject, tm.MapobjectSegmentation
                             ).
                             filter(
+                                tm.FeatureValue != None,
                                 tm.Mapobject.mapobject_type_id == child_type.id,
                                 tm.MapobjectSegmentation.geom_poly.ST_CoveredBy(
                                     parent.segmentations[0].geom_poly
                                 )
                             ).
-                            all(),
-                            columns = [
-                                'value', 'feature_id', 'mapobject_id', 'tpoint'
-                            ]
+                            group_by(
+                                tm.FeatureValue.feature_id,
+                                tm.FeatureValue.tpoint
+                            ).
+                            all()
                         )
-                        # NOTE: some precautions in case the dataframe is empty
+                        # Some precautions in case the dataframe is empty
                         if df.empty:
-                            df['value'] = df['value'].astype(float)
+                            df['Mean'] = df['Mean'].astype(float)
+                            df['Max'] = df['Max'].astype(float)
+                            df['Min'] = df['Min'].astype(float)
+                            df['Count'] = df['Count'].astype(float)
                             df['feature_id'] = df['feature_id'].astype(int)
-                            df['mapobject_id'] = df['mapobject_id'].astype(int)
                             df['tpoint'] = df['tpoint'].astype(int)
 
                         count = 0
                         for feature in child_type.features:
-                            index = df.feature_id == feature.id
-                            for statistic, function in moments.iteritems():
+                            for statistic in moments:
                                 logger.debug(
                                     'compute value of feature "%s"',
                                     parent_features[count].name
                                 )
-                                for t in tpoints:
-                                    val = function(df.loc[index, 'value'])
+                                for t in np.unique(df.tpoint):
+                                    index = np.logical_and(
+                                        df.feature_id == feature.id,
+                                        df.tpoint == t
+                                    )
+                                    val = float(df.loc[index, statistic])
                                     new_feature_values.append(
                                         dict(
                                             feature_id=parent_features[count].id,
@@ -882,10 +884,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                         )
                                     )
                                 count += 1
-                        # Also compute the number of children objects
-                        for t in tpoints:
+                        for t in np.unique(df.tpoint):
                             index = df.tpoint == t
-                            val = len(np.unique(df.loc[index, 'mapobject_id']))
+                            val = float(df.loc[index, 'Count'][0])
                             new_feature_values.append(
                                 dict(
                                     feature_id=parent_features[count].id,
