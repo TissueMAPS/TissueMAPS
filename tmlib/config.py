@@ -1,3 +1,18 @@
+# TmLibrary - TissueMAPS library for distibuted image analysis routines.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 from abc import ABCMeta
 import logging
@@ -44,14 +59,13 @@ class TmapsConfig(object):
             logger.warn(
                 'configuration file does not exist: %s' % self._config_file
             )
-        self._config = SafeConfigParser({'home': os.environ['HOME']})
+        self._config = SafeConfigParser()
         self._section = self.__class__.__module__.split('.')[0]
         if not self._config.has_section(self._section):
             self._config.add_section(self._section)
         self.db_user = 'postgres'
         self.db_host = 'localhost'
         self.db_port = 5432
-        self.read()
 
     def read(self):
         '''Reads the configuration from a file
@@ -60,7 +74,7 @@ class TmapsConfig(object):
         --------
         tmlib.config.CONFIG_FILE
         '''
-        logger.info('read config file: "%s"', self._config_file)
+        logger.debug('read config file: "%s"', self._config_file)
         try:
             self._config.read(self._config_file)
         except OSError:
@@ -161,6 +175,8 @@ class LibraryConfig(TmapsConfig):
         super(LibraryConfig, self).__init__()
         self.modules_home = '~/jtmodules'
         self.storage_home = '/data/experiments'
+        self.use_spark = False
+        self.spark_master = 'local'
         self.read()
 
     @property
@@ -199,3 +215,38 @@ class LibraryConfig(TmapsConfig):
             )
         self._config.set(self._section, 'storage_home', str(value))
 
+    @property
+    def spark_master(self):
+        '''str: name of the `Apache Spark` master
+        (choices: ``{"local", "yarn"}``, default: ``"local"``)
+        '''
+        return self._config.get(self._section, 'spark_master')
+
+    @spark_master.setter
+    def spark_master(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError(
+                'Configuration parameter "spark_master" must have type str.'
+            )
+        vals = {'local', 'yarn'}
+        if value not in vals:
+            raise ValueError(
+                'Configuration parameter "spark_master" must be one of the '
+                'following: "%s"' % '", "'.join(vals)
+            )
+        self._config.set(self._section, 'spark_master', str(value))
+
+    @property
+    def use_spark(self):
+        '''bool: whether `Apache Spark` should be used for processing tool
+        requests (default: ``False``)
+        '''
+        return self._config.getboolean(self._section, 'use_spark')
+
+    @use_spark.setter
+    def use_spark(self, value):
+        if not isinstance(value, bool):
+            raise TypeError(
+                'Configuration parameter "use_spark" must have type bool.'
+            )
+        self._config.set(self._section, 'use_spark', str(value).lower())

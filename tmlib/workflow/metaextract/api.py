@@ -1,3 +1,18 @@
+# TmLibrary - TissueMAPS library for distibuted image analysis routines.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
 import logging
@@ -5,7 +20,7 @@ import subprocess
 from tmlib.readers import JavaBridge, BFOmeXmlReader
 
 import tmlib.models as tm
-from tmlib.workflow import register_api
+from tmlib.workflow import register_step_api
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.errors import MetadataError
@@ -14,7 +29,7 @@ from tmlib.workflow.api import ClusterRoutines
 logger = logging.getLogger(__name__)
 
 
-@register_api('metaextract')
+@register_step_api('metaextract')
 class MetadataExtractor(ClusterRoutines):
 
     '''Class for extraction of metadata from microscopic image files.

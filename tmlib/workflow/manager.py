@@ -1,3 +1,18 @@
+# TmLibrary - TissueMAPS library for distibuted image analysis routines.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import argparse
 import inspect
 import logging
@@ -10,7 +25,7 @@ from tmlib.logging_utils import configure_logging
 from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.workflow import Workflow
-from tmlib.workflow.submission import SubmissionManager
+from tmlib.workflow.submission import WorkflowWorkflowWorkflowSubmissionManager
 from tmlib.errors import NotSupportedError
 from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow import cli
@@ -18,16 +33,8 @@ from tmlib.workflow import cli
 logger = logging.getLogger(__name__)
 
 
-LOGO = '''
-     _        _        _        _        _
-   _( )__   _( )__   _( )__   _( )__   _( )__
- _|     _|_|     _|_|     _|_|     _|_|     _|        tmaps (tmlib %s)
-(_ T _ (_(_ M _ (_(_ A _ (_(_ P _ (_(_ S _ (_         TissueMAPS workflow manager
-  |_( )__| |_( )__| |_( )__| |_( )__| |_( )__|        https://github.com/TissueMAPS/TmLibrary
-''' % __version__
 
-
-class Tmaps(SubmissionManager):
+class WorkflowManager(WorkflowWorkflowWorkflowSubmissionManager):
 
     '''Command line interface for building, submitting, and monitoring
     `TissueMAPS` workflows.
@@ -44,15 +51,21 @@ class Tmaps(SubmissionManager):
         '''
         self.experiment_id = experiment_id
         self.verbosity = verbosity
-        self.name = 'workflow'
-        super(Tmaps, self).__init__(self.experiment_id, 'workflow')
+        super(WorkflowManager, self).__init__(self.experiment_id, 'workflow')
 
     @staticmethod
     def _print_logo():
-        print LOGO
+        print '''
+             _        _        _        _        _        _        _        _
+           _( )__   _( )__   _( )__   _( )__   _( )__   _( )__   _( )__   _( )__
+         _|     _|_|     _|_|     _|_|     _|_|     _|_|     _|_|     _|_|     _|      TissueMAPS workflow manager (tmlib %s)
+        (_ W _ (_(_ O _ (_(_ R _ (_(_ K _ (_(_ F _ (_(_ L _ (_(_ O _ (_(_ W _ (_       https://github.com/TissueMAPS/TmLibrary
+          |_( )__| |_( )__| |_( )__| |_( )__| |_( )__| |_( )__| |_( )__| |_( )__|
+
+        ''' % __version__
 
     def submit(self, monitoring_depth, monitoring_interval, force=False):
-        '''Create workflow, submit it to the cluster and monitor its progress.
+        '''Creates workflow, submits it to the cluster and monitors its progress.
 
         Parameters
         ----------
@@ -65,7 +78,7 @@ class Tmaps(SubmissionManager):
         '''
         self._print_logo()
         logger.info('submit workflow')
-        submission_id, user_name = self.register_submission('workflow')
+        submission_id, user_name = self.register_submission()
         with tm.utils.MainSession() as session:
             experiment = session.query(tm.ExperimentReference).\
                 get(self.experiment_id)

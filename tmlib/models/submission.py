@@ -1,3 +1,18 @@
+# TmLibrary - TissueMAPS library for distibuted image analysis routines.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import gc3libs
 from sqlalchemy import Column, Integer, String, LargeBinary, Interval, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
@@ -10,17 +25,6 @@ class Submission(MainModel, DateMixIn):
 
     '''A *submission* handles the processing of a computational *task*
     on a cluster.
-
-    Attributes
-    ----------
-    experiment_id: int
-        ID of the parent experiment
-    experiment: tmlib.experiment.Experiment
-        parent experiment to which the submission belongs
-    user_id: int
-        ID of the submitting user
-    user: tmlib.user.User
-        parent user to which the submission belongs
     '''
 
     __tablename__ = 'submissions'
@@ -37,6 +41,16 @@ class Submission(MainModel, DateMixIn):
         index=True
     )
 
+    #: int: ID of the submitting user
+    user_id = Column(
+        Integer,
+        ForeignKey(
+            'users.id', onupdate='CASCADE', ondelete='CASCADE'
+        ),
+        index=True
+
+    )
+
     #: int: ID of the top task in the submitted collection of tasks
     top_task_id = Column(
         Integer,
@@ -50,8 +64,13 @@ class Submission(MainModel, DateMixIn):
         backref=backref('submissions', cascade='all, delete-orphan')
     )
 
+    #: tmlib.models.user.User: submitting user
+    user = relationship(
+        'User',
+        backref=backref('submissions', cascade='all, delete-orphan')
+    )
 
-    def __init__(self, experiment_id, program):
+    def __init__(self, experiment_id, program, user_id):
         '''
         Parameters
         ----------
@@ -59,14 +78,18 @@ class Submission(MainModel, DateMixIn):
             ID of the parent experiment
         program: str
             name of the program that submits the tasks
+        user_id: int
+            ID of the submitting user
         '''
         self.experiment_id = experiment_id
         self.program = program
+        self.user_id = user_id
 
     def __repr__(self):
         return (
-            '<Submission(id=%r, task=%r, experiment=%r, program=%r)>'
-            % (self.id, self.task.name, self.experiment.name, self.program)
+            '<Submission(id=%r, experiment_id=%r, program=%r, user_id=%r)>' % (
+                self.id, self.experiment_id, self.program, self.user_id
+            )
         )
 
 

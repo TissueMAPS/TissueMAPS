@@ -1,3 +1,18 @@
+# TmLibrary - TissueMAPS library for distibuted image analysis routines.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''Database models.
 
 A database `model` is an object-relational mapping (ORM) of Python objects
@@ -29,7 +44,10 @@ from tmlib.models.user import User
 from tmlib.models.experiment import Experiment, ExperimentReference
 from tmlib.models.well import Well
 from tmlib.models.channel import Channel
-from tmlib.models.layer import ChannelLayer
+from tmlib.models.layer import (
+    ChannelLayer, LabelLayer, ScalarLabelLayer, SupervisedClassifierLabelLayer,
+    ContinuousLabelLayer, HeatmapLabelLayer, LabelLayerValue
+)
 from tmlib.models.tile import ChannelLayerTile
 from tmlib.models.mapobject import (
     MapobjectType, Mapobject, MapobjectSegmentation
@@ -45,3 +63,5 @@ from tmlib.models.file import (
     MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile,
     IllumstatsFile
 )
+from tmlib.models.result import ToolResult
+from tmlib.models.plot import Plot

@@ -1,3 +1,18 @@
+# TmLibrary - TissueMAPS library for distibuted image analysis routines.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
 import numpy as np
@@ -6,15 +21,18 @@ import lxml
 import itertools
 import collections
 from cached_property import cached_property
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey, String
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Session
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, Session
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.file import ChannelImageFile
 from tmlib.models.site import Site
 from tmlib.models.well import Well
+from tmlib.models.feature import FeatureValue
 from tmlib.models.plate import Plate
 from tmlib.models.base import ExperimentModel
 from tmlib.errors import RegexError
@@ -592,3 +610,277 @@ class ChannelLayer(ExperimentModel):
             % (self.__class__.__name__, self.id, self.channel_id,
                 self.tpoint, self.zplane)
         )
+
+
+class LabelLayer(ExperimentModel):
+
+    '''A layer that associates each :class:`tmlib.models.mapobject.Mapobject`
+    with a :class:`tmlib.models.layer.LabelLayerValue` for multi-resolution
+    visualization of tool results on the map.
+    The layer can be rendered client side as vector graphics and mapobjects
+    can be color-coded according their respective label.
+
+    '''
+
+    __tablename__ = 'label_layers'
+
+    #: str: label layer type
+    type = Column(String(50))
+
+    #: dict: mapping of tool-specific attributes
+    attributes = Column(JSON)
+
+    __mapper_args__ = {'polymorphic_on': type}
+
+    #: int: ID of the parent mapobject
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: int: ID of parent tool result
+    tool_result_id = Column(
+        Integer,
+        ForeignKey('tool_results.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
+    mapobject_type = relationship(
+        'MapobjectType',
+        backref=backref('label_layers', cascade='all, delete-orphan')
+    )
+
+    #: tmlib.models.result.ToolResult: parent tool result
+    tool_result = relationship(
+        'ToolResult',
+        backref=backref('layer', cascade='all, delete-orphan', uselist=False)
+    )
+
+    def __init__(self, tool_result_id, mapobject_type_id, **extra_attributes):
+        '''
+        Parameters
+        ----------
+        tool_result_id: int
+            ID of the parent tool result
+        mapobject_type_id: int
+            ID of the corresponding :class:`tmlib.models.MapobjectType`
+        **extra_attributes: dict, optional
+            additional tool-specific attributes that be need to be saved
+        '''
+        self.tool_result_id = tool_result_id
+        self.mapobject_type_id = mapobject_type_id
+        labels = extra_attributes.pop('labels', None)
+        self.attributes = extra_attributes
+
+    def get_labels(self, mapobject_ids):
+        '''Queries the database to retrieve the generated label values for
+        the given `mapobjects`.
+
+        Parameters
+        ----------
+        mapobject_ids: List[int]
+            IDs of mapobjects for which labels should be retrieved
+
+        Returns
+        -------
+        Dict[int, float or int]
+            mapping of mapobject ID to label value
+        '''
+        session = Session.object_session(self)
+        return dict(
+            session.query(
+                LabelLayerValue.mapobject_id, LabelLayerValue.label
+            ).
+            filter(
+                LabelLayerValue.mapobject_id.in_(mapobject_ids),
+                LabelLayerValue.label_layer_id == self.id
+            ).
+            all()
+        )
+
+
+class ScalarLabelLayer(LabelLayer):
+
+    '''A label layer that assigns each mapobject a discrete value.'''
+
+    __mapper_args__ = {'polymorphic_identity': 'ScalarLabelLayer'}
+
+    def __init__(self, tool_result_id, mapobject_type_id, unique_labels,
+            **extra_attributes):
+        '''
+        Parameters
+        ----------
+        tool_result_id: int
+            ID of the parent tool result
+        mapobject_type_id: int
+            ID of the corresponding :class:`tmlib.models.MapobjectType`
+        unique_labels : List[int]
+            unique label values
+        **extra_attributes: dict, optional
+            additional tool-specific attributes that be need to be saved
+        '''
+        super(ScalarLabelLayer, self).__init__(
+            tool_result_id, mapobject_type_id, unique_labels=unique_labels,
+            **extra_attributes
+        )
+
+
+class SupervisedClassifierLabelLayer(ScalarLabelLayer):
+
+    '''A label layer for results of a supervised classifier.
+    Results of such classifiers have specific colors associated with class
+    labels.
+    '''
+
+    __mapper_args__ = {'polymorphic_identity': 'SupervisedClassifierLabelLayer'}
+
+    def __init__(self, tool_result_id, mapobject_type_id, unqiue_labels,
+            color_map, **extra_attributes):
+        '''
+        Parameters
+        ----------
+        tool_result_id: int
+            ID of the parent tool result
+        mapobject_type_id: int
+            ID of the corresponding :class:`tmlib.models.MapobjectType`
+        unique_labels : List[int]
+            unique label values
+        color_map : dict[int | float | str, str]
+            mapping of label value to color strings of the format "#ffffff"
+        **extra_attributes: dict, optional
+            additional tool-specific attributes that be need to be saved
+        '''
+        super(SupervisedClassifierLabelLayer, self).__init__(
+            tool_result_id, mapobject_type_id, color_map=color_map,
+            unique_labels=unique_labels, **extra_attributes
+        )
+
+
+class ContinuousLabelLayer(LabelLayer):
+
+    '''A label layer where each mapobject gets assigned a continuous value.'''
+
+    __mapper_args__ = {'polymorphic_identity': 'ContinuousLabelLayer'}
+
+    def __init__(self, tool_result_id, mapobject_type_id, **extra_attributes):
+        '''
+        Parameters
+        ---------
+        tool_result_id: int
+            ID of the parent tool result
+        mapobject_type_id: int
+            ID of the corresponding :class:`tmlib.models.MapobjectType`
+        **extra_attributes: dict, optional
+            additional tool-specific attributes that be need to be saved
+
+        '''
+        super(ContinuousLabelLayer, self).__init__(
+            tool_result_id, mapobject_type_id, **extra_attributes
+        )
+
+
+class HeatmapLabelLayer(ContinuousLabelLayer):
+
+    '''A label layer for results of the Heatmap tool, where each mapobject
+    gets assigned an already available feature value.
+    '''
+
+    __mapper_args__ = {'polymorphic_identity': 'HeatmapLabelLayer'}
+
+    def __init__(self, tool_result_id, mapobject_type_id, feature_id, min, max):
+        '''
+        Parameters
+        ----------
+        tool_result_id: int
+            ID of the parent tool result
+        mapobject_type_id: int
+            ID of the parent mapobject type
+        feature_id: int
+            ID of the feature whose values should be used
+        '''
+        super(HeatmapLabelLayer, self).__init__(
+            tool_result_id, mapobject_type_id, feature_id=feature_id,
+            min=min, max=max
+        )
+
+    def get_labels(self, mapobject_ids):
+        '''Queries the database to retrieve the pre-computed feature values for
+        the given `mapobjects`.
+
+        Parameters
+        ----------
+        mapobject_ids: List[int]
+            IDs of mapobjects for which feature values should be retrieved
+
+        Returns
+        -------
+        Dict[int, float or int]
+            mapping of mapobject ID to feature value
+        '''
+        session = Session.object_session(self)
+        layer = session.query(self.__class__).\
+            filter_by(tool_result_id=self.tool_result_id).\
+            one()
+        return dict(
+            session.query(
+                FeatureValue.mapobject_id, FeatureValue.value
+            ).
+            filter(
+                FeatureValue.mapobject_id.in_(mapobject_ids),
+                FeatureValue.feature_id == layer.attributes['feature_id']
+            ).
+            all()
+        )
+
+
+class LabelLayerValue(ExperimentModel):
+
+    '''A label that's assigned to an indiviual mapobject.'''
+
+    __tablename__ = 'label_layer_values'
+
+    label = Column(JSON)
+
+    #: int: ID of the parent mapobject
+    mapobject_id = Column(
+        Integer,
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: int: ID of the parent label layer
+    label_layer_id = Column(
+        Integer,
+        ForeignKey('label_layers.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    # TODO: does this mapping work with subclasses of LabelLayer?
+    # label_layer = relationship(
+    #     'LabelLayer',
+    #     backref=backref('labels', cascade='all, delete-orphan')
+    # )
+
+    #: tmlib.models.mapobject.Mapobject: parent mapobject
+    mapobject = relationship(
+        'Mapobject',
+        backref=backref('labels', cascade='all, delete-orphan')
+    )
+
+    def __init__(self, label, label_layer_id, mapobject_id):
+        '''
+        Parameters
+        ----------
+        label:
+            label value
+        label_layer_id: int
+            ID of the parent label layer
+        mapobject_id: int
+            ID of the mapobject to which the value is assigned
+        '''
+        self.label = label
+        self.label_layer_id = label_layer_id
+        self.mapobject_id = mapobject_id
+

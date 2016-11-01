@@ -1,3 +1,18 @@
+# TmLibrary - TissueMAPS library for distibuted image analysis routines.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import yaml
 import glob
@@ -113,7 +128,7 @@ class ClusterRoutines(BasicClusterRoutines):
     for large-scale image processing on a batch cluster.
 
     Each workflow step must implement this class and decorate it with
-    :func:`tmlib.workflow.register_api` to register it for use
+    :func:`tmlib.workflow.register_step_api` to register it for use
     within a worklow.
 
     Note
@@ -325,7 +340,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return files
 
     def build_batch_filename_for_run_job(self, job_id):
-        '''Builds the name of a batch file for a run job.
+        '''Builds the path to a batch file for a run job.
 
         Parameters
         ----------
@@ -348,7 +363,7 @@ class ClusterRoutines(BasicClusterRoutines):
         )
 
     def build_batch_filename_for_collect_job(self):
-        '''Builds the name of a batch file for a "collect" job.
+        '''Builds the path to a batch file for a "collect" job.
 
         Returns
         -------
@@ -418,12 +433,12 @@ class ClusterRoutines(BasicClusterRoutines):
         return batch
 
     def read_batch_file(self, filename):
-        '''Read batches from JSON file.
+        '''Reads job description from JSON file.
 
         Parameters
         ----------
         filename: str
-            absolute path to the *.job* file that contains the description
+            absolute path to the file that contains the description
             of a single job
 
         Returns
@@ -433,7 +448,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Raises
         ------
-        tmlib.errors.WorkflowError
+        OSError
             when `filename` does not exist
 
         Note
@@ -441,14 +456,14 @@ class ClusterRoutines(BasicClusterRoutines):
         The relative paths for "inputs" and "outputs" are made absolute.
         '''
         if not os.path.exists(filename):
-            raise WorkflowError(
+            raise OSError(
                 'Job description file does not exist: %s.\n'
                 'Initialize the step first by calling the "init" method.'
                 % filename
             )
         with JsonReader(filename) as f:
             batch = f.read()
-            return self._make_paths_absolute(batch)
+        return self._make_paths_absolute(batch)
 
     @staticmethod
     def _check_io_description(batches):
@@ -536,7 +551,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return batch
 
     def write_batch_files(self, batches):
-        '''Write batches to files as JSON.
+        '''Writes job descriptions to files in JSON format.
 
         Parameters
         ----------

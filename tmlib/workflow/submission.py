@@ -1,9 +1,26 @@
+# TmLibrary - TissueMAPS library for distibuted image analysis routines.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import time
 import datetime
 import logging
 import gc3libs
 
 import tmlib.models as tm
+from tmlib.utils import same_docstring_as
+from tmlib.submission import SubmissionManager
 from tmlib.workflow.utils import get_task_data_from_sql_store
 from tmlib.workflow.utils import print_task_status
 from tmlib.workflow.utils import log_task_failure
@@ -11,57 +28,15 @@ from tmlib.workflow.utils import log_task_failure
 logger = logging.getLogger(__name__)
 
 
-class SubmissionManager(object):
+class WorkflowSubmissionManager(SubmissionManager):
 
-    '''Mixin class for submission and monitoring of computational tasks.'''
+    '''Mixin class for submission and monitoring of workflows.'''
 
+    @same_docstring_as(SubmissionManager.__init__)
     def __init__(self, experiment_id, program_name):
-        '''
-        Parameters
-        ----------
-        experiment_id: int
-            ID of the processed experiment
-        program_name: str
-            name of the submitting program
-        '''
-        self.experiment_id = experiment_id
-        self.program_name = program_name
-
-    def register_submission(self, program_name=None):
-        '''Generates a unique submission ID.
-
-        Creates a database entry in the "submissions" table.
-
-        Parameters
-        ----------
-        program_name: str, optional
-            name of the submitting program (default: ``None``)
-
-        Returns
-        -------
-        Tuple[int, str]
-            ID of the submission and the name of the submitting user
-
-        Warning
-        -------
-        Ensure that the "submissions" table get updated once the jobs
-        were submitted, i.e. added to a running `GC3Pie` engine.
-        To this end, use the ::meth:`tmlib.workflow.api.update_submission`
-        method.
-
-        See also
-        --------
-        :class:`tmlib.models.submission.Submission`
-        '''
-        if program_name is None:
-            program_name = self.program_name
-        with tm.utils.MainSession() as session:
-            submission = tm.Submission(
-                experiment_id=self.experiment_id, program=program_name
-            )
-            session.add(submission)
-            session.flush()
-            return (submission.id, submission.experiment.user.name)
+        super(WorkflowSubmissionManager, self).__init__(
+            experiment_id, program_name
+        )
 
     def update_submission(self, jobs):
         '''Updates the submission with the submitted tasks.

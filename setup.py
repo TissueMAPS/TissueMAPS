@@ -76,7 +76,10 @@ def build_console_scripts():
                 name=name, cls=name.capitalize()
             )
         )
-    cli_tools.append('tmaps = tmlib.workflow.tmaps:Tmaps.main')
+    cli_tools.extend([
+        'tm_workflow = tmlib.workflow.manager:WorkflowManager.main',
+        'tm_tool = tmlib.tools.manager:ToolRequestManager.main',
+    ])
     return cli_tools
 
 
@@ -90,10 +93,11 @@ def get_version():
 setuptools.setup(
     name='tmlibrary',
     version=get_version(),
-    description='TissueMAPS library for distibuted image processing routines.',
+    description='TissueMAPS library for distibuted image analysis routines.',
     author='Markus D. Herrmann',
     author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/tmlibrary',
+    license='AGPL-3.0+',
     platforms=['Linux', 'OS-X'],
     classifiers=[
         'Environment :: Console',
@@ -168,6 +172,5 @@ setuptools.setup(
         'https://github.com/jmcgeheeiv/pyfakefs/tarball/master#egg=pyfakefs',
         'https://github.com/tissuemaps/gc3pie/tarball/master#egg=gc3pie-2.5.dev',
         # 'https://github.com/tissuemaps/sqlalchemy-utils/tarball/master#egg=sqlalchemy_utils'
-        # TODO: include TissueMAPS repos once they are public
     ],
 )
