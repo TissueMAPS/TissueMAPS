@@ -22,7 +22,7 @@
 #  - OS_USERNAME
 #  - OS_PASSWORD
 #  - OS_PROJECT_NAME
-- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance with boot disk of defined size"
   local_action: os_server
   args:
     name: "{{ instance_name }}"
@@ -31,7 +31,7 @@
     security_groups: "{{ security_groups }}"
     image: "{{ image }}"
     flavor: "{{ flavor }}"
-    auto_ip: yes
+    auto_ip: "{{ assign_public_ip }}"
     wait: yes
     timeout: 300
     boot_from_volume: yes
@@ -40,6 +40,24 @@
     network: "{{ network }}"
     region_name: "{{ region }}"
   register: instance
+  when: disk_size is defined
+
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance with default boot disk"
+  local_action: os_server
+  args:
+    name: "{{ instance_name }}"
+    state: "{{ instance_state }}"
+    key_name: "{{ key_name }}"
+    security_groups: "{{ security_groups }}"
+    image: "{{ image }}"
+    flavor: "{{ flavor }}"
+    auto_ip: "{{ assign_public_ip }}"
+    wait: yes
+    timeout: 300
+    network: "{{ network }}"
+    region_name: "{{ region }}"
+  register: instance
+  when: disk_size is not defined
 
 - name: Register IP address of created instance
   set_fact:

@@ -23,19 +23,41 @@
 #  - GCE_CREDENTIALS_FILE_PATH: path to an credentials file in JSON format
 #    (https://developers.google.com/identity/protocols/application-default-credentials)
 - name: Create boot disk
-  delegate_to: localhost
-  gce_pd:
+  local_action: gce_pd
     disk_type: pd-standard
     image: "{{ image }}"
     name: "{{ instance_name }}"
     size_gb: "{{ disk_size }}"
     zone: "{{ region }}"
+  when: disk_size is defined
+
+- name: Use custom boot disk
+  set_fact:
+    instance_disks:
+      - name: "{{ instance_name }}"
+        mode: READ_WRITE
+  when: disk_size is defined
+
+- name: Use default boot disk
+  set_fact:
+    instance_disks: []
+  when: disk size is not defined
+
+- name: Set public IP type
+  set_fact:
+    public_ip_type: ephemeral
+  when: assign_public_ip|bool
+
+- name: Set no public IP type
+  set_fact:
+    public_ip_type: none
+  when: not (assign_public_ip|bool)
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
   vars:
     ssh_key: "{{ lookup('file', key_file) }}"
-  delegate_to: localhost
-  gce:
+  local_action: gce
+  args:
     state: "{{ instance_state }}"
     name: "{{ instance_name }}"
     image: "{{ image }}"
@@ -43,9 +65,7 @@
     external_ip: ephemeral
     network: "{{ network }}"
     zone: "{{ region }}"
-    disks:
-      - name: "{{ instance_name }}"
-        mode: READ_WRITE
+    disks: "{{ instance_disks }}"
     metadata:
       ssh-keys: "ubuntu:{{ ssh_key }}"
     disk_auto_delete: yes
@@ -57,8 +77,7 @@
   when: instance_state == 'present'
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume and attach it to instance"
-  delegate_to: localhost
-  gce_pd:
+  local_action: gce_pd
     state: "{{ instance_state }}"
     zone: "{{ region }}"
     name: "{{ volume_name }}"

@@ -20,8 +20,24 @@
 # Requires the following environment variables:
 #  - AWS_ACCESS_KEY_ID
 #  - AWS_SECRET_ACCESS_KEY
+- name: Define boot disk
+  set_facts:
+    instance_disks:
+      # TODO: SSD device for root file system?
+      - device_name: /dev/sda1
+        volume_size: "{{ disk_size }}"
+        volume_type: gp2
+        delete_on_termination: yes
+  when: disk_size is defined
+
+- name: Use default boot disk
+  set_facts:
+    intsance_disks: []
+  when: disk_size is not defined
+
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
-  ec2:
+  local_action: ec2
+  args:
     state: "{{ instance_state }}"
     key_name: "{{ key_name }}"
     image: "{{ image }}"
@@ -32,12 +48,7 @@
     groups: "{{ security_groups }}"
     wait: true
     wait_timeout: 300
-    volumes:
-      # TODO: SSD device for root file system?
-      - device_name: /dev/sda1
-        volume_size: "{{ disk_size }}"
-        volume_type: gp2
-        delete_on_termination: yes
+    volumes: "{{ instance_disks }}"
     # ebs_optimized: no
     # assign_public_ip: yes
     # vpc_subnet_id: "{{ network }}"
@@ -51,7 +62,8 @@
   when: instance_state == 'present'
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume and attach it to instance"
-  ec2_vol:
+  local_action: ec2_vol
+  args:
     state: "{{ instance_state }}"
     device_name: "{{ volume_device[provider] }}"
     instance: "{{ instance.instances[0].id }}"  # TODO: Does this work upon termination?
