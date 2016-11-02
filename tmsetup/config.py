@@ -444,7 +444,7 @@ class AnsibleHostVariableSection(SetupSection):
     given cluster node type are created.
     '''
 
-    _OPTIONAL_ATTRS = {'disk_size', 'volume_size'}
+    _OPTIONAL_ATTRS = {'disk_size', 'volume_size', 'assign_public_ip'}
 
     def __init__(self, description):
         super(AnsibleHostVariableSection, self).__init__(description)
@@ -489,6 +489,18 @@ class AnsibleHostVariableSection(SetupSection):
     def image(self, value):
         self._check_value_type(value, 'image', str)
         self._image = value
+
+    @property
+    def assign_public_ip(self):
+        '''bool: whether a public IP address should be assigned to the virtual
+        machine (default: ``True``)
+        '''
+        return self._assign_public_ip
+
+    @assign_public_ip.setter
+    def assign_public_ip(self, value):
+        self._check_value_type(value, 'assign_public_ip', bool)
+        self._assign_public_ip = value
 
     @property
     def flavor(self):
