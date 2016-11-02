@@ -46,7 +46,7 @@
     name={{ volume_mountpoint }}
     fstype={{ volume_fstype }}
     passno=0
-    src={{ volume_device[provider] }}
+    src={{ volume_device_name }}
     state=mounted
     # opts={{ item.mount_options }}
   tags:

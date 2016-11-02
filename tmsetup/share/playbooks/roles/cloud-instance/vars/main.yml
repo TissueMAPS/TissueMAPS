@@ -18,7 +18,7 @@
 volume_fstype: ext4
 instance_name: "{{ inventory_hostname }}"
 volume_name: "{{ instance_name }}-storage"
-volume_device:
+volume_device_mapping:
   os: /dev/vdb
   ec2: /dev/sdf
   gce: /dev/disk/by-id/google-{{ volume_name }}

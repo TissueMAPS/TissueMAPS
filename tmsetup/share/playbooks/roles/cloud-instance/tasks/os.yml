@@ -83,7 +83,7 @@
     state: "{{ instance_state }}"
     server: "{{ instance_name }}"
     volume: "{{ volume_name }}"
-    device: "{{ volume_device[provider] }}"
+    device: "{{ volume_device_mapping[provider] }}"
     wait: yes
     timeout: 300
   when: (volume_size is defined) and (instance_state == 'present')

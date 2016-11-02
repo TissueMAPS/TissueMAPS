@@ -38,6 +38,11 @@
 # TODO: this does not trigger --refresh
 - meta: refresh_inventory
 
+- name: Set host address
+  set_fact:
+    ansible_host: "{{ instance_public_ip }}"
+  when: instance_state == "present"
+
 - name: Reset host address
   set_fact:
     ansible_host: null

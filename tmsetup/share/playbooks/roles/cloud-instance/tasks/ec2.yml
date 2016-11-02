@@ -94,11 +94,12 @@
   local_action: ec2_vol
   args:
     state: "{{ instance_state }}"
-    device_name: "{{ volume_device[provider] }}"
+    device_name: "{{ volume_device_mapping[provider] }}"
     instance: "{{ instance_id }}"
     delete_on_termination: yes
     name: "{{ volume_name }}"
     region: "{{ region }}"
     volume_type: standard
     volume_size: "{{ volume_size }}"
+  register: volume
   when: instance_state == 'present' and volume_size is defined

@@ -24,14 +24,57 @@
     - volume
 
 - debug:
-    msg: Mountpoint {{ volume_mountpoint }} is already mounted!
-  when: (mountpoint.rc|int) == 0
+    msg: Mountpoint {{ volume_mountpoint }} is {{ (mountpoint.rc|int == 0) | ternary('', 'not') }} mounted!
+
+- name: Determine if device exists
+  become: yes
+  failed_when: False
+  changed_when: False
+  command: file -s "{{ volume_device_mapping[provider] }}"
+  register: device
+  tags:
+    - volume
+
+- debug:
+    msg: Device {{ volume_device_mapping[provider] }} does {{ (device.rc|int == 0) | ternary('', 'not') }} exist!
+  tags:
+    - volume
+
+- name: Set default volume device name
+  set_fact:
+    volume_device_name: "{{ volume_device_mapping[provider] }}"
+  tags:
+    - volume
+
+# AWS states: "Depending on the block device driver of the kernel, the device
+# might be attached with a different name than what you specify. [...]
+# in most cases, the trailing letter remains the same."
+# http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
+- name: Determine device name
+  shell: ls /dev/*{{ volume_device_mapping[provider][-1] }}
+  register: volume_device_list
+  when: (provider == 'ec2') and (device.rc|int == 1)
+  tags:
+    - volume
+
+- fail:
+    msg: Volume device name could not be determined.
+  when: (provider == 'ec2') and (device.rc|int == 1) and (volume_device_list.stdout_lines|length != 1)
+  tags:
+    - volume
+
+- name: Override default volume device name
+  set_fact:
+    volume_device_name: "{{ volume_device_list.stdout_lines[0] }}"
+  when: (provider == 'ec2') and (device.rc|int == 1) and (volume_device_list.stdout_lines|length != 0)
+  tags:
+    - volume
 
 - name: Format attached storage volume
   become: yes
   filesystem:
     fstype: "{{ volume_fstype }}"
-    dev: "{{ volume_device[provider] }}"
+    dev: "{{ volume_device_name }}"
+  when: (mountpoint.rc|int) == 1
   tags:
     - volume
-  when: (mountpoint.rc|int) == 1
