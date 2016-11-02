@@ -62,7 +62,6 @@
     volumes: "{{ instance_disks }}"
     assign_public_ip: "{{ assign_public_ip }}"
     # ebs_optimized: no
-    # assign_public_ip: yes
     # vpc_subnet_id: "{{ network }}"
     region: "{{ region }}"
   register: instance
@@ -70,32 +69,22 @@
 - debug:
     msg: "{{ (instance.instances|length) == 0 }}"
 
-- name: Register host using private IP address of existing instance
+- name: Register host IP address of existing instance
   set_fact:
-    ansible_host: "{{ instance.tagged_instances[0].private_ip }}"
-  when: instance_state == 'present' and (instance.instances|length) == 0 and not assign_public_ip
+    ansible_host: "{{ instance.tagged_instances[0].public_ip if assign_public_ip else instance.tagged_instances[0].private_ip }}"
+  when: instance_state == 'present' and (instance.instances|length) == 0
 
-- name: Register host using private IP address of created instance
+- name: Register host IP address of created instance
   set_fact:
-    ansible_host: "{{ instance.instances[0].private_ip }}"
+    ansible_host: "{{ instance.instances[0].public_ip if assign_public_ip else instance.instances[0].private_ip }}"
   when: instance_state == 'present' and (instance.instances|length) != 0 and not assign_public_ip
-
-- name: Register host using public IP address of existing instance
-  set_fact:
-    ansible_host: "{{ instance.tagged_instances[0].public_ip }}"
-  when: instance_state == 'present' and (instance.instances|length) == 0 and assign_public_ip
-
-- name: Register host using IP address of created instance
-  set_fact:
-    ansible_host: "{{ instance.instances[0].public_ip }}"
-  when: instance_state == 'present' and (instance.instances|length) != 0 and assign_public_ip
 
 - name: Get ID of existing instance
   set_fact:
     instance_id: "{{ instance.tagged_instances[0].id }}"
   when: instance_state == 'present' and (instance.instances|length) == 0
 
-- name: Register ID of created instance
+- name: Get ID of created instance
   set_fact:
     instance_id: "{{ instance.instances[0].id }}"
   when: instance_state == 'present' and (instance.instances|length) != 0

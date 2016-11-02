@@ -72,15 +72,13 @@
     disk_auto_delete: yes
   register: instance
 
-- name: Register host with public IP address
-  set_fact:
-    ansible_host: "{{ instance.instance_data[0].public_ip }}"
-  when: instance_state == 'present' and assign_public_ip
+- debug:
+    msg: "{{ instance.instance_data[0] }}"
 
-- name: Register host with private IP address
+- name: Register host IP address
   set_fact:
-    ansible_host: "{{ instance.instance_data[0].private_ip }}"  # TODO: does attribute "private_ip" exist?
-  when: instance_state == 'present' and not assign_public_ip
+    ansible_host: "{{ instance.instance_data[0].public_ip if assign_public_ip else instance.instance_data[0].private_ip }}"
+  when: instance_state == 'present'
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume and attach it to instance"
   local_action: gce_pd
