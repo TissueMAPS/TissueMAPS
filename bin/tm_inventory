@@ -7,6 +7,7 @@ import logging
 from ConfigParser import SafeConfigParser
 
 from tmsetup.utils import write_yaml_file, read_yaml_file, to_json
+from tmsetup.log import configure_logging, map_logging_verbosity
 from tmsetup.config import Setup
 from tmsetup.errors import (
     CloudError, NoInstanceFoundError, MultipleInstancesFoundError
@@ -16,7 +17,7 @@ from tmsetup.inventory import (
     build_inventory_information, load_inventory, save_inventory
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(os.path.basename(__file__))
 
 
 def _get_host_ip_os(region, host_name, host_vars):
@@ -48,8 +49,9 @@ def _get_host_ip_os(region, host_name, host_vars):
             'No addresses found for network "%s"' % host_vars['network']
         )
     if len(addresses) > 1:
-        raise CloudError(
-            'More than one address found for network "%s"' % host_vars['network']
+        # Which one to choose? OS-EXT-IPS:type?
+        logger.warn(
+            'more than one address found for network "%s"', host_vars['network']
         )
     elif len(addresses) == 0:
         raise CloudError(
@@ -80,8 +82,8 @@ def _get_host_ip_ec2(region, host_name, host_vars):
     for inst in instances:
         addresses.append(inst.public_ip_address)
     if len(addresses) > 1:
-        raise MultipleInstancesFoundError(
-            'More than one instance found with name "%s"' % host_name
+        logger.warn(
+            'more than one instance found with name "%s"', host_name
         )
     elif len(addresses) == 0:
         raise NoInstanceFoundError(
@@ -126,13 +128,13 @@ def _get_host_ip_gce(region, host_name, host_vars):
             'No network with name "%s".' % host_vars['network']
         )
     elif len(networks) > 1:
-        raise CloudError(
-            'More than one network with name "%s".' % host_vars['network']
+        logger.warn(
+            'more than one network with name "%s".', host_vars['network']
         )
     addresses = [addr['natIP'] for addr in networks[0]['accessConfigs']]
     if len(addresses) > 1:
-        raise CloudError(
-            'More than one address found for network "%s"' % host_vars['network']
+        logger.warn(
+            'more than one address found for network "%s"', host_vars['network']
         )
     elif len(addresses) == 0:
         raise CloudError(
@@ -177,32 +179,39 @@ def update_static_inventory(inventory_info, setup):
             private_key_file = os.path.expandvars(
                 os.path.expanduser(setup.cloud.key_file_private)
             )
-            try:
-                host_vars = read_yaml_file(host_vars_file)
-            except OSError:
-                host_vars = {}
-                pass
-            default_host_vars = {
+            host_vars = dict()
+            host_vars.update(inventory_info['_meta']['hostvars'][host])
+            host_vars.update({
                 'ansible_user': 'ubuntu',
                 'ansible_ssh_private_key_file': private_key_file
-            }
-            host_vars.update(default_host_vars)
+            })
             # NOTE: --refresh is supposed to be triggered by ansible via
             # (meta: refresh_inventory), but it's not!
-            # if args.refresh:
-            try:
-                host_vars['ansible_host'] = get_host_ip(
-                    setup.cloud.provider, setup.cloud.region, host,
-                    inventory_info['_meta']['hostvars'][host]
-                )
-            except NoInstanceFoundError:
-                logger.warn('no instance found for host "%s"', host)
-                host_vars['ansible_host'] = None
-                logger.debug('remove "ansible_host" variable')
-            except CloudError as err:
-                logger.error(
-                    'getting host address from cloud failed: %s', str(err)
-                )
+            if args.refresh:
+                try:
+                    host_vars['ansible_host'] = get_host_ip(
+                        setup.cloud.provider, setup.cloud.region, host,
+                        inventory_info['_meta']['hostvars'][host]
+                    )
+                except NoInstanceFoundError:
+                    logger.warn('no instance found for host "%s"', host)
+                    host_vars['ansible_host'] = None
+                    logger.debug('remove "ansible_host" variable')
+                except CloudError as err:
+                    logger.error(
+                        'getting host address from cloud failed: %s', str(err)
+                    )
+            else:
+                try:
+                    pre_host_vars = read_yaml_file(host_vars_file)
+                    host_vars['ansible_host'] = pre_host_vars['ansible_host']
+                except OSError:
+                    logger.warn('no variable file found for host "%s"', host)
+                except KeyError:
+                    logger.warn(
+                        'variable "ansible_host" is not defined for host "%s"',
+                        host
+                    )
             # Update inventory with host and group variables
             inventory_info['_meta']['hostvars'][host].update(host_vars)
             write_yaml_file(host_vars_file, host_vars)
@@ -273,4 +282,10 @@ if __name__ == "__main__":
         help='list details about the specific host'
     )
     args = parser.parse_args()
+
+    configure_logging()
+    log_level = map_logging_verbosity(logging.INFO)
+    logger.setLevel(log_level)
+    tmsetup_logger = logging.getLogger('tmsetup')
+    tmsetup_logger.setLevel(log_level)
     main(args)
