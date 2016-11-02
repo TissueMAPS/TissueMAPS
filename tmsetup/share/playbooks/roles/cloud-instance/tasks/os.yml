@@ -22,7 +22,7 @@
 #  - OS_USERNAME
 #  - OS_PASSWORD
 #  - OS_PROJECT_NAME
-- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance with boot disk of defined size"
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
   local_action: os_server
   args:
     name: "{{ instance_name }}"
@@ -34,35 +34,22 @@
     auto_ip: "{{ assign_public_ip }}"
     wait: yes
     timeout: 300
-    boot_from_volume: yes
-    volume_size: "{{ disk_size }}"
+    boot_from_volume: "{{ disk_size is defined }}"
+    volume_size: "{{ disk_size|default(100) }}"
     terminate_volume: yes
     network: "{{ network }}"
     region_name: "{{ region }}"
   register: instance
-  when: disk_size is defined
 
-- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance with default boot disk"
-  local_action: os_server
-  args:
-    name: "{{ instance_name }}"
-    state: "{{ instance_state }}"
-    key_name: "{{ key_name }}"
-    security_groups: "{{ security_groups }}"
-    image: "{{ image }}"
-    flavor: "{{ flavor }}"
-    auto_ip: "{{ assign_public_ip }}"
-    wait: yes
-    timeout: 300
-    network: "{{ network }}"
-    region_name: "{{ region }}"
-  register: instance
-  when: disk_size is not defined
-
-- name: Register IP address of created instance
+- name: Register host with public IP address
   set_fact:
-    instance_public_ip: "{{ instance.openstack.public_v4 }}"
-  when: instance_state == 'present'
+    ansible_host: "{{ instance.openstack.public_v4 }}"
+  when: instance_state == 'present' and assign_public_ip
+
+- name: Register host with private IP address
+  set_fact:
+    ansible_host: "{{ instance.openstack.private_v4 }}"
+  when: instance_state == 'present' and not assign_public_ip
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume"
   local_action: os_volume
@@ -88,3 +75,7 @@
     timeout: 300
   when: (volume_size is defined) and (instance_state == 'present')
 
+- name: Unregister host
+  set_fact:
+    ansible_host: null
+  when: instance_state == 'absent'

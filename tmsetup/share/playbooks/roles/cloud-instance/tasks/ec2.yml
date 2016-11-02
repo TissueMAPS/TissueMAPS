@@ -70,15 +70,25 @@
 - debug:
     msg: "{{ (instance.instances|length) == 0 }}"
 
-- name: Get IP address of existing instance
+- name: Register host using private IP address of existing instance
   set_fact:
-    instance_public_ip: "{{ instance.tagged_instances[0].public_ip }}"
-  when: instance_state == 'present' and (instance.instances|length) == 0
+    ansible_host: "{{ instance.tagged_instances[0].private_ip }}"
+  when: instance_state == 'present' and (instance.instances|length) == 0 and not assign_public_ip
 
-- name: Register IP address of created instance
+- name: Register host using private IP address of created instance
   set_fact:
-    instance_public_ip: "{{ instance.instances[0].public_ip }}"
-  when: instance_state == 'present' and (instance.instances|length) != 0
+    ansible_host: "{{ instance.instances[0].private_ip }}"
+  when: instance_state == 'present' and (instance.instances|length) != 0 and not assign_public_ip
+
+- name: Register host using public IP address of existing instance
+  set_fact:
+    ansible_host: "{{ instance.tagged_instances[0].public_ip }}"
+  when: instance_state == 'present' and (instance.instances|length) == 0 and assign_public_ip
+
+- name: Register host using IP address of created instance
+  set_fact:
+    ansible_host: "{{ instance.instances[0].public_ip }}"
+  when: instance_state == 'present' and (instance.instances|length) != 0 and assign_public_ip
 
 - name: Get ID of existing instance
   set_fact:
@@ -103,3 +113,8 @@
     volume_size: "{{ volume_size }}"
   register: volume
   when: instance_state == 'present' and volume_size is defined
+
+- name: Unregister host
+  set_fact:
+    ansible_host: null
+  when: instance_state == 'absent'

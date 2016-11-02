@@ -22,13 +22,13 @@
 - include: "{{provider}}.yml"
 
 - debug:
-    msg: Created instance {{ instance_public_ip }}
+    msg: Created instance {{ ansible_host }}
   when: instance_state == "present"
 
 - name: Wait for instance
   local_action: wait_for
   args:
-    host: "{{ instance_public_ip }}"
+    host: "{{ ansible_host }}"
     port: 22
     delay: 30
     timeout: 300
@@ -38,23 +38,12 @@
 # TODO: this does not trigger --refresh
 - meta: refresh_inventory
 
-- name: Set host address
-  set_fact:
-    ansible_host: "{{ instance_public_ip }}"
-  when: instance_state == "present"
-
-- name: Reset host address
-  set_fact:
-    ansible_host: null
-  when: instance_state == "absent"
-
-
 # - include: roles/cloud-instance/tasks/format.yml
-#   delegate_to: "{{ instance_public_ip }}"
+#   delegate_to: "{{ instance_ip }}"
 #   delegate_facts: yes
 #   when: (volume_size is defined) and (instance_state == "present")
 
 # - include: roles/cloud-instance/tasks/mount.yml
-#   delegate_to: "{{ instance_public_ip }}"
+#   delegate_to: "{{ instance_ip }}"
 #   delegate_facts: yes
 #   when: (volume_size is defined) and (instance_state == "present")
