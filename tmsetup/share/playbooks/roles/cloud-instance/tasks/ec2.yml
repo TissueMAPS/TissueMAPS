@@ -55,7 +55,7 @@
     instance_tags:
        Name: "{{ instance_name }}"
     count_tag: Name
-    exact_count: 1
+    exact_count: "{{ instance_count }}"
     groups: "{{ security_groups }}"
     wait: true
     wait_timeout: 300
