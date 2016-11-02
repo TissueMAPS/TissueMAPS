@@ -72,9 +72,6 @@
     disk_auto_delete: yes
   register: instance
 
-- debug:
-    msg: "{{ instance.instance_data[0] }}"
-
 - name: Register host IP address
   set_fact:
     ansible_host: "{{ instance.instance_data[0].public_ip if assign_public_ip else instance.instance_data[0].private_ip }}"
