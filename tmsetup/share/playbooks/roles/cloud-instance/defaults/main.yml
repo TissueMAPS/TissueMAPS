@@ -15,9 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-disk_size: 30
 security_groups: default
 network: default
+assign_public_ip: yes
 volume_mountpoint: /data
 
 volume_group: root
