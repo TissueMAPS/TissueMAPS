@@ -24,6 +24,7 @@
 #    (https://developers.google.com/identity/protocols/application-default-credentials)
 - name: Create boot disk
   local_action: gce_pd
+  args:
     disk_type: pd-standard
     image: "{{ image }}"
     name: "{{ instance_name }}"
@@ -41,7 +42,7 @@
 - name: Use default boot disk
   set_fact:
     instance_disks: []
-  when: disk size is not defined
+  when: disk_size is not defined
 
 - name: Set public IP type
   set_fact:
@@ -62,7 +63,7 @@
     name: "{{ instance_name }}"
     image: "{{ image }}"
     machine_type: "{{ flavor }}"
-    external_ip: ephemeral
+    external_ip: "{{ public_ip_type }}"
     network: "{{ network }}"
     zone: "{{ region }}"
     disks: "{{ instance_disks }}"
@@ -78,6 +79,7 @@
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume and attach it to instance"
   local_action: gce_pd
+  args:
     state: "{{ instance_state }}"
     zone: "{{ region }}"
     name: "{{ volume_name }}"
