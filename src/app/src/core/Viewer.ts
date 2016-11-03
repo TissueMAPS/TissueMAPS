@@ -11,10 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// interface SerializedViewer extends Serialized<Viewer> {
-//     experiment: SerializedExperiment;
-//     viewport: SerializedViewport;
-// }
+
 class Viewer {
     id: string;
 
@@ -86,7 +83,7 @@ class Viewer {
             }
         })
 
-        this._startMonitoringJobs(3000);
+        this._getExistingToolResults();
 
         //// DEBUG
         // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
@@ -240,39 +237,104 @@ class Viewer {
         console.log('ToolService: DONE.');
     }
 
+
+    /**
+     * Given a submissionId of a job, query the server for this job's result and, if
+     * there is such a result, add it to the viewer.
+     */
+    private _getAndHandleToolResult(submissionId: number) {
+        return this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + submissionId)
+        .then((resp: any) => {
+            var result = resp.data.data;
+            this._handleSuccessfulToolResult(result);
+            return result;
+        });
+    }
+
+    /**
+     * Check all terminated and running jobs for the current user and experiment.
+     * If a job has terminated already, get the result it produced and add it to
+     * the viewer.
+     */
+    private _getExistingToolResults() {
+        this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status')
+        .then((resp: any) => {
+            var jobStati = resp.data.data;
+            _(jobStati).each((st) => {
+                var didJobEnd = st.state === 'TERMINATING' || st.state === 'TERMINATED';
+                var jobSuccessful = didJobEnd && st.exitcode === 0;
+                var jobStillRunning = st.state === 'RUNNING';
+                if (jobSuccessful) {
+                    this._getAndHandleToolResult(st.submission_id);
+                }
+                if (jobStillRunning) {
+                    this._startMonitoringForToolResult(st.submission_id);
+                }
+            });
+        });
+    }
+
+    /**
+     * Start polling the server for the status of the job with id `submissionId`.
+     * If the job terminated successfully, the result it produced should be
+     * added to the viewer.
+     */
+    private _startMonitoringForToolResult(submissionId: number) {
+        var subscription;
+        var monitor = () => {
+            this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status?submission_id=' + submissionId)
+            .then((resp: any) => {
+                var st = resp.data;
+                var didJobEnd = st.state === 'TERMINATING' || st.state === 'TERMINATED';
+                var jobSuccessful = didJobEnd && st.exitcode === 0;
+                var jobFailed = st.state === didJobEnd && st.exitcode == 1;
+                if (didJobEnd) {
+                    this._$interval.cancel(subscription);
+                }
+                if (jobSuccessful) {
+                    this._getAndHandleToolResult(st.submission_id);
+                }
+                if (jobFailed) {
+                    // TODO: Handle error
+                }
+            });
+        };
+        subscription = this._$interval(monitor, 3000);
+    }
+
     /**
      * Start long-polling the server for a tool result.
      * @param jobId The id of the job processing the tool request.
      * @param session The tool session from which the original request was sent.
      * @type ng.IPromise<any>
      */
-    private _startMonitoringJobs(delayMs: number) {
-        var promise = this._$interval(() => {
-            // Query the server for job statuses
-            this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status')
-            .then((resp: any) => {
-                _(this.savedResults).each((res) => {
-                    if (res !== null) {
-                        this.isSubmissionHandled[res.submissionId] = true;
-                    }
-                });
-                var jobStati = resp.data.data;
-                _(jobStati).each((st) => {
-                    if ((st.state == 'TERMINATING' || st.state == 'TERMINATED') && st.exitcode == 0) {
-                        if (!this.isSubmissionHandled[st.submission_id]) {
-                            this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + st.submission_id)
-                            .then((resp: any) => {
-                                var result = resp.data.data;
-                                this._handleSuccessfulToolResult(result);
-                            });
-                        }
-                    }
-                });
-            });
+    // private _startMonitoringJobs(delayMs: number) {
+    //     var promise = this._$interval(() => {
+    //         // Query the server for job statuses
+    //         this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status')
+    //         .then((resp: any) => {
+    //             _(this.savedResults).each((res) => {
+    //                 if (res !== null) {
+    //                     this.isSubmissionHandled[res.submissionId] = true;
+    //                 }
+    //             });
+    //             var jobStati = resp.data.data;
+    //             _(jobStati).each((st) => {
+    //                 if ((st.state == 'TERMINATING' || st.state == 'TERMINATED') && st.exitcode == 0) {
+    //                     if (!this.isSubmissionHandled[st.submission_id]) {
+    //                         this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + st.submission_id)
+    //                         .then((resp: any) => {
+    //                             var result = resp.data.data;
+    //                             this._handleSuccessfulToolResult(result);
+    //                         });
+    //                     }
+    //                 }
+    //             });
+    //         });
 
-        }, delayMs);
-        return promise;
-    }
+    //     }, delayMs);
+    //     return promise;
+    // }
 
     /**
      * Send a request to the server-side tool to start a processing job.
@@ -296,12 +358,15 @@ class Viewer {
         console.log('ToolService: START REQUEST.');
         return $http.post(url, request).then(
         (resp: any) => {
+            var submissionId = resp.data.data.submission_id;
+            this._startMonitoringForToolResult(submissionId);
+            // TODO: Dialog to show that submission was successful
             return true;
         },
         (err) => {
+            // TODO: Dialog to show that submission was successful
             return false;
         });
-
     }
 
     /**
