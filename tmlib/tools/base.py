@@ -33,7 +33,7 @@ from tmlib.utils import (
 
 logger = logging.getLogger(__name__)
 
-_registry = {}
+_register = {}
 
 
 class _ToolMeta(ABCMeta):
@@ -74,7 +74,7 @@ class _ToolMeta(ABCMeta):
                             cls_name, attr
                         )
                     )
-            _registry[cls_name] = cls
+            _register[cls_name] = cls
         return super(_ToolMeta, cls).__init__(cls_name, cls_bases, cls_args)
 
     def __call__(cls, *args, **kwargs):
@@ -92,6 +92,8 @@ class _ToolMeta(ABCMeta):
 
 
 class ToolInterface(object):
+
+    '''Abstract base class for tool library interfaces.'''
 
     __metaclass__ = ABCMeta
 
@@ -121,11 +123,10 @@ class ToolSparkInterface(ToolInterface):
     '''Tool interface for the `Spark <http://spark.apache.org/>`_ library.
 
     The interface uses the
-    `pyspark.DataFrame <http://spark.apache.org/docs/latest/api/python/pyspark.sql.html#pyspark.sql.DataFrame>`_
+    `Spark DataFrame <http://spark.apache.org/docs/latest/api/python/pyspark.sql.html#pyspark.sql.DataFrame>`_
     data container together with the
-    `Spark MLib <http://spark.apache.org/docs/latest/api/python/pyspark.mllib.html>`
-    machine learning library. All implemented tools must therefore be compatible
-    with the `Spark SQL module <http://spark.apache.org/docs/latest/api/python/pyspark.sql.html#>`_.
+    `Spark MLlib <http://spark.apache.org/docs/latest/api/python/pyspark.ml.html>`
+    machine learning library.
     '''
 
     def _create_spark_session(self, tool_name):
@@ -264,7 +265,7 @@ class ToolPandasInterface(ToolInterface):
     '''Tool interface for the `Pandas <http://pandas.pydata.org/>`_ library.
 
     The interface uses the
-    `pandas.DataFrame <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html>`_
+    `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html>`_
     data container together with the
     `Scikit-Learn <http://scikit-learn.org/stable/>`_ machine learning library.
     It can also be used with other machine learning libraries, such as
@@ -356,35 +357,34 @@ class Tool(object):
     '''Abstract base class for a data analysis `tool`.
 
     Derived classes delegate the actual processing to either the
-    `pandas <>`_ or the `pyspark <>`_ library.
-    Both libraries use a data container called "DataFrame" and have very
-    similar interfaces. Note, however, that spark code gets
-    evaluated lazily.
+    `pandas` or the `spark` library interface. Both libraries use a data
+    container called "DataFrame" and have very similar interfaces. Note,
+    however, that spark code gets evaluated lazily.
 
-    Common methods required by all libraries should be implemented directly
+    Common methods required by both libraries should be implemented directly
     in the derived class. Library-specific processing methods should
     be implemented in separate mixin classes. These library-specific mixins
     must be provided to the derived class via the ``__libs__`` attribute
-    (in form a mapping of library name to mixin class).
-    The appropriate library mixin will be chosen automatically based on
+    (in form of a mapping library name -> mixin class).
+    The appropriate library interface will be chosen automatically based on
     configuration of :attr:`tmlib.config.tool_library` and injected upon
-    instantiation of the derived class. This provides tools with an identical
-    interface independent of the specific library used behind the scenes.
+    instantiation of the derived class. This provides tools with a uniform
+    interface independent of the specificities of different library backends.
 
     By default, the `pandas` library will be used and you don't need to
-    have `Spark <http://spark.apache.org/>`_ installed to use the tools.
+    have `Spark <http://spark.apache.org/>`_ installed.
     When setting :attr:`tmlib.config.LibraryConfig.tool_library` to ``spark``,
-    the `pyspark` library will be used instead. The required
-    `pyspark.SparkSession <https://spark.apache.org/docs/latest/api/python/pyspark.sql.html#pyspark.sql.SparkSession>`_
-    gets automatically created and made available to instances of derived
-    classes.
+    the `spark` library will be used instead. The required
+    `Spark Session <https://spark.apache.org/docs/latest/api/python/pyspark.sql.html#pyspark.sql.SparkSession>`_
+    (the main entry point for `Spark` functionality) gets automatically created
+    and made available to instances of derived classes as ``spark`` attribute.
 
     On small datasets, `pyspark` is an overkill and running analysis in memory
-    via `pandas` would be advised. However, `pyspark` can pay off on
-    large datasets particularly when combined with a
+    using `pandas` will be faster in most cases. However, `pyspark` pays off on
+    large datasets, in particular in combination with a
     `Spark cluster <http://spark.apache.org/docs/latest/cluster-overview.html>`_.
-    To this end, `TissueMAPS` supports running tool requests in a distributed
-    manner on `YARN <http://spark.apache.org/docs/latest/running-on-yarn.html>`_.
+    `TissueMAPS` supports running `spark` tool requests in a distributed manner
+    on `YARN <http://spark.apache.org/docs/latest/running-on-yarn.html>`_.
     '''
 
     __metaclass__ = _ToolMeta
@@ -489,6 +489,8 @@ class Tool(object):
 
 class ClassifierInterface(object):
 
+    '''Abstract base class for classifier tool library interfaces.'''
+
     __metaclass__ = ABCMeta
 
     @abstractmethod
@@ -531,22 +533,11 @@ class ClassifierSparkInterface(ClassifierInterface):
             :class:`pyspark.mllib.linalg.DenseVector` as required by classifiers
             of the :mod:`pyspark.ml` package and a "mapobject_id" column
         '''
-        # feature_values = spark.read_table('feature_values')
-        # features = spark.read_table('features')
-        # mapobjects = spark.read_table('mapobjects')
-        # mapobject_types = spark.read_table('mapobject_types')
         from pyspark.ml.feature import VectorAssembler
         for i, name in enumerate(feature_names):
             df = ToolSparkInterface.load_feature_values(self,
                 mapobject_type_name, name
             )
-            # df = feature_values.\
-            #     join(features, features.id==feature_values.feature_id).\
-            #     join(mapobjects, mapobjects.id==feature_values.mapobject_id).\
-            #     join(mapobject_types, mapobject_types.id==features.mapobject_type_id).\
-            #     filter(features.name == name).\
-            #     filter(mapobject_types.name == mapobject_type_name).\
-            #     filter(mapobject_types.experiment_id == experiment_id)
             if i == 0:
                 data = df.select(
                     df.value.alias(name),

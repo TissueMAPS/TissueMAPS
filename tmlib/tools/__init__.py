@@ -18,16 +18,48 @@
 This packages provides tools for interactive data analysis and machine learning.
 A `tool` is an implementation of :class:`tmlib.tools.base.Tool`
 that can process client requests and persist the result of the analysis
-as an instance of :class:`tmlib.models.result.ToolResult` in the database.
-The client can then stream the result in form of a
-:class:`tmlib.models.layer.LabelLayer` or :class:`tmlib.models.plot.Plot`
-to visualize it on the map in an interactive an responsive manner.
+in form of an instance of :class:`tmlib.models.result.ToolResult` in the
+database. The client can stream the result provided via
+:class:`tmlib.models.layer.LabelLayer` and :class:`tmlib.models.plot.Plot`
+and visualize it on the map in an interactive an responsive manner.
 
-To create a new tool, one must implement :class:`tmlib.tools.base.Tool`,
-decorate the derived class with :func:`tmlib.tools.registry.register_tool` and
-import it in :mod:`tmlib.tools`.
+Custom tools can be added by implementing :class:`tmlib.tools.base.Tool` and
+import the derived class in :mod:`tmlib.tools`. Note that tools also require
+a client side representation.
 '''
 from tmlib.version import __version__
 from tmlib.tools.classification import Classification
 from tmlib.tools.clustering import Clustering
 from tmlib.tools.heatmap import Heatmap
+
+from tmlib.tools.base import _register
+
+
+def get_tool_class(name):
+    '''Gets the tool-specific implementation of :class:`tmlib.models.base.Tool`.
+
+    Parameters
+    ----------
+    name: str
+        name of the tool
+
+    Returns
+    -------
+    type
+        tool class
+    '''
+    try:
+        return _register[name]
+    except KeyError:
+        raise RegistryError('Tool "%s" is not registered.' % name)
+
+
+def get_available_tools():
+    '''Gets a list of available tools.
+
+    Returns
+    -------
+    List[str]
+        names of available tools
+    '''
+    return _register.keys()

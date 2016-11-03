@@ -19,12 +19,10 @@ import tmlib.models as tm
 from tmlib.utils import same_docstring_as
 
 from tmlib.tools.base import Tool, Classifier
-from tmlib.tools.registry import register_tool
 
 logger = logging.getLogger(__name__)
 
 
-@register_tool
 class Classification(Classifier):
 
     '''Tool for supervised classification.'''

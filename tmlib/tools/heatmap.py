@@ -19,14 +19,12 @@ import logging
 
 import tmlib.models as tm
 from tmlib.utils import same_docstring_as
-from tmlib.tools.registry import register_tool
 
 from tmlib.tools.base import Tool
 
 logger = logging.getLogger(__name__)
 
 
-@register_tool
 class Heatmap(Tool):
 
     __icon__ = 'HMP'

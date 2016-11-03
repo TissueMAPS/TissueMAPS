@@ -64,11 +64,26 @@ def find_scripts():
     return scripts
 
 
-def build_console_scripts():
+def get_cli_tools():
     src_path = os.path.abspath(os.path.dirname(__file__))
-    sys.path = [src_path] + sys.path
-    import tmlib
-    names = tmlib.get_cli_tools()
+    root = os.path.join(src_path, 'tmlib', 'workflow')
+    def _is_step(d):
+        # A step is defined as a subpackage that implements the following
+        # modules: api, cli, args
+        d = os.path.join(root, d)
+        return(
+            os.path.isdir(d) and
+            glob.glob(os.path.join(d, '__init__.py')) and
+            glob.glob(os.path.join(d, 'api.py')) and
+            glob.glob(os.path.join(d, 'cli.py')) and
+            glob.glob(os.path.join(d, 'args.py'))
+        )
+
+    return filter(_is_step, os.listdir(root))
+
+
+def build_console_scripts():
+    names = get_cli_tools()
     cli_tools = list()
     for name in names:
         cli_tools.append(
