@@ -36,8 +36,7 @@ from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
 from tmserver.extensions import gc3pie
 
-from tmlib.tools import SUPPORTED_TOOLS
-from tmlib.tools import get_tool_class
+from tmlib.tools.registry import get_available_tools, get_tool_class
 from tmlib.tools.manager import ToolRequestManager
 
 
@@ -99,7 +98,8 @@ def get_tools():
 
     """
     tool_descriptions = list()
-    for name in SUPPORTED_TOOLS:
+    available_tools = get_available_tools()
+    for name in available_tools:
         tool_cls = get_tool_class(name)
         tool_descriptions.append({
             'name': tool_cls.__name__,
@@ -254,7 +254,7 @@ def get_tool_job_status(experiment_id):
     """
     logger.info('get status of tool jobs for experiment %d', experiment_id)
     with tm.utils.MainSession() as session:
-        tool_job_status_ = session.query(
+        tool_job = session.query(
                 tm.Task.state, tm.Task.submission_id, tm.Task.exitcode
             ).\
             join(tm.Submission).\
@@ -263,9 +263,14 @@ def get_tool_job_status(experiment_id):
                 tm.Submission.experiment_id == experiment_id
             ).\
             all()
-        tool_job_status = \
-            [{'state': st[0], 'submission_id': st[1], 'exitcode': st[2]}
-             for st in tool_job_status_]
+        tool_job_status = [
+            {
+                'state': j.state,
+                'submission_id': j.submission_id,
+                'exitcode': j.exitcode
+            }
+            for j in tool_job
+        ]
 
         return jsonify(data=tool_job_status)
 
@@ -327,9 +332,10 @@ def get_label_layer_tiles(experiment_id, label_layer_id):
 
     with tm.utils.ExperimentSession(experiment_id) as session:
         label_layer = session.query(tm.LabelLayer).get(label_layer_id)
+        result = session.query(tm.ToolResult).get(label_layer.tool_result_id)
         logger.info('get result tiles for label layer "%s"', label_layer.type)
         mapobject_type = session.query(tm.MapobjectType).\
-            get(label_layer.mapobject_type_id)
+            get(result.mapobject_type_id)
         query_res = mapobject_type.get_mapobject_outlines_within_tile(
             x, y, z, zplane=zplane, tpoint=tpoint
         )
