@@ -143,11 +143,4 @@ def create_app(config_overrides={}, log_level=None):
     # websocket.init_app(app)
     app.register_blueprint(jtui, url_prefix='/jtui')
 
-    # @app.after_request
-    # def after_request(response):
-    #   response.headers.add('Access-Control-Allow-Origin', '*')
-    #   response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    #   response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
-    #   return response
-
     return app

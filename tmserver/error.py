@@ -23,7 +23,7 @@ import sqlalchemy
 from flask import jsonify, current_app
 
 from tmserver.serialize import json_encoder
-from api import api
+from tmserver.api import api
 
 
 def register_error(cls):

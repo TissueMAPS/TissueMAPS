@@ -65,6 +65,8 @@ def submit_workflow(experiment_id):
 
         **Example request**:
 
+        .. sourcecode:: http
+
             Content-Type: application/json
 
             {
@@ -125,6 +127,8 @@ def resubmit_workflow(experiment_id):
         structure such a description object.
 
         **Example request**:
+
+        .. sourcecode:: http
 
             Content-Type: application/json
 
@@ -275,6 +279,8 @@ def get_jobs_status(experiment_id):
                 task_ids = []
                 for phase in step.tasks:
                     if hasattr(phase, 'tasks'):
+                        if len(phase.tasks) == 0:
+                            continue
                         if hasattr(phase.tasks[0], 'tasks'):
                             for subphase in phase.tasks:
                                 task_ids.extend([
@@ -347,6 +353,8 @@ def save_workflow_description(experiment_id):
         Save a new workflow description for the specified experiment.
 
         **Example request**:
+
+        .. sourcecode:: http
 
             Content-Type: application/json
 
