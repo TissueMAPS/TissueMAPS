@@ -2,6 +2,7 @@ import os
 import argparse
 import socket
 import logging
+from whichcraft import which
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
@@ -48,7 +49,7 @@ class ToolRequestManager(SubmissionManager):
     def _print_logo():
         print '''
             )           (
-         ( /(           )\
+         ( /(           )\\
          )\()) (    (  ((_)
         (_))/  )\   )\  _     TissueMAPS tool request manager (tmlib %s)
         | |_  ((_) ((_)| |    https://github.com/TissueMAPS/TmLibrary
@@ -70,7 +71,7 @@ class ToolRequestManager(SubmissionManager):
         return os.path.join(self.batches_location, filename)
 
     def _build_command(self, submission_id):
-        if cfg.use_spark:
+        if cfg.tool_library == 'spark':
             command = [
                 'spark-submit',
                 '--driver-class-path', cfg.spark_jdbc_driver,
@@ -78,18 +79,21 @@ class ToolRequestManager(SubmissionManager):
             ]
             if cfg.spark_master == 'yarn':
                 command.extend(['--deploy-mode', 'client'])
-            # TODO: ship Python dependencies
             # args.extend([
-            #     '--py-files', cfg.spark_tmlib.tools_egg
+            #     '--py-files', os.path.expanduser('~/tmlibrary/tmlibrary-egg.info')
             # ])
         else:
             command = []
+
         command.extend([
-            'tm_tool', str(self.experiment_id),
+            which('tm_tool.py'),
+            str(self.experiment_id),
             '--name', self.tool_name,
             '--submission_id', str(submission_id)
         ])
         command.extend(['-v' for x in xrange(self.verbosity)])
+        logger.debug('submit tool request: %s', ' '.join(command))
+        print ' '.join(command)
         return command
 
     def create_job(self, submission_id, user_name, duration='00:30:00',

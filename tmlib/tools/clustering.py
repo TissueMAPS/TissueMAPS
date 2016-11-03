@@ -41,61 +41,6 @@ class Clustering(Classifier):
     def __init__(self, experiment_id):
         super(Clustering, self).__init__(experiment_id)
 
-    def classify(self, feature_data, k, method):
-        '''Clusters mapobjects based on `feature_data` using the
-        machine learning library.
-
-        Parameters
-        ----------
-        feature_data: pyspark.sql.DataFrame or pandas.DataFrame
-            feature values
-        k: int
-            number of classes
-        method: str
-            model to use for clustering
-
-        Returns
-        -------
-        pyspark.sql.DataFrame or pandas.DataFrame
-            data frame with additional column "predictions" with predicted label
-            values for each mapobject
-        '''
-        if self.use_spark:
-            return self._classify_spark(feature_data, k, method)
-        else:
-            return self._classify_pandas(feature_data, k, method)
-
-    def _classify_pandas(self, feature_data, k, method):
-        from sklearn.cluster import KMeans
-
-        models = {
-            'kmeans': KMeans
-        }
-        logger.info(
-            'perform clustering via Scikit-Learn with "%s" method', method
-        )
-        clf = models[method](n_clusters=k)
-        logger.info('fit model')
-        clf.fit(feature_data)
-        # Ensure that values are JSON serializable
-        predictions = pd.DataFrame(clf.labels_.astype(float), columns=['label'])
-        predictions['mapobject_id'] = feature_data.index.astype(int)
-        return predictions
-
-    def _classify_spark(self, feature_data, k, method):
-        from pyspark.ml.clustering import KMeans
-        import pyspark.sql.functions as sp
-        models = {
-            'kmeans': KMeans
-        }
-        logger.info('perform clustering via Spark with "%s" method', method)
-        clf = models[method](k=k, seed=1)
-        logger.info('fit model')
-        model = clf.fit(feature_data)
-        predictions = model.transform(feature_data).\
-            select(sp.col('prediction').alias('label'), 'mapobject_id')
-        return predictions
-
     def process_request(self, submission_id, payload):
         '''Processes a client tool request and inserts the generated result
         into the database. The `payload` is expected to have the following
@@ -127,9 +72,9 @@ class Clustering(Classifier):
         feature_data = self.load_feature_values(
             mapobject_type_name, feature_names
         )
-        predicted_labels = self.classify(feature_data, k, method)
+        predicted_labels = self.classify_unsupervised(feature_data, k, method)
 
-        unique_labels = self.calculate_unique_labels(predicted_labels)
+        unique_labels = self.calculate_unique(predicted_labels, 'label')
         result_id = self.initialize_result(
             submission_id, mapobject_type_name,
             layer_type='ScalarLabelLayer', unique_labels=unique_labels

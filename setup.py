@@ -76,9 +76,11 @@ def build_console_scripts():
                 name=name, cls=name.capitalize()
             )
         )
+    # NOTE: Spark entry points must have .py ending, otherwise they will
+    # be interpreted as scala files.
     cli_tools.extend([
         'tm_workflow = tmlib.workflow.manager:WorkflowManager.main',
-        'tm_tool = tmlib.tools.manager:ToolRequestManager.main',
+        'tm_tool.py = tmlib.tools.manager:ToolRequestManager.main',
     ])
     return cli_tools
 
@@ -165,6 +167,7 @@ setuptools.setup(
        # Ubuntu: sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        # 'rpy2>=2.7.4'
+       'whichcraft>=0.4.0'
     ],
     dependency_links=[
         # The dependency_links functionality has been deprecated, but it can

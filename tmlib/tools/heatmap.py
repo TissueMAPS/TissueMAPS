@@ -63,16 +63,7 @@ class Heatmap(Tool):
         feature_values = self.load_feature_values(
             mapobject_type_name, selected_feature
         )
-        if self.use_spark:
-            import pyspark.sql.functions as sp
-            stats = feature_values.\
-                select(sp.min('value'), sp.max('value')).\
-                collect()
-            lower_bound = stats[0][0]
-            upper_bound = stats[0][1]
-        else:
-            lower_bound = np.min(feature_values.value)
-            upper_bound = np.max(feature_values.value)
+        lower, upper = self.calculate_extrema(feature_values, 'value')
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             feature = session.query(tm.Feature.id).\
@@ -86,7 +77,7 @@ class Heatmap(Tool):
 
         result_id = self.initialize_result(
             submission_id, mapobject_type_name, layer_type='HeatmapLabelLayer',
-            feature_id=feature_id, min=lower_bound, max=upper_bound
+            feature_id=feature_id, min=lower, max=upper
         )
 
         # NOTE: This tool doesn't generate any new labels, but uses already

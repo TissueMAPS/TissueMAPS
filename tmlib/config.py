@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 CONFIG_FILE = os.path.expanduser('~/.tmaps/tissuemaps.cfg')
+DEFAULT_LIB = 'pandas'
+IMPLEMENTED_LIBS = {DEFAULT_LIB, 'spark'}
 
 
 class TmapsConfig(object):
@@ -175,7 +177,7 @@ class LibraryConfig(TmapsConfig):
         super(LibraryConfig, self).__init__()
         self.modules_home = '~/jtmodules'
         self.storage_home = '/data/experiments'
-        self.use_spark = False
+        self.tool_library = DEFAULT_LIB
         self.spark_master = 'local'
         self.read()
 
@@ -243,7 +245,9 @@ class LibraryConfig(TmapsConfig):
         The driver can be downloaded from the
         `PostgreSQL website <https://jdbc.postgresql.org/download.html>`_.
         '''
-        return self._config.get(self._section, 'spark_jdbc_driver')
+        return os.path.expanduser(os.path.expandvars(
+            self._config.get(self._section, 'spark_jdbc_driver')
+        ))
 
     @spark_jdbc_driver.setter
     def spark_jdbc_driver(self, value):
@@ -259,16 +263,21 @@ class LibraryConfig(TmapsConfig):
         self._config.set(self._section, 'spark_jdbc_driver', str(value))
 
     @property
-    def use_spark(self):
-        '''bool: whether `Apache Spark` should be used for processing tool
-        requests (default: ``False``)
+    def tool_library(self):
+        '''str: library that should be used for processing tool requests
+        requests (default: ``"pandas"``, options: ``{"pandas", "spark"}``)
         '''
-        return self._config.getboolean(self._section, 'use_spark')
+        return self._config.get(self._section, 'tool_library')
 
-    @use_spark.setter
-    def use_spark(self, value):
-        if not isinstance(value, bool):
+    @tool_library.setter
+    def tool_library(self, value):
+        if not isinstance(value, basestring):
             raise TypeError(
-                'Configuration parameter "use_spark" must have type bool.'
+                'Configuration parameter "tool_library" must have type str.'
             )
-        self._config.set(self._section, 'use_spark', str(value).lower())
+        if value not in IMPLEMENTED_LIBS:
+            raise ValueError(
+                'Configuration parameter "tool_library" can be one of the '
+                'following: "%s"' % '", "'.join(IMPLEMENTED_LIBS)
+            )
+        self._config.set(self._section, 'tool_library', str(value))
