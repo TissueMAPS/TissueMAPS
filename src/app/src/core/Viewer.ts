@@ -296,12 +296,6 @@ class Viewer {
         console.log('ToolService: START REQUEST.');
         return $http.post(url, request).then(
         (resp: any) => {
-            // if (resp.data.status == 'ok') {
-            //     // this._startMonitoringToolResponseStatus(resp.data.job_id, session);
-            //     console.log('Successfully started job server-side.');
-            // } else {
-            //     console.log('Error: failed to start job server-side.');
-            // }
             return true;
         },
         (err) => {
