@@ -222,12 +222,14 @@ class Viewer {
                 this.saveCurrentResult();
                 this.currentResult = result;
             } else {
-                var submissionIds = this.savedResults.map((res) => {
-                    return res.submissionId;
-                })
-                if (submissionIds.indexOf(result.submissionId) == -1 && result.submissionId != this.currentResult.submissionId) {
-                    console.log('save result: ', result)
-                    this.savedResults.push(result);
+                if (result.submissionId != this.currentResult.submissionId) {
+                    var submissionIds = this.savedResults.map((res) => {
+                        return res.submissionId;
+                    })
+                    if (submissionIds.indexOf(result.submissionId) == -1) {
+                        console.log('save result: ', result)
+                        this.savedResults.push(result);
+                    }
                 }
             }
         } else {
@@ -266,9 +268,6 @@ class Viewer {
                         }
                     }
                 });
-                if (this.currentResult !== null) {
-                    this.currentResult.visible = true;
-                }
             });
 
         }, delayMs);
