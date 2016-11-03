@@ -152,9 +152,9 @@ class TmapsConfig(object):
         )
 
     @property
-    def db_uri_jdbc(self):
-        '''str: database URI in `JDBC` format'''
-        return 'postgresql://{host}:{port}/tissuemaps?user={user}:password={pw}'.format(
+    def db_uri_spark(self):
+        '''str: database URI in `JDBC` format as required by `Spark`'''
+        return 'jdbc:postgresql://{host}:{port}/tissuemaps?user={user}&password={pw}'.format(
             user=self.db_user, pw=self.db_password,
             host=self.db_host, port=self.db_port
         )
@@ -235,6 +235,28 @@ class LibraryConfig(TmapsConfig):
                 'following: "%s"' % '", "'.join(vals)
             )
         self._config.set(self._section, 'spark_master', str(value))
+
+    @property
+    def spark_jdbc_driver(self):
+        '''str: path to the `PostgreSQL` JDBC driver jar file
+
+        The driver can be downloaded from the
+        `PostgreSQL website <https://jdbc.postgresql.org/download.html>`_.
+        '''
+        return self._config.get(self._section, 'spark_jdbc_driver')
+
+    @spark_jdbc_driver.setter
+    def spark_jdbc_driver(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError(
+                'Configuration parameter "spark_jdbc_driver" must have type str.'
+            )
+        value = os.path.expanduser(os.path.expandvars(value))
+        if not os.path.exists(value):
+            raise OSError(
+                'JDBC driver does not exist: %s', value
+            )
+        self._config.set(self._section, 'spark_jdbc_driver', str(value))
 
     @property
     def use_spark(self):

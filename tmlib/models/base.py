@@ -88,7 +88,7 @@ class IdMixIn(object):
     with primary key constraint.
     '''
 
-    #: int: ID of the object
+    #: int: ID assigned to the object by the database
     id = Column(Integer, primary_key=True)
 
     @property

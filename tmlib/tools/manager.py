@@ -10,12 +10,11 @@ from tmlib import cfg
 import tmlib.models as tm
 from tmlib.submission import SubmissionManager
 from tmlib.tools.jobs import ToolJob
-from tmlib.tools import SUPPORTED_TOOLS
-from tmlib.tools import get_tool_class
 from tmlib.writers import JsonWriter
 from tmlib.readers import JsonReader
 from tmlib.utils import autocreate_directory_property
 from tmlib.logging_utils import configure_logging, map_logging_verbosity
+from tmlib.tools.registry import get_tool_class, get_available_tools
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +71,11 @@ class ToolRequestManager(SubmissionManager):
 
     def _build_command(self, submission_id):
         if cfg.use_spark:
-            command = ['spark-submit', '--master', cfg.spark_master]
+            command = [
+                'spark-submit',
+                '--driver-class-path', cfg.spark_jdbc_driver,
+                '--master', cfg.spark_master,
+            ]
             if cfg.spark_master == 'yarn':
                 command.extend(['--deploy-mode', 'client'])
             # TODO: ship Python dependencies
@@ -217,7 +220,7 @@ class ToolRequestManager(SubmissionManager):
         )
         parser.add_argument(
             '--name', '-n', required=True,
-            choices=SUPPORTED_TOOLS, help='name of the tool'
+            choices=set(get_available_tools()), help='name of the tool'
         )
         parser.add_argument(
             '--submission_id', '-s', type=int, required=True,

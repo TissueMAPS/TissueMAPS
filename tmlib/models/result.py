@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 import numpy as np
-from sqlalchemy import Integer, Column, String
+from sqlalchemy import Integer, Column, String, ForeignKey
+from sqlalchemy.orm import relationship, backref
 
 from tmlib.models import ExperimentModel
 
@@ -46,7 +47,20 @@ class ToolResult(ExperimentModel):
     #: int: ID of the corresponding job submission
     submission_id = Column(Integer, index=True)
 
-    def __init__(self, submission_id, tool_name, name=None):
+    #: int: id of the parent mapobject
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
+    mapobject_type = relationship(
+        'MapobjectType',
+        backref=backref('label_layers', cascade='all, delete-orphan')
+    )
+
+    def __init__(self, submission_id, tool_name, mapobject_type_id, name=None):
         '''A persisted result that can be interpreted and visualized by the
         client.
 
@@ -56,6 +70,8 @@ class ToolResult(ExperimentModel):
             ID of the respective job submission
         tool_name: str
             name of the tool that generated the result
+        mapobject_type_id: int
+            ID of the selected mapobject_type
         name: str, optional
             a descriptive name for this result
         '''
@@ -65,6 +81,7 @@ class ToolResult(ExperimentModel):
             self.name = name
         self.tool_name = tool_name
         self.submission_id = submission_id
+        self.mapobject_type_id = mapobject_type_id
 
 
 

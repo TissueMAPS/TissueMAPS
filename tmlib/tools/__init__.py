@@ -15,116 +15,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''Data analysis tools.
 
+This packages provides tools for interactive data analysis and machine learning.
+A `tool` is an implementation of :class:`tmlib.tools.base.Tool`
+that can process client requests and persist the result of the analysis
+as an instance of :class:`tmlib.models.result.ToolResult` in the database.
+The client can then stream the result in form of a
+:class:`tmlib.models.layer.LabelLayer` or :class:`tmlib.models.plot.Plot`
+to visualize it on the map in an interactive an responsive manner.
+
+To create a new tool, one must implement :class:`tmlib.tools.base.Tool`,
+decorate the derived class with :func:`tmlib.tools.registry.register_tool` and
+import it in :mod:`tmlib.tools`.
 '''
-import os
-import inspect
-import logging
-import importlib
-
 from tmlib.version import __version__
-from tmlib.errors import RegistryError
-
-logger = logging.getLogger(__name__)
-
-
-# TODO: how to do this dynamically: import modules
-SUPPORTED_TOOLS = {'Clustering', 'Classification', 'Heatmap'}
-
-_tool_register = dict()
-
-
-def register_tool(name):
-    '''Class decorator to register a derived class of
-    :class:`tmlib.tools.base.Tool`.
-
-    Parameters
-    ----------
-    name: str
-        name of the tool that should be registered
-
-    Returns
-    -------
-    function
-        decorator
-
-    Raises
-    ------
-    TypeError
-        when decorated class is not derived from
-        :class:`tmlib.tools.base.Tool`
-    '''
-    from tmlib.tools.base import Tool
-    def decorator(cls):
-        if Tool not in inspect.getmro(cls):
-            raise TypeError(
-                'Tool class must be derived from "tmlib.tools.base.Tool"'
-            )
-        _tool_register[name] = cls
-        return cls
-    return decorator
-
-
-def get_tool_class(name):
-    '''Gets the tool-specific implementation of :class:`tmlib.models.tool.Tool`.
-
-    Parameters
-    ----------
-    name: str
-        name of the tool
-
-    Returns
-    -------
-    type
-        tool class
-    '''
-    module_name = '%s.%s' % (__name__, name.lower())
-    try:
-        module = importlib.import_module(module_name)
-    except ImportError as error:
-        raise ImportError(
-            'Import of module "%s" failed: %s' % (module_name, str(error))
-        )
-    try:
-        return _tool_register[name]
-    except KeyError:
-        raise RegistryError('Tool "%s" is not registered.' % name)
-    # tool_module = import_tool_module(name)
-    # logger.debug('get class for tool "%s"', name)
-    # return getattr(tool_module, name)
-
-
-# def import_tool_module(name):
-#     '''Imports the module for an implemented `tool`.
-
-#     Parameters
-#     ----------
-#     name: str
-#         name of the tool
-
-#     Returns
-#     -------
-#     module
-#         loaded module instance
-
-#     Raises
-#     ------
-#     ValueError
-#         when no tool is know for the given `name` or when no respective module
-#         is found
-#     '''
-#     if name not in SUPPORTED_TOOLS:
-#         raise ValueError(
-#             'Unknown tool "%s".\n'
-#             'Supported are: "%s"' % '", "'.join(SUPPORTED_TOOLS)
-#         )
-#     name = name.lower()
-#     tool_module_filename = '%s.py' % name
-#     module_files = [
-#         f for f in os.listdir(os.path.dirname(__file__))
-#         if f != '__init__.py'
-#     ]
-#     if tool_module_filename not in module_files:
-#         raise ValueError('No module found for tool "%s"', name)
-#     module_path = '%s.%s' % (__name__, name)
-#     return importlib.import_module(module_path)
-
+from tmlib.tools.classification import Classification
+from tmlib.tools.clustering import Clustering
+from tmlib.tools.heatmap import Heatmap

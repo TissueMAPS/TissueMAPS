@@ -32,14 +32,8 @@ class Feature(ExperimentModel):
 
     Attributes
     ----------
-    name: str
-        name of the feature
-    mapobject_type_id: int
-        ID of parent mapobject type
-    mapobject_type: tmlib.models.MapobjectType
-        parent map object type to which the feature belongs
     values: List[tmlib.models.FeatureValues]
-        values that belong to the feature
+        values belonging to the feature
     '''
 
     __tablename__ = 'features'
@@ -87,9 +81,9 @@ class Feature(ExperimentModel):
 
 class FeatureValue(ExperimentModel):
 
-    '''An individual value of a *feature* that was measured for a given
-    *map object*.
-
+    '''An individual value of a :class:`tmlib.models.feature.Feature`
+    that was extracted for a given :class:`tmlib.models.mapobject.Mapbobject`
+    as part of a :mod:`tmlib.workflow.jterator` pipeline.
     '''
 
     __tablename__ = 'feature_values'
@@ -154,6 +148,72 @@ class FeatureValue(ExperimentModel):
     def __repr__(self):
         return (
             '<FeatureValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
-            % (self.id, self.tpoint, self.mapobject_id, self.feature.name)
+            % (self.id, self.tpoint, self.mapobject_id, self.feature_id)
         )
 
+
+class LabelValue(ExperimentModel):
+
+    '''An individual value of a :class:`tmlib.models.feature.Feature`
+    that was assigned to a given :class:`tmlib.models.mapobject.Mapbobject`
+    as part of a :class:`tmlib.models.result.ToolResult` generated for a client
+    tool request.
+    '''
+
+    __tablename__ = 'label_values'
+
+    #: float: the actual label value
+    value = Column(Float(precision=15))
+
+    #: int: zero-based time point index
+    tpoint = Column(Integer, index=True)
+
+    #: int: ID of the parent mapobject
+    mapobject_id = Column(
+        Integer,
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: int: ID of the parent label layer
+    tool_result_id = Column(
+        Integer,
+        ForeignKey('tool_results.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: tmlib.models.mapobject.Mapobject: parent mapobject
+    mapobject = relationship(
+        'Mapobject',
+        backref=backref('label_values', cascade='all, delete-orphan')
+    )
+
+    #: tmlib.models.result.ToolResult: parent tool result
+    tool_result = relationship(
+        'ToolResult',
+        backref=backref('label_values', cascade='all, delete-orphan')
+    )
+
+    def __init__(self, tool_result_id, mapobject_id, value=None, tpoint=None):
+        '''
+        Parameters
+        ----------
+        tool_result_id: int
+            ID of the parent tool result
+        mapobject_id: int
+            ID of the mapobject to which the value is assigned
+        value:
+            label value (default: ``None``)
+        tpoint: int, optional
+            zero-based time point index (default: ``None``)
+        '''
+        self.tpoint = tpoint
+        self.value = value
+        self.label_id = label_id
+        self.mapobject_id = mapobject_id
+
+    def __repr__(self):
+        return (
+            '<LabelValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
+            % (self.id, self.tpoint, self.mapobject_id, self.feature_id)
+        )

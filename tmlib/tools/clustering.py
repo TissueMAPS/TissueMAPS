@@ -14,18 +14,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
+import pandas as pd
 import logging
 
 import tmlib.models as tm
 from tmlib.utils import same_docstring_as
-from tmlib.tools import register_tool
+from tmlib.tools.registry import register_tool
 
 from tmlib.tools.base import Tool, Classifier
 
 logger = logging.getLogger(__name__)
 
 
-@register_tool('Clustering')
+@register_tool
 class Clustering(Classifier):
 
     __icon__ = 'CLU'
@@ -55,15 +56,16 @@ class Clustering(Classifier):
 
         Returns
         -------
-        List[Tuple[int, str]]
-            ID and predicted label for each mapobject
+        pyspark.sql.DataFrame or pandas.DataFrame
+            data frame with additional column "predictions" with predicted label
+            values for each mapobject
         '''
         if self.use_spark:
             return self._classify_spark(feature_data, k, method)
         else:
-            return self._classify_sklearn(feature_data, k, method)
+            return self._classify_pandas(feature_data, k, method)
 
-    def _classify_sklearn(self, feature_data, k, method):
+    def _classify_pandas(self, feature_data, k, method):
         from sklearn.cluster import KMeans
 
         models = {
@@ -75,14 +77,14 @@ class Clustering(Classifier):
         clf = models[method](n_clusters=k)
         logger.info('fit model')
         clf.fit(feature_data)
-        logger.info('collect predicted labels')
         # Ensure that values are JSON serializable
-        predictions = clf.labels_.astype(int).tolist()
-        mapobject_ids = feature_data.index.astype(int).tolist()
-        return zip(mapobject_ids, predictions)
+        predictions = pd.DataFrame(clf.labels_.astype(float), columns=['label'])
+        predictions['mapobject_id'] = feature_data.index.astype(int)
+        return predictions
 
     def _classify_spark(self, feature_data, k, method):
         from pyspark.ml.clustering import KMeans
+        import pyspark.sql.functions as sp
         models = {
             'kmeans': KMeans
         }
@@ -91,10 +93,8 @@ class Clustering(Classifier):
         logger.info('fit model')
         model = clf.fit(feature_data)
         predictions = model.transform(feature_data).\
-            select('prediction', 'mapobject_id')
-        logger.info('collect predicted labels')
-        result = predictions.collect()
-        return [(r.mapobject_id, r.prediction) for r in result]
+            select(sp.col('prediction').alias('label'), 'mapobject_id')
+        return predictions
 
     def process_request(self, submission_id, payload):
         '''Processes a client tool request and inserts the generated result
@@ -124,34 +124,15 @@ class Clustering(Classifier):
         if method not in self.__methods__:
             raise ValueError('Unknown method "%s".' % method)
 
-        feature_data = self.format_feature_data(
+        feature_data = self.load_feature_values(
             mapobject_type_name, feature_names
         )
         predicted_labels = self.classify(feature_data, k, method)
 
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            mapobject_type = session.query(tm.MapobjectType).\
-                filter_by(name=mapobject_type_name).\
-                one()
+        unique_labels = self.calculate_unique_labels(predicted_labels)
+        result_id = self.initialize_result(
+            submission_id, mapobject_type_name,
+            layer_type='ScalarLabelLayer', unique_labels=unique_labels
+        )
 
-            result = tm.ToolResult(submission_id, self.__class__.__name__)
-            session.add(result)
-            session.flush()
-
-            unique_labels = np.unique(np.array(predicted_labels)[:, 1]).tolist()
-            layer = tm.ScalarLabelLayer(
-                result.id, mapobject_type.id, unique_labels
-            )
-            session.add(layer)
-            session.flush()
-
-            label_objs = [
-                {
-                    'label': value,
-                    'mapobject_id': mapobject_id,
-                    'label_layer_id': layer.id
-                }
-                for mapobject_id, value in predicted_labels
-            ]
-            session.bulk_insert_mappings(tm.LabelLayerValue, label_objs) 
-
+        self.save_label_values(result_id, predicted_labels)

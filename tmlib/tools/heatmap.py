@@ -19,14 +19,14 @@ import logging
 
 import tmlib.models as tm
 from tmlib.utils import same_docstring_as
-from tmlib.tools import register_tool
+from tmlib.tools.registry import register_tool
 
 from tmlib.tools.base import Tool
 
 logger = logging.getLogger(__name__)
 
 
-@register_tool('Heatmap')
+@register_tool
 class Heatmap(Tool):
 
     __icon__ = 'HMP'
@@ -60,7 +60,7 @@ class Heatmap(Tool):
         selected_feature = payload['selected_feature']
 
         logger.info('calculate min/max for rescaling of intensities')
-        feature_values = self.get_feature_values(
+        feature_values = self.load_feature_values(
             mapobject_type_name, selected_feature
         )
         if self.use_spark:
@@ -74,27 +74,20 @@ class Heatmap(Tool):
             lower_bound = np.min(feature_values.value)
             upper_bound = np.max(feature_values.value)
 
-
-        # This tool doesn't generate any new labels, but uses already
-        # existing feature values.
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            mapobject_type = session.query(tm.MapobjectType).\
-                filter_by(name=mapobject_type_name).\
-                one()
-            feature = session.query(tm.Feature).\
+            feature = session.query(tm.Feature.id).\
                 join(tm.MapobjectType).\
                 filter(
                     tm.Feature.name == selected_feature,
                     tm.MapobjectType.name == mapobject_type_name
                 ).\
                 one()
+            feature_id = feature.id
 
-            result = tm.ToolResult(submission_id, self.__class__.__name__)
-            session.add(result)
-            session.flush()
+        result_id = self.initialize_result(
+            submission_id, mapobject_type_name, layer_type='HeatmapLabelLayer',
+            feature_id=feature_id, min=lower_bound, max=upper_bound
+        )
 
-            layer = tm.HeatmapLabelLayer(
-                result.id, mapobject_type.id,
-                feature_id=feature.id, min=lower_bound, max=upper_bound
-            )
-            session.add(layer)
+        # NOTE: This tool doesn't generate any new labels, but uses already
+        # existing feature values.

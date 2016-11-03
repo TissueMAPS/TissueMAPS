@@ -233,22 +233,23 @@ class Query(sqlalchemy.orm.query.Query):
         ----
         Also removes locations of instances on the file system.
         '''
-        instances = self.all()
-        locations = [getattr(inst, 'location', None) for inst in instances]
+        classes = [d['type'] for d in self.column_descriptions]
+        locations = list()
+        for cls in classes:
+            if hasattr(cls, 'location'):
+                locations.extend(self.from_self(cls._location).all())
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
-        if instances:
-            logger.debug(
-                'delete %d instances of class %s from database',
-                len(instances), instances[0].__class__.__name__
-            )
-            super(Query, self).delete(synchronize_session=False)
-            self.session.expire_all()
+        logger.debug(
+            'delete instances of class %s from database', cls.__name__
+        )
+        super(Query, self).delete(synchronize_session=False)
+        self.session.expire_all()
         if locations:
             logger.debug('remove corresponding locations on disk')
             for loc in locations:
-                if loc is not None:
-                    delete_location(loc)
+                if loc[0] is not None:
+                    delete_location(loc[0])
 
 
 class SQLAlchemy_Session(object):
@@ -511,15 +512,14 @@ class MainSession(_Session):
         if db_uri is None:
             db_uri = get_db_uri()
         super(MainSession, self).__init__(db_uri)
-        # if not database_exists(db_uri):
-        #     raise ValueError('Database does not exist: %s' % db_uri)
         try:
             engine = create_db_engine(self._db_uri)
             connection = engine.connect()
             connection.close()
         except sqlalchemy.exc.OperationalError:
-            raise ValueError('Database does not exist: %s' % self._db_uri)
-
+            raise ValueError(
+                'Cannot connect to database: %s' % self._db_uri
+            )
 
 
 class ExperimentSession(_Session):

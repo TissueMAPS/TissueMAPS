@@ -32,7 +32,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from tmlib.models.file import ChannelImageFile
 from tmlib.models.site import Site
 from tmlib.models.well import Well
-from tmlib.models.feature import FeatureValue
+from tmlib.models.feature import FeatureValue, LabelValue
 from tmlib.models.plate import Plate
 from tmlib.models.base import ExperimentModel
 from tmlib.errors import RegexError
@@ -615,7 +615,7 @@ class ChannelLayer(ExperimentModel):
 class LabelLayer(ExperimentModel):
 
     '''A layer that associates each :class:`tmlib.models.mapobject.Mapobject`
-    with a :class:`tmlib.models.layer.LabelLayerValue` for multi-resolution
+    with a :class:`tmlib.models.layer.LabelValue` for multi-resolution
     visualization of tool results on the map.
     The layer can be rendered client side as vector graphics and mapobjects
     can be color-coded according their respective label.
@@ -632,24 +632,11 @@ class LabelLayer(ExperimentModel):
 
     __mapper_args__ = {'polymorphic_on': type}
 
-    #: int: ID of the parent mapobject
-    mapobject_type_id = Column(
-        Integer,
-        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
     #: int: ID of parent tool result
     tool_result_id = Column(
         Integer,
         ForeignKey('tool_results.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
-    )
-
-    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
-    mapobject_type = relationship(
-        'MapobjectType',
-        backref=backref('label_layers', cascade='all, delete-orphan')
     )
 
     #: tmlib.models.result.ToolResult: parent tool result
@@ -658,20 +645,18 @@ class LabelLayer(ExperimentModel):
         backref=backref('layer', cascade='all, delete-orphan', uselist=False)
     )
 
-    def __init__(self, tool_result_id, mapobject_type_id, **extra_attributes):
+    def __init__(self, tool_result_id, **extra_attributes):
         '''
         Parameters
         ----------
         tool_result_id: int
             ID of the parent tool result
-        mapobject_type_id: int
-            ID of the corresponding :class:`tmlib.models.MapobjectType`
         **extra_attributes: dict, optional
             additional tool-specific attributes that be need to be saved
         '''
         self.tool_result_id = tool_result_id
-        self.mapobject_type_id = mapobject_type_id
-        labels = extra_attributes.pop('labels', None)
+        if 'type' in extra_attributes:
+            self.type = extra_attributes.pop('type')
         self.attributes = extra_attributes
 
     def get_labels(self, mapobject_ids):
@@ -691,11 +676,11 @@ class LabelLayer(ExperimentModel):
         session = Session.object_session(self)
         return dict(
             session.query(
-                LabelLayerValue.mapobject_id, LabelLayerValue.label
+                LabelValue.mapobject_id, LabelValue.value
             ).
             filter(
-                LabelLayerValue.mapobject_id.in_(mapobject_ids),
-                LabelLayerValue.label_layer_id == self.id
+                LabelValue.mapobject_id.in_(mapobject_ids),
+                LabelValue.tool_result_id == self.tool_result_id
             ).
             all()
         )
@@ -707,23 +692,19 @@ class ScalarLabelLayer(LabelLayer):
 
     __mapper_args__ = {'polymorphic_identity': 'ScalarLabelLayer'}
 
-    def __init__(self, tool_result_id, mapobject_type_id, unique_labels,
-            **extra_attributes):
+    def __init__(self, tool_result_id, unique_labels, **extra_attributes):
         '''
         Parameters
         ----------
         tool_result_id: int
             ID of the parent tool result
-        mapobject_type_id: int
-            ID of the corresponding :class:`tmlib.models.MapobjectType`
         unique_labels : List[int]
             unique label values
         **extra_attributes: dict, optional
             additional tool-specific attributes that be need to be saved
         '''
         super(ScalarLabelLayer, self).__init__(
-            tool_result_id, mapobject_type_id, unique_labels=unique_labels,
-            **extra_attributes
+            tool_result_id, unique_labels=unique_labels, **extra_attributes
         )
 
 
@@ -736,25 +717,23 @@ class SupervisedClassifierLabelLayer(ScalarLabelLayer):
 
     __mapper_args__ = {'polymorphic_identity': 'SupervisedClassifierLabelLayer'}
 
-    def __init__(self, tool_result_id, mapobject_type_id, unqiue_labels,
-            color_map, **extra_attributes):
+    def __init__(self, tool_result_id, unqiue_labels, color_map,
+            **extra_attributes):
         '''
         Parameters
         ----------
         tool_result_id: int
             ID of the parent tool result
-        mapobject_type_id: int
-            ID of the corresponding :class:`tmlib.models.MapobjectType`
         unique_labels : List[int]
             unique label values
-        color_map : dict[int | float | str, str]
+        color_map : dict[float, str]
             mapping of label value to color strings of the format "#ffffff"
         **extra_attributes: dict, optional
             additional tool-specific attributes that be need to be saved
         '''
         super(SupervisedClassifierLabelLayer, self).__init__(
-            tool_result_id, mapobject_type_id, color_map=color_map,
-            unique_labels=unique_labels, **extra_attributes
+            tool_result_id, color_map=color_map, unique_labels=unique_labels,
+            **extra_attributes
         )
 
 
@@ -764,20 +743,18 @@ class ContinuousLabelLayer(LabelLayer):
 
     __mapper_args__ = {'polymorphic_identity': 'ContinuousLabelLayer'}
 
-    def __init__(self, tool_result_id, mapobject_type_id, **extra_attributes):
+    def __init__(self, tool_result_id, **extra_attributes):
         '''
         Parameters
         ----------
         tool_result_id: int
             ID of the parent tool result
-        mapobject_type_id: int
-            ID of the corresponding :class:`tmlib.models.MapobjectType`
         **extra_attributes: dict, optional
             additional tool-specific attributes that be need to be saved
 
         '''
         super(ContinuousLabelLayer, self).__init__(
-            tool_result_id, mapobject_type_id, **extra_attributes
+            tool_result_id, **extra_attributes
         )
 
 
@@ -789,20 +766,17 @@ class HeatmapLabelLayer(ContinuousLabelLayer):
 
     __mapper_args__ = {'polymorphic_identity': 'HeatmapLabelLayer'}
 
-    def __init__(self, tool_result_id, mapobject_type_id, feature_id, min, max):
+    def __init__(self, tool_result_id, feature_id, min, max):
         '''
         Parameters
         ----------
         tool_result_id: int
             ID of the parent tool result
-        mapobject_type_id: int
-            ID of the parent mapobject type
         feature_id: int
             ID of the feature whose values should be used
         '''
         super(HeatmapLabelLayer, self).__init__(
-            tool_result_id, mapobject_type_id, feature_id=feature_id,
-            min=min, max=max
+            tool_result_id, feature_id=feature_id, min=min, max=max
         )
 
     def get_labels(self, mapobject_ids):
@@ -833,54 +807,3 @@ class HeatmapLabelLayer(ContinuousLabelLayer):
             ).
             all()
         )
-
-
-class LabelLayerValue(ExperimentModel):
-
-    '''A label that's assigned to an indiviual mapobject.'''
-
-    __tablename__ = 'label_layer_values'
-
-    label = Column(JSON)
-
-    #: int: ID of the parent mapobject
-    mapobject_id = Column(
-        Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: int: ID of the parent label layer
-    label_layer_id = Column(
-        Integer,
-        ForeignKey('label_layers.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    # TODO: does this mapping work with subclasses of LabelLayer?
-    # label_layer = relationship(
-    #     'LabelLayer',
-    #     backref=backref('labels', cascade='all, delete-orphan')
-    # )
-
-    #: tmlib.models.mapobject.Mapobject: parent mapobject
-    mapobject = relationship(
-        'Mapobject',
-        backref=backref('labels', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, label, label_layer_id, mapobject_id):
-        '''
-        Parameters
-        ----------
-        label:
-            label value
-        label_layer_id: int
-            ID of the parent label layer
-        mapobject_id: int
-            ID of the mapobject to which the value is assigned
-        '''
-        self.label = label
-        self.label_layer_id = label_layer_id
-        self.mapobject_id = mapobject_id
-
