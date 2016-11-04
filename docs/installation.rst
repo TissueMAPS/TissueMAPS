@@ -5,17 +5,17 @@ Installation
 
 `TissueMAPS` uses a client-server model:
 
-* **Client** code runs on local machines and interacts with the server over `HTTP <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_ protocol. No local installation is required for the user interface, since the `Javascript` code is served to users through the browser. Other client implementations (active programming and command line interfaces) need to be installed locally, but they have very few dependencies and are easy to setup on various platforms (Linux, MacOSX, Windows).
+* **Client** code runs on local machines and interacts with the server over `HTTP <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_ protocol. No local installation is required for the user interface, since the `Javascript` code is served to users via the browser. Other client implementations (active programming and command line interfaces) need to be installed locally. They have very few dependencies and are easy to install on various platforms (Linux, MacOSX, Windows).
 
-* **Server** code typically runs on a remote machine (or multiple machines). It has more dependencies, is more complicated to setup and designed for `UNIX <http://www.unix.org/what_is_unix.html>`_ plaforms. To facilitate setup, `TissueMAPS` provides `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_ for automated configuration management and deployment on `Ubuntu 14.04 <http://releases.ubuntu.com/14.04/>`_.
+* **Server** code can also run on a local machine, but is typically deployed on a remote machine (or multiple machines). It has many dependencies, is more complicated to setup and is designed for `UNIX <http://www.unix.org/what_is_unix.html>`_ plaforms (we have never tested it, but the server probably won't run on Windows). This section provides instructions for manual setup on MacOSX and Linux Ubuntu. `TissuMAPS` further provides automated configuration management and deployment routines for `Ubuntu 14.04 <http://releases.ubuntu.com/14.04/>`_ in form of `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_. For more information, please refer to the :doc:`cloud setup and deployment <setup_and_deployment>`
 
 .. _clients:
 
 Clients
 =======
 
-Setting up `TissueMAPS` clients is straight forward.
 Users can interact with the program via a standard web browser (tested with `Chrome <https://www.google.com/chrome/>`_, `Firefox <https://www.mozilla.org/en-US/firefox/new/>`_ and `Safari <http://www.apple.com/safari/>`_) without the need to install any additional software locally.
+
 Other client implementations are available in various languages through the `TmClient <https://github.com/TissueMAPS/TmClient>`_ repository.
 
 .. _python-client:
@@ -25,7 +25,6 @@ Python client
 
 The `tmclient` Python package provides an active programming and command line interface for uploading or downloading data.
 
-.. _non-python-requirements:
 
 Requirements
 ^^^^^^^^^^^^
@@ -93,11 +92,13 @@ The `tmclient` R package can be installed from the R console using the `devtools
 Server
 ======
 
-The server backend is designed for `UNIX`-based operating systems. It has been successfully deployed in production on `Ubuntu 14.04 Trusty <http://releases.ubuntu.com/14.04/>`_ and used for development on `MacOSX 10.10.5 Yosemite <https://support.apple.com/kb/DL1833?locale=en_US>`_. It is very unlikely to work on Windows.
+The server backend is designed for `UNIX`-based operating systems. It has been successfully deployed in production on `Ubuntu 14.04 Trusty <http://releases.ubuntu.com/14.04/>`_ and development on `MacOSX 10.10.5 Yosemite <https://support.apple.com/kb/DL1833?locale=en_US>`_.
 
-The `TissueMAPS` "server" is composed of different components. These components might be installed all on the same or distributed accross multiple machines, depending on available resources and expected workloads.
+For MacOSX we highly recommend using the `Homebrew <http://brew.sh/>`_ package manager.
 
-Below, the individual server components are desribed and instructions for manual deployment and configuration are provided. The manual installation guide gives an overview of the different components and their requirements and can be helpful for setting up a `TissueMAPS` server locally for development. Note that you don't need to install web and application servers for local debugging and testing, since development servers are provided through the `TmUI <https://github.com/TissueMAPS/TmUI>`_ and `TmServer <https://github.com/TissueMAPS/TmServer>`_ repositories, respectively. For production deployment, please refer to the `automatic setup <automatic-setup>`_ section, where you'll find instructions on how to setup `TissueMAPS` in a fully automated and reproducible way.
+The `TissueMAPS` server is comprised of different components: web, storage, and compute units. These components might be all installed on the same machine or distributed accross multiple machines, depending on available resources and expected workloads.
+
+Below, the individual server components are desribed and instructions for manual installation and configuration instructions are provided for setup on a single machine. The manual installation guide gives an overview of the different components and their requirements and can be helpful for setting up a `TissueMAPS` server for local development. Note that you don't need to install web and application servers for local debugging and testing, since development servers are provided through the `TmUI <https://github.com/TissueMAPS/TmUI>`_ and `TmServer <https://github.com/TissueMAPS/TmServer>`_ repositories, respectively. For production deployment, please refer to the `cloud setup and deployment <setup_and_deployment>`_ section, where you'll find instructions on how to setup `TissueMAPS` in the cloud in a fully automated and reproducible way.
 
 .. _web-server:
 
@@ -107,10 +108,12 @@ Web server
 The `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository hosts the code for the `AngularJS <https://angularjs.org/>`_ web app. It is written to large extends in `TypeScript <https://www.typescriptlang.org/>`_ and managed by `Gulp <http://gulpjs.com/>`_.
 The `HTTP` server serves the app (`HTML <http://www.w3schools.com/html/html_intro.asp>`_ templates and built `Javascript <http://www.w3schools.com/js/js_intro.asp>`_ code) to clients.
 
+.. _web-server-requirements:
+
 Requirements
 ^^^^^^^^^^^^
 
-* `NodeJs <https://nodejs.org/en/>`_: Also provides its package manager `npm <https://www.npmjs.com/>`_.
+* `NodeJs <https://nodejs.org/en/>`_ and its package manager `npm <https://www.npmjs.com/>`_:
 
     On Ubuntu::
 
@@ -131,7 +134,7 @@ Requirements
 
         brew install git
 
-* `NGINX <https://www.nginx.com/>`_ (for production deployment):
+* `NGINX <https://www.nginx.com/>`_ (only required for production deployment):
 
     On Ubuntu::
 
@@ -141,14 +144,15 @@ Requirements
 
         brew install nginx
 
+.. _web-server-installation:
 
 Installation
 ^^^^^^^^^^^^
 
-Clone the `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository (including submodules) from Github and change the current directory::
+Clone the `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository (including submodules) from Github and cd into the created directory::
 
-    git clone --recursive https://github.com/TissueMAPS/TmUI.git $HOME/tmclient
-    cd $HOME/tmui/src
+    git clone --recursive https://github.com/TissueMAPS/TmUI.git ~/tmclient
+    cd ~/tmui/src
 
 Install `node` packages::
 
@@ -162,8 +166,9 @@ Build cliet code for production deployment::
 
     node_modules/gulp/bin/gulp.js build --production
 
-This will create a ``build`` subdirectory. The contents of this directory can now be served by a separate HTTP web server, such as `NGINX`.
+This will create a ``build`` subdirectory. The contents of this directory can now be served by a HTTP web server, such as `NGINX`.
 
+.. _web-server-configuration:
 
 Configuration
 ^^^^^^^^^^^^^
@@ -191,11 +196,11 @@ When using `NGINX`, create an application-specific site and set the path to the 
         }
     }
 
-and enable the ``tissuemaps`` site by creating the following softlink::
+Enable the ``tissuemaps`` site by creating the following softlink::
 
     sudo ln -s /etc/nginx/sites-available/tissuemaps /etc/nginx/sites-enabled/tissuemaps
 
-Also set the following application-specific parameters in ``/etc/nginx/conf.d/tissuemaps.conf`` (the values may need to be adapated for your use case)::
+Set the following application-specific parameters in ``/etc/nginx/conf.d/tissuemaps.conf`` (the values may need to be adapated for your use case)::
 
     uwsgi_read_timeout 3600;
     uwsgi_buffering off;
@@ -208,12 +213,14 @@ Application server
 ------------------
 
 The application server communicates between the web server and the Python web application, using the `Web Server Gateway Interface (WSGI) specification <https://wsgi.readthedocs.io/en/latest/>`_.
-Since we will run web and application servers on the same machine, we use a Unix socket, which communicates with the web proxy server via the `WSGI` protocol instead of a network port. This would need to be changed when the different server components operate on different machines.
+Since we will run web and application servers on the same machine, we use a Unix socket, which communicates with the web proxy server via the `WSGI` protocol instead of a network port. This would need to be changed when the different server components operate on separate machines.
+
+.. _application-server-requirements:
 
 Requirements
 ^^^^^^^^^^^^
 
-* `Python <https://www.python.org/>`_ (version 2.7): Ubuntu (up to version 14.04) and MacOSX come with Python included. However, installing a newer version (2.7.9 or higher) is recommended. For MacOSX make sure you use the version installed via `Homebrew`!
+* `Python <https://www.python.org/>`_ (version 2.7): Ubuntu (up to version 14.04) and MacOSX come with Python included. However, installing a newer version (2.7.9 or higher) is recommended. On MacOSX make sure you use the version installed via `Homebrew`!
 * `Pip <https://pip.pypa.io/en/stable/>`_: The Python package manager is typically already installed with the Python distributions, but we need to update it to make sure we use the most recent version.
 
     On Ubuntu::
@@ -230,17 +237,25 @@ Requirements
         brew install python
         sudo pip install --upgrade pip
 
+.. _application-server-installation:
 
 Installation
 ^^^^^^^^^^^^
 
+`uWSGI` can be installed via the Python package manager `pip`::
+
+    sudo pip install uwsgi
+
+
 If you don't install the application on a dedicated machine, we recommend using a Python virtual environment.
 
-To this end, install `virtualenv <https://virtualenv.readthedocs.org/en/latest/>`_ and `virtualenvwrapper <https://virtualenvwrapper.readthedocs.org/en/latest/>`_ and set up your environment::
+To this end, install `virtualenv <https://virtualenv.readthedocs.org/en/latest/>`_ and `virtualenvwrapper <https://virtualenvwrapper.readthedocs.org/en/latest/>`_::
 
     sudo pip install virtualenv virtualenvwrapper
 
-Execute the following lines and add them to your ``.bash_profile`` file::
+Add the following lines to your ``~/.bash_profile`` file:
+
+.. code-block:: bash
 
     export WORKON_HOME=$HOME/.virtualenvs
     source /usr/local/bin/virtualenvwrapper.sh
@@ -255,21 +270,17 @@ You can later activate the environment as follows::
 
 .. warning::
 
-    A coexisting `anaconda <http://docs.continuum.io/anaconda/pkg-docs>`_ installation doens't play nice with virtual environments and will create problems; see `potential solution <https://gist.github.com/mangecoeur/5161488>`_. It might also create issues with Python bindings installed by other package managers.
-
-`uWSGI` can be installed via the Python package manager `pip`::
-
-    sudo pip install uwsgi
+    A coexisting `anaconda <http://docs.continuum.io/anaconda/pkg-docs>`_ installation doens't play nice with virtual environments and will create problems; see `potential solution <https://gist.github.com/mangecoeur/5161488>`_. It might also create issues with Python bindings installed by other package managers. For this reason (and others) we prefer working with good old virtualenvs.
 
 
 Configuration
 ^^^^^^^^^^^^^
 
-Create a direcotory for application-specific configurations::
+Create a direcotory for `TissueMAPS`-specific configurations::
 
-    mkdir $HOME/.tmaps
+    mkdir ~/.tmaps
 
-and configure `uWSGI` in ``$HOME/.tmaps/uwsgi.ini``:
+and configure `uWSGI` in ``~/.tmaps/uwsgi.ini``:
 
 .. code-block:: ini
 
@@ -288,13 +299,13 @@ and configure `uWSGI` in ``$HOME/.tmaps/uwsgi.ini``:
 Ensure that the server runs in `gevent <http://www.gevent.org/>`_ mode and
 adapt configurations according to available computational resources.
 
-When working with a virtual environment, include the path to the project:
+When working with a virtual environment (as described above), include the path to the project in the configuration file:
 
 .. code-block:: ini
 
     home = $(VIRTUALENVWRAPPER_HOOK_DIR)/tissuemaps
 
-Then create an upstart script in ``$HOME/.tmaps/uwsgi.sh``:
+Create a upstart script in ``~/.tmaps/uwsgi.sh``:
 
 .. code-block:: bash
 
@@ -320,13 +331,14 @@ and set the path to the script in the service definition file ``/etc/init/uwsgi.
 Application
 -----------
 
-The actual Python web application is implemented in the `Flask <http://flask.pocoo.org/>`_ micro-framework.
+The actual `TissueMAPS` Python web application is implemented in the `Flask <http://flask.pocoo.org/>`_ micro-framework.
 
+.. _application-requirements:
 
 Requirements
 ^^^^^^^^^^^^
 
-* `PostgreSQL <http://postgresxl.org/>`_ (version 9.6): `PostgreSQL` is available on Ubuntu by default, but we want a more recent version with improved performanced. On MacOSX `PostgreSQL` is avaible via `homebrew`, but the `PostgresApp <http://postgresapp.com/>`_ can be used alternatively for convenience.
+* `PostgreSQL <http://postgresxl.org/>`_ (version 9.6): `PostgreSQL` is available on Ubuntu by default, but we want a more recent version with improved performanced. On MacOSX `PostgreSQL` is avaible via `homebrew`, but the `PostgresApp <http://postgresapp.com/>`_ is a convenient alternative.
 
     On Ubuntu::
 
@@ -344,6 +356,8 @@ Requirements
 
         brew tap petere/postgresql
         brew install postgresql-9.6 && brew link -f postgresql-9.6
+
+        # Postgis extension
         brew install pex
         brew install gettext && brew link -f gettext
         pex init
@@ -370,17 +384,17 @@ Requirements
         brew install opencv3
         echo /usr/local/opt/opencv3/lib/python2.7/site-packages >> /usr/local/lib/python2.7/site-packages/opencv3.pth
 
-    Build `OpenCV` globally and create softlinks for the Python bindings to use it within a virtual environment (exemplified for ``tissuemaps`` project):
+    This will build `OpenCV` globally. If you work with a virtual enviroment, create a softlink for the Python bindings (exemplified for ``tissuemaps`` project):
 
-    On Ubuntu::
+        On Ubuntu::
 
-        cd $VIRTUALENVWRAPPER_HOOK_DIR/tissuemaps/lib/python2.7/site-packages
-        ln -s /usr/local/lib/python2.7/dist-packages/cv2.so cv2.so
+            cd $VIRTUALENVWRAPPER_HOOK_DIR/tissuemaps/lib/python2.7/site-packages
+            ln -s /usr/local/lib/python2.7/dist-packages/cv2.so cv2.so
 
-    On MacOSX::
+        On MacOSX::
 
-        cd $VIRTUALENVWRAPPER_HOOK_DIR/tissuemaps/lib/python2.7/site-packages/
-        ln -s /usr/local/lib/python2.7/site-packages/opencv3.pth opencv3.pth
+            cd $VIRTUALENVWRAPPER_HOOK_DIR/tissuemaps/lib/python2.7/site-packages/
+            ln -s /usr/local/lib/python2.7/site-packages/opencv3.pth opencv3.pth
 
 * `HDF5 <https://www.hdfgroup.org/HDF5/>`_:
 
@@ -408,7 +422,7 @@ Requirements
         brew tab ome/alt
         brew install bioformats51
 
-* `Spark <http://spark.apache.org/>`_ (version 2.0): Requires installation with support for `YARN <http://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html>`_ for running Spark on a cluster as well as `Hive <https://hive.apache.org/>`_ and `JDBC <http://docs.oracle.com/javase/tutorial/jdbc/overview/index.html>`_ for `Spark SQL <http://spark.apache.org/docs/latest/sql-programming-guide.html#overview>`_ integration. It is important to `build <http://spark.apache.org/docs/latest/building-spark.html#specifying-the-hadoop-version>`_ Spark againgst the `HDFS <http://hadoop.apache.org/docs/r1.2.1/hdfs_design.html>`_ version available in your cluster environment, since `HDFS` is not cross compatible across versions. Pyspark further requires the same minor version of Python in both drivers and workers.
+* `Spark <http://spark.apache.org/>`_ (version 2.0): Requires installation with support for `YARN <http://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html>`_ for running Spark on a cluster as well as `Hive <https://hive.apache.org/>`_ and `JDBC <http://docs.oracle.com/javase/tutorial/jdbc/overview/index.html>`_ for `Spark SQL <http://spark.apache.org/docs/latest/sql-programming-guide.html#overview>`_ integration. It is important to `build <http://spark.apache.org/docs/latest/building-spark.html#specifying-the-hadoop-version>`_ Spark againgst the `HDFS <http://hadoop.apache.org/docs/r1.2.1/hdfs_design.html>`_ version available in your cluster environment, since `HDFS` is not compatible across versions. Pyspark further requires the same minor version of Python in both drivers and workers.
 
     On Ubuntu::
 
@@ -438,29 +452,32 @@ Requirements
         sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
         sudo apt-get -y install libgeos-dev
 
+.. _application-installation:
 
 Installation
 ^^^^^^^^^^^^
 
 Download the server code from Github::
 
-    git clone https://github.com/TissueMAPS/TmServer.git $HOME/tmserver
+    git clone https://github.com/TissueMAPS/TmServer.git ~/tmserver
 
 Install the `tmserver` Python package via `pip`::
 
-    cd $HOME/tmserver
-    pip install .
+    cd ~/tmserver && pip install -e . --user
 
-You may want to install `TissueMAPS` packages in developer mode to be able to modify code locally. To this end, you can clone and install repositories in ``$HOME/tmserver/requirements/requirements-git.txt`` manually.
+This will install the package in `editable mode <https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs>`_, which allows you to modify code locally without having to reinstall the package.
 
+.. _application-configuration:
 
 Configuration
 ^^^^^^^^^^^^^
 
-PostgreSQL
-~~~~~~~~~~
+.. _application-configuration-postgresql:
 
-Create a database cluster for a given ``data_directory`` and start the server (here demonstrated for `PostgreSQL` version 9.6 with the default ``data_directory`` - it might have already been done automatically upon installation):
+PostgreSQL
+++++++++++
+
+Create a `database cluster <https://www.postgresql.org/docs/current/static/creating-cluster.html>`_ using the default ``data_directory`` and start the server (here demonstrated for `PostgreSQL` version 9.6). These steps might have already been performed automatically upon installation:
 
     On Ubuntu (as ``postgres`` user)::
 
@@ -473,7 +490,9 @@ Create a database cluster for a given ``data_directory`` and start the server (h
         /usr/local/opt/postgresql-9.6/bin/initdb -D /usr/local/var/lib/postgresql/9.6/main
         /usr/local/opt/postgresql-9.6/bin/pg_ctrl -D /usr/local/var/lib/postgresql/9.6/main -l logfile restart
 
-On MacOSX you may want to add the `PostgreSQL` executables to the ``$PATH`` in your ``.bash_profile`` file::
+On MacOSX you may want to add the `PostgreSQL` executables to the ``$PATH`` in your ``~/.bash_profile`` file:
+
+.. code-block:: bash
 
         export PATH=$PATH:/usr/local/opt/postgresql-9.6/bin
         export MANPATH=$MANPATH:/usr/local/opt/postgresql-9.6/share/man
@@ -489,7 +508,7 @@ Configure postgres in ``/etc/postgresql/9.6/main/postgresql.conf``:
     listen_addresses = '*'
     host  all  all  .0.0.0/0  md5
 
-Enter `psql` console:
+Now enter `psql` console:
 
     On Ubuntu (as ``postgres`` user)::
 
@@ -499,7 +518,7 @@ Enter `psql` console:
 
         psql postgres
 
-Create the postgres user (it may already exist) and chanage the password:
+to change permissions for the postgres user (it may already exist) and set a new password:
 
 .. code-block:: sql
 
@@ -523,34 +542,40 @@ Now, you should be able to connect to the database as ``postgres`` user with you
 
     psql -h localhost tissuemaps postgres
 
-It's convenient to use a `pgpass file <https://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_ to be able to connect to the database without having to type the password::
+It's convenient to use a `pgpass file <https://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_ to be able to connect to the database without having to type the password every time::
 
-    echo "*:5432:tissuemaps:postgres:XXX" > $HOME/.pgpass
-    chmod 0600 $HOME/.pgpass
+    echo "*:5432:tissuemaps:postgres:XXX" > ~/.pgpass
+    chmod 0600 ~/.pgpass
 
 When using a mounted filesystem for data storage, you can create a symlink to ``data_dirctory`` or use an alternative directory. Make sure, however, to set the correct permissions for the parent directory of the desired data directory. For more information please refer to the PostgreSQL online documentation on `file locations <https://www.postgresql.org/docs/current/static/runtime-config-file-locations.html>`_ and `creation of a new database cluster <https://www.postgresql.org/docs/9.6/static/app-initdb.html>`_.
 
+.. _application-configuration-tissuemaps:
 
-Create the `TissueMAPS` configuration file ``.tmaps/tissuemaps.cfg``::
+TissueMAPS
+++++++++++
 
-    tm_create_config
-
-and set the ``db_password`` parameter (replace ``XXX`` with the actual password):
+Create a `TissueMAPS` configuration file ``~/.tmaps/tissuemaps.cfg`` and set the ``db_password`` parameter (replace ``XXX`` with the actual password you defined above):
 
 .. code-block:: ini
 
     [DEFAULT]
     db_password = XXX
 
-Now the ``tissuemaps`` database is ready to get populated with tables::
+Additional parameters can be set. Please refer to :doc:`tmlib.config.Setup <tmlib.config>`.
+
+Finally, populate the ``tissuemaps`` database with the tables defined in the :doc:`tmlib.models` package. To this, call the following utility script::
 
     tm_create_tables
 
 
-GC3Pie
-~~~~~~
+.. _application-configuration-gc3pie:
 
-Create the configuration file ``$HOME/.gc3/gc3pie.conf``. Modify it according to your computational infrastructure. For more information please refer to the `GC3Pie online documentation <http://gc3pie.readthedocs.org/en/latest/users/configuration.html>`_:
+GC3Pie
+++++++
+
+Under the hood, `TissueMAPS` uses `GC3Pie <http://gc3pie.readthedocs.io/en/latest/programmers/index.html>`_ for computational job management. The program provides a high-level API around different cluster backends (and localhost).
+
+Create a configuration file ``~/.gc3/gc3pie.conf`` and modify it according to your computational infrastructure. For more information please refer to the `GC3Pie online documentation <http://gc3pie.readthedocs.org/en/latest/users/configuration.html>`_:
 
 .. code-block:: ini
 
@@ -569,174 +594,45 @@ Create the configuration file ``$HOME/.gc3/gc3pie.conf``. Modify it according to
     max_memory_per_core=4 GB
     max_walltime=48 hours
     architecture=x64_64
-    # When True, the shellcmd backend will discover the actual
-    # architecture, the number of cores and the total memory of the
-    # machine and will ignore the values found on the configuration
-    # file. Default is `False`
-    override=yes
 
+.. tip:: If you are not sure about your architecture, setting ``override=yes`` usually does the trick.
 
 .. _startup:
 
 Startup
 -------
 
-Now that we have are parts installed and configured, the servers can be started.
+Now that all parts are installed and configured, the servers can be started.
 
+.. _startup-production:
 
 Production mode
 ^^^^^^^^^^^^^^^
 
-For production the web server (`NGINX`) and application server (`uWSGI`) need to be started:
+For production web server (`NGINX`) and application server (`uWSGI`) need to be started:
 
 On Ubuntu::
 
     sudo service nginx start
     sudo service uwsgi start
 
+.. _development-production:
 
 Development mode
 ^^^^^^^^^^^^^^^^
 
 For local developement and testing `NGINX` and `uWSGI` are not required.
 
-The `tmserver` package provides a `development application server <http://flask.pocoo.org/docs/0.11/server/#server>`_::
+The `tmserver` package provides a command line tool that starts a `development application server <http://flask.pocoo.org/docs/0.11/server/#server>`_::
 
-    tmserver
+    tm_server
 
 The client installation also provides a `development web server <https://www.npmjs.com/package/gulp-webserver>`_ to dynamically build client code with live reload functionality::
 
-    cd $HOME/tmui/src
+    cd ~/tmui/src
     node_modules/gulp/bin/gulp.js
 
-This will automatically start the server on localhost (port 8002).
+This will automatically start the server on localhost (port 8002). To access the website, point your browser to ``http://localhost:8002/``.
 
 Both dev servers provide live reload functionality. They will auto-watch files and rebuild code upon changes, which is useful for local development and testing.
-
-
-.. _automated-setup:
-
-Automated setup
----------------
-
-Manual installation and configuration, as described above, is feasible for a single machine.
-However, to run `TissueMAPS` in a multi-node cluster environment in the cloud, manual setup becomes labor intensive and error-prone.
-`TissueMAPS` uses `Ansible <https://www.ansible.com/>`_ for automation of application deployment.
-To this end, the `TmSetup <https://github.com/TissueMAPS/TmSetup>`_ repository provides automated installation and configuration routines in form of `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_ for `Ubuntu 14.04 <http://releases.ubuntu.com/14.04/>`_.
-
-In the following section, we will go through the steps required to setup `TissueMAPS` in a fully automated manner.
-
-Requirements
-^^^^^^^^^^^^
-
-To begin with, "manually" launch a virtual machine (VM) instance (here referred to as ``tissuemaps-monitor``) based an image with `Ubuntu 14.04` installed. This instance will be used to setup and deploy the different components of the `TissueMAPS` grid and will later host the `Ganglia <http://ganglia.info/>`_ server for monitoring the grid components.
-
-On the remote machine install the following requirements required for the setup process:
-
-* `Apt` packages::
-
-    sudo apt-get -y install git build-essential python-pip python-dev libc6-dev libffi-dev libssl-dev
-
-* `Ansible` modules and roles::
-
-    git clone https://github.com/kwoodson/yedit.git ~/yedit
-    echo "~/yedit/" >> ~/.bash_profile
-
-    git clone
-
-.. TODO: Elasticluster modules
-
-* Clone the `TmSetup <https://github.com/TissueMAPS/TmSetup>`_ repository and install the `tmsetup` Python package together with its Python requirements::
-
-    git clone https://github.com/TissueMAPS/TmSetup.git ~/tmsetup
-    cd ~/tmsetup
-    pip install -r requirements.txt
-    sudo pip install -e . --user
-
-Configuration
-^^^^^^^^^^^^^
-
-Setup of `TissueMAPS` can be configured via the ``setup.yml`` file. Templates for different cloud providers are available via the `TmSetup` repository.
-
-Copy a template into ``~/.tmaps/setup`` and modify it according to your needs::
-
-    mkdir -p ~/.tmaps/setup
-    cp ~/tmsetup/src/etc/singlenode_setup_gce.yml ~/.tmaps/setup/setup.yml
-
-
-The file has two main sections:
-- The *cloud* section provides information about the cloud on which `TissueMAPS` should be set up. Currently, three providers are supported: ``os`` (`OpenStack <http://www.openstack.org/>`_), ``ec2`` (`Amazon Web Services Elastic Compute Cloud <https://www.s3it.uzh.ch/en/scienceit/infrastructure/sciencecloud.html>`_) and ``gce`` (`Google Compute Engine <https://cloud.google.com/compute/>`_).
-- The *grid* section describes the computational resources that should host `TissueMAPS` and how they need to be configured using `Ansible`. The different components (web server, database server, ...) may all run on a single machine or may get distributed across several dedicated machines. For consistency, the term "cluster" is used to refer to a set of machines that needs to be configured the same way - even if there is only one such machine. Each `cluster` is composed of one or more `categories` of nodes (different types of machines) and each node `category` links these hosts to one or more `Ansible groups <http://docs.ansible.com/ansible/intro_inventory.html#hosts-and-groups>`_.
-
-For more details on the individual sections of the setup file, please refer to the `tmsetup documentation <tmsetup.config.Setup>`_.
-
-In the following, we will exemplify the setup description for the ``gce`` provider. The instructions below assume that you have already appropriate networks, keys, and security groups (filewalls) in place. Please refer to the documentation of your provider for information on how to create them.
-
-To set up a single-node `TissueMAPS` instance, we only need to launch one VM, but configure it such that it hosts all required components:
-
-.. code-block:: yaml
-
-    ---
-    cloud:
-    grid:
-
-
-To setup `TissueMAPS` in a multi-node cluster environment, where the different components are distributed accross serveral dedicated VMs, additional "clusters" need to be added:
-
-.. code-block:: yaml
-
-    ---
-    cloud:
-    grid:
-
-
-The default `TissueMPAS` grid uses the following components:
-
-* `PostgreSQL <https://www.postgresql.org/>`_ database:
-
-.. note:: We have also tested the `PostgresXL <http://postgresxl.org/>`_ cluster to scale out the database. However, we were not satisfied with its performance and stability. Alternatively, the database could be scaled out using a `Citus <https://docs.citusdata.com/en/v5.2/aboutcitus/what_is_citus.html>`_ cluster. However, `citusdb` doesn't support all `SQL` features (e.g. multi-statement transactions) and will require changes in the `TissueMAPS` API and complicate further development. As of version 9.6 `PostgreSQL` allows parallelization of (select) queries over CPUs, which already gives very good performance in our experience on large machines (even with many compute nodes concurrently connecting to the database).
-
-
-* `SLURM <http://slurm.schedmd.com/>`_ cluster to run custom batch compute jobs:
-
-.. note::  We have implemented fair `scheduling <http://slurm.schedmd.com/sched_config.html>`_, based on `SLURM accounts <http://slurm.schedmd.com/accounting.html>`_. To enable this functionality, create an account for each `TissueMAPS` user using the provided *create_slurm_account.sh* script.
-
-.. note:: All nodes of belonging to group ``slurm_workers`` have an identical setup. Since we may want many (houndreds) of these nodes, we recommend using a custom pre-built image to speed up the cluster creation process. To this end, configure a dedicated machine with only the ``tissuemaps_compute`` group and create a `snapshot <https://en.wikipedia.org/wiki/Snapshot_(computer_storage)>`_ of the configured instance. The thereby created image can then later be reused to quickly boot additional machines for a scale-out cluster setup.
-
-* `GlusterFS <https://www.gluster.org/>`_ cluster that serves a distributed filesystem:
-
-
-* `YARN <https://hadoop.apache.org/docs/r2.7.2/hadoop-yarn/hadoop-yarn-site/YARN.html>`_ cluster to run `Apache Spark <http://spark.apache.org/docs/latest/running-on-yarn.html>`_ map-reduce compute jobs (optional - will only be used when `TissueMAPS` is configured with ``use_spark=true``):
-
-These components are guarateed to work on all implemented cloud providers.
-
-
-Deployment
-^^^^^^^^^^
-
-Create a `SSH` key-pair (here called ``tmaps_setup``) and place it into the ``~/.ssh`` directory::
-
-    ssh-keygen -f ~/.ssh/tmaps_setup
-
-Ensure that the key file has the correct permission::
-
-    chmod 400 ~/.ssh/tmaps_setup
-
-and disable host key checking in the `SSH` configuration file ``~/.ssh/config``::
-
-    Host *
-        StrictHostKeyChecking no
-
-Finally, launch the instances and deploy the `TissueMAPS` application (these steps can take a while)::
-
-    tmsetup -v launch
-    tmsetup -v deploy
-
-The `tmsetup` program automates setup and configuration of the different ``cluster`` components of the `TissueMAPS` grid. The program launches VM instances as specified in each ``cluster`` section and then configures these `hosts` using `Ansible <https://www.ansible.com/>`_. Upon ``deploy``, `tmsetup` applies each ``playbook`` to the ``group`` of hosts it got assigned to in the ``setup.yml`` file.
-
-The resulting grid is configured such that it will automatically start all the servers upon booting. When using a security group that allows `HTTP` access, the web-based user interface can be accessed by pointing your web browser to the IP address of the instance hosting the web server.
-
-.. note:: `TissueMAPS` code is installed in editable mode. Local changes will thus be immediatly effictive without restallation of the libraries.
-
-.. note:: If you want to share your instance with others, you can make use of the ``tm_users`` variable. Simply list the `Github` user names of people you would like to provide access to your machine and their public `SSH` keys will automatically be downloaded form `Github` and included in ``authorized_hosts``.
 
