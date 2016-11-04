@@ -17,7 +17,7 @@ import collections
 from abc import ABCMeta
 
 
-class WorkflowDependenciesMeta(ABCMeta):
+class _WorkflowDependenciesMeta(ABCMeta):
 
     '''Metaclass for :class:`tmlib.workflow.dependencies.WorkflowDependencies`.
 
@@ -83,6 +83,6 @@ class WorkflowDependencies(object):
 
     '''
 
-    __metaclass__ = WorkflowDependenciesMeta
+    __metaclass__ = _WorkflowDependenciesMeta
 
     __abstract__ = True

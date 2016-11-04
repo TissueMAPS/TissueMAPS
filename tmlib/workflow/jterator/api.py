@@ -38,7 +38,7 @@ from tmlib.writers import TextWriter
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.errors import PipelineDescriptionError
 from tmlib.errors import JobDescriptionError
-from tmlib.logging_utils import map_logging_verbosity
+from tmlib.log import map_logging_verbosity
 from tmlib.workflow.jterator.utils import complete_path
 from tmlib.workflow.jterator.utils import get_module_path
 from tmlib.workflow.jterator.project import Project

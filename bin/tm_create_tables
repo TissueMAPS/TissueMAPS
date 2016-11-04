@@ -3,7 +3,7 @@ import os
 import argparse
 
 import tmlib.models as tm
-from tmlib.logging_utils import configure_logging
+from tmlib.log import configure_logging
 from tmlib import cfg
 
 

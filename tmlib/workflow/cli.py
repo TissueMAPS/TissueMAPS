@@ -45,8 +45,8 @@ from tmlib.workflow.submission import WorkflowSubmissionManager
 from tmlib.workflow.description import WorkflowStepDescription
 from tmlib.workflow.workflow import WorkflowStep
 from tmlib.workflow.jobs import CliJobCollection
-from tmlib.logging_utils import configure_logging
-from tmlib.logging_utils import map_logging_verbosity
+from tmlib.log import configure_logging
+from tmlib.log import map_logging_verbosity
 from tmlib.errors import WorkflowError
 import tmlib.models as tm
 
@@ -466,11 +466,11 @@ class CommandLineInterface(WorkflowSubmissionManager):
         ''',
         monitoring_depth=Argument(
             type=int, help='number of child tasks that should be monitored',
-            default=1, flag='d'
+            meta='INDEX', default=1, flag='d'
         ),
         monitoring_interval=Argument(
             type=int, help='seconds to wait between monitoring iterations',
-            default=10, flag='i'
+            meta='SECONDS', default=10, flag='i'
         )
     )
     def submit(self, monitoring_depth, monitoring_interval):
@@ -520,11 +520,11 @@ class CommandLineInterface(WorkflowSubmissionManager):
         ''',
         monitoring_depth=Argument(
             type=int, help='number of child tasks that should be monitored',
-            default=1, flag='d'
+            meta='INDEX', default=1, flag='d'
         ),
         monitoring_interval=Argument(
             type=int, help='seconds to wait between monitoring iterations',
-            default=10, flag='i'
+            meta='SECONDS', default=10, flag='i'
         )
     )
     def resubmit(self, monitoring_depth, monitoring_interval):

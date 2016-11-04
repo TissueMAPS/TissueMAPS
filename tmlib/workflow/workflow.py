@@ -75,7 +75,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
 
     '''A *workflow step* represents a collection of computational tasks
     that should be processed in parallel on a cluster, i.e. one parallelization
-    step within a larger, more complex workflow.
+    step within a larger workflow.
     '''
 
     def __init__(self, name, experiment_id, verbosity, submission_id, user_name,
@@ -95,6 +95,10 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             name of the submitting user
         description: tmlib.tmaps.description.WorkflowStepDescription
             description of the step
+
+        See also
+        --------
+        :class:`tmlib.workflow.description.WorkflowStepDescription`
         '''
         super(WorkflowStep, self).__init__(tasks=[], jobname=name)
         self.name = name
@@ -103,10 +107,12 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         self.submission_id = submission_id
         self.user_name = user_name
         self.description = description
-        # self.initialize()
         self._current_task = 0
 
     def initialize(self):
+        '''Initializes the step, i.e. generates the jobs for the different
+        phases.
+        '''
         self.create_init_job()
         self.create_run_job_collection()
         if self._api_instance.has_collect_phase:
@@ -202,7 +208,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         return api_instance
 
     def create_init_job(self):
-        '''Creates job for "init" phase.'''
+        '''Creates the job for "init" phase.'''
         logger.info(
             'create job for "init" phase of step "%s"', self.name
         )
@@ -218,8 +224,8 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         )
 
     def create_run_jobs(self):
-        '''Creates the individual jobs for "run" phase based on descriptions
-        created by "init" phase.
+        '''Creates the individual jobs for the "run" phase based on descriptions
+        created during the "init" phase.
         '''
         logger.info(
             'create jobs for "run" phase of step "%s"', self.name
@@ -255,8 +261,8 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         )
 
     def create_collect_job(self):
-        '''Creates job for "collect" phase based on descriptions
-        created by previous "init" phase.
+        '''Creates the job for "collect" phase based on descriptions
+        created during the "init" phase.
         '''
         self.collect_job = self._api_instance.create_collect_job(
             self.submission_id, self.user_name
@@ -291,8 +297,9 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
 class WorkflowStage(State):
 
     '''Base class for `TissueMAPS` workflow stages. A *workflow stage* is
-    composed of one or more *workflow steps* that together comprise a logical
-    computational unit.'''
+    composed of one or more *workflow steps*, which together comprise an
+    abstract computational task.
+    '''
 
     def __init__(self, name, experiment_id, verbosity, submission_id, user_name,
                  description):
@@ -315,8 +322,11 @@ class WorkflowStage(State):
         Raises
         ------
         TypeError
-            when `description` doesn't have type
-            :class:`tmlib.workflow.tmaps.description.WorkflowStageDescription`
+            when `description` doesn't have the correct type
+
+        See also
+        --------
+        :class:`tmlib.workflow.description.WorkflowStageDescription`
         '''
         self.name = name
         self.experiment_id = experiment_id
@@ -512,7 +522,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
         )
 
     def add(self, step):
-        '''Adds a step.
+        '''Adds a `step`.
 
         Parameters
         ----------
@@ -539,8 +549,8 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
 
 class Workflow(SequentialTaskCollection, State):
 
-    '''A *workflow* represents a computational pipeline that processes a
-    sequence of *stages* on a cluster.
+    '''A *workflow* represents a computational pipeline that gets dynamically
+    assembled from individual *stages* based on a user provided description.
     '''
 
     def __init__(self, experiment_id, verbosity, submission_id, user_name,
@@ -560,16 +570,16 @@ class Workflow(SequentialTaskCollection, State):
             description of the workflow
         waiting_time: int, optional
             time in seconds that should be waited upon transition from one
-            stage to the other to avoid issues related to network file systems
+            stage; required with certain network file systems settings
             (default: ``0``)
 
-        Note
-        ----
-        *Inactive* workflow stages/steps will not be ignored.
+        Warning
+        -------
+        *Inactive* workflow stages/steps will be ignored.
 
         See also
         --------
-        :class:`tmlib.workflow.WorkflowStage`
+        :class:`tmlib.workflow.description.WorkflowDescription`
         '''
         self.experiment_id = experiment_id
         self.verbosity = verbosity
@@ -588,7 +598,8 @@ class Workflow(SequentialTaskCollection, State):
 
     @assert_type(description='tmlib.workflow.description.WorkflowDescription')
     def update_description(self, description):
-        '''Updates the workflow description, which will be used to dynamically
+        '''Updates the workflow description by removing *inactive* stages/steps
+        from the description that will ultimately be used to dynamically
         build `stages` upon processing.
 
         Parameters
@@ -673,8 +684,8 @@ class Workflow(SequentialTaskCollection, State):
         return len(self.description.stages)
 
     def update_stage(self, index):
-        '''Updates the indexed stage, i.e. creates new jobs for each step of
-        the stage.
+        '''Updates the indexed stage, i.e. creates the individual
+        computational jobs for each step of the stage.
 
         Parameters
         ----------

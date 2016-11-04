@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import argparse
-from tmlib.logging_utils import configure_logging
+from tmlib.log import configure_logging
 
 
 def create_lib_config():

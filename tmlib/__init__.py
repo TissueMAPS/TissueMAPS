@@ -13,6 +13,19 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''`TissueMAPS` library.
+
+The package provides active programming and command line interfaces for
+distributed image analysis.
+
+It has three subpackages that serve different tasks:
+
+    * :mod:`tmlib.models`: object-relational mapper classes for interaction
+      with the database
+    * :mod:`tmlib.workflow`: modular routines for distributed image processing
+    * :mod:`tmlib.tools`: plugins for interactive machine learning
+
+'''
 import os
 import glob
 from pkg_resources import resource_filename
@@ -21,28 +34,3 @@ from tmlib.version import __version__
 from tmlib.config import LibraryConfig
 
 cfg = LibraryConfig()
-
-
-def get_cli_tools():
-    '''Lists command line interfaces for implemented steps.
-
-    Returns
-    -------
-    List[str]
-        names of cli tools
-    '''
-    root = resource_filename(__name__, 'workflow')
-    def _is_package(d):
-        # A step is defined as a subpackage that implements the following
-        # modules: api, cli, args
-        d = os.path.join(root, d)
-        return(
-            os.path.isdir(d) and
-            glob.glob(os.path.join(d, '__init__.py')) and
-            glob.glob(os.path.join(d, 'api.py')) and
-            glob.glob(os.path.join(d, 'cli.py')) and
-            glob.glob(os.path.join(d, 'args.py'))
-        )
-
-    return filter(_is_package, os.listdir(root))
-

@@ -20,8 +20,8 @@ import logging
 import tmlib.models as tm
 from tmlib import __version__
 from tmlib.utils import same_docstring_as
-from tmlib.logging_utils import map_logging_verbosity
-from tmlib.logging_utils import configure_logging
+from tmlib.log import map_logging_verbosity
+from tmlib.log import configure_logging
 from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.workflow import Workflow

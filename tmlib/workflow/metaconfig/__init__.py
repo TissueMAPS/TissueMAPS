@@ -29,9 +29,12 @@ This is achieved via microscope-specific implementations of
 :class:`tmlib.workflow.metaconfig.base.MetadataHanlder`. The step already
 supports a variety of microscopes. New microscope types can be registered by
 by implementing :class:`tmlib.workflow.metaconfig.base.MetadataReader` and
-:class:`tmlib.workflow.metaconfig.base.MetadataHandler` in a separate module
-(the name of the microscope type is determined from the name of the module).
+:class:`tmlib.workflow.metaconfig.base.MetadataHandler` in a separate module.
+The name of the microscope type is determined from the name of the module.
 
+To make the micorscope type available for usage add the its name (name of the
+implemented module) to
+:const:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`.
 '''
 import re
 import importlib

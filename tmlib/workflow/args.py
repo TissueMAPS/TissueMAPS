@@ -55,17 +55,19 @@ class Argument(object):
         type='type', help='basestring',
         choices=['set', 'list', 'types.NoneType'],
         flag=['basestring', 'types.NoneType'],
-        dependency=['tuple']
+        dependency=['tuple'],
+        meta=['basestring', 'types.NoneType']
     )
     def __init__(self, type, help, default=None, choices=None, flag=None,
-            required=False, disabled=False, get_choices=None, dependency=()):
+            required=False, disabled=False, get_choices=None, meta=None,
+            dependency=()):
         '''
         Parameters
         ----------
         type: type
             type of the argument
         help: str
-            help message that describes the argument 
+            help message that describes the argument
         default: , optional
             default value (default: ``None``)
         choices: set or list or function, optional
@@ -83,6 +85,8 @@ class Argument(object):
             of type :class:`tmlib.models.experiment.Experiment` and returns the
             choices in case they need to (and can) be determined dynamically
             (default: ``None``)
+        meta: str, optional
+            alternative name of the argument displayed for command line options
         dependency: tuple, optional
             name-value pair of an argument the given argument depends on
 
@@ -110,6 +114,7 @@ class Argument(object):
                     'a single argument.' % get_choices.__name__
                 )
             self.get_choices = get_choices
+        self.meta = meta
         if self.default is not None:
             if self.type == str:
                 if not isinstance(self.default, basestring):
@@ -256,6 +261,8 @@ class Argument(object):
             except IndexError:
                 v = None
             kwargs['action'] = _check_dependency(k, v)
+        if self.meta is not None:
+            kwargs['metavar'] = self.meta.upper()
         parser.add_argument(*flags, **kwargs)
 
 def __str__(self):
@@ -487,7 +494,7 @@ class SubmissionArguments(ArgumentCollection):
     '''
 
     duration = Argument(
-        type=str, default='02:00:00',
+            type=str, default='02:00:00', meta='HH:MM:SS',
         help='''
             walltime that should be allocated to a each "run" job
             in the format "HH:MM:SS"
@@ -495,7 +502,7 @@ class SubmissionArguments(ArgumentCollection):
     )
 
     memory = Argument(
-        type=int, default=3800,
+        type=int, default=3800, meta='MB',
         help='''
             amount of memory that should be allocated to each "run" job
             in megabytes (MB)
@@ -503,7 +510,7 @@ class SubmissionArguments(ArgumentCollection):
     )
 
     cores = Argument(
-        type=int, default=1,
+        type=int, default=1, meta='NUMBER',
         help='''
             number of cores that should be allocated to each "run" job
         '''

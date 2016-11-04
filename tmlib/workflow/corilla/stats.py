@@ -14,11 +14,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''Calculation of illumination statistics, which can subsequently be applied
-to individual images in order to correct them for illumination artifacts [1]_.
+to individual images in order to correct them for illumination artifacts [1] .
 
 References
 ----------
-.. _[1]: Stoeger T, Battich N, Herrmann MD, Yakimovich Y, Pelkmans L. 2015. "Computer vision for image-based transcriptomics". Methods.
+.. [1] Stoeger T, Battich N, Herrmann MD, Yakimovich Y, Pelkmans L. 2015. "Computer vision for image-based transcriptomics". Methods.
+.. [2] Welford BP. 1962. "Note on a method for calculating corrected sums of squares and products". Technometrics 4(3):419-420.
+
 '''
 
 import numpy as np
@@ -34,14 +36,8 @@ class OnlineStatistics(object):
 
     '''Class for calculating online statistics (mean and variance)
     element-by-element on a series of numpy arrays based on
-    Welford's method [1]_ . For more information see Wikipedia article
-    "Algorithms for calculating variance" [2]_ .
-
-    References
-    ----------
-    .. [1] B. P. Welford (1962). "Note on a method for calculating corrected sums of squares and products". Technometrics 4(3):419-420
-
-    .. [2] https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
+    Welford's method [2] . For more information see Wikipedia article
+    `"Algorithms for calculating variance" <https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm>`_.
     '''
 
     def __init__(self, image_dimensions, decimals=3):

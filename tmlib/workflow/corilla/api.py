@@ -99,9 +99,8 @@ class IllumstatsCalculator(ClusterRoutines):
         return job_descriptions
 
     def delete_previous_job_output(self):
-        '''Deletes all instances of class
-        :class:`tm.IllumstatsFile` as well as all children for the
-        processed experiment.
+        '''Deletes all :class:`tmlib.models.file.IllumstatsFile` instances
+        of the processed experiment.
         '''
         logger.info('delete existing illumination statistics files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
