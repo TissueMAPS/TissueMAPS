@@ -36,7 +36,7 @@ from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
 from tmserver.extensions import gc3pie
 
-from tmlib.tools.registry import get_available_tools, get_tool_class
+from tmlib.tools import get_available_tools, get_tool_class
 from tmlib.tools.manager import ToolRequestManager
 
 
