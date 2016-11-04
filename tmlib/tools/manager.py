@@ -15,7 +15,7 @@ from tmlib.writers import JsonWriter
 from tmlib.readers import JsonReader
 from tmlib.utils import autocreate_directory_property
 from tmlib.logging_utils import configure_logging, map_logging_verbosity
-from tmlib.tools.registry import get_tool_class, get_available_tools
+from tmlib.tools import get_tool_class, get_available_tools
 
 logger = logging.getLogger(__name__)
 
