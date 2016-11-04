@@ -27,7 +27,7 @@ import tmlib.models as tm
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.workflow import Workflow
-from tmlib.logging_utils import LEVELS_TO_VERBOSITY
+from tmlib.log import LEVELS_TO_VERBOSITY
 from tmlib import cfg as lib_cfg
 
 from tmserver.util import decode_query_ids, decode_form_ids

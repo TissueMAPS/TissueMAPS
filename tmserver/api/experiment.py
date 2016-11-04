@@ -26,7 +26,7 @@ from werkzeug import secure_filename
 
 import tmlib.models as tm
 from tmlib.image import PyramidTile
-from tmlib.logging_utils import LEVELS_TO_VERBOSITY
+from tmlib.log import LEVELS_TO_VERBOSITY
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
 from tmlib import cfg as lib_cfg

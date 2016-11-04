@@ -36,7 +36,7 @@ from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import RunJobCollection
 import tmlib.workflow.utils as cluster_utils
 from tmlib.workflow.jterator.api import ImageAnalysisPipeline
-from tmlib.logging_utils import configure_logging
+from tmlib.log import configure_logging
 from tmlib.workflow.jterator.project import list_projects
 from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.project import AvailableModules
