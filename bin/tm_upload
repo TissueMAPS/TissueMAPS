@@ -4,8 +4,8 @@ import os
 import logging
 import argparse
 
-from tmclient.logging_utils import configure_logging
-from tmclient.logging_utils import map_logging_verbosity
+from tmclient.log import configure_logging
+from tmclient.log import map_logging_verbosity
 from tmclient.upload import UploadService
 
 logger = logging.getLogger(__name__)
