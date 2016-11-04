@@ -19,7 +19,7 @@ security_groups: default
 network: default
 assign_public_ip: yes
 volume_mountpoint: /data
-instance_tags: ''  # only possible for gce provider
+instance_tags: null
 
 volume_group: root
 volume_user: root
