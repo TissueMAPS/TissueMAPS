@@ -44,9 +44,9 @@
     - name: Download Hadoop configuration files from existing YARN cluster
       synchronize:
         mode: pull
-        src: "rsync://{{ yarn_master_ssh_host }}/etc/hadoop/conf"
+        src: "rsync://{{ yarn_master_host }}/etc/hadoop/conf"
         dest: /etc/hadoop/conf
       tags:
         - spark
         - tissuemaps
-      when: yarn_master_ssh_host is defined
+      when: yarn_master_host is defined

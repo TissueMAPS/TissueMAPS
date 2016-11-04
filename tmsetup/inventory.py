@@ -103,6 +103,10 @@ def build_inventory_information(setup):
                                 setup.cloud.key_file_public
                             )
                         ),
+                        # Ansible sproadically fails to connect to hosts.
+                        # Attempt to work around this issue by trying to
+                        # reconnect repeatedly.
+                        'ansible_ssh_common_args': '-o ConnectionAttempts=20'
                     }
 
     return inventory

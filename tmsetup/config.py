@@ -114,7 +114,11 @@ class SetupSection(object):
                 continue
             if attr in self._OPTIONAL_ATTRS:
                 try:
-                    mapping[attr] = getattr(self, attr)
+                    value = getattr(self, attr)
+                    # TODO: solve this more elegantly
+                    if attr == 'tags':
+                        value = ','.join(value)
+                    mapping[attr] = value
                 except:
                     pass
             else:
@@ -444,7 +448,7 @@ class AnsibleHostVariableSection(SetupSection):
     given cluster node type are created.
     '''
 
-    _OPTIONAL_ATTRS = {'disk_size', 'volume_size', 'assign_public_ip'}
+    _OPTIONAL_ATTRS = {'disk_size', 'volume_size', 'assign_public_ip', 'tags'}
 
     def __init__(self, description):
         super(AnsibleHostVariableSection, self).__init__(description)
@@ -538,7 +542,21 @@ class AnsibleHostVariableSection(SetupSection):
         self._check_value_type(value, 'network', str)
         self._network = value
 
-    # TODO: ansible_ssh_user, ...
+    @property
+    def tags(self):
+        '''List[str]: names of tags should be added to instances
+
+        Note
+        ----
+        Only useful for ``gce`` and ``ec2`` providers.
+        '''
+        return self._tags
+
+    @tags.setter
+    def tags(self, value):
+        self._check_value_type(value, 'tags', list)
+        self._tags = value
+
 
 class Setup(object):
 
