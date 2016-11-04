@@ -1,0 +1,76 @@
+# Template for setting up TissueMAPS on multiple nodes on Google Compute Engine.
+#
+# The configuration assumes a "tissuemaps" network.
+# The "tissuemaps" network restricts access to the TissueMAPS grid (this is highly
+# recommended). For production, the node hosting the web server
+# (in this case "tissuemaps-slurm-master-001") should get a floating IP
+# assigned and a firewall rule that allows ingressing HTTP connections.
+#
+# This setup depends on groups defined via Elasticluster.
+---
+cloud:
+  provider: gce
+  region: us-west1-b
+  key_name: tmaps_setup
+  key_file_private: ~/.ssh/tmaps_setup
+  key_file_public: ~/.ssh/tmaps_setup.pub
+grid:
+  name: tissuemaps
+  clusters:
+    - name: postgresql
+      node_types:
+        - name: server
+          count: 1
+          groups:
+            - name: tissuemaps_database
+              vars:
+                db_password: XXX
+            - name: ganglia_client
+          instance:
+            volume_size: 1000
+            disk_size: 30
+            image: ubuntu-1404-trusty-v20161020
+            flavor: n1-highcpu-16
+            network: tissuemaps
+    - name: glusterfs
+      node_types:
+        - name: server
+          count: 2
+          groups:
+            - name: glusterfs_server
+            - name: ganglia_client
+          instance:
+            volume_size: 1000
+            disk_size: 30
+            image: ubuntu-1404-trusty-v20161020
+            flavor: n1-standard-2
+            network: tissuemaps
+    - name: slurm
+      node_types:
+        - name: master
+          count: 1
+          groups:
+            - name: tissuemaps_web
+              vars:
+                db_password: XXX
+            - name: slurm_master
+            - name: glusterfs_client
+            - name: ganglia_client
+          instance:
+            disk_size: 30
+            image: ubuntu-1404-trusty-v20161020
+            flavor: n1-standard-8
+            network: tissuemaps-web
+        - name: worker
+          count: 4
+          groups:
+            - name: tissuemaps_compute
+            - name: slurm_workers
+            - name: glusterfs_client
+            - name: ganglia_client
+          instance:
+            disk_size: 30
+            image: ubuntu-1404-trusty-v20161020
+            flavor: n1-highmem-4
+            network: tissuemaps
+

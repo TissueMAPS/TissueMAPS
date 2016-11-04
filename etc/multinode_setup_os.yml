@@ -6,12 +6,9 @@
 # The "private" network restricts access to the TissueMAPS grid (this is highly
 # recommended). For production, the node hosting the web server
 # (in this case "tissuemaps-slurm-master-001") should get a floating IP
-# assigned to.
+# assigned.
 #
-# This setup depends on playbooks provided by Elasticluster.
-# Set the environment variable ELASTICLUSTER_PLAYBOOKS such that it points
-# to the elasticluster/share/playbooks/roles subdirectory of your local copy of
-# the elasticluster repository.
+# This setup depends on groups defined via Elasticluster.
 ---
 cloud:
   provider: os
@@ -30,11 +27,9 @@ grid:
             - name: tissuemaps_database
               vars:
                 db_password: XXX
-              playbook: database.yml
             - name: ganglia_client
           instance:
-            volume_size: 10000
-            disk_size: 100
+            volume_size: 1000
             image: Ubuntu Server 14.04.04 LTS (2016-05-19)
             flavor: 16cpu-64ram-hpc
             security_group: default
@@ -45,13 +40,9 @@ grid:
           count: 2
           groups:
             - name: glusterfs_server
-              vars:
-                gluster_replicas: 2
-                gluster_strips: 2
             - name: ganglia_client
           instance:
-            volume_size: 10000
-            disk_size: 100
+            volume_size: 1000
             image: Ubuntu Server 14.04.04 LTS (2016-05-19)
             flavor: 2cpu-8ram-hpc
             security_group: default
@@ -68,7 +59,6 @@ grid:
             - name: glusterfs_client
             - name: ganglia_client
           instance:
-            disk_size: 100
             image: Matlab-R2016a - ubuntu 14.04.4 x86-64 - (2016-03-17)
             flavor: 16cpu-64ram-hpc
             security_group: web
@@ -81,7 +71,6 @@ grid:
             - name: glusterfs_client
             - name: ganglia_client
           instance:
-            disk_size: 100
             image: Matlab-R2016a - ubuntu 14.04.4 x86-64 - (2016-03-17)
             flavor: 4cpu-16ram-hpc
             security_group: default
