@@ -26,7 +26,7 @@
   local_action: gce_net
   args:
     state: present
-    name: "{{ network_private }}"
+    name: "{{ network }}"
     ipv4_range: "{{ ip_range }}"
   run_once: yes
   when: instance_state == "present"
@@ -35,7 +35,7 @@
   local_action: gce_net
   args:
     state: present
-    name: "{{ network_private }}"
+    name: "{{ network }}"
     fwname: compute-storage
     allowed: tcp:1-65535
     ipv4_range: "{{ ip_range }}"
@@ -49,7 +49,7 @@
   local_action: gce_net
   args:
     state: present
-    name: "{{ network_private }}"
+    name: "{{ network }}"
     fwname: web
     allowed: tcp:22,80,443
     ipv4_range: 0.0.0.0/0
@@ -100,7 +100,7 @@
     image: "{{ image }}"
     machine_type: "{{ flavor }}"
     external_ip: "{{ public_ip_type }}"
-    network: "{{ network_private }}"
+    network: "{{ network }}"
     zone: "{{ region }}"
     disks: "{{ instance_disks }}"
     metadata:

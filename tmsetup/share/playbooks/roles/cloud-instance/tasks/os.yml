@@ -26,7 +26,7 @@
   local_action: os_network
   args:
     state: present
-    name: "{{ network_private }}"
+    name: "{{ network }}"
     region_name: "{{ region }}"
     wait: yes
   run_once: yes
@@ -36,8 +36,8 @@
   local_action: os_subnet
   args:
     state: present
-    name: "{{ network_private }}-subnet"
-    network_name: "{{ network_private }}"
+    name: "{{ network }}-subnet"
+    network_name: "{{ network }}"
     ip_version: 4
     enable_dhcp: yes
     cidr: "{{ ip_range }}"
@@ -51,10 +51,10 @@
   args:
     state: present
     region_name: "{{ region }}"
-    name: "{{ network_private }}-router"
-    network: "{{ network_public }}"
+    name: "{{ network }}-router"
+    network: public
     interfaces:
-      - "{{ network_private }}-subnet"
+      - "{{ network }}-subnet"
   when: instance_state == "present"
 
 - name: Create key pair
@@ -87,6 +87,20 @@
     direction: ingress
     port_range_min: 1
     port_range_max: 65535
+    remote_ip_prefix: "{{ ip_range }}"
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress ICMP (Ping) rule for compute-storage security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: compute-storage
+    protocol: icmp
+    direction: ingress
+    port_range_min: -1
+    port_range_max: -1
     remote_ip_prefix: "{{ ip_range }}"
     region_name: "{{ region }}"
   run_once: yes
@@ -158,9 +172,6 @@
   run_once: yes
   when: instance_state == "present"
 
-- debug:
-    msg: "{{ security_groups }}"
-
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
   local_action: os_server
   args:
@@ -178,7 +189,7 @@
     boot_from_volume: "{{ disk_size is defined }}"
     volume_size: "{{ disk_size|default(100) }}"
     terminate_volume: yes
-    network: "{{ network_private }}"
+    network: "{{ network }}-subnet"
     region_name: "{{ region }}"
   register: instance_facts
 

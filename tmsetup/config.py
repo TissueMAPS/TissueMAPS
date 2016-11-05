@@ -200,7 +200,7 @@ class CloudSection(SetupSection):
 
     @property
     def ip_range(self):
-        '''str: range of allowed IPv4 addresses for networks in
+        '''str: range of allowed IPv4 addresses for network in
         `Classless Inter-Domain Routing (CIDR) <https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing>`_
         notation, e.g. ``"10.0.0.0/24"``
         '''
