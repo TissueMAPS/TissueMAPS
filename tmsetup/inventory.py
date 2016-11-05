@@ -77,7 +77,8 @@ def build_inventory_information(setup):
 
     if not isinstance(setup, Setup):
         raise TypeError(
-            'Argument "setup" must have type tmsetup.config.Setup.'
+            'Argument "setup" must have type %s.' %
+            '.'.join([Setup.__module__, Setup.__name__])
         )
     for cluster in setup.grid.clusters:
         for node_type in cluster.node_types:
@@ -86,8 +87,26 @@ def build_inventory_information(setup):
                     grid=setup.grid.name, cluster=cluster.name,
                     node_type=node_type.name, index=i+1
                 )
-                inventory['_meta']['hostvars'][host_name] = \
-                    node_type.instance.to_dict()
+                host_vars = dict()
+                for k, v in node_type.instance.to_dict().iteritems():
+                    if k == 'tags':
+                        security_groups = ''
+                        if 'compute' in v or 'storage' in 'web':
+                            host_vars['assign_public_ip'] = 'no'
+                            security_groups = 'compute-storage'
+                        if 'web' in v:
+                            host_vars['assign_public_ip'] = 'yes'
+                            if security_groups:
+                                security_groups = ','.join([
+                                    security_groups, 'web'
+                                ])
+                            else:
+                                security_groups = 'web'
+                        host_vars['security_groups'] = security_groups
+                    if isinstace(v, list):
+                        v = ','.join(v)
+                    host_vars[k] = v
+                inventory['_meta']['hostvars'][host_name] = host_vars
                 for group in node_type.groups:
                     if group.name not in inventory:
                         inventory[group.name] = {'hosts': list()}
@@ -103,6 +122,8 @@ def build_inventory_information(setup):
                                 setup.cloud.key_file_public
                             )
                         ),
+                        'network': setup.cloud.network,
+                        'ip_range': setup.cloud.ip_range,
                         # Ansible sproadically fails to connect to hosts.
                         # Attempt to work around this issue by trying to
                         # reconnect repeatedly.

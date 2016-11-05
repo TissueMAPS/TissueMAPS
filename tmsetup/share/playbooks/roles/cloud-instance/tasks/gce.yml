@@ -70,13 +70,24 @@
     metadata:
       ssh-keys: "ubuntu:{{ ssh_key }}"
     disk_auto_delete: yes
-    tags: "{{ instance_tags }}"
+    tags: "{{ tags }}"
   register: instance
 
 - name: Register host IP address
   set_fact:
     ansible_host: "{{ instance.instance_data[0].public_ip if assign_public_ip else instance.instance_data[0].private_ip }}"
   when: instance_state == 'present'
+
+- name: Create default firewall
+  local_action: gce_net
+  args:
+    state: present
+    name: "{{ network }}"
+    allowed: tcp:22
+    target_tags:
+      - web
+      - compute
+      - storage
 
 - name: Create firewall for web instance
   local_action: gce_net
@@ -87,7 +98,6 @@
     allowed: tcp:80,443
     target_tags:
       - web
-  when: instance_tags is defined # and 'web' in instance_tags
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume and attach it to instance"
   local_action: gce_pd

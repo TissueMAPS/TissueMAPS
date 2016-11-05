@@ -112,17 +112,19 @@ class SetupSection(object):
                 continue
             if not isinstance(getattr(self.__class__, attr), property):
                 continue
-            if attr in self._OPTIONAL_ATTRS:
-                try:
-                    value = getattr(self, attr)
-                    # TODO: solve this more elegantly
-                    if attr == 'instance_tags':
-                        value = ','.join(value)
-                    mapping[attr] = value
-                except:
-                    pass
-            else:
-                mapping[attr] = getattr(self, attr)
+            try:
+                value = getattr(self, attr)
+            except AttributeError:
+                if attr in self._OPTIONAL_ATTRS:
+                    continue
+                else:
+                    raise AttributeError(
+                        'Required attribute "%s" does not exist on '
+                        'instance of type "%s".' % (
+                            attr, self.__class__.__name__
+                        )
+                    )
+            mapping[attr] = value
         return mapping
 
     def __repr__(self):
@@ -186,6 +188,35 @@ class CloudSection(SetupSection):
         self._provider = value
 
     @property
+    def network(self):
+        '''str: name of the network that should be used for virtual machines
+        '''
+        return self._network
+
+    @network.setter
+    def network(self, value):
+        self._check_value_type(value, 'network', str)
+        self._network = value
+
+    @property
+    def ip_range(self):
+        '''str: range of allowed IPv4 addresses for networks in
+        `Classless Inter-Domain Routing (CIDR) <https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing>`_
+        notation, e.g. ``"10.0.0.0/24"``
+        '''
+        return self._ip_range
+
+    @ip_range.setter
+    def ip_range(self, value):
+        self._check_value_type(value, 'ip_range', str)
+        r = re.compile(r'^\d+\.\d+\.\d+\.\d+\/\d+$')
+        if not r.search(value):
+            raise ValueError(
+                'Argument "ip_range" must be provided in CIDR notation.'
+            )
+        self._ip_range = value
+
+    @property
     def key_name(self):
         '''str: name of the key-pair used to connect to virtual machines'''
         return self._key_name
@@ -197,7 +228,9 @@ class CloudSection(SetupSection):
 
     @property
     def key_file_private(self):
-        '''str: path to the private key used to connect to virtual machines'''
+        '''str: path to the private key used by Ansible to connect to virtual
+        machines
+        '''
         return self._key_file_private
 
     @key_file_private.setter
@@ -217,7 +250,9 @@ class CloudSection(SetupSection):
 
     @property
     def key_file_public(self):
-        '''str: path to the public key used to connect to virtual machines'''
+        '''str: path to the public key that will be uploaded to the cloud
+        provider
+        '''
         return self._key_file_public
 
     @key_file_public.setter
@@ -449,7 +484,7 @@ class AnsibleHostVariableSection(SetupSection):
     '''
 
     _OPTIONAL_ATTRS = {
-        'disk_size', 'volume_size', 'assign_public_ip', 'instance_tags'
+        'disk_size', 'volume_size', 'assign_public_ip', 'tags'
     }
 
     def __init__(self, description):
@@ -533,31 +568,29 @@ class AnsibleHostVariableSection(SetupSection):
         self._security_group = value
 
     @property
-    def network(self):
-        '''str: name or ID of the network that should be used for the virtual
-        machine
-        '''
-        return self._network
-
-    @network.setter
-    def network(self, value):
-        self._check_value_type(value, 'network', str)
-        self._network = value
-
-    @property
-    def instance_tags(self):
+    def tags(self):
         '''List[str]: tags that should be added to instances
+        (options: ``{"web", "compute", "storage"}``)
 
         Note
         ----
-        Will only be used for ``gce`` provider.
+        Will only be used for assigning security groups (firewall rules) to
+        tagged instances.
         '''
-        return self._instance_tags
+        return self._tags
 
-    @instance_tags.setter
-    def instance_tags(self, value):
-        self._check_value_type(value, 'instance_tags', list)
-        self._instance_tags = value
+    @tags.setter
+    def tags(self, value):
+        self._check_value_type(value, 'tags', list)
+        supported_tags = {'web', 'compute', 'storage'}
+        for t in value:
+            if t not in supported_tags:
+                raise ValueError(
+                    'Tag "%s" is not supported! Supported are: "%s"' %(
+                        t, '", "'.join(supported_tags)
+                    )
+                )
+        self._tags = value
 
 
 class Setup(object):

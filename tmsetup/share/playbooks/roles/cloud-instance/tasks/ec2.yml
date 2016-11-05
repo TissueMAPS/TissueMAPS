@@ -48,7 +48,6 @@
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
   local_action: ec2
   args:
-    # state: "{{ instance_state }}"
     key_name: "{{ key_name }}"
     image: "{{ image }}"
     instance_type: "{{ flavor }}"
@@ -61,8 +60,6 @@
     wait_timeout: 300
     volumes: "{{ instance_disks }}"
     assign_public_ip: "{{ assign_public_ip }}"
-    # ebs_optimized: no
-    # vpc_subnet_id: "{{ network }}"
     region: "{{ region }}"
   register: instance
 
