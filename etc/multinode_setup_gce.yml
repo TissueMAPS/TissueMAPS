@@ -1,15 +1,12 @@
 # Template for setting up TissueMAPS on multiple nodes on Google Compute Engine.
 #
-# The configuration assumes a "tissuemaps" network.
-# The "tissuemaps" network restricts access to the TissueMAPS grid (this is highly
-# recommended). For production, the node hosting the web server
-# (in this case "tissuemaps-slurm-master-001") should get a floating IP
-# assigned and a firewall rule that allows ingressing HTTP connections.
-#
 # This setup depends on groups defined via Elasticluster.
 ---
 cloud:
   provider: gce
+  network_private: tmaps
+  network_public: default
+  ip_range: 10.138.0.0/20
   region: us-west1-b
   key_name: tmaps_setup
   key_file_private: ~/.ssh/tmaps_setup
@@ -31,7 +28,8 @@ grid:
             disk_size: 30
             image: ubuntu-1404-trusty-v20161020
             flavor: n1-highcpu-16
-            network: tissuemaps
+            tags:
+              - storage
     - name: glusterfs
       node_types:
         - name: server
@@ -44,7 +42,8 @@ grid:
             disk_size: 30
             image: ubuntu-1404-trusty-v20161020
             flavor: n1-standard-2
-            network: tissuemaps
+            tags:
+              - storage
     - name: slurm
       node_types:
         - name: master
@@ -60,7 +59,8 @@ grid:
             disk_size: 30
             image: ubuntu-1404-trusty-v20161020
             flavor: n1-standard-8
-            network: tissuemaps-web
+            tags:
+              - web
         - name: worker
           count: 4
           groups:
@@ -72,5 +72,6 @@ grid:
             disk_size: 30
             image: ubuntu-1404-trusty-v20161020
             flavor: n1-highmem-4
-            network: tissuemaps
+            tags:
+              - compute
 
