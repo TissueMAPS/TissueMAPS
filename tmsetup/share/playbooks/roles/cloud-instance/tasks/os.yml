@@ -26,8 +26,7 @@
   local_action: os_network
   args:
     state: present
-    name: "{{ network }}"
-    external: no
+    name: "{{ network_private }}"
     region_name: "{{ region }}"
     wait: yes
   run_once: yes
@@ -37,14 +36,25 @@
   local_action: os_subnet
   args:
     state: present
-    name: "{{ network }}-subnet"
-    network_name: "{{ network }}"
+    name: "{{ network_private }}-subnet"
+    network_name: "{{ network_private }}"
     ip_version: 4
     enable_dhcp: yes
     cidr: "{{ ip_range }}"
     region_name: "{{ region }}"
     wait: yes
   run_once: yes
+  when: instance_state == "present"
+
+- name: Create router
+  local_action: os_router
+  args:
+    state: present
+    region_name: "{{ region }}"
+    name: "{{ network_private }}-router"
+    network: "{{ network_public }}"
+    interfaces:
+      - "{{ network_private }}-subnet"
   when: instance_state == "present"
 
 - name: Create key pair
@@ -69,14 +79,14 @@
   when: instance_state == "present"
 
 - name: Create ingress TCP rule for compute-storage security group
-  local_action:
+  local_action: os_security_group_rule
   args:
     state: present
     security_group: compute-storage
     protocol: tcp
     direction: ingress
     port_range_min: 1
-    part_range_max: 65535
+    port_range_max: 65535
     remote_ip_prefix: "{{ ip_range }}"
     region_name: "{{ region }}"
   run_once: yes
@@ -93,32 +103,63 @@
   when: instance_state == "present"
 
 - name: Create ingress TCP (HTTP) rule for web security group
-  local_action:
+  local_action: os_security_group_rule
   args:
     state: present
     security_group: web
     protocol: tcp
     direction: ingress
     port_range_min: 80
-    part_range_max: 80
+    port_range_max: 80
     remote_ip_prefix: 0.0.0.0/0
     region_name: "{{ region }}"
   run_once: yes
   when: instance_state == "present"
 
 - name: Create ingress TCP (HTTPS) rule for web security group
-  local_action:
+  local_action: os_security_group_rule
   args:
     state: present
     security_group: web
     protocol: tcp
     direction: ingress
     port_range_min: 443
-    part_range_max: 443
+    port_range_max: 443
     remote_ip_prefix: 0.0.0.0/0
     region_name: "{{ region }}"
   run_once: yes
   when: instance_state == "present"
+
+- name: Create ingress TCP (SSH) rule for web security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: tcp
+    direction: ingress
+    port_range_min: -1
+    port_range_max: 22
+    remote_ip_prefix: 0.0.0.0/0
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress ICMP (Ping) rule for web security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: icmp
+    direction: ingress
+    port_range_min: -1
+    port_range_max: -1
+    remote_ip_prefix: 0.0.0.0/0
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- debug:
+    msg: "{{ security_groups }}"
 
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
   local_action: os_server
@@ -130,14 +171,14 @@
     image: "{{ image }}"
     flavor: "{{ flavor }}"
     meta:
-      tag: "{{ tag }}"
+      tags: "{{ tags }}"
     auto_ip: "{{ assign_public_ip }}"
     wait: yes
     timeout: 300
     boot_from_volume: "{{ disk_size is defined }}"
     volume_size: "{{ disk_size|default(100) }}"
     terminate_volume: yes
-    network: "{{ network }}"
+    network: "{{ network_private }}"
     region_name: "{{ region }}"
   register: instance_facts
 

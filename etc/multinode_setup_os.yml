@@ -1,20 +1,14 @@
 # Template for setting up TissueMAPS in a multi-node environment on an OpenStack
 # cloud.
 #
-# The configuration assumes a "web" security group, which should allow
-# incombing HTTP access.
-# The "private" network restricts access to the TissueMAPS grid (this is highly
-# recommended). For production, the node hosting the web server
-# (in this case "tissuemaps-slurm-master-001") should get a floating IP
-# assigned.
-#
 # This setup depends on groups defined via Elasticluster.
 ---
 cloud:
   provider: os
   region: RegionOne
-  network: tmaps
-  ip_range: 10.0.0.0/24
+  network_private: tmaps
+  network_public: public
+  ip_range: 10.65.0.0/24
   key_name: tmaps_setup
   key_file_private: ~/.ssh/tmaps_setup
   key_file_public: ~/.ssh/tmaps_setup.pub
