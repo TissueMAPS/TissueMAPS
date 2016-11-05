@@ -1,18 +1,12 @@
 # Template for setting up TissueMAPS on a single node on the Google Compute
 # Engine.
-#
-# The configuration assumes a "tissuemaps" network with a firewall rule
-# that allows incombing HTTP access.
-# Please refer to the online documentation for details on how to create it:
-# https://cloud.google.com/compute/docs/networking?hl=en_US
-# It uses the "n1-standard-4" machine type and attaches a volume with 500GB
-# storage space. Adapt these variable according to your needs.
-# You can find more information on
-# https://cloud.google.com/compute/docs/instances/.
 ---
 cloud:
   provider: gce
+  network_private: tmaps
+  network_public: default
   region: us-west1-b
+  ip_range: 10.138.0.0/20
   key_name: tmaps_setup
   key_file_private: ~/.ssh/tmaps_setup
   key_file_public: ~/.ssh/tmaps_setup.pub
@@ -25,13 +19,10 @@ grid:
           count: 1
           groups:
             - name: tissuemaps_compute
-              playbook: compute.yml
             - name: tissuemaps_web
-              playbook: web.yml
               vars:
                 db_password: XXX
             - name: tissuemaps_database
-              playbook: database.yml
               vars:
                 db_password: XXX
           instance:
@@ -39,7 +30,6 @@ grid:
             flavor: n1-standard-4
             volume_size: 500
             disk_size: 30
-            network: tissuemaps
             tags:
               - compute
               - web
