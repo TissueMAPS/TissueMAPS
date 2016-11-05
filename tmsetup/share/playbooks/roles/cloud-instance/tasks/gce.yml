@@ -36,7 +36,9 @@
   args:
     state: present
     name: "{{ network_private }}"
+    fwname: compute-storage
     allowed: tcp:1-65535
+    ipv4_range: "{{ ip_range }}"
     target_tags:
       - compute
       - storage
@@ -50,6 +52,7 @@
     name: "{{ network_private }}"
     fwname: web
     allowed: tcp:22,80,443
+    ipv4_range: 0.0.0.0/0
     target_tags:
       - web
   run_once: yes
