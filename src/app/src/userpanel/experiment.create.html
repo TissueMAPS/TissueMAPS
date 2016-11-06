@@ -28,11 +28,10 @@
         </select>
 
         <p class="help-block">
+          Please specify the number of wells per plate.
           A well plate represents a container with multiple reservoirs for different
               samples (wells) that might be stained independently, but imaged under the
               same conditions.
-              There are different plate *formats*, which encode the number of wells
-              in the plate, e.g. "384".
         </p>
       </div>
 
@@ -44,8 +43,7 @@
         </select>
 
         <p class="help-block">
-          Please specify the microscope you used to take the pictures for this experiment.
-          Note that all plateSources of an experiment have to be acquired by the same microscope.
+          Please specify how images were acquired by the microscope. When "multiplexing", sequential acquisitions are interpreted as different channels, while when "basic" they are treated as time points.
         </p>
       </div>
 
@@ -56,8 +54,7 @@
         </select>
 
         <p class="help-block">
-          Please specify the microscope you used to take the pictures for this experiment.
-          Note that all plateSources of an experiment have to be acquired by the same microscope.
+          Please specify which microscope was used to acquire the images for this experiment.
         </p>
       </div>
 
