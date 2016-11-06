@@ -21,8 +21,13 @@ Most available applications for microscopy image analysis are designed to run on
 Client-server architecture
 ==========================
 
-.. image:: ./_static/overview.png
-    :height: 300px
+.. figure:: ./_static/overview.png
+   :height: 300px
+   :align: left
+
+   Computational infrastructure.
+
+   The server backend may scale from a single standalone machine hosting web, storage and compute units to a large, scale-out grid consisting of several compute and storage clusters, where individual components are distributed over hundreds of dedicated machines. Only one client is shown here for simplicity, but of course multiple clients may interact simultaneously with the same server.
 
 
 The `TissueMAPS` server exposes a `RESTful API <https://en.wikipedia.org/wiki/Representational_state_transfer>`_ that abstracts away the complexity of compute and storage infrastructure. Clients send `HTTP <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_ request messages to the server, who handles the requests and returns response messages to the client. The server processes these requests asynchronenous and submits computational tasks to available compute resources.
@@ -98,9 +103,9 @@ Generally, serveral interdependent processing steps are required to get from the
 Distributed image processing
 ============================
 
-An image processing workflow represents a series of *steps*, each of which comprises a set of computational *jobs* that get distributed across available compute resources for parallel processing. Functionally related *steps* are further grouped into abstract *stages*.
+An image processing workflow represents a series of *steps*, each of which comprises a set of computational *jobs* that get distributed across available compute resources for parallel processing. Functionally related *steps* are further grouped into abstract *stages*. The entire workflow can be submitted for processing or individual *stages* can be submitted one after the other. Since results of each *step* are persisted on disk, workflows can further be resubmitted from any given *stage*.
 
-The :doc:`tmlib.workflow` package provides functionality for generating and managing distributed image processing workflows. Each of the steps is implemented as a subpackage of :doc:`tmlib.workflow` and represents a parallel computational task collection that can also be invoked separately.
+The :doc:`tmlib.workflow` package provides functionality for generating and managing distributed image processing workflows. Each of the steps is implemented as a subpackage of :doc:`tmlib.workflow` and represents a parallel computational task collection that can also be invoked separately via the command line.
 
 The following "canonical" `TissueMAPS` workflow for automated analysis of multi-wellplate screens is used here for illustration. To meet specific user requirements, custom workflows can be easily created, either by modifying or extending existing workflows or by creating new ones from scratch.
 
@@ -110,10 +115,13 @@ Canonical workflow
 ------------------
 
 
-.. image:: ./_static/canonical_workflow.png
-    :height: 300px
+.. figure:: ./_static/canonical_workflow.png
+   :height: 300px
+   :align: left
 
-Note that "upload" and "download" stages are not part of the actual image processing workflow and handled separately.
+   Stages of the canonical workflow.
+
+   "Upload" and "Download" are not actual stages of the image processing *workflow* and handled separately.
 
 
 Image conversion
