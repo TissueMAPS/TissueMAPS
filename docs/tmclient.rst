@@ -36,10 +36,10 @@ tmclient.experiment module
     :undoc-members:
     :show-inheritance:
 
-tmclient.logging_utils module
+tmclient.log module
 -----------------------------
 
-.. automodule:: tmclient.logging_utils
+.. automodule:: tmclient.log
     :members:
     :undoc-members:
     :show-inheritance:

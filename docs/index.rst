@@ -10,10 +10,11 @@ Contents:
 
 .. toctree::
    :maxdepth: 3
+   :includehidden:
 
    introduction
    installation
-   deployment
+   setup_and_deployment
    user_guide
    support
    developer_guide

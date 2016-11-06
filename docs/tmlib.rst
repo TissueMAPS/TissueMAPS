@@ -77,10 +77,10 @@ tmlib.jobs module
     :undoc-members:
     :show-inheritance:
 
-tmlib.logging_utils module
+tmlib.log module
 --------------------------
 
-.. automodule:: tmlib.logging_utils
+.. automodule:: tmlib.log
     :members:
     :undoc-members:
     :show-inheritance:
