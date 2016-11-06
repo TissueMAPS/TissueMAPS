@@ -236,8 +236,11 @@ class Query(sqlalchemy.orm.query.Query):
         classes = [d['type'] for d in self.column_descriptions]
         locations = list()
         for cls in classes:
-            if hasattr(cls, 'location'):
+            if hasattr(cls, '_location'):
                 locations.extend(self.from_self(cls._location).all())
+            elif hasattr(cls, 'location'):
+                instances = self.from_self(cls).all()
+                locations.extend([inst.location for inst in instances])
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
         logger.debug(
@@ -248,8 +251,8 @@ class Query(sqlalchemy.orm.query.Query):
         if locations:
             logger.debug('remove corresponding locations on disk')
             for loc in locations:
-                if loc[0] is not None:
-                    delete_location(loc[0])
+                if loc is not None:
+                    delete_location(loc)
 
 
 class SQLAlchemy_Session(object):
