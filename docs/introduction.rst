@@ -116,7 +116,7 @@ Canonical workflow
 
 
 .. figure:: ./_static/canonical_workflow.png
-   :height: 300px
+   :width: 75%
    :align: left
 
    Stages of the canonical workflow.

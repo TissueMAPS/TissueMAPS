@@ -16,9 +16,9 @@ Contents:
    installation
    setup_and_deployment
    user_guide
-   support
    developer_guide
    contribution
+   support
    faq
    license
    modules

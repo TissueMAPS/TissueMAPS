@@ -154,17 +154,17 @@ Clone the `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository (including sub
     git clone --recursive https://github.com/TissueMAPS/TmUI.git ~/tmclient
     cd ~/tmui/src
 
-Install `node` packages::
+Install `node` packages (globally)::
 
-    npm install
+    npm install -g
 
 Install `bower <https://bower.io/>`_ packages::
 
-    node_modules/bower/bin/bower install
+    bower install
 
 Build cliet code for production deployment::
 
-    node_modules/gulp/bin/gulp.js build --production
+    gulp build --production
 
 This will create a ``build`` subdirectory. The contents of this directory can now be served by a HTTP web server, such as `NGINX`.
 
@@ -630,7 +630,7 @@ The `tmserver` package provides a command line tool that starts a `development a
 The client installation also provides a `development web server <https://www.npmjs.com/package/gulp-webserver>`_ to dynamically build client code with live reload functionality::
 
     cd ~/tmui/src
-    node_modules/gulp/bin/gulp.js
+    gulp
 
 This will automatically start the server on localhost (port 8002). To access the website, point your browser to ``http://localhost:8002/``.
 

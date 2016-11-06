@@ -1,9 +1,56 @@
 ***************************
-Troubleshooting and Support
+Support and troubleshooting
 ***************************
 
-Github issue tracker
+.. _issue-tracker:
 
-before creating an issue...
+Issue tracker
+=============
 
-Dev VM (TissueMAPS code is installed in developer mode and can be edited without reinstallation)
+If you have a question or feature request or you want to report a bug, please use the `Github issue tracker <https://github.com/TissueMAPS/TissueMAPS/issues>`_.
+
+.. _creating-an-issue:
+
+Creating an issue
+-----------------
+
+`Here <https://help.github.com/articles/creating-an-issue/>`_ you find help on how to create an issue on Github.
+
+Before creating an issue, please check whether there is already an existing issue describing your problem.
+
+When creating an issue, please
+
+    - create separate issue reports for orthogonal topics
+    - use `Markdown <https://help.github.com/articles/about-writing-and-formatting-on-github/>`_ syntax
+    - provide an error traceback from a log message whenever possible
+    - embed screenshots for UI related topics (you can simply drag and drop the image into the text input field)
+    - metion other users via ``@<username>``
+    - refer to other issues via ``#<issue_id>``
+
+
+.. _debugging:
+
+Debugging
+=========
+
+To debug `TissueMAPS` code outside of your production environment, you can either :doc:`install <installation>` it on your local machine or :doc:`setup <setup_and_deployment>` a `dev` instance in the cloud.
+
+When you followed the installation or setup guide, `TissueMAPS` Python packages are installed in editable mode. Thereby, can simply set breakpoints (e.g. using `ipdb <https://pypi.python.org/pypi/ipdb>`_) or include ``print`` statements in the code.
+
+You can find the files of installed packages locally with the following command (exemplified here for the `tmlib` package)::
+
+    python -c 'import tmlib; print tmlib.__file__'
+
+.. _starting-dev-servers:
+
+Starting the dev servers
+------------------------
+
+The `tmserver` package provides a development appliation server that can be started via the command line::
+
+    tm_server
+
+The `TmUI <https://github.com/TissueMAPS/TmUI/blob/master/src/gulpfile.js>`_ repository provides a development web server for the `tmaps` app. It can be started via the command line as follows (assuming that you cloned the repo into ``~/tmui`` and globally installed the required `npm` and `bower` packages)::
+
+    cd ~/tmui/src
+    gulp

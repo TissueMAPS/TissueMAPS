@@ -30,8 +30,8 @@ Connection
 
 .. _requirements-connection-ssh-key:
 
-SSH key pair
-^^^^^^^^^^^^
+SSH keys
+^^^^^^^^
 
 Connections to remote machines in the cloud are established via the `Secure Shell (SSH) <https://en.wikipedia.org/wiki/Secure_Shell>`_ protocol with key-based authentication.
 
@@ -47,8 +47,6 @@ and disable host key checking in the `SSH` configuration file ``~/.ssh/config``:
 
     Host *
         StrictHostKeyChecking no
-
-Import the public key ``~/.ssh/tmaps_setup.pub`` to your cloud provider.
 
 .. note:: Amazon Web Serices requires the public key in a ``.pem`` file. You can create this key file using the following command: ``ssh-keygen -f tmaps_setup -e -m pem > tmaps_setup.pem`` For more information please refer to the `AWS online documentation <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws>`_.
 
