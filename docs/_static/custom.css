@@ -1,5 +1,5 @@
 /* https://github.com/bitprophet/alabaster/blob/master/alabaster/static/alabaster.css_t */
-pre {
+div.hightlight pre {
     background: #f2f2f2;
     padding: 7px 30px;
     margin: 15px 0px;
@@ -13,14 +13,41 @@ dl dl pre {
     padding-left: 90px;
 }
 
-dt {
+/* class, method and attributes */
+dl.class dt {
     background-color: #f2f2f2;
 }
+
+/* command line interaces */
+dl.class dl.docutils dt {
+    background-color: none;
+}
+
+dl.option dt {
+    margin: 0px 0px 0px 15px;
+}
+
 
 code {
     /* color: #703040; */
     color: #544545;
 }
 
+div.sphinxsidebar {
+    @extend div.sphinxsidebar;
+    font-size: 16px;
+}
 
+div.sphinxsidebar a:active {
+    font-weight: bold;
+}
 
+div.figure p.caption {
+    margin: 15px 0px 0px 15px;
+    font-weight: bold;
+}
+
+div.figure div.legend {
+    margin: 0px 0px 10px 15px;
+    padding: 0.3em;
+}
