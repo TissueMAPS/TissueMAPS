@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 angular.module('jtui.runner')
-.controller('FigureCtrl', ['$scope', '$sce', 'figure', 'name', 'jobId', '$uibModalInstance',
-    function($scope, $sce, figure, name, jobId, $uibModalInstance) {
+.controller('FigureCtrl', ['$scope', 'figure', 'name', 'jobId', '$uibModalInstance',
+    function($scope, figure, name, jobId, $uibModalInstance) {
 
+    console.log('plot figure')
+    $scope.figure = null;  // necessary to update the parent scope!!!
     $scope.figure = figure;
     $scope.figure.layout.height = 1000;
     $scope.figure.layout.width = 1000;
