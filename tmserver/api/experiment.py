@@ -23,6 +23,7 @@ from flask import jsonify, send_file, current_app, request
 from flask_jwt import jwt_required
 from flask_jwt import current_identity
 from werkzeug import secure_filename
+from sqlalchemy import or_
 
 import tmlib.models as tm
 from tmlib.image import PyramidTile
@@ -530,8 +531,17 @@ def get_experiments():
     """
     logger.info('get all experiments')
     with tm.utils.MainSession() as session:
-        experiments = session.query(tm.ExperimentReference).\
+        shares = session.query(tm.ExperimentShare.experiment_id).\
             filter_by(user_id=current_identity.id).\
+            all()
+        shared_ids = [s.experiment_id for s in shares]
+        experiments = session.query(tm.ExperimentReference).\
+            filter(
+                or_(
+                    tm.ExperimentReference.user_id == current_identity.id,
+                    tm.ExperimentReference.id.in_(shared_ids)
+                )
+            ).\
             all()
         return jsonify({
             'data': experiments
@@ -606,8 +616,18 @@ def get_experiment_id():
     experiment_name = request.args.get('experiment_name')
     logger.info('get ID of experiment "%s"', experiment_name)
     with tm.utils.MainSession() as session:
+        shares = session.query(tm.ExperimentShare.experiment_id).\
+            filter_by(user_id=current_identity.id).\
+            all()
+        shared_ids = [s.experiment_id for s in shares]
         experiment = session.query(tm.ExperimentReference).\
-            filter_by(user_id=current_identity.id, name=experiment_name).\
+            filter(
+                or_(
+                    tm.ExperimentReference.user_id == current_identity.id,
+                    tm.ExperimentReference.id.in_(shared_ids)
+                ),
+                tm.ExperimentReference.name == experiment_name,
+            ).\
             one()
         return jsonify({
             'id': encode_pk(experiment.id)

@@ -94,6 +94,10 @@ def submit_workflow(experiment_id):
     workflow_description = WorkflowDescription(**data['description'])
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        if not experiment.can_be_modified_by(current_identity.id):
+            raise NotAuthorizedError(
+                'No perimissions to modify experiment "%s"' % experiment.name
+            )
         experiment.persist_workflow_description(workflow_description)
     submission_manager = SubmissionManager(experiment_id, 'workflow')
     submission_id, user_name = submission_manager.register_submission()
@@ -152,6 +156,14 @@ def resubmit_workflow(experiment_id):
 
     """
     logger.info('resubmit workflow for experiment %d', experiment_id)
+
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        if not experiment.can_be_modified_by(current_identity.id):
+            raise NotAuthorizedError(
+                'No perimissions to modify experiment "%s"' % experiment.name
+            )
+
     data = json.loads(request.data)
     index = data.get('index', 0)
     workflow_description = WorkflowDescription(**data['description'])
@@ -380,8 +392,11 @@ def save_workflow_description(experiment_id):
     data = request.get_json()
     workflow_description = WorkflowDescription(**data['description'])
     with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).\
-            get(experiment_id)
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        if not experiment.can_be_modified_by(current_identity.id):
+            raise NotAuthorizedError(
+                'No perimissions to modify experiment "%s"' % experiment.name
+            )
         experiment.persist_workflow_description(workflow_description)
     return jsonify({
         'message': 'ok'
@@ -412,6 +427,12 @@ def kill_workflow(experiment_id):
 
     """
     logger.info('kill workflow for experiment %d', experiment_id)
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        if not experiment.can_be_modified_by(current_identity.id):
+            raise NotAuthorizedError(
+                'No perimissions to modify experiment "%s"' % experiment.name
+            )
     workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
     gc3pie.kill_jobs(workflow)
     return jsonify({
