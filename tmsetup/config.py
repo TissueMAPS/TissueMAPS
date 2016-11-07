@@ -139,7 +139,11 @@ class CloudSection(SetupSection):
     deployed.
     '''
 
+    _OPTIONAL_ATTRS = {'ip_range', 'network'}
+
     def __init__(self, description):
+        self.ip_range = '10.65.4.0/24'
+        self.network = 'tmaps'
         super(CloudSection, self).__init__(description)
 
     @property
@@ -189,7 +193,7 @@ class CloudSection(SetupSection):
 
     @property
     def network(self):
-        '''str: name of the network that should be used for virtual machines
+        '''str: name of the network that should be used (default: ``"tmaps"``)
         '''
         return self._network
 
@@ -200,9 +204,9 @@ class CloudSection(SetupSection):
 
     @property
     def ip_range(self):
-        '''str: range of allowed IPv4 addresses for network in
+        '''str: range of allowed IPv4 addresses for the private network in
         `Classless Inter-Domain Routing (CIDR) <https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing>`_
-        notation, e.g. ``"10.0.0.0/24"``
+        notation (default:``"10.65.4.0/24"``)
         '''
         return self._ip_range
 

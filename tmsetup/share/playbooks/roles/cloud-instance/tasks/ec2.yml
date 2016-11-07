@@ -107,12 +107,30 @@
       - proto: tcp
         from_port: 1
         to_port: 65535
-        cidr_ip: "{{ ip_range }}"
+        group_name: web
       - proto: icmp
         from_port: -1
         to_port:  -1
-        cidr_ip: "{{ ip_range }}"
+        group_name: web
+      - proto: tcp
+        from_port: 1
+        to_port: 65535
+        group_name: compute-storage
+      - proto: icmp
+        from_port: -1
+        to_port:  -1
+        group_name: compute-storage
   run_once: yes
+
+- name: Upload public SSH key
+  local_action: ec2_key
+  args:
+    state: present
+    region: "{{ region }}"
+    name: "{{ key_name }}"
+    wait: yes
+    key_material: "{{ item }}"
+  with_file: "{{ key_file }}"
 
 - name: Define boot disk
   set_fact:
