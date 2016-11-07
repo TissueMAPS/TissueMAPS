@@ -80,7 +80,7 @@
       - proto: tcp
         from_port: 22
         to_port: 22
-        cidr_ip: 10.0.0.0/8
+        cidr_ip: 0.0.0.0/0
       - proto: tcp
         from_port: 80
         to_port: 80
@@ -131,6 +131,7 @@
     wait: yes
     key_material: "{{ item }}"
   with_file: "{{ key_file }}"
+  run_once: yes
 
 - name: Define boot disk
   set_fact:
