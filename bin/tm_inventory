@@ -212,6 +212,14 @@ def update_static_inventory(inventory_info, setup):
                         'variable "ansible_host" is not defined for host "%s"',
                         host
                     )
+            if host == ansible_bastion_host:
+
+                inventory_info['all']['ansible_ssh_common_args'] = \
+                    '-o ProxyCommand="ssh -i %s -W %h:%p -q %s@%s"' % (
+                        host_vars['ansible_ssh_private_key_file'],
+                        host_vars['ansible_user'],
+                        host_vars['ansible_bastion_host']
+                    )
             # Update inventory with host and group variables
             inventory_info['_meta']['hostvars'][host].update(host_vars)
             write_yaml_file(host_vars_file, host_vars)

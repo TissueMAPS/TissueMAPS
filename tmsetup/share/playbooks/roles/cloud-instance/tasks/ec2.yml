@@ -20,6 +20,118 @@
 # Requires the following environment variables:
 #  - AWS_ACCESS_KEY_ID
 #  - AWS_SECRET_ACCESS_KEY
+- name: Create private network
+  local_action: ec2_vpc_net
+  args:
+    state: present
+    name: "{{ network }}"
+    cidr_block: "{{ ip_range }}"
+    region: "{{ region }}"
+    multi_ok: no
+    dns_support: yes
+  register: network_facts
+  run_once: yes
+
+- name: Create internet gateway
+  local_action: ec2_vpc_igw
+  args:
+    state: present
+    vpc_id: "{{ network_facts.vpc.id }}"
+    region: "{{ region }}"
+  register: gateway_facts
+  run_once: yes
+
+- name: Create private subnetwork
+  local_action: ec2_vpc_subnet
+  args:
+    state: present
+    vpc_id: "{{ network_facts.vpc.id }}"
+    cidr: "{{ ip_range }}"
+    region: "{{ region }}"
+    resource_tags:
+      Name: "{{ network }}-subnet"
+  register: subnet_facts
+  run_once: yes
+
+- name: Create route table
+  local_action: ec2_vpc_route_table
+  args:
+    state: present
+    vpc_id: "{{ network_facts.vpc.id }}"
+    region: "{{ region }}"
+    tags:
+      Name: "{{ network }}"
+    subnets:
+      - "{{ subnet_facts.subnet.id }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ gateway_facts.gateway_id }}"
+  run_once: yes
+
+- name: Create web security group
+  local_action: ec2_group
+  args:
+    state: present
+    name: web
+    vpc_id: "{{ network_facts.vpc.id }}"
+    region: "{{ region }}"
+    description: Public SSH and HTTP/HTTP access
+    rules:
+      - proto: tcp
+        from_port: 22
+        to_port: 22
+        cidr_ip: 10.0.0.0/8
+      - proto: tcp
+        from_port: 80
+        to_port: 80
+        cidr_ip: 0.0.0.0/0
+      - proto: tcp
+        from_port: 443
+        to_port: 443
+        cidr_ip: 0.0.0.0/0
+      - proto: icmp
+        from_port: -1
+        to_port:  -1
+        cidr_ip: 0.0.0.0/0
+  run_once: yes
+
+- name: Create compute-storage security group
+  local_action: ec2_group
+  args:
+    state: present
+    name: compute-storage
+    region: "{{ region }}"
+    vpc_id: "{{ network_facts.vpc.id }}"
+    description: Private access
+    rules:
+      - proto: tcp
+        from_port: 1
+        to_port: 65535
+        group_name: web
+      - proto: icmp
+        from_port: -1
+        to_port:  -1
+        group_name: web
+      - proto: tcp
+        from_port: 1
+        to_port: 65535
+        group_name: compute-storage
+      - proto: icmp
+        from_port: -1
+        to_port:  -1
+        group_name: compute-storage
+  run_once: yes
+
+- name: Upload public SSH key
+  local_action: ec2_key
+  args:
+    state: present
+    region: "{{ region }}"
+    name: "{{ key_name }}"
+    wait: yes
+    key_material: "{{ item }}"
+  with_file: "{{ key_file }}"
+
 - name: Define boot disk
   set_fact:
     instance_disks:
@@ -48,7 +160,6 @@
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
   local_action: ec2
   args:
-    # state: "{{ instance_state }}"
     key_name: "{{ key_name }}"
     image: "{{ image }}"
     instance_type: "{{ flavor }}"
@@ -56,13 +167,12 @@
        Name: "{{ instance_name }}"
     count_tag: Name
     exact_count: "{{ instance_count }}"
-    groups: "{{ security_groups }}"
+    group: "{{ security_groups }}"
     wait: true
     wait_timeout: 300
     volumes: "{{ instance_disks }}"
     assign_public_ip: "{{ assign_public_ip }}"
-    # ebs_optimized: no
-    # vpc_subnet_id: "{{ network }}"
+    vpc_subnet_id: "{{ subnet_facts.subnet.id }}"
     region: "{{ region }}"
   register: instance
 
