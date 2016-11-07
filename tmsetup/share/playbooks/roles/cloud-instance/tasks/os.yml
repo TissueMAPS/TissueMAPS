@@ -51,7 +51,7 @@
   args:
     state: present
     region_name: "{{ region }}"
-    name: "{{ network }}-router"
+    name: "{{ network }}"
     network: public
     interfaces:
       - "{{ network }}-subnet"

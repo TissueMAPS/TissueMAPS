@@ -60,7 +60,7 @@
     vpc_id: "{{ network_facts.vpc.id }}"
     region: "{{ region }}"
     tags:
-      Name: "{{ network }}-router"
+      Name: "{{ network }}"
     subnets:
       - "{{ subnet_facts.subnet.id }}"
     routes:
