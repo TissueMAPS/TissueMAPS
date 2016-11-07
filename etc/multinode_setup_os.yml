@@ -6,10 +6,6 @@
 cloud:
   provider: os
   region: RegionOne
-  network: tmaps
-  key_name: tmaps
-  key_file_private: ~/.ssh/tmaps
-  key_file_public: ~/.ssh/tmaps.pub
 grid:
   name: tissuemaps
   clusters:

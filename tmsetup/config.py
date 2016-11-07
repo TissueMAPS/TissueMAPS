@@ -140,11 +140,16 @@ class CloudSection(SetupSection):
     deployed.
     '''
 
-    _OPTIONAL_ATTRS = {'ip_range', 'network'}
+    _OPTIONAL_ATTRS = {
+        'ip_range', 'network', 'key_name', 'key_file_public', 'key_file_private'
+    }
 
     def __init__(self, description):
         self.ip_range = '10.65.4.0/24'
         self.network = 'tmaps'
+        self.key_name = 'tmaps'
+        self.key_file_public = '~/.ssh/tmaps.pub'
+        self.key_file_private = '~/.ssh/tmaps'
         super(CloudSection, self).__init__(description)
 
     @property
@@ -223,7 +228,8 @@ class CloudSection(SetupSection):
 
     @property
     def key_name(self):
-        '''str: name of the key-pair used to connect to virtual machines'''
+        '''str: name of the key-pair used to connect to virtual machines
+        (default: ``"tmaps"``)'''
         return self._key_name
 
     @key_name.setter
@@ -234,7 +240,9 @@ class CloudSection(SetupSection):
     @property
     def key_file_private(self):
         '''str: path to the private key used by Ansible to connect to virtual
-        machines
+        machines (by default looks for a file with name
+        :attr:`key_name <tmsetup.config.CloudSection.key_name>` in ``~/.ssh``
+        directory)
         '''
         return self._key_file_private
 
@@ -248,7 +256,7 @@ class CloudSection(SetupSection):
                 value
             )
         if not os.path.exists(value):
-            raise SetupDescriptionError(
+            raise OSError(
                 'Private key file "%s" does not exist.' % value
             )
         self._key_file_private = value
@@ -256,7 +264,9 @@ class CloudSection(SetupSection):
     @property
     def key_file_public(self):
         '''str: path to the public key that will be uploaded to the cloud
-        provider
+        provider (by default looks for a ``.pub`` file with name
+        :attr:`key_name <tmsetup.config.CloudSection.key_name>` in ``~/.ssh``
+        directory)
         '''
         return self._key_file_public
 

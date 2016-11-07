@@ -4,12 +4,7 @@
 ---
 cloud:
   provider: gce
-  network: tmaps
-  ip_range: 10.138.0.0/20
   region: us-west1-b
-  key_name: tmaps
-  key_file_private: ~/.ssh/tmaps
-  key_file_public: ~/.ssh/tmaps.pub
 grid:
   name: tissuemaps
   clusters:
