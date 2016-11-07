@@ -18,7 +18,7 @@ import numpy as np
 import logging
 import itertools
 from cached_property import cached_property
-from sqlalchemy import Column, String, Integer, Text, ForeignKey
+from sqlalchemy import Column, String, Integer, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy import UniqueConstraint
 
@@ -213,8 +213,101 @@ class ExperimentReference(MainModel, DateMixIn):
         '''
         return self.user_id == user.id
 
+    def can_be_modified_by(self, user_id):
+        '''Checks whether a user has the perimissions to modify the referenced
+        experiment.
+
+        Parameters
+        ----------
+        user_id: int
+            ID of user for which permissions should be checked
+
+        Returns
+        -------
+        bool
+            ``True`` if the user can modify the referenced experiment and
+            ``False`` otherwise
+        '''
+        session = Session.object_session(self)
+        shares = session.query(ExperimentShare.user_id).\
+            filter_by(id=self.id).\
+            all()
+        if self.user_id == user_id:
+            return True
+        else:
+            return user_id in [s.user_id for s in shares if s.write_access]
+
+    def can_be_viewed_by(self, user_id):
+        '''Checks whether a user has the perimissions to view the referenced
+        experiment.
+
+        Parameters
+        ----------
+        user_id: int
+            ID of user for which permissions should be checked
+
+        Returns
+        -------
+        bool
+            ``True`` if the user can view the referenced experiment and
+            ``False`` otherwise
+        '''
+        session = Session.object_session(self)
+        shares = session.query(ExperimentShare.user_id).\
+            filter_by(id=self.id).\
+            all()
+        if self.user_id == user_id:
+            return True
+        else:
+            return user_id in [s.user_id for s in shares]
+
     def __repr__(self):
         return '<ExperimentReference(id=%r, name=%r)>' % (self.id, self.name)
+
+
+class ExperimentShare(MainModel):
+
+    '''Relationship between a :class:`User <tmlib.models.user.User` and
+    an :class:`Experiment <tmlib.models.experiment.ExperimentReference` to
+    to share an experiment with other users.
+
+    '''
+    __tablename__ = 'experiment_shares'
+
+    __table_args__ = (UniqueConstraint('experiment_id', 'user_id'), )
+
+    #: int: ID of shared experiment
+    experiment_id = Column(
+        Integer, ForeignKey('experiment_references.id'), index=True
+    )
+
+    #: int: ID of user with whom the experiment is shared
+    user_id = Column(Integer, ForeignKey('users.id'), index=True)
+
+    #: tmlib.models.experiment.ExperimentReference: shared experiment
+    experiment = relationship('ExperimentReference', backref='shares')
+
+    #: tmlib.models.user.User: user with whom the experiment is shared
+    user = relationship('User', backref='experiment_shares')
+
+    #: bool: whether the user has write access, i.e. can modify the experiment
+    write_access = Column(Boolean, index=True)
+
+    def __init__(self, experiment_id, user_id, write_access=False):
+        '''
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the experiment that should be shared
+        user_id: int
+            ID of the user with whom the experiment should be shared
+        write_access: bool, optional
+            whether the user will have write access to the shared experiment
+            (default: ``False``)
+        '''
+        self.experiment_id = experiment_id
+        self.user_id = user_id
+        self.write_access = write_access
 
 
 @remove_location_upon_delete
