@@ -268,7 +268,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 job_descriptions['run'].append({
                     'id': job_id,
                     'inputs': {
-                        'image_files': [f[0] for f in image_files_locations]
+                        'image_files': [f[0] for f in image_file_locations]
                     },
                     'outputs': {},
                     'site_ids': batch,
