@@ -105,7 +105,7 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
         # been built.
         # First refresh inventory
         if args.refresh_cache:
-            commands.append(['tm_inventory', '--list', '--refresh'])
+            commands.append(['tm_inventory', '--refresh'])
         # Run the TissueMAPS-specific playbooks implemented in tmsetup
         tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
         playbook = os.path.join(tmsetup_playbooks_dir, 'site.yml')
