@@ -4,13 +4,12 @@
 ---
 cloud:
   provider: gce
-  network_private: tmaps
-  network_public: default
+  network: tmaps
   ip_range: 10.138.0.0/20
   region: us-west1-b
-  key_name: tmaps_setup
-  key_file_private: ~/.ssh/tmaps_setup
-  key_file_public: ~/.ssh/tmaps_setup.pub
+  key_name: tmaps
+  key_file_private: ~/.ssh/tmaps
+  key_file_public: ~/.ssh/tmaps.pub
 grid:
   name: tissuemaps
   clusters:
@@ -61,6 +60,7 @@ grid:
             flavor: n1-standard-8
             tags:
               - web
+              - compute
         - name: worker
           count: 4
           groups:
@@ -74,4 +74,15 @@ grid:
             flavor: n1-highmem-4
             tags:
               - compute
-
+    - name: ganglia
+      node_teyps:
+        - name: server
+          count: 1
+          groups:
+            - name: ganglia_client
+          instance:
+            disk_size: 30
+            image: ubuntu-1404-trusty-v20161020
+            flavor: n1-standard-1
+            tags:
+              - web

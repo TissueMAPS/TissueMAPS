@@ -4,12 +4,10 @@
 cloud:
   provider: os
   region: RegionOne
-  network_private: tmaps
-  network_public: public
-  ip_range: 10.65.0.0/24
-  key_name: tmaps_setup
-  key_file_private: ~/.ssh/tmaps_setup
-  key_file_public: ~/.ssh/tmaps_setup.pub
+  network: tmaps
+  key_name: tmaps
+  key_file_private: ~/.ssh/tmaps
+  key_file_public: ~/.ssh/tmaps.pub
 grid:
   name: tissuemaps
   clusters:

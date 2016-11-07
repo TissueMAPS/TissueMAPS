@@ -3,13 +3,11 @@
 ---
 cloud:
   provider: gce
-  network_private: tmaps
-  network_public: default
+  network: tmaps
   region: us-west1-b
-  ip_range: 10.138.0.0/20
-  key_name: tmaps_setup
-  key_file_private: ~/.ssh/tmaps_setup
-  key_file_public: ~/.ssh/tmaps_setup.pub
+  key_name: tmaps
+  key_file_private: ~/.ssh/tmaps
+  key_file_public: ~/.ssh/tmaps.pub
 grid:
   name: tissuemaps
   clusters:
