@@ -775,7 +775,7 @@ class ClassifierPandasInterface(ClassifierInterface):
         List[float]
             unique values
         '''
-        return np.unique(labels[column]).astype(float).tolist()
+        return np.unique(data[column]).astype(float).tolist()
 
     def label_feature_data(self, feature_data, labeled_mapobjects):
         '''Adds labels to `feature_data` for supervised classification.
