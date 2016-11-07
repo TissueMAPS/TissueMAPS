@@ -106,21 +106,23 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
         # First refresh inventory
         if args.refresh_cache:
             commands.append(['tm_inventory', '--refresh'])
-        # Run the TissueMAPS-specific playbooks implemented in tmsetup
-        tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
-        playbook = os.path.join(tmsetup_playbooks_dir, 'site.yml')
-        logger.debug('build command for playbook: %s', playbook)
-        cmd = _build_command(
-            verbosity, playbook, variables, set(groups_to_deploy.keys())
-        )
-        commands.append(cmd)
 
         # Run the playbooks implemented in elasticluster
+        # NOTE: These playbooks also configure the SSH host-based authorization.
         elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
         playbook = os.path.join(elasticluster_playbooks_dir, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
         variables['ansible_become'] = 'yes'
         logger.debug('run playbook in sudo mode')
+        cmd = _build_command(
+            verbosity, playbook, variables, set(groups_to_deploy.keys())
+        )
+        commands.append(cmd)
+
+        # Run the TissueMAPS-specific playbooks implemented in tmsetup
+        tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
+        playbook = os.path.join(tmsetup_playbooks_dir, 'site.yml')
+        logger.debug('build command for playbook: %s', playbook)
         cmd = _build_command(
             verbosity, playbook, variables, set(groups_to_deploy.keys())
         )
@@ -133,10 +135,6 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
                         verbosity, playbook
                     )
                     commands.append(cmd)
-            # # NOTE: variables are already provided via group_vars files
-            # if group.vars is not None:
-            #     for k, v in group.vars.iteritems():
-            #         variables[k] = v
 
     return commands
 
