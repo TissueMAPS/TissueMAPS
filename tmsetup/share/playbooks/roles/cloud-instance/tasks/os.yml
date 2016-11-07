@@ -51,10 +51,12 @@
   args:
     state: present
     region_name: "{{ region }}"
-    name: "{{ network }}-router"
+    name: "{{ network }}"
     network: public
     interfaces:
       - "{{ network }}-subnet"
+    wait: yes
+  run_once: yes
   when: instance_state == "present"
 
 - name: Upload public SSH key
@@ -217,7 +219,7 @@
     boot_from_volume: "{{ disk_size is defined }}"
     volume_size: "{{ disk_size|default(100) }}"
     terminate_volume: yes
-    network: "{{ network }}-subnet"
+    network: "{{ network }}"
     region_name: "{{ region }}"
   register: instance_facts
 

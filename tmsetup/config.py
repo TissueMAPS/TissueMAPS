@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 from abc import ABCMeta
 from abc import abstractproperty
 from ConfigParser import SafeConfigParser
@@ -559,17 +560,17 @@ class AnsibleHostVariableSection(SetupSection):
         self._check_value_type(value, 'flavor', str)
         self._flavor = value
 
-    @property
-    def security_group(self):
-        '''str: name or ID of the security_group (firewall) that should be
-        assigned to the virtual machine
-        '''
-        return self._security_group
+    # @property
+    # def security_group(self):
+    #     '''str: name or ID of the security_group (firewall) that should be
+    #     assigned to the virtual machine
+    #     '''
+    #     return self._security_group
 
-    @security_group.setter
-    def security_group(self, value):
-        self._check_value_type(value, 'security_group', str)
-        self._security_group = value
+    # @security_group.setter
+    # def security_group(self, value):
+    #     self._check_value_type(value, 'security_group', str)
+    #     self._security_group = value
 
     @property
     def tags(self):

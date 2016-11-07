@@ -103,7 +103,7 @@ def build_inventory_information(setup):
                             else:
                                 security_groups = 'web'
                         host_vars['security_groups'] = security_groups
-                    if isinstace(v, list):
+                    if isinstance(v, list):
                         v = ','.join(v)
                     host_vars[k] = v
                 inventory['_meta']['hostvars'][host_name] = host_vars

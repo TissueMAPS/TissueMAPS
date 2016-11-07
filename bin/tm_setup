@@ -17,6 +17,8 @@ from tmsetup.inventory import HOSTNAME_FORMAT
 from tmsetup.errors import SetupDescriptionError
 from tmsetup.utils import to_yaml, to_json
 
+logger = logging.getLogger(os.path.basename(__file__))
+
 
 def _get_playbooks_dir(pkg_name):
     rel_path = os.path.join('share', 'playbooks')
@@ -88,6 +90,9 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
             # gce: stopped
             # os: -
             raise ValueError('Stopping VMs is not yet supported')
+        # First refresh inventory
+        if args.refresh_cache:
+            commands.append(['tm_inventory', '--refresh'])
         tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
         playbook = os.path.join(tmsetup_playbooks_dir, 'instance.yml')
         cmd = _build_command(
@@ -98,6 +103,10 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
     elif action == 'deploy':
         # This playbook must be called after the individual components have
         # been built.
+        # First refresh inventory
+        if args.refresh_cache:
+            commands.append(['tm_inventory', '--refresh'])
+        # Run the TissueMAPS-specific playbooks implemented in tmsetup
         tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
         playbook = os.path.join(tmsetup_playbooks_dir, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
@@ -106,6 +115,7 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
         )
         commands.append(cmd)
 
+        # Run the playbooks implemented in elasticluster
         elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
         playbook = os.path.join(elasticluster_playbooks_dir, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
@@ -116,7 +126,7 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
         )
         commands.append(cmd)
 
-        for group, playbooks in groups_to_deploy.iteritems():
+        for group, plays in groups_to_deploy.iteritems():
             for playbook in plays:
                 if playbook is not None:
                     cmd = _build_command(
@@ -203,9 +213,6 @@ if __name__ == '__main__':
         '--cluster', '-c', metavar='CLUSTER', type=str,
         help='limit action to VMs of a particular cluster'
     )
-    # NOTE: There is a bug in argparse that prevents using nargs='*' before
-    # positional arguments (or subparser arguments)
-    # http://bugs.python.org/issue9338
     target_parser.add_argument(
         '--groups', '-g', metavar='GROUP', type=str, nargs='*', default=[],
         help='limit action to VMs of individual Ansible group(s)'
@@ -214,6 +221,10 @@ if __name__ == '__main__':
         '--node_type', '-n', metavar='NODETYPE', type=str,
         action=check_dependency('cluster'),
         help='limit action to VMs of a partiuclar cluster node_type'
+    )
+    target_parser.add_argument(
+        '--no-refresh', dest='refresh_cache', action='store_false',
+        help='when the inventory cache should not be refreshed'
     )
 
     subparsers = parser.add_subparsers(dest='action', help='action')
@@ -262,7 +273,6 @@ if __name__ == '__main__':
 
     configure_logging()
     log_level = map_logging_verbosity(args.verbosity)
-    logger = logging.getLogger(os.path.basename(__file__))
     logger.setLevel(log_level)
     tmsetup_logger = logging.getLogger('tmsetup')
     tmsetup_logger.setLevel(log_level)

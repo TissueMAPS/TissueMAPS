@@ -20,7 +20,7 @@ from tmsetup.inventory import (
 logger = logging.getLogger(os.path.basename(__file__))
 
 
-def _get_host_ip_os(region, host_name, host_vars):
+def _get_host_ip_os(region, network, host_name, host_vars):
     import novaclient.client
     auth_url = os.getenv('OS_AUTH_URL')
     username = os.getenv('OS_USERNAME')
@@ -43,21 +43,34 @@ def _get_host_ip_os(region, host_name, host_vars):
         )
 
     try:
-        addresses = instances[0].addresses[host_vars['network']]
+        addresses = instances[0].addresses[network]
     except KeyError:
         raise CloudError(
-            'No addresses found for network "%s"' % host_vars['network']
+            'No addresses found for network "%s"' % network
         )
     if len(addresses) > 1:
         # Which one to choose? OS-EXT-IPS:type?
         logger.warn(
-            'more than one address found for network "%s"', host_vars['network']
+            'more than one address found for network "%s"', network
         )
+        logger.info('try to use floating address (if existing)')
+        floating_addresses = [
+            addr['addr'] for addr in addresses
+            if addr['OS-EXT-IPS:type'] == 'floating'
+        ]
+        try:
+            address = floating_addresses[0]
+            logger.info('floating address found')
+        except IndexError:
+            logger.info('no floating address found')
+            address = addresses[0]['addr']
     elif len(addresses) == 0:
         raise CloudError(
-            'No address found for network "%s"' % host_vars['network']
+            'No address found for network "%s"' % network
         )
-    return addresses[0]['addr']
+    else:
+        address = addresses[0]['addr']
+    return address
 
 
 def _get_host_ip_ec2(region, host_name, host_vars):
@@ -92,7 +105,7 @@ def _get_host_ip_ec2(region, host_name, host_vars):
     return addresses[0]
 
 
-def _get_host_ip_gce(region, host_name, host_vars):
+def _get_host_ip_gce(region, network, host_name, host_vars):
     import googleapiclient.discovery
     from oauth2client.client import GoogleCredentials
     project = os.getenv('GCE_PROJECT')
@@ -121,35 +134,35 @@ def _get_host_ip_gce(region, host_name, host_vars):
         )
     networks = [
         net for net in instances[0]['networkInterfaces']
-        if net['name'] == host_vars['network']
+        if net['name'] == network
     ]
     if len(networks) == 0:
         raise CloudError(
-            'No network with name "%s".' % host_vars['network']
+            'No network with name "%s".' % network
         )
     elif len(networks) > 1:
         logger.warn(
-            'more than one network with name "%s".', host_vars['network']
+            'more than one network with name "%s".', network
         )
     addresses = [addr['natIP'] for addr in networks[0]['accessConfigs']]
     if len(addresses) > 1:
         logger.warn(
-            'more than one address found for network "%s"', host_vars['network']
+            'more than one address found for network "%s"', network
         )
     elif len(addresses) == 0:
         raise CloudError(
-            'No address found for network "%s"' % host_vars['network']
+            'No address found for network "%s"' % network
         )
     return addresses[0]
 
 
-def get_host_ip(provider, region, host_name, host_vars):
+def get_host_ip(provider, region, network, host_name, host_vars):
     if provider == 'os':
-        ip = _get_host_ip_os(region, host_name, host_vars)
+        ip = _get_host_ip_os(region, network, host_name, host_vars)
     elif provider == 'ec2':
-        ip = _get_host_ip_ec2(region, host_name, host_vars)
+        ip = _get_host_ip_ec2(region, network, host_name, host_vars)
     elif provider == 'gce':
-        ip = _get_host_ip_gce(region, host_name, host_vars)
+        ip = _get_host_ip_gce(region, network, host_name, host_vars)
     else:
         raise ValueError('Provider "%s" is not supported.' % provider)
     return str(ip)
@@ -190,7 +203,8 @@ def update_static_inventory(inventory_info, setup):
             if args.refresh:
                 try:
                     host_vars['ansible_host'] = get_host_ip(
-                        setup.cloud.provider, setup.cloud.region, host,
+                        setup.cloud.provider, setup.cloud.region,
+                        setup.cloud.network, host,
                         inventory_info['_meta']['hostvars'][host]
                     )
                 except NoInstanceFoundError:
@@ -212,8 +226,7 @@ def update_static_inventory(inventory_info, setup):
                         'variable "ansible_host" is not defined for host "%s"',
                         host
                     )
-            if host == ansible_bastion_host:
-
+            if host == 'ansible_bastion_host':
                 inventory_info['all']['ansible_ssh_common_args'] = \
                     '-o ProxyCommand="ssh -i %s -W %h:%p -q %s@%s"' % (
                         host_vars['ansible_ssh_private_key_file'],
@@ -280,7 +293,7 @@ if __name__ == "__main__":
         '--debug', action='store_true',
         help='enable debug output'
     )
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group()
     group.add_argument(
         '--list', action='store_true',
         help='list active servers'
