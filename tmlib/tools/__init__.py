@@ -16,16 +16,99 @@
 '''Data analysis tools.
 
 This packages provides tools for interactive data analysis and machine learning.
-A `tool` is an implementation of :class:`tmlib.tools.base.Tool`
+A *tool* is an implementation of :class:`Tool <tmlib.tools.base.Tool>`
 that can process client requests and persist the result of the analysis
-in form of an instance of :class:`tmlib.models.result.ToolResult` in the
-database. The client can stream the result provided via
-:class:`tmlib.models.layer.LabelLayer` and :class:`tmlib.models.plot.Plot`
-and visualize it on the map in an interactive an responsive manner.
+in form of an instance of :class:`ToolResult <tmlib.models.result.ToolResult>`
+in the database. The client can stream the result provided via
+:class:`LabelLayer <tmlib.models.layer.LabelLayer>` and
+:class:`Plot <tmlib.models.plot.Plot>` and visualize it on the map in an
+interactive an responsive manner.
 
-Custom tools can be added by implementing :class:`tmlib.tools.base.Tool` and
-import the derived class in :mod:`tmlib.tools`. Note that tools also require
-a client side representation.
+Custom tools can be added by implementing :class:`Tool <tmlib.tools.base.Tool>`
+and import the derived class in :mod:`tmlib.tools`.
+
+Additional abstract bases classes are available for the *pandas* and *spark*
+libraries: :class:`PandasInterface <tmlib.tools.base.PandasInterface>` and
+:class:`SparkInterface <tmlib.models.base.SparkInterface>`). They serve as
+`Mixins <https://en.wikipedia.org/wiki/Mixin>`_ and provide library-specific
+methods for reading feature data from the database and writing tool results
+back to the database. Methods common to both libraries can be provided on
+the derived :class:`Tool <tmlib.tools.base.Tool>` class. However,
+new functionality specific to either the *pandas* or *spark* library should be
+implemented in a library-specific mixin class and provided to the tool class
+via the ``__libs__`` attribute. The class for the currently active library,
+defined via the :attr:`tool_library <tmlib.config.LibraryConfig.tool_library>`
+configuration parameter, will get automatically addded to the bases of the tool
+class.
+
+Consider the following example for a new tool named ``Foo``.
+It requires an additional method to do the magic. The magic is library-specific
+and is thus implemented in two separate mixin classes, namely ``FooPandas`` and
+``FooSpark``. The implementation of the required ``do_magic`` method
+for both libraries can be achieved by using an abstract base class, here called
+``FooInterface``. The ``Foo`` class implements the abstract method
+:meth:`process_request <tmlib.tools.base.Tool.process_request>` et voila we
+have a new tool
+
+.. code-block:: python
+
+    from abc import ABCMeta
+    from abc import abstractmethod
+    from tmlib.tools.base import Tool
+
+
+    class FooInterface(object):
+
+        __metaclass__ = ABCMeta
+
+        @abstractmethod
+        def do_magic(self, values):
+            pass
+
+
+    class FooPandas(FooInterface):
+
+        def do_magic(self, values):
+            # Do pandas magic here
+
+
+    class FooSpark(FooInterface):
+
+        def do_magic(self, values):
+            # Do spark magic here
+
+
+    class Foo(Tool):
+
+        __libs__ = {'pandas': FooPandas, 'spark': FooSpark}
+
+        def __init__(self, experiment_id):
+            super(Foo, self).__init__(experiment_id)
+
+        def process_request(self, submission_id, payload):
+            mapobject_type_name = payload['chosen_object_type']
+            feature_name = payload['selected_feature']
+
+            feature_values = self.load_feature_values(
+                mapobject_type_name, feature_name
+            )
+            magic_labels = self.do_magic(feature_values)
+
+            result_id = self.initialize_result(
+                submission_id, mapobject_type_name,
+                label_type='ContinuousLabelLayer'
+            )
+
+            self.save_label_values(result_id, magic_labels)
+
+
+The actual magic is done by a meta class, acting behind the scenes to
+dynamically injecting the mixin classes as bases of ``Foo`` and registering
+the ``Foo`` to make available for use in the UI.
+
+Note
+----
+Each tool also requires a client-side representation.
 '''
 from tmlib.version import __version__
 from tmlib.tools.classification import Classification
@@ -36,7 +119,8 @@ from tmlib.tools.base import _register
 
 
 def get_tool_class(name):
-    '''Gets the tool-specific implementation of :class:`tmlib.models.base.Tool`.
+    '''Gets the tool-specific implementation of
+    :class:`Tool <tmlib.models.base.Tool>`.
 
     Parameters
     ----------

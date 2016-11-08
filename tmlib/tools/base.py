@@ -38,7 +38,7 @@ _register = {}
 
 class _ToolMeta(ABCMeta):
 
-    '''Meta class for :class:`tmlib.tools.base.Tool`.'''
+    '''Meta class for :class:`Tool <tmlib.tools.base.Tool>`.'''
 
     def __init__(cls, cls_name, cls_bases, cls_args):
         if hasattr(cls, '__libs__'):
@@ -159,7 +159,8 @@ class ToolSparkInterface(ToolInterface):
 
         Note
         ----
-        Caches the :class:`pyspark.sql.DataFrame` to speed up computations.
+        Caches the :class:`DataFrame <pyspark.sql.DataFrame>` to speed up
+        computations.
 
         '''
         url = cfg.db_uri_spark.replace(
@@ -268,8 +269,9 @@ class ToolPandasInterface(ToolInterface):
     `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html>`_
     data container together with the
     `Scikit-Learn <http://scikit-learn.org/stable/>`_ machine learning library.
-    It can also be used with other machine learning libraries, such as
-    `Caffe <http://caffe.berkeleyvision.org/>`_ or `Keras <https://keras.io/>`_.
+    It could in principle also be used with other machine learning libraries,
+    such as `Caffe <http://caffe.berkeleyvision.org/>`_,
+    `Keras <https://keras.io/>`_ or `TensorFlow <https://www.tensorflow.org/>`_.
     '''
 
     def load_feature_values(self, mapobject_type_name, feature_name):
@@ -354,12 +356,13 @@ class ToolPandasInterface(ToolInterface):
 
 class Tool(object):
 
-    '''Abstract base class for a data analysis `tool`.
+    '''Abstract base class for a data analysis *tool*.
 
     Derived classes delegate the actual processing to either the
-    `pandas` or the `spark` library interface. Both libraries use a data
-    container called "DataFrame" and have very similar interfaces. Note,
-    however, that spark code gets evaluated lazily.
+    :class:`PandasInterface <tmlib.tools.base.PandasInterface>` or
+    :class:`SparkInterface <tmlib.tools.base.SparkInterface>`.
+    Both libraries use a data container called "DataFrame" and have very similar
+    interfaces. Note, however, that spark code gets evaluated lazily.
 
     Common methods required by both libraries should be implemented directly
     in the derived class. Library-specific processing methods should
@@ -367,20 +370,21 @@ class Tool(object):
     must be provided to the derived class via the ``__libs__`` attribute
     (in form of a mapping library name -> mixin class).
     The appropriate library interface will be chosen automatically based on
-    configuration of :attr:`tmlib.config.tool_library` and injected upon
-    instantiation of the derived class. This provides tools with a uniform
-    interface independent of the specificities of different library backends.
+    configuration of :attr:`tool_library <tmlib.config.tool_library>` and
+    injected upon instantiation of the derived class. This provides tools with
+    a uniform interface independent of the specificities of different library
+    backends.
 
-    By default, the `pandas` library will be used and you don't need to
+    By default, the *pandas* library will be used and you don't need to
     have `Spark <http://spark.apache.org/>`_ installed.
-    When setting :attr:`tmlib.config.LibraryConfig.tool_library` to ``spark``,
-    the `spark` library will be used instead. The required
+    When setting :attr:`tool_library <tmlib.config.LibraryConfig.tool_library>`
+    to ``spark``, the *spark* library will be used instead. The required
     `Spark Session <https://spark.apache.org/docs/latest/api/python/pyspark.sql.html#pyspark.sql.SparkSession>`_
     (the main entry point for `Spark` functionality) gets automatically created
     and made available to instances of derived classes as ``spark`` attribute.
 
-    On small datasets, `pyspark` is an overkill and running analysis in memory
-    using `pandas` will be faster in most cases. However, `pyspark` pays off on
+    On small datasets, *pyspark* is an overkill and running analysis in memory
+    using *pandas* will be faster in most cases. However, *pyspark* pays off on
     large datasets, in particular in combination with a
     `Spark cluster <http://spark.apache.org/docs/latest/cluster-overview.html>`_.
     `TissueMAPS` supports running `spark` tool requests in a distributed manner

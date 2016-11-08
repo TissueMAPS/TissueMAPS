@@ -26,49 +26,58 @@ processed in parallel. It is comprised of the following phases:
     * **collect** (optional): Postprocessing of results obtained by individual
       batch jobs.
 
-A `step` is implemented as a subpackage of `tmlib.workflow` containing
+A *step* is implemented as a subpackage of :mod:`tmlib.workflow` containing
 three modules:
 
-    * **args**: Must implemement :class:`tmlib.workflow.args.BatchArguments` and
-      :class:`tmlib.workflow.args.SubmissionArguments` and decorate them with
-      :func:`tmlib.workflow.register_step_batch_args` and
-      :func:`tmlib.workflow.register_step_submission_args`, respectively. These
-      classes provide `step`-specific arguments that control the
-      partitioning of the given computational task into separate batch jobs
+    * **args**: Must implemement
+      :class:`BatchArguments <tmlib.workflow.args.BatchArguments>` and
+      :class:`SubmissionArguments <tmlib.workflow.args.SubmissionArguments>`
+      and decorate them with
+      :func:`register_step_batch_args <tmlib.workflow.register_step_batch_args>`
+      and
+      :func:`register_step_submission_args <tmlib.workflow.register_step_submission_args>`,
+      respectively. These classes provide `step`-specific arguments controlling
+      the partitioning of the given computational task into separate batch jobs
       and the amount of computational resources, which should get allocated
       to each batch job.
-    * **api**: Must implement :class:`tmlib.workflow.api.ClusterRoutines` and
-      decorate it with :func:`tmlib.workflow.register_step_api`. This class
+    * **api**: Must implement
+      :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>` and
+      decorate it with
+      :func:`register_step_api <tmlib.workflow.register_step_api>`. This class
       provides the active programming interface (API) with methods for
       creation and management of batch jobs. The methods
-      :meth:`tmlib.workflow.api.ClusterRoutines.create_batches`,
-      :meth:`tmlib.workflow.api.ClusterRoutines.run_job` and
-      :meth:`tmlib.workflow.api.ClusterRoutines.collect_job_output` implemented
-      by derived classes are responsible for the `step`-specific processing
-      behaviour and controlled via the `batch` and `submission` arguments
-      described above.
-    * **cli**: Must implement :class:`tmlib.workflow.cli.CommandLineInterface`.
+      :meth:`create_batches <tmlib.workflow.api.ClusterRoutines.create_batches>`,
+      :meth:`run_job <tmlib.workflow.api.ClusterRoutines.run_job>` and
+      :meth:`collect_job_output <tmlib.workflow.api.ClusterRoutines.collect_job_output>`
+      implemented by derived classes are responsible for the *step*-specific
+      processing behaviour and controlled via the *batch* and *submission*
+      arguments described above.
+    * **cli**: Must implement
+      :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`.
       This class provides the command line interface (CLI) and main entry points
       for the program. It supplies high-level methods for the different
-      `phases`, which delegate processing to the respective API methods.
+      *phases*, which delegate processing to the respective API methods.
 
-This implementation automatically registers a `step` and makes it available
+This implementation automatically registers a *step* and makes it available
 for integration into larger workflows.
-To this end, `steps` are further combined into abstract task collections
-referred to as `stages`. A `stage` bundles one ore more `steps`
+To this end, *steps* are further combined into abstract task collections
+referred to as *stages*. A *stage* bundles one ore more *steps*
 into a logical processing unit taking potential dependencies between them
 into account.
 
-A :class:`tmlib.workflow.workflow.Workflow` is dynamically build from `steps`
-based on :class:`tmlib.workflow.description.WorkflowDescription` - a description
-provided by users as a mapping in `YAML` format.
-The `workflow` structure, i.e. the sequence of `stages` and `steps` and their
-interdependencies, is defined by its `type`, which is determined based on an
-implementation of :class:`tmlib.workflow.dependencies.WorkflowDependencies`.
-To make a `type` available for use, the derived class must be
-registered via :func:`register_workflow_type`. An example is the "canonical"
-`type` declared by
-:class:`tmlib.workflow.canonical.CanonicalWorkflowDependencies`.
+A :class:`Workflow <tmlib.workflow.workflow.Workflow>` is dynamically build
+from *steps* based on
+:class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>` -
+provided by users as a mapping in *YAML* format.
+The *workflow* structure, i.e. the sequence of *stages* and *steps* and their
+interdependencies, is defined by its *type*, which is determined based on an
+implementation of
+:class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>`.
+To make a *type* available for use, the derived class must be
+registered via
+:func:`register_workflow_type <tmlib.workflow.register_workflow_type>`.
+As an example serves the "canonical" *type* declared by
+:class:`CanonicalWorkflowDependencies <tmlib.workflow.canonical.CanonicalWorkflowDependencies>`.
 
 '''
 import os
