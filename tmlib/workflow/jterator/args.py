@@ -32,7 +32,7 @@ class JteratorBatchArguments(BatchArguments):
 
     batch_size = Argument(
         type=int, help='number of sites that should be processed per job',
-        default=1, flag='b'
+        default=100, flag='b'
     )
 
 
