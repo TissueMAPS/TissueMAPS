@@ -361,7 +361,7 @@ class Viewer {
             var submissionId = resp.data.data.submission_id;
             this._startMonitoringForToolResult(submissionId);
             var dialogService = $injector.get<DialogService>('dialogService');
-            dialogService.info('Job submission successful!);
+            dialogService.info('Job submission successful!');
             return true;
         },
         (err) => {
