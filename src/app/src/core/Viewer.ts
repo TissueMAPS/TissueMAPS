@@ -284,7 +284,7 @@ class Viewer {
         var monitor = () => {
             this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status?submission_id=' + submissionId)
             .then((resp: any) => {
-                var st = resp.data;
+                var st = resp.data.data;
                 var didJobEnd = st.state === 'TERMINATING' || st.state === 'TERMINATED';
                 var jobSuccessful = didJobEnd && st.exitcode === 0;
                 var jobFailed = st.state === didJobEnd && st.exitcode == 1;
