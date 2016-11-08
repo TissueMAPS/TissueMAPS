@@ -853,10 +853,17 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 tm.FeatureValue.feature_id,
                                 tm.FeatureValue.tpoint
                             ).
-                            all()
+                            all(),
+                            columns = [
+                                'Mean', 'Max', 'Min', 'Count',
+                                'feature_id', 'tpoint'
+                            ]
                         )
                         # Some precautions in case the dataframe is empty
                         if df.empty:
+                            # Feature values must have type float and IDs type
+                            # int. Assert this even for empty dataframes
+                            # prevent type problems later on.
                             df['Mean'] = df['Mean'].astype(float)
                             df['Max'] = df['Max'].astype(float)
                             df['Min'] = df['Min'].astype(float)
