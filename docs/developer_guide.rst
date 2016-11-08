@@ -2,6 +2,13 @@
 Developer guide
 ***************
 
+Most developers might be interested in extending one of the following functionalities:
+
+- `workflows`_: define a custom workflow based on existing steps or develop new steps
+- `jterator modules`_: develop custom image analysis routines
+- `data analysis tools`_: developing a custom interactive tool
+
+*Workflows* and *modules* only need to be implemented server-side, while *tools* also require a client representation.
 
 .. _frontend:
 
@@ -46,15 +53,28 @@ Data analysis tools
 Backend
 =======
 
+The backend is to large extent implemented in `Python 2.7 <https://docs.python.org/2/>`_.
+
+.. _data-models:
+
+Data Models
+-----------
+
+The database schema is defined via `SQLAlchemy Object Relational Mapper (ORM) <http://docs.sqlalchemy.org/en/latest/orm/tutorial.html>`_ and the respective model classes are implemented in the :mod:`tmlib.models` package.
+
 .. _workflows:
 
 Workflows
 ---------
 
+Workflows are implemented in the :mod:`tmlib.workflow` package.
+
 .. _data-analysis-tools:
 
 Data analysis tools
 -------------------
+
+Data anlysis tools are implemented in the :mod:`tmlib.tools` package.
 
 .. _jterator-modules:
 
@@ -66,8 +86,8 @@ Jterator modules
 Python was chosen as programming language because it represents a good trade-off between development time and performance. The language is relatively easy to learn and its interpreted nature facilitates scripting and testing. The powerful `NumPy <http://www.numpy.org/>`_ package provides an great framework for n-dimensional array operations. In addition, there are numerous established C/C++ image processing libraries with Python bindings that use `NumPy arrays <http://docs.scipy.org/doc/numpy/reference/arrays.html>`_ as data container:
 
 - `ITK <http://www.simpleitk.org/>`_
-- `openCV <http://opencv.org/>`_
-- `mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
+- `OpenCV <http://opencv.org/>`_
+- `Mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
 
 This makes it easy to combine algorithms implemented in different libraries into an image analysis workflow. In addition to Python, `jterator` pipelines can integrate modules written in other programming languages frequently used for scientific computing:
 
@@ -261,7 +281,7 @@ Thereby, the module named ``matlab_module`` (residing in a file called ``matlab_
 R example
 *********
 
-To implement the same interface in *R*, we have to get a bit more inventive, since *R* is is not a propper programming language (Ups!).
+To implement the same interface in *R*, we have to get a bit more creative, since *R* is not a proper programming language (Ups! Did I just say that?).
 
 .. code-block:: r
 
