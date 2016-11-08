@@ -142,7 +142,9 @@ def process_tool_request(experiment_id):
             Content-Type: application/json
 
             {
-                "message": "ok"
+                "data": {
+                    "submission_id": "MQ=="
+                }
             }
 
         :reqheader Authorization: JWT token issued by the server
@@ -168,7 +170,9 @@ def process_tool_request(experiment_id):
     gc3pie.store_jobs(job)
     gc3pie.submit_jobs(job)
 
-    return jsonify(message='ok')
+    return jsonify(data={
+        'submission_id': submission_id
+    })
 
 
 @api.route(
@@ -228,7 +232,7 @@ def get_tool_job_status(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/tools/status
 
-        Get the status of a job processing a tool request.
+        Get the status of one or multiple jobs processing a tool request.
 
         **Example response**:
 
@@ -236,6 +240,8 @@ def get_tool_job_status(experiment_id):
 
             HTTP/1.1 200 OK
             Content-Type: application/json
+
+            If no submission_id was supplied:
 
             {
                 "data": [
@@ -248,31 +254,63 @@ def get_tool_job_status(experiment_id):
                 ]
             }
 
+            If a submission_id was supplied:
+
+            {
+                "data": {
+                    "state": string,
+                    "submission_id": number,
+                    "exitcode": number
+                }
+            }
+
+        :query submission_id: numeric id of the submission for which the job status should be retrieved (optional).
         :statuscode 400: malformed request
         :statuscode 200: no error
 
     """
-    logger.info('get status of tool jobs for experiment %d', experiment_id)
+    submission_id = request.args.get('submission_id', type=int)
+
+    if submission_id is None:
+        logger.info('get status of tool jobs for experiment %d', experiment_id)
+    else:
+        logger.info('get status of single tool job %d', submission_id)
+
     with tm.utils.MainSession() as session:
-        tool_job = session.query(
+        query = session.query(
                 tm.Task.state, tm.Task.submission_id, tm.Task.exitcode
             ).\
-            join(tm.Submission).\
+            join(tm.Submission)
+        if submission_id is None:
+            tool_jobs = query.\
             filter(
                 tm.Submission.program == 'tool',
                 tm.Submission.experiment_id == experiment_id
             ).\
             all()
-        tool_job_status = [
-            {
-                'state': j.state,
-                'submission_id': j.submission_id,
-                'exitcode': j.exitcode
+            tool_job_status = [
+                {
+                    'state': j.state,
+                    'submission_id': j.submission_id,
+                    'exitcode': j.exitcode
+                }
+                for j in tool_jobs
+            ]
+            return jsonify(data=tool_job_status)
+        else:
+            tool_job = query.\
+            filter(
+                tm.Submission.program == 'tool',
+                tm.Submission.experiment_id == experiment_id,
+                tm.Submission.id == submission_id
+            ).\
+            one()
+            tool_job_status = {
+                'state': tool_job.state,
+                'submission_id': tool_job.submission_id,
+                'exitcode': tool_job.exitcode
             }
-            for j in tool_job
-        ]
-
-        return jsonify(data=tool_job_status)
+            return jsonify(data=tool_job_status)
 
 
 @api.route(
