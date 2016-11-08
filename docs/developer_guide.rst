@@ -21,6 +21,14 @@ Architecture
 ------------
 
 .. TODO: brief overview how the app works
+The web frontend of TissueMAPS is largely based on the framework `AngularJS <https://angularjs.org/>`_.
+
+Classes and functions encapsulating core application logic and that are therefore not UI-specific are separated from the UI-specifc code.
+Code comprising core application logic is located in the subdirectory ``core`` and the other directories are reserved for code handling views, user input, as well as AngularJS-related things.
+Several server-side resources like the *Experiment* also have a client-side representation.
+However, it is important to note that these concepts are not exactly the same.
+A client-side experiment is *constructed* from a serialized server-side experiment but can also have other properties that is only interesting to code dealing with the user interface.
+
 
 .. _data-access-objects:
 
@@ -29,24 +37,65 @@ Data access objects (DAO)
 
 .. _dialogs:
 
+Whenever a class in TissueMAPS wants to access a resource from the server, the call has to go through a model-specific *data access object (DAO)*.
+These objects issue HTTP-requests and handle the deserialization process when contructing actual model class instances from JSON objects.
+
+.. TODO: This doesn't seem to be the case anymore? Were these methods removed from the DAOs?
+
 Dialogs
 -------
 
-.. TODO: modals and error handling
+To display messages to the user by means of dialogs (popup windows), TissueMAPS provides a service called ``dialogService``.
+For example, to inform the user that some request has been performed successfully, this service can be used like this::
+
+    dialogService.info('Task XY has been performed successfully')
+
+Similar utility methods exist for error or warning messages.
+
+Errors that result because of some server-side issue (such as authorization failures or not found resources) are caught by an ``errorInterceptor`` and automatically displayed to the user. Thus, manually handling such errors is not necessary.
+
 
 .. _viewer:
 
 Viewer
 ------
 
-.. TODO: openlayers, channels, objects, ...
+The main class of the TissueMAPS interface is the ``Viewer`` class. The viewer is in charge of visualizing an experiment and to handle related resources such as mapobjects and tools with which the experiment can be analyzed.
+
+The actual visualization of the microscopy images is done with an extended version of `OpenLayers <https://openlayers.org>`_ that allows WebGL-powered rendering of tiled images and vector data, as well as additive blending of images.
+The interface to OpenLayers is hidden within several wrapper classes such as ``ImageTileLayer`` and ``VectorTileLayer``.
+Ultimately, whenever the user scrolls the map, OpenLayers will prompt the underlying layer objects to perform a GET request to the tile server to get a slice of the pyramid image or a collection of vectoral data (for example cell outlines).
+Analoguous to these layer classes, the ``Viewport`` class is a wrapper around an OpenLayers ``Map`` object and is used within TissueMAPS to add and remove layer objects.
+
 
 .. _data-analysis-tools:
 
 Data analysis tools
 -------------------
 
-.. TODO: flugin machanism, templates, scope, ...
+The TissueMAPS interface uses a plugin mechanism for data analysis tools.
+This mechanism ensures that each implemented tool can be selected from the toolbar and that results returned from the server are interpreted correctly.
+To make use of this plugin mechanism, the code for an existing or new tool has to follow some conventions.
+
+A tool is located under ``src/tools/{ToolName}`` and should provide a AngularJS controller named ``{ToolNameCtrl}``.
+When clicking on a tool button in the toolbar, TissueMAPS will create an instance of this controller and link it to a tool window-specific ``$scope``.
+This tool window will further be populated with a custom template content.
+
+.. TODO: Where is it defined again which tool has which template? It seems this has changed. Is it supplied by the server?
+
+Templates can make use of several pre-defined widgets.
+For example, the following tag will insert a widget with which the desired mapobject type can be selected::
+
+    <tm-mapobject-type-widget></tm-mapobject-type-widget></p>
+
+
+Another widget can be used to select a specific feature::
+
+    <tm-feature-selection-widget
+      selected-mapobject-type="mapobjectTypeWidget.selectedType">
+    </tm-feature-selection-widget>
+
+Implementations of existing tools provide a good idea of how to implement a new tool.
 
 .. _backend:
 
