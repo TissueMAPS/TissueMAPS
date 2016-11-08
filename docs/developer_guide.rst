@@ -8,7 +8,38 @@ Developer guide
 Frontend
 ========
 
+.. _architecture:
 
+Architecture
+------------
+
+.. TODO: brief overview how the app works
+
+.. _data-access-objects:
+
+Data access objects (DAO)
+-------------------------
+
+.. _dialogs:
+
+Dialogs
+-------
+
+.. TODO: modals and error handling
+
+.. _viewer:
+
+Viewer
+------
+
+.. TODO: openlayers, channels, objects, ...
+
+.. _data-analysis-tools:
+
+Data analysis tools
+-------------------
+
+.. TODO: flugin machanism, templates, scope, ...
 
 .. _backend:
 
