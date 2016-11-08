@@ -302,39 +302,6 @@ class Viewer {
         subscription = this._$interval(monitor, 3000);
     }
 
-    /**
-     * Start long-polling the server for a tool result.
-     * @param jobId The id of the job processing the tool request.
-     * @param session The tool session from which the original request was sent.
-     * @type ng.IPromise<any>
-     */
-    // private _startMonitoringJobs(delayMs: number) {
-    //     var promise = this._$interval(() => {
-    //         // Query the server for job statuses
-    //         this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status')
-    //         .then((resp: any) => {
-    //             _(this.savedResults).each((res) => {
-    //                 if (res !== null) {
-    //                     this.isSubmissionHandled[res.submissionId] = true;
-    //                 }
-    //             });
-    //             var jobStati = resp.data.data;
-    //             _(jobStati).each((st) => {
-    //                 if ((st.state == 'TERMINATING' || st.state == 'TERMINATED') && st.exitcode == 0) {
-    //                     if (!this.isSubmissionHandled[st.submission_id]) {
-    //                         this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + st.submission_id)
-    //                         .then((resp: any) => {
-    //                             var result = resp.data.data;
-    //                             this._handleSuccessfulToolResult(result);
-    //                         });
-    //                     }
-    //                 }
-    //             });
-    //         });
-
-    //     }, delayMs);
-    //     return promise;
-    // }
 
     /**
      * Send a request to the server-side tool to start a processing job.
