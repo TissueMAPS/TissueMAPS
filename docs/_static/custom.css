@@ -1,4 +1,8 @@
 /* https://github.com/bitprophet/alabaster/blob/master/alabaster/static/alabaster.css_t */
+div.body h5 {
+    font-size: 110%;
+}
+
 div.hightlight pre {
     background: #f2f2f2;
     padding: 7px 30px;

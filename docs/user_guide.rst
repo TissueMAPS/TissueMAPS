@@ -40,8 +40,8 @@ After successful authorization, you will see an overview of your existing experi
 
 .. _user-interface-add-experiment:
 
-Add an experiment
-^^^^^^^^^^^^^^^^^
+Adding an experiment
+^^^^^^^^^^^^^^^^^^^^
 
 To create a new :class:`experiment <tmlib.models.experiment.Experiment>`, click on |create_new_exp_button|.
 
@@ -80,10 +80,10 @@ Workflow manager
 
    Interface for uploading and processing images. At the top of the page there is a button for *upload* and one for each stage of the :ref:`canonical workflow <canonical-workflow>`.
 
-.. _user-interface-workflow-manager-upload:
+.. _user-interface-workflow-manager-uploading-images:
 
-Upload
-^^^^^^
+Uploading image files
+^^^^^^^^^^^^^^^^^^^^^
 
 To begin with, add a new :class:`plate <tmlib.models.plate.Plate>`, by clicking on |create_plate_button|.
 
@@ -164,10 +164,14 @@ Select the created acquisition, by clicking on the link |acq_link|.
 
 You can add additional acquisitions and plates to the experiments by repeating the steps described above. Once you have uploaded all files, you can continue to process them.
 
-.. _user-interface-workflow-manager-process:
+.. _user-interface-workflow-manager-processing-images:
 
-Process
-^^^^^^^
+Processing images
+^^^^^^^^^^^^^^^^^
+
+Once you have uploaded all files, you can proceed to the subsequent processing stages.
+
+.. note:: You are prevented from proceeding until upload is completed. Requesting this information from the server may take a few seconds for large experiments.
 
 .. figure:: ./_static/ui_workflow_stage_one.png
    :width: 75%
@@ -229,10 +233,10 @@ You can further |resubmit_button| the workflow with modified arguments from any 
 
 The image analysis stage is a bit more complex, therefore we will cover it in a separte section.
 
-.. _workflow-interface-jterator:
+.. _workflow-interface-image-analysis-pipeline:
 
-Image analysis
-^^^^^^^^^^^^^^
+Setting up image analysis pipelines
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. figure:: ./_static/ui_workflow_stage_four.png
    :width: 75%
@@ -240,7 +244,7 @@ Image analysis
 
    Image analysis stage.
 
-   Notice the "extra arguments" section, which hasn't been present in any of the other previous stages. You are required to select a "pipeline", which should be processed by by the "jterator" step. Since no pipeline has been created so far, the drop-down menue is empty.
+   Notice the "extra arguments" section, which hasn't been present in any of the other previous stages. You are required to select a "pipeline", which should be processed by the "jterator" step. Since no pipeline has been created so far, the drop-down menue is empty.
 
 To begin with, you need to create a pipeline. To this end, click on |create_pipe_button|. Give the pipeline a descriptive name, here we call it ``test-pipe``.
 This will direct you to a separte interface for defining the pipeline.
@@ -270,9 +274,9 @@ This will direct you to a separte interface for defining the pipeline.
    :width: 75%
    :align: center
 
-   Pipeline and module settings.
+   Module renaming.
 
-   A module can be renamed by clicking on its name. Enter a new name in the provided field and press enter.
+   A module can be renamed by clicking on the textfield in the respective pipeline item. Enter a new name in the provided field and press enter. Note, that the name in the "Module Settings" column remains unchanged. It continues to refer to the module source file.
 
 .. note:: Names of modules in the pipeline must be unique. When adding the same module twice, it will be automatically renamed by appending it with a number. Be aware that names of module outputs must be hashable and therefore also unique. Best practice is to use to use the module as a namespace: ``<module_name>.<output_argument_name>``, e.g. ``smooth.smoothed_image`` for the above example. Since module names must be unique the resulting *output* will consequently have a unique name, too.
 
@@ -286,23 +290,23 @@ Here, we will first add all the modules required to segment "Nuclei" and "Cells"
    :width: 75%
    :align: center
 
-   Pipeline and module settings.
+   Example segmentation pipeline.
 
-   Example pipeline for segmenting primary ("Nuclei") and secondary objects ("Cells"): The image of channel "wavelength-1" is smoothed and subsequently thresholded. The resulting mask is then labeled to define individual primary objects. These primary objects are then expanded using a watershed transform of the smoothed image of channel "wavelength-2" to generate secondary objects.
+   This pipeline identifies primary ("Nuclei") and secondary objects ("Cells"): The image corresponding to channel "wavelength-1" is smoothed and subsequently thresholded. The resulting mask is then labeled to define individual primary objects. The primary objects are subsequently expanded using a watershed transform of the smoothed image belonging to channel "wavelength-2", which generates secondary objects.
 
 The pipeline can be saved at any time by clicking on |save_button|. This will save the pipeline settings as well as settings of each module in the pipeline.
 
 When all required parameters are set, the pipeline can be submitted by clicking on |submit_button| (submission will automatically save the pipeline as well).
 
-.. figure:: ./_static/ui_jterator_module_submit.png
+.. figure:: ./_static/ui_jterator_submit.png
    :width: 75%
    :align: center
 
    Pipeline submission.
 
-   Up to ten jobs can be maximally submitted for the pipeline.
+   Up to ten jobs can be maximally submitted for a pipeline.
 
-To see which acquisition sites the jobs map to, you can click on |list_jobs_button|.
+To see which acquisition sites the jobs map to, click on |list_jobs_button|.
 
 .. figure:: ./_static/ui_jterator_joblist.png
    :width: 75%
@@ -322,37 +326,69 @@ Once submitted, jobs get cued and processed depending on available computational
 
    Pipeline results.
 
-   Results of individual jobs are listed in the "Results" column.
+   Results of individual jobs are listed in the "Results" column. |figure_button| is active for the currently selected module.
 
-|figure_button| is active for the currently selected module. When clicked, the figure for the respective job is displayed in fullscreen mode.
+When clicking on |figure_button|, the figure for the respective job is displayed in fullscreen mode.
 
 .. figure:: ./_static/ui_jterator_figure.png
    :width: 75%
    :align: center
 
-   Module figure.
+   Module figures.
 
-   Figures are interactive. Pixels values are displayed when hovering over images.
+   Figures are interactive. Pixels values are displayed when hovering over images. You can also zoom into plots to have a closer look. Be aware, however, that plots may have a reduced resolution.
 
 .. note:: Plotting needs to be explicitely activated for a module by selecting ``true`` for argument "plot". This is done to speed up processing of the pipeline.
 
-The |log_button| shows the the same message, independent of the currently selected module.
+When clicking on |log_button|, the log output for the respective job is displayed. The messages includes the log of the entire pipeline and is the same irrespective of which module is currently active.
 
 .. figure:: ./_static/ui_jterator_log.png
    :width: 75%
    :align: center
 
-   Pipeline log output.
+   Pipeline log outputs.
 
-   Standard output and error are caputered for each job. The logging level is set to ``INFO`` by default.
+   Standard output and error are caputered for each pipeline run. The logging level is set to ``INFO`` by default.
+
+To save segmented objects and be able to assign values of extracted features to them, objects need to be registered using the :mod:`register_objects <jtmodules.register_objects>` modules. From a user perspective, the registration simply assigns a name to a label image.
 
 
+.. figure:: ./_static/ui_jterator_object_registration.png
+   :width: 75%
+   :align: center
 
-Now, when we are happy with the segmentation results, we can add addtional modules for feature extraction.
+   Object registration.
 
-.. topic:: Nerd Tip
+   Assign a unique, but short and descriptive name to each type of segmented objects that you want to save. To this end, objects need to be provided in form of a labled image, where each object has a unique ID, as output by the :mod:`label <jtmodules.label>` module, for example.
 
-    You can move down and up in the pipeline in a `Vim <http://www.vim.org/>`_-like manner using the *j* and *k* keys, respectively.
+When we are happy with the segmentation results, we can add addtional modules for feature extraction.
+
+.. warning:: All extracted features will be automatically saved. Since the resulting I/O will increase processing time, its recommended to exclude *measurement* modules from the pipeline for tuning segmentation parameters.
+
+.. tip:: You can inactivate modules by clicking on |eye_open_symbol| without having to remove them from the pipeline. Just be aware that this may affect downstream modules, since the *output* of inactivated modules will of course no longer be produced.
+
+.. tip:: You can quickly move down and up in the pipeline in a `Vim <http://www.vim.org/>`_-like manner using the *j* and *k* keys, respectively.
+
+.. figure:: ./_static/ui_jterator_feature_extraction.png
+   :width: 75%
+   :align: center
+
+   Feature extraction.
+
+   Select a previously registerd object type for which you would like to take a measurement. Some features, such as ``intensity`` require an additional raster image. Others, such as ``morphology`` measure only object size and shape and are thus independent of the actual pixel intensity values.
+
+.. note:: Feature names following the following convention: ``<class>_<statistic>_<channel>``. For the above example, this would be formatted to ``Intensity_Mean_wavelength-2``.
+
+Once you have set up your pipeline, save your pipeline (!) and return to the workflow panel. Select the created pipeline and submit the "image analysis" stage by clicking on |resume_button|. In contrast to submissions in the *jterator* user interface, this will now submit all jobs and potentially run more than one pipeline per job in a sequential manner, depending on the specified ``batch_size``.
+
+.. figure:: ./_static/ui_workflow_stage_four_submission.png
+   :width: 75%
+   :align: center
+
+   Image analysis submission.
+
+   Select the created pipline in the drop-down menu. In case the pipeline doesn't show up, you may have to |reload_button| the workflow settings.
+
 
 .. _user-interface-viewer:
 
@@ -392,6 +428,9 @@ Viewer
 .. |resume_button| image:: ./_static/ui_resume_button.png
    :height: 15px
 
+.. |reload_button| image:: ./_static/ui_reload_button.png
+   :height: 15px
+
 .. |resubmit_button| image:: ./_static/ui_resubmit_button.png
    :height: 15px
 
@@ -409,6 +448,12 @@ Viewer
 
 .. |log_button| image:: ./_static/ui_log_button.png
    :height: 15px
+
+.. |eye_open_symbol| image:: ./_static/ui_eye_open_symbol.png
+   :height: 15px
+
+
+
 
 .. _restful-api:
 
