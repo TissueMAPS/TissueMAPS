@@ -14,11 +14,12 @@ Architecture
 ------------
 
 .. TODO: brief overview how the app works
+The web frontend of TissueMAPS is largely based on the framework `AngularJS <https://angularjs.org/>`_.
 
-The web frontend of TissueMAPS is largely based on the framework .. AngularJS: https://angularjs.org/.
 Classes and functions encapsulating core application logic and that are therefore not UI-specific are separated from the UI-specifc code.
 Code comprising core application logic is located in the subdirectory ``core`` and the other directories are reserved for code handling views, user input, as well as AngularJS-related things.
-Several server-side resources like the *Experiment** also have a client-side representation. However, it is important to note that these concepts are not exactly the same.
+Several server-side resources like the *Experiment* also have a client-side representation.
+However, it is important to note that these concepts are not exactly the same.
 A client-side experiment is *constructed* from a serialized server-side experiment but can also have other properties that is only interesting to code dealing with the user interface.
 
 
@@ -38,9 +39,9 @@ Dialogs
 -------
 
 To display messages to the user by means of dialogs (popup windows), TissueMAPS provides a service called ``dialogService``.
-For example, to inform the user that some request has been performed successfully, this service can be used like this:
+For example, to inform the user that some request has been performed successfully, this service can be used like this::
 
-``dialogService.info('Task XY has been performed successfully')``
+    dialogService.info('Task XY has been performed successfully')
 
 Similar utility methods exist for error or warning messages.
 
@@ -54,7 +55,7 @@ Viewer
 
 The main class of the TissueMAPS interface is the ``Viewer`` class. The viewer is in charge of visualizing an experiment and to handle related resources such as mapobjects and tools with which the experiment can be analyzed.
 
-The actual visualization of the microscopy images is done with an extended version of .. OpenLayers: https://openlayers.org/ that allows WebGL-powered rendering of tiled images and vector data, as well as additive blending of images.
+The actual visualization of the microscopy images is done with an extended version of `OpenLayers <https://openlayers.org>`_ that allows WebGL-powered rendering of tiled images and vector data, as well as additive blending of images.
 The interface to OpenLayers is hidden within several wrapper classes such as ``ImageTileLayer`` and ``VectorTileLayer``.
 Ultimately, whenever the user scrolls the map, OpenLayers will prompt the underlying layer objects to perform a GET request to the tile server to get a slice of the pyramid image or a collection of vectoral data (for example cell outlines).
 Analoguous to these layer classes, the ``Viewport`` class is a wrapper around an OpenLayers ``Map`` object and is used within TissueMAPS to add and remove layer objects.
