@@ -35,20 +35,20 @@ SSH keys
 
 Connections to remote machines in the cloud are established via the `Secure Shell (SSH) <https://en.wikipedia.org/wiki/Secure_Shell>`_ protocol with key-based authentication.
 
-On the deploying machine, create a `SSH` key-pair (here called ``tmaps_setup``) and place it into ``~/.ssh``::
+On the deploying machine, create a `SSH` key-pair (here called ``tmaps``) and place it into ``~/.ssh``::
 
-    ssh-keygen -f ~/.ssh/tmaps_setup
+    ssh-keygen -f ~/.ssh/tmaps
 
 Ensure that the key file has the correct permission::
 
-    chmod 400 ~/.ssh/tmaps_setup
+    chmod 400 ~/.ssh/tmaps
 
 and disable host key checking in the `SSH` configuration file ``~/.ssh/config``::
 
     Host *
         StrictHostKeyChecking no
 
-.. note:: Amazon Web Serices requires the public key in a ``.pem`` file. You can create this key file using the following command: ``ssh-keygen -f tmaps_setup -e -m pem > tmaps_setup.pem`` For more information please refer to the `AWS online documentation <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws>`_.
+.. note:: Amazon Web Serices requires the public key in a ``.pem`` file. You can create this key file using the following command: ``ssh-keygen -f ~/.ssh/tmaps -e -m pem > ~/.ssh/tmaps.pem`` For more information please refer to the `AWS online documentation <http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#how-to-generate-your-own-key-and-import-it-to-aws>`_.
 
 
 .. _requirements-software:
@@ -86,7 +86,7 @@ The file is in `YAML <http://yaml.org/>`_ format has two main sections:
 
 `Ansible` ``groups`` defined in either `tmsetup <https://github.com/TissueMAPS/TmSetup/tree/master/tmsetup/share/playbooks>`_ or `elasticluster <https://github.com/gc3-uzh-ch/elasticluster/tree/master/elasticluster/share/playbooks>`_ playbooks are directly available without the need to specify the path to the respective playbook. Additional custom playbooks can be provided for a group via the ``playbook`` key.
 
-For more details on the individual sections of the setup file, please refer to the documenation of the :doc:`tmsetup <tmsetup>` package.
+For more details on the individual sections of the setup file, please refer to the documenation of the :mod:`tmsetup.config <tmsetup.config>` module.
 
 In the following, we will walk you through the setup and deployment process for the ``gce`` provider. The procedure is the same for the other cloud providers, but variables need to be adjusted (names of images, machine type flavors, etc).
 
@@ -201,9 +201,9 @@ Each of the `cluster` components is open-source and works on all implemented clo
       security_groups=default
       assign_public_ip=no
       network=default
-      key_name=tmaps_setup
+      key_name=tmaps
       ansible_user=ubuntu
-      ansible_ssh_private_key_file=~/.ssh/tmaps_setup
+      ansible_ssh_private_key_file=~/.ssh/tmaps
   
   Launch the instance::
   
@@ -255,7 +255,7 @@ The ``launch`` command calls the `instance.yml <https://github.com/TissueMAPS/Tm
 
 .. note:: Virtual machine instances can be terminated via the ``terminate`` command. However, the created networks and security groups don't get automatically deleted.
 
-.. warning:: A private network and security group (firewall) rules will automatically be created based on the provided setup description. Machines within the grid will be able to connect to each other via `host-based authentication <https://en.wikibooks.org/wiki/OpenSSH/Cookbook/Host-based_Authentication>`_. However, only machines tagged with ``web`` will be accessible from outside, i.e. via the internet.
+.. warning:: A private network and security group (firewall) rules will automatically be created based on the provided setup description. Only machines tagged with "web" will be directly accessible via *SSH*. Machines that are part of the grid connect to each other internally via `host-based authentication <https://en.wikibooks.org/wiki/OpenSSH/Cookbook/Host-based_Authentication>`_.
 
 .. _deployment:
 
