@@ -365,6 +365,7 @@ class Viewer {
             return true;
         },
         (err) => {
+            // TODO: Dialog to show that submission was successful
             return false;
         });
     }
