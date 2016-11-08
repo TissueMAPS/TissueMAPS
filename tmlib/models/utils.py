@@ -241,6 +241,17 @@ class Query(sqlalchemy.orm.query.Query):
             elif hasattr(cls, 'location'):
                 instances = self.from_self(cls).all()
                 locations.extend([(inst.location,) for inst in instances])
+            if cls.__name__ == 'Experiment':
+                raise ValueError(
+                    'To delete an experiment delete the corresponding '
+                    'reference object.'
+                )
+            elif cls.__name__ == 'ExperimentReference':
+                experiments = self.from_self(cls.id).all()
+                for exp in experiments:
+                    logger.debug('drop database of experiment %d', exp.id)
+                    db_uri = get_db_uri()
+                    drop_database('%s_experiment_%d' % (db_uri, exp.id))
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
         logger.debug(

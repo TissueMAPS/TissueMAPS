@@ -228,13 +228,13 @@ class ExperimentReference(MainModel, DateMixIn):
             ``True`` if the user can modify the referenced experiment and
             ``False`` otherwise
         '''
-        session = Session.object_session(self)
-        shares = session.query(ExperimentShare.user_id).\
-            filter_by(id=self.id).\
-            all()
         if self.user_id == user_id:
             return True
         else:
+            session = Session.object_session(self)
+            shares = session.query(ExperimentShare.user_id).\
+                filter_by(id=self.id).\
+                all()
             return user_id in [s.user_id for s in shares if s.write_access]
 
     def can_be_viewed_by(self, user_id):
@@ -252,13 +252,13 @@ class ExperimentReference(MainModel, DateMixIn):
             ``True`` if the user can view the referenced experiment and
             ``False`` otherwise
         '''
-        session = Session.object_session(self)
-        shares = session.query(ExperimentShare.user_id).\
-            filter_by(id=self.id).\
-            all()
         if self.user_id == user_id:
             return True
         else:
+            session = Session.object_session(self)
+            shares = session.query(ExperimentShare.user_id).\
+                filter_by(id=self.id).\
+                all()
             return user_id in [s.user_id for s in shares]
 
     def __repr__(self):

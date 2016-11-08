@@ -31,14 +31,23 @@ individual `experiment`, such as user credentials
 computational tasks (see :class:`Task <tmlib.models.submission.Task>`).
 This database further provides reference to existing *experiment*-specific
 databases
-(:class:`ExperimentRerefence <tmlib.models.experiment.ExperimentReference>`).
+(:class:`ExperimentRerefence <tmlib.models.experiment.ExperimentReference>`)
+and information on *experiment*-specific user permissions
+(:class:`ExperimentShare <tmlib.models.experiment.ExperimentShare>`).
 
-The main and *experiment*-specific databases can accessed and programmatically
+*Main* and *experiment*-specific databases can accessed programmatically
 using :class:`MainSession <tmlib.models.utils.MainSession>` or
 :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, respectively.
-They provide a database transaction that bundles all enclosing statements into
-an all-or-nothing operation to ensure that either all or no changes are
-persisted.
+These sessions provide a database transaction that bundles all enclosing
+statements into an all-or-nothing operation to ensure that either all or no
+changes are persisted in the database.
+
+The *ORM* is convient and easy to use. This convenience comes at a cost:
+performance. For performance-critical operations (in particular large number
+of inserts), we therfore rely on
+`bulk operations <http://docs.sqlalchemy.org/en/latest/orm/persistence_techniques.html#bulk-operations>`_,
+which bypass most of the *ORM* functionality.
+
 '''
 
 from tmlib.models.base import MainModel, ExperimentModel
