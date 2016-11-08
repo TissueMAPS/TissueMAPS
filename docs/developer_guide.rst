@@ -13,7 +13,6 @@ Frontend
 Architecture
 ------------
 
-.. TODO: brief overview how the app works
 The web frontend of TissueMAPS is largely based on the framework `AngularJS <https://angularjs.org/>`_.
 
 Classes and functions encapsulating core application logic and that are therefore not UI-specific are separated from the UI-specifc code.
@@ -32,8 +31,6 @@ Data access objects (DAO)
 
 Whenever a class in TissueMAPS wants to access a resource from the server, the call has to go through a model-specific *data access object (DAO)*.
 These objects issue HTTP-requests and handle the deserialization process when contructing actual model class instances from JSON objects.
-
-.. TODO: This doesn't seem to be the case anymore? Were these methods removed from the DAOs?
 
 Dialogs
 -------
