@@ -93,7 +93,6 @@ class ToolRequestManager(SubmissionManager):
         ])
         command.extend(['-v' for x in xrange(self.verbosity)])
         logger.debug('submit tool request: %s', ' '.join(command))
-        print ' '.join(command)
         return command
 
     def create_job(self, submission_id, user_name, duration='00:30:00',

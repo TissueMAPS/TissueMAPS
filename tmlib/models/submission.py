@@ -52,10 +52,7 @@ class Submission(MainModel, DateMixIn):
     )
 
     #: int: ID of the top task in the submitted collection of tasks
-    top_task_id = Column(
-        Integer,
-        index=True
-    )
+    top_task_id = Column(Integer,index=True)
     # TODO: make top_task_id a foreign key and create a relationship
 
     #: tmlib.models.experiment.Experimment: parent experiment
