@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 angular.module('jtui.runner')
-.controller('RunnerCtrl', ['$scope', '$state', '$stateParams', '$uibModal', '$window', '$sce', 'hotkeys',
-        function ($scope, $state, $stateParams, $uibModal, $window, $sce, hotkeys) {
+.controller('RunnerCtrl', ['$scope', '$state', '$stateParams', '$uibModal', '$window', 'hotkeys',
+        function ($scope, $state, $stateParams, $uibModal, $window, hotkeys) {
 
     var currentModuleName = $stateParams.moduleName;
     // Get the current module
@@ -134,16 +134,16 @@ angular.module('jtui.runner')
       description: 'go to next module (downstream in the pipeline)',
       callback: $scope.goToNextModule
     })
-    // .add({
-    //   combo: 'o',
-    //   description: 'show log output of current job',
-    //   callback: $scope.showJobLog
-    // })
-    // .add({
-    //   combo: 'f',
-    //   description: 'show figure of current module and job',
-    //   callback: $scope.showFigure
-    // })
+    .add({
+      combo: 'o',
+      description: 'show log output of current job',
+      callback: $scope.showJobLog
+    })
+    .add({
+      combo: 'f',
+      description: 'show figure of current module and job',
+      callback: $scope.showFigure
+    })
 
     // $scope.showThumbnail = function () {
     //     if ($scope.jobs.currentId) {

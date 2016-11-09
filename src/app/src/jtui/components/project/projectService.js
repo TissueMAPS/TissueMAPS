@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 angular.module('jtui.project')
-.service('projectService', ['$http', '$q', '$sce', 'Project',
-         function ($http, $q, $sce, Project) {
+.service('projectService', ['$http', '$q', 'Project',
+         function ($http, $q, Project) {
 
 
     function values2yaml(jtproject) {
