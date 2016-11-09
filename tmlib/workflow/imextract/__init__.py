@@ -30,8 +30,17 @@ which facilitate downstream processing.
 Note that implementation details of the storage backend may be subject to
 change and files may not necessarily be accessible via a POSIX compliant file
 system! Users are therefore advised to use
-:meth:`tmlib.models.ChannelImageFile.get` to retrieve the extraced images.
+:meth:`ChannelImageFile.get <tmlib.models.ChannelImageFile.get>`
+to retrieve the extraced images.
 
+Warning
+-------
+This step (at least temporarily) approximately doubles storage requirements,
+because pixel data are extracted in parallel during the *run* phase,
+but the microscope image files are only deleted afterwards during the
+*collect* phase (and only if the 
+:attr:`delete <tmlib.workflow.imextract.ImextractBatchArguments.delete>`
+argument is set to ``True``).
 '''
 from tmlib import __version__
 

@@ -38,7 +38,7 @@ class ImageExtractor(ClusterRoutines):
 
     '''Class for extraction of pixel arrays (planes) stored in image files using
     `python-bioformats <https://github.com/CellProfiler/python-bioformats>`_.
-    The extracted arrays are written to PNG files.
+
     '''
 
     def __init__(self, experiment_id, verbosity):
@@ -110,7 +110,11 @@ class ImageExtractor(ClusterRoutines):
                     'mip': args.mip
                 })
 
-            job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
+            job_descriptions['collect'] = {
+                'inputs': dict(),
+                'outputs': dict(),
+                'delete': args.delete
+            }
 
         return job_descriptions
 
@@ -190,21 +194,36 @@ class ImageExtractor(ClusterRoutines):
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
-        :class:`tm.ChannelImageFile` as well as all children for
-        the processed experiment.
+        :class:`ChannelImageFile <tmlib.models.file.ChannelImageFile>` as well
+        as all children for the processed experiment.
         '''
         logger.info('delete existing channel image files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             session.query(tm.ChannelImageFile).delete()
 
     def collect_job_output(self, batch):
-        '''Omits channel image files that do not exist across all cycles.
+        '''Omits channel image files that do not exist across all cycles
+        and delete all instances of
+        :class:`MicroscopeImageFile <tmlib.models.file.MicroscopeImageFile>`
+        in case
+        :attr:`delete <tmlib.workflow.imextract.args.ImextractBatchArguments>`
+        is set to ``True``.
 
         Parameters
         ----------
         batch: dict
             job description
+
+        Note
+        ----
+        Files are only deleted after individual planes have been extracted,
+        because it may lead to problems depending on how planes are distributed
+        across individual microscope image files.
         '''
+        if batch['delete']:
+            logger.info('delete all microscope image files')
+            with tm.utils.ExperimentSession(self.experiment_id) as session:
+                session.query(tm.MicroscopeImageFile).delete()
         # TODO: this does not work for experiments with multiple plates
         # with tm.utils.Session() as session:
         #     metadata = pd.DataFrame(

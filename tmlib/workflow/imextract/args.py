@@ -33,6 +33,13 @@ class ImextractBatchArguments(BatchArguments):
         help='perform maximum intensity projection along z axis'
     )
 
+    delete = Argument(
+        type=bool, default=False,
+        help='''
+            delete microscope files after pixel data got extracted
+            (Warning: You won't be able to rerun jobs afterwards!)
+        '''
+    )
 
 
 @register_step_submission_args('imextract')

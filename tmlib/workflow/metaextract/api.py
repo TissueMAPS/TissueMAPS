@@ -24,6 +24,7 @@ from tmlib.workflow import register_step_api
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.errors import MetadataError
+from tmlib.errors import WorkflowError
 from tmlib.workflow.api import ClusterRoutines
 
 logger = logging.getLogger(__name__)
@@ -80,9 +81,12 @@ class MetadataExtractor(ClusterRoutines):
                     filter_by(acquisition_id=acq.id).\
                     count()
                 if n_files == 0:
-                    raise ValueError(
+                    raise WorkflowError(
                         'Acquisition "%s" of plate "%s" doesn\'t have any '
-                        'microscope image files' % (acq.name, acq.plate.name)
+                        'microscope image files. Did you delete them in a '
+                        'previous submission or forgot to upload them?' % (
+                            acq.name, acq.plate.name
+                        )
                     )
                 batches = self._create_batches(
                     acq.microscope_image_files, args.batch_size
@@ -109,10 +113,10 @@ class MetadataExtractor(ClusterRoutines):
                 'set attribute "omexml" of instances of class '
                 'tmlib.models.MicroscopeImageFile to None'
             )
-            file_ids = session.query(tm.MicroscopeImageFile.id)
+            files = session.query(tm.MicroscopeImageFile.id)
             session.bulk_update_mappings(
                 tm.MicroscopeImageFile,
-                [{'id': i[0], 'omexml': None} for i in file_ids]
+                [{'id': f.id, 'omexml': None} for f in files]
             )
 
     def run_job(self, batch):
