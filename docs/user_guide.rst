@@ -377,7 +377,7 @@ When we are happy with the segmentation results, we can add addtional modules fo
 
    Select a previously registerd object type for which you would like to take a measurement. Some features, such as ``intensity`` require an additional raster image. Others, such as ``morphology`` measure only object size and shape and are thus independent of the actual pixel intensity values.
 
-.. note:: Feature names following the following convention: ``<class>_<statistic>_<channel>``. For the above example, this would be formatted to ``Intensity_Mean_wavelength-2``.
+.. note:: Feature names follow a convention: ``<class>_<statistic>_<channel>``. In case features are intensity-independent, the name reduces to ``<class>_<statistic>``. For the above example this would result in ``Intensity_mean_wavelength-2`` or ``Morphology_area``.
 
 Once you have set up your pipeline, save your pipeline (!) and return to the workflow panel. Select the created pipeline and submit the "image analysis" stage by clicking on |resume_button|. In contrast to submissions in the *jterator* user interface, this will now submit all jobs and potentially run more than one pipeline per job in a sequential manner, depending on the specified ``batch_size``.
 
@@ -394,6 +394,8 @@ Once you have set up your pipeline, save your pipeline (!) and return to the wor
 
 Viewer
 ------
+
+Once you've setup your experiment, you can view the *experiment* by returning to the `user panel`_ and clicking on |view_button|.
 
 .. |create_new_exp_button| image:: ./_static/ui_create_new_exp_button.png
    :height: 15px

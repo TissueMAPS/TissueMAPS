@@ -32,9 +32,9 @@ dl.option dt {
 }
 
 
-code {
-    /* color: #703040; */
-    color: #544545;
+code.xref, a code {
+    color: #471f2a;
+    /* color: #544545; */
 }
 
 div.sphinxsidebar {

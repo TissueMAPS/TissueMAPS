@@ -2,14 +2,6 @@
 Developer guide
 ***************
 
-Most developers might be interested in extending one of the following functionalities:
-
-- `workflows`_: define a custom workflow based on existing steps or develop new steps
-- `jterator modules`_: develop custom image analysis routines
-- `data analysis tools`_: developing a custom interactive tool
-
-*Workflows* and *modules* only need to be implemented server-side, while *tools* also require a client representation.
-
 .. _frontend:
 
 Frontend
@@ -20,39 +12,39 @@ Frontend
 Architecture
 ------------
 
-.. TODO: brief overview how the app works
-The web frontend of TissueMAPS is largely based on the framework `AngularJS <https://angularjs.org/>`_.
+The web frontend of *TissueMAPS* is largely based on the framework `AngularJS <https://angularjs.org/>`_.
 
-Classes and functions encapsulating core application logic and that are therefore not UI-specific are separated from the UI-specifc code.
+Classes and functions encapsulating core application logic, which are therefore not UI-specific, are separated from the UI-specifc code.
 Code comprising core application logic is located in the subdirectory ``core`` and the other directories are reserved for code handling views, user input, as well as AngularJS-related things.
-Several server-side resources like the *Experiment* also have a client-side representation.
+Several server-side resources like the :class:`Experiment <tmlib.models.experiment.Experiment>` also have a client-side representation.
 However, it is important to note that these concepts are not exactly the same.
-A client-side experiment is *constructed* from a serialized server-side experiment but can also have other properties that is only interesting to code dealing with the user interface.
-
+A client-side experiment is *constructed* from a serialized server-side experiment, but can also have other properties that are only of interest to code dealing with the user interface.
 
 .. _data-access-objects:
 
 Data access objects (DAO)
 -------------------------
 
-.. _dialogs:
-
-Whenever a class in TissueMAPS wants to access a resource from the server, the call has to go through a model-specific *data access object (DAO)*.
+Whenever a class in *TissueMAPS* wants to access a resource from the server, the call has to go through a model-specific *data access object (DAO)*.
 These objects issue HTTP-requests and handle the deserialization process when contructing actual model class instances from JSON objects.
 
 .. TODO: This doesn't seem to be the case anymore? Were these methods removed from the DAOs?
 
+.. _dialogs:
+
 Dialogs
 -------
 
-To display messages to the user by means of dialogs (popup windows), TissueMAPS provides a service called ``dialogService``.
-For example, to inform the user that some request has been performed successfully, this service can be used like this::
+To display messages to the user by means of dialogs (popup windows), *TissueMAPS* provides a service called ``dialogService``.
+For example, to inform the user that some request has been performed successfully, this service can be used like this:
+
+.. code-block:: js
 
     dialogService.info('Task XY has been performed successfully')
 
 Similar utility methods exist for error or warning messages.
 
-Errors that result because of some server-side issue (such as authorization failures or not found resources) are caught by an ``errorInterceptor`` and automatically displayed to the user. Thus, manually handling such errors is not necessary.
+Errors that result because of a server-side exception (such as authorization failures or not found resources) are caught by an ``errorInterceptor`` and automatically displayed to the user. Thus, manually handling such errors is not necessary.
 
 
 .. _viewer:
@@ -65,31 +57,29 @@ The main class of the TissueMAPS interface is the ``Viewer`` class. The viewer i
 The actual visualization of the microscopy images is done with an extended version of `OpenLayers <https://openlayers.org>`_ that allows WebGL-powered rendering of tiled images and vector data, as well as additive blending of images.
 The interface to OpenLayers is hidden within several wrapper classes such as ``ImageTileLayer`` and ``VectorTileLayer``.
 Ultimately, whenever the user scrolls the map, OpenLayers will prompt the underlying layer objects to perform a GET request to the tile server to get a slice of the pyramid image or a collection of vectoral data (for example cell outlines).
-Analoguous to these layer classes, the ``Viewport`` class is a wrapper around an OpenLayers ``Map`` object and is used within TissueMAPS to add and remove layer objects.
+Analoguous to these layer classes, the ``Viewport`` class is a wrapper around an OpenLayers ``Map`` object and is used within *TissueMAPS* to add and remove layer objects.
 
 
-.. _data-analysis-tools:
+.. _data-analysis-tools-frontend:
 
 Data analysis tools
 -------------------
 
-The TissueMAPS interface uses a plugin mechanism for data analysis tools.
-This mechanism ensures that each implemented tool can be selected from the toolbar and that results returned from the server are interpreted correctly.
-To make use of this plugin mechanism, the code for an existing or new tool has to follow some conventions.
-
-A tool is located under ``src/tools/{ToolName}`` and should provide a AngularJS controller named ``{ToolNameCtrl}``.
-When clicking on a tool button in the toolbar, TissueMAPS will create an instance of this controller and link it to a tool window-specific ``$scope``.
-This tool window will further be populated with a custom template content.
-
-.. TODO: Where is it defined again which tool has which template? It seems this has changed. Is it supplied by the server?
+The *TissueMAPS* interface uses a plugin mechanism for data analysis tools.
+This mechanism ensures that each implemented :class:`Tool <tmlib.tools.base.Tool>` can be selected from the toolbar and results returned from the server are interpreted correctly.
+To make use of this plugin mechanism, tool-specific code must be located under ``src/tools/<ToolName>`` and provide an *AngularJS* controller named ``<ToolName>Ctrl.ts`` and a *HTML* template named ``<ToolName>Template.html``.
+When clicking on a tool button in the toolbar, *TissueMAPS* will create an instance of this controller and link it to a tool window-specific ``$scope``. This tool window will then further be populated with the template content.
 
 Templates can make use of several pre-defined widgets.
-For example, the following tag will insert a widget with which the desired mapobject type can be selected::
+For example, the following tag will insert a widget with which the desired :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` can be selected:
+
+.. code-block:: html
 
     <tm-mapobject-type-widget></tm-mapobject-type-widget></p>
 
+Another widget can be used to select a specific :class:`Feature <tmlib.models.feature.Feature>`:
 
-Another widget can be used to select a specific feature::
+.. code-block:: html
 
     <tm-feature-selection-widget
       selected-mapobject-type="mapobjectTypeWidget.selectedType">
@@ -102,35 +92,115 @@ Implementations of existing tools provide a good idea of how to implement a new 
 Backend
 =======
 
-The backend is to large extent implemented in `Python 2.7 <https://docs.python.org/2/>`_.
+*TissueMAPS*'' backend is implemented to large extend in `Python 2.7 <https://docs.python.org/2/>`_.
 
-.. _data-models:
+The code is distributed accross different repositories:
 
-Data Models
------------
+- `Tmserver <https://github.com/TissueMAPS/TmServer>`_ (:mod:`tmserver` Python package): *TissueMAPS* server - `Flask <http://flask.pocoo.org/>`_-based  web application with *REST API*
 
-The database schema is defined via `SQLAlchemy Object Relational Mapper (ORM) <http://docs.sqlalchemy.org/en/latest/orm/tutorial.html>`_ and the respective model classes are implemented in the :mod:`tmlib.models` package.
+- `TmLibary <https://github.com/TissueMAPS/TmLibrary>`_ (:mod:`tmlibrary` Python package): *TissueMAPS* library - code for interacting with compute and storage backends with *API* and *CLI*
+  * :mod:`tmlib.models`: SQLAlchemy <http://www.sqlalchemy.org/>`_-based data models (see `developing data models <developing-data-models>`_)
+  * :mod:`tmlib.workflow`: GC3Pie <http://gc3pie.readthedocs.io/en/latest/index.html>`_-based distributed image processing workflows (see `developing workflow <developing-workflows>`_)
+  * :mod:`tmlib.tools`: `pySpark <http://spark.apache.org/docs/0.9.0/python-programming-guide.html>`_-based distributed data analysis and machine learning tools (see `developing tools <developing-data-analysis-tools-backend>`_)
 
-.. _workflows:
+- `JtModules <https://github.com/TissueMAPS/JtModules>`_ (:mod:`jtmodules` package in different languages): *Jterator* modules - modules for the :mod:`jterator <tmlib.workflow.jterator>` pipeline engine (see `developing jterator modules <developing jterator modules>`_)
 
-Workflows
----------
+- `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ (:mod:`jtlibrary` package in different languages): *Jterator* library - image processing routines used by :mod:`jtmodules`
 
-Workflows are implemented in the :mod:`tmlib.workflow` package.
+There are several reasons for splitting code across different repositories:
 
-.. _data-analysis-tools:
+- **Independent usage**: Packages *tmlibrary* and *jtlibrary* can be used indepently, also *jtmodules* and *jtlibrary* packages can be used independent of *jterator*. Separating these packages keeps requirements for each of them to a minimum.
+- **Independent installation**: Python packages can be *pip*-installed directly from Github. To this end, each repository should only contain a single package (*setup.py* file).
+- **Code locality**: In a distributed multi-node setup, not all packages are required on the same machine. For example, the *tmserver* package gets only deployed on the machine hosting the web server, while the *tmlibrary* package gets deployed on all compute servers.
 
-Data analysis tools
+.. _documentation:
+
+Documentation
+-------------
+
+*TissueMAPS* uses `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate module documentation. Please make yourself familiar with the `NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_ and follow the `PEP 0257 docstring conventions <https://www.python.org/dev/peps/pep-0257/>`_ to ensure that the documentation will be build correctly.
+
+.. _tests:
+
+Tests
+-----
+
+*TissueMAPS* uses `pytest <http://doc.pytest.org/en/latest/>`_ together with `tox <https://tox.readthedocs.io/en/latest/>`_ and runs integrated tests with `jenkins <https://jenkins.io/index.html>`_. Tests should be placed in a separate folder called ``tests`` outside of packages sibling to the package root folder.
+
+.. _library-development:
+
+Library development
 -------------------
 
-Data anlysis tools are implemented in the :mod:`tmlib.tools` package.
+.. _developing-data-models:
 
-.. _jterator-modules:
+Data models
+^^^^^^^^^^^
 
-Jterator modules
-----------------
+*TissueMAPS* uses `PostgreSQL <https://www.postgresql.org/>`_ via the `SQLAlchemy Object Relational Mapper (ORM) <http://docs.sqlalchemy.org/en/latest/orm/tutorial.html>`_. The respective model classes are implemented in the :mod:`tmlib.models` package.
 
-`TissueMAPS` provides with :mod:`jterator <tmlib.workflow.jterator>` a **cross-language pipeline engine** for scientific computing and image analysis. The program uses `Python <https://www.python.org/>`_ as a glue language, but can plug in **modules** written in different languages. It makes use of easily human readable and modifiable `YAML <http://yaml.org/>`_ files to define pipeline logic and module input/output.
+The main ``tissuemaps`` database manages user credentials and permissions and holds a references for each :class:`Experiment <tmlib.models.experiment.Experiment>`.
+Experiment related data reside in separate databases. These experiment-specific databases are called ``tissuemaps_experiment_<id>``, where ``id`` is the ID of the respective experiment assigned by :class:`ExperimentReference <tmlib.models.experiment.ExperimentReference>` in the main database.
+Therefore, models mapping to data that belongs to an experiment must implement :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`, while models representing global data must implement :class:`MainModel <tmlib.models.base.MainModels>`. All derived model classes should be imported such that they are available at the level of the :mod:`tmlib.models` package namespace.
+
+.. note:: Using separte databases per experiment improves performance and scalability. Tables are smaller and are generally only modified by a single user at a time, thereby facilitating index updates and circumventing table locks by other queries. It further improves portablity, since an experiment can be simply backed up by `dumping <https://www.postgresql.org/docs/current/static/backup-dump.html>`_ the entire database without affecting other pontentially simulatenously processed experiments. In principle, these databases could also be hosted on different servers.
+
+.. _developing-microscope-types:
+
+Microscope types
+^^^^^^^^^^^^^^^^
+
+*TissueMAPS* uses the `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_ library to read heterogenous microscope image and metadata file formats.
+
+Since *TissueMAPS* is written in Python, we cannot use the Java library directly. To this end, we make use of the `python-bioformats <http://pythonhosted.org/python-bioformats/>`_ package, which interacts with the library via a Java bridge. Unfortunately, there are several issues with this approach, ranging from incomplete metadata parsing to large memory consumption.
+
+Although *Bio-Formats* supports a large number of `file formats <http://www.openmicroscopy.org/site/support/bio-formats5.2/supported-formats.html>`_, many of the vendor-specific formats are not fully supported, in particular when it comes to reading additional microscope-specific metadata files, and crucial information is sometimes missing. Therefore, *TissueMAPS* does not fully rely on *Bio-Formats* in terms of reading and interpreting image metadata, but uses the following multi-step approach instead (implemented as the "image conversion" workflow stage):
+
+- The :mod:`metaextract <tmlib.workflow.metaextract>` step extracts metadata in form of `OMEXML <https://www.openmicroscopy.org/site/support/ome-model/ome-xml/>`_ from each image file using the `showinf <showinf>`_ *Bio-Formats* command line tool.
+- The :mod:`metaconfig <tmlib.workflow.metaconfig>` step then combines metadata extracted from each image with metadata provided by other sources, for example via custom microscope-type specific :class:`MetadataReader <tmlib.worklow.metaconfig.base.MetadataReader>` classes or, in the worst case, user interput, and saves the configured metadata in the database. The *TissueMAPS* database schema uses similar terminology as the `OME schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2016-06/ome.html>`_ (e.g. :class:`Plate <tmlib.models.plate.Plate>`, :class:`Well <tmlib.models.well.Well>`, :class:`Channel <tmlib.models.channel.Channel>`), but puts less emphasis on microscope details and more on multi-scale map representation of images and segmented objects (e.g. :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>`, :class:`LabelLayer <tmlib.models.layer.LabelLayer>` or :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`).
+- The :mod:`imextract <tmlib.workflow.imextract>` step finally extract the pixel data from image files and stores them in a standarized format. Currently we use `HDF5 <https://support.hdfgroup.org/HDF5/>`_, but this may be subject to change. Developers are therefore advised to access image data via the respective :class:`FileModel <tmlib.models.file.FileModel>`) classes.
+
+The most critical step in this stage is :mod:`metaconfig <tmlib.workflow.metaconfig>`. In fact, it is crucial for the entire subsequent workflow. Because it is so important that images are handled correctly, *TissueMAPS* requires users to specify the :attr:`microscope_type <tmlib.models.experiment.Experiment.microscope_type>` for each experiment. To register a new microscope, developers must implement a microscope-specific :class:`MetadataHandler <tmlib.workflow.metaconfig.base.MetadataHandler>` and :class:`MetadataReader <tmlib.workflow.metaconfig.base.MetadataReader>`. Please refer to the docuementation of the :mod:`metaconfig` step for more details.
+
+.. _developing-workflows:
+
+Workflows
+^^^^^^^^^
+
+Workflows can be dynamically assembled from *steps*, which are implemented as subpackages of :mod:`tmlib.workflow`. To this end, *TissueMAPS* builds on top of `GC3Pie <http://gc3pie.readthedocs.io/en/latest/index.html>`_ - a high-level *API* for building and managing large, inter-dependent task collections with support for different cluster backends.
+
+Steps get automatically equipped with an active programming interface for distributed computing (by implementing :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>`) as well as a command line interface (by implementing :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`). By subclasses these two base classes, you basically have a new step. This design makes it easy to develop a new step and plug it into an existing workflow. Workflows can further be easily customized by subclassing :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>` or any other already implemented workflow *type*, such as :class:`CanonicalWorkflowDependencies <tmlib.workflow.canonical.CanonicalWorkflowDependencies>`.
+
+The main entry point for a step is :method:`CommandLineInterface.main <tmlib.workflow.cli.CommandLineInterface.main>`, which is accessed by a :class:`WorkflowStepJob <tmlib.workflow.jobs.WorkflowStepJob>` via the step-specific command line interface autogenerated from the `CLI` class derived from `CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`.
+
+For more information on how to develop new steps and combine them into workflows, please refer to documentation of the :mod:`tmlib.workflow` package. The already implemented steps should also serve as good examples.
+
+.. note:: Server-side developed *steps* and *workflows* are fully functional and don't require any client-side modifications. They will automatically work integrate into the workflow manager of the UI.
+
+
+.. _developing-data-analysis-tools-backend:
+
+Data analysis tools
+^^^^^^^^^^^^^^^^^^^
+
+Data anlysis tools allow users to interactively analyse image data in a visually asisted way in the `viewer`_. They are implemented in the :mod:`tmlib.tools` package and available with `Pandas <http://pandas.pydata.org/>`_ or `pySpark <http://spark.apache.org/docs/0.9.0/python-programming-guide.html>`_ backend. The server submits client tool requests to the available computational resources for asynchronous processing. This is done on the one hand to remove load from the web server and on the other hand because *spark* jobs require a driving process.
+
+The main entry point for tool functionliaty is :meth:`ToolRequestManager.main <tmlib.tools.manager.ToolRequestManager.main>`. It is accessed by a :class:`ToolJob <tmlib.tools.jobs.ToolJob>` via the command line using the ``tm_tool.py`` script, which gets autogenerated from the parser provided by :class:`ToolRequestManager <tmlib.tools.manger.ToolRequestManager>`.
+
+For more information on how to develop new tools and make them available to the UI, please refer to the documentation of the :mod:`tmlib.tools` package. Already implemented tools, such as :class:`Clustering <tmlib.tools.clustering.Clustering>` or :class:`Heatmap <tmlib.tools.heatmap.Heatmap>` should also serve as an example and a good starting point for developing a new tool.
+
+.. note:: In contrast to a *workflow step*, a *tool* also requires some frontend developement. This design decision was made to give developers as much flexiblity as possible when it comes to the design of new tools. The potential uses cases are consequently too broad to be handled entirely client-side. Please refer to `data analysis tools <data-analysis-tools-frontend>`_ in the frontend section for more details on how to develop a tool client-side.
+
+A :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>` and a :class:`Tool <tmlib.tools.base.Tool>` both represent a distributed computational task, but from a conceptual point of view, they are two different things. The former is used in the `workflow manager <user-interface-workflow-manager>`_ for general image processing, while the latter is used in the `viewer <user-interface-viewer>`_ for machine learning tasks. This doesn't mean that image processing and machine learning should be handled separately per-se. For example, pixel-based image segmentation would be an execellant use case for a tool. From a technical perspective, a *workflow step* represents a collection of batch jobs that can be *run* in parallel (plus an optional subsequent *collect* job), whereas a tool request is handled as a `MapReduce <https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html>`_ job in form of a `Spark application <http://spark.apache.org/docs/latest/submitting-applications.html>`_. These two types of jobs are generally also processed on different types of clusters, e.g. `Slurm <http://slurm.schedmd.com/>`_ (a workflow manager typically deployed on classical high-performance computing clusters) and `YARN <https://hadoop.apache.org/docs/r2.7.2/hadoop-yarn/hadoop-yarn-site/YARN.html<Paste>`_ (a resource manager for "big data" clusters), respectively. *TissueMAPS* combines both types of clusters to process tool requests: tool jobs get submitted via *Slurm* using the ``spark-submit`` command with ``--master yarn --deploy-mode client``. The driver program is thereby launched directly on the *Slurm* compute node within the spark-submit process. The resources for that "local" job are managed by *Slurm*, while the remote, distributed *Spark* application is managed by *YARN*. The advantages of this combined approach are two fold: First, we get rid of the driver process and can handle and monitor it the same way as any other job, e.g. a *workflow step*. Second, we can execute any non-*Spark* code in the "local" Python environment, without having to distribute the code to the *YARN* cluster. This becomes particularly useful for tool requests that might be processed via the *pandas* library, although the job gets executed via ``spark-submit``, because it gives developers to freedom to not implement a *spark* interface for their tool.
+
+.. note:: At the moment *Spark* jobs only interact with the database and don't have access to the shared filesystem. This is because, by default, the *YARN* cluster uses the `Hadoop Distributed File System (HDFS) <https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html>`_. However, it would be possible to replace it with `GlusterFS <https://github.com/gluster/glusterfs-hadoop>`_, which is used by *TissueMAPS* on nodes of the *Slurm* cluster. This would allow the exchange data between the two clusters without the need to import lots of image data into *HDFS*.
+
+.. _jterator-module-development:
+
+Jterator module development
+---------------------------
+
+*TissueMAPS* provides with :mod:`jterator <tmlib.workflow.jterator>` a cross-language pipeline engine for scientific computing and image analysis. The program uses Python as a glue language, but can plug in "modules" written in different languages. It makes use of easily human readable and modifiable `YAML <http://yaml.org/>`_ files to define pipeline logic and module input/output.
 
 Python was chosen as programming language because it represents a good trade-off between development time and performance. The language is relatively easy to learn and its interpreted nature facilitates scripting and testing. The powerful `NumPy <http://www.numpy.org/>`_ package provides an great framework for n-dimensional array operations. In addition, there are numerous established C/C++ image processing libraries with Python bindings that use `NumPy arrays <http://docs.scipy.org/doc/numpy/reference/arrays.html>`_ as data container:
 
@@ -138,7 +208,7 @@ Python was chosen as programming language because it represents a good trade-off
 - `OpenCV <http://opencv.org/>`_
 - `Mahotas <http://mahotas.readthedocs.org/en/latest/index.html>`_
 
-This makes it easy to combine algorithms implemented in different libraries into an image analysis workflow. In addition to Python, `jterator` pipelines can integrate modules written in other programming languages frequently used for scientific computing:
+This makes it easy to combine algorithms implemented in different libraries into an image analysis workflow. In addition to Python, pipelines can integrate modules written in other programming languages frequently used for scientific computing:
 
 - Matlab: `matlab_wrapper <https://github.com/mrkrd/matlab_wrapper>`_
 - R: `rpy2 <http://rpy.sourceforge.net/>`_
@@ -253,22 +323,7 @@ The module named ``python_module`` (residing in a file called ``python_module.py
     img = np.zeros((10,10))
     jtmodules.python_module.main(img)
 
-.. note:: The return type of ``main()`` must be `namedtuple <https://docs.python.org/2/library/collections.html#collections.namedtuple>`_. Instances of this type behave like tuple objects, which can be indexed and are iterable. In addition, however, fields are accessible via attribute lookup:
-
-    .. code-block:: python
-
-       import numpy as np
-       from jtmodules.python_module import Output
-
-       output = Output(np.zeros((5, 5)), "")
-
-       # Objects are iterable
-       for out in output:
-           print out
-
-       # Object fields can be indexed and accessed via attribute lookup
-       print output[0]
-       print output.output_image
+.. note:: The return type of ``main()`` must be `namedtuple <https://docs.python.org/2/library/collections.html#collections.namedtuple>`_. Instances of this type behave like tuple objects, which can be indexed and are iterable, but on top fields are accessible via attribute lookup.
 
 .. _jterator-module-matlab-example:
 
@@ -493,13 +548,8 @@ The plotting library `plotly <https://plot.ly/api/>`_ is used to generate intera
 Documentation
 ^^^^^^^^^^^^^
 
-We use `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate module documentation. Each module must have a docstring that describes its functionality and purpuse. In addition, a dosctring must be provided for the ``main()`` function that describes input parameters and return values. Please make yourself familiar with the `NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_ and follow the `PEP 0257 docstring conventions <https://www.python.org/dev/peps/pep-0257/>`_ to ensure that the documentation for your module will be build correctly.
+We use `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate module documentation (see also `documentation`_).
 
-.. _jterator-tests:
-
-Tests
-^^^^^
-
-.. TODO:
+Each module must have a docstring that describes its functionality and purpuse. In addition, a dosctring must be provided for the ``main()`` function that describes input parameters and return values. 
 
 

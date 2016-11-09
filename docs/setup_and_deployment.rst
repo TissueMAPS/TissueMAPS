@@ -243,7 +243,38 @@ Setup
 
 The `tm_setup` program automates setup and configuration of the different ``cluster`` components. The program launches and configures VM instances as specified in each ``cluster`` section using `Ansible <https://www.ansible.com/>`_.
 
-Setting up the computational infrastructure is as simple as calling::
+To connect to the cloud, the program requires the credentials. They must be provided via the following environment variables:
+
+* ``os`` provider:
+  - ``OS_PROJECT_NAME``: name of the `project <http://docs.openstack.org/admin-guide/cli-manage-projects-users-and-roles.html>`_
+  - ``OS_AUTH_URL``: URL of the identity endpoint
+  - ``OS_USERNAME``: username
+  - ``OS_PASSWORD``: password
+
+* ``gce`` provider:
+  - ``GCE_PROJECT``: name of the `project <https://cloud.google.com/compute/docs/projects>`
+  - ``GCE_EMAIL``: email associated with the *project*
+  - ``GCE_CREDENTIALS_FILE_PATH``: path to JSON `credentials file <https://developers.google.com/identity/protocols/application-default-credentials>`
+
+* ``ec2`` provider:
+  - ``AWS_ACCESS_KEY_ID``: `access key <http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html>`_
+  - ``AWS_SECRET_ACCESS_KEY``: corresponding secret access key
+
+It can be convenient to place these variables into a ``~/.credentials.sh`` file:
+
+.. code-block:: bash
+
+    export GCE_PROJECT=XXX
+    export GCE_EMAIL=XXX
+    export GCE_CREDENTIALS_FILE_PATH=XXX
+
+and source the file prior to running ``tm_setup``::
+
+    . ~/.credentials.sh
+
+If you forget to set a variable, ``tm_setup`` will remind you.
+
+Setting up the computational infrastructure is then as simple as calling::
 
     tm_setup -v launch
 
@@ -253,23 +284,23 @@ The ``launch`` command calls the `instance.yml <https://github.com/TissueMAPS/Tm
 
 .. note:: Of course, you can also create the virtual machine instance(s) manually via the web console. Keep in mind, however, that you also need to upload keys and create volumes, networks, routers, etc.
 
-.. note:: Virtual machine instances can be terminated via the ``terminate`` command. However, the created networks and security groups don't get automatically deleted.
+.. note:: Virtual machine instances can be terminated via the ``terminate`` command. However, created networks and security groups won't get deleted under the assumption that you may want to use them again.
 
-.. warning:: A private network and security group (firewall) rules will automatically be created based on the provided setup description. Only machines tagged with "web" will be directly accessible via *SSH*. Machines that are part of the grid connect to each other internally via `host-based authentication <https://en.wikibooks.org/wiki/OpenSSH/Cookbook/Host-based_Authentication>`_.
+.. warning:: A private network and security group (firewall) rules will automatically be created based on the provided setup description. Only machines tagged with "web" will be get a public IP and directly accessible via *SSH* and key-based authentication. Machines that are part of the grid connect to each other internally via `host-based authentication <https://en.wikibooks.org/wiki/OpenSSH/Cookbook/Host-based_Authentication>`_.
 
 .. _deployment:
 
 Deployment
 ==========
 
-Once VMs are launched, the `TissueMAPS` application (and the other cluster components) can be deployed. This can be achieved with the following command::
+Once VMs are launched, the `TissueMAPS` application (and potentially other cluster components) can be deployed. This can be achieved with the following command::
 
     tm_setup -v deploy
 
 The ``deploy`` command calls the following two playbooks:
 
-    - `site.yml <https://github.com/TissueMAPS/TmSetup/blob/master/tmsetup/share/playbooks/site.yml>`_ playbook of the `tmsetup` package: deploys `TissueMAPS` application
     - `site.yml <https://github.com/gc3-uzh-ch/elasticluster/blob/master/elasticluster/share/playbooks/site.yml>`_ of the `elasticluster` package: deploys the cluster components and wires everything together
+    - `site.yml <https://github.com/TissueMAPS/TmSetup/blob/master/tmsetup/share/playbooks/site.yml>`_ playbook of the `tmsetup` package: deploys the `TissueMAPS` application and the database
 
 Additional playbooks may be called in case you provided any via the ``playbook`` variable.
 
