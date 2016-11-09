@@ -33,7 +33,7 @@ class Clustering(Classifier):
         Clusters mapobjects based on a set of selected features.
     '''
 
-    __methods__ = ['kmeans']
+    __options__ = {'method': ['kmeans'] }
 
     @same_docstring_as(Tool.__init__)
     def __init__(self, experiment_id):
@@ -47,10 +47,11 @@ class Clustering(Classifier):
             {
                 "choosen_object_type": str,
                 "selected_features": [str, ...],
-                "method": str,
-                "k": int
+                "options": {
+                    "method": str,
+                    "k": int
+                }
             }
-
 
         Parameters
         ----------
@@ -61,10 +62,10 @@ class Clustering(Classifier):
         '''
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
-        k = payload['k']
-        method = payload['method']
+        k = payload['options']['k']
+        method = payload['options']['method']
 
-        if method not in self.__methods__:
+        if method not in self.__options__['method']:
             raise ValueError('Unknown method "%s".' % method)
 
         feature_data = self.load_feature_values(

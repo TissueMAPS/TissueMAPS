@@ -88,7 +88,7 @@ class _ToolMeta(ABCMeta):
         classes = [cls]
         classes += inspect.getmro(cls)
         # Process in reversed order, such that derived classes are considered
-        # first.
+        # first for determining availability of libraries.
         for c in reversed(classes):
             if hasattr(c, '__lib_bases__'):
                 # In case the configured library is not available for the tool,
@@ -108,6 +108,10 @@ class _ToolMeta(ABCMeta):
                             cfg.tool_library, cls.__name__
                         )
                         lib = cfg.tool_library
+        # Process bases first, such that susequent implementation override
+        # correclty.
+        for c in classes:
+            if hasattr(c, '__lib_bases__'):
                 mixin_mapping.append(c.__lib_bases__[lib])
         for mixin_cls in mixin_mapping:
             if mixin_cls not in cls.__bases__:
@@ -259,9 +263,9 @@ class ToolSparkInterface(ToolInterface):
         url = cfg.db_uri_spark.replace(
             'tissuemaps', 'tissuemaps_experiment_%s' % self.experiment_id
         )
-        table = tm.LabelLayerValue.__table__.name
-        formatted_data = data.select(data.label.alias('value'))
-        formatted_data = data.withColumn('tool_result_id', sp.lit(result_id))
+        table = tm.LabelValue.__table__.name
+        formatted_data = data.withColumnRenamed('label', 'value')
+        formatted_data = formatted_data.withColumn('tool_result_id', sp.lit(result_id))
         formatted_data.write.jdbc(url=url, table=table, mode='append')
 
     def calculate_extrema(self, data, column):
@@ -455,6 +459,7 @@ class Tool(object):
         int
             ID of the tool result
         '''
+        logger.info('initialize result')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             mapobject_type = session.query(tm.MapobjectType.id).\
                 filter_by(name=mapobject_type_name).\
@@ -532,7 +537,7 @@ class ClassifierInterface(object):
 
     @abstractmethod
     def classify_supervised(self, unlabeled_feature_data, labeled_feature_data,
-            method):
+            method, n_fold_cv):
         pass
 
     @abstractmethod
@@ -629,7 +634,8 @@ class ClassifierSparkInterface(ClassifierInterface):
         ).cache()
         return labeled_data
 
-    def classify_supervised(self, unlabeled_feature_data, labeled_feature_data, method):
+    def classify_supervised(self, unlabeled_feature_data, labeled_feature_data,
+            method, n_fold_cv):
         '''Trains a classifier for labeled mapobjects based on
         `labeled_feature_data` and predicts labels for all mapobjects in
         `unlabeled_feature_data`.
@@ -642,22 +648,26 @@ class ClassifierSparkInterface(ClassifierInterface):
             data that should be used for training of the classifier
         method: str
             method to use for classification
+        n_fold_cv: int
+            number of crossvalidation iterations (*n*-fold)
 
         Returns
         -------
-        List[Tuple[int, str]]
-            ID and predicted label for each mapobject
+        pyspark.sql.DataFrame
+            data frame with additional column "label" with predicted label
+            values for each mapobject
         '''
         from pyspark.ml import Pipeline
-        from pyspark.ml.feature import StringIndexer
-        from pyspark.ml.feature import VectorAssembler
-        from pyspark.ml.feature import VectorIndexer
-        from pyspark.ml.feature import VectorAssembler, VectorIndexer, StringIndexer
+        import pyspark.sql.functions as sp
+        from pyspark.ml.feature import (
+            VectorAssembler, VectorIndexer, StringIndexer, IndexToString
+        )
         from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
         from pyspark.ml.classification import RandomForestClassifier
         from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
         logger.info('perform classification via Spark with "%s" method', method)
+        logger.info('create feature and label indexer')
         feature_indexer = VectorIndexer(
                 inputCol='features', outputCol='indexedFeatures',
                 maxCategories=2
@@ -669,25 +679,14 @@ class ClassifierSparkInterface(ClassifierInterface):
             ).\
             fit(labeled_feature_data)
 
-        label_df = label_indexer.transform(labeled_feature_data)
-        label_mapping = {
-            r.indexedLabel: r.label
-            for r in label_df.select('label','indexedLabel').distinct().collect()
-        }
-        # TODO: How can this be achieved with IndexToString() when prediction
-        # is done on unlabeled dataset?
-        # label_converter = IndexToString(
-        #     inputCol='prediction', outputCol='predictedLabel',
-        #     labels=label_indexer.labels
-        # )
-
         models = {
             'randomforest': RandomForestClassifier
         }
         grid_search_space = {
             'randomforest': {
-                'maxDepth': [3, 5, 7],
-                'numTrees': [10, 20, 30]
+                'numTrees': [10]
+                # 'maxDepth': [3, 5, 7],
+                # 'numTrees': [10, 20, 30]
             }
         }
 
@@ -696,8 +695,8 @@ class ClassifierSparkInterface(ClassifierInterface):
         )
         grid = ParamGridBuilder()
         for k, v in grid_search_space[method].iteritems():
-            grid.addGrid(getattr(clf, k), v)
-        grid.build()
+            grid = grid.addGrid(getattr(clf, k), v)
+        grid = grid.build()
 
         pipeline = Pipeline(stages=[feature_indexer, label_indexer, clf])
         evaluator = MulticlassClassificationEvaluator(
@@ -706,14 +705,23 @@ class ClassifierSparkInterface(ClassifierInterface):
         )
         crossval = CrossValidator(
             estimator=pipeline, estimatorParamMaps=grid,
-            evaluator=evaluator, numFolds=3
+            evaluator=evaluator, numFolds=n_fold_cv
         )
         logger.info('fit model')
         model = crossval.fit(labeled_feature_data)
+        logger.info('predict labels')
         predictions = model.transform(unlabeled_feature_data)
-        logger.info('collect predicted labels')
-        return predictions.\
-            select( sp.col('prediction').alias('label'), 'mapobject_id')
+        # In case labels were provided as strings on needs to map them back
+        # label_converter = IndexToString(
+        #     inputCol='prediction', outputCol='predictedLabel',
+        #     labels=label_indexer.labels
+        # )
+        # return label_converter.transform(predictions).select(
+        #     sp.col('predictedLabel').alias('label'), 'mapobject_id'
+        # )
+        return predictions.select(
+            sp.col('prediction').alias('label'), 'mapobject_id'
+        )
 
     def classify_unsupervised(self, feature_data, k, method):
         '''Clusters mapobjects based on `feature_data` using the
@@ -731,7 +739,7 @@ class ClassifierSparkInterface(ClassifierInterface):
         Returns
         -------
         pyspark.sql.DataFrame
-            data frame with additional column "predictions" with predicted label
+            data frame with additional column "label" with predicted label
             values for each mapobject
         '''
         from pyspark.ml.clustering import KMeans
@@ -814,10 +822,10 @@ class ClassifierPandasInterface(ClassifierInterface):
         feature_data: pandas.DataFrame
             data frame where columns are features and rows are mapobjects
             as generated by
-            :meth:`tmlib.tools.base.Classfier.load_feature_values`
+            :meth:`Classifier.load_feature_values <tmlib.tools.base.Classfier.load_feature_values>`
         labeled_mapobjects: Tuple[int]
             ID and assigned label for each selected
-            :class:`tmlib.models.mapobject.Mapobject`
+            :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
 
         Returns
         -------
@@ -833,7 +841,7 @@ class ClassifierPandasInterface(ClassifierInterface):
         return labeled_feature_data
 
     def classify_supervised(self, unlabeled_feature_data, labeled_feature_data,
-            method):
+            method, n_fold_cv):
         '''Trains a classifier for labeled mapobjects based on
         `labeled_feature_data` and predicts labels for all mapobjects in
         `unlabeled_feature_data`.
@@ -846,11 +854,13 @@ class ClassifierPandasInterface(ClassifierInterface):
             data that should be used for training of the classifier
         method: str
             method to use for classification
+        n_fold_cv: int
+            number of crossvalidation iterations (*n*-fold)
 
         Returns
         -------
-        List[Tuple[int, str]]
-            ID and predicted label for each mapobject
+        pandas.DataFrame
+            dataframe with columns "label" and "mapobject_id"
         '''
         from sklearn.ensemble import RandomForestClassifier
         from sklearn.grid_search import GridSearchCV
@@ -870,12 +880,11 @@ class ClassifierPandasInterface(ClassifierInterface):
             }
         }
         n_samples = labeled_feature_data.shape[0]
-        n_folds = min(n_samples / 2, 10)
 
         X = labeled_feature_data.drop('label', axis=1)
         y = labeled_feature_data.label
         clf = models[method]()
-        folds = cross_validation.StratifiedKFold(y, n_folds=n_folds)
+        folds = cross_validation.StratifiedKFold(y, n_folds=n_fold_cv)
         gs = GridSearchCV(clf, grid_search_space[method], cv=folds)
         logger.info('fit model')
         gs.fit(X, y)

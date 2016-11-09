@@ -91,7 +91,7 @@ class ToolRequestManager(SubmissionManager):
             '--name', self.tool_name,
             '--submission_id', str(submission_id)
         ])
-        command.extend(['-v' for x in xrange(self.verbosity)])
+        command.extend(['-v' for x in range(self.verbosity)])
         logger.debug('submit tool request: %s', ' '.join(command))
         return command
 

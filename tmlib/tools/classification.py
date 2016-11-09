@@ -34,7 +34,7 @@ class Classification(Classifier):
         labels provided by the user.
     '''
 
-    __methods__ = ['randomforest']
+    __options__ = {'method': ['randomforest'], 'n_fold_cv': 10}
 
     @same_docstring_as(Tool.__init__)
     def __init__(self, experiment_id):
@@ -48,7 +48,6 @@ class Classification(Classifier):
             {
                 "choosen_object_type": str,
                 "selected_features": [str, ...],
-                "method": str,
                 "training_classes": [
                     {
                         "name": str,
@@ -56,9 +55,13 @@ class Classification(Classifier):
                         "color": str
                     },
                     ...
-                ]
-            }
+                ],
+                "options": {
+                    "method": str,
+                    "n_fold_cv": int
+                }
 
+            }
 
         Parameters
         ----------
@@ -70,17 +73,21 @@ class Classification(Classifier):
         # Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
-        method = payload['method']
+        method = payload['options']['method']
+        n_fold_cv = payload['options']['n_fold_cv']
 
-        if method not in self.__methods__:
+        if method not in self.__options__['method']:
             raise ValueError('Unknown method "%s".' % method)
 
         labeled_mapobjects = list()
-        color_map = dict()
-        for cls in payload['training_classes']:
-            labels = [(i, cls['name']) for i in cls['object_ids']]
+        label_map = dict()
+        for i, cls in enumerate(payload['training_classes']):
+            labels = [(j, i) for j in cls['object_ids']]
             labeled_mapobjects.extend(labels)
-            color_map[cls['name']] = cls['color']
+            label_map[float(i)] = {
+                'name': cls['name'],
+                'color': cls['color']
+            }
 
         unlabeled_feature_data = self.load_feature_values(
             mapobject_type_name, feature_names
@@ -89,14 +96,14 @@ class Classification(Classifier):
             unlabeled_feature_data, labeled_mapobjects
         )
         predicted_labels = self.classify_supervised(
-            unlabeled_feature_data, labeled_feature_data, method
+            unlabeled_feature_data, labeled_feature_data, method, n_fold_cv
         )
 
-        unique_labels = self.calculate_unique(predicated_labels, 'label')
+        unique_labels = self.calculate_unique(predicted_labels, 'label')
         result_id = self.initialize_result(
             submission_id, mapobject_type_name,
-            label_type='SupervisedClassifierLabelLayer',
-            unique_labels=unique_labels, color_map=color_map
+            layer_type='SupervisedClassifierLabelLayer',
+            unique_labels=unique_labels, label_map=label_map
         )
 
         self.save_label_values(result_id, predicted_labels)
