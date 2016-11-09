@@ -736,34 +736,35 @@ class SupervisedClassifierLabelLayer(ScalarLabelLayer):
             **extra_attributes
         )
 
-    def get_labels(self, mapobject_ids):
-        '''Queries the database to retrieve the generated label values for
-        the given `mapobjects`.
+    # def get_labels(self, mapobject_ids):
+    #     '''Queries the database to retrieve the generated label values for
+    #     the given `mapobjects`.
 
-        Parameters
-        ----------
-        mapobject_ids: List[int]
-            IDs of mapobjects for which labels should be retrieved
+    #     Parameters
+    #     ----------
+    #     mapobject_ids: List[int]
+    #         IDs of mapobjects for which labels should be retrieved
 
-        Returns
-        -------
-        Dict[int, str]
-            mapping of mapobject ID to color string of format ``"ffffff"``
-        '''
-        print self.attributes
-        session = Session.object_session(self)
-        label_values = session.query(
-                LabelValue.mapobject_id, LabelValue.value
-            ).\
-            filter(
-                LabelValue.mapobject_id.in_(mapobject_ids),
-                LabelValue.tool_result_id == self.tool_result_id
-            ).\
-            all()
-        return {
-            mapobject_id: self.attributes['label_map'][value]['color']
-            for mapobject_id, value in label_values
-        }
+    #     Returns
+    #     -------
+    #     Dict[int, str]
+    #         mapping of mapobject ID to color string of format ``"ffffff"``
+    #     '''
+    #     session = Session.object_session(self)
+    #     label_values = session.query(
+    #             LabelValue.mapobject_id, LabelValue.value
+    #         ).\
+    #         filter(
+    #             LabelValue.mapobject_id.in_(mapobject_ids),
+    #             LabelValue.tool_result_id == self.tool_result_id
+    #         ).\
+    #         all()
+    #     # NOTE: in contrast to Python dicts, keys of JSON objects must be
+    #     # stings.
+    #     return {
+    #         mapobject_id: self.attributes['label_map'][str(value)]['color']
+    #         for mapobject_id, value in label_values
+    #     }
 
 
 class ContinuousLabelLayer(LabelLayer):
