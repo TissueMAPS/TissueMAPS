@@ -21,7 +21,8 @@ interface ClassificationScope extends ToolWindowContentScope {
 class ClassificationCtrl extends ToolCtrl {
     static $inject = ['$scope', 'viewer'];
 
-    algorithm: string = 'randomforest';
+    method: string = 'randomforest';
+    nCrossvalidations: number = 10;
 
     constructor(public $scope: ClassificationScope,
                 public viewer: Viewer) {
@@ -45,7 +46,10 @@ class ClassificationCtrl extends ToolCtrl {
             chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
             selected_features: selectedFeatures,
             training_classes: trainingClasses,
-            method: this.algorithm
+            options: {
+                method: this.method,
+                n_fold_cv: this.nCrossvalidations
+            }
         });
     }
 }

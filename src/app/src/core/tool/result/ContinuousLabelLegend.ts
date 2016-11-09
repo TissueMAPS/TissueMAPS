@@ -46,16 +46,19 @@ class ContinuousLabelLegend extends Legend {
        var j: number;
        for (i = min, j = 0; i <= max; i += step, j++) {
            if (j % 10 == 0) {
+               var val = Math.floor(i * 100) / 100;
+               var str = ('     ' + val).slice(-15);
                annotations.push({
-                   x: 0.51,
+                   x: 12,
                    y: j,
-                   text: Math.floor(i * 100) / 100,
-                   xanchor: 'left',
+                   text: str,
+                   xanchor: 'right',
                    yanchor: 'center',
                    showarrow: false,
                    font: {
+                       size: 10,
                        color: 'white',
-                       size: 14
+                       style: 'bold'
                    }
                });
            }

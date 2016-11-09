@@ -59,6 +59,13 @@ class StepCtrl {
                 });
             }
         });
+        this._$rootScope.$on('updateJobStatus', () => {
+            // console.log('update job status for step: ', stepName)
+            if (this.uiScrollingAdapter.topVisibleScope != undefined) {
+                var viewIndex = this.uiScrollingAdapter.topVisibleScope.$index;
+                this.uiScrollingAdapter.reload(viewIndex);
+            }
+        });
     }
 
     hasExtraArgs() {
@@ -84,13 +91,6 @@ class StepCtrl {
                 // console.log('received job status for step ', stepName, ' : ', jobs)
                 success(jobs);
             });
-            this._$rootScope.$on('updateJobStatus', () => {
-                // console.log('update job status for step: ', stepName)
-                if (this.uiScrollingAdapter.topVisibleScope != undefined) {
-                    var viewIndex = this.uiScrollingAdapter.topVisibleScope.$index;
-                    this.uiScrollingAdapter.reload(viewIndex);
-                }
-            })
         }
     };
 

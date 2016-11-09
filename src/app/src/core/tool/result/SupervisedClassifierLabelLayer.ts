@@ -15,8 +15,8 @@ class SupervisedClassifierLabelLayer extends LabelLayer {
     getLabelColorMapper() {
         var colorMap = {};
         // Convert from hex strings to Color objects
-        for (var label in this.attributes.color_map) {
-            colorMap[label] = Color.fromHex(this.attributes.color_map[label]);
+        for (var label in this.attributes.label_map) {
+            colorMap[label] = Color.fromHex(this.attributes.label_map[label]['color']);
         }
         return (label) => {
             return colorMap[label];
@@ -25,10 +25,12 @@ class SupervisedClassifierLabelLayer extends LabelLayer {
 
     getLegend() {
         return new ScalarLabelLegend({
-            colors: _.values(this.attributes.color_map).map((c) => {
-                return Color.fromHex(c);
+            colors: _.values(this.attributes.label_map).map((c) => {
+                return Color.fromHex(c.color);
             }),
-            labels: _.keys(this.attributes.color_map)
+            labels: _.values(this.attributes.label_map).map((c) => {
+                return c.name;
+            })
         });
     }
 }
