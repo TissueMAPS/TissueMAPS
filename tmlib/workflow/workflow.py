@@ -98,7 +98,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
 
         See also
         --------
-        :class:`tmlib.workflow.description.WorkflowStepDescription`
+        :class:`WorkflowStepDescription <tmlib.workflow.description.WorkflowStepDescription>`
         '''
         super(WorkflowStep, self).__init__(tasks=[], jobname=name)
         self.name = name
@@ -326,7 +326,7 @@ class WorkflowStage(State):
 
         See also
         --------
-        :class:`tmlib.workflow.description.WorkflowStageDescription`
+        :class:`WorkflowStageDescription <tmlib.workflow.description.WorkflowStageDescription>`
         '''
         self.name = name
         self.experiment_id = experiment_id
@@ -579,7 +579,7 @@ class Workflow(SequentialTaskCollection, State):
 
         See also
         --------
-        :class:`tmlib.workflow.description.WorkflowDescription`
+        :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>`
         '''
         self.experiment_id = experiment_id
         self.verbosity = verbosity

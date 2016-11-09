@@ -16,21 +16,22 @@
 import sys
 import logging
 
-#: Mapping for logging level verbosity
+#: dict[int, int]: Mapping of logging verbosity to logging level
 VERBOSITY_TO_LEVELS = {
-    0: logging.WARN,  # For simplicity. Includes ERROR, CRITICAL
-    1: logging.INFO,
-    2: logging.DEBUG,
-    3: logging.NOTSET,  # Equivalent to no filtering. Everything is logged.
+    0: logging.NOTSET,  # Equivalent to no filtering. Everything is logged.
+    1: logging.WARN,  # For simplicity. Includes ERROR, CRITICAL
+    2: logging.INFO,
+    3: logging.DEBUG,
 }
 
+#: dict[int, int]: Mapping of logging level to logging verbosity
 LEVELS_TO_VERBOSITY = {
-    logging.WARN: 0,
-    logging.ERROR: 0,
-    logging.CRITICAL: 0,
-    logging.INFO: 1,
-    logging.DEBUG: 2,
-    logging.NOTSET: 3
+    logging.NOTSET: 0,
+    logging.WARN: 1,
+    logging.ERROR: 1,
+    logging.CRITICAL: 1,
+    logging.INFO: 2,
+    logging.DEBUG: 3,
 }
 
 
@@ -60,7 +61,7 @@ def map_logging_verbosity(verbosity):
         raise ValueError('Argument "verbosity" must be a positive number.')
     if verbosity > len(VERBOSITY_TO_LEVELS):
         verbosity = len(VERBOSITY_TO_LEVELS) - 1
-    return VERBOSITY_TO_LEVELS.get(verbosity, logging.NOTSET)
+    return VERBOSITY_TO_LEVELS.get(verbosity)
 
 
 def configure_logging():

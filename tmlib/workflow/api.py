@@ -579,7 +579,7 @@ class ClusterRoutines(BasicClusterRoutines):
     def _build_init_command(self, batch_args, extra_args):
         logger.debug('build "init" command')
         command = [self.step_name]
-        command.extend(['-v' for x in xrange(self.verbosity)])
+        command.extend(['-v' for x in range(self.verbosity)])
         command.append(self.experiment_id)
         if extra_args is not None:
             for arg in extra_args.iterargs():
@@ -606,7 +606,7 @@ class ClusterRoutines(BasicClusterRoutines):
     def _build_run_command(self, job_id):
         logger.debug('build "run" command')
         command = [self.step_name]
-        command.extend(['-v' for x in xrange(self.verbosity)])
+        command.extend(['-v' for x in range(self.verbosity)])
         command.append(self.experiment_id)
         command.extend(['run', '--job', str(job_id)])
         return command
@@ -614,7 +614,7 @@ class ClusterRoutines(BasicClusterRoutines):
     def _build_collect_command(self):
         logger.debug('build "collect" command')
         command = [self.step_name]
-        command.extend(['-v' for x in xrange(self.verbosity)])
+        command.extend(['-v' for x in range(self.verbosity)])
         command.append(self.experiment_id)
         command.extend(['collect'])
         return command
