@@ -21,7 +21,7 @@ interface ClassificationScope extends ToolWindowContentScope {
 class ClassificationCtrl extends ToolCtrl {
     static $inject = ['$scope', 'viewer'];
 
-    algorithm: string = 'rf';
+    algorithm: string = 'randomforest';
 
     constructor(public $scope: ClassificationScope,
                 public viewer: Viewer) {
