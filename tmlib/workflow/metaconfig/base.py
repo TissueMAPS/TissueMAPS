@@ -575,7 +575,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        :func:`illuminati.stitch.calc_grid_coordinates_from_positions`
+        :func:`calc_grid_coordinates_from_positions <illuminati.stitch.calc_grid_coordinates_from_positions>`
         '''
         md = self.metadata
         if (any(md.stage_position_y.isnull()) or
@@ -628,7 +628,7 @@ class MetadataHandler(object):
 
         See also
         --------
-        :func:`illuminati.stitch.calc_grid_coordinates_from_layout`
+        :func:`calc_grid_coordinates_from_layout <illuminati.stitch.calc_grid_coordinates_from_layout>`
         '''
         md = self.metadata
 

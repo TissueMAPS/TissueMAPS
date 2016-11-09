@@ -512,7 +512,7 @@ class MainSession(_Session):
 
     See also
     --------
-    :class:`tmlib.models.base.MainModel`
+    :class:`MainModel <tmlib.models.base.MainModel>`
     '''
 
     def __init__(self, db_uri=None):
@@ -552,7 +552,7 @@ class ExperimentSession(_Session):
 
     See also
     --------
-    :class:`tmlib.models.base.ExperimentModel`
+    :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
     '''
 
     def __init__(self, experiment_id, db_uri=None):

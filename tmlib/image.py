@@ -49,7 +49,7 @@ def is_image_file(filename):
 
     See also
     --------
-    :const:`tmlib.image.SUPPORTED_IMAGE_FILE_EXTENSIONS`
+    :const:`SUPPORTED_IMAGE_FILE_EXTENSIONS <tmlib.image.SUPPORTED_IMAGE_FILE_EXTENSIONS>`
     '''
     return os.path.splitext(filename)[1] in SUPPORTED_IMAGE_FILE_EXTENSIONS
 

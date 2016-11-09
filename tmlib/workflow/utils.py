@@ -284,7 +284,7 @@ def print_task_status(task_data):
 
     See also
     --------
-    :func:`tmlib.workflow.utils.get_task_data_from_sql_store`
+    :func:`get_task_data_from_sql_store <tmlib.workflow.utils.get_task_data_from_sql_store>`
     '''
     def add_row_recursively(data, table, i):
         table.add_row([

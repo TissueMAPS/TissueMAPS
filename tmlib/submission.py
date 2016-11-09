@@ -40,7 +40,7 @@ class SubmissionManager(object):
 
         See also
         --------
-        :class:`tmlib.models.submission.Submission`
+        :class:`Submission <tmlib.models.submission.Submission>`
         '''
         with tm.utils.MainSession() as session:
             if user_id is None:

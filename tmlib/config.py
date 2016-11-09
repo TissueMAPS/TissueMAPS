@@ -33,7 +33,7 @@ class TmapsConfig(object):
 
     `TissueMAPS` code is distributed across mutliple Python packages,
     but configuration settings are bundeled in one global config file
-    (:constant:`tmlib.config.CONFIG_FILE`)
+    (:constant:`CONFIG_FILE <tmlib.config.CONFIG_FILE>`)
     with an `INI <https://en.wikipedia.org/wiki/INI_file>`_-like file format.
 
     The environment variable ``TMAPS_CONFIG_FILE`` can be used to overwrite
@@ -74,7 +74,7 @@ class TmapsConfig(object):
 
         See also
         --------
-        tmlib.config.CONFIG_FILE
+        :const:`CONFIG_FILE <tmlib.config.CONFIG_FILE>`
         '''
         logger.debug('read config file: "%s"', self._config_file)
         try:

@@ -171,8 +171,8 @@ class ImageFileMapping(ExperimentModel):
 
     See also
     --------
-    :class:`tmlib.models.file.MicroscopeImageFile`
-    :class:`tmlib.models.file.ChannelImageFile`
+    :class:`MicroscopeMetadataFile <tmlib.models.file.MicroscopeImageFile>`
+    :class:`ChannelImageFile <tmlib.models.file.ChannelImageFile>`
 
     '''
 

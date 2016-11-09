@@ -71,7 +71,7 @@ class WorkflowStepJob(Job):
 
         See also
         --------
-        :class:`tmlib.models.submission.Submission`
+        :class:`Submission <tmlib.models.submission.Submission>`
 
         Note
         ----

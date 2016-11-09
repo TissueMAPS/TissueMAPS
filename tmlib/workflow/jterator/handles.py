@@ -556,9 +556,6 @@ class SegmentedObjects(LabelImage):
         attribute: tmlib.workflow.jterator.handles.Attribute
             attribute for each segmented object at each time point
 
-        See also
-        --------
-        :attr:`tmlib.jterator.handles.Attribute`
         '''
         if not isinstance(attribute, Attribute):
             raise TypeError(
@@ -588,10 +585,6 @@ class SegmentedObjects(LabelImage):
         ----------
         measurement: tmlib.workflow.jterator.handles.Measurement
             measured features for each segmented object
-
-        See also
-        --------
-        :attr:`tmlib.jterator.handles.Measurement`
         '''
         if not isinstance(measurement, Measurement):
             raise TypeError(

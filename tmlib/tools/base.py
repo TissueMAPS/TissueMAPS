@@ -41,31 +41,34 @@ class _ToolMeta(ABCMeta):
     '''Meta class for :class:`Tool <tmlib.tools.base.Tool>`.'''
 
     def __init__(cls, cls_name, cls_bases, cls_args):
-        if hasattr(cls, '__libs__'):
-            if not isinstance(cls.__libs__, dict):
+        if hasattr(cls, '__lib_bases__'):
+            if not isinstance(cls.__lib_bases__, dict):
                 raise TypeError(
-                    'Attibute "__libs__" of class "%s" must have type dict.' %
-                    cls_name
+                    'Attibute "__lib_bases__" of class "%s" must have type dict.'
+                    % cls_name
                 )
-            if DEFAULT_LIB not in cls.__libs__:
+            if DEFAULT_LIB not in cls.__lib_bases__:
                 raise KeyError(
-                    'Attibute "__libs__" of class "%s" must have key "%s"' % (
-                        cls_name, DEFAULT_LIB
-                    )
+                    'Attibute "__lib_bases__" of class "%s" must have key "%s"'
+                    % (cls_name, DEFAULT_LIB)
                 )
-            for lib in cls.__libs__:
+            for lib in cls.__lib_bases__:
                 if lib not in IMPLEMENTED_LIBS:
                     raise KeyError(
-                        'Key "%s" in "__libs__" of class "%s" is not an '
+                        'Key "%s" in "__lib_bases__" of class "%s" is not an '
                         'implemented library! Implemented are: "%s"' % (
                             lib, cls_name, '", "'.join(IMPLEMENTED_LIBS)
                         )
                     )
-        register = True
-        if '__abstract__' in vars(cls):
-            if getattr(cls, '__abstract__'):
-                register = False
-        if register:
+
+        def is_abstract(cls):
+            is_abstract = False
+            if '__abstract__' in vars(cls):
+                if getattr(cls, '__abstract__'):
+                    is_abstract = True
+            return is_abstract
+
+        if not is_abstract(cls):
             required_attrs = {'__icon__', '__description__'}
             for attr in required_attrs:
                 if not hasattr(cls, attr):
@@ -74,19 +77,41 @@ class _ToolMeta(ABCMeta):
                             cls_name, attr
                         )
                     )
+            logger.debug('registering tool %s', cls.__name__)
             _register[cls_name] = cls
+
         return super(_ToolMeta, cls).__init__(cls_name, cls_bases, cls_args)
 
     def __call__(cls, *args, **kwargs):
-        mixin_mapping = collections.defaultdict(list)
+        lib = None
+        mixin_mapping = list()
         classes = [cls]
         classes += inspect.getmro(cls)
-        for c in classes:
-            if hasattr(c, '__libs__'):
-                for lib, mixin_cls in c.__libs__.iteritems():
-                    mixin_mapping[lib].append(mixin_cls)
-        for mixin_cls in mixin_mapping.get(cfg.tool_library):
+        # Process in reversed order, such that derived classes are considered
+        # first.
+        for c in reversed(classes):
+            if hasattr(c, '__lib_bases__'):
+                # In case the configured library is not available for the tool,
+                # we use the default library (it's implementation is enforced,
+                # see _ToolMeta.__init__). In case of Spark this is no problem,
+                # since the environment can also execute "normal" Python code.
+                if lib is None:
+                    if cfg.tool_library not in c.__lib_bases__:
+                        logger.warn(
+                            'defaulting to library "%s" for tool "%s"',
+                            DEFAULT_LIB, cls.__name__
+                        )
+                        lib = DEFAULT_LIB
+                    else:
+                        logger.debug(
+                            'using library "%s" for tool "%s"',
+                            cfg.tool_library, cls.__name__
+                        )
+                        lib = cfg.tool_library
+                mixin_mapping.append(c.__lib_bases__[lib])
+        for mixin_cls in mixin_mapping:
             if mixin_cls not in cls.__bases__:
+                logger.debug('adding mixin %r to bases of %r', mixin_cls, cls)
                 cls.__bases__ += (mixin_cls,)
         return super(_ToolMeta, cls).__call__(*args, **kwargs)
 
@@ -228,7 +253,7 @@ class ToolSparkInterface(ToolInterface):
 
         See also
         --------
-        :class:`tmlib.models.feature.LabelValue`
+        :class:`LabelValue <tmlib.models.feature.LabelValue>`
         '''
         import pyspark.sql.functions as sp
         url = cfg.db_uri_spark.replace(
@@ -320,7 +345,7 @@ class ToolPandasInterface(ToolInterface):
 
         See also
         --------
-        :class:`tmlib.models.feature.LabelValue`
+        :class:`LabelValue <tmlib.models.feature.LabelValue>`
         '''
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             label_mappings = [
@@ -367,7 +392,7 @@ class Tool(object):
     Common methods required by both libraries should be implemented directly
     in the derived class. Library-specific processing methods should
     be implemented in separate mixin classes. These library-specific mixins
-    must be provided to the derived class via the ``__libs__`` attribute
+    must be provided to the derived class via the ``__lib_bases__`` attribute
     (in form of a mapping library name -> mixin class).
     The appropriate library interface will be chosen automatically based on
     configuration of :attr:`tool_library <tmlib.config.tool_library>` and
@@ -395,7 +420,7 @@ class Tool(object):
 
     __abstract__ = True
 
-    __libs__ = {'spark': ToolSparkInterface, 'pandas': ToolPandasInterface}
+    __lib_bases__ = {'spark': ToolSparkInterface, 'pandas': ToolPandasInterface}
 
     def __init__(self, experiment_id):
         '''
@@ -596,7 +621,7 @@ class ClassifierSparkInterface(ClassifierInterface):
             subset of `feature_data` for selected mapobjects with additional
             "label" column
         '''
-        labels = spark.sqlc.createDataFrame(
+        labels = self.spark.createDataFrame(
             labeled_mapobjects, schema=['mapobject_id', 'label']
         )
         labeled_data = feature_data.join(
@@ -670,7 +695,7 @@ class ClassifierSparkInterface(ClassifierInterface):
             labelCol='indexedLabel', featuresCol='indexedFeatures'
         )
         grid = ParamGridBuilder()
-        for k, v in grid_search_space.iteritems():
+        for k, v in grid_search_space[method].iteritems():
             grid.addGrid(getattr(clf, k), v)
         grid.build()
 
@@ -906,7 +931,7 @@ class Classifier(Tool):
 
     __abstract__ = True
 
-    __libs__ = {
+    __lib_bases__ = {
         'spark': ClassifierSparkInterface, 'pandas': ClassifierPandasInterface
     }
 

@@ -136,8 +136,8 @@ class MetadataConfigurator(ClusterRoutines):
         complements it with metadata retrieved from additional microscope
         metadata files and/or user input.
 
-        The actual processing is delegated to a format-specific implementation
-        of :class:`tmlib.workflow.metaconfig.base.MetadataHandler`.
+        The actual processing is delegated to a format-specific implementation of
+        :class:`MetadataHandler <tmlib.workflow.metaconfig.base.MetadataHandler>`.
 
         Parameters
         ----------
@@ -146,7 +146,7 @@ class MetadataConfigurator(ClusterRoutines):
 
         See also
         --------
-        :mod:`tmlib.workflow.metaconfig.cellvoyager`
+        :mod:`cellvoyager <tmlib.workflow.metaconfig.cellvoyager>`
         '''
         MetadataReader = metadata_reader_factory(batch['microscope_type'])
 

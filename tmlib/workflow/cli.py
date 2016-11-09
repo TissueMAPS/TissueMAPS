@@ -346,12 +346,9 @@ class CommandLineInterface(WorkflowSubmissionManager):
     def init(self):
         self._print_logo()
         api = self.api_instance
-        logger.info('delete previous job output')
-        api.delete_previous_job_output()
-        logger.debug('remove log reports and batches of previous submission')
+        logger.debug('remove batches of previous submission')
         shutil.rmtree(api.batches_location)
         os.mkdir(api.batches_location)
-
         logger.info('create batches for "run" and "collect" jobs')
         batches = api.create_batches(self._batch_args)
         if not batches['run']:
@@ -362,6 +359,8 @@ class CommandLineInterface(WorkflowSubmissionManager):
             )
         logger.info('write batches to files')
         api.write_batch_files(batches)
+        logger.info('delete previous job output')
+        api.delete_previous_job_output()
         return batches
 
     @climethod(
