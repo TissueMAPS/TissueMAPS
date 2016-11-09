@@ -29,7 +29,7 @@ from flask_jwt import jwt_required
 from flask_jwt import current_identity
 
 import tmlib.models as tm
-from tmlib import cfg as tmlib_cfg
+from tmlib import cfg as libcfg
 from tmlib.utils import flatten
 from tmlib.workflow import get_step_args
 from tmlib.workflow.jobs import RunJob
@@ -131,14 +131,8 @@ def list_module_names(pipeline):
 
 
 def get_projects(location):
-    '''Creates a `Jtproject` object for each Jterator project folder
-    in the data location.
-
-    .. Warning::
-
-        In case the `experiment` contains `subexperiments`, only the
-        subexperiment folders will be screened for Jterator projects, but not
-        the experiment folder itself.
+    '''Creates a :class:`Project <tmlib.workflow.jterator.project.Project>`
+    object for each Jterator project folder in the `location`.
 
     Parameters
     ----------
@@ -147,7 +141,7 @@ def get_projects(location):
 
     Returns
     -------
-    List[Jtproject]
+    List[tmlib.workflow.jterator.project.Project]
     '''
     projects = list()
 
@@ -165,17 +159,6 @@ def get_available_projects(experiment_id):
     '''Lists all Jterator projects available in the data location.
     A project consists of a pipeline description ("pipe") and
     several module descriptions ("handles").
-
-    Parameters
-    ----------
-    experiment: tmlib.models.Experiment
-        processed experiment
-
-    Returns
-    -------
-    str
-        JSON string with "jtprojects" key. The corresponding value is a list
-        of Jterator project descriptions in YAML format.
     '''
     logger.info(
         'get available jterator projects for experiment %d', experiment_id
@@ -198,53 +181,6 @@ def get_project(experiment_id, project_name):
     A project consists of a pipeline description ("pipe") and
     several module descriptions ("handles"), represented on disk by `.pipe`
     and `.handles` files, respectively.
-
-    Parameters
-    ----------
-    experiment: tmlib.models.Experiment
-        processed experiment
-
-    Returns
-    -------
-    str
-        JSON string with "jtproject" key. The corresponding value is encoded
-        in YAML format:
-
-        .. code-block:: yaml
-
-            name: string
-            pipe:
-                name: string
-                description:
-                    project:
-                        name: string
-                    jobs:
-                        folder: string
-                        pattern:
-                            - name: string
-                              expression: string
-                            ...
-                    pipeline:
-                        - handles: string
-                          module: string
-                          active: boolean
-                        ...
-            handles:
-                - name: string
-                  description:
-                    input:
-                        - name: string
-                          class: string
-                          value: string or number or list
-                        ...
-                    output:
-                        - name: string
-                          class: string
-                          value: string or number or list
-                        ...
-                    plot: boolean
-                ...
-
     '''
     logger.info(
         'get jterator project "%s" for experiment %d',
@@ -264,51 +200,9 @@ def get_project(experiment_id, project_name):
 def get_available_modules():
     '''Lists all available Jterator modules in the
     `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
-
-    Returns
-    -------
-    str
-        JSON string with "jtmodules" key. The corresponding value has the
-        following format:
-
-        .. code-block:: json
-
-            {
-                modules: [
-                    {
-                        name: string,
-                        description: {
-                            input: {
-                                ...
-                            },
-                            output: {
-                                ...
-                            }
-                        }
-                    },
-                    ...
-                ],
-                registration: [
-                    {
-                        name: string,
-                        description: {
-                            module: string,
-                            handles: string,
-                            active: boolean
-                        }
-                    },
-                    ...
-                ]
-            }
-
     '''
     logger.info('get list of available jterator modules')
-    repo_location = tmlib_cfg.modules_home
-    if repo_location is None:
-        raise Exception(
-            'You have to set the config `TMAPS_MODULES_HOME` to the '
-            ' location of the Jterator modules.'
-        )
+    repo_location = libcfg.modules_home
     modules = AvailableModules(repo_location)
     return jsonify(jtmodules=modules.to_dict())
 
@@ -318,15 +212,9 @@ def get_available_modules():
 def get_available_pipelines():
     '''Lists all available Jterator pipelines in the
     `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
-
-    Returns
-    -------
-    str
-        JSON string with "jtpipelines" key. The corresponding value is an
-        array of strings.
     '''
     logger.info('get list of available jterator pipelines')
-    pipes_location = os.path.join(tmlib_cfg.modules_home, 'pipes')
+    pipes_location = os.path.join(libcfg.modules_home, 'pipes')
     pipes = [
         os.path.basename(p)
         for p in list_projects(pipes_location)
@@ -339,19 +227,7 @@ def get_available_pipelines():
 @jwt_required()
 @decode_query_ids()
 def get_available_channels(experiment_id):
-    '''Lists all channels for a given experiment.
-
-    Parameters
-    ----------
-    experiment: tmlib.models.Experiment
-        processed experiment
-
-    Returns
-    -------
-    str
-       JSON string with "channels" key. The corresponding value is the list of
-       layer names that are available for the given experiment
-    '''
+    '''Lists all channels for a given experiment.'''
     logger.info(
         'get list of available channels for experiment %d', experiment_id
     )
@@ -364,21 +240,10 @@ def get_available_channels(experiment_id):
 @assert_query_params('module_filename')
 @jwt_required()
 def get_module_source_code():
-    '''Gets the source code for a given module.
-
-    Parameters
-    ----------
-    module_filename: str
-        name of the module source code file
-
-    Returns
-    -------
-    str
-       content of the module source code file
-    '''
+    '''Gets the source code for a given module.'''
     module_filename = request.args.get('module_filename')
     logger.info('get source code of module file "%s"', module_filename)
-    modules = AvailableModules(current_app.config.get('TMAPS_MODULES_HOME'))
+    modules = AvailableModules(libcfg.modules_home)
     files = [
         f for i, f in enumerate(modules.module_files)
         if os.path.basename(f) == module_filename
@@ -391,20 +256,7 @@ def get_module_source_code():
 @assert_query_params('module_name', 'job_id')
 @decode_query_ids()
 def get_module_figure(experiment_id, project_name):
-    '''Gets the figure for a given module.
-
-    Parameters
-    ----------
-    experiment: tmlib.models.Experiment
-        ID of the processed experiment
-    project_name: str
-        name of the project (pipeline)
-
-    Returns
-    -------
-    str
-        html figure representation
-    '''
+    '''Gets the figure for a given module.'''
     module_name = request.args.get('module_name')
     job_id = request.args.get('job_id', type=int)
     logger.info(
@@ -444,47 +296,23 @@ def get_module_figure(experiment_id, project_name):
 def create_joblist(experiment_id, project_name):
     '''Creates a list of jobs for the current project to give the user a
     possiblity to select a site of interest.
-
     '''
     logger.info(
         'create list of jterator jobs for project "%s" of experiment %d',
         project_name, experiment_id
     )
-    jt = ImageAnalysisPipeline(
-        experiment_id=experiment_id,
-        verbosity=logging.INFO,
-        pipeline=project_name
-    )
-    try:
-        batches = jt.get_batches_from_files()
-    except IOError:
-        # NOTE: This may take quite some time for a large experiment.
-        batch_args_cls, submit_args_cls, _ = get_step_args('jterator')
-        batch_args = batch_args_cls()
-        batches = jt.create_batches(batch_args)
-    metadata = list()
-    try:
-        with tm.utils.ExperimentSession(experiment_id) as session:
-            metadata = dict()
-            for batch in batches['run']:
-                f = session.query(tm.ChannelImageFile).\
-                    filter_by(site_id=batch['site_id']).\
-                    first()
-                # TODO: Include time point here?
-                # Depends on batching in Jterator.
-                metadata[batch['id']] = {
-                    'tpoint': f.tpoint,
-                    'channel_name': f.channel.name,
-                    'plate': f.site.well.plate.name,
-                    'well': f.site.well.name,
-                    'y': f.site.y,
-                    'x': f.site.x,
-                }
-            return jsonify({'joblist': metadata})
-    except Exception, e:
-        error = str(e)
-        print 'Error upon joblist creation: ', error
-        return jsonify({'joblist': None, 'error': error})
+    metadata = dict()
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        for index, site in enumerate(session.query(tm.Site)):
+            # TODO: Include time point here?
+            # Depends on batching in Jterator.
+            metadata[index+1] = {
+                'plate': site.well.plate.name,
+                'well': site.well.name,
+                'y': site.y,
+                'x': site.x,
+            }
+    return jsonify({'joblist': metadata})
 
 
 @jtui.route(
@@ -506,18 +334,13 @@ def save_project(experiment_id, project_name):
     project = yaml.load(data['project'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
-        verbosity=1,
+        verbosity=2,
         pipeline=project_name,
         pipe=project['pipe'],
         handles=project['handles'],
     )
-    try:
-        jt.project.save()
-        return jsonify({'success': True})
-    except Exception as e:
-        error = str(e)
-        print 'Error upon saving project: ', error
-        return jsonify({'success': False, 'error': error})
+    jt.project.save()
+    return jsonify({'success': True})
 
 
 @jtui.route(
@@ -538,18 +361,13 @@ def check_jtproject(experiment_id, project_name):
     project = yaml.load(data['project'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
-        verbosity=1,
+        verbosity=2,
         pipeline=project_name,
         pipe=project['pipe'],
         handles=project['handles'],
     )
-    try:
-        jt.check_pipeline()
-        return jsonify({'success': True})
-    except Exception as e:
-        error = str(e)
-        print 'Error upon checking pipeline: ', error
-        return jsonify({'success': False, 'error': error})
+    jt.check_pipeline()
+    return jsonify({'success': True})
 
 
 @jtui.route(
@@ -567,16 +385,11 @@ def delete_project(experiment_id, project_name):
     )
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
-        verbosity=1,
+        verbosity=2,
         pipeline=project_name
     )
-    try:
-        jt.project.remove()
-        return jsonify({'success': True})
-    except Exception as e:
-        error = str(e)
-        print error
-        return jsonify({'success': False, 'error': error})
+    jt.project.remove()
+    return jsonify({'success': True})
 
 
 @jtui.route(
@@ -597,19 +410,17 @@ def create_jtproject(experiment_id, project_name):
     data = json.loads(request.data)
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
-        verbosity=1,
+        verbosity=2,
         pipeline=project_name,
     )
+    # TODO
     # Create the project, i.e. create a folder that contains a .pipe file and
     # handles subfolder with .handles files
     if data.get('template', None):
-        skel_dir = os.path.join(
-            current_app.config.get('TMAPS_MODULES_HOME'),
-            'pipes', data['template']
-        )
+        skel_dir = os.path.join(libcfg.modules_home, 'pipes', data['template'])
     else:
         skel_dir = None
-    repo_dir = current_app.config.get('TMAPS_MODULES_HOME')
+    repo_dir = libcfg.modules_home
     jt.project.create(repo_dir=repo_dir, skel_dir=skel_dir)
     serialized_jtproject = yaml.safe_dump(jt.project.to_dict())
     return jsonify(jtproject=serialized_jtproject)
@@ -620,8 +431,7 @@ def create_jtproject(experiment_id, project_name):
 @jwt_required()
 @decode_query_ids()
 def kill_jobs(experiment_id):
-    '''Kills submitted jobs.
-    '''
+    '''Kills submitted jobs.'''
     # TODO
     raise NotImplementedError()
 
@@ -673,13 +483,7 @@ def _get_output(jobs, modules, fig_location):
 @jwt_required()
 @decode_query_ids()
 def get_job_status(experiment_id, project_name):
-    '''Gets the status of submitted jobs.
-
-    Parameters
-    ----------
-    experiment: tmlib.models.Experiment
-        processed experiment
-    '''
+    '''Gets the status of submitted jobs.'''
     jobs = gc3pie.retrieve_jobs(
         experiment_id=experiment_id,
         program='jtui-{project}'.format(project=project_name)
@@ -699,19 +503,12 @@ def get_job_status(experiment_id, project_name):
 @assert_form_params('project')
 @decode_query_ids()
 def get_job_output(experiment_id, project_name):
-    '''Gets output generated by a previous submission.
-
-    Parameters
-    ----------
-    experiment: tmlib.models.Experiment
-        processed experiment
-
-    '''
+    '''Gets output generated by a previous submission.'''
     data = json.loads(request.data)
     project = yaml.load(data['project'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
-        verbosity=1,
+        verbosity=2,
         pipeline=project_name,
         pipe=project['pipe'],
         handles=project['handles'],
@@ -727,7 +524,6 @@ def get_job_output(experiment_id, project_name):
         return jsonify(output=None)
     except Exception as e:
         error = str(e)
-        print 'Error upon output retrieval:', error
         return jsonify(output=None, error=error)
 
 
@@ -744,12 +540,6 @@ def run_jobs(experiment_id, project_name):
 
     This requires the pipeline and module descriptions to be saved to *pipe*
     and *handles* files, respectively.
-
-    Parameters
-    ----------
-    experiment: tmlib.models.Experiment
-        processed experiment
-
     '''
     logger.info(
         'submit jobs for jterator pipeline "%s" of experiment %d',
@@ -760,7 +550,7 @@ def run_jobs(experiment_id, project_name):
     project = yaml.load(data['project'])
     jt = ImageAnalysisPipeline(
         experiment_id=experiment_id,
-        verbosity=1,
+        verbosity=2,
         pipeline=project_name,
         pipe=project['pipe'],
         handles=project['handles']

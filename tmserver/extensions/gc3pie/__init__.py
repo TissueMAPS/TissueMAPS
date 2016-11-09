@@ -27,6 +27,7 @@ from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.utils import create_gc3pie_session
 from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.utils import get_task_data_from_sql_store
+from tmlib.workflow.workflow import WorkflowStep, ParallelWorkflowStage
 
 logger = logging.getLogger(__name__)
 
@@ -110,11 +111,6 @@ class GC3Pie(object):
         ----------
         jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
             individual computational task or collection of tasks
-
-        Returns
-        -------
-        gc3libs.session.Session
-            session
 
         See also
         --------
@@ -247,6 +243,23 @@ class GC3Pie(object):
         self._engine.add(jobs)
         logger.info('redo jobs "%s"', jobs.jobname)
         self._engine.redo(jobs, index)
+
+    def set_jobs_to_stopped(self, jobs):
+        '''Sets the state of jobs to ``STOPPED`` in a recursive manner.
+
+        Parameters
+        ----------
+        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
+            individual computational task or collection of tasks
+        '''
+        def stop_recursively(task_):
+            task_.execution.state = 'STOPPED'
+            if hasattr(task_, 'tasks'):
+                for t in task_:
+                    if t.state != gc3libs.Run.State.TERMINATED:
+                        stop_recursively(t)
+
+        stop_recursively(jobs)
 
     def get_status_of_submitted_jobs(self, jobs, recursion_depth=None):
         '''Gets the status of submitted jobs.

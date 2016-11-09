@@ -21,6 +21,7 @@ from flask import Flask
 from flask_sqlalchemy_session import flask_scoped_session
 import gc3libs
 
+import tmlib.models as tm
 from tmlib.models.utils import (
     create_db_engine, create_db_session_factory, set_db_uri
 )
@@ -35,9 +36,29 @@ from tmlib import cfg as libcfg
 logger = logging.getLogger(__name__)
 
 
-def create_app(config_overrides={}, log_level=None):
+def get_running_task_ids():
+    """Gets the IDs of all tasks that are not in state ``STOPPED`` or
+    ``TERMINATED``. If tasks are have one of these states at server startup,
+    they have probably been interrupted by a previous shutdown and need to
+    be resubmitted.
+
+    Returns
+    -------
+    List[int]
     """
-    Create a Flask application object that registers all the blueprints on
+    with tm.utils.MainSession() as session:
+        top_task_ids = session.query(tm.Submission.top_task_id).all()
+        tasks = session.query(tm.Task.id).\
+            filter(
+                tm.Task.id.in_(top_task_ids),
+                ~tm.Task.state.in_({'STOPPED', 'TERMINATED', 'TERMINATING'})
+            ).\
+            all()
+        return [t.id for t in tasks]
+
+
+def create_app(config_overrides={}, log_level=None):
+    """Creates a Flask application object that registers all the blueprints on
     which the actual routes are defined.
 
     Parameters
@@ -142,5 +163,19 @@ def create_app(config_overrides={}, log_level=None):
     # from tmserver.extensions import websocket
     # websocket.init_app(app)
     app.register_blueprint(jtui, url_prefix='/jtui')
+
+    # Restart all jobs that might have been accidentially stopped by
+    # a server shutdown.
+    with app.app_context():
+        ids_of_tasks_to_restart = get_running_task_ids()
+        for tid in ids_of_tasks_to_restart:
+            task = gc3pie.retrieve_single_job(tid)
+            gc3pie.set_jobs_to_stopped(task)
+            gc3pie.store_jobs(task)
+            if hasattr(task, 'tasks'):
+                index = len(task.tasks)-1
+            else:
+                index = 0
+            gc3pie.resubmit_jobs(task)
 
     return app

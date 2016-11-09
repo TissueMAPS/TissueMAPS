@@ -25,6 +25,9 @@ import tmlib.models as tm
 from tmlib import cfg as tmlib_cfg
 from tmlib.writers import JsonWriter
 from tmlib.tools.jobs import ToolJob
+from tmlib.log import LEVELS_TO_VERBOSITY
+from tmlib.tools import get_available_tools, get_tool_class
+from tmlib.tools.manager import ToolRequestManager
 
 from tmserver.api import api
 from tmserver.error import (
@@ -35,9 +38,7 @@ from tmserver.error import (
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
 from tmserver.extensions import gc3pie
-
-from tmlib.tools import get_available_tools, get_tool_class
-from tmlib.tools.manager import ToolRequestManager
+from tmserver import cfg as server_cfg
 
 
 logger = logging.getLogger(__name__)
@@ -158,7 +159,8 @@ def process_tool_request(experiment_id):
 
     logger.info('process request of tool "%s"', tool_name)
 
-    manager = ToolRequestManager(experiment_id, tool_name, 1)
+    verbosity = LEVELS_TO_VERBOSITY[server_cfg.log_level]
+    manager = ToolRequestManager(experiment_id, tool_name, verbosity)
     submission_id, user_name = manager.register_submission(current_identity.id)
     manager.write_batch_file(payload, submission_id)
     job = manager.create_job(submission_id, user_name)
@@ -220,7 +222,10 @@ def get_tool_result(experiment_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         tool_result = session.query(tm.ToolResult).\
             filter_by(submission_id=submission_id).\
-            one()
+            order_by(tm.ToolResult.submission_id.desc()).\
+            first()
+        if tool_result is None:
+            raise ResourceNotFoundError(tm.ToolResult)
         return jsonify(data=tool_result)
 
 
@@ -390,7 +395,7 @@ def get_label_layer_tiles(experiment_id, label_layer_id):
                     'type': 'Feature',
                     'geometry': json.loads(geom_geojson_str),
                     'properties': {
-                        'label': mapobject_id_to_label[id],
+                        'label': str(mapobject_id_to_label[id]),
                         'id': id
                      }
                 }
