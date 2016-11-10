@@ -5,6 +5,7 @@ from werkzeug.contrib.profiler import ProfilerMiddleware
 
 from tmserver.appfactory import create_app
 
+
 logo = """
   _____ _                    __  __    _    ____  ____
  |_   _(_)___ ___ _   _  ___|  \/  |  / \  |  _ \/ ___|
@@ -25,9 +26,8 @@ if __name__ == '__main__':
         help='if the dev server should run in gevent mode'
     )
     parser.add_argument(
-        '--logging', dest='logging_level', type=str, default='INFO',
-        choices={'CRITICAL', 'INFO', 'DEBUG'},
-        help='logging level (default: INFO)'
+        '--verbosity', '-v', action='count', default=0,
+        help='logging verbosity '
     )
     parser.add_argument(
         '--config_file', type=str,
@@ -41,15 +41,8 @@ if __name__ == '__main__':
     print logo
     args = parser.parse_args()
 
-    logging_levels = {
-        'INFO': logging.INFO,
-        'DEBUG': logging.DEBUG,
-        'CRITICAL': logging.CRITICAL
-    }
-    log_level = logging_levels[args.logging_level]
-
     app = create_app(
-        config_overrides={'SCHEDULER': 'threading'}, log_level=log_level
+        config_overrides={'SCHEDULER': 'threading'}, verbosity=args.verbosity
     )
     if args.profile:
         app.config['PROFILE'] = True

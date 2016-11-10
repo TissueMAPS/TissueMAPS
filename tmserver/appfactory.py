@@ -22,6 +22,7 @@ from flask_sqlalchemy_session import flask_scoped_session
 import gc3libs
 
 import tmlib.models as tm
+from tmlib.log import map_logging_verbosity
 from tmlib.models.utils import (
     create_db_engine, create_db_session_factory, set_db_uri
 )
@@ -57,7 +58,7 @@ def get_running_task_ids():
         return [t.id for t in tasks]
 
 
-def create_app(config_overrides={}, log_level=None):
+def create_app(config_overrides={}, verbosity=None):
     """Creates a Flask application object that registers all the blueprints on
     which the actual routes are defined.
 
@@ -76,7 +77,9 @@ def create_app(config_overrides={}, log_level=None):
     """
     app = Flask('wsgi')
 
-    if log_level is not None:
+    if verbosity is not None:
+        log_level = map_logging_verbosity(verbosity)
+        print log_level
         cfg.log_level = log_level
 
     app.config.update(config_overrides)
@@ -120,16 +123,26 @@ def create_app(config_overrides={}, log_level=None):
     tmlib_logger.setLevel(cfg.log_level)
     tmlib_logger.addHandler(file_handler)
     tmlib_logger.addHandler(stdout_handler)
-    gc3pie_logger = logging.getLogger('gc3.gc3libs')
-    gc3pie_logger.setLevel(logging.CRITICAL)
-    gc3pie_logger.addHandler(file_handler)
-    gc3pie_logger.addHandler(stdout_handler)
     apscheduler_logger = logging.getLogger('apscheduler')
     apscheduler_logger.setLevel(logging.CRITICAL)
     apscheduler_logger.addHandler(file_handler)
     apscheduler_logger.addHandler(stdout_handler)
+    gc3pie_logger = logging.getLogger('gc3.gc3libs')
+    if verbosity > 4:
+        gc3pie_logger.setLevel(logging.DEBUG)
+    elif verbosity > 3:
+        gc3pie_logger.setLevel(logging.INFO)
+    else:
+        gc3pie_logger.setLevel(logging.CRITICAL)
+    gc3pie_logger.addHandler(file_handler)
+    gc3pie_logger.addHandler(stdout_handler)
     werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.setLevel(logging.CRITICAL)
+    if verbosity > 4:
+        werkzeug_logger.setLevel(logging.DEBUG)
+    elif verbosity > 3:
+        werkzeug_logger.setLevel(logging.INFO)
+    else:
+        werkzeug_logger.setLevel(logging.CRITICAL)
     werkzeug_logger.addHandler(file_handler)
     werkzeug_logger.addHandler(stdout_handler)
 
