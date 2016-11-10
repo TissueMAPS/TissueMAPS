@@ -227,6 +227,11 @@ class WorkflowService {
         return this._$http.post('/api/experiments/' + experiment.id + '/workflow/submit', data)
         .then((resp) => {
             // console.log(resp);
+            console.log('UPDATE JOBS')
+            data.description.stages[index].steps.map((step, stepIndex) => {
+                console.log('UPDATE JOBS for step ', step.name)
+                return this._$rootScope.$emit('updateJobStatus', step.name);
+            });
             return resp;
         })
         .catch((resp) => {
