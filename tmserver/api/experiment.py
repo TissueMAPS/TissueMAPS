@@ -32,6 +32,7 @@ from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
 from tmlib import cfg as lib_cfg
 
+from tmserver import cfg as server_cfg
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
 from tmserver.model import decode_pk
@@ -44,13 +45,10 @@ from tmserver.error import (
     ResourceNotFoundError,
     NotAuthorizedError
 )
-from tmserver import cfg as server_cfg
 
 
 logger = logging.getLogger(__name__)
 
-def _raise_error_when_missing(arg):
-    raise MissingGETParameterError(arg)
 
 @api.route(
     '/experiments/<experiment_id>/channel_layers/<channel_layer_id>/tiles',

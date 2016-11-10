@@ -23,6 +23,8 @@ from flask_jwt import JWT
 
 import tmlib.models as tm
 
+from tmserver.error import ResourceNotFoundError
+
 
 jwt = JWT()
 
@@ -33,10 +35,10 @@ def authenticate(username, password):
     """Check if there is a user with this username-pw-combo
     and return the user object if a matching user has been found."""
     user = current_session.query(tm.User).filter_by(name=username).one()
-    if user and sha256_crypt.verify(password, user.password):
-        return user
-    else:
-        return None
+    if not(user and sha256_crypt.verify(password, user.password)):
+        raise ResourceNotFoundError(tm.User)
+    return user
+
 
 
 @jwt.identity_handler

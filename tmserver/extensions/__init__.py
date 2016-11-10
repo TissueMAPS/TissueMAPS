@@ -13,9 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from auth import jwt
+from tmserver.extensions.auth import jwt
 
-from gc3pie import GC3Pie
+from tmserver.extensions.gc3pie import GC3Pie
 gc3pie = GC3Pie()
 
 from flask_uwsgi_websocket import GeventWebSocket

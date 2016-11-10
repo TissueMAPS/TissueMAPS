@@ -23,6 +23,38 @@ from tmserver.api import api
 
 @api.route('/register', methods=['POST'])
 def register():
+    """
+    .. http:post:: /api/experiments/register
+
+        Registers a new :class:`User <tmlib.models.user.User>` in the database.
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "username": "testuser",
+                "password": "XXX",
+                "email": "testuser@gmail.com",
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "id": "MQ==",
+                "name": "testuser",
+                "email": "testuser@gmail.com",
+            }
+
+        :statuscode 200: no error
+
+    """
     data = json.loads(request.data)
     password = data.get('password')
     username = data.get('username')

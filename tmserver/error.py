@@ -20,50 +20,10 @@ the flask error handler and sent to the client.
 
 """
 import sqlalchemy
-from flask import jsonify, current_app
 
 from tmserver.serialize import json_encoder
-from tmserver.api import api
 
 
-def register_error(cls):
-    """Decorator to register exception classes as errors that can be
-    serialized to JSON"""
-    @api.errorhandler(cls)
-    def handle_invalid_usage(error):
-        current_app.logger.error(error)
-        response = jsonify(error=error)
-        response.status_code = error.status_code
-        return response
-    return cls
-
-
-@api.errorhandler(sqlalchemy.orm.exc.NoResultFound)
-def handle_no_result_found(error):
-    response = jsonify(error={
-        'message': error.message,
-        'status_code': 404,
-        'type': error.__class__.__name__
-    })
-    current_app.logger.error('NoResultFound: ' + error.message)
-    response.status_code = 404
-    return response
-
-
-@api.errorhandler(sqlalchemy.exc.IntegrityError)
-def handle_integrity_error(error):
-    response = jsonify(error={
-        'error': True,
-        'message': error.message,
-        'status_code': 500,
-        'type': error.__class__.__name__
-    })
-    current_app.logger.error('IntegrityError: ' + error.message)
-    response.status_code = 500
-    return response
-
-
-@register_error
 class APIException(Exception):
     def __init__(self, message, status_code):
         self.message = message
@@ -83,7 +43,6 @@ def encode_api_exception(obj, encoder):
     }
 
 
-@register_error
 class MalformedRequestError(APIException):
 
     default_message = 'Invalid request'
@@ -94,7 +53,6 @@ class MalformedRequestError(APIException):
         )
 
 
-@register_error
 class MissingGETParameterError(MalformedRequestError):
     def __init__(self, *parameters):
         super(MissingGETParameterError, self).__init__(
@@ -105,7 +63,6 @@ class MissingGETParameterError(MalformedRequestError):
         )
 
 
-@register_error
 class MissingPOSTParameterError(MalformedRequestError):
     def __init__(self, *parameters):
         super(MissingPOSTParameterError, self).__init__(
@@ -116,7 +73,6 @@ class MissingPOSTParameterError(MalformedRequestError):
         )
 
 
-@register_error
 class NotAuthorizedError(APIException):
 
     default_message = 'This user does not have access to this resource.'
@@ -127,7 +83,6 @@ class NotAuthorizedError(APIException):
         )
 
 
-@register_error
 class ResourceNotFoundError(APIException):
     def __init__(self, model):
         super(ResourceNotFoundError, self).__init__(
@@ -138,7 +93,6 @@ class ResourceNotFoundError(APIException):
         )
 
 
-@register_error
 class InternalServerError(APIException):
 
     default_message = 'The server encountered an unexpected problem.'
