@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 angular.module('jtui.runner')
-.controller('FigureCtrl', ['$scope', 'figure', 'name', 'jobId', '$uibModalInstance',
-    function($scope, figure, name, jobId, $uibModalInstance) {
+.controller('FigureCtrl', ['$scope', 'figure', 'name', 'jobId', '$uibModalInstance', '$rootScope',
+    function($scope, figure, name, jobId, $uibModalInstance, $rootScope) {
 
     console.log('plot figure')
-    $scope.figure = null;  // necessary to update the parent scope!!!
-    $scope.figure = figure;
-    $scope.figure.layout.height = 1000;
-    $scope.figure.layout.width = 1000;
-    $scope.figure.options = {
+    // $scope.figure = null;  // necessary to update the parent scope!!!
+    $rootScope.figure = figure;
+    // $scope.figure = figure;
+    $rootScope.figure.layout.height = 1000;
+    $rootScope.figure.layout.width = 1000;
+    $rootScope.figure.options = {
         showLink: false,
         displayLogo: false,  // this doesn't work
         displayModeBar: true,
