@@ -79,7 +79,6 @@ def create_app(config_overrides={}, verbosity=None):
 
     if verbosity is not None:
         log_level = map_logging_verbosity(verbosity)
-        print log_level
         cfg.log_level = log_level
 
     app.config.update(config_overrides)

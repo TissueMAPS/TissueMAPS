@@ -36,14 +36,14 @@ class TmJSONEncoder(flask.json.JSONEncoder):
     """Custom JSON encoder to serialize types defined for TissueMAPS.
     This serializer will also check supertypes if no matching serializer was
     found.
-    Serializers need to be registered with the ``json_encoder`` decorator:
+    Serializers need to be registered with the ``json_encoder`` decorator::
 
-    @json_encoder(SomeClass)
-    def encode_some_class(obj, encoder):
-        return {
-            'id': encode_pk(obj.id)
-            ...
-        }
+        @json_encoder(SomeClass)
+        def encode_some_class(obj, encoder):
+            return {
+                'id': encode_pk(obj.id)
+                ...
+            }
 
     Make sure that the files where the serializers are defined are imported at
     application start, otherwise they won't be registered.

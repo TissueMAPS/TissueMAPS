@@ -241,7 +241,7 @@ class GC3Pie(object):
         except:
             pass
         self._engine.add(jobs)
-        logger.info('redo jobs "%s"', jobs.jobname)
+        logger.info('redo jobs "%s" at %d', jobs.jobname, index)
         self._engine.redo(jobs, index)
 
     def set_jobs_to_stopped(self, jobs):
@@ -255,8 +255,8 @@ class GC3Pie(object):
         def stop_recursively(task_):
             task_.execution.state = 'STOPPED'
             if hasattr(task_, 'tasks'):
-                for t in task_:
-                    if t.state != gc3libs.Run.State.TERMINATED:
+                for t in task_.tasks:
+                    if t.execution.state != gc3libs.Run.State.TERMINATED:
                         stop_recursively(t)
 
         stop_recursively(jobs)

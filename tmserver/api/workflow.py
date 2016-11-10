@@ -313,6 +313,7 @@ def get_jobs_status(experiment_id):
                     offset(index).\
                     all()
                 # order_by(tm.Task.id).\
+                tasks = sorted(tasks, key=lambda k: k.name)
                 status = [t.status for t in tasks]
 
     return jsonify({
