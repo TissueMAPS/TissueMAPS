@@ -215,7 +215,7 @@ class Viewer {
         // session.results.push(result);
         if (this.currentResult !== null) {
             if (result.submissionId > this.currentResult.submissionId) {
-                console.log('update current result: ', result)
+                // console.log('update current result: ', result)
                 this.saveCurrentResult();
                 this.currentResult = result;
             } else {
@@ -224,13 +224,13 @@ class Viewer {
                         return res.submissionId;
                     })
                     if (submissionIds.indexOf(result.submissionId) == -1) {
-                        console.log('save result: ', result)
+                        // console.log('save result: ', result)
                         this.savedResults.push(result);
                     }
                 }
             }
         } else {
-            console.log('update current result: ', result)
+            // console.log('update current result: ', result)
             this.currentResult = result;
         }
         // TODO: Send event to Viewer messagebox
