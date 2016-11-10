@@ -56,10 +56,9 @@ def map_logging_verbosity(verbosity):
     '''
     if not isinstance(verbosity, int):
         raise TypeError('Argument "verbosity" must have type int.')
-
     if not verbosity >= 0:
         raise ValueError('Argument "verbosity" must be a positive number.')
-    if verbosity > len(VERBOSITY_TO_LEVELS):
+    if verbosity >= len(VERBOSITY_TO_LEVELS):
         verbosity = len(VERBOSITY_TO_LEVELS) - 1
     return VERBOSITY_TO_LEVELS.get(verbosity)
 
