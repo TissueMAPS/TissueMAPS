@@ -14,21 +14,22 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """User interface view functions that deal with layers."""
+import json
 import logging
-from flask import jsonify, request, current_app
+from flask import jsonify, request, current_app, send_file
 from flask_jwt import current_identity, jwt_required
 from cStringIO import StringIO
 
 import tmlib.models as tm
 
-from tmserver.ui import ui
+from tmserver.api import api
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
 
 logger = logging.getLogger(__name__)
 
 
-@ui.route(
+@api.route(
     '/experiments/<experiment_id>/mapobjects/<object_name>/tile',
     methods=['GET']
 )
@@ -36,7 +37,7 @@ logger = logging.getLogger(__name__)
 @decode_query_ids()
 def get_mapobjects_tile(experiment_id, object_name):
     """
-    .. http:get:: /ui/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/tile
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/tile
 
         Sends all mapobject outlines as a GeoJSON feature collection
         that intersect with the tile at position x, y, z.
@@ -148,7 +149,7 @@ def get_mapobjects_tile(experiment_id, object_name):
     })
 
 
-@ui.route(
+@api.route(
     '/experiments/<experiment_id>/channel_layers/<channel_layer_id>/tiles',
     methods=['GET']
 )
@@ -156,7 +157,7 @@ def get_mapobjects_tile(experiment_id, object_name):
 @decode_query_ids()
 def get_channel_layer_tile(experiment_id, channel_layer_id):
     """
-    .. http:get:: /ui/experiments/(string:experiment_id)/channel_layer/(string:channel_layer_id)/tiles
+    .. http:get:: /api/experiments/(string:experiment_id)/channel_layer/(string:channel_layer_id)/tiles
 
         Sends a pyramid tile image for a specific channel layer.
 
@@ -199,7 +200,7 @@ def get_channel_layer_tile(experiment_id, channel_layer_id):
         return send_file(f, mimetype='image/jpeg')
 
 
-@ui.route(
+@api.route(
     '/experiments/<experiment_id>/label_layers/<label_layer_id>/tiles',
     methods=['GET']
 )
@@ -207,7 +208,7 @@ def get_channel_layer_tile(experiment_id, channel_layer_id):
 @assert_query_params('x', 'y', 'z', 'zplane', 'tpoint')
 def get_label_layer_tiles(experiment_id, label_layer_id):
     """
-    .. http:get:: /ui/experiments/(string:experiment_id)/labellayers/(string:label_layer_id)/tiles
+    .. http:get:: /api/experiments/(string:experiment_id)/labellayers/(string:label_layer_id)/tiles
 
         Get all mapobjects together with the labels that were assigned to them
         for a given tool result and tile coordinate.

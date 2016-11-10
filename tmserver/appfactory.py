@@ -174,9 +174,6 @@ def create_app(config_overrides={}, verbosity=None):
     from tmserver.jtui import jtui
     app.register_blueprint(jtui, url_prefix='/jtui')
 
-    from tmserver.ui import ui
-    app.register_blueprint(ui, url_prefix='/ui')
-
     # Restart all jobs that might have been accidentially stopped by
     # a server shutdown.
     with app.app_context():

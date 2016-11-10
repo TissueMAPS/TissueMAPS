@@ -72,3 +72,5 @@ import tmserver.api.workflow
 import tmserver.api.upload
 import tmserver.api.user
 import tmserver.api.mapobject
+import tmserver.api.layer
+import tmserver.api.tools

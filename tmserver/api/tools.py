@@ -30,7 +30,7 @@ from tmlib.log import LEVELS_TO_VERBOSITY
 from tmlib.tools import get_available_tools, get_tool_class
 from tmlib.tools.manager import ToolRequestManager
 
-from tmserver.ui import ui
+from tmserver.api import api
 from tmserver.error import (
     MalformedRequestError,
     ResourceNotFoundError,
@@ -68,11 +68,11 @@ def _create_mapobject_feature(mapobject_id, geometry_description):
     }
 
 
-@ui.route('/tools', methods=['GET'])
+@api.route('/tools', methods=['GET'])
 @jwt_required()
 def get_tools():
     """
-    .. http:get:: /ui/tools
+    .. http:get:: /api/tools
 
         Get a list of supported tools.
 
@@ -112,7 +112,7 @@ def get_tools():
     return jsonify(data=tool_descriptions)
 
 
-@ui.route(
+@api.route(
     '/experiments/<experiment_id>/tools/request', methods=['POST']
 )
 @jwt_required()
@@ -120,7 +120,7 @@ def get_tools():
 @assert_form_params('payload', 'session_uuid', 'tool_name')
 def process_tool_request(experiment_id):
     """
-    .. http:post:: /ui/experiments/(string:experiment_id)/tools/request
+    .. http:post:: /api/experiments/(string:experiment_id)/tools/request
 
         Processes a generic tool request sent by the client.
 
@@ -178,14 +178,14 @@ def process_tool_request(experiment_id):
     })
 
 
-@ui.route(
+@api.route(
     '/experiments/<experiment_id>/tools/result', methods=['GET']
 )
 @decode_query_ids()
 @assert_query_params('submission_id')
 def get_tool_result(experiment_id):
     """
-    .. http:get:: /ui/experiments/(string:experiment_id)/tools/result
+    .. http:get:: /api/experiments/(string:experiment_id)/tools/result
 
         Get the result of a previous tool request including a label layer that
         can be queried for tiled cell labels as well as optional plots.
@@ -230,13 +230,13 @@ def get_tool_result(experiment_id):
         return jsonify(data=tool_result)
 
 
-@ui.route(
+@api.route(
     '/experiments/<experiment_id>/tools/status', methods=['GET']
 )
 @decode_query_ids()
 def get_tool_job_status(experiment_id):
     """
-    .. http:get:: /ui/experiments/(string:experiment_id)/tools/status
+    .. http:get:: /api/experiments/(string:experiment_id)/tools/status
 
         Get the status of one or multiple jobs processing a tool request.
 
