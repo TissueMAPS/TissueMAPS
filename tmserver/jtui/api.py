@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Jterator user interface view functions."""
 import os
 import time
 import json
@@ -24,7 +25,7 @@ import base64
 import subprocess
 
 from natsort import natsorted
-from flask import send_file, jsonify, request, Blueprint, current_app
+from flask import send_file, jsonify, request
 from flask_jwt import jwt_required
 from flask_jwt import current_identity
 
@@ -45,9 +46,15 @@ from tmserver.extensions import websocket
 from tmserver.util import decode_query_ids
 from tmserver.util import assert_form_params, assert_query_params
 from tmserver.extensions import gc3pie
+from tmserver.jtui import jtui
+from tmserver.error import (
+    MalformedRequestError,
+    MissingGETParameterError,
+    MissingPOSTParameterError,
+    ResourceNotFoundError,
+    NotAuthorizedError
+)
 
-
-jtui = Blueprint('jtui', __name__)
 
 logger = logging.getLogger(__name__)
 
@@ -523,8 +530,8 @@ def get_job_output(experiment_id, project_name):
     except IndexError:
         return jsonify(output=None)
     except Exception as e:
-        error = str(e)
-        return jsonify(output=None, error=error)
+        logger.error(str(e))
+        return JtUIError('Output could not be retrieved.')
 
 
 @jtui.route(
@@ -541,6 +548,7 @@ def run_jobs(experiment_id, project_name):
     This requires the pipeline and module descriptions to be saved to *pipe*
     and *handles* files, respectively.
     '''
+    raise ResourceNotFoundError(tm.Experiment)
     logger.info(
         'submit jobs for jterator pipeline "%s" of experiment %d',
         project_name, experiment_id

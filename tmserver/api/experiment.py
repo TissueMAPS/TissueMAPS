@@ -20,8 +20,7 @@ from cStringIO import StringIO
 import logging
 import numpy as np
 from flask import jsonify, send_file, current_app, request
-from flask_jwt import jwt_required
-from flask_jwt import current_identity
+from flask_jwt import jwt_required, current_identity
 from werkzeug import secure_filename
 from sqlalchemy import or_
 
@@ -48,57 +47,6 @@ from tmserver.error import (
 
 
 logger = logging.getLogger(__name__)
-
-
-@api.route(
-    '/experiments/<experiment_id>/channel_layers/<channel_layer_id>/tiles',
-    methods=['GET']
-)
-@assert_query_params('x', 'y', 'z')
-@decode_query_ids()
-def get_channel_layer_tile(experiment_id, channel_layer_id):
-    """
-    .. http:get:: /api/experiments/(string:experiment_id)/channel_layer/(string:channel_layer_id)/tiles
-
-        Sends a pyramid tile image for a specific channel layer.
-
-        :query x: zero-based `x` coordinate
-        :query y: zero-based `y` coordinate
-        :query z: zero-based zoom level index
-
-    """
-    logger.info(
-        'get tile for channel layer %d of experiment %d',
-        channel_layer_id, experiment_id
-    )
-    x = request.args.get('x', type=int)
-    y = request.args.get('y', type=int)
-    z = request.args.get('z', type=int)
-
-    with tm.utils.ExperimentSession(experiment_id) as session:
-        channel_layer = session.query(tm.ChannelLayer).get(channel_layer_id)
-        logger.debug(
-            'get channel layer tile: x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
-            x, y, z, channel_layer.zplane, channel_layer.tpoint
-        )
-
-        channel_layer_tile = session.query(tm.ChannelLayerTile).\
-            filter_by(
-                column=x, row=y, level=z,
-                channel_layer_id=channel_layer.id
-            ).\
-            one_or_none()
-
-        if channel_layer_tile is None:
-            logger.warn('tile does not exist - create empty')
-            tile = PyramidTile.create_as_background()
-            pixels = tile.jpeg_encode()
-        else:
-            pixels = channel_layer_tile._pixels
-        f = StringIO()
-        f.write(pixels)
-        f.seek(0)
-        return send_file(f, mimetype='image/jpeg')
 
 
 @api.route('/experiments/<experiment_id>/cycles/id', methods=['GET'])

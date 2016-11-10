@@ -21,7 +21,7 @@ import importlib
 import logging
 import re
 
-from flask import request
+from flask import request, jsonify
 from flask_jwt import jwt_required
 from werkzeug import secure_filename
 from sqlalchemy.orm.exc import MultipleResultsFound

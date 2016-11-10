@@ -168,13 +168,14 @@ def create_app(config_overrides={}, verbosity=None):
     gc3pie.init_app(app)
 
     ## Import and register blueprints
-    from api import api
+    from tmserver.api import api
     app.register_blueprint(api, url_prefix='/api')
 
-    from jtui.api import jtui
-    # from tmserver.extensions import websocket
-    # websocket.init_app(app)
+    from tmserver.jtui import jtui
     app.register_blueprint(jtui, url_prefix='/jtui')
+
+    from tmserver.ui import ui
+    app.register_blueprint(ui, url_prefix='/ui')
 
     # Restart all jobs that might have been accidentially stopped by
     # a server shutdown.
@@ -188,6 +189,6 @@ def create_app(config_overrides={}, verbosity=None):
                 index = len(task.tasks)-1
             else:
                 index = 0
-            gc3pie.resubmit_jobs(task)
+            gc3pie.resubmit_jobs(task, index)
 
     return app

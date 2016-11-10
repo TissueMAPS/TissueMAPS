@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import tmserver.model
 import tmserver.serialize
-
 from tmserver.version import __version__
 from tmserver.config import ServerConfig
 

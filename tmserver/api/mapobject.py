@@ -26,9 +26,7 @@ from zipfile import ZipFile
 from geoalchemy2.shape import to_shape
 import skimage.draw
 
-from flask_jwt import jwt_required
-from flask_jwt import current_identity
-from flask_jwt import jwt_required
+from flask_jwt import current_identity, jwt_required
 from flask import jsonify, request, send_file
 from sqlalchemy.sql import text
 from werkzeug import secure_filename
@@ -42,126 +40,6 @@ from tmserver.error import MalformedRequestError, ResourceNotFoundError
 
 
 logger = logging.getLogger(__name__)
-
-
-@api.route(
-    '/experiments/<experiment_id>/mapobjects/<object_name>/tile',
-    methods=['GET']
-)
-@assert_query_params('x', 'y', 'z', 'zplane', 'tpoint')
-@decode_query_ids()
-def get_mapobjects_tile(experiment_id, object_name):
-    """
-    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/tile
-
-        Sends all mapobject outlines as a GeoJSON feature collection
-        that intersect with the tile at position x, y, z.
-        If ``mapobject_type`` is ``DEBUG_TILE`` the outline returned
-        will correspond to the tile boundaries.
-
-        **Example response**:
-
-        .. sourcecode:: http
-
-            HTTP/1.1 200 OK
-            Content-Type: application/json
-
-            {
-                "type": "FeatureCollection",
-                "features": [
-                    "type": "Feature",
-                    "id": 1,
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [x1, y1], [x2, y2], ...
-                        ]]
-                    },
-                    "properties": {
-                        "type": "Cells"
-                    }
-                    ...
-                ]
-            }
-
-        :query x: zero-based `x` coordinate
-        :query y: zero-based `y` coordinate
-        :query z: zero-based zoom level index
-        :query zplane: the zplane of the associated layer
-        :query tpoint: the time point of the associated layer
-
-        :statuscode 200: no error
-        :statuscode 400: malformed request
-
-    """
-    # The coordinates of the requested tile
-    x = request.args.get('x', type=int)
-    y = request.args.get('y', type=int)
-    # "z" is the pyramid zoom level and "zlevel" the z-resolution of the
-    # acquired image
-    z = request.args.get('z', type=int)
-    zplane = request.args.get('zplane', type=int)
-    tpoint = request.args.get('tpoint', type=int)
-
-    logger.debug(
-        'get tile for mapobject of type "%s": x=%d, y=%d, z=%d, zplane=%d, '
-        'tpoint=%d', object_name, x, y, z, zplane, tpoint
-    )
-
-    if object_name == 'DEBUG_TILE':
-        with tm.utils.ExperimentSession(experiment_id) as session:
-            layer = session.query(tm.ChannelLayers).first()
-            maxzoom = layer.maxzoom_level_index
-        minx, miny, maxx, maxy = tm.MapobjectSegmentation.bounding_box(
-            x, y, z, maxzoom
-        )
-        return jsonify({
-            'type': 'Feature',
-            'geometry': {
-                'type': 'Polygon',
-                'coordinates': [[
-                    [maxx, maxy], [minx, maxy], [minx, miny], [maxx, miny],
-                    [maxx, maxy]
-                ]]
-            },
-            'properties': {
-                'x': x,
-                'y': y,
-                'z': z,
-                'type': 'DEBUG_TILE'
-            }
-        })
-
-    with tm.utils.ExperimentSession(experiment_id) as session:
-        mapobject_type = session.query(tm.MapobjectType).\
-            filter_by(name=object_name).\
-            one()
-        query = mapobject_type.get_mapobject_outlines_within_tile(
-            x, y, z, tpoint, zplane
-        )
-
-    features = []
-    if len(query) > 0:
-        # Try to estimate how many points there are in total within
-        # the polygons of this tile.
-        # TODO: Make this more light weight by sending binary coordinates
-        # without GEOJSON overhead. Requires a hack on the client side.
-        for mapobject_id, geom_geojson_str in query:
-            logger.debug('include geometry of mapobject %d', mapobject_id)
-            feature = {
-                "type": "Feature",
-                "id": mapobject_id,
-                "geometry": json.loads(geom_geojson_str),
-                "properties": {
-                    "type": object_name
-                }
-            }
-            features.append(feature)
-
-    return jsonify({
-        "type": "FeatureCollection",
-        "features": features
-    })
 
 
 @api.route('/experiments/<experiment_id>/features', methods=['GET'])

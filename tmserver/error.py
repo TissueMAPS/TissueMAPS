@@ -19,12 +19,17 @@ When raised these exceptions will be automatically handled and serialized by
 the flask error handler and sent to the client.
 
 """
+import logging
+import importlib
+import inspect
 import sqlalchemy
 
 from tmserver.serialize import json_encoder
 
+logger = logging.getLogger(__name__)
 
-class APIException(Exception):
+
+class HTTPException(Exception):
     def __init__(self, message, status_code):
         self.message = message
         self.status_code = status_code
@@ -33,7 +38,7 @@ class APIException(Exception):
         return '%s: %s' % (self.__class__.__name__, self.message)
 
 
-@json_encoder(APIException)
+@json_encoder(HTTPException)
 def encode_api_exception(obj, encoder):
     return {
         'error': True,
@@ -43,7 +48,7 @@ def encode_api_exception(obj, encoder):
     }
 
 
-class MalformedRequestError(APIException):
+class MalformedRequestError(HTTPException):
 
     default_message = 'Invalid request'
 
@@ -73,7 +78,7 @@ class MissingPOSTParameterError(MalformedRequestError):
         )
 
 
-class NotAuthorizedError(APIException):
+class NotAuthorizedError(HTTPException):
 
     default_message = 'This user does not have access to this resource.'
 
@@ -83,7 +88,7 @@ class NotAuthorizedError(APIException):
         )
 
 
-class ResourceNotFoundError(APIException):
+class ResourceNotFoundError(HTTPException):
     def __init__(self, model):
         super(ResourceNotFoundError, self).__init__(
             message=(
@@ -93,7 +98,7 @@ class ResourceNotFoundError(APIException):
         )
 
 
-class InternalServerError(APIException):
+class InternalServerError(HTTPException):
 
     default_message = 'The server encountered an unexpected problem.'
 
@@ -101,3 +106,21 @@ class InternalServerError(APIException):
         super(InternalServerError, self).__init__(
             message=message, status_code=500
         )
+
+
+def register_http_error_classes(error_handler_func):
+    """Registers an error handler for error classes derived from
+    :class:`HTTPException <tmserver.error.HTTPException>`.
+
+    Parameters
+    ----------
+    error_handler_func: function
+    """
+    module = importlib.import_module('tmserver.error')
+    HTTPException = getattr(module, 'HTTPException')
+    for name, obj in inspect.getmembers(module):
+    # for name, obj in inspect.getmembers(globals()):
+        if inspect.isclass(obj):
+            if HTTPException in inspect.getmro(obj):
+                logger.debug('mokey path class %r with error handler', obj)
+                globals()[obj.__name__] = error_handler_func(obj)
