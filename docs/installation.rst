@@ -227,15 +227,17 @@ Requirements
 
         sudo add-apt-repository ppa:fkrull/deadsnakes-python2.7
         sudo apt-get update
-        sudo apt-get install python2.7
+        sudo apt-get -y install python2.7
 
         sudo apt-get -y install python-pip python-dev build-essential
         sudo pip install --upgrade pip
+        sudo pip install --upgrade setuptools
 
     On MacOSX::
 
         brew install python
         sudo pip install --upgrade pip
+        sudo pip install --upgrade setuptools
 
 .. _application-server-installation:
 
