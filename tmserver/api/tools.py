@@ -190,6 +190,16 @@ def get_tool_result(experiment_id):
         Get the result of a previous tool request including a label layer that
         can be queried for tiled cell labels as well as optional plots.
 
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "submission_id": 117
+            }
+
         **Example response**:
 
         .. sourcecode:: http
@@ -201,7 +211,7 @@ def get_tool_result(experiment_id):
                 "data": {
                     "id": "MQ==",
                     "name": "Cluster Result 1",
-                    "submission_id": 1,
+                    "submission_id": 117,
                     "layer": {
                         "id": "MQ==",
                         "type": "HeatmapLayer",
@@ -228,6 +238,39 @@ def get_tool_result(experiment_id):
         if tool_result is None:
             raise ResourceNotFoundError(tm.ToolResult)
         return jsonify(data=tool_result)
+
+
+@api.route(
+    '/experiments/<experiment_id>/tools/result/<tool_result_id>',
+    methods=['DELETE']
+)
+@decode_query_ids()
+def delete_tool_result(experiment_id, tool_result_id):
+    """
+    .. http:delete:: /api/experiments/(string:experiment_id)/tools/result/(string:tool_result_id)
+
+        Delete a tool result.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+
+        :statuscode 200: no error
+
+    """
+    logger.info('delete tool result %d', tool_result_id)
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        session.query(tm.ToolResult).\
+            filter_by(id=tool_result_id).\
+            delete()
+    return jsonify(message='ok')
 
 
 @api.route(
