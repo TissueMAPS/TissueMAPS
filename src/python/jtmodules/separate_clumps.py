@@ -27,7 +27,7 @@ VERSION = '0.0.5'
 logger = logging.getLogger(__name__)
 PAD = 1
 
-Output = collections.namedtuple('Output', ['output_mask', 'figure'])
+Output = collections.namedtuple('Output', ['separated_mask', 'figure'])
 
 
 def find_concave_regions(mask, max_dist):
@@ -117,18 +117,18 @@ def create_feature_images(label_image):
     return tuple(images)
 
 
-def main(input_mask, input_image, min_area, max_area,
+def main(mask, intensity_image, min_area, max_area,
         min_cut_area, max_form_factor, max_solidity, cutting_passes,
         plot=False, selection_test_mode=False):
-    '''Detects clumps in `input_mask` given criteria provided by the user
+    '''Detects clumps in `mask` given criteria provided by the user
     and cuts them along the borders of watershed regions, which are determined
-    based on the distance transform of `input_mask`.
+    based on the distance transform of `mask`.
 
     Parameters
     ----------
-    input_mask: numpy.ndarray[numpy.bool]
+    mask: numpy.ndarray[numpy.bool]
         2D binary array encoding potential clumps
-    input_image: numpy.ndarray[numpy.uint8 or numpy.uint16]
+    intensity_image: numpy.ndarray[numpy.uint8 or numpy.uint16]
         2D grayscale array with intensity values of the objects that should
         be detected
     min_area: int
@@ -150,7 +150,7 @@ def main(input_mask, input_image, min_area, max_area,
     selection_test_mode: bool, optional
         whether, instead the normal plot, heatmaps should be generated that
         display values of the selection criteria *area*, *form factor* and
-        *solidity* for each individual object in `input_mask` as well as
+        *solidity* for each individual object in `mask` as well as
         the final selection of "clumps" based on the selection
         criteria provided by the user
 
@@ -159,12 +159,12 @@ def main(input_mask, input_image, min_area, max_area,
     jtmodules.separate_clumps.Output
     '''
 
-    output_mask = input_mask.copy()
-    cut_mask = np.zeros(output_mask.shape, bool)
-    clumps_mask = np.zeros(output_mask.shape, bool)
+    separated_mask = mask.copy()
+    cut_mask = np.zeros(separated_mask.shape, bool)
+    clumps_mask = np.zeros(separated_mask.shape, bool)
     for n in range(cutting_passes):
         logger.info('cutting pass #%d', n+1)
-        label_image = mh.label(output_mask)[0]
+        label_image = mh.label(separated_mask)[0]
         object_ids = np.unique(label_image[label_image > 0])
         if len(object_ids) == 0:
             logger.debug('no objects')
@@ -173,12 +173,12 @@ def main(input_mask, input_image, min_area, max_area,
         bboxes = mh.labeled.bbox(label_image)
         for oid in object_ids:
             logger.debug('process object #%d', oid)
-            mask = jtlib.utils.extract_bbox_image(
+            obj_mask = jtlib.utils.extract_bbox_image(
                 label_image, bboxes[oid], pad=PAD
             )
-            mask = mask == oid
+            obj_mask = obj_mask == oid
 
-            area, form_factor, solidity = calc_features(mask)
+            area, form_factor, solidity = calc_features(obj_mask)
             if area < min_area or area > max_area:
                 logger.debug('not a clump - outside area range')
                 continue
@@ -189,14 +189,14 @@ def main(input_mask, input_image, min_area, max_area,
                 logger.debug('not a clump - above solidity threshold')
                 continue
 
-            y, x = np.where(mask)
+            y, x = np.where(obj_mask)
             y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
             y += y_offset
             x += x_offset
             clumps_mask[y, x] = True
 
             # Rescale distance intensities to make them independent of clump size
-            dist = mh.stretch(mh.distance(mask))
+            dist = mh.stretch(mh.distance(obj_mask))
             # Find peaks that can be used as seeds for the watershed transform
             thresh = mh.otsu(dist)
             peaks = dist > thresh
@@ -225,15 +225,15 @@ def main(input_mask, input_image, min_area, max_area,
                     peaks[peaks == label] = 0
             peaks = mh.labeled.relabel(peaks)[0]
             regions = mh.cwatershed(np.invert(dist), peaks)
-            regions[~mask] = 0
+            regions[~obj_mask] = 0
 
             # Use the line separating the watershed regions to make the cut
             line = mh.labeled.borders(regions)
-            outer_lines = mh.labeled.borders(mask)
+            outer_lines = mh.labeled.borders(obj_mask)
             line[outer_lines] = 0
 
             # Ensure that cut is reasonable give the user defined criteria
-            test_cut_mask = mask.copy()
+            test_cut_mask = obj_mask.copy()
             test_cut_mask[line] = False
             test_cut_mask = mh.morph.open(test_cut_mask)
             subobjects, n_subobjects = mh.label(test_cut_mask)
@@ -258,18 +258,16 @@ def main(input_mask, input_image, min_area, max_area,
             x += x_offset
             cut_mask[y, x] = True
 
-        output_mask[cut_mask] = 0
+        separated_mask[cut_mask] = 0
 
     if plot:
         from jtlib import plotting
         if selection_test_mode:
             logger.info('create plot for selection test mode')
-            labeled_output_mask, n_objects = mh.label(
-                input_mask, np.ones((3, 3), bool)
+            labeled_separated_mask, n_objects = mh.label(
+                mask, np.ones((3, 3), bool)
             )
-            area_img, form_factor_img, solidity_img = create_feature_images(
-                input_mask
-            )
+            area_img, form_factor_img, solidity_img = create_feature_images(mask)
             area_colorscale = plotting.create_colorscale(
                 'Greens', n_objects,
                 add_background=True, background_color='white'
@@ -301,20 +299,20 @@ def main(input_mask, input_image, min_area, max_area,
             )
         else:
             logger.info('create plot')
-            labeled_output_mask, n_objects = mh.label(
-                output_mask, np.ones((3, 3), bool)
+            labeled_separated_mask, n_objects = mh.label(
+                separated_mask, np.ones((3, 3), bool)
             )
             colorscale = plotting.create_colorscale(
                 'Spectral', n=n_objects, permute=True, add_background=True
             )
-            outlines = mh.morph.dilate(mh.labeled.bwperim(output_mask))
+            outlines = mh.morph.dilate(mh.labeled.bwperim(separated_mask))
             cutlines = mh.morph.dilate(mh.labeled.bwperim(cut_mask))
             plots = [
                 plotting.create_mask_image_plot(
-                    labeled_output_mask, 'ul', colorscale=colorscale
+                    labeled_separated_mask, 'ul', colorscale=colorscale
                 ),
                 plotting.create_intensity_overlay_image_plot(
-                    input_image, outlines, 'ur'
+                    intensity_image, outlines, 'ur'
                 ),
                 plotting.create_mask_overlay_image_plot(
                     clumps_mask, cutlines, 'll'
@@ -326,4 +324,4 @@ def main(input_mask, input_image, min_area, max_area,
     else:
         figure = str()
 
-    return Output(output_mask, figure)
+    return Output(separated_mask, figure)
