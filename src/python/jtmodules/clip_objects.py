@@ -11,41 +11,68 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-'''Jterator module for creation of object clipping masks.'''
+'''Jterator module for clipping objects to create new objects
+that consist of the set of non-intersecting pixels.
+'''
 import numpy as np
 import collections
 
 VERSION = '0.0.1'
 
-Output = collections.namedtuple('Output', ['clipped_mask', 'figure'])
+Output = collections.namedtuple('Output', ['clipped_image', 'figure'])
 
 
-def main(outer_mask, inner_mask, plot=False):
-    '''Clips a labeled or binary mask, such that the intersecting pixels/voxels
-    are set to background.
+def main(image_1, image_2, plot=False):
+    '''Clips a labeled image using another image as a mask, such that
+    intersecting pixels/voxels are set to background.
 
     Parameters
     ----------
-    outer_mask: numpy.ndarray[numpy.int32]
-        mask that should be clipped
-    inner_mask: numpy.ndarray[numpy.int32]
-        intersecting mask that should be used for clipping
+    image_1: numpy.ndarray[numpy.int32]
+        label image that should be clipped
+    image_2: numpy.ndarray[numpy.int32]
+        intersecting label image that should be used for clipping
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
     jtmodules.clip_objects.Output
+
+    Note
+    ----
+    `image_1` and `image_2` must have the same size
+
+    Raises
+    ------
+    ValueError
+        when `image_1` and `image_2` don't have the same dimensions
+        and data type and if they don't have unsigned integer type
     '''
-    clipped_mask = np.copy(outer_mask)
-    clipped_mask
-    clipped_mask[inner_mask > 0] = 0
-    clipped_mask = clipped_mask
+    if image_1.shape != image_2.shape:
+        raise ValueError('Both images must have the same dimensions.')
+    clipped_image = np.copy(image_1)
+    clipped_image[image_2 > 0] = 0
 
     if plot:
-        # TODO
-        figure = str()
+        from jtlib import plotting
+        n_objects = len(np.unique(clipped_image)[1:])
+        colorscale = plotting.create_colorscale(
+            'Spectral', n=n_objects, permute=True, add_background=True
+        )
+        plots = [
+            plotting.create_mask_image_plot(
+                image_1, 'ul', colorscale=colorscale
+            ),
+            plotting.create_mask_image_plot(
+                image_2, 'ur', colorscale=colorscale
+            ),
+            plotting.create_mask_image_plot(
+                combined_image, 'll', colorscale=colorscale
+            )
+        ]
+        figure = plotting.create_figure(plots, title='clipped image')
     else:
         figure = str()
 
-    return Output(clipped_mask, figure)
+    return Output(clipped_image, figure)

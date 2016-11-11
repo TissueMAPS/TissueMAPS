@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 '''Jterator module for separation of clumps in a binary image,
-where a `clump` is a connected component with certain size and shape.
+where a `clump` is defined as a connected component of certain size and shape.
 '''
 import numpy as np
 import cv2
@@ -59,85 +59,6 @@ def find_concave_regions(mask, max_dist):
             if defect_pts.size != 0:
                 concave_img[defect_pts[:, 1], defect_pts[:, 0]] = True
     return mh.label(concave_img)
-
-
-def find_watershed_lines(mask, img, ksize):
-    '''Finds watershed lines in the region of `img` defined by `mask`.
-    The seeds for the watershed are automatically determined using thresholding
-    (Otsu's method). The thereby created mask is morphologically opened using
-    a squared structuring element of size `ksize`.
-
-    Parameters
-    ----------
-    mask: numpy.ndarray[numpy.bool]
-        mask image
-    img: numpy.ndarray[numpy.uint8 or numpy.uint16]
-        intensity image
-    ksize: int
-        size of the kernel that's used to detect regional maxima in `img`
-        within `mask`
-
-    Returns
-    -------
-    numpy.ndarray[numpy.bool]
-        image with lines that separate neighbouring watershed regions
-
-    '''
-    if ksize < 2:
-        ksize = 2
-    se = skimage.morphology.square(ksize)
-    peaks = mh.morph.regmax(img, Bc=se)
-    seeds = mh.label(peaks)[0]
-    watershed_regions = mh.cwatershed(np.invert(img), seeds)
-    watershed_regions[~mask] = 0
-    lines = mh.labeled.borders(watershed_regions)
-    outer_lines = mh.labeled.borders(mask)
-    lines[outer_lines] = 0
-    lines = mh.thin(lines)
-    labeled_lines = mh.label(lines)[0]
-    sizes = mh.labeled.labeled_size(labeled_lines)
-    too_small = np.where(sizes < 10)
-    lines = mh.labeled.remove_regions(labeled_lines, too_small) > 0
-    return lines
-
-
-def find_nodes_closest_to_concave_regions(concave_region_points, end_points, nodes):
-    '''Finds end points within shortest distance to each concave region.
-
-    Parameters
-    ----------
-    concave_region_points: numpy.ndarray[numpy.int32]
-        labeled points marking concave regions on the object contour
-    end_points: numpy.ndarray[numpy.int32]
-        labeled points marking intersection points between lines and the
-        object contour
-    nodes: numpy.ndarray[numpy.int32]
-        all labeled points
-
-    Returns
-    -------
-    Dict[int, int]
-        mapping of concave region points to closest end points
-    '''
-    concave_region_point_node_map = dict()
-    concave_region_point_ids = np.unique(concave_region_points)[1:]
-    end_point_ids = np.unique(end_points)[1:]
-    for cid in concave_region_point_ids:
-        cpt = np.array(np.where(concave_region_points == cid)).T[0, :]
-        dists = dict()
-        for eid in end_point_ids:
-            ept = np.array(np.where(end_points == eid)).T[0, :]
-            # We use end point id to retrieve the correct coordinate,
-            # we want to track the point by node id
-            nid = nodes[tuple(ept)]
-            dists[nid] = np.linalg.norm(cpt - ept)
-        if not dists:
-            return dict()
-        min_dist = np.min(dists.values())
-        concave_region_point_node_map.update({
-            cid: nid for nid, d in dists.iteritems() if d == min_dist
-        })
-    return concave_region_point_node_map
 
 
 def calc_features(mask):
@@ -280,25 +201,6 @@ def main(input_mask, input_image, min_area, max_area,
             thresh = mh.otsu(dist)
             peaks = dist > thresh
             n = mh.label(peaks)[1]
-            # NOTE: Clustering with one feature gives the same results
-            # also Otsu's method, but it may be an alternive in case we
-            # would use more information
-            # import cv2
-            # y, x = np.where(mask)
-            # pixels = np.float32(mh.distance(mask)[mask])
-            # pixels = np.zeros((np.sum(mask), 3), np.float32)
-            # pixels[:, 0] = mh.distance(mask)[mask]
-            # pixels[:, 1] = y
-            # pixels[:, 2] = x
-            # criteria = (
-            #     cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0
-            # )
-            # flags = cv2.KMEANS_RANDOM_CENTERS
-            # compactness, labels, centers = cv2.kmeans(
-            #     pixels, 2, None, criteria, 10, flags
-            # )
-            # label_img = np.zeros(mask.shape)
-            # label_img[y, x] = np.squeeze(labels) + 1
             if n == 1:
                 logger.debug(
                     'only one peak detected - perform iterative erosion'

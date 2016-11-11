@@ -3,10 +3,10 @@ version: 0.0.1
 
 input:
 
-    - name: label_image
+    - name: image
       type: LabelImage
       key: 
-      help: Label image in which objects should be expanded.
+      help: Labeled image with objects should be expanded.
 
     - name: n
       type: Numeric
@@ -21,10 +21,11 @@ input:
 
 output:
 
-    - name: expanded_label_image
+    - name: expanded_image
       type: LabelImage
-      key: expand_objects.expanded_label_image
-      help: Expanded label image.
+      key: expand_objects.expanded_image
+      help: Expanded image.
 
     - name: figure
       type: Figure
+      help: Comparison of "image" and "expanded_image".

@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+'''Jterator module for filtering objects based on one of the
+:const:`SUPPORTED_FEATURES <jtmodules.filter_objects.SUPPORTED_FEATURES>`.'''
 import logging
 import numpy as np
 import mahotas as mh
@@ -24,24 +26,25 @@ VERSION = '0.0.3'
 SUPPORTED_FEATURES = {
     'area': mh.labeled.labeled_size,
     'perimenter': mh.labeled.bwperim,
-    'excentricity': mh.features.eccentricity,
+    'eccentricity': mh.features.eccentricity,
     'roundness': mh.features.roundness,
 }
 
-Output = collections.namedtuple('Output', ['output_mask', 'figure'])
+Output = collections.namedtuple('Output', ['filtered_mask', 'figure'])
 
 
-def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
+def main(mask, feature, lower_threshold=None, upper_threshold=None,
         plot=False):
-    '''Filters objects (labeled connected components) based on specified
+    '''Filters objects (labeled connected components) based on the specified
     value range for a given `feature`.
 
     Parameters
     ----------
-    input_mask: numpy.ndarray[numpy.bool]
+    mask: numpy.ndarray[numpy.bool]
         binary image that should be filtered
     feature: str
         name of the feature based on which the image should be filtered
+        (options: ``{"area", "perimeter", "eccentricity", "roundness"})
     lower_threshold:
         minimal `feature` value objects must have
         (default: ``None``; type depends on the chosen `feature`)
@@ -58,15 +61,15 @@ def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
     Raises
     ------
     TypeError
-        when `input_mask` is not binary
+        when `mask` is not binary
     ValueError
         when both `lower_threshold` and `upper_threshold` are ``None``
     ValueError
         when value of `feature` is not one of the supported features
 
     '''
-    if input_mask.dtype != np.bool:
-        raise TypeError('Argument "input_mask" must be binary.')
+    if mask.dtype != np.bool:
+        raise TypeError('Argument "mask" must be binary.')
     if lower_threshold is None and upper_threshold is None:
         raise ValueError(
             'Arugment "lower_threshold" or "upper_threshold" must be provided. '
@@ -77,7 +80,7 @@ def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
             % '", "'.join(SUPPORTED_FEATURES.keys())
         )
 
-    labeled_image = mh.label(input_mask)[0]
+    labeled_image = mh.label(mask)[0]
     feature_values = SUPPORTED_FEATURES[feature](labeled_image)
     feature_image = feature_values[labeled_image]
     if lower_threshold is None:
@@ -94,21 +97,22 @@ def main(input_mask, feature, lower_threshold=None, upper_threshold=None,
     )
     filtered_image = labeled_image.copy()
     filtered_image[condition_image] = 0
-    output_mask = filtered_image > 0
+    filtered_mask = filtered_image > 0
 
     if plot:
         from jtlib import plotting
         plots = [
-            plotting.create_mask_image_plot(input_mask, 'ul'),
-            plotting.create_mask_image_plot(output_mask, 'ur'),
+            plotting.create_mask_image_plot(mask, 'ul'),
+            plotting.create_mask_image_plot(filtered_mask, 'ur'),
         ]
-        n_removed = len(np.unique(labeled_image)) - len(np.unique(filtered_image))
+        n_removed = (
+            len(np.unique(labeled_image)) - len(np.unique(filtered_image))
+        )
         figure = plotting.create_figure(
             plots,
-            title='''removed %d objects with "%s" values outside of [%d, %d]
-            ''' % (n_removed, feature, lower_threshold, upper_threshold)
+            title='Filtered mask with %d objects removed' % n_removed
         )
     else:
         figure = str()
 
-    return Output(output_mask, figure)
+    return Output(filtered_mask, figure)

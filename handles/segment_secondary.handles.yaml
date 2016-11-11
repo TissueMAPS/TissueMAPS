@@ -3,14 +3,14 @@ version: 0.0.2
 
 input:
 
-  - name: input_label_image
+  - name: primary_label_image
     type: LabelImage
     key:
     help: >
-      Label image encoding primary objects that should be used as seeds for the
-      detection of secondary objects.
+      Labeled image encoding primary objects that should be used as seeds for
+      the detection of secondary objects.
 
-  - name: input_image
+  - name: intensity_image
     type: IntensityImage
     key:
     help: >
@@ -39,13 +39,16 @@ input:
 
 output:
 
-  - name: output_label_image
+  - name: secondary_label_image
     type: LabelImage
-    key: segment_secondary.output_label_image
-    help: Label image encoding secondary objects.
+    key: segment_secondary.secondary_label_image
+    help: Labeled image encoding secondary objects.
 
   - name: figure
     type: Figure
+    help: >
+      Comparison of "primary_label_image" and "secondary_label_image". Also
+      shows outlines of objects in "secondary_label_image" on "intensity_image".
 
 
 

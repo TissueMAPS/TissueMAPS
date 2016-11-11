@@ -11,6 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+'''Jterator module for thresholding of an image using a global fixed threshold.
+The threshold level is determined with
+`Otsu's method <https://en.wikipedia.org/wiki/Otsu%27s_method>`_.
+'''
 import logging
 import collections
 import mahotas as mh
@@ -25,12 +29,11 @@ Output = collections.namedtuple('Output', ['mask', 'figure'])
 
 def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
         fill=True, plot=False):
-    '''Thresholds an image with Otsu's method.
-    For more information on the algorithmic implementation see
-    func:`mahotas.otsu`.
+    '''Thresholds an image by applying an automatically determined global
+    threshold level.
 
     Additional parameters allow correction of the calculated fixed threshold
-    level or restriction of it to a defined range. This may be useful to prevent
+    level or restricting it to a defined range. This may be useful to prevent
     extreme levels in case the `image` contains artifacts.
 
     Parameters

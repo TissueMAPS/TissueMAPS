@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+'''Jterator module for segmentation of secondary objects around existing
+primary objects.
+'''
 import logging
 import numpy as np
 import mahotas as mh
@@ -27,21 +30,22 @@ logger = logging.getLogger(__name__)
 
 version = '0.0.2'
 
-Output = collections.namedtuple('Output', ['output_label_image', 'figure'])
+Output = collections.namedtuple('Output', ['secondary_label_image', 'figure'])
 
 
-def main(input_label_image, input_image, contrast_threshold, min_threshold, plot=False):
+def main(primary_label_image, intensity_image, contrast_threshold,
+        min_threshold, plot=False):
     '''Detects secondary objects in an image by expanding the primary objects
-    encoded in `input_label_image`. The outlines of secondary objects are
-    determined based on the watershed transform of `input_image` using the
-    primary objects in `input_label_image` as seeds.
+    encoded in `primary_label_image`. The outlines of secondary objects are
+    determined based on the watershed transform of `intensity_image` using the
+    primary objects in `primary_label_image` as seeds.
 
     Parameters
     ----------
-    input_label_image: numpy.ndarray[numpy.int32]
+    primary_label_image: numpy.ndarray[numpy.int32]
         2D labeled array encoding primary objects, which serve as seeds for
         watershed transform
-    input_image: numpy.ndarray[numpy.uint8 or numpy.uint16]
+    intensity_image: numpy.ndarray[numpy.uint8 or numpy.uint16]
         2D grayscale array that serves as gradient for watershed transform;
         optimally this image is enhanced with a low-pass filter
     contrast_threshold: int
@@ -59,24 +63,24 @@ def main(input_label_image, input_image, contrast_threshold, min_threshold, plot
     jtmodules.segment_secondary.Output
 
     '''
-    if np.any(input_label_image == 0):
+    if np.any(primary_label_image == 0):
         has_background = True
     else:
         has_background = False
 
     if not has_background:
-        output_label_image = input_label_image
+        secondary_label_image = primary_label_image
     else:
         # A simple, fixed threshold doesn't work for SE stains. Therefore, we
         # use adaptive thresholding to determine background regions,
-        # i.e. regions in the input_image that should not be covered by
+        # i.e. regions in the intensity_image that should not be covered by
         # secondary objects.
-        n_objects = np.max(input_label_image)
+        n_objects = np.max(primary_label_image)
         # TODO: consider using contrast_treshold as input parameter
         background_mask = mh.thresholding.bernsen(
-            input_image, 5, contrast_threshold
+            intensity_image, 5, contrast_threshold
         )
-        background_mask += input_image < min_threshold
+        background_mask += intensity_image < min_threshold
         # background_mask = mh.morph.open(background_mask)
         background_label_image = mh.label(background_mask)[0]
         background_label_image[background_mask] += n_objects
@@ -86,11 +90,11 @@ def main(input_label_image, input_image, contrast_threshold, min_threshold, plot
         # objects and the additional seeds for the background regions. The
         # background regions will compete with the foreground regions and
         # thereby work as a stop criterion for expansion of primary objects.
-        labels = input_label_image + background_label_image
-        regions = mh.cwatershed(np.invert(input_image), labels)
+        labels = primary_label_image + background_label_image
+        regions = mh.cwatershed(np.invert(intensity_image), labels)
         # Remove background regions
         regions[regions > n_objects] = 0
-        # regions[input_image < background_level] = 0
+        # regions[intensity_image < background_level] = 0
 
         # Ensure objects are separated
         lines = mh.labeled.borders(regions)
@@ -111,7 +115,7 @@ def main(input_label_image, input_image, contrast_threshold, min_threshold, plot
         # after the watershed region growing)
         # TODO: Ensure that mapping of objects is one-to-one, i.e. each primary
         # object has exactly one secondary object
-        min_size = np.min(mh.labeled.labeled_size(input_label_image))
+        min_size = np.min(mh.labeled.labeled_size(primary_label_image))
         sizes = mh.labeled.labeled_size(regions)
         too_small = np.where(sizes < min_size)
         regions = mh.labeled.remove_regions(regions, too_small)
@@ -123,7 +127,7 @@ def main(input_label_image, input_image, contrast_threshold, min_threshold, plot
         new_label_image, n_new_labels = mh.label(regions > 0, Bc=se)
         lut = np.zeros(np.max(new_label_image)+1, new_label_image.dtype)
         for i in range(1, n_new_labels+1):
-            orig_labels = input_label_image[new_label_image == i]
+            orig_labels = primary_label_image[new_label_image == i]
             orig_labels = orig_labels[orig_labels > 0]
             orig_count = np.bincount(orig_labels)
             orig_unique = np.where(orig_count)[0]
@@ -135,29 +139,29 @@ def main(input_label_image, input_image, contrast_threshold, min_threshold, plot
                     ', '.join(map(str, orig_unique))
                 )
                 lut[i] = np.where(orig_count == np.max(orig_count))[0][0]
-        output_label_image = lut[new_label_image]
+        secondary_label_image = lut[new_label_image]
 
     if plot:
         from jtlib import plotting
-        n_objects = len(np.unique(output_label_image)[1:])
+        n_objects = len(np.unique(secondary_label_image)[1:])
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
-        outlines = mh.morph.dilate(mh.labeled.bwperim(output_label_image > 0))
+        outlines = mh.morph.dilate(mh.labeled.bwperim(secondary_label_image > 0))
         plots = [
             plotting.create_mask_image_plot(
-                input_label_image, 'ul', colorscale=colorscale
+                primary_label_image, 'ul', colorscale=colorscale
                 ),
             plotting.create_mask_image_plot(
-                output_label_image, 'ur', colorscale=colorscale
+                secondary_label_image, 'ur', colorscale=colorscale
             ),
             plotting.create_intensity_overlay_image_plot(
-                input_image, outlines, 'll'
+                intensity_image, outlines, 'll'
             )
         ]
         figure = plotting.create_figure(plots, title='secondary objects')
     else:
         figure = str()
 
-    return Output(output_label_image, figure)
+    return Output(secondary_label_image, figure)
 

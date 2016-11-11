@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+'''Jterator module for labeling connected pixel components.'''
 import logging
 import numpy as np
 import collections
@@ -56,7 +57,7 @@ def main(mask, plot=False):
             plotting.create_mask_image_plot(mask, 'ul'),
             plotting.create_mask_image_plot(label_image, 'ur')
         ]
-        figure = plotting.create_figure(plots, title='Labeled objects')
+        figure = plotting.create_figure(plots, title='Labeled image')
     else:
         figure = str()
 

@@ -11,6 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+'''Jterator module for smooting an image with a low-pass filter.
+
+For more information on image filtering see
+`OpenCV tutorial <http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_smoothed_imageproc/py_filtering/py_filtering.html>`_.
+
+
+'''
 import logging
 import cv2
 import mahotas as mh
@@ -28,10 +35,7 @@ Output = collections.namedtuple('Output', ['smoothed_image', 'figure'])
 
 def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
                  sigma_space=0, plot=False):
-    '''Smoothes (blurs) an image using a low-pass filter.
-
-    For more information on image filtering see
-    `OpenCV tutorial <http://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_smoothed_imageproc/py_filtering/py_filtering.html>`_.
+    '''Smoothes (blurs) `image`.
 
     Parameters
     ----------

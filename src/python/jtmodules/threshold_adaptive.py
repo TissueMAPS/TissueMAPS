@@ -11,6 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+'''Jterator module for thresholding an image with a locally adaptive method,
+where different thresholds are applied to different regions of the image.
+
+For more information on adaptive thresholding please refer to the
+`OpenCV documentation <http://docs.opencv.org/trunk/d7/d4d/tutorial_py_thresholding.html>`.
+'''
 import logging
 import collections
 import mahotas as mh
@@ -25,14 +31,8 @@ Output = collections.namedtuple('Output', ['mask', 'figure'])
 
 
 def main(image, kernel_size, fill=True, plot=False):
-    '''Thresholds an image using an adaptive method, where different thresholds
-    get applied to different regions of the image.
-    For more information on the algorithmic implementation see
-    func:`cv2.adaptiveThreshold`.
-
-    Additional parameters allow correction of the calculated fixed threshold
-    level or restriction of it to a defined range. This may be useful to prevent
-    extreme levels in case the `image` contains artifacts.
+    '''Thresholds an image with a locally adaptive threshold, where locality
+    is defined by `kernel_size`.
 
     Parameters
     ----------

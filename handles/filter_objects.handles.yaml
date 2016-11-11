@@ -3,33 +3,33 @@ version: 0.0.3
 
 input:
 
-    - name: input_mask
+    - name: mask
       type: BinaryImage
-      key: 
+      key:
       help: Binary image in which objects should be filtered.
 
     - name: feature
       type: Character
-      value: 
+      value:
       options:
         - area
         - eccentricity
         - perimeter
         - roundness
       help: >
-        Name of the feature based on which objects in "input_mask" should be
+        Name of the feature based on which objects in "mask" should be
         filtered.
 
     - name: lower_threshold
       type: Numeric
-      value: 
+      value:
       help: >
         Minimal allowed feature value. Objects with values below this threshold
         will be removed.
 
     - name: upper_threshold
       type: Numeric
-      value: 
+      value:
       help: >
         Maximal allowed feature value. Objects with values above this threshold
         will be removed.
@@ -41,11 +41,11 @@ input:
 
 output:
 
-    - name: output_mask
+    - name: filtered_mask
       type: BinaryImage
-      key: filter_objects.output_mask
+      key: filter_objects.filtered_mask
       help: Filtered mask image.
 
     - name: figure
       type: Figure
-      help: Comparison of "input_mask" and "output_mask".
+      help: Comparison of "mask" and "filtered_mask".

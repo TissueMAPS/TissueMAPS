@@ -3,12 +3,12 @@ version: 0.0.1
 
 input:
 
-    - name: input_mask_1
+    - name: mask_1
       type: BinaryImage
       key:
       help: First binary mask.
 
-    - name: input_mask_2
+    - name: mask_2
       type: BinaryImage
       key:
       help: Second binary mask.
@@ -20,13 +20,14 @@ input:
 
 output:
 
-    - name: output_mask
+    - name: combined_mask
       type: BinaryMask
-      key: combine_objects.output_mask
+      key: combine_objects.combined_mask
       help: Combined mask.
 
     - name: figure
       type: Figure
+      help: Comparison of input and output masks.
 
 
 

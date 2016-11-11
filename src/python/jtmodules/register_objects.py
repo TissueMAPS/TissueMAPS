@@ -11,8 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-'''Jterator module for registering objects, which will allow taking measurements
-of the objects and persist them on disk.
+'''Jterator module for registering objects. Registration allows subsequent
+measurements of the objects (feature extraction) and automatically persist them
+on disk.
 '''
 import collections
 import logging
@@ -39,5 +40,9 @@ def main(label_image, as_polygons=True):
     Returns
     -------
     jtmodules.register_objects.Output
+
+    See also
+    --------
+    :class:`SegmentedObjects <tmlib.workflow.jterator.handles.SegmentedObjects`
     '''
     return Output(label_image, as_polygons)

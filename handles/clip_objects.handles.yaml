@@ -3,15 +3,15 @@ version: 0.0.1
 
 input:
 
-    - name: outer_mask
+    - name: image_1
       type: LabelImage
       key:
       help: Labeled image that should be clipped.
 
-    - name: inner_mask
+    - name: image_2
       type: LabelImage
       key:
-      help: Labeled image that's used as the clipping mask.
+      help: Labeled image that's used as clipping mask.
 
     - name: plot
       type: Plot
@@ -20,14 +20,14 @@ input:
 
 output:
 
-    - name: clipped_mask
+    - name: clipped_image
       type: LabelImage
-      key: clip_objects.clipped_mask
+      key: clip_objects.clipped_image
       help: Clipped mask.
 
     - name: figure
       type: Figure
-      help: Comparison of <i>mask</i> and <i>filled_mask</i>.
+      help: Comparison of "input_image_1" and "clipped_image"
 
 
 

@@ -40,7 +40,7 @@ def main(label_image, intensity_image, plot=False):
 
     See also
     --------
-   :class:`jtlib.features.TAS`
+    :class:`TAS <jtlib.features.TAS>`
     '''
     f = jtlib.features.TAS(
         label_image=label_image, intensity_image=intensity_image

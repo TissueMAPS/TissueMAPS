@@ -3,12 +3,12 @@ version: 0.0.1
 
 input:
 
-    - name: input_image_1
+    - name: image_1
       type: IntensityImage
       key:
       help: First grayscale image.
 
-    - name: input_image_2
+    - name: image_2
       type: IntensityImage
       key:
       help: Second grayscale image.
@@ -30,13 +30,14 @@ input:
 
 output:
 
-    - name: output_image
+    - name: combined_image
       type: IntensityMask
-      key: combine_channels.output_image
+      key: combine_channels.combined_image
       help: Combined grayscale image.
 
     - name: figure
       type: Figure
+      help: Comparison of "image_1", "image_2" and "combined_image".
 
 
 
