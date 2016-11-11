@@ -3,12 +3,12 @@ version: 0.0.4
 
 input:
 
-  - name: input_mask
+  - name: mask
     type: BinaryImage
     key:
     help: Binary image in which clumps should be separated.
 
-  - name: input_image
+  - name: intensity_image
     type: IntensityImage
     key:
     help: Grayscale image that may be used to help separating clumps.
@@ -65,9 +65,9 @@ input:
 
 output:
 
-  - name: output_mask
+  - name: separated_mask
     type: BinaryImage
-    key: separate_clumps.output_mask
+    key: separate_clumps.separated_mask
     help: Binary output image.
 
   - name: figure
