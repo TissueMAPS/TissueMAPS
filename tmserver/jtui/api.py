@@ -47,22 +47,30 @@ from tmserver.util import decode_query_ids
 from tmserver.util import assert_form_params, assert_query_params
 from tmserver.extensions import gc3pie
 from tmserver.jtui import jtui
+from tmserver.jtui import register_error
 from tmserver.error import (
     MalformedRequestError,
     MissingGETParameterError,
     MissingPOSTParameterError,
     ResourceNotFoundError,
-    NotAuthorizedError
+    NotAuthorizedError,
+    HTTPException
 )
 
 
 logger = logging.getLogger(__name__)
 
-# Create websocket for job status update
-# websocket = GeventWebSocket(app)
-# websocket.timeout = 3600
 
-# socket = None  # for potential re-connection
+@register_error
+class JtUIError(HTTPException):
+    '''Error class for Jterator user interface errors that should be reported
+    to the client.
+    '''
+
+    def __init__(self, message):
+        super(JtUIError, self).__init__(message=message, status_code=400)
+
+
 def _make_thumbnail(figure_file):
     '''Makes a PNG thumbnail of a plotly figure by screen capture.
 
@@ -346,8 +354,11 @@ def save_project(experiment_id, project_name):
         pipe=project['pipe'],
         handles=project['handles'],
     )
-    jt.project.save()
-    return jsonify({'success': True})
+    try:
+        jt.project.save()
+        return jsonify({'success': True})
+    except Exception as err:
+        raise JtUIError('Project could not be saved:\n%s', str(err))
 
 
 @jtui.route(
@@ -373,8 +384,12 @@ def check_jtproject(experiment_id, project_name):
         pipe=project['pipe'],
         handles=project['handles'],
     )
-    jt.check_pipeline()
-    return jsonify({'success': True})
+    try:
+        jt.check_pipeline()
+        return jsonify({'success': True})
+    except Exception as err:
+        raise JtUIError('Pipeline check failed:\n%s' % str(err))
+
 
 
 @jtui.route(
@@ -529,9 +544,6 @@ def get_job_output(experiment_id, project_name):
         return jsonify(output=output)
     except IndexError:
         return jsonify(output=None)
-    except Exception as e:
-        logger.error(str(e))
-        return JtUIError('Output could not be retrieved.')
 
 
 @jtui.route(
@@ -548,7 +560,6 @@ def run_jobs(experiment_id, project_name):
     This requires the pipeline and module descriptions to be saved to *pipe*
     and *handles* files, respectively.
     '''
-    raise ResourceNotFoundError(tm.Experiment)
     logger.info(
         'submit jobs for jterator pipeline "%s" of experiment %d',
         project_name, experiment_id
