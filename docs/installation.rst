@@ -156,15 +156,15 @@ Clone the `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository (including sub
 
 Install `node` packages (globally)::
 
-    npm install -g
+    npm install
 
 Install `bower <https://bower.io/>`_ packages::
 
-    bower install
+    node_modules/bower/bin/bower install
 
 Build cliet code for production deployment::
 
-    gulp build --production
+    node_modules/gulp/bin/gulp.js build --production
 
 This will create a ``build`` subdirectory. The contents of this directory can now be served by a HTTP web server, such as `NGINX`.
 
