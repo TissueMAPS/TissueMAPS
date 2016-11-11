@@ -21,6 +21,7 @@ from flask_jwt import current_identity, jwt_required
 from cStringIO import StringIO
 
 import tmlib.models as tm
+from tmlib.image import PyramidTile
 
 from tmserver.api import api
 from tmserver.util import decode_query_ids, decode_form_ids
