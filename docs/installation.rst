@@ -151,7 +151,7 @@ Installation
 
 Clone the `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository (including submodules) from Github and cd into the created directory::
 
-    git clone --recursive https://github.com/TissueMAPS/TmUI.git ~/tmclient
+    git clone --recursive https://github.com/TissueMAPS/TmUI.git ~/tmui
     cd ~/tmui/src
 
 Install `node` packages (globally)::
