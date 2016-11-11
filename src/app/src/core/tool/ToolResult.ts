@@ -52,6 +52,8 @@ class ToolResult {
     delete() {
         if (this.layer) {
             this._viewer.viewport.removeLayer(this.layer);
+            // TODO: delete tool result
+            // this._$http.delete()
         }
         if (this.legend) {
             this.legend.delete();
