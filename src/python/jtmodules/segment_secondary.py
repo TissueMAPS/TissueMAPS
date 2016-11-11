@@ -30,7 +30,7 @@ version = '0.0.2'
 Output = collections.namedtuple('Output', ['output_label_image', 'figure'])
 
 
-def main(input_label_image, input_image, plot=False):
+def main(input_label_image, input_image, contrast_threshold, min_threshold, plot=False):
     '''Detects secondary objects in an image by expanding the primary objects
     encoded in `input_label_image`. The outlines of secondary objects are
     determined based on the watershed transform of `input_image` using the
@@ -44,6 +44,13 @@ def main(input_label_image, input_image, plot=False):
     input_image: numpy.ndarray[numpy.uint8 or numpy.uint16]
         2D grayscale array that serves as gradient for watershed transform;
         optimally this image is enhanced with a low-pass filter
+    contrast_threshold: int
+        contrast threshold for automatic separation of forground from background
+        based on locally adaptive thresholding (when ``0`` threshold defaults
+        to `min_threshold` manual thresholding)
+    min_threshold: int
+        minimal foreground value; pixels below `min_threshold` are considered
+        background
     plot: bool, optional
         whether a plot should be generated
 
@@ -66,8 +73,11 @@ def main(input_label_image, input_image, plot=False):
         # secondary objects.
         n_objects = np.max(input_label_image)
         # TODO: consider using contrast_treshold as input parameter
-        background_mask = mh.thresholding.bernsen(input_image, 5, 5)
-        background_mask = mh.morph.open(background_mask)
+        background_mask = mh.thresholding.bernsen(
+            input_image, 5, contrast_threshold
+        )
+        background_mask += input_image < min_threshold
+        # background_mask = mh.morph.open(background_mask)
         background_label_image = mh.label(background_mask)[0]
         background_label_image[background_mask] += n_objects
 

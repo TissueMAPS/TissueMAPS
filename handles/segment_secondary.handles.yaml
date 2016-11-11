@@ -1,5 +1,5 @@
 ---
-version: 0.0.1
+version: 0.0.2
 
 input:
 
@@ -16,6 +16,21 @@ input:
     help: >
       Grayscale image that should be used to find the outlines of secondary
       objects.
+
+  - name: contrast_threshold
+    type: Numeric
+    value: 5
+    help: >
+      Contrast threshold for automatic separation of foreground from
+      background based on locally adaptive thresholding (when 0 defaults to
+      manual threshold using "min_threshold").
+
+  - name: min_threshold
+    type: Numeric
+    value: 125
+    help: >
+      Minimal foreground value to default to; pixels below this value are
+      considered background.
 
   - name: plot
     type: Plot
