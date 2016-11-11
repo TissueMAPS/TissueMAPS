@@ -48,10 +48,7 @@ angular.module('jtui.project')
                 response: ['projectService', function(projectService){
                     return projectService.checkProject($scope.project).then(
                         function(res) {
-                            return {
-                                success: res.success,
-                                message: res.error
-                            }
+                            return {success: res.success}
                         }
                     )
                 }]
@@ -82,10 +79,7 @@ angular.module('jtui.project')
                 response: ['projectService', function(projectService){
                     return projectService.saveProject($scope.project).then(
                         function(res) {
-                            return {
-                                success: res.success,
-                                message: res.error
-                            }
+                            return {success: res.success}
                         }
                     )
                 }]

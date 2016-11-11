@@ -15,10 +15,9 @@ angular.module('jtui.runner')
 .controller('FigureCtrl', ['$scope', 'figure', 'name', 'jobId', '$uibModalInstance', '$rootScope',
     function($scope, figure, name, jobId, $uibModalInstance, $rootScope) {
 
-    console.log('plot figure')
-    // $scope.figure = null;  // necessary to update the parent scope!!!
+    console.log('plot figure: ', figure)
+    // TODO: When setting figure on $scope it's not updating!
     $rootScope.figure = figure;
-    // $scope.figure = figure;
     $rootScope.figure.layout.height = 1000;
     $rootScope.figure.layout.width = 1000;
     $rootScope.figure.options = {
