@@ -69,6 +69,7 @@ def main(image, kernel_size, fill=True, plot=False):
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
         kernel_size, 0
     )
+    # OpenCV treats masks as unsigned integer and not as boolean
     thresh_image = thresh_image > 0
 
     if fill:

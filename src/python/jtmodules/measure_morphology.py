@@ -36,7 +36,7 @@ def main(label_image, plot=False):
 
     See also
     --------
-    class:`jtlib.features.Morphology`
+   :class:`jtlib.features.Morphology`
     '''
     f = jtlib.features.Morphology(label_image=label_image)
 
