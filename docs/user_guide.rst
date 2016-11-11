@@ -395,7 +395,97 @@ Once you have set up your pipeline, save your pipeline (!) and return to the wor
 Viewer
 ------
 
-Once you've setup your experiment, you can view the *experiment* by returning to the `user panel`_ and clicking on |view_button|.
+Once you've setup your *experiment*, you can view it by returning to the `user panel`_ and clicking on |view_button|.
+
+
+.. figure:: ./_static/ui_viewer.png
+   :width: 75%
+   :align: center
+
+   Viewer overview.
+
+   Upon initial access, the first channel is shown in the viewport at the maximally zoomed-out resultion level.
+   You can zoom in and out using either the mouse wheel or trackpad or the + and - buttons provided at the top left corner of the viewport.
+   The map can also be repositions within the viewport by dragging it with the mouse.
+
+   To the right of the viewport is the map sidebar and to the left the tool sidebar. Sections of the map control sidebar can be resized using the mouse and individual items can be rearranged via drag and drop.
+   Below the viewport are sliders to zoom along the *z*-axis or time series for experiment comprised of images acquired at different *z* resolutions or time points, respectively.
+
+The map sidebar has the following sections:
+
+    - ``Channels``: one raster image layer for each channel (created during the "pyramid_creation" workflow stage)
+    - ``Objects``: one vector layer for each object type (created during the "image_analysis" workflow stage)
+    - ``Selections``: tool for selecting mapobjects on the map
+    - ``Saved results``: one vector layer for each saved (previously generated) tool result
+    - ``Current result``: single vector layer for the most recent tool result
+
+Individual sections are described in more detail below.
+
+.. figure:: ./_static/ui_viewer_sidebar_channels.png
+   :width: 75%
+   :align: center
+
+   Map sidebar: Channels.
+
+   Channels are represented on the map in form of raster images. Individual channel layers can be toggled as well as dynamically colorized and rescaled.
+   By default, channels are shown in grayscale. When multiple channels are active, colors are additively blended (e.g. red + green = yellow).
+   Pixel intensities are mapped to 8-bit for map representation. However, intensities value shown below sliders reflect the original bit range.
+
+
+.. figure:: ./_static/ui_viewer_sidebar_objects.png
+   :width: 75%
+   :align: center
+
+   Map sidebar: Objects.
+
+   Objects are represented on the map in form of vector graphics. Individual object layers can be toggled as well as dyncamically colorized. In addition, the opacity of object outlines can be adapted. When multiple objects are active, colors are additively blended.
+
+.. note:: Objects of type "Plates", "Wells" and "Sites" will be auto-generated based on available image metadata. These *static* types are independent of parameters set in the "image_analysis" workflow stage.
+
+.. warning:: Object outlines may not be represented 100% accurately on the map, because the polygon contours might have been simplified server side.
+
+.. figure:: ./_static/ui_viewer_sidebar_selections.png
+   :width: 75%
+   :align: center
+
+   Map sidebar: Selections.
+
+   Objects can be selected and assigned to different groups. A map marker will be dropped at each selected object. An object can be unselected by clicking on it again using the same selection item. More than one marker can be assigned to an object.
+   The respective object layer will automatically be activated for the choosen mapobject type.
+
+
+Selections can subsequently be used by tools. For example, to perform supervised classification using the "SVC" tool.
+
+.. figure:: ./_static/ui_viewer_tools_example.png
+   :width: 75%
+   :align: center
+
+   Tool sidebar.
+
+   Each tool is associated with a separate window, which opens when the corresponding tool icon is clicked in the tool sidebar.
+
+   The window content varies between tools depending on their functionality. Typically, there is a section for selection of object types and features and a button to submit the tool request to the server.
+   In case of the supervised classification (SVC) tool, there is also a section for assigning selections to label classes, which can be used for training of the classifier.
+
+To perform the classification, click on |classify_button|. This will submit a request to the server to perform the computation. Once the classification is done the result will appear in the "Current result" section of the map control sidebar.
+
+.. figure:: ./_static/ui_viewer_sidebar_current_result.png
+   :width: 75%
+   :align: center
+
+   Map sidebar: current result.
+
+   Once a tool result is available a layer will appear in the "Current result" section. Similar to object layers, they are represented on the map as vector graphics. In contrast to the object layers, however, the filled objects are shown instead outlines. Result layers can also be toggled and the opacity can be changed to reveal underlying channel layers (or other tool result layers).
+
+
+.. figure:: ./_static/ui_viewer_sidebar_saved_results.png
+   :width: 75%
+   :align: center
+
+   Map sidebar: saved results.
+
+   When additional tool requests become available, the "Current result" moves to "Saved results" and gets replaced with the more recent result. Multiple results can be active simultaneously and their colors are additively blended. Transparency of result layers can be controlled independently. Here, we performed an additional unsupervised classification, using the same features and number of classes, and can now compare the results of the supervised with the unsupervised analysis on the map.
+
 
 .. |create_new_exp_button| image:: ./_static/ui_create_new_exp_button.png
    :height: 15px
@@ -404,6 +494,9 @@ Once you've setup your experiment, you can view the *experiment* by returning to
    :height: 15px
 
 .. |modify_button| image:: ./_static/ui_modify_button.png
+   :height: 15px
+
+.. |view_button| image:: ./_static/ui_view_button.png
    :height: 15px
 
 .. |create_plate_button| image:: ./_static/ui_create_plate_button.png
@@ -425,6 +518,9 @@ Once you've setup your experiment, you can view the *experiment* by returning to
    :height: 15px
 
 .. |submit_button| image:: ./_static/ui_submit_button.png
+   :height: 15px
+
+.. |classify_button| image:: ./_static/ui_classify_button.png
    :height: 15px
 
 .. |resume_button| image:: ./_static/ui_resume_button.png
