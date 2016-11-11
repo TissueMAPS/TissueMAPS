@@ -638,3 +638,4 @@ This will automatically start the server on localhost (port 8002). To access the
 
 Both dev servers provide live reload functionality. They will auto-watch files and rebuild code upon changes, which is useful for local development and testing.
 
+.. note:: The dev server can sometimes behave a bit funny and may use more database transactions than provided by the pool or create too many database connections. Restarting the database server helps.
