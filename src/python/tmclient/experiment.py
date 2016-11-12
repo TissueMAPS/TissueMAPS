@@ -25,12 +25,14 @@ class ExperimentService(HttpClient):
 
     '''Class for querying a TissueMAPS experiment via RESTful API.'''
 
-    def __init__(self, host_name, experiment_name, user_name, password=None):
+    def __init__(self, host, port, experiment_name, user_name, password=None):
         '''
         Parameters
         ----------
-        host_name: str
-            name of the TissueMAPS instance
+        host: str
+            name of the TissueMAPS host
+        port: int
+            number of the port to which TissueMAPS server listens
         experiment_name: str
             name of the experiment that should be queried
         user_name: str
@@ -38,7 +40,7 @@ class ExperimentService(HttpClient):
         password: str
             password for `username`
         '''
-        super(ExperimentService, self).__init__(host_name, user_name, password)
+        super(ExperimentService, self).__init__(host, port, user_name, password)
         self.experiment_name = experiment_name
         self._experiment_id = self._get_experiment_id(experiment_name)
 
@@ -89,10 +91,6 @@ class ExperimentService(HttpClient):
         str
             experiment ID
 
-        See also
-        --------
-        :class:`tmlib.models.Experiment`
-        :class:`tmlib.models.ExperimentReference`
         '''
         logger.debug('get ID for experiment "%s"', experiment_name)
         params = {
@@ -100,7 +98,7 @@ class ExperimentService(HttpClient):
         }
         url = self.build_url('/api/experiments/id', params)
         res = self.session.get(url)
-        self._handle_error(res)
+        res.raise_for_status()
         return res.json()['id']
 
     def create_experiment(self, microscope_type, plate_format,
@@ -121,7 +119,8 @@ class ExperimentService(HttpClient):
 
         See also
         --------
-        :class:`tmlib.models.Experiment`
+        :class:`tmlib.models.experiment.ExperimentReference`
+        :class:`tmlib.models.experiment.Experiment`
         '''
         logger.info('create experiment "%s"', experiment_name)
         data = {
@@ -132,7 +131,7 @@ class ExperimentService(HttpClient):
         }
         url = self.build_url('/api/experiments')
         res = self.session.post(url, json=data)
-        self._handle_error(res)
+        res.raise_for_status()
 
     def _get_plate_id(self, plate_name):
         '''Gets the ID of an existing plate given its name.
@@ -147,9 +146,6 @@ class ExperimentService(HttpClient):
         str
             plate ID
 
-        See also
-        --------
-        :class:`tmlib.models.Plate`
         '''
         logger.debug('get ID for plate "%s"' % plate_name)
         params = {
@@ -159,7 +155,7 @@ class ExperimentService(HttpClient):
             '/api/experiments/%s/plates/id' % self._experiment_id, params
         )
         res = self.session.get(url)
-        self._handle_error(res)
+        res.raise_for_status()
         return res.json()['id']
 
     def create_plate(self, plate_name):
@@ -172,7 +168,7 @@ class ExperimentService(HttpClient):
 
         See also
         --------
-        :class:`tmlib.models.Plate`
+        :class:`tmlib.models.plate.Plate`
         '''
         logger.info('create plate "%s"', plate_name)
         data = {
@@ -180,7 +176,7 @@ class ExperimentService(HttpClient):
         }
         url = self.build_url('/api/experiments/%s/plates' % self._experiment_id)
         res = self.session.post(url, json=data)
-        self._handle_error(res)
+        res.raise_for_status()
 
     def _get_acquisition_id(self, plate_name, acquisition_name):
         '''Gets the ID of an existing acquisition given its name and the name
@@ -198,9 +194,6 @@ class ExperimentService(HttpClient):
         str
             acquisition ID
 
-        See also
-        --------
-        :class:`tmlib.models.Acquisition`
         '''
         logger.debug(
             'get acquisition ID given acquisition "%s" and plate "%s"',
@@ -215,7 +208,7 @@ class ExperimentService(HttpClient):
             params
         )
         res = self.session.get(url)
-        self._handle_error(res)
+        res.raise_for_status()
         return res.json()['id']
 
     def create_acquisition(self, plate_name, acquisition_name):
@@ -230,7 +223,7 @@ class ExperimentService(HttpClient):
 
         See also
         --------
-        :class:`tmlib.models.Acquisition`
+        :class:`tmlib.models.aquisition.Acquisition`
         '''
         logger.info(
             'create acquisition "%s" for plate "%s"',
@@ -244,7 +237,7 @@ class ExperimentService(HttpClient):
             '/api/experiments/%s/acquisitions' % self._experiment_id
         )
         res = self.session.post(url, json=data)
-        self._handle_error(res)
+        res.raise_for_status()
 
     def _get_cycle_id(self, plate_name, cycle_index):
         '''Gets the ID of a cycle given its index, the name of the parent plate
@@ -262,9 +255,6 @@ class ExperimentService(HttpClient):
         str
             cycle ID
 
-        See also
-        --------
-        :class:`tmlib.models.Cycle`
         '''
         logger.debug(
             'get cycle ID given cycle #%d and plate "%s"',
@@ -278,7 +268,7 @@ class ExperimentService(HttpClient):
             '/api/experiments/%s/cycles/id' % self._experiment_id, params
         )
         res = self.session.get(url)
-        self._handle_error(res)
+        res.raise_for_status()
         return res.json()['id']
 
     def _get_channel_id(self, channel_name):
@@ -294,9 +284,6 @@ class ExperimentService(HttpClient):
         str
             channel ID
 
-        See also
-        --------
-        :class:`tmlib.models.Channel`
         '''
         logger.debug('get channel ID given channel "%s"', channel_name)
         params = {
@@ -306,7 +293,7 @@ class ExperimentService(HttpClient):
             '/api/experiments/%s/channels/id' % self._experiment_id, params
         )
         res = self.session.get(url)
-        self._handle_error(res)
+        res.raise_for_status()
         return res.json()['id']
 
     def _get_channel_layer_id(self, channel_name, tpoint=0, zplane=0):
@@ -327,9 +314,6 @@ class ExperimentService(HttpClient):
         str
             channel layer ID
 
-        See also
-        --------
-        :class:`tmlib.models.ChannelLayer`
         '''
         logger.debug(
             'get channel ID given channel "%s", tpoint %d and zplane %d',
@@ -345,7 +329,7 @@ class ExperimentService(HttpClient):
             params
         )
         res = self.session.get(url)
-        self._handle_error(res)
+        res.raise_for_status()
         return res.json()['id']
 
 

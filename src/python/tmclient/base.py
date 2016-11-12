@@ -32,32 +32,34 @@ class HttpClient(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, host_name, user_name, password=None):
+    def __init__(self, host, port, user_name, password=None):
         '''
         Parameters
         ----------
-        host_name: str
-            name of the TissueMAPS instance
+        host: str
+            name of the TissueMAPS host
+        port: int
+            number of the port to which TissueMAPS server listens
         user_name: str
             name of the TissueMAPS user
         password: str, optional
             password for `username` (default: ``None``)
         '''
-        self.base_url = 'http://%s' % host_name
+        self.base_url = 'http://%s:%d' % (host, port)
         self.session = requests.Session()
         self.session.get(self.base_url)
         if password is None:
-            password = self._load_credentials(user_name)
+            password = self.load_credentials(user_name)
         self.login(user_name, password)
 
-    def build_url(self, uri, params={}):
-        '''Gets the full URL based on the base URL and the provided
-        API `uri`.
+    def build_url(self, route, params={}):
+        '''Builds the full URL based on the base URL (``http://<host>:<port>``)
+        and the provided `route`.
 
         Parameters
         ----------
-        uri: str
-            URI for TissueMAPS RESTful API
+        route: str
+            route used by the TissueMAPS RESTful API
         params: dict, optional
             optional parameters that need to included in the URL
 
@@ -66,34 +68,18 @@ class HttpClient(object):
         str
             URL
         '''
-        url = self.base_url + uri
+        url = self.base_url + route
         if not params:
+            logger.debug('url: %s', url)
             return url
         url = '%s?%s' % (url, urllib.urlencode(params))
         logger.debug('url: %s', url)
         return url
 
-    def _handle_error(self, result):
-        if result.status_code != 200:
-            message = 'Status %s: %s' % (result.status_code, result.reason)
-            try:
-                data = result.json()
-                if 'description' in data:
-                    message += '\n%s: %s' % (
-                        data['error'], data['description']
-                    )
-                else:
-                    message += '\n%s: %s' % (
-                        data['error']['type'], data['error']['message']
-                    )
-            except ValueError:
-                pass
-            raise ServerError(message)
+    def load_credentials(self, username):
+        '''Loads password for `username` from file.
 
-    def _load_credentials(self, username):
-        '''Loads password from file.
-
-        The file must be called ``".tmaps_pass.yaml"`` and stored in
+        The file must be called ``~/.tm_pass`` and stored in
         the home directory. It must provide a YAML mapping where
         keys are usernames and the values the corresponding passwords.
 
@@ -106,10 +92,19 @@ class HttpClient(object):
         -------
         str
             password for the given user
+
+        Raises
+        ------
+        OSError
+            when the file does not exist
+        ValueError
+            when the file cannot be parsed
+        KeyError
+            when `username` is not found in file
         '''
-        cred_filepath = os.path.expanduser('~/.tmaps_pass.yaml')
+        cred_filepath = os.path.expanduser('~/.tm_pass')
         if not os.path.exists(cred_filepath):
-            raise OSError('Credentials file ".tmaps_pass.yaml" not found.')
+            raise OSError('Credentials file "~/.tm_pass" not found.')
         try:
             with open(cred_filepath) as cred_file:
                 credentials = yaml.load(cred_file.read())
@@ -136,7 +131,7 @@ class HttpClient(object):
         url = self.build_url('/auth')
         payload = {'username': username, 'password': password}
         res = self.session.post(url, json=payload)
-        self._handle_error(res)
+        res.raise_for_status()
         self._access_token = res.json()['access_token']
         self.session.headers.update(
             {'Authorization': 'JWT %s' % self._access_token}

@@ -17,15 +17,19 @@ if __name__ == '__main__':
         description='Download files from TissueMAPS.'
     )
     parser.add_argument(
-        '-H', '--host_name', required=True,
-        help='host_name of TissueMAPS instance'
+        '-H', '--host', required=True,
+        help='host name of TissueMAPS instance'
     )
     parser.add_argument(
-        '-U', '--user_name', required=True,
+        '-P', '--port', type=int, default=80,
+        help='number of the port to which the TissueMAPS server listens'
+    )
+    parser.add_argument(
+        '-u', '--user_name', required=True,
         help='name of TissueMAPS user'
     )
     parser.add_argument(
-        '-P', '--password',
+        '-p', '--password',
         help='password of TissueMAPS user'
     )
     parser.add_argument(
@@ -92,11 +96,11 @@ if __name__ == '__main__':
         method='download_segmentation_image_file'
     )
     segmentation_image_parser.add_argument(
-        '-o', '--object_name', required=True,
-        help='name of the segmented objects'
+        '-o', '--object_type', required=True,
+        help='type of the segmented objects (e.g. Cells)'
     )
     segmentation_image_parser.add_argument(
-        '-P', '--plate_name', required=True,
+        '-p', '--plate_name', required=True,
         help='name of the plate'
     )
     segmentation_image_parser.add_argument(
@@ -121,14 +125,22 @@ if __name__ == '__main__':
     )
 
     feature_value_parser = subparsers.add_parser(
-        'features', help='download feature data and corresponding metadata'
+        'feature_values', help='download object feature values'
     )
-    feature_value_parser.set_defaults(method='download_features_file')
+    feature_value_parser.set_defaults(method='download_object_feature_values_file')
     feature_value_parser.add_argument(
-        '-o', '--object_name', required=True,
-        help='name of the segmented objects'
+        '-o', '--object_type', required=True,
+        help='type of the segmented objects (e.g. Cells)'
     )
 
+    metadata_parser = subparsers.add_parser(
+        'metadata', help='download object metadata'
+    )
+    metadata_parser.set_defaults(method='download_object_metadata_file')
+    metadata_parser.add_argument(
+        '-o', '--object_type', required=True,
+        help='type of the segmented objects (e.g. Cells)'
+    )
     args = parser.parse_args()
 
     configure_logging()
@@ -137,6 +149,7 @@ if __name__ == '__main__':
     logger.setLevel(logging_level)
 
     service = DownloadService(
-        args.host_name, args.experiment_name, args.user_name, args.password
+        args.host, args.port, args.experiment_name,
+        args.user_name, args.password
     )
     service(args)

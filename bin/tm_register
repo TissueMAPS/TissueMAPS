@@ -19,15 +19,19 @@ if __name__ == '__main__':
         description='Register experiment data in the TissueMAPS database.'
     )
     parser.add_argument(
-        '-H', '--host_name', required=True,
-        help='host_name of TissueMAPS instance'
+        '-H', '--host', required=True,
+        help='name of TissueMAPS host'
     )
     parser.add_argument(
-        '-U', '--user_name', required=True,
+        '-P', '--port', type=int, default=80,
+        help='number of the port to which the TissueMAPS server listens'
+    )
+    parser.add_argument(
+        '-u', '--user_name', required=True,
         help='name of TissueMAPS user'
     )
     parser.add_argument(
-        '-P', '--password',
+        '-p', '--password',
         help='password of TissueMAPS user'
     )
     parser.add_argument(
@@ -47,11 +51,11 @@ if __name__ == '__main__':
     )
     experiment_parser.set_defaults(method='create_experiment')
     experiment_parser.add_argument(
-        '--microscope_type', default='cellvoyager',
+        '--microscope_type', '-m', default='cellvoyager',
         help='microscope type (default: cellvoyager)'
     )
     experiment_parser.add_argument(
-        '--plate_format', type=int, default=384,
+        '--plate_format', '-f', type=int, default=384,
         help='''
             well-plate format - total number of wells per plate (default: 384)
         '''
@@ -95,7 +99,8 @@ if __name__ == '__main__':
     logger.setLevel(logging_level)
 
     service = ExperimentService(
-        args.host_name, args.experiment_name, args.user_name, args.password
+        args.host, args.port, args.experiment_name,
+        args.user_name, args.password
     )
 
     service(args)

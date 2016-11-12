@@ -28,12 +28,14 @@ class UploadService(ExperimentService):
     RESTful API.
     '''
 
-    def __init__(self, host_name, experiment_name, user_name, password):
+    def __init__(self, host, port, experiment_name, user_name, password):
         '''
         Parameters
         ----------
-        host_name: str
-            name of the TissueMAPS instance
+        host: str
+            name of the TissueMAPS host
+        port: int
+            number of the port to which TissueMAPS server listens
         experiment_name: str
             name of the experiment that should be queried
         user_name: str
@@ -42,7 +44,7 @@ class UploadService(ExperimentService):
             password for `username`
         '''
         super(UploadService, self).__init__(
-            host_name, experiment_name, user_name, password
+            host, port, experiment_name, user_name, password
         )
 
     def get_uploaded_filenames(self, plate_name, acquisition_name):
@@ -60,6 +62,13 @@ class UploadService(ExperimentService):
         -------
         List[str]
             names of uploaded files
+
+        See also
+        --------
+        :func:`tmserver.api.experiment.get_microscope_image_files`
+        :func:`tmserver.api.experiment.get_microscope_metadata_files`
+        :class:`tmlib.models.file.MicroscopeImageFile`
+        :class:`tmlib.models.file.MicroscopeMetadataFile`
         '''
         acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
         image_files = self._get_image_files(
@@ -83,7 +92,7 @@ class UploadService(ExperimentService):
             )
         )
         res = self.session.get(url)
-        self._handle_error(res)
+        res.raise_for_status()
         return res.json()['data']
 
     def _get_metadata_files(self, acquisition_id):
@@ -96,7 +105,7 @@ class UploadService(ExperimentService):
             )
         )
         res = self.session.get(url)
-        self._handle_error(res)
+        res.raise_for_status()
         return res.json()['data']
 
     def upload_microscope_files(self, plate_name, acquisition_name, directory):
@@ -112,6 +121,11 @@ class UploadService(ExperimentService):
             path to a directory on disk where the files that should be uploaded
             are located
 
+        See also
+        --------
+        :mod:`tmserver.api.upload`
+        :class:`tmlib.models.file.MicroscopeImageFile`
+        :class:`tmlib.models.file.MicroscopeMetadataFile`
         '''
         # TODO: consider using os.walk() to screen subdirectories recursively
         logger.info(
@@ -155,7 +169,7 @@ class UploadService(ExperimentService):
         )
         payload = {'files': filenames}
         res = self.session.post(url, json=payload)
-        self._handle_error(res)
+        res.raise_for_status()
         return res.json()['data']
 
     def _upload_file(self, acquisition_id, filepath):
@@ -178,4 +192,4 @@ class UploadService(ExperimentService):
         )
         files = {'file': open(filepath, 'rb')}
         res = self.session.post(url, files=files)
-        self._handle_error(res)
+        res.raise_for_status()

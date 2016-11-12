@@ -17,15 +17,19 @@ if __name__ == '__main__':
         description='Upload microscope files to TissueMAPS.'
     )
     parser.add_argument(
-        '-H', '--host_name', required=True,
-        help='host_name of TissueMAPS instance'
+        '-H', '--host', required=True,
+        help='name of TissueMAPS host'
     )
     parser.add_argument(
-        '-U', '--user_name', required=True,
+        '-P', '--port', type=int, default=80,
+        help='number of the port to which the TissueMAPS server listens'
+    )
+    parser.add_argument(
+        '-u', '--user_name', required=True,
         help='name of TissueMAPS user'
     )
     parser.add_argument(
-        '-P', '--password',
+        '-p', '--password',
         help='password of TissueMAPS user'
     )
     parser.add_argument(
@@ -65,7 +69,8 @@ if __name__ == '__main__':
     logger.setLevel(logging_level)
 
     service = UploadService(
-        args.host_name, args.experiment_name, args.user_name, args.password
+        args.host, args.port, args.experiment_name,
+        args.user_name, args.password
     )
 
     service(args)

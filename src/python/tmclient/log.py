@@ -24,7 +24,7 @@ VERBOSITY_TO_LEVELS = {
 
 #: Dict[int, int]: Mapping of logging level to verbosity
 LEVELS_TO_VERBOSITY = {
-    logging.NOTSET: 0
+    logging.NOTSET: 0,
     logging.WARN: 1,
     logging.INFO: 2,
     logging.DEBUG: 3,
