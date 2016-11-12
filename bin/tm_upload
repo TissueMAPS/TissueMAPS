@@ -4,9 +4,9 @@ import os
 import logging
 import argparse
 
+from tmclient import TmClient
 from tmclient.log import configure_logging
 from tmclient.log import map_logging_verbosity
-from tmclient.upload import UploadService
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     logging.getLogger('tmclient').setLevel(logging_level)
     logger.setLevel(logging_level)
 
-    service = UploadService(
+    service = TmClient(
         args.host, args.port, args.experiment_name,
         args.user_name, args.password
     )

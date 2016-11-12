@@ -11,28 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import inspect
+import logging
 import requests
 import os
 import cgi
 import re
 import json
 import cv2
+import tempfile
 import pandas as pd
 from cStringIO import StringIO
-import logging
-import tempfile
 
-from tmclient.experiment import ExperimentService
-
+from tmclient.base import HttpClient
 
 logger = logging.getLogger(__name__)
 
 
-class DownloadService(ExperimentService):
+class TmClient(HttpClient):
 
-    '''Class for downloading image files from TissueMAPS via its RESTful API.'''
+    '''Class for interacting with a *TissueMAPS* server via *RESTful API*.'''
 
-    def __init__(self, host, port, experiment_name, user_name, password):
+    def __init__(self, host, port, experiment_name, user_name, password=None):
         '''
         Parameters
         ----------
@@ -47,9 +47,444 @@ class DownloadService(ExperimentService):
         password: str
             password for `username`
         '''
-        super(DownloadService, self).__init__(
-            host, port, experiment_name, user_name, password
+        super(TmClient, self).__init__(host, port, user_name, password)
+        self.experiment_name = experiment_name
+        self._experiment_id = self._get_experiment_id(experiment_name)
+
+    def __call__(self, cli_args):
+        '''Calls a method with the provided keyword arguments.
+
+        Paramaters
+        ----------
+        cli_args: argparse.Namespace
+            parsed command line arguments that should be passed on to the
+            specified method (appropriate arguments get automatically stripped)
+
+        Raises
+        ------
+        AttributeError
+            when `cli_args` don't have an attribute "method" that specifies
+            the method that should be called or when the class doesn't have the
+            specied method
+        '''
+        if not hasattr(cli_args, 'method'):
+            raise AttributeError('Arguments must specify "method".')
+        method_name = cli_args.method
+        logger.debug('call method "%s"', method_name)
+        if not hasattr(self, method_name):
+            raise AttributeError(
+                'Object of type "%s" doesn\'t have a method "%s"'
+                % (self.__class__.__name__, method_name)
+            )
+        args = vars(cli_args)
+        method = getattr(self, method_name)
+        kwargs = dict()
+        valid_arg_names = inspect.getargspec(method).args
+        for arg_name, arg_value in args.iteritems():
+            if arg_name in valid_arg_names:
+                kwargs[arg_name] = arg_value
+        method(**kwargs)
+
+    def _get_experiment_id(self, experiment_name):
+        '''Gets the ID of an existing experiment given its name.
+
+        Parameters
+        ----------
+        experiment_name: str
+            name of the experiment
+
+        Returns
+        -------
+        str
+            experiment ID
+
+        '''
+        logger.debug('get ID for experiment "%s"', experiment_name)
+        params = {
+            'experiment_name': experiment_name,
+        }
+        url = self.build_url('/api/experiments/id', params)
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res.json()['id']
+
+    def create_experiment(self, microscope_type, plate_format,
+            plate_acquisition_mode):
+        '''Creates a new experiment.
+
+        Parameters
+        ----------
+        microscope_type: str
+            microscope_type
+        plate_format: int
+            well-plate format, i.e. total number of wells per plate
+        plate_acquisition_mode: str
+            mode of image acquisition that determines whether acquisitions will
+            be interpreted as time points as part of a time series experiment
+            or as multiplexing cycles as part of a serial multiplexing
+            experiment
+
+        See also
+        --------
+        :class:`tmlib.models.experiment.ExperimentReference`
+        :class:`tmlib.models.experiment.Experiment`
+        '''
+        logger.info('create experiment "%s"', experiment_name)
+        data = {
+            'name': self.experiment_name,
+            'microscope_type': microscope_type,
+            'plate_format': plate_format,
+            'plate_acquisition_mode': plate_acquisition_mode
+        }
+        url = self.build_url('/api/experiments')
+        res = self.session.post(url, json=data)
+        res.raise_for_status()
+
+    def _get_plate_id(self, plate_name):
+        '''Gets the ID of an existing plate given its name.
+
+        Parameters
+        ----------
+        plate_name: str
+            name of the plate
+
+        Returns
+        -------
+        str
+            plate ID
+
+        '''
+        logger.debug('get ID for plate "%s"' % plate_name)
+        params = {
+            'plate_name': plate_name,
+        }
+        url = self.build_url(
+            '/api/experiments/%s/plates/id' % self._experiment_id, params
         )
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res.json()['id']
+
+    def create_plate(self, plate_name):
+        '''Creates a new plate.
+
+        Parameters
+        ----------
+        plate_name: str
+            name that should be given to the plate
+
+        See also
+        --------
+        :class:`tmlib.models.plate.Plate`
+        '''
+        logger.info('create plate "%s"', plate_name)
+        data = {
+            'name': plate_name,
+        }
+        url = self.build_url('/api/experiments/%s/plates' % self._experiment_id)
+        res = self.session.post(url, json=data)
+        res.raise_for_status()
+
+    def _get_acquisition_id(self, plate_name, acquisition_name):
+        '''Gets the ID of an existing acquisition given its name and the name
+        of the parent plate.
+
+        Parameters
+        ----------
+        plate_name: str
+            name of the parent plate
+        acquisition_name: str
+            name of the acquisition
+
+        Returns
+        -------
+        str
+            acquisition ID
+
+        '''
+        logger.debug(
+            'get acquisition ID given acquisition "%s" and plate "%s"',
+            acquisition_name, plate_name
+        )
+        params = {
+            'plate_name': plate_name,
+            'acquisition_name': acquisition_name
+        }
+        url = self.build_url(
+            '/api/experiments/%s/acquisitions/id' % self._experiment_id,
+            params
+        )
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res.json()['id']
+
+    def create_acquisition(self, plate_name, acquisition_name):
+        '''Creates a new acquisition.
+
+        Parameters
+        ----------
+        plate_name: str
+            name of the parent plate
+        acquisition_name: str
+            name that should be given to the acquisition
+
+        See also
+        --------
+        :class:`tmlib.models.aquisition.Acquisition`
+        '''
+        logger.info(
+            'create acquisition "%s" for plate "%s"',
+            acquisition_name, plate_name
+        )
+        data = {
+            'plate_name': plate_name,
+            'name': acquisition_name
+        }
+        url = self.build_url(
+            '/api/experiments/%s/acquisitions' % self._experiment_id
+        )
+        res = self.session.post(url, json=data)
+        res.raise_for_status()
+
+    def _get_cycle_id(self, plate_name, cycle_index):
+        '''Gets the ID of a cycle given its index, the name of the parent plate
+        and ID of the parent experiment.
+
+        Parameters
+        ----------
+        plate_name: str
+            name of the parent plate
+        cycle_index: str
+            index of the cycle
+
+        Returns
+        -------
+        str
+            cycle ID
+
+        '''
+        logger.debug(
+            'get cycle ID given cycle #%d and plate "%s"',
+            cycle_index, plate_name
+        )
+        params = {
+            'plate_name': plate_name,
+            'cycle_index': cycle_index
+        }
+        url = self.build_url(
+            '/api/experiments/%s/cycles/id' % self._experiment_id, params
+        )
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res.json()['id']
+
+    def _get_channel_id(self, channel_name):
+        '''Gets the ID of a channel given its name.
+
+        Parameters
+        ----------
+        channel_name: str
+            name of the channel
+
+        Returns
+        -------
+        str
+            channel ID
+
+        '''
+        logger.debug('get channel ID given channel "%s"', channel_name)
+        params = {
+            'channel_name': channel_name,
+        }
+        url = self.build_url(
+            '/api/experiments/%s/channels/id' % self._experiment_id, params
+        )
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res.json()['id']
+
+    def _get_channel_layer_id(self, channel_name, tpoint=0, zplane=0):
+        '''Gets the ID of a channel layer given the name of the parent channel
+        as well as time point and z-plane indices.
+
+        Parameters
+        ----------
+        channel_name: str
+            name of the channel
+        tpoint: int, optional
+            zero-based time point index (default: ``0``)
+        zplane: int, optional
+            zero-based z-plane index (default: ``0``)
+
+        Returns
+        -------
+        str
+            channel layer ID
+
+        '''
+        logger.debug(
+            'get channel ID given channel "%s", tpoint %d and zplane %d',
+            channel_name, tpoint, zplane
+        )
+        params = {
+            'channel_name': channel_name,
+            'tpoint': tpoint,
+            'zplane': zplane
+        }
+        url = self.build_url(
+            '/api/experiments/%s/channel_layers/id' % self._experiment_id,
+            params
+        )
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res.json()['id']
+
+    def get_uploaded_filenames(self, plate_name, acquisition_name):
+        '''Gets the names of files that have already been successfully
+        uploaded.
+
+        Parameters
+        ----------
+        plate_name: str
+            name of the parent plate
+        acquisition_name: str
+            name of the parent acquisition
+
+        Returns
+        -------
+        List[str]
+            names of uploaded files
+
+        See also
+        --------
+        :func:`tmserver.api.experiment.get_microscope_image_files`
+        :func:`tmserver.api.experiment.get_microscope_metadata_files`
+        :class:`tmlib.models.file.MicroscopeImageFile`
+        :class:`tmlib.models.file.MicroscopeMetadataFile`
+        '''
+        acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
+        image_files = self._get_image_files(
+            self._experiment_id, acquisition_id
+        )
+        metadata_files = self._get_metadata_files(
+            self._experiment_id, acquisition_id
+        )
+        return [
+            f['name'] for f in image_files + metadata_files
+            if f['status'] == 'COMPLETE'
+        ]
+
+    def _get_image_files(self, acquisition_id):
+        logger.debug(
+            'get image files for acquisition %s', acquisition_id
+        )
+        url = self.build_url(
+            '/api/experiments/%s/acquisitions/%s/image-files' % (
+                self._experiment_id, acquisition_id
+            )
+        )
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res.json()['data']
+
+    def _get_metadata_files(self, acquisition_id):
+        logger.debug(
+            'get metadata files for acquisition %s', acquisition_id
+        )
+        url = self.build_url(
+            '/api/experiments/%s/acquisitions/%s/metadata-files' % (
+                self._experiment_id, acquisition_id
+            )
+        )
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res.json()['data']
+
+    def upload_microscope_files(self, plate_name, acquisition_name, directory):
+        '''Uploads microscope files contained in `directory`.
+
+        Parameters
+        ----------
+        plate_name: str
+            name of the parent plate
+        acquisition_name: str
+            name of the parent acquisition
+        directory: int
+            path to a directory on disk where the files that should be uploaded
+            are located
+
+        See also
+        --------
+        :mod:`tmserver.api.upload`
+        :class:`tmlib.models.file.MicroscopeImageFile`
+        :class:`tmlib.models.file.MicroscopeMetadataFile`
+        '''
+        # TODO: consider using os.walk() to screen subdirectories recursively
+        logger.info(
+            'upload microscope files of plate "%s" and acquisition "%s"',
+            plate_name, acquisition_name
+        )
+        directory = os.path.expanduser(directory)
+        directory = os.path.expandvars(directory)
+        filenames = os.listdir(directory)
+        acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
+        registered_filenames = self._register_files_for_upload(
+            acquisition_id, filenames
+        )
+        for name in registered_filenames:
+            logger.info('upload file: %s', name)
+            filepath = os.path.join(directory, name)
+            self._upload_file(acquisition_id, filepath)
+
+    def _register_files_for_upload(self, acquisition_id, filenames):
+        '''Registers microscope files for upload.
+
+        Parameters
+        ----------
+        acquisition_id: str
+            ID of the acquisition
+        filenames: List[str]
+            names of files that should be uploaded
+
+        Returns
+        -------
+        List[str]
+            names of valid files that have been registered
+        '''
+        logger.info(
+            'register files for upload of acquisition %s', acquisition_id
+        )
+        url = self.build_url(
+            '/api/experiments/%s/acquisitions/%s/upload/register' % (
+                self._experiment_id, acquisition_id
+            )
+        )
+        payload = {'files': filenames}
+        res = self.session.post(url, json=payload)
+        res.raise_for_status()
+        return res.json()['data']
+
+    def _upload_file(self, acquisition_id, filepath):
+        '''Uploads an individual file.
+
+        Parameters
+        ----------
+        acquisition_id: str
+            ID of the acquisition
+        filepath: str
+            absolute path to the file on the local disk
+        '''
+        logger.debug(
+            'upload file "%s" for acquisition %s', filepath, acquisition_id
+        )
+        url = self.build_url(
+            '/api/experiments/%s/acquisitions/%s/upload/upload-file' % (
+                self._experiment_id, acquisition_id
+            )
+        )
+        files = {'file': open(filepath, 'rb')}
+        res = self.session.post(url, files=files)
+        res.raise_for_status()
 
     @classmethod
     def _extract_filename_from_headers(cls, headers):

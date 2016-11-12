@@ -18,17 +18,13 @@ import urllib
 import requests
 from abc import ABCMeta
 
-from tmclient.errors import ServerError
-
 
 logger = logging.getLogger(__name__)
 
 
 class HttpClient(object):
 
-    '''Abstract base class for RESTful interaction with the
-    TissueMAPS server.
-    '''
+    '''Abstract base class for HTTP interface.'''
 
     __metaclass__ = ABCMeta
 

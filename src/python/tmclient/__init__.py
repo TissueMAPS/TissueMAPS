@@ -11,8 +11,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-__version__ = '0.1.0'
-
-from tmclient.experiment import ExperimentService
-from tmclient.download import DownloadService
-from tmclient.upload import UploadService
+from tmclient.api import TmClient
