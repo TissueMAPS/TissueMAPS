@@ -223,6 +223,17 @@ class GC3Pie(object):
         self._engine.kill(jobs)
         self._engine.progress()
 
+    def continue_jobs(self, jobs):
+        """Continous jobs that have been interrupted.
+
+        Parameters
+        ----------
+        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
+            individual computational task or collection of tasks
+        """
+        logger.info('update jobs in engine')
+        self._engine.add(jobs)
+
     def resubmit_jobs(self, jobs, index=0):
         """Resubmits jobs to the cluster.
 

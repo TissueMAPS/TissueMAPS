@@ -37,7 +37,7 @@ from tmlib import cfg as libcfg
 logger = logging.getLogger(__name__)
 
 
-def get_running_task_ids():
+def get_interrupted_tasks():
     """Gets the IDs of all tasks that are not in state ``STOPPED`` or
     ``TERMINATED``. If tasks are have one of these states at server startup,
     they have probably been interrupted by a previous shutdown and need to
@@ -177,15 +177,9 @@ def create_app(config_overrides={}, verbosity=None):
     # Restart all jobs that might have been accidentially stopped by
     # a server shutdown.
     with app.app_context():
-        ids_of_tasks_to_restart = get_running_task_ids()
-        for tid in ids_of_tasks_to_restart:
+        task_ids = get_interrupted_tasks()
+        for tid in task_ids:
             task = gc3pie.retrieve_single_job(tid)
-            gc3pie.set_jobs_to_stopped(task)
-            gc3pie.store_jobs(task)
-            if hasattr(task, 'tasks'):
-                index = len(task.tasks)-1
-            else:
-                index = 0
-            gc3pie.resubmit_jobs(task, index)
+            gc3pie.continue_jobs(task)
 
     return app

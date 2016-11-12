@@ -50,7 +50,7 @@ def encode_api_exception(obj, encoder):
 
 class MalformedRequestError(HTTPException):
 
-    default_message = 'Invalid request'
+    default_message = 'Invalid request.'
 
     def __init__(self, message=default_message):
         super(MalformedRequestError, self).__init__(
@@ -59,6 +59,7 @@ class MalformedRequestError(HTTPException):
 
 
 class MissingGETParameterError(MalformedRequestError):
+
     def __init__(self, *parameters):
         super(MissingGETParameterError, self).__init__(
             message=(
@@ -69,6 +70,7 @@ class MissingGETParameterError(MalformedRequestError):
 
 
 class MissingPOSTParameterError(MalformedRequestError):
+
     def __init__(self, *parameters):
         super(MissingPOSTParameterError, self).__init__(
             message=(
@@ -80,7 +82,7 @@ class MissingPOSTParameterError(MalformedRequestError):
 
 class NotAuthorizedError(HTTPException):
 
-    default_message = 'This user does not have access to this resource.'
+    default_message = 'This user does not have access to the requested resource.'
 
     def __init__(self, message=default_message):
         super(NotAuthorizedError, self).__init__(
@@ -89,12 +91,25 @@ class NotAuthorizedError(HTTPException):
 
 
 class ResourceNotFoundError(HTTPException):
-    def __init__(self, model):
+
+    def __init__(self, model, **parameters):
+        if parameters:
+            message = (
+                'The requested resource of type "%s" was not found '
+                'for parameters: %s' % (
+                    model.__name__,
+                    ', '.join([
+                        '='.join([k, v]) for k, v in parameters.iteritems()
+                    ])
+                )
+            )
+        else:
+            message = (
+                'The requested resource of type "%s" was not found.' %
+                model.__name__
+            )
         super(ResourceNotFoundError, self).__init__(
-            message=(
-                'The requested resource with type "%s" was not found.' % model.__name__
-            ),
-            status_code=404
+            message=message, status_code=404
         )
 
 

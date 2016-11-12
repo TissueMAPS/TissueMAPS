@@ -446,7 +446,7 @@ def get_acquisition_modes():
 @jwt_required()
 def get_experiments():
     """
-    .. http:get:: /api/experiments/(string:experiment_id)
+    .. http:get:: /api/experiments
 
         Get all experiments for the currently logged in user.
 
@@ -612,6 +612,7 @@ def create_experiment():
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -676,6 +677,7 @@ def delete_experiment(experiment_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -712,6 +714,7 @@ def get_plate(experiment_id, plate_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -755,6 +758,7 @@ def get_plates(experiment_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -800,6 +804,7 @@ def delete_plate(experiment_id, plate_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -847,6 +852,7 @@ def create_plate(experiment_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -945,6 +951,7 @@ def create_acquisition(experiment_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -999,6 +1006,7 @@ def delete_acquisition(experiment_id, acquisition_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -1040,6 +1048,7 @@ def get_acquisition(experiment_id, acquisition_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -1119,7 +1128,7 @@ def get_acquisition_id(experiment_id):
 )
 @jwt_required()
 @decode_query_ids()
-def get_acquisition_image_files(experiment_id, acquisition_id):
+def get_microscope_image_files(experiment_id, acquisition_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/image-files
 
@@ -1129,6 +1138,7 @@ def get_acquisition_image_files(experiment_id, acquisition_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {
@@ -1162,7 +1172,7 @@ def get_acquisition_image_files(experiment_id, acquisition_id):
 )
 @jwt_required()
 @decode_query_ids()
-def get_acquisition_metadata_files(experiment_id, acquisition_id):
+def get_microscope_metadata_files(experiment_id, acquisition_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/metadata-files
 
@@ -1172,6 +1182,7 @@ def get_acquisition_metadata_files(experiment_id, acquisition_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {

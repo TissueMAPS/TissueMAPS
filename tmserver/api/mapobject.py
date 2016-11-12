@@ -20,22 +20,24 @@ import os.path as p
 import json
 import logging
 import numpy as np
+import pandas as pd
 from cStringIO import StringIO
 from zipfile import ZipFile
-
 from geoalchemy2.shape import to_shape
 import skimage.draw
-
 from flask_jwt import current_identity, jwt_required
-from flask import jsonify, request, send_file
+from flask import jsonify, request, send_file, Response
 from sqlalchemy.sql import text
+from sqlalchemy.orm.exc import NoResultFound
 from werkzeug import secure_filename
 
 import tmlib.models as tm
 from tmlib.image import SegmentationImage
 
 from tmserver.api import api
-from tmserver.util import decode_query_ids, assert_query_params
+from tmserver.util import (
+    decode_query_ids, assert_query_params, check_permissions
+)
 from tmserver.error import MalformedRequestError, ResourceNotFoundError
 
 
@@ -88,13 +90,13 @@ def get_features(experiment_id):
 
 
 @api.route(
-    '/experiments/<experiment_id>/mapobjects/<object_name>/segmentations',
+    '/experiments/<experiment_id>/mapobjects/<object_type>/segmentations',
     methods=['GET']
 )
 @jwt_required()
 @assert_query_params('plate_name', 'well_name', 'x', 'y', 'zplane', 'tpoint')
 @decode_query_ids()
-def get_mapobjects_segmentation(experiment_id, object_name):
+def get_segmentation_image(experiment_id, object_type):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/segmentations
 
@@ -135,7 +137,7 @@ def get_mapobjects_segmentation(experiment_id, object_name):
             ).\
             one()
         mapobject_type = session.query(tm.MapobjectType).\
-            filter_by(name=object_name).\
+            filter_by(name=object_type).\
             one()
         segmentations = session.query(
                 tm.MapobjectSegmentation.label,
@@ -144,7 +146,7 @@ def get_mapobjects_segmentation(experiment_id, object_name):
             join(tm.Mapobject).\
             join(tm.MapobjectType).\
             filter(
-                tm.MapobjectType.name == object_name,
+                tm.MapobjectType.name == object_type,
                 tm.MapobjectSegmentation.site_id == site.id,
                 tm.MapobjectSegmentation.zplane == zplane,
                 tm.MapobjectSegmentation.tpoint == tpoint
@@ -152,7 +154,7 @@ def get_mapobjects_segmentation(experiment_id, object_name):
             all()
 
         if len(segmentations) == 0:
-            raise ResourceNotFoundError('No segmentations found.')
+            raise ResourceNotFoundError(tm.MapobjectSegmentation, request.args)
         polygons = dict()
         for seg in segmentations:
             polygons[(tpoint, zplane, seg.label)] = seg.geom_poly
@@ -169,7 +171,7 @@ def get_mapobjects_segmentation(experiment_id, object_name):
 
         filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
             experiment_name, site.well.name, site.x, site.y, zplane, tpoint,
-            object_name
+            object_type
         )
 
     img = SegmentationImage.create_from_polygons(
@@ -187,66 +189,163 @@ def get_mapobjects_segmentation(experiment_id, object_name):
 
 
 @api.route(
-    '/experiments/<experiment_id>/mapobjects/<object_name>/feature-values',
+    '/experiments/<experiment_id>/mapobjects/<object_type>/feature-values',
     methods=['GET']
 )
 @jwt_required()
 @decode_query_ids()
-def get_feature_values(experiment_id, object_name):
+def get_mapobject_feature_values(experiment_id, object_type):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/feature-values
 
-        Get all feature values for a given ``mapobject_type`` as a
-        zip-compressed CSV file.
+        Get all feature values
+        (:class:`FeatureValue.value <tmlib.models.feature.FeatureValue`)
+        for object of the given
+        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType`
+        as a *n*x*p* *CSV* table, where *n* is the number of
+        mapobjects (:class:`Mapobject <tmlib.models.mapobject.Mapobject`) and
+        *p* is the number of features
+        (:class:`Feature <tmlib.models.feature.Feature>`).
 
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
         :statuscode 400: malformed request
+        :statuscode 401: unauthorized
+        :statuscode 404: not found
+
+    .. note:: The first row of the table are column (feature) names.
+    """
+    experiment_name = check_permissions(experiment_id)
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        try:
+            mapobject_type = session.query(tm.MapobjectType).\
+                filter_by(name=object_type).\
+                one()
+        except NoResultFound:
+            raise ResourceNotFoundError(
+                tm.MapobjectType, {'object_type': object_type}
+            )
+
+        def generate_feature_matrix(mapobject_type_id):
+            mapobjects = session.query(tm.Mapobject.id).\
+                filter_by(mapobject_type_id=mapobject_type_id).\
+                order_by(tm.Mapobject.id).\
+                all()
+            features = session.query(tm.Feature.id, tm.Feature.name).\
+                filter_by(mapobject_type_id=mapobject_type_id).\
+                order_by(tm.Feature.id).\
+                all()
+            feature_ids = [f.id for f in features]
+            feature_names = [f.name for f in features]
+            # First line of CSV are column names
+            for i in range(-1, len(mapobjects)):
+                if i < 0:
+                    yield ','.join(feature_names) + '\n'
+                else:
+                    feature_values = session.query(tm.FeatureValue.value).\
+                        filter(
+                            tm.FeatureValue.mapobject_id == mapobjects[i].id,
+                            tm.FeatureValue.feature_id.in_(feature_ids)
+                        ).\
+                        order_by(tm.FeatureValue.feature_id).\
+                        all()
+                    values = [str(f.value) for f in feature_values]
+                    yield ','.join(values) + '\n'
+
+        return Response(
+            generate_feature_matrix(mapobject_type.id),
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=%s' % (
+                    '%s_%s_feature-values.csv' % (experiment_name, object_type)
+                )
+            }
+        )
+
+
+@api.route(
+    '/experiments/<experiment_id>/mapobjects/<object_type>/metadata',
+    methods=['GET']
+)
+@jwt_required()
+@decode_query_ids()
+def get_mapobject_metadata(experiment_id, object_type):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/metadata
+
+        Get :class:`FeatureValue <tmlib.models.feature.FeatureValue` for
+        the given :class:`MapobjectType <tmlib.models.mapobject.MapobjectType`
+        as a *n*x*p* feature table, where *n* is the number of
+        mapobjects (:class:`Mapobject <tmlib.models.mapobject.Mapobject`) and
+        *p* is the number of features
+        (:class:`Feature <tmlib.models.feature.Feature>`).
+        The table is send in form of a *CSV* file with the first representing
+        feature names.
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 400: malformed request
+        :statuscode 401: unauthorized
+        :statuscode 404: not found
 
     """
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        experiment_name = experiment.name
-
+    experiment_name = check_permissions(experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        mapobject_type = session.query(tm.MapobjectType).\
-            filter_by(name=object_name).\
-            one()
-        features = mapobject_type.get_feature_value_matrix()
-        metadata = mapobject_type.get_metadata_matrix()
+        try:
+            mapobject_type = session.query(tm.MapobjectType).\
+                filter_by(name=object_type).\
+                one()
+        except NoResultFound:
+            raise ResourceNotFoundError(
+                tm.MapobjectType, {'object_type': object_type}
+            )
 
-    if features.values.shape[0] != metadata.values.shape[0]:
-        raise ValueError(
-            'Features and metadata must have same number of "%s" objects'
-            % object_name
+        def generate_feature_matrix(mapobject_type_id):
+            mapobjects = session.query(tm.Mapobject.id).\
+                filter_by(mapobject_type_id=mapobject_type_id).\
+                order_by(tm.Mapobject.id).\
+                all()
+            features = session.query(tm.Feature.id, tm.Feature.name).\
+                filter_by(mapobject_type_id=mapobject_type_id).\
+                order_by(tm.Feature.id).\
+                all()
+            feature_ids = [f.id for f in features]
+            feature_names = [f.name for f in features]
+            # First line of CSV are column names
+            for i in range(-1, len(mapobjects)):
+                if i < 0:
+                    names = [
+                        'label', 'tpoint', 'zplane',
+                        'plate_name', 'well_name',
+                        'site_y', 'site_x',
+                    ]
+                    yield ','.join(names) + '\n'
+                else:
+                    values = session.query(
+                            tm.MapobjectSegmentation.label,
+                            tm.MapobjectSegmentation.tpoint,
+                            tm.MapobjectSegmentation.zplane,
+                            tm.Plate.name,
+                            tm.Well.name,
+                            tm.Site.y,
+                            tm.Site.x,
+                        ).\
+                        join(tm.Mapobject).\
+                        join(tm.Site).\
+                        join(tm.Well).\
+                        join(tm.Plate).\
+                        filter(tm.Mapobject.id == mapobjects[i].id).\
+                        one()
+                    values = [str(f) for f in values]
+                    yield ','.join(values) + '\n'
+
+        return Response(
+            generate_feature_matrix(mapobject_type.id),
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': 'attachment; filename=%s' % (
+                    '%s_%s_metadata.csv' % (experiment_name, object_type)
+                )
+            }
         )
-    if any(features.index.values != metadata.index.values):
-        raise ValueError(
-            'Features and metadata must have the same index.'
-        )
-    basename = secure_filename(
-        '%s_%s_features' % (experiment_name, object_name)
-    )
-    data_filename = '%s_data.csv' % basename
-    metadata_filename = '%s_metadata.csv' % basename
-    f = StringIO()
-    with ZipFile(f, 'w') as zf:
-        zf.writestr(
-            data_filename,
-            features.to_csv(None, encoding='utf-8', index=False)
-        )
-        zf.writestr(
-            metadata_filename,
-            metadata.to_csv(None, encoding='utf-8', index=False)
-        )
-    f.seek(0)
-    # TODO: These files may become very big, we may need to use a generator to
-    # stream the file: http://flask.pocoo.org/docs/0.11/patterns/streaming
-    # On the client side the streaming requests can be handled by an iterator:
-    # http://docs.python-requests.org/en/master/user/advanced/#streaming-requests
-    return send_file(
-        f,
-        attachment_filename='%s.zip' % basename,
-        mimetype='application/octet-stream',
-        as_attachment=True
-    )
+

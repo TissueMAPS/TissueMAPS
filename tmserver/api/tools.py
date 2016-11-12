@@ -255,6 +255,7 @@ def delete_tool_result(experiment_id, tool_result_id):
 
         .. sourcecode:: http
 
+            HTTP/1.1 200 OK
             Content-Type: application/json
 
             {

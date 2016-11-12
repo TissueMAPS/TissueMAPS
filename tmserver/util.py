@@ -193,3 +193,35 @@ def decode_query_ids():
             return f(*args, **kwargs)
         return wrapped
     return decorator
+
+
+def check_permissions(experiment_id, mode='read'):
+    """Checks whether the current user has permissions to access a given
+    experiment.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of an experiment
+    mode: str, optional
+        access mode (options: ``{"read", "write"}``, default: ``"read"``)
+
+    Returns
+    -------
+    str
+        name of the experiment when permission is granted
+
+    Raises
+    ------
+    NotAuthorizedError
+        when current user doesn't have permissions
+    """
+    if mode not in {'read', 'write'}:
+        raise ValueError('Argument "mode" must be either "read" or "write".')
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        if not experiment.can_be_viewed_by(current_identity.id):
+            raise NotAuthorizedError(
+                'No permissions to %s experiment "%s"' % (mode, experiment.name)
+            )
+        return experiment.name
