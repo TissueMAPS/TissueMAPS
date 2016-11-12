@@ -146,7 +146,7 @@ class MetadataConfigurator(ClusterRoutines):
 
         See also
         --------
-        :mod:`cellvoyager <tmlib.workflow.metaconfig.cellvoyager>`
+        :mod:`tmlib.workflow.metaconfig.cellvoyager`
         '''
         MetadataReader = metadata_reader_factory(batch['microscope_type'])
 

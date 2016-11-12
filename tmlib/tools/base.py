@@ -257,7 +257,7 @@ class ToolSparkInterface(ToolInterface):
 
         See also
         --------
-        :class:`LabelValue <tmlib.models.feature.LabelValue>`
+        :class:`tmlib.models.feature.LabelValue`
         '''
         import pyspark.sql.functions as sp
         url = cfg.db_uri_spark.replace(
@@ -349,7 +349,7 @@ class ToolPandasInterface(ToolInterface):
 
         See also
         --------
-        :class:`LabelValue <tmlib.models.feature.LabelValue>`
+        :class:`tmlib.models.feature.LabelValue`
         '''
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             label_mappings = [
@@ -643,9 +643,12 @@ class ClassifierSparkInterface(ClassifierInterface):
         Parameters
         ----------
         unlabeled_feature_data: pyspark.sql.DataFrame
-            mapobjects that should be classified
+            dataframe with columns "mapobject_id" and "features"
+            containing mapobjects that should be classified
         labeled_feature_data: pyspark.sql.DataFrame
-            data that should be used for training of the classifier
+            dataframe with columns "mapobject_id", "features" and "label"
+            containing mapobjects that should be used for training of the
+            classifier
         method: str
             method to use for classification
         n_fold_cv: int
@@ -654,8 +657,9 @@ class ClassifierSparkInterface(ClassifierInterface):
         Returns
         -------
         pyspark.sql.DataFrame
-            data frame with additional column "label" with predicted label
-            values for each mapobject
+            data frame with additional column "label" (type float:
+            `DoubleType <http://spark.apache.org/docs/latest/api/python/pyspark.sql.html#pyspark.sql.types.DoubleType>`_)
+            with predicted label values for each mapobject
         '''
         from pyspark.ml import Pipeline
         import pyspark.sql.functions as sp
@@ -674,34 +678,25 @@ class ClassifierSparkInterface(ClassifierInterface):
             ).\
             fit(labeled_feature_data)
 
-        label_indexer = StringIndexer(
-                inputCol='label', outputCol='indexedLabel'
-            ).\
-            fit(labeled_feature_data)
-
         models = {
             'randomforest': RandomForestClassifier
         }
         grid_search_space = {
             'randomforest': {
-                'numTrees': [10]
-                # 'maxDepth': [3, 5, 7],
-                # 'numTrees': [10, 20, 30]
+                'maxDepth': [3, 5, 7],
+                'numTrees': [10, 20, 30]
             }
         }
 
-        clf = models[method](
-            labelCol='indexedLabel', featuresCol='indexedFeatures'
-        )
+        clf = models[method](labelCol='label', featuresCol='indexedFeatures')
         grid = ParamGridBuilder()
         for k, v in grid_search_space[method].iteritems():
             grid = grid.addGrid(getattr(clf, k), v)
         grid = grid.build()
 
-        pipeline = Pipeline(stages=[feature_indexer, label_indexer, clf])
+        pipeline = Pipeline(stages=[feature_indexer, clf])
         evaluator = MulticlassClassificationEvaluator(
-            labelCol='indexedLabel', predictionCol='prediction',
-            metricName='f1'
+            labelCol='label', predictionCol='prediction', metricName='f1'
         )
         crossval = CrossValidator(
             estimator=pipeline, estimatorParamMaps=grid,
@@ -711,14 +706,6 @@ class ClassifierSparkInterface(ClassifierInterface):
         model = crossval.fit(labeled_feature_data)
         logger.info('predict labels')
         predictions = model.transform(unlabeled_feature_data)
-        # In case labels were provided as strings on needs to map them back
-        # label_converter = IndexToString(
-        #     inputCol='prediction', outputCol='predictedLabel',
-        #     labels=label_indexer.labels
-        # )
-        # return label_converter.transform(predictions).select(
-        #     sp.col('predictedLabel').alias('label'), 'mapobject_id'
-        # )
         return predictions.select(
             sp.col('prediction').alias('label'), 'mapobject_id'
         )

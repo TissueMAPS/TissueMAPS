@@ -72,9 +72,9 @@ class TmapsConfig(object):
     def read(self):
         '''Reads the configuration from a file
 
-        See also
+        See Also
         --------
-        :const:`CONFIG_FILE <tmlib.config.CONFIG_FILE>`
+        :const:`tmlib.config.CONFIG_FILE`
         '''
         logger.debug('read config file: "%s"', self._config_file)
         try:

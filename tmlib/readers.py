@@ -564,7 +564,7 @@ class BFImageReader(object):
 
     See also
     --------
-    :class:`JavaBridge <tmlib.readers.JavaBridge>`
+    :class:`tmlib.readers.JavaBridge`
     '''
     # TODO: reimplement the whole BioFormats approach using Py4J
     # I don't like the way python-bioformats is implemented!

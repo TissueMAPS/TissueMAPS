@@ -273,6 +273,10 @@ class MapobjectType(ExperimentModel, DateMixIn):
             the number of features.
             The index is set to the IDs of the mapobjects.
 
+        Warning
+        -------
+        This may not be a good idea in case of a large experiment, because
+        the data may not fit into memory.
         '''
         from tmlib.models import Feature, FeatureValue
         session = Session.object_session(self)

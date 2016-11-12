@@ -50,7 +50,7 @@ class WorkflowSubmissionManager(SubmissionManager):
 
         See also
         --------
-        :class:`Submission <tmlib.models.submission.Submission>`
+        :class:`tmlib.models.submission.Submission`
 
         Raises
         ------

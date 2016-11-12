@@ -55,7 +55,7 @@ class ExperimentReference(MainModel, DateMixIn):
 
     See also
     --------
-    :class:`Experiment <tmlib.models.experiment.Experiment>`
+    :class:`tmlib.models.experiment.Experiment`
     '''
 
     __tablename__ = 'experiment_references'
@@ -378,9 +378,9 @@ class Experiment(DirectoryModel):
 
         See also
         --------
-        :attr:`SUPPORTED_MICROSCOPE_TYPES <tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES>`
-        :attr:`SUPPORTED_PLATE_AQUISITION_MODES <tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES>`
-        :attr:`SUPPORTED_PLATE_FORMATS <tmlib.models.plate.SUPPORTED_PLATE_FORMATS>`
+        :attr:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
+        :attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
+        :attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
         '''
         self._location = location
         self.zoom_factor = zoom_factor

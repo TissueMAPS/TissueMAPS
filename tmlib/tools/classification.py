@@ -82,7 +82,7 @@ class Classification(Classifier):
         labeled_mapobjects = list()
         label_map = dict()
         for i, cls in enumerate(payload['training_classes']):
-            labels = [(j, i) for j in cls['object_ids']]
+            labels = [(j, float(i)) for j in cls['object_ids']]
             labeled_mapobjects.extend(labels)
             label_map[float(i)] = {
                 'name': cls['name'],

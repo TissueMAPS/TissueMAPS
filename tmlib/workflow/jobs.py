@@ -71,7 +71,7 @@ class WorkflowStepJob(Job):
 
         See also
         --------
-        :class:`Submission <tmlib.models.submission.Submission>`
+        :class:`tmlib.models.submission.Submission`
 
         Note
         ----
@@ -292,7 +292,7 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection, RunJobCollec
 
     '''Class for multiple run job collections.'''
 
-    def __init__(self, step_name, submission_id, run_job_collections=None):
+    def __init__(self, step_name, submission_id, run_job_collections=list()):
         '''
         Parameters
         ----------
@@ -306,6 +306,8 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection, RunJobCollec
         self.name = '%s_run' % step_name
         self.step_name = step_name
         self.submission_id = submission_id
+        if run_job_collections is None:
+            run_job_collections = list()
         super(self.__class__, self).__init__(
             jobname=self.name, tasks=run_job_collections
         )
