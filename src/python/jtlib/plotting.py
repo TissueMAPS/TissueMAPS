@@ -190,8 +190,8 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
 
     See also
     --------
-    function:`jtlib.plotting.create_intensity_image_plot`
-    function:`jtlib.plotting.create_intensity_overlay_image_plot`
+    :func:`jtlib.plotting.create_intensity_image_plot`
+    :func:`jtlib.plotting.create_intensity_overlay_image_plot`
     '''
 
     _check_position_argument(position)
@@ -256,8 +256,8 @@ def create_float_image_plot(image, position, colorscale=None):
 
     See also
     --------
-    function:`jtlib.plotting.create_intensity_image_plot`
-    function:`jtlib.plotting.create_colorscale`
+    :func:`jtlib.plotting.create_intensity_image_plot`
+    :func:`jtlib.plotting.create_colorscale`
     '''
 
     _check_position_argument(position)
@@ -319,8 +319,8 @@ def create_mask_image_plot(mask, position, colorscale=None):
 
     See also
     --------
-    function:`jtlib.plotting.create_intensity_image_plot`
-    function:`jtlib.plotting.create_intensity_overlay_image_plot`
+    :func:`jtlib.plotting.create_intensity_image_plot`
+    :func:`jtlib.plotting.create_intensity_overlay_image_plot`
     '''
     _check_position_argument(position)
     # if not mask.dtype == np.bool or not mask.dtype == np.int32:
@@ -393,8 +393,8 @@ def create_intensity_overlay_image_plot(image, mask, position,
 
     See also
     --------
-    function:`jtlib.plotting.create_intensity_image_plot`
-    function:`jtlib.plotting.create_mask_image_plot`
+    :func:`jtlib.plotting.create_intensity_image_plot`
+    :func:`jtlib.plotting.create_mask_image_plot`
     '''
 
     _check_position_argument(position)
@@ -483,7 +483,7 @@ def create_mask_overlay_image_plot(mask, mask2, position, color=None):
 
     See also
     --------
-    function:`jtlib.plotting.create_mask_image_plot`
+    :func:`jtlib.plotting.create_mask_image_plot`
     '''
 
     _check_position_argument(position)
