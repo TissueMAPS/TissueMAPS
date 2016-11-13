@@ -43,6 +43,6 @@ def main(label_image, as_polygons=True):
 
     See also
     --------
-    :class:`SegmentedObjects <tmlib.workflow.jterator.handles.SegmentedObjects`
+    :class:`tmlib.workflow.jterator.handles.SegmentedObjects`
     '''
     return Output(label_image, as_polygons)

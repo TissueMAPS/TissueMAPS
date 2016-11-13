@@ -39,7 +39,7 @@ def main(label_image, intensity_image, plot=False):
 
     See also
     --------
-    :class:`Hu <jtlib.features.Hu>`
+    :class:`jtlib.features.Hu`
     '''
     f = jtlib.features.Hu(
         label_image=label_image, intensity_image=intensity_image

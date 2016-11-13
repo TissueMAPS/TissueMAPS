@@ -37,9 +37,9 @@ def main(label_image, intensity_image, plot=False):
     -------
     jtmodules.maeasure_gabor.Output
 
-    See also
+    See Also
     --------
-    :class:`Gabor <jtlib.features.Gabor>`
+    :class:`jtlib.features.Gabor`
     '''
     f = jtlib.features.Gabor(
         label_image=label_image, intensity_image=intensity_image
