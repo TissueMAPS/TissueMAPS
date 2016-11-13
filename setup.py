@@ -68,6 +68,13 @@ def find_scripts():
     return scripts
 
 
+def build_console_scripts():
+    cli_tools = [
+        'tm_client = tmclient.api:TmClient.main',
+    ]
+    return cli_tools
+
+
 def get_version():
     src_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), 'src', 'python', 'tmclient'
@@ -97,6 +104,7 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=find_scripts(),
+    entry_points={'console_scripts': build_console_scripts()},
     packages=setuptools.find_packages(os.path.join('src', 'python')),
     package_dir={'': os.path.join('src', 'python')},
     package_data={'': ['*.rst']},

@@ -14,6 +14,7 @@
 import inspect
 import logging
 import requests
+import argparse
 import os
 import cgi
 import re
@@ -52,7 +53,7 @@ class TmClient(HttpClient):
         self._experiment_id = self._get_experiment_id(experiment_name)
 
     def __call__(self, cli_args):
-        '''Calls a method with the provided keyword arguments.
+        '''Calls a method with the provided arguments.
 
         Paramaters
         ----------
@@ -84,6 +85,256 @@ class TmClient(HttpClient):
             if arg_name in valid_arg_names:
                 kwargs[arg_name] = arg_value
         method(**kwargs)
+
+    @classmethod
+    def main(cls):
+        '''Main entry point for command line interface.'''
+        parser = cls._get_parser()
+        args = parser.parse_args()
+
+        import ipdb; ipdb.set_trace()
+        configure_logging()
+        logging_level = map_logging_verbosity(args.verbosity)
+        logging.getLogger('tmclient').setLevel(logging_level)
+        logger.setLevel(logging_level)
+
+        client = cls(
+            args.host, args.port, args.experiment_name,
+            args.user_name, args.password
+        )
+        client(args)
+
+    @classmethod
+    def _get_parser(cls):
+        parser = argparse.ArgumentParser(
+            prog='tm_client',
+            description='TissueMAPS REST API client.',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        parser.add_argument(
+            '-H', '--host', required=True,
+            help='name of TissueMAPS server host'
+        )
+        parser.add_argument(
+            '-P', '--port', type=int, default=80,
+            help='number of the port to which the TissueMAPS server listens'
+        )
+        parser.add_argument(
+            '-u', '--user_name', required=True,
+            help='name of TissueMAPS user'
+        )
+        parser.add_argument(
+            '-p', '--password',
+            help='password of TissueMAPS user'
+        )
+        parser.add_argument(
+            '-v', '--verbosity', action='count', default=0,
+            help='increase logging verbosity'
+        )
+        parser.add_argument(
+            '-e', '--experiment_name', required=True,
+            help='name of the parent experiment'
+        )
+
+        subparsers = parser.add_subparsers(
+            dest='request_type', help='request type'
+        )
+        subparsers.required = True
+
+        create_parser = subparsers.add_parser(
+            'create', help='create new database entries',
+            description='Create new database entries.',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+
+        create_subparsers = create_parser.add_subparsers(
+            dest='data_model', help='data model'
+        )
+
+        experiment_parser = create_subparsers.add_parser(
+            'experiment', help='create a new experiment',
+            description='Create a new experiment.',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        experiment_parser.set_defaults(method='create_experiment')
+        experiment_parser.add_argument(
+            '--microscope_type', '-m', default='cellvoyager',
+            help='microscope type'
+        )
+        experiment_parser.add_argument(
+            '--plate_format', '-f', type=int, default=384,
+            help='''
+                well-plate format, i.e. total number of wells per plate
+            '''
+        )
+        experiment_parser.add_argument(
+            '--plate_acquisition_mode', default='basic',
+            choices={'basic', 'multiplexing'},
+            help='''
+                whether multiple acquisitions of the same plate are interpreted
+                as time points ("basic" mode) or multiplexing cycles
+                ("multiplexing" mode)
+            '''
+        )
+
+        plate_parser = create_subparsers.add_parser(
+            'plate', help='create a new plate for an existing experiment',
+            description='Create a new plate.',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        plate_parser.set_defaults(method='create_plate')
+        plate_parser.add_argument(
+            '-p', '--plate_name', required=True,
+            help='name of the plate that should be created'
+        )
+
+        acquisition_parser = create_subparsers.add_parser(
+            'acquisition', help='create a new acquisition for an existing plate',
+            description='Create a new acquisition.',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        acquisition_parser.set_defaults(method='create_acquisition')
+        acquisition_parser.add_argument(
+            '-p', '--plate_name', required=True,
+            help='name of the parent plate'
+        )
+        acquisition_parser.add_argument(
+            '-a', '--acquisition_name', required=True,
+            help='name of the acquisition that should be created'
+        )
+
+        upload_parser = subparsers.add_parser(
+            'upload', help='upload data',
+            description='Upload data.',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        upload_parser.add_argument(
+            '-d', '--directory', required=True,
+            help='path to directory where files should be uploaded from'
+        )
+
+        upload_subparsers = upload_parser.add_subparsers(
+            dest='file_type', help='file type'
+        )
+        upload_subparsers.required = True
+
+        microscope_file_parser = upload_subparsers.add_parser(
+            'microscope_file',
+            help='upload microscope image and metadata files',
+            description='Upload microscope image and metadata files.',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        microscope_file_parser.set_defaults(method='upload_microscope_files')
+        microscope_file_parser.add_argument(
+            '-p', '--plate_name', required=True,
+            help='name of the plate'
+        )
+        microscope_file_parser.add_argument(
+            '-a', '--acquisition_name', required=True,
+            help='name of the acquisition'
+        )
+
+        download_parser = subparsers.add_parser(
+            'download', help='download data',
+            description='Download data.',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+
+        download_subparsers = download_parser.add_subparsers(
+            dest='file_type', help='file type'
+        )
+        download_subparsers.required = True
+
+        image_position_parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        image_position_parser.add_argument(
+            '-p', '--plate_name', required=True,
+            help='name of the plate'
+        )
+        image_position_parser.add_argument(
+            '-w', '--well_name', required=True,
+            help='name of the well'
+        )
+        image_position_parser.add_argument(
+            '-x', '--well_pos_x', required=True,
+            help='zero-based x cooridinate of acquisition site within the well'
+        )
+        image_position_parser.add_argument(
+            '-y', '--well_pos_y', required=True,
+            help='zero-based y cooridinate of acquisition site within the well'
+        )
+        image_position_parser.add_argument(
+            '-z', '--zplane', default=0,
+            help='zero-based z-plane index'
+        )
+        image_position_parser.add_argument(
+            '-t', '--tpoint', default=0,
+            help='zero-based time point index'
+        )
+
+        channel_image_parser = download_subparsers.add_parser(
+            'channel_image', help='download channel image',
+            parents=[image_position_parser],
+            description='Download channel image.',
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        channel_image_parser.set_defaults(method='download_channel_image_file')
+        channel_image_parser.add_argument(
+            '-c', '--channel_name', required=True,
+            help='name of the channel'
+        )
+        channel_image_parser.add_argument(
+            '-i', '--cycle_index', default=0,
+            help='zero-based index of the cycle'
+        )
+        channel_image_parser.add_argument(
+            '--correct', action='store_true',
+            help='whether image should be corrected for illumination artifacts'
+        )
+
+        segmentation_image_parser = download_subparsers.add_parser(
+            'segmentation_image',
+            help='download segmented objects as label image',
+            description='Download segmentation image.',
+            parents=[image_position_parser],
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        segmentation_image_parser.set_defaults(
+            method='download_segmentation_image_file'
+        )
+        segmentation_image_parser.add_argument(
+            '-o', '--object_type', required=True,
+            help='type of the segmented objects (e.g. Cells)'
+        )
+
+        object_parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        object_parser.add_argument(
+            '-o', '--object_type', required=True,
+            help='type of the segmented objects (e.g. Cells)'
+        )
+
+        feature_value_parser = download_subparsers.add_parser(
+            'feature_values', help='download object feature values',
+            description='Download feature values for segmented objects.',
+            parents=[object_parser],
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        feature_value_parser.set_defaults(method='download_object_feature_values_file')
+
+        metadata_parser = download_subparsers.add_parser(
+            'metadata', help='download object metadata',
+            description='Download metadata for segmented objects.',
+            parents=[object_parser],
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        )
+        metadata_parser.set_defaults(method='download_object_metadata_file')
+
+        return parser
 
     def _get_experiment_id(self, experiment_name):
         '''Gets the ID of an existing experiment given its name.
