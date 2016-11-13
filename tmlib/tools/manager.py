@@ -232,7 +232,7 @@ class ToolRequestManager(SubmissionManager):
         return parser
 
     @classmethod
-    def main(cls):
+    def __main__(cls):
         '''Main entry point for command line interface.
 
         Parsers the command line arguments and configures logging.

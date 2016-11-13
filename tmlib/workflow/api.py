@@ -73,7 +73,7 @@ def _is_model_class_attr(obj):
 
 class BasicClusterRoutines(object):
 
-    '''Abstract base class for submission of jobs to a cluster.'''
+    '''Abstract base class for cluster routines.'''
 
     __metaclass__ = ABCMeta
 
@@ -128,14 +128,14 @@ class ClusterRoutines(BasicClusterRoutines):
     for large-scale image processing on a batch cluster.
 
     Each workflow step must implement this class and decorate it with
-    :func:`tmlib.workflow.register_step_api` to register it for use
-    within a worklow.
+    :func:`register_step_api <tmlib.workflow.register_step_api>` to register
+    it for use within a :class:`Workflow <tmlib.workflow.workflow.Workflow>`.
 
     Note
     ----
     Classes that don't implement the *collect* phase must decorate the
-    implemented `collect_job_output` method with
-    :func:`tmlib.utils.notimplemented`.
+    implemented ``collect_job_output()`` method with
+    :func:`notimplemented <tmlib.utils.notimplemented>`.
     '''
 
     __metaclass__ = _ApiMeta

@@ -212,7 +212,7 @@ class CommandLineInterface(WorkflowSubmissionManager):
         return self.__class__.__name__.lower()
 
     @classmethod
-    def main(cls):
+    def __main__(cls):
         '''Main entry point for command line interfaces.
 
         Parses the command line arguments and configures logging.

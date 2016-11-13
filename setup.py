@@ -87,15 +87,15 @@ def build_console_scripts():
     cli_tools = list()
     for name in names:
         cli_tools.append(
-            '{name} = tmlib.workflow.{name}.cli:{cls}.main'.format(
+            '{name} = tmlib.workflow.{name}.cli:{cls}.__main__'.format(
                 name=name, cls=name.capitalize()
             )
         )
     # NOTE: Spark entry points must have .py ending, otherwise they will
     # be interpreted as scala files.
     cli_tools.extend([
-        'tm_workflow = tmlib.workflow.manager:WorkflowManager.main',
-        'tm_tool.py = tmlib.tools.manager:ToolRequestManager.main',
+        'tm_workflow = tmlib.workflow.manager:WorkflowManager.__main__',
+        'tm_tool.py = tmlib.tools.manager:ToolRequestManager.__main__',
     ])
     return cli_tools
 

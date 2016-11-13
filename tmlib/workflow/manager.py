@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 class WorkflowManager(SubmissionManager):
 
-    '''Command line interface for building, submitting, and monitoring
+    '''Command line interface for submitting, and monitoring
     `TissueMAPS` workflows.
     '''
 
@@ -259,7 +259,7 @@ class WorkflowManager(SubmissionManager):
         return parser
 
     @classmethod
-    def main(cls):
+    def __main__(cls):
         '''Main entry point for command line interface.
 
         Parsers the command line arguments and configures logging.
