@@ -611,7 +611,7 @@ class Workflow(SequentialTaskCollection, State):
         ------
         TypeError
             when `description` doesn't have type
-            :class:`tmlib.tmaps.description.WorkflowDescription`
+            :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>`
 
         '''
         logger.info('update workflow description')

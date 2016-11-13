@@ -26,7 +26,6 @@ from tmlib.workflow import get_workflow_dependencies
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
 from tmlib.workflow.args import ExtraArguments
-from tmlib.workflow.args import ArgumentMeta
 
 
 class WorkflowDescription(object):
@@ -44,7 +43,8 @@ class WorkflowDescription(object):
     upstream step, the workflow will stop.
     However, in order to be able to check the workflow logic before any jobs
     get submitted, workflows dependencies are checked according a specific
-    implementation of :class:`tmlib.workflow.dependencies.WorkflowDependencies`.
+    implementation of
+    :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>`.
 
     '''
 
@@ -84,7 +84,7 @@ class WorkflowDescription(object):
         ------
         TypeError
             when `stage_description` doesn't have type
-            :class:`tmlib.workflow.description.WorkflowStageDescription`
+            :class:`WorkflowStageDescription <tmlib.workflow.description.WorkflowStageDescription>`
         '''
         if not isinstance(stage_description, WorkflowStageDescription):
             raise TypeError(
@@ -243,7 +243,7 @@ class WorkflowStageDescription(object):
         ------
         TypeError
             when `step_description` doesn't have type
-            :class:`tmlib.workflow.description.WorkflowStepDescription`
+            :class:`WorkflowStepDescription <tmlib.workflow.description.WorkflowStepDescription>`
         '''
         if not isinstance(step_description, WorkflowStepDescription):
             raise TypeError(

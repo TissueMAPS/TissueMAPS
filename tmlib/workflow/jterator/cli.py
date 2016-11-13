@@ -51,7 +51,7 @@ class Jterator(CommandLineInterface):
         self.api_instance.project.create(repo_dir, skel_dir)
 
     @climethod(
-        help='runs an invidiual jobs on the local machine',
+        help='runs an invidiual job on the local machine',
         job_id=Argument(
             type=int, help='ID of the job that should be run', flag='j'
         ),

@@ -71,12 +71,12 @@ class DateMixIn(object):
     database table.
     '''
 
-    #: date and time when the row was inserted into the column
+    #: datetime: date and time when the row was inserted into the column
     created_at = Column(
         DateTime, default=func.now()
     )
 
-    #: date and time when the row was last updated
+    #: datetime: date and time when the row was last updated
     updated_at = Column(
         DateTime, default=func.now(), onupdate=func.now()
     )
@@ -115,7 +115,6 @@ class FileSystemModel(ExperimentModel):
 
     '''Abstract base class for model classes, which refer to data
     stored on disk outside of the database.
-
     '''
 
     __abstract__ = True
@@ -160,10 +159,12 @@ class FileModel(FileSystemModel):
 
     @abstractmethod
     def get(self):
+        '''Gets the file content.'''
         pass
 
     @abstractmethod
     def put(self, data):
+        '''Puts `data` to the file.'''
         pass
 
 

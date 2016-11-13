@@ -344,7 +344,7 @@ class CliJobCollection(SequentialTaskCollection, JobCollection):
 
     '''Class for manual submission of the *run* and *collect* phases of a
     workflow steps via
-    :meth:`tmlib.workflow.cli.CommandLineInterface.submit`.
+    :meth:`submit <tmlib.workflow.cli.CommandLineInterface.submit>`.
     '''
 
     def __init__(self, step_name, submission_id, jobs=None):

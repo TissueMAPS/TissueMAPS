@@ -82,9 +82,9 @@ class Argument(object):
             (default: ``False``)
         get_choices: function, optional
             function that takes an object
-            of type :class:`tmlib.models.experiment.Experiment` and returns the
-            choices in case they need to (and can) be determined dynamically
-            (default: ``None``)
+            of type :class:`Experiment <tmlib.models.experiment.Experiment>`
+            and returns the choices in case they need to (and can) be determined
+            dynamically (default: ``None``)
         meta: str, optional
             alternative name of the argument displayed for command line options
         dependency: tuple, optional
@@ -269,15 +269,15 @@ def __str__(self):
     return '<Argument(name=%r, type=%r)>' % (self.name, self.type)
 
 
-class ArgumentMeta(ABCMeta):
+class _ArgumentMeta(ABCMeta):
 
     '''Metaclass for adding class attributes of type
-    :class:`tmlib.workflow.args.Argument` as descriptors to instances of
+    :class:`Argument <tmlib.workflow.args.Argument>` as descriptors to instances of
     the class.
     '''
 
     def __init__(cls, clsname, bases, attrs):
-        super(ArgumentMeta, cls).__init__(clsname, bases, attrs)
+        super(_ArgumentMeta, cls).__init__(clsname, bases, attrs)
         for name, value in attrs.iteritems():
             if isinstance(value, Argument):
                 argument = value
@@ -293,20 +293,21 @@ class ArgumentMeta(ABCMeta):
 class ArgumentCollection(object):
 
     '''Abstract base class for an argument collection. The collection serves
-    as a container for arguments that can be parsed to methods of 
-    :class:`tmlib.workflow.cli.CommandLineInterface`.
+    as a container for arguments that can be parsed to methods of
+    :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`
+    decorated with :func:`climethod <tmlib.workflow.climethod>`.
 
     Implementations of the class can be instantiated without having to
     implement a constructor, i.e. an `__init__` method. The constructor
     accepts keyword arguments and strips the values from those arguments
     that are implemented as class attributes with type
-    :class:`tmlib.workflow.args.Argument` and replaces any default values.
-    When there is no default value specified, the argument has to be provided
-    as a key-value pair. Derived classes can explicitly implement a constructor
-    if required.
+    :class:`Argument <tmlib.workflow.args.Argument>` and replaces any default
+    values. When there is no default value specified, the argument has to be
+    provided as a key-value pair. Derived classes can explicitly implement
+    a constructor if required.
     '''
 
-    __metaclass__ = ArgumentMeta
+    __metaclass__ = _ArgumentMeta
 
     def __init__(self, **kwargs):
         '''
@@ -364,7 +365,7 @@ class ArgumentCollection(object):
     @classmethod
     def iterargs(cls):
         '''Iterates over the class attributes of type
-        :class:`tmlib.workflow.arg.Argument`.
+        :class:`Argument <mlib.workflow.arg.Argument>`.
 
         Warning
         -------
@@ -413,7 +414,8 @@ class ArgumentCollection(object):
 
     def as_list(self):
         '''Returns class attributes of type
-        :class:`tmlib.workflow.args.Argument` as an array of key-value pairs.
+        :class:`Argument <tmlib.workflow.args.Argument>` as an array of
+        key-value pairs.
 
         Returns
         -------
@@ -466,9 +468,11 @@ class BatchArguments(ArgumentCollection):
     computational task should be devided into individual batch jobs
     for parallel processing on the cluster.
 
-    These arguments can be passed to a step-specific implementation of
-    :meth:`tmlib.workflow.cli.CommandLineInterface.init` and are
-    required by :meth:`tmlib.workflow.api.ClusterRoutines.create_batches`.
+    These arguments can be passed to a step-specific implementation of the
+    :meth:`init <tmlib.workflow.cli.CommandLineInterface.init>` *CLI* method
+    and will be parsed to the
+    :meth:`create_batches <tmlib.workflow.api.ClusterRoutines.create_batches>`
+    *API* method.
 
     Note
     ----
@@ -482,9 +486,11 @@ class SubmissionArguments(ArgumentCollection):
     '''Base class for arguments that are used to control the submission of
     jobs to the cluster.
 
-    These arguments can be passed to a step-specific implementation of
-    :meth:`tmlib.workflow.cli.CommandLineInterface.submit` and are
-    required by :meth:`tmlib.workflow.api.ClusterRoutines.create_jobs`.
+    These arguments can be passed to a step-specific implementation of the
+    :meth:`submit <tmlib.workflow.cli.CommandLineInterface.submit>` *CLI* 
+    method and are parse to the
+    :meth:`create_jobs <tmlib.workflow.api.ClusterRoutines.create_jobs>` *API*
+    method.
 
     Note
     ----
@@ -520,13 +526,12 @@ class SubmissionArguments(ArgumentCollection):
 class ExtraArguments(ArgumentCollection):
 
     '''Collection of arguments that can be passed to the constructor of
-    API classes, i.e. a step-specific implementation of
-    :class:`tmlib.workflow.api.ClusterRoutines`, in addition to the default
-    arguments `experiment_id` and `verbosity`.
+    a step-specific implementation of the
+    :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>` *API* class.
 
     Note
     ----
-    A step may implement this class if required.
+    A step may only implement this class when required.
     '''
 
 
@@ -534,11 +539,7 @@ class CliMethodArguments(ArgumentCollection):
 
     '''Collection of arguments that can be passed to a method of
     a step-specific implemenation of
-    :class:`tmlib.workflow.cli.CommandLineInterface`.
-
-    Note
-    ----
-    This class is automatically implemented for each method by the
-    :function:`tmlib.workflow.registry.climethod` decorator.
+    :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`,
+    which are decoreated with :func:`climethod <tmlib.workflow.climethod>`.
     '''
 

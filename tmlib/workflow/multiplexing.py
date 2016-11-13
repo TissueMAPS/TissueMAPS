@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class MultiplexingWorkflowDependencies(CanonicalWorkflowDependencies):
 
     '''Declaration of dependencies for a multiplexing workflow, which includes
-    the :module:`tmlib.workflow.align` step.
+    the :mod:`algin <tmlib.workflow.align>` step.
     '''
 
     #: Dict[str, List[str]]: names of steps within each stage

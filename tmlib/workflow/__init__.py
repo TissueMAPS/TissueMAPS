@@ -169,6 +169,8 @@ def climethod(help, **kwargs):
     interface and provides description for the arguments of the method, which
     are required for parsing of arguments via the command line.
 
+    The decorator further constructs the docstring for the docorated method.
+
     Parameters
     ----------
     help: str
@@ -186,17 +188,17 @@ def climethod(help, **kwargs):
         when registered function is not a method
     TypeError
         when the class of the registered method is not derived from
-        :class:`tmlib.workflow.cli.CommandLineInterface`
+        :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`
     TypeError
         when the value specified by a keyword argument doesn't have type
-        :class:`tmlib.workflow.args.Argument`
+        :class:`Argument <tmlib.workflow.args.Argument>`
     ValueError
         when the key of an keyword argument doesn't match a parameter
         of the method
     '''
     from tmlib.workflow.args import Argument
     from tmlib.workflow.args import CliMethodArguments
-    from tmlib.workflow.args import ArgumentMeta
+    from tmlib.workflow.args import _ArgumentMeta
     def decorator(func):
         if not isinstance(func, types.FunctionType):
             raise TypeError('Registered object must be a function.')
@@ -207,11 +209,14 @@ def climethod(help, **kwargs):
         #     )
         func.is_climethod = True
         func.help = help
-        func.args = ArgumentMeta(
+        func.args = _ArgumentMeta(
             '%sCliMethodArguments' % func.__name__.capitalize(),
             (CliMethodArguments,), dict()
         )
         # The first argument of a method is the class instance
+        func.__doc__ = '%s\n' % help.capitalize()
+        if kwargs:
+            func.__doc__ += '\nParameters\n----------\n'
         argument_names = inspect.getargspec(func).args[1:]
         for name in argument_names:
             if name not in kwargs:
@@ -232,13 +237,16 @@ def climethod(help, **kwargs):
                 )
             value.name = name
             setattr(func.args, name, value)
+            func.__doc__ += '%s: %s\n    %s\n' % (
+                name, value.type.__name__, value.help
+            )
         return func
     return decorator
 
 
 def register_step_batch_args(name):
     '''Class decorator to register a derived class of
-    :class:`tmlib.workflow.args.BatchArguments` for a workflow
+    :class:`BatchArguments <tmlib.workflow.args.BatchArguments>` for a workflow
     step to use it via the command line or within a workflow.
 
     Parameters
@@ -270,8 +278,8 @@ def register_step_batch_args(name):
 
 def register_step_submission_args(name):
     '''Class decorator to register a derived class of
-    :class:`tmlib.workflow.args.SubmissionArguments` for a worklow
-    step to use it via the command line or within a worklow.
+    :class:`SubmissionArguments <tmlib.workflow.args.SubmissionArguments>`
+    for a worklow step to use it via the command line or within a worklow.
 
     Parameters
     ----------
@@ -302,7 +310,7 @@ def register_step_submission_args(name):
 
 def register_step_extra_args(name):
     '''Class decorator to register a derived class of
-    :class:`tmlib.workflow.args.ExtraArguments` for a worklow
+    :class:`ExtraArguments <tmlib.workflow.args.ExtraArguments>` for a worklow
     step to use it via the command line or within a worklow.
 
     Parameters
@@ -333,7 +341,8 @@ def register_step_extra_args(name):
 
 
 def get_step_args(name):
-    '''Gets the step-specific implementations of the argument collection
+    '''Gets the step-specific implementations of the
+    :class:`ArgumentCollection <tmlib.workflow.args.ArgumentCollection>`
     classes.
 
     Parameters
@@ -343,9 +352,9 @@ def get_step_args(name):
 
     Returns
     -------
-    Tuple[tmlib.workflow.args.ArgumentCollection or None]
-        batch and submission arguments and extra arguments in case the step
-        implemented any
+    Tuple[tmlib.workflow.args.BatchArguments and tmlib.workflow.args.SubmissionArguments and tmlib.workflow.args.ExtraArguments or None]
+        batch and submission arguments as well as extra arguments
+        (in case the step implements any)
     '''
     module_name = '%s.%s.args' % (__name__, name)
     try:
@@ -368,7 +377,8 @@ def get_step_args(name):
 
 
 def get_step_api(name):
-    '''Gets the step-specific implementation of the API class.
+    '''Gets the step-specific implementation of the
+    :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>` *API* class.
 
     Parameters
     ----------
@@ -422,7 +432,7 @@ def get_step_information(name):
 
 def get_workflow_dependencies(name):
     '''Gets a specific implementation of
-    :class:`tmlib.workflow.dependencies.WorkflowDependencies`.
+    :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>`.
 
     Parameters
     ----------

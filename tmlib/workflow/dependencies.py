@@ -66,8 +66,8 @@ class WorkflowDependencies(object):
 
     Derived classes will be used by descriptor classes in
     :mod:`tmlib.worklow.description` to declare a workflow `type`.
-    To this end, derived classes need to be registered using the class
-    decorator :func:`tmlib.workflow.register_workflow_type`.
+    To this end, derived classes need to be registered by decorating it with
+    :func:`register_workflow_type <tmlib.workflow.register_workflow_type>`.
 
     In addtion, derived classes must implement the following attributes:
 

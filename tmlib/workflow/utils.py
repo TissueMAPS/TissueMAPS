@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 def create_gc3pie_sql_store():
     '''Creates a `Store` instance for job persistence in the PostgreSQL table
-    :class:`tmlib.models.submission.Tasks`.
+    :class:`Tasks <tmlib.models.submission.Tasks>`.
 
     Returns
     -------
@@ -186,20 +186,20 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
     '''Provides the following data for each task and recursively for each
     subtask in form of a mapping:
 
-        * ``"id"`` (*int*): id of task
-        * ``"submission_id"`` (*int*): id of submission
-        * ``"name"`` (*str*): name of task
-        * ``"state"`` (*g3clibs.Run.State*): state of the task
-        * ``"live"`` (*bool*): whether the task is currently processed
-        * ``"done"`` (*bool*): whether the task is done
-        * ``"failed"`` (*bool*): whether the task failed, i.e. terminated
+        * ``id`` (*int*): id of task
+        * ``submission_id`` (*int*): id of submission
+        * ``name`` (*str*): name of task
+        * ``state`` (*g3clibs.Run.State*): state of the task
+        * ``live`` (*bool*): whether the task is currently processed
+        * ``done`` (*bool*): whether the task is done
+        * ``failed`` (*bool*): whether the task failed, i.e. terminated
           with non-zero exitcode
-        * ``"percent_done"`` (*float*): percent of subtasks that are *done*
-        * ``"exitcode"`` (*int*): status code returned by the program
-        * ``"time"`` (*str*): duration as "HH:MM:SS"
-        * ``"memory"`` (*float*): amount of used memory in MB
-        * ``"cpu_time"`` (*str*): used cpu time as "HH:MM:SS"
-        * ``"type"`` (*str*): type of the task object
+        * ``percent_done`` (*float*): percent of subtasks that are *done*
+        * ``exitcode`` (*int*): status code returned by the program
+        * ``time`` (*str*): duration as "HH:MM:SS"
+        * ``memory`` (*float*): amount of used memory in MB
+        * ``cpu_time`` (*str*): used cpu time as "HH:MM:SS"
+        * ``type`` (*str*): type of the task object
 
     Parameters
     ----------

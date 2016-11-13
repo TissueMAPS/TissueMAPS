@@ -167,27 +167,29 @@ class CommandLineInterface(WorkflowSubmissionManager):
 
     '''Abstract base class for command line interfaces.
 
-    Each workflow step must implement this class. This will automatically
-    provide derived classes with command line interface functionality
-    in form of an instance of :class:`argparse.ArgumentParser`.
-    The docstring of the derived class is also used for the `description`
+    Each workflow step must implement this class. The derived class will get
+    automatically equipped with command line interface functionality
+    in form of an instance of :class:`ArgumentParser <argparse.ArgumentParser>`.
+    The docstring of the derived class is also used for the *description*
     attribute of the parser for display in the command line.
     A separate subparser is added for each method of the derived class that is
-    decorated with :func:`tmlib.workflow.climethod`. The decorator provides
-    descriptions of the method arguments, which are also added to the
+    decorated with :func:`climethod <tmlib.workflow.climethod>`. The decorator
+    provides descriptions of the method arguments, which are also added to the
     corresponding subparser.
 
-    The :meth:`tmlib.workflow.cli.CommandLineInterface.init`
-    and :meth:`tmlib.workflow.cli.CommandLineInterace.submit` methods
+    The :meth:`init <tmlib.workflow.cli.CommandLineInterface.init>`
+    and :meth:`submit <tmlib.workflow.cli.CommandLineInterace.submit>` methods
     require additional step-specific arguments that are passed to the *API*
-    methods :meth:`tmlib.workflow.api.ClusterRoutines.create_batches` and
-    :meth:`tmlib.workflow.api.ClusterRoutines.create_run_jobs`,
+    methods
+    :meth:`create_batches <tmlib.workflow.api.ClusterRoutines.create_batches>`
+    and
+    :meth:`create_run_jobs <tmlib.workflow.api.ClusterRoutines.create_run_jobs>`,
     respectively. These arguments are handled separately, since they also need
     to be accessible outside the scope of the command line interace.
     They are provided by step-specific implementations of
-    :class:`tmlib.workflow.args.BatchArguments` and
-    :class:`tmlib.workflow.args.SubmissionArguments` and added to the
-    corresponding `init` and `submit` subparsers, respectively.
+    :class:`BatchArguments <tmlib.workflow.args.BatchArguments>` and
+    :class:`SubmissionArguments <tmlib.workflow.args.SubmissionArguments>`
+    and added to the corresponding *init* and *submit* subparsers, respectively.
     '''
 
     __metaclass__ = _CliMeta
@@ -329,19 +331,21 @@ class CommandLineInterface(WorkflowSubmissionManager):
         print cls.__logo__
 
     @climethod(
-        help='''cleans up the output of a previous submission, i.e. removes
-            files and database entries created by previously submitted jobs
-        '''
+        help=(
+            'cleans up the output of a previous submission, i.e. removes '
+            'files and database entries created by previously submitted jobs'
+        )
     )
     def cleanup(self):
         self._print_logo()
         self.api_instance.delete_previous_job_output()
 
     @climethod(
-        help='''creates batches for parallel processing and thereby
-            defines how the computational task should be distrubuted over
-            the cluster (also cleans up the output of previous submissions)
-        '''
+        help=(
+            'creates batches for parallel processing and thereby '
+            'defines how the computational task should be distrubuted over '
+            'the cluster (also cleans up the output of previous submissions)'
+        )
     )
     def init(self):
         self._print_logo()
@@ -459,10 +463,11 @@ class CommandLineInterface(WorkflowSubmissionManager):
         return self.api_instance.list_input_files(self.batches)
 
     @climethod(
-        help='''creates batch jobs for the "run" and "collect" phases, submits
-            them to the cluster and monitors their status upon processing
-            (requires a prior "init")
-        ''',
+        help=(
+            'creates batch jobs for the "run" and "collect" phases, submits '
+            'them to the cluster and monitors their status upon processing '
+            '(requires a prior "init")'
+        ),
         monitoring_depth=Argument(
             type=int, help='number of child tasks that should be monitored',
             meta='INDEX', default=1, flag='d'
@@ -514,9 +519,10 @@ class CommandLineInterface(WorkflowSubmissionManager):
             raise
 
     @climethod(
-        help='''resubmits previously created jobs for "run" and "collect"
-            phases to the cluster and monitors their status upon processing
-        ''',
+        help=(
+            'resubmits previously created jobs for "run" and "collect" '
+            'phases to the cluster and monitors their status upon processing '
+        ),
         monitoring_depth=Argument(
             type=int, help='number of child tasks that should be monitored',
             meta='INDEX', default=1, flag='d'
@@ -551,10 +557,11 @@ class CommandLineInterface(WorkflowSubmissionManager):
             raise
 
     @climethod(
-        help='''collects the output of run jobs, i.e. performs a
-            post-processing operation that either cannot be parallelized
-            or needs to be performed afterwards
-        '''
+        help=(
+            'collects the output of run jobs, i.e. performs a '
+            'post-processing operation that either cannot be parallelized '
+            'or needs to be performed afterwards'
+        )
     )
     def collect(self):
         self._print_logo()
