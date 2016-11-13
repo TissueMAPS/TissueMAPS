@@ -25,6 +25,9 @@ import pandas as pd
 from cStringIO import StringIO
 
 from tmclient.base import HttpClient
+from tmclient.log import configure_logging
+from tmclient.log import map_logging_verbosity
+
 
 logger = logging.getLogger(__name__)
 
@@ -87,12 +90,11 @@ class TmClient(HttpClient):
         method(**kwargs)
 
     @classmethod
-    def main(cls):
+    def __main__(cls):
         '''Main entry point for command line interface.'''
         parser = cls._get_parser()
         args = parser.parse_args()
 
-        import ipdb; ipdb.set_trace()
         configure_logging()
         logging_level = map_logging_verbosity(args.verbosity)
         logging.getLogger('tmclient').setLevel(logging_level)
