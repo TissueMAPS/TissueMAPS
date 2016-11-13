@@ -12,42 +12,21 @@ tmclient.base module
     :undoc-members:
     :show-inheritance:
 
-tmclient.download module
+tmclient.api module
 ------------------------
 
-.. automodule:: tmclient.download
+.. automodule:: tmclient.api
     :members:
     :undoc-members:
     :show-inheritance:
 
-tmclient.errors module
-----------------------
-
-.. automodule:: tmclient.errors
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmclient.experiment module
---------------------------
-
-.. automodule:: tmclient.experiment
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. autoprogram:: tmclient.api:TmClient._get_parser()
+    :prog: tm_client
 
 tmclient.log module
 -----------------------------
 
 .. automodule:: tmclient.log
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmclient.upload module
-----------------------
-
-.. automodule:: tmclient.upload
     :members:
     :undoc-members:
     :show-inheritance:

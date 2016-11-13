@@ -639,20 +639,16 @@ Similarly, you can download all feature values extracted for objects of type ``C
 
     GET /api/experiments/MQ==/mapobjects/Cells/feature-values
 
-In this case, the server would respond with a message containing the requested feature values as *zip*-compressed binary data, which can be written to a file archive using the provided filename:
+In this case, the server would respond with a message containing the requested feature values as *CSV*-encoded binary data, which can be written to a file using the provided filename:
 
 .. code-block:: http
 
     HTTP/1.1 200 OK
     Content-Type: application/octet-stream
-    Content-Disposition: attachment; filename="test_Cells_features.zip"
+    Content-Disposition: attachment; filename="test_Cells_feature-values.csv"
 
     ...
 
-The archive contains two *CSV* files:
-
-- ``test_Cells_features_data.csv``: the actual *n*x*p* feature matrix, where *n* is the number of objects of type "Cells" and *p* the number of extracted features
-- ``test_Cells_features_metadata.csv``: related metadata, such as plate and well name, x/y/z coordinate, time point, etc.
 
 For more information about available resources and verbs, please refer to :mod:`tmserver.api`.
 
@@ -811,42 +807,39 @@ The :mod:`tmclient` package is a *REST API* wrapper that provides an interface (
 Active programming interface
 ++++++++++++++++++++++++++++
 
-You can use the *tmclient* *API* to *get* data for analysis outside of *TissueMAPS*.
+You can use the *tmclient* *API* to download data for analysis outside of *TissueMAPS*.
 
-The package provides an :class:`UploadService <tmclient.upload.UploadSerive>` and :class:`DownloadService <tmclient.download.DownloadSerive>` to upload and download data, respectively. The examples below are shown for the Python package, but the same interface is available for Matlab and R.
+The package provides an :class:`TmClient <tmclient.api.TmClient>` to interact with the server, e.g. for data upload and download. The examples below are shown for the Python package, but the same interface is available for Matlab and R.
 
 For example, a :class:`ChannelImageFile <tmlib.models.file.ChannelImageFile>` can be downloaded as follows:
 
 .. code-block:: python
 
-    from tmclient import DownloadService
+    from tmclient import TmClient
 
-    service = DownloadService(
+    client = TmClient(
         host='localhost', port=8002, experiment_name='test', user_name='demo', password='XXX'
     )
 
     # Download an illumination corrected image
-    image = service.download_channel_image(
+    image = client.download_channel_image(
         plate_name='plate01', well_name='D03', x=0, y=0,
         cycle_index=0, tpoint=0, zplane=0, correct=True
     )
 
     # Show image dimensions
-    print image.dimensions
+    print image.shape
 
     # Show first row of pixels
-    print image.array[0, :]
+    print image.[0, :]
 
-    # Show time point at which the image was acquired
-    print image.metadata.tpoint
-
-The ``image`` object has type :class:`ChannelImage <tmlib.image.ChannelImage>`, which contains the actual n-dimensional pixel/voxel ``array`` (`numpy.array <https://docs.scipy.org/doc/numpy/reference/generated/numpy.array.html>`_) as well as the corresponding ``metadata`` (:class:`ChannelImageMetadata <tmlib.metadata.ChannelImageMetadata>`).
+The ``image`` object has type `NumPy ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_.
 
 Similarly, feature values (:class:`FeatureValue <tmlib.models.feature.FeatureValue>`) for a particular :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` can be downloaded as follows:
 
 .. code-block:: python
 
-    data = service.download_object_feature_values('Cells')
+    data = client.download_object_feature_values('Cells')
 
     # Show names of features
     print data.columns
@@ -861,8 +854,7 @@ Similarly, feature values (:class:`FeatureValue <tmlib.models.feature.FeatureVal
         # Show value of first object for each feature
         print '{name}: {value}'.format(name=name, value=values[0])
 
-In this case, ``data`` has type `pandas.DataFrame <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html>`_.
-
+In this case, the ``data`` object has type `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/dsintro.html#dataframe>`_.
 
 .. _rest-api-tmclient-cli:
 
@@ -871,33 +863,45 @@ Command line interface
 
 The *tmclient* Python package further provides a command line interface for uploading and downloading files. Internally the command line interface uses the *API* just as we did above.
 
-You can download the image for channel ``wavelength-1`` via the following command::
+You can download the image for channel ``wavelength-1`` via the following command:
 
-    tm_download -vv --host localhost --port 8002 --user_name demo -password XXX --experiment_name test channel_image --channel_name wavelength-1 --plate_name plate01 --well_name D03 -x 0 -y 0 --cycle_index 0 --correct
+.. code-block:: none
 
-or shorter::
+    tm_client -vv --host localhost --port 8002 --user_name demo --password XXX --experiment_name test download channel_image --channel_name wavelength-1 --plate_name plate01 --well_name D03 -x 0 -y 0 --cycle_index 0 --correct
 
-    tm_download -vv -H localhost -P 8002 -u demo -p XXX -e test channel_image -c wavelength-1 -p plate01 -w D03 -x 0 -y 0 -i 0 --correct
+or shorthand:
 
-Similarly, you can download the feature values for ``Cells`` using this command::
+.. code-block:: none
 
-    tm_download -vv -H localhost -P 8002 -u demo -p XXX -e test feature_values --object_type Cells
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test download channel_image -c wavelength-1 -p plate01 -w D03 -x 0 -y 0 -i 0 --correct
 
-.. note:: By default, files will be downloaded to your temporary directory, e.g. ``/tmp`` (the exact location depends on your operating system). The program will print the location of the file to the console (when called with ``-vv`` or higher logging verbosity). You can specify an alternative download location using the ``--directory`` or ``-d`` argument.
+Similarly, you can download the feature values for ``Cells`` using this command:
 
-In the same way, microsopce files can be uploaded from directory ``/data/myacquisition`` on your local machine::
+.. code-block:: none
 
-    tm_upload -vv -H localhost -P 8002 -u demo -p XXX -e test -d /data/myacquisition microscope_file -p plate01 -a acquisition01
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test download feature_values -o Cells
 
-You can also create the ``test`` :class:`Experiment <tmlib.models.experiment.Experiment>` via the command line::
+.. note:: By default, files will be downloaded to your temporary directory, e.g. ``/tmp`` (the exact location depends on your operating system). The program will print the location of the file to the console (when called with ``-vv`` or higher logging verbosity). You can specify an alternative download location for ``download`` using the ``--directory`` or ``-d`` argument.
 
-    tm_register -vv -H localhost -P 8002 -u demo -p XXX -e test experiment -m cellvoyager -f 384
+In the same way, microsopce files can be uploaded from directory ``/data/myacquisition`` on your local machine:
 
-And create ``plate01`` :class:`Plate <tmlib.models.plate.Plate>` for experiment ``test``::
+.. code-block:: none
 
-    tm_register -vv -H localhost -P 8002 -u demo -p XXX -e test plate -p plate01
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test upload -d /data/myacquisition microscope_file -p plate01 -a acquisition01
 
-.. tip:: You can store passwords in the ``~/.tm_pass`` file as key-value pairs (username: password) in `YAML <http://yaml.org/>`_ format:
+You can also create the ``test`` :class:`Experiment <tmlib.models.experiment.Experiment>` via the command line:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test create experiment -m cellvoyager -f 384
+
+And create :class:`Plate <tmlib.models.plate.Plate>` ``plate01`` for experiment ``test``:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test create plate -p plate01
+
+.. tip:: You can store passwords in a ``~/.tm_pass`` file as key-value pairs (username: password) in `YAML <http://yaml.org/>`_ format:
 
     .. code-block:: yaml
 

@@ -61,4 +61,4 @@ tmlib.tools.manager module
     :show-inheritance:
 
 .. autoprogram:: tmlib.tools.manager:ToolRequestManager._get_parser()
-    :prog: tm_tool
+    :prog: tm_tool.py
