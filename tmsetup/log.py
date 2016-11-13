@@ -67,6 +67,7 @@ def configure_logging():
     '''Configures the root logger for command line applications.
 
     Two stream handlers will be added to the logger:
+
         * "out" that will direct INFO & DEBUG messages to the standard output
         stream
         * "err" that will direct WARN, WARNING, ERROR, & CRITICAL messages to

@@ -212,7 +212,7 @@ class CloudSection(SetupSection):
     def ip_range(self):
         '''str: range of allowed IPv4 addresses for the private network in
         `Classless Inter-Domain Routing (CIDR) <https://en.wikipedia.org/wiki/Classless_Inter-Domain_Routing>`_
-        notation (default:``"10.65.4.0/24"``)
+        notation (default:``"10.65.4.0/24""``)
         '''
         return self._ip_range
 
