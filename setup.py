@@ -70,7 +70,7 @@ def find_scripts():
 
 def build_console_scripts():
     cli_tools = [
-        'tm_client = tmclient.api:TmClient.main',
+        'tm_client = tmclient.api:TmClient.__main__',
     ]
     return cli_tools
 
@@ -103,7 +103,7 @@ setuptools.setup(
         'Operating System :: POSIX :: Linux',
         'Operating System :: MacOS'
     ],
-    scripts=find_scripts(),
+    # scripts=find_scripts(),
     entry_points={'console_scripts': build_console_scripts()},
     packages=setuptools.find_packages(os.path.join('src', 'python')),
     package_dir={'': os.path.join('src', 'python')},
