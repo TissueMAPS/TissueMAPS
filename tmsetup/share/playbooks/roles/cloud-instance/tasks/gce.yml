@@ -27,6 +27,9 @@
   args:
     state: present
     name: "{{ network }}"
+    mode: custom
+    subnet_name: "{{ network }}-subnet"
+    subnet_region: "{{ region }}"
     ipv4_range: "{{ ip_range }}"
   run_once: yes
   when: instance_state == "present"
@@ -105,9 +108,10 @@
     external_ip: "{{ public_ip_type }}"
     network: "{{ network }}"
     zone: "{{ region }}"
+    subnetwork: "{{ network }}-subnet"
     disks: "{{ instance_disks }}"
     metadata:
-      ssh-keys: "ubuntu:{{ ssh_key }}"
+      ssh-keys: "{{ ansible_user }}:{{ ssh_key }}"
     disk_auto_delete: yes
     tags: "{{ tags }}"
   register: instance
