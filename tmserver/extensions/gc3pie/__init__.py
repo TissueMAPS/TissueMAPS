@@ -289,6 +289,6 @@ class GC3Pie(object):
 
         See also
         --------
-        :function:`tmlib.workflow.utils.get_task_data_from_sql_store`
+        :func:`tmlib.workflow.utils.get_task_data_from_sql_store`
         '''
         return get_task_data_from_sql_store(jobs, recursion_depth)
