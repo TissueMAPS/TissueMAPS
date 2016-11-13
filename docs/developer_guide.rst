@@ -86,25 +86,36 @@ Another widget can be used to select a specific :class:`Feature <tmlib.models.fe
 
 Implementations of existing tools provide a good idea of how to implement a new tool.
 
+.. _http-client-interfaces:
+
+HTTP client interfaces
+----------------------
+
+
 .. _backend:
 
 Backend
 =======
 
-*TissueMAPS*'' backend is implemented to large extend in `Python 2.7 <https://docs.python.org/2/>`_.
+The *TissueMAPS* backend is implemented to large extend in `Python 2.7 <https://docs.python.org/2/>`_.
 
-The code is distributed accross different repositories:
+The code is distributed accross different repositories, each of them hosting a Python package:
 
-- `Tmserver <https://github.com/TissueMAPS/TmServer>`_ (:mod:`tmserver` Python package): *TissueMAPS* server - `Flask <http://flask.pocoo.org/>`_-based  web application with *REST API*
+- `Tmserver <https://github.com/TissueMAPS/TmServer>`_ (:mod:`tmserver` Python package): *TissueMAPS* server - `Flask <http://flask.pocoo.org/>`_-based web application
 
-- `TmLibary <https://github.com/TissueMAPS/TmLibrary>`_ (:mod:`tmlibrary` Python package): *TissueMAPS* library - code for interacting with compute and storage backends with *API* and *CLI*
-  * :mod:`tmlib.models`: SQLAlchemy <http://www.sqlalchemy.org/>`_-based data models (see `developing data models <developing-data-models>`_)
-  * :mod:`tmlib.workflow`: GC3Pie <http://gc3pie.readthedocs.io/en/latest/index.html>`_-based distributed image processing workflows (see `developing workflow <developing-workflows>`_)
-  * :mod:`tmlib.tools`: `pySpark <http://spark.apache.org/docs/0.9.0/python-programming-guide.html>`_-based distributed data analysis and machine learning tools (see `developing tools <developing-data-analysis-tools-backend>`_)
+  * :mod:`tmserver.api`: `blueprint <http://flask.pocoo.org/docs/0.11/blueprints/>`_ with `view functions <http://flask.pocoo.org/docs/0.11/tutorial/views/>`_ for the *RESTful API* listening on ``/api`` route
+  * :mod:`tmserver.jtui`: blueprint with view functions specific to the *Jterator* user interface listening on ``/jtui`` route
+  * :mod:`tmserver.extensions`: extensions for user authentication and job management
+
+- `TmLibary <https://github.com/TissueMAPS/TmLibrary>`_ (:mod:`tmlibrary <tmlib>` Python package): *TissueMAPS* library - code for interacting with compute and storage backends with *API* and *CLI*
+
+  * :mod:`tmlib.models`: `SQLAlchemy <http://www.sqlalchemy.org/>`_-based data models (see `developing data models <developing-data-models>`_)
+  * :mod:`tmlib.workflow`: `GC3Pie <http://gc3pie.readthedocs.io/en/latest/index.html>`_-based distributed image processing workflows (see `developing workflows <developing-workflows>`_)
+  * :mod:`tmlib.tools`: `pandas <http://pandas.pydata.org/>`_- and `pySpark <http://spark.apache.org/docs/0.9.0/python-programming-guide.html>`_-based distributed data analysis and machine learning tools (see `developing tools <developing-data-analysis-tools-backend>`_)
 
 - `JtModules <https://github.com/TissueMAPS/JtModules>`_ (:mod:`jtmodules` package in different languages): *Jterator* modules - modules for the :mod:`jterator <tmlib.workflow.jterator>` pipeline engine (see `developing jterator modules <developing jterator modules>`_)
 
-- `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ (:mod:`jtlibrary` package in different languages): *Jterator* library - image processing routines used by :mod:`jtmodules`
+- `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ (:mod:`jtlibrary <jtlib>` package in different languages): *Jterator* library - image processing routines used by :mod:`jtmodules`
 
 There are several reasons for splitting code across different repositories:
 
@@ -117,14 +128,39 @@ There are several reasons for splitting code across different repositories:
 Documentation
 -------------
 
-*TissueMAPS* uses `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate module documentation. Please make yourself familiar with the `NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_ and follow the `PEP 0257 docstring conventions <https://www.python.org/dev/peps/pep-0257/>`_ to ensure that the documentation will be build correctly.
+*TissueMAPS* uses `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate documentation. Please make yourself familiar with the `NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_ and `reStructuredText <http://www.sphinx-doc.org/en/stable/rest.html>`_ and follow the `PEP 0257 <https://www.python.org/dev/peps/pep-0257/>`_ docstring conventions to ensure that your documentation will be build correctly. Since Python is a dynamically typed language, we put emphasis on rigorously documentating the type of parameters and return values.
+
+.. _coding-style:
+
+Coding style
+------------
+
+Please take time to read through `PEP 8 <https://www.python.org/dev/peps/pep-0008/>`_ - the official style guide for Python code - and stick to it!
 
 .. _tests:
 
 Tests
 -----
 
-*TissueMAPS* uses `pytest <http://doc.pytest.org/en/latest/>`_ together with `tox <https://tox.readthedocs.io/en/latest/>`_ and runs integrated tests with `jenkins <https://jenkins.io/index.html>`_. Tests should be placed in a separate folder called ``tests`` outside of packages sibling to the package root folder.
+*TissueMAPS* uses `pytest <http://doc.pytest.org/en/latest/>`_ together with `tox <https://tox.readthedocs.io/en/latest/>`_ and runs integrated tests with `jenkins <https://jenkins.io/index.html>`_. Tests should be placed in a separate repository folder called ``tests`` outside of the package sibling to the package root folder.
+
+.. _server-development:
+
+Server development
+------------------
+
+.. _developing-rest-api:
+
+REST API
+^^^^^^^^
+
+The *RESTful API* is implemented in :mod:`tmserver.api` in form of a `Flask Blueprint <http://flask.pocoo.org/docs/0.11/blueprints/>`_. All *HTTP* requests starting with ``/api`` will thereby automatically get associated with view functions in the *api* package. Module in which *api* view functions are defined must be imported at the package level to make them available to the blueprint. Care must be taken with respect to code structure to prevent circular imports, which can easily occur due to the way blueprints are implemented in *Flask*, see `note in docs <http://flask.pocoo.org/docs/0.11/patterns/packages/>`_.
+
+All custom exceptions derived from :mod:`HTTPException <tmserver.error.HTTPException>` and defined in :mod:`tmserver.error` will automatically be handled via `error handlers <http://flask-.readthedocs.io/en/latest/patterns/errorpages/#error-handlers>`_. The client auto-injects the resulting error messages and displays them to the user.
+
+View functions should be documented using the `HTTPDomain Sphinx extension <https://pythonhosted.org/sphinxcontrib-httpdomain/>`_.
+
+The `TmClient <https://github.com/TissueMAPS/TmClient>`_ repository provides client *REST API* wrappers in different languages. When you add support for additional routes, please implement the interfaces such that they are as similar as possible between languages.
 
 .. _library-development:
 
@@ -170,11 +206,11 @@ Workflows can be dynamically assembled from *steps*, which are implemented as su
 
 Steps get automatically equipped with an active programming interface for distributed computing (by implementing :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>`) as well as a command line interface (by implementing :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`). By subclasses these two base classes, you basically have a new step. This design makes it easy to develop a new step and plug it into an existing workflow. Workflows can further be easily customized by subclassing :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>` or any other already implemented workflow *type*, such as :class:`CanonicalWorkflowDependencies <tmlib.workflow.canonical.CanonicalWorkflowDependencies>`.
 
-The main entry point for a step is :method:`CommandLineInterface.main <tmlib.workflow.cli.CommandLineInterface.main>`, which is accessed by a :class:`WorkflowStepJob <tmlib.workflow.jobs.WorkflowStepJob>` via the step-specific command line interface autogenerated from the `CLI` class derived from `CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`.
+The main entry point for a step is the ``__main__()`` method of :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`, which is accessed by a :class:`WorkflowStepJob <tmlib.workflow.jobs.WorkflowStepJob>` via the step-specific command line interface autogenerated from the `CLI` class derived from :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`.
 
-For more information on how to develop new steps and combine them into workflows, please refer to documentation of the :mod:`tmlib.workflow` package. The already implemented steps should also serve as good examples.
+For more information on how to develop new steps and combine them into workflows, please refer to documentation of the :mod:`tmlib.workflow` package. Already implemented steps should further serve as good examples.
 
-.. note:: Server-side developed *steps* and *workflows* are fully functional and don't require any client-side modifications. They will automatically work integrate into the workflow manager of the UI.
+.. note:: Server-side developed *steps* and *workflows* are fully functional and don't require any client-side modifications. They will automatically integrate into the UI workflow manager.
 
 
 .. _developing-data-analysis-tools-backend:
@@ -182,17 +218,17 @@ For more information on how to develop new steps and combine them into workflows
 Data analysis tools
 ^^^^^^^^^^^^^^^^^^^
 
-Data anlysis tools allow users to interactively analyse image data in a visually asisted way in the `viewer`_. They are implemented in the :mod:`tmlib.tools` package and available with `Pandas <http://pandas.pydata.org/>`_ or `pySpark <http://spark.apache.org/docs/0.9.0/python-programming-guide.html>`_ backend. The server submits client tool requests to the available computational resources for asynchronous processing. This is done on the one hand to remove load from the web server and on the other hand because *spark* jobs require a driving process.
+Data anlysis tools allow users to interactively analyse image data in a visually asisted way in the :ref:`viewer <viewer>`. They are implemented in the :mod:`tmlib.tools` package and available for the `Pandas <http://pandas.pydata.org/>`_ or `pySpark <http://spark.apache.org/docs/0.9.0/python-programming-guide.html>`_ libraries. The server submits client tool requests to the available computational resources for asynchronous processing. This is done on the one hand to remove load from the web server and on the other hand because *spark* jobs require a driving process.
 
-The main entry point for tool functionliaty is :meth:`ToolRequestManager.main <tmlib.tools.manager.ToolRequestManager.main>`. It is accessed by a :class:`ToolJob <tmlib.tools.jobs.ToolJob>` via the command line using the ``tm_tool.py`` script, which gets autogenerated from the parser provided by :class:`ToolRequestManager <tmlib.tools.manger.ToolRequestManager>`.
+The main entry point for tool functionliaty is ``__main__()`` method of :class:`ToolRequestManger <tmlib.tools.manager.ToolRequestManager>`. It is accessed by a :class:`ToolJob <tmlib.tools.jobs.ToolJob>` via the command line using the ``tm_tool.py`` script, which gets autogenerated from the parser provided by :class:`ToolRequestManager <tmlib.tools.manger.ToolRequestManager>`.
 
 For more information on how to develop new tools and make them available to the UI, please refer to the documentation of the :mod:`tmlib.tools` package. Already implemented tools, such as :class:`Clustering <tmlib.tools.clustering.Clustering>` or :class:`Heatmap <tmlib.tools.heatmap.Heatmap>` should also serve as an example and a good starting point for developing a new tool.
 
 .. note:: In contrast to a *workflow step*, a *tool* also requires some frontend developement. This design decision was made to give developers as much flexiblity as possible when it comes to the design of new tools. The potential uses cases are consequently too broad to be handled entirely client-side. Please refer to `data analysis tools <data-analysis-tools-frontend>`_ in the frontend section for more details on how to develop a tool client-side.
 
-A :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>` and a :class:`Tool <tmlib.tools.base.Tool>` both represent a distributed computational task, but from a conceptual point of view, they are two different things. The former is used in the `workflow manager <user-interface-workflow-manager>`_ for general image processing, while the latter is used in the `viewer <user-interface-viewer>`_ for machine learning tasks. This doesn't mean that image processing and machine learning should be handled separately per-se. For example, pixel-based image segmentation would be an execellant use case for a tool. From a technical perspective, a *workflow step* represents a collection of batch jobs that can be *run* in parallel (plus an optional subsequent *collect* job), whereas a tool request is handled as a `MapReduce <https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html>`_ job in form of a `Spark application <http://spark.apache.org/docs/latest/submitting-applications.html>`_. These two types of jobs are generally also processed on different types of clusters, e.g. `Slurm <http://slurm.schedmd.com/>`_ (a workflow manager typically deployed on classical high-performance computing clusters) and `YARN <https://hadoop.apache.org/docs/r2.7.2/hadoop-yarn/hadoop-yarn-site/YARN.html<Paste>`_ (a resource manager for "big data" clusters), respectively. *TissueMAPS* combines both types of clusters to process tool requests: tool jobs get submitted via *Slurm* using the ``spark-submit`` command with ``--master yarn --deploy-mode client``. The driver program is thereby launched directly on the *Slurm* compute node within the spark-submit process. The resources for that "local" job are managed by *Slurm*, while the remote, distributed *Spark* application is managed by *YARN*. The advantages of this combined approach are two fold: First, we get rid of the driver process and can handle and monitor it the same way as any other job, e.g. a *workflow step*. Second, we can execute any non-*Spark* code in the "local" Python environment, without having to distribute the code to the *YARN* cluster. This becomes particularly useful for tool requests that might be processed via the *pandas* library, although the job gets executed via ``spark-submit``, because it gives developers to freedom to not implement a *spark* interface for their tool.
+A :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>` and a :class:`Tool <tmlib.tools.base.Tool>` both represent a distributed computational task, but from a conceptual point of view, they are two different things. The former is used in the `workflow manager <user-interface-workflow-manager>`_ for general image processing tasks, while the latter is used in the :ref:`viewer <user-interface-viewer>` for machine learning tasks. This doesn't mean that image processing and machine learning should be handled separately per-se. For example, pixel-based image segmentation would be an execellant use case for a tool. From a technical perspective, a *workflow step* represents a collection of batch jobs that can be *run* in parallel (plus an optional subsequent *collect* job), whereas a tool request is handled as a `MapReduce <https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html>`_ job in form of a `Spark application <http://spark.apache.org/docs/latest/submitting-applications.html>`_. These two types of jobs are generally also processed on different types of clusters, e.g. `Slurm <http://slurm.schedmd.com/>`_ (a workflow manager typically deployed on classical high-performance computing clusters) and `YARN <https://hadoop.apache.org/docs/r2.7.2/hadoop-yarn/hadoop-yarn-site/YARN.html>`_ (a resource manager for "big data" clusters), respectively. *TissueMAPS* combines both types of clusters to process tool requests: tool jobs get submitted via *Slurm* using the ``spark-submit`` command with ``--master yarn --deploy-mode client``. The driver program is thereby launched directly on the "local" compute node within the spark-submit process. The resources for that job are managed by *Slurm* (or more generelly speaking by *GC3Pie*), while the remote, distributed *Spark* application is managed by *YARN*. The advantages of this combined approach are two fold: First, we run the driver process as a batch job and can thereby handle and monitor it via *GC3Pie* the same way as any other job, e.g. a *workflow step*. Second, we can execute any non-*Spark* code in the "local" Python environment, without having to distribute the code to the *YARN* cluster. This becomes particularly useful for tool requests that might be processed via the *pandas* library, although the job has been executed via ``spark-submit``. This gives developers to freedom to not implement a *spark* library interface for their tool. The same of course applies when processing tool request on *localhost*, i.e. with ``--master local``.
 
-.. note:: At the moment *Spark* jobs only interact with the database and don't have access to the shared filesystem. This is because, by default, the *YARN* cluster uses the `Hadoop Distributed File System (HDFS) <https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html>`_. However, it would be possible to replace it with `GlusterFS <https://github.com/gluster/glusterfs-hadoop>`_, which is used by *TissueMAPS* on nodes of the *Slurm* cluster. This would allow the exchange data between the two clusters without the need to import lots of image data into *HDFS*.
+.. note:: At the moment *spark* tool jobs only interact with the database and don't have access to the shared filesystem. This is because the *YARN* cluster uses by default the `Hadoop Distributed File System (HDFS) <https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html>`_. However, it would be possible to replace it with `GlusterFS <https://github.com/gluster/glusterfs-hadoop>`_, which is used by *TissueMAPS* on nodes of the *Slurm* cluster, and therby allow the exchange data between the two clusters without the need to import image data into *HDFS*.
 
 .. _jterator-module-development:
 
@@ -375,9 +411,9 @@ Thereby, the module named ``matlab_module`` (residing in a file called ``matlab_
     jtmodules.matlab_module.main(img)
 
 
-.. note:: Matlab functions must return output arguments using the ``[]`` notation.
+.. note:: The Matlab ``main()`` function must return output arguments using the ``[]`` notation.
 
-.. warning:: Matlab class `struct` is not supported for input arguments or return values!
+.. warning:: Matlab class `struct <https://mathworks.com/help/matlab/ref/struct.html>`_ is not supported for input arguments or return values!
 
 .. _jterator-module-r-example:
 
@@ -547,8 +583,10 @@ The plotting library `plotly <https://plot.ly/api/>`_ is used to generate intera
 Documentation
 ^^^^^^^^^^^^^
 
-We use `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate module documentation (see also `documentation`_).
+We use `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate module documentation (see also :ref:`documentation <documentation>`).
 
-Each module must have a docstring that describes its functionality and purpuse. In addition, a dosctring must be provided for the ``main()`` function that describes input parameters and return values. 
+For *Matlab* code, use the `Sphinx Matlab domain <https://pypi.python.org/pypi/sphinxcontrib-matlabdomain>`_.
+
+Each module must have a docstring that describes its functionality and purpuse. In addition, a dosctring must be provided for the ``main()`` function that describes input parameters and return values.
 
 

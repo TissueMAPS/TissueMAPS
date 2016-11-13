@@ -243,20 +243,23 @@ Setup
 
 The `tm_setup` program automates setup and configuration of the different ``cluster`` components. The program launches and configures VM instances as specified in each ``cluster`` section using `Ansible <https://www.ansible.com/>`_.
 
-To connect to the cloud, the program requires the credentials. They must be provided via the following environment variables:
+To connect to the cloud, the program requires your credentials, which must be provided via the following provider-specific environment variables:
 
 * ``os`` provider:
+
   - ``OS_PROJECT_NAME``: name of the `project <http://docs.openstack.org/admin-guide/cli-manage-projects-users-and-roles.html>`_
   - ``OS_AUTH_URL``: URL of the identity endpoint
   - ``OS_USERNAME``: username
   - ``OS_PASSWORD``: password
 
 * ``gce`` provider:
-  - ``GCE_PROJECT``: name of the `project <https://cloud.google.com/compute/docs/projects>`
+
+  - ``GCE_PROJECT``: name of the `project <https://cloud.google.com/compute/docs/projects>`_
   - ``GCE_EMAIL``: email associated with the *project*
-  - ``GCE_CREDENTIALS_FILE_PATH``: path to JSON `credentials file <https://developers.google.com/identity/protocols/application-default-credentials>`
+  - ``GCE_CREDENTIALS_FILE_PATH``: path to JSON `credentials file <https://developers.google.com/identity/protocols/application-default-credentials>`_
 
 * ``ec2`` provider:
+
   - ``AWS_ACCESS_KEY_ID``: `access key <http://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSGettingStartedGuide/AWSCredentials.html>`_
   - ``AWS_SECRET_ACCESS_KEY``: corresponding secret access key
 
@@ -286,7 +289,7 @@ The ``launch`` command calls the `instance.yml <https://github.com/TissueMAPS/Tm
 
 .. note:: Virtual machine instances can be terminated via the ``terminate`` command. However, created networks and security groups won't get deleted under the assumption that you may want to use them again.
 
-.. warning:: A private network and security group (firewall) rules will automatically be created based on the provided setup description. Only machines tagged with "web" will be get a public IP and directly accessible via *SSH* and key-based authentication. Machines that are part of the grid connect to each other internally via `host-based authentication <https://en.wikibooks.org/wiki/OpenSSH/Cookbook/Host-based_Authentication>`_.
+.. warning:: A private network and security group (firewall) rules will automatically be created based on the provided setup description. Only machines tagged with "web" will be get a public IP and can be directly accessed via *SSH*. The other machine are only accessible from within the private network.
 
 .. _deployment:
 

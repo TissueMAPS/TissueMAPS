@@ -12,6 +12,11 @@ div.hightlight pre {
     font-size: 0.7em;
 }
 
+dd div.admonition {
+    margin-left: -30px;
+    padding-left: 30px;
+}
+
 dl dl pre {
     margin-left: 0px;
     padding-left: 90px;

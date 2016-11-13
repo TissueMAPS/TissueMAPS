@@ -8,5 +8,5 @@ Packages
     tmserver
     tmclient
     tmsetup
-    jtmodules
     jtlib
+    jtmodules

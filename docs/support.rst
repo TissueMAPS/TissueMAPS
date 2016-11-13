@@ -16,11 +16,11 @@ Creating an issue
 
 `Here <https://help.github.com/articles/creating-an-issue/>`_ you find help on how to create an issue on Github.
 
-Before creating an issue, please check whether there is already an existing issue describing your problem.
+Before creating an issue, check whether there is already an existing issue describing your problem.
 
-When creating an issue, please
+When creating an issue
 
-    - create separate issue reports for orthogonal topics
+    - create a separate issue report for orthogonal topics
     - use `Markdown <https://help.github.com/articles/about-writing-and-formatting-on-github/>`_ syntax
     - provide an error traceback from a log message whenever possible
     - embed screenshots for UI related topics (you can simply drag and drop the image into the text input field)
@@ -35,11 +35,13 @@ Debugging
 
 To debug `TissueMAPS` code outside of your production environment, you can either :doc:`install <installation>` it on your local machine or :doc:`setup <setup_and_deployment>` a `dev` instance in the cloud.
 
-When you followed the installation or setup guide, `TissueMAPS` Python packages are installed in editable mode. Thereby, can simply set breakpoints (e.g. using `ipdb <https://pypi.python.org/pypi/ipdb>`_) or include ``print`` statements in the code.
+When you follow the installation or setup guide, `TissueMAPS` Python packages are installed in editable mode. Thereby, can simply set breakpoints (e.g. using `ipdb <https://pypi.python.org/pypi/ipdb>`_) or include ``print`` statements in the code.
 
-You can find the files of installed packages locally with the following command (exemplified here for the `tmlib` package)::
+.. tip:: You can find the files of installed packages locally with the following command (exemplified here for the `tmlib` package):
 
-    python -c 'import tmlib; print tmlib.__file__'
+    .. code-block:: none
+
+        python -c 'import tmlib; print tmlib.__file__'
 
 .. _starting-dev-servers:
 
