@@ -237,18 +237,19 @@ class Viewer {
      * there is such a result, add it to the viewer.
      */
     private _getAndHandleToolResult(submissionId: number) {
-        return this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result/id?submission_id=' + submissionId)
+        return this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + submissionId)
         .then((resp) => {
-            return resp.data.data.id;
-        })
-        .then((resultId) => {
-            return this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result/' + resultId)
-            .then((resp: any) => {
-                var result = resp.data.data;
+            var results = resp.data.data;
+            if (results.length === 0) {
+                console.log('ERROR: No result found with submission_id ' + submissionId);
+            } else if (results.length > 1) {
+                console.log('ERROR: Multiple results founds for submission_id ' + submissionId);
+            } else {
+                var result = results[0];
                 this._handleSuccessfulToolResult(result);
                 return result;
-            });
-        })
+            }
+        });
     }
 
     /**
