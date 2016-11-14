@@ -182,7 +182,8 @@ setuptools.setup(
        # Ubuntu: sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        # 'rpy2>=2.7.4'
-       'whichcraft>=0.4.0'
+       'whichcraft>=0.4.0',
+       'jtmodules>=0.1.0'
     ],
     dependency_links=[
         # The dependency_links functionality has been deprecated, but it can
