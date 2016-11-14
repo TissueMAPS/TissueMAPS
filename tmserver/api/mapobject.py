@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 @api.route('/experiments/<experiment_id>/features', methods=['GET'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_features(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/features
@@ -95,7 +95,7 @@ def get_features(experiment_id):
 )
 @jwt_required()
 @assert_query_params('plate_name', 'well_name', 'x', 'y', 'zplane', 'tpoint')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_segmentation_image(experiment_id, object_type):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/segmentations
@@ -193,7 +193,7 @@ def get_segmentation_image(experiment_id, object_type):
     methods=['GET']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_mapobject_feature_values(experiment_id, object_type):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/feature-values
@@ -268,7 +268,7 @@ def get_mapobject_feature_values(experiment_id, object_type):
     methods=['GET']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_mapobject_metadata(experiment_id, object_type):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/metadata

@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 @jwt_required()
 @assert_form_params('files')
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('write')
 def register_upload(experiment_id, acquisition_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/upload/register
@@ -137,7 +137,7 @@ def register_upload(experiment_id, acquisition_id):
 )
 @jwt_required()
 @assert_form_params('files')
-@decode_query_ids()
+@decode_query_ids('write')
 def file_validity_check(experiment_id, acquisition_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/upload/validity-check
@@ -200,7 +200,7 @@ def file_validity_check(experiment_id, acquisition_id):
     methods=['POST']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('write')
 def upload_file(experiment_id, acquisition_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/upload/upload-file
@@ -290,7 +290,7 @@ def upload_file(experiment_id, acquisition_id):
     methods=['GET']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('write')
 def get_uploaded_file_count(experiment_id, acquisition_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/upload/count

@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 @api.route('/experiments/<experiment_id>/cycles/id', methods=['GET'])
 @jwt_required()
 @assert_query_params('plate_name', 'cycle_index')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_cycle_id(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/cycles/id
@@ -81,7 +81,7 @@ def get_cycle_id(experiment_id):
     plate_name = request.args.get('plate_name')
     cycle_index = request.args.get('cycle_index', type=int)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        cycle = session.query(tm.Cycle).\
+        cycle = session.query(tm.Cycle.id).\
             join(tm.Plate).\
             filter(
                 tm.Plate.name == plate_name,
@@ -95,7 +95,7 @@ def get_cycle_id(experiment_id):
 
 @api.route('/experiments/<experiment_id>/channels', methods=['GET'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_channels(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/channels
@@ -147,7 +147,7 @@ def get_channels(experiment_id):
 
 @api.route('/experiments/<experiment_id>/mapobject_types', methods=['GET'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_mapobject_types(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/mapobject_types
@@ -190,7 +190,7 @@ def get_mapobject_types(experiment_id):
 @api.route('/experiments/<experiment_id>/channels/id', methods=['GET'])
 @jwt_required()
 @assert_query_params('channel_name')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_channel_id(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/channels/id
@@ -217,7 +217,7 @@ def get_channel_id(experiment_id):
     logger.info('get ID of channel from experiment %d', experiment_id)
     channel_name = request.args.get('channel_name')
     with tm.utils.ExperimentSession(experiment_id) as session:
-        channel = session.query(tm.Channel).\
+        channel = session.query(tm.Channel.id).\
             filter_by(name=channel_name).\
             one()
         return jsonify({
@@ -228,7 +228,7 @@ def get_channel_id(experiment_id):
 @api.route('/experiments/<experiment_id>/channel_layers/id', methods=['GET'])
 @jwt_required()
 @assert_query_params('channel_name', 'tpoint', 'zplane')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_channel_layer_id(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/channel_layers/id
@@ -259,7 +259,7 @@ def get_channel_layer_id(experiment_id):
     tpoint = request.args.get('tpoint', type=int)
     zplane = request.args.get('zplane', type=int)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        channel_layer = session.query(tm.ChannelLayer).\
+        channel_layer = session.query(tm.ChannelLayer.id).\
             join(tm.Channel).\
             filter(
                 tm.Channel.name == channel_name,
@@ -280,7 +280,7 @@ def get_channel_layer_id(experiment_id):
 @assert_query_params(
     'plate_name', 'cycle_index', 'well_name', 'x', 'y', 'tpoint', 'zplane'
 )
-@decode_query_ids()
+@decode_query_ids('read')
 def get_channel_image(experiment_id, channel_name):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/channels/(string:channel_name)/image-files
@@ -495,7 +495,7 @@ def get_experiments():
 
 @api.route('/experiments/<experiment_id>', methods=['GET'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_experiment(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)
@@ -666,7 +666,7 @@ def create_experiment():
 
 @api.route('/experiments/<experiment_id>', methods=['DELETE'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('write')
 def delete_experiment(experiment_id):
     """
     .. http:delete:: /api/experiments/(string:experiment_id)
@@ -703,7 +703,7 @@ def delete_experiment(experiment_id):
 
 @api.route('/experiments/<experiment_id>/plates/<plate_id>', methods=['GET'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_plate(experiment_id, plate_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/plates/(string:plate_id)
@@ -747,7 +747,7 @@ def get_plate(experiment_id, plate_id):
 
 @api.route('/experiments/<experiment_id>/plates', methods=['GET'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_plates(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/plates
@@ -793,7 +793,7 @@ def get_plates(experiment_id):
 
 @api.route('/experiments/<experiment_id>/plates/<plate_id>', methods=['DELETE'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('write')
 def delete_plate(experiment_id, plate_id):
     """
     .. http:delete:: /api/experiments/(string:experiment_id)/plates/(string:plate_id)
@@ -830,7 +830,7 @@ def delete_plate(experiment_id, plate_id):
 @api.route('/experiments/<experiment_id>/plates', methods=['POST'])
 @jwt_required()
 @assert_form_params('name')
-@decode_query_ids()
+@decode_query_ids('write')
 def create_plate(experiment_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/plates
@@ -887,7 +887,7 @@ def create_plate(experiment_id):
 @api.route('/experiments/<experiment_id>/plates/id', methods=['GET'])
 @jwt_required()
 @assert_query_params('plate_name')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_plate_id(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/plates/id
@@ -917,7 +917,7 @@ def get_plate_id(experiment_id):
         plate_name, experiment_id
     )
     with tm.utils.ExperimentSession(experiment_id) as session:
-        plate = session.query(tm.Plate).\
+        plate = session.query(tm.Plate.id).\
             filter_by(name=plate_name).\
             one()
         return jsonify({
@@ -928,7 +928,7 @@ def get_plate_id(experiment_id):
 @api.route('/experiments/<experiment_id>/acquisitions', methods=['POST'])
 @jwt_required()
 @assert_form_params('plate_name', 'name')
-@decode_query_ids()
+@decode_query_ids('write')
 @decode_form_ids()
 def create_acquisition(experiment_id):
     """
@@ -995,7 +995,7 @@ def create_acquisition(experiment_id):
     methods=['DELETE']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('write')
 def delete_acquisition(experiment_id, acquisition_id):
     """
     .. http:delete:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)
@@ -1037,7 +1037,7 @@ def delete_acquisition(experiment_id, acquisition_id):
     methods=['GET']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_acquisition(experiment_id, acquisition_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)
@@ -1078,7 +1078,7 @@ def get_acquisition(experiment_id, acquisition_id):
 @api.route('/experiments/<experiment_id>/acquisitions/id', methods=['GET'])
 @jwt_required()
 @assert_query_params('plate_name', 'acquisition_name')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_acquisition_id(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/plates/id
@@ -1127,7 +1127,7 @@ def get_acquisition_id(experiment_id):
     methods=['GET']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_microscope_image_files(experiment_id, acquisition_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/image-files
@@ -1171,7 +1171,7 @@ def get_microscope_image_files(experiment_id, acquisition_id):
     methods=['GET']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_microscope_metadata_files(experiment_id, acquisition_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/metadata-files

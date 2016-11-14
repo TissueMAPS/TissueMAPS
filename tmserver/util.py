@@ -146,9 +146,15 @@ def decode_form_ids(*model_ids):
     return decorator
 
 
-def decode_query_ids():
+def decode_query_ids(permission='write'):
     """A decorator that extracts and decodes all model IDs from the URL
     and inserts them into the argument list of the view function.
+
+    Parameters
+    ----------
+    permission: str, optional
+        check whether current user has ``"read"`` or ``"write"`` permissions
+        for the requested experiment (default: ``"write"``)
 
     Returns
     -------
@@ -159,7 +165,7 @@ def decode_query_ids():
     MalformedRequestError
         when ``"experiment_id"`` was missing from the URL
     NotAuthorizedError
-        when requested `experiment` does not belong to the user
+        when requested experiment does not belong to the user
 
     """
     def decorator(f):
@@ -181,47 +187,20 @@ def decode_query_ids():
                     with tm.utils.MainSession() as session:
                         experiment = session.query(tm.ExperimentReference).\
                             get(model_id)
-                        try:
-                            if not experiment.belongs_to(current_identity):
-                                raise NotAuthorizedError(
-                                    'User is not authorized to access '
-                                    'experiment #%d.' % model_id
-                                )
-                                current_identity.id
-                        except AttributeError:
-                            pass
+                        if experiment is None:
+                            raise ResourceNotFoundError(
+                                tm.Experiment, experiment_id=experiment_id
+                            )
+                        granted = experiment.can_be_accessed_by(
+                            current_identity.id, permission
+                        )
+                        if not granted:
+                            raise NotAuthorizedError(
+                                'User is not authorized to access '
+                                'experiment #%d.' % model_id
+                            )
+                            current_identity.id
             return f(*args, **kwargs)
         return wrapped
     return decorator
 
-
-def check_permissions(experiment_id, mode='read'):
-    """Checks whether the current user has permissions to access a given
-    experiment.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of an experiment
-    mode: str, optional
-        access mode (options: ``{"read", "write"}``, default: ``"read"``)
-
-    Returns
-    -------
-    str
-        name of the experiment when permission is granted
-
-    Raises
-    ------
-    NotAuthorizedError
-        when current user doesn't have permissions
-    """
-    if mode not in {'read', 'write'}:
-        raise ValueError('Argument "mode" must be either "read" or "write".')
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        if not experiment.can_be_viewed_by(current_identity.id):
-            raise NotAuthorizedError(
-                'No permissions to %s experiment "%s"' % (mode, experiment.name)
-            )
-        return experiment.name

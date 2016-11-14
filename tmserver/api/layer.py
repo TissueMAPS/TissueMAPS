@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
     methods=['GET']
 )
 @assert_query_params('x', 'y', 'z', 'zplane', 'tpoint')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_mapobjects_tile(experiment_id, object_name):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/tile
@@ -155,7 +155,7 @@ def get_mapobjects_tile(experiment_id, object_name):
     methods=['GET']
 )
 @assert_query_params('x', 'y', 'z')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_channel_layer_tile(experiment_id, channel_layer_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/channel_layer/(string:channel_layer_id)/tiles

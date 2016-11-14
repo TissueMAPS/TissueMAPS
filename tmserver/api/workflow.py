@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 @api.route('/experiments/<experiment_id>/workflow/submit', methods=['POST'])
 @jwt_required()
 @assert_form_params('description')
-@decode_query_ids()
+@decode_query_ids('write')
 def submit_workflow(experiment_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/workflow/submit
@@ -94,10 +94,6 @@ def submit_workflow(experiment_id):
     workflow_description = WorkflowDescription(**data['description'])
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        if not experiment.can_be_modified_by(current_identity.id):
-            raise NotAuthorizedError(
-                'No perimissions to modify experiment "%s"' % experiment.name
-            )
         experiment.persist_workflow_description(workflow_description)
     submission_manager = SubmissionManager(experiment_id, 'workflow')
     submission_id, user_name = submission_manager.register_submission()
@@ -121,7 +117,7 @@ def submit_workflow(experiment_id):
 @api.route('/experiments/<experiment_id>/workflow/resubmit', methods=['POST'])
 @jwt_required()
 @assert_form_params('description')
-@decode_query_ids()
+@decode_query_ids('write')
 def resubmit_workflow(experiment_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/workflow/resubmit
@@ -156,14 +152,6 @@ def resubmit_workflow(experiment_id):
 
     """
     logger.info('resubmit workflow for experiment %d', experiment_id)
-
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        if not experiment.can_be_modified_by(current_identity.id):
-            raise NotAuthorizedError(
-                'No perimissions to modify experiment "%s"' % experiment.name
-            )
-
     data = json.loads(request.data)
     index = data.get('index', 0)
     workflow_description = WorkflowDescription(**data['description'])
@@ -181,7 +169,7 @@ def resubmit_workflow(experiment_id):
     '/experiments/<experiment_id>/workflow/status', methods=['GET']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_workflow_status(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/workflow/status
@@ -215,7 +203,7 @@ def get_workflow_status(experiment_id):
 )
 @jwt_required()
 @assert_query_params('step_name', 'index')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_jobs_status(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/workflow/jobs
@@ -323,7 +311,7 @@ def get_jobs_status(experiment_id):
 
 @api.route('/experiments/<experiment_id>/workflow/description', methods=['GET'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 def get_workflow_description(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/workflow/description
@@ -358,7 +346,7 @@ def get_workflow_description(experiment_id):
 @api.route('/experiments/<experiment_id>/workflow/description', methods=['POST'])
 @jwt_required()
 @assert_form_params('description')
-@decode_query_ids()
+@decode_query_ids('write')
 def save_workflow_description(experiment_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/workflow/description
@@ -394,10 +382,6 @@ def save_workflow_description(experiment_id):
     workflow_description = WorkflowDescription(**data['description'])
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        if not experiment.can_be_modified_by(current_identity.id):
-            raise NotAuthorizedError(
-                'No perimissions to modify experiment "%s"' % experiment.name
-            )
         experiment.persist_workflow_description(workflow_description)
     return jsonify({
         'message': 'ok'
@@ -406,7 +390,7 @@ def save_workflow_description(experiment_id):
 
 @api.route('/experiments/<experiment_id>/workflow/kill', methods=['POST'])
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('write')
 def kill_workflow(experiment_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/workflow/kill
@@ -428,12 +412,6 @@ def kill_workflow(experiment_id):
 
     """
     logger.info('kill workflow for experiment %d', experiment_id)
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        if not experiment.can_be_modified_by(current_identity.id):
-            raise NotAuthorizedError(
-                'No perimissions to modify experiment "%s"' % experiment.name
-            )
     workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
     gc3pie.kill_jobs(workflow)
     return jsonify({
@@ -444,7 +422,7 @@ def kill_workflow(experiment_id):
 @api.route('/experiments/<experiment_id>/workflow/log', methods=['POST'])
 @jwt_required()
 @assert_form_params('job_id')
-@decode_query_ids()
+@decode_query_ids('read')
 def get_job_log_output(experiment_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/workflow/log

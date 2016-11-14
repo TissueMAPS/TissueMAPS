@@ -38,6 +38,7 @@ from tmserver.error import (
 )
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params
+from tmserver.model import encode_pk
 from tmserver.extensions import gc3pie
 from tmserver import cfg as server_cfg
 
@@ -116,7 +117,7 @@ def get_tools():
     '/experiments/<experiment_id>/tools/request', methods=['POST']
 )
 @jwt_required()
-@decode_query_ids()
+@decode_query_ids('read')
 @assert_form_params('payload', 'session_uuid', 'tool_name')
 def process_tool_request(experiment_id):
     """
@@ -179,13 +180,61 @@ def process_tool_request(experiment_id):
 
 
 @api.route(
-    '/experiments/<experiment_id>/tools/result', methods=['GET']
+    '/experiments/<experiment_id>/tools/result/<tool_result_id>',
+    methods=['GET']
 )
-@decode_query_ids()
-@assert_query_params('submission_id')
-def get_tool_result(experiment_id):
+@decode_query_ids('read')
+def get_tool_result(experiment_id, tool_result_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/tools/result
+
+        Get the result of a previous tool request including a label layer that
+        can be queried for tiled cell labels as well as optional plots.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "id": "MQ==",
+                    "name": "Cluster Result 1",
+                    "submission_id": 117,
+                    "layer": {
+                        "id": "MQ==",
+                        "type": "HeatmapLayer",
+                        "attributes": {
+                            "min": 0,
+                            "max": 2414
+                        }
+                    },
+                    "plots": []
+                }
+            }
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+
+    """
+    submission_id = request.args.get('submission_id', type=int)
+    logger.info('get ID of tool result for submission %d', submission_id)
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        tool_result = session.query(tm.ToolResult).get(tool_result_id)
+        if tool_result is None:
+            raise ResourceNotFoundError(tm.ToolResult)
+        return jsonify(data=tool_result)
+
+@api.route(
+    '/experiments/<experiment_id>/tools/result/id', methods=['GET']
+)
+@decode_query_ids('read')
+@assert_query_params('submission_id')
+def get_tool_result_id(experiment_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/tools/result/id
 
         Get the result of a previous tool request including a label layer that
         can be queried for tiled cell labels as well as optional plots.
@@ -229,22 +278,24 @@ def get_tool_result(experiment_id):
 
     """
     submission_id = request.args.get('submission_id', type=int)
-    logger.info('get tool result for submission %d', submission_id)
+    logger.info('get ID of tool result for submission %d', submission_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         tool_result = session.query(tm.ToolResult).\
-            filter_by(submission_id=submission_id).\
+            filter_by(
+                submission_id=submission_id, user_id=current_identity.id
+            ).\
             order_by(tm.ToolResult.submission_id.desc()).\
             first()
         if tool_result is None:
             raise ResourceNotFoundError(tm.ToolResult)
-        return jsonify(data=tool_result)
+        return jsonify(id=encode_pk(tool_result.id))
 
 
 @api.route(
     '/experiments/<experiment_id>/tools/result/<tool_result_id>',
     methods=['DELETE']
 )
-@decode_query_ids()
+@decode_query_ids('read')
 def delete_tool_result(experiment_id, tool_result_id):
     """
     .. http:delete:: /api/experiments/(string:experiment_id)/tools/result/(string:tool_result_id)
@@ -277,7 +328,7 @@ def delete_tool_result(experiment_id, tool_result_id):
 @api.route(
     '/experiments/<experiment_id>/tools/status', methods=['GET']
 )
-@decode_query_ids()
+@decode_query_ids('read')
 def get_tool_job_status(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/tools/status
@@ -335,7 +386,8 @@ def get_tool_job_status(experiment_id):
             tool_jobs = query.\
             filter(
                 tm.Submission.program == 'tool',
-                tm.Submission.experiment_id == experiment_id
+                tm.Submission.experiment_id == experiment_id,
+                tm.Submission.user_id == current_identity.id
             ).\
             all()
             tool_job_status = [
@@ -352,7 +404,8 @@ def get_tool_job_status(experiment_id):
             filter(
                 tm.Submission.program == 'tool',
                 tm.Submission.experiment_id == experiment_id,
-                tm.Submission.id == submission_id
+                tm.Submission.id == submission_id,
+                tm.Submission.user_id == current_identity.id
             ).\
             one()
             tool_job_status = {
