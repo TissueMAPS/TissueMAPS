@@ -80,7 +80,7 @@
   run_once: yes
   when: instance_state == "present"
 
-- name: Create ingress TCP (HTTP: 8080) rule for web security group
+- name: Create ingress TCP (HTTP 8080) rule for web security group
   local_action: os_security_group_rule
   args:
     state: present
@@ -94,7 +94,7 @@
   run_once: yes
   when: instance_state == "present"
 
-- name: Create ingress TCP (HTTP: 80) rule for web security group
+- name: Create ingress TCP (HTTP 80) rule for web security group
   local_action: os_security_group_rule
   args:
     state: present
@@ -108,7 +108,7 @@
   run_once: yes
   when: instance_state == "present"
 
-- name: Create ingress TCP (HTTPS: 443) rule for web security group
+- name: Create ingress TCP (HTTPS 443) rule for web security group
   local_action: os_security_group_rule
   args:
     state: present
@@ -122,7 +122,7 @@
   run_once: yes
   when: instance_state == "present"
 
-- name: Create ingress TCP (SSH: 22) rule for web security group
+- name: Create ingress TCP (SSH 22) rule for web security group
   local_action: os_security_group_rule
   args:
     state: present
