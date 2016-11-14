@@ -109,26 +109,25 @@ def create_db_engine(db_uri):
     return DATABASE_ENGINES[db_uri]
 
 
-
-@listens_for(sqlalchemy.pool.Pool, 'connect')
-def _on_pool_connect(dbapi_con, connection_record):
-    logger.debug('create database connection: %d', dbapi_con.get_backend_pid())
-
-
-@listens_for(sqlalchemy.pool.Pool, 'checkin')
-def _on_pool_checkin(dbapi_con, connection_record):
-    logger.debug(
-        'database connection returned to pool: %d',
-        dbapi_con.get_backend_pid()
-    )
+# @listens_for(sqlalchemy.pool.Pool, 'connect')
+# def _on_pool_connect(dbapi_con, connection_record):
+#     logger.debug('create database connection: %d', dbapi_con.get_backend_pid())
 
 
-@listens_for(sqlalchemy.pool.Pool, 'checkout')
-def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
-    logger.debug(
-        'database connection retrieved from pool: %d',
-        dbapi_con.get_backend_pid()
-    )
+# @listens_for(sqlalchemy.pool.Pool, 'checkin')
+# def _on_pool_checkin(dbapi_con, connection_record):
+#     logger.debug(
+#         'database connection returned to pool: %d',
+#         dbapi_con.get_backend_pid()
+#     )
+
+
+# @listens_for(sqlalchemy.pool.Pool, 'checkout')
+# def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
+#     logger.debug(
+#         'database connection retrieved from pool: %d',
+#         dbapi_con.get_backend_pid()
+#     )
 
 
 def create_db_session_factory(engine):
