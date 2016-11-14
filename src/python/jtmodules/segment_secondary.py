@@ -18,13 +18,6 @@ import logging
 import numpy as np
 import mahotas as mh
 import collections
-from skimage.segmentation import clear_border
-from skimage.measure import label
-from skimage.measure import regionprops
-from scipy import ndimage as ndi
-import skimage as sk
-from skimage.morphology import watershed, binary_dilation
-from matplotlib import pyplot as plt
 
 logger = logging.getLogger(__name__)
 
