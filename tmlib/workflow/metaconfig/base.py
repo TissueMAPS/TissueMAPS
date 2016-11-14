@@ -700,7 +700,8 @@ class MetadataHandler(object):
         # in order to be able to perform the intensity projection later on
         grouped_file_mapper_list = list()
         grouped_file_mapper_lookup = defaultdict(list)
-        for i, indices in enumerate(sorted(zstacks.groups.values())):
+        sorted_indices = sorted(zstacks.groups.values(), key=lambda k: k[0])
+        for i, indices in enumerate(sorted_indices):
             fm = ImageFileMapping()
             fm.files = list()
             fm.series = list()
@@ -758,7 +759,7 @@ class MetadataHandler(object):
         logger.info('assign plate wide acquisition site indices')
         md = self.metadata
         sites = md.groupby(['well_name', 'well_position_x', 'well_position_y'])
-        site_indices = sorted(sites.groups.values())
+        site_indices = sorted(sites.groups.values(), key=lambda k: k[0])
         for i, indices in enumerate(site_indices):
             md.loc[indices, 'site'] = i
         md.site = md.site.astype(int)
