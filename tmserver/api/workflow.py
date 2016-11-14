@@ -202,15 +202,13 @@ def get_workflow_status(experiment_id):
     '/experiments/<experiment_id>/workflow/status/jobs', methods=['GET']
 )
 @jwt_required()
-@assert_query_params('step_name', 'index')
+@assert_query_params('step_name')
 @decode_query_ids('read')
 def get_jobs_status(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/workflow/jobs
 
-        Query the status of n jobs currently associated with step starting from a
-        given index.
-
+        Query the status of n jobs currently associated with step.
 
         **Example response**:
 
@@ -233,19 +231,24 @@ def get_jobs_status(experiment_id):
             }
 
         :query step_name: the name of the step (required)
-        :query index: the index of the first job queried (required)
+        :query index: the index of the first job queried (optional)
         :query batch_size: the amount of job stati to return starting from ``index``.
         :statuscode 200: no error
 
     """
     step_name = request.args.get('step_name')
-    index = request.args.get('index', type=int)
-    batch_size = request.args.get('batch_size', 50, type=int)
+    index = request.args.get('index', 0, type=int)
+    batch_size = request.args.get('batch_size', type=int)
+
+    logger.info(
+        'get status of jobs for workflow step "%s" for experiment %d',
+        step_name, experiment_id
+    )
 
     # If the index is negative don't send `batch_size` jobs.
     # For example, if the index is -5 and the batch_size 50,
     # send the first 45 jobs back.
-    if index < 0:
+    if index < 0 and batch_size is not None:
         batch_size = batch_size + index
         index = 0
         if batch_size <= 0:
@@ -253,10 +256,6 @@ def get_jobs_status(experiment_id):
                 'data': []
             })
 
-    logger.info(
-        'get status of jobs starting from index #%d of step "%s" for experiment %d',
-        index, step_name, experiment_id
-    )
     submission_id = gc3pie.get_id_of_last_submission(experiment_id, 'workflow')
     # TODO: Upon reload, the submission_id of tasks doesn't get updated.
     # While this makes sense to track tasks belonging to the same collection
@@ -296,17 +295,18 @@ def get_jobs_status(experiment_id):
                     filter(
                         tm.Task.id.in_(task_ids),
                         ~tm.Task.is_collection
-                    ).\
-                    limit(batch_size).\
+                    )
+                if batch_size is not None:
+                    logger.debug('query status of %d jobs', batch_size)
+                    tasks = tasks.limit(batch_size)
+                tasks = tasks.\
                     offset(index).\
                     all()
                 # order_by(tm.Task.id).\
                 tasks = sorted(tasks, key=lambda k: k.name)
                 status = [t.status for t in tasks]
 
-    return jsonify({
-        'data': status
-    })
+    return jsonify(data=status)
 
 
 @api.route('/experiments/<experiment_id>/workflow/description', methods=['GET'])

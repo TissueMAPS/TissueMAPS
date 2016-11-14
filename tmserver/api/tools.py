@@ -331,14 +331,14 @@ def get_tool_results(experiment_id):
         :statuscode 200: no error
 
     """
-    submission_id = request.args.get('submission_id', None)
+    submission_id = request.args.get('submission_id', type=int)
     logger.info('get tool results')
 
     if submission_id is not None:
         logger.info(
-            'filter tool results for submissions %d', int(submission_id)
+            'filter tool results for submissions %d', submission_id
         )
-        submission_ids = [int(submission_id)]
+        submission_ids = [submission_id]
     else:
         with tm.utils.MainSession() as session:
             logger.debug('filter tool results for current user')
@@ -408,8 +408,6 @@ def get_tool_job_status(experiment_id):
             HTTP/1.1 200 OK
             Content-Type: application/json
 
-            If no submission_id was supplied:
-
             {
                 "data": [
                     {
@@ -421,67 +419,41 @@ def get_tool_job_status(experiment_id):
                 ]
             }
 
-            If a submission_id was supplied:
-
-            {
-                "data": {
-                    "state": string,
-                    "submission_id": number,
-                    "exitcode": number
-                }
-            }
-
-        :query submission_id: numeric id of the submission for which the job status should be retrieved (optional).
+        :query submission_id: numeric ID of the submission for which the job status should be retrieved (optional)
+        :query state: state jobs should have, e.g. RUNNING (optional)
         :statuscode 400: malformed request
         :statuscode 200: no error
 
     """
+    logger.info('get status of tool jobs for experiment %d', experiment_id)
     submission_id = request.args.get('submission_id', type=int)
-    state_query_arg = request.args.get('state')
-
-    if submission_id is None:
-        logger.info('get status of tool jobs for experiment %d', experiment_id)
-    else:
-        logger.info('get status of single tool job %d', submission_id)
+    state = request.args.get('state')
 
     with tm.utils.MainSession() as session:
-        query = session.query(
+        tool_jobs = session.query(
                 tm.Task.state, tm.Task.submission_id, tm.Task.exitcode
             ).\
-            join(tm.Submission)
-        if submission_id is None:
-            tool_jobs_query = query.\
+            join(tm.Submission).\
             filter(
                 tm.Submission.program == 'tool',
                 tm.Submission.experiment_id == experiment_id,
                 tm.Submission.user_id == current_identity.id
             )
-            if state_query_arg is not None:
-                tool_jobs_query = tool_jobs_query.filter(
-                    tm.Task.state == state_query_arg
-                )
-            tool_jobs = tool_jobs_query.all()
-            tool_job_status = [
-                {
-                    'state': j.state,
-                    'submission_id': j.submission_id,
-                    'exitcode': j.exitcode
-                }
-                for j in tool_jobs
-            ]
-            return jsonify(data=tool_job_status)
-        else:
-            tool_job = query.\
-            filter(
-                tm.Submission.program == 'tool',
-                tm.Submission.experiment_id == experiment_id,
-                tm.Submission.id == submission_id,
-                tm.Submission.user_id == current_identity.id
-            ).\
-            one()
-            tool_job_status = {
-                'state': tool_job.state,
-                'submission_id': tool_job.submission_id,
-                'exitcode': tool_job.exitcode
+        if state is not None:
+            logger.info('filter tool jobs for state "%s"', state)
+            tool_jobs = tool_jobs.\
+                filter(tm.Task.state == state)
+        if submission_id is not None:
+            logger.info('filter tool jobs for submission %d', submission_id)
+            tool_jobs = tool_jobs.\
+                filter(tm.Task.submission_id == submission_id)
+        tool_jobs = tool_jobs.all()
+        tool_job_status = [
+            {
+                'state': j.state,
+                'submission_id': j.submission_id,
+                'exitcode': j.exitcode
             }
-            return jsonify(data=tool_job_status)
+            for j in tool_jobs
+        ]
+        return jsonify(data=tool_job_status)

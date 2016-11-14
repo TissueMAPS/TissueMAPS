@@ -76,19 +76,20 @@ def get_cycles(experiment_id):
 
     """
     logger.info('get cycles for experiment %d', experiment_id)
-    plate_name = request.args.get('plate_name', None)
-    cycle_index = request.args.get('index', None)
+    plate_name = request.args.get('plate_name')
+    cycle_index = request.args.get('index', type=int)
     with tm.utils.ExperimentSession(experiment_id) as session:
         cycles = session.query(tm.Cycle.id)
         if cycle_index is not None:
             cycles = cycles.\
-                filter_by(index=int(cycle_index))
+                filter_by(index=cycle_index)
         if plate_name is not None:
             cycles = cycles.\
                 join(tm.Plate).\
                 filter(tm.Plate.name == plate_name)
+        cycles = cycles.all()
         return jsonify({
-            'data': cycles.all()
+            'data': cycles
         })
 
 
@@ -141,7 +142,7 @@ def get_channels(experiment_id):
 
     """
     logger.info('get channels of experiment %d', experiment_id)
-    channel_name = request.args.get('name', None)
+    channel_name = request.args.get('name')
     with tm.utils.ExperimentSession(experiment_id) as session:
         channels = session.query(tm.Channel)
         if channel_name is not None:
@@ -223,19 +224,19 @@ def get_channel_layers(experiment_id):
 
     """
     logger.info('get channel layers of experiment %d', experiment_id)
-    channel_name = request.args.get('channel_name', None)
-    tpoint = request.args.get('tpoint', None)
-    zplane = request.args.get('zplane', None)
+    channel_name = request.args.get('channel_name')
+    tpoint = request.args.get('tpoint', type=int)
+    zplane = request.args.get('zplane', type=int)
     with tm.utils.ExperimentSession(experiment_id) as session:
         channel_layers = session.query(tm.ChannelLayer.id)
         if tpoint is not None:
-            logger.info('filter channel layers for tpoint %d', int(tpoint))
+            logger.info('filter channel layers for tpoint %d', tpoint)
             channel_layers = channel_layers.\
-                filter_by(tpoint=int(tpoint))
+                filter_by(tpoint=tpoint)
         if zplane is not None:
-            logger.info('filter channel layers for zplane %d', int(zplane))
+            logger.info('filter channel layers for zplane %d', zplane)
             channel_layers = channel_layers.\
-                filter_by(zplane=int(zplane))
+                filter_by(zplane=zplane)
         if channel_name is not None:
             logger.info(
                 'filter channel layers for channel with name %d', channel_name
@@ -453,7 +454,7 @@ def get_experiments():
 
     """
     logger.info('get experiments')
-    experiment_name = request.args.get('name', None)
+    experiment_name = request.args.get('name')
     with tm.utils.MainSession() as session:
         shares = session.query(tm.ExperimentShare.experiment_id).\
             filter_by(user_id=current_identity.id).\
@@ -712,7 +713,7 @@ def get_plates(experiment_id):
         :statuscode 200: no error
 
     """
-    plate_name = request.args.get('name', None)
+    plate_name = request.args.get('name')
     logger.info('get plates for experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         plates = session.query(tm.Plate)
@@ -988,8 +989,8 @@ def get_acquisitions(experiment_id):
         :statuscode 404: no such experiment found
 
     """
-    plate_name = request.args.get('plate_name', None)
-    acquisition_name = request.args.get('name', None)
+    plate_name = request.args.get('plate_name')
+    acquisition_name = request.args.get('name')
     logger.info('get acquistions for experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisitions = session.query(tm.Acquisition)
