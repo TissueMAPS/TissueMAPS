@@ -48,3 +48,9 @@
   pip: name=setuptools extra_args='--upgrade' editable=false
   become: yes
 
+- name: Install nice-to-have packages
+  become: yes
+  pip: name={{ item }} editable=false
+  with_items:
+    - ipython
+    - ipdb
