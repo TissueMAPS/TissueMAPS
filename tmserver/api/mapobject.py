@@ -35,9 +35,7 @@ import tmlib.models as tm
 from tmlib.image import SegmentationImage
 
 from tmserver.api import api
-from tmserver.util import (
-    decode_query_ids, assert_query_params, check_permissions
-)
+from tmserver.util import decode_query_ids, assert_query_params
 from tmserver.error import MalformedRequestError, ResourceNotFoundError
 
 
