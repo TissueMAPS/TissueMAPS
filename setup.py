@@ -113,6 +113,7 @@ setuptools.setup(
         'pyparsing>=2.0.5',
         'python-dateutil>=2.4.2',
         'python-editor>=0.4',
+        'tmlibrary>=0.1.0'
     ]
 )
 
