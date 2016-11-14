@@ -213,19 +213,22 @@ class ExperimentReference(MainModel, DateMixIn):
         '''
         return self.user_id == user.id
 
-    def can_be_modified_by(self, user_id):
-        '''Checks whether a user has the perimissions to modify the referenced
+    def can_be_accessed_by(self, user_id, permission='write'):
+        '''Checks whether a user has the permissions to access the referenced
         experiment.
 
         Parameters
         ----------
         user_id: int
             ID of user for which permissions should be checked
+        permission: str, optional
+            whether user must have ``"read"`` or ``"write"`` permission
+            (default: ``"write"``)
 
         Returns
         -------
         bool
-            ``True`` if the user can modify the referenced experiment and
+            ``True`` if the user can access the referenced experiment and
             ``False`` otherwise
         '''
         if self.user_id == user_id:
@@ -235,31 +238,14 @@ class ExperimentReference(MainModel, DateMixIn):
             shares = session.query(ExperimentShare.user_id).\
                 filter_by(id=self.id).\
                 all()
-            return user_id in [s.user_id for s in shares if s.write_access]
-
-    def can_be_viewed_by(self, user_id):
-        '''Checks whether a user has the perimissions to view the referenced
-        experiment.
-
-        Parameters
-        ----------
-        user_id: int
-            ID of user for which permissions should be checked
-
-        Returns
-        -------
-        bool
-            ``True`` if the user can view the referenced experiment and
-            ``False`` otherwise
-        '''
-        if self.user_id == user_id:
-            return True
-        else:
-            session = Session.object_session(self)
-            shares = session.query(ExperimentShare.user_id).\
-                filter_by(id=self.id).\
-                all()
-            return user_id in [s.user_id for s in shares]
+            if permission == 'read':
+                return user_id in [s.user_id for s in shares]
+            elif permission == 'write':
+                return user_id in [s.user_id for s in shares if s.write_access]
+            else:
+                raise ValueError(
+                    'Argument "permission" must be either "read" or "write".'
+                )
 
     def __repr__(self):
         return '<ExperimentReference(id=%r, name=%r)>' % (self.id, self.name)

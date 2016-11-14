@@ -14,7 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import gc3libs
-from sqlalchemy import Column, Integer, String, LargeBinary, Interval, ForeignKey, Boolean
+from sqlalchemy import (
+    Column, Integer, String, LargeBinary, Interval, ForeignKey, Boolean
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
 
