@@ -817,9 +817,9 @@ class TmClient(HttpClient):
             ),
             params
         )
-        response = self.session.get(url)
-        self._handle_error(response)
-        return response
+        res = self.session.get(url)
+        res.raise_for_status()
+        return res
 
     def download_channel_image(self, channel_name, plate_name,
             well_name, well_pos_y, well_pos_x,
@@ -935,7 +935,7 @@ class TmClient(HttpClient):
             params
         )
         response = self.session.get(url)
-        self._handle_error(response)
+        response.raise_for_status()
         return response
 
     def download_segmentation_image(self, object_type,
