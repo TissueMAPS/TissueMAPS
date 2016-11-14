@@ -19,6 +19,7 @@ server application.
 
 """
 import functools
+import logging
 from flask import request, current_app
 from flask_jwt import current_identity
 
@@ -32,6 +33,9 @@ from tmserver.error import (
     MissingGETParameterError,
     MissingPOSTParameterError
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def assert_query_params(*params):
@@ -184,22 +188,22 @@ def decode_query_ids(permission='write'):
                     model_id = decode_pk(encoded_model_id)
                     kwargs[arg] = model_id
                 if arg == 'experiment_id':
-                    with tm.utils.MainSession() as session:
-                        experiment = session.query(tm.ExperimentReference).\
-                            get(model_id)
-                        if experiment is None:
-                            raise ResourceNotFoundError(
-                                tm.Experiment, experiment_id=experiment_id
+                    if permission is not None:
+                        with tm.utils.MainSession() as session:
+                            experiment = session.query(tm.ExperimentReference).\
+                                get(model_id)
+                            if experiment is None:
+                                raise ResourceNotFoundError(
+                                    tm.Experiment, experiment_id=experiment_id
+                                )
+                            granted = experiment.can_be_accessed_by(
+                                current_identity.id, permission
                             )
-                        granted = experiment.can_be_accessed_by(
-                            current_identity.id, permission
-                        )
-                        if not granted:
-                            raise NotAuthorizedError(
-                                'User is not authorized to access '
-                                'experiment #%d.' % model_id
-                            )
-                            current_identity.id
+                            if not granted:
+                                raise NotAuthorizedError(
+                                    'User is not authorized to access '
+                                    'experiment %s.' % model_id
+                                )
             return f(*args, **kwargs)
         return wrapped
     return decorator

@@ -48,15 +48,14 @@ from tmserver.error import (
 logger = logging.getLogger(__name__)
 
 
-@api.route('/experiments/<experiment_id>/cycles/id', methods=['GET'])
+@api.route('/experiments/<experiment_id>/cycles', methods=['GET'])
 @jwt_required()
-@assert_query_params('plate_name', 'cycle_index')
 @decode_query_ids('read')
-def get_cycle_id(experiment_id):
+def get_cycles(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/cycles/id
+    .. http:get:: /api/experiments/(string:experiment_id)/cycles
 
-        Get the hashed database id of a cycle with a given index and plate name.
+        Get cycles for the specified experiments.
 
         **Example response**:
 
@@ -69,27 +68,27 @@ def get_cycle_id(experiment_id):
                 "id": "MQ=="
             }
 
-        :query plate_name: the name of the plate (required)
-        :query cycle_index: the cycle's index (required)
+        :query plate_name: the name of the plate (optional)
+        :query cycle_index: the cycle's index (optional)
 
         :statuscode 200: no error
         :statuscode 404: no matching cycle found
 
     """
-    logger.info('get ID of cycle from experiment %d', experiment_id)
-    experiment_name = experiment.name
-    plate_name = request.args.get('plate_name')
-    cycle_index = request.args.get('cycle_index', type=int)
+    logger.info('get cycles for experiment %d', experiment_id)
+    plate_name = request.args.get('plate_name', None)
+    cycle_index = request.args.get('cycle_index', None)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        cycle = session.query(tm.Cycle.id).\
-            join(tm.Plate).\
-            filter(
-                tm.Plate.name == plate_name,
-                tm.Cycle.index == cycle_index,
-            ).\
-            one()
+        cycles = session.query(tm.Cycle.id)
+        if cycle_index is not None:
+            cycles = cycles.\
+                filter_by(index=int(cycle_index))
+        if plate_name is not None:
+            cycles = cycles.\
+                join(tm.Plate).\
+                filter(tm.Plate.name == plate_name)
         return jsonify({
-            'id': encode_pk(cycle.id)
+            'data': cycles.all()
         })
 
 
@@ -100,7 +99,7 @@ def get_channels(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/channels
 
-        Get all channels for a specific experiment.
+        Get channels for a specific experiment.
 
         **Example response**:
 
@@ -136,13 +135,21 @@ def get_channels(experiment_id):
                 ]
             }
 
+        :query name: name of a channel (optional)
+
         :statuscode 200: no error
 
     """
-    logger.info('get all channels from experiment %d', experiment_id)
+    logger.info('get channels of experiment %d', experiment_id)
+    channel_name = request.args.get('name', None)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        channels = session.query(tm.Channel).all()
-        return jsonify(data=channels)
+        channels = session.query(tm.Channel)
+        if channel_name is not None:
+            logger.info('filter channels for name "%s"', channel_name)
+            channels = channels.filter_by(name=channel_name)
+        return jsonify({
+            'data': channels.all()
+        })
 
 
 @api.route('/experiments/<experiment_id>/mapobject_types', methods=['GET'])
@@ -187,15 +194,14 @@ def get_mapobject_types(experiment_id):
         return jsonify(data=mapobject_types)
 
 
-@api.route('/experiments/<experiment_id>/channels/id', methods=['GET'])
+@api.route('/experiments/<experiment_id>/channel_layers', methods=['GET'])
 @jwt_required()
-@assert_query_params('channel_name')
 @decode_query_ids('read')
-def get_channel_id(experiment_id):
+def get_channel_layers(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/channels/id
+    .. http:get:: /api/experiments/(string:experiment_id)/channel_layers
 
-        Get the id of a channel given its parent experiment id and its name.
+        Get channel layers for the requested experiment.
 
         **Example response**:
 
@@ -208,67 +214,37 @@ def get_channel_id(experiment_id):
                 "id": "MQ=="
             }
 
-        :query channel_name: the name of the channel (required)
-
-        :statuscode 200: no error
-        :statuscode 404: no matching channel found
-
-    """
-    logger.info('get ID of channel from experiment %d', experiment_id)
-    channel_name = request.args.get('channel_name')
-    with tm.utils.ExperimentSession(experiment_id) as session:
-        channel = session.query(tm.Channel.id).\
-            filter_by(name=channel_name).\
-            one()
-        return jsonify({
-            'id': encode_pk(channel.id)
-        })
-
-
-@api.route('/experiments/<experiment_id>/channel_layers/id', methods=['GET'])
-@jwt_required()
-@assert_query_params('channel_name', 'tpoint', 'zplane')
-@decode_query_ids('read')
-def get_channel_layer_id(experiment_id):
-    """
-    .. http:get:: /api/experiments/(string:experiment_id)/channel_layers/id
-
-        Get the id of a channel layer given its parent experiment id, the associated channel's name as well as the specific time point and zplane.
-
-        **Example response**:
-
-        .. sourcecode:: http
-
-            HTTP/1.1 200 OK
-            Content-Type: application/json
-
-            {
-                "id": "MQ=="
-            }
-
-        :query channel_name: the name of the channel (required)
-        :query tpoint: the time point associated with this layer (required)
-        :query zplane: the zplane of this layer (required)
+        :query channel_name: the name of the channel (optional)
+        :query tpoint: the time point associated with this layer (optional)
+        :query zplane: the zplane of this layer (optional)
 
         :statuscode 200: no error
         :statuscode 404: no matching layer found
 
     """
-    logger.info('get ID of channel layer from experiment %d', experiment_id)
-    channel_name = request.args.get('channel_name')
-    tpoint = request.args.get('tpoint', type=int)
-    zplane = request.args.get('zplane', type=int)
+    logger.info('get channel layers of experiment %d', experiment_id)
+    channel_name = request.args.get('channel_name', None)
+    tpoint = request.args.get('tpoint', None)
+    zplane = request.args.get('zplane', None)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        channel_layer = session.query(tm.ChannelLayer.id).\
-            join(tm.Channel).\
-            filter(
-                tm.Channel.name == channel_name,
-                tm.ChannelLayer.tpoint == tpoint,
-                tm.ChannelLayer.zplane == zplane,
-            ).\
-            one()
+        channel_layers = session.query(tm.ChannelLayer.id)
+        if tpoint is not None:
+            logger.info('filter channel layers for tpoint %d', int(tpoint))
+            channel_layers = channel_layers.\
+                filter_by(tpoint=int(tpoint))
+        if zplane is not None:
+            logger.info('filter channel layers for zplane %d', int(zplane))
+            channel_layers = channel_layers.\
+                filter_by(zplane=int(zplane))
+        if channel_name is not None:
+            logger.info(
+                'filter channel layers for channel with name %d', channel_name
+            )
+            channel_layers = channel_layers.\
+                join(tm.Channel).\
+                filter(tm.Channel.name == channel_name)
         return jsonify({
-            'id': encode_pk(channel_layer.id)
+            'data': channel_layers.all()
         })
 
 
@@ -448,7 +424,7 @@ def get_experiments():
     """
     .. http:get:: /api/experiments
 
-        Get all experiments for the currently logged in user.
+        Get experiments for the currently logged in user.
 
         **Example response**:
 
@@ -469,12 +445,15 @@ def get_experiments():
                 ]
             }
 
+        :query name: name of an experiment (optional)
+
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
         :statuscode 404: no such experiment found
 
     """
-    logger.info('get all experiments')
+    logger.info('get experiments')
+    experiment_name = request.args.get('name', None)
     with tm.utils.MainSession() as session:
         shares = session.query(tm.ExperimentShare.experiment_id).\
             filter_by(user_id=current_identity.id).\
@@ -486,10 +465,12 @@ def get_experiments():
                     tm.ExperimentReference.user_id == current_identity.id,
                     tm.ExperimentReference.id.in_(shared_ids)
                 )
-            ).\
-            all()
+            )
+        if experiment_name is not None:
+            logger.info('filter experiments for name "%s"', name)
+            experiments = experiments.filter_by(name=experiment_name)
         return jsonify({
-            'data': experiments
+            'data': experiments.all()
         })
 
 
@@ -528,54 +509,6 @@ def get_experiment(experiment_id):
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         return jsonify({
             'data': experiment
-        })
-
-
-@api.route('/experiments/id', methods=['GET'])
-@jwt_required()
-@assert_query_params('experiment_name')
-def get_experiment_id():
-    """
-    .. http:get:: /api/experiments/(string:experiment_id)
-
-        Get an experiment's id given its name.
-
-        **Example response**:
-
-        .. sourcecode:: http
-
-            HTTP/1.1 200 OK
-            Content-Type: application/json
-
-            {
-                "id": "MQ=="
-            }
-
-        :query experiment_name: the experiment's name (required)
-
-        :reqheader Authorization: JWT token issued by the server
-        :statuscode 200: no error
-        :statuscode 404: no such experiment found
-
-    """
-    experiment_name = request.args.get('experiment_name')
-    logger.info('get ID of experiment "%s"', experiment_name)
-    with tm.utils.MainSession() as session:
-        shares = session.query(tm.ExperimentShare.experiment_id).\
-            filter_by(user_id=current_identity.id).\
-            all()
-        shared_ids = [s.experiment_id for s in shares]
-        experiment = session.query(tm.ExperimentReference).\
-            filter(
-                or_(
-                    tm.ExperimentReference.user_id == current_identity.id,
-                    tm.ExperimentReference.id.in_(shared_ids)
-                ),
-                tm.ExperimentReference.name == experiment_name,
-            ).\
-            one()
-        return jsonify({
-            'id': encode_pk(experiment.id)
         })
 
 
@@ -744,7 +677,7 @@ def get_plates(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/plates
 
-        Get all plates for the specified experiment.
+        Get plates for the specified experiment.
 
         **Example response**:
 
@@ -774,13 +707,19 @@ def get_plates(experiment_id):
                 ]
             }
 
+        :query name: name of a plate (optional)
+
         :statuscode 200: no error
 
     """
-    logger.info('get all plates for experiment %d', experiment_id)
+    plate_name = request.args.get('name', None)
+    logger.info('get plates for experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        plates = session.query(tm.Plate).all()
-        return jsonify(data=plates)
+        plates = session.query(tm.Plate)
+        if plate_name is not None:
+            logger.info('filter plates for name: %s', name)
+            plates = plates.filter_by(name=plate_name)
+        return jsonify(data=plates.all())
 
 
 @api.route('/experiments/<experiment_id>/plates/<plate_id>', methods=['DELETE'])
@@ -868,46 +807,6 @@ def create_plate(experiment_id):
         return jsonify({
             'data': plate,
             'experiment_id': experiment_id
-        })
-
-@api.route('/experiments/<experiment_id>/plates/id', methods=['GET'])
-@jwt_required()
-@assert_query_params('plate_name')
-@decode_query_ids('read')
-def get_plate_id(experiment_id):
-    """
-    .. http:get:: /api/experiments/(string:experiment_id)/plates/id
-
-        Get the id of a plate given its name.
-
-        **Example response**:
-
-        .. sourcecode:: http
-
-            HTTP/1.1 200 OK
-            Content-Type: application/json
-
-            {
-                "id": "MQ=="
-            }
-
-        :query plate_name: the plates's name (required)
-        :reqheader Authorization: JWT token issued by the server
-        :statuscode 200: no error
-        :statuscode 404: no such experiment found
-
-    """
-    plate_name = request.args.get('plate_name')
-    logger.info(
-        'get ID of plate "%s" from experiment %d',
-        plate_name, experiment_id
-    )
-    with tm.utils.ExperimentSession(experiment_id) as session:
-        plate = session.query(tm.Plate.id).\
-            filter_by(name=plate_name).\
-            one()
-        return jsonify({
-            'id': encode_pk(plate.id)
         })
 
 
@@ -1032,13 +931,11 @@ def get_acquisition(experiment_id, acquisition_id):
             Content-Type: application/json
 
             {
-                "data":
-                    {
-                        "id": "MQ==",
-                        "name": "Acquisition XY",
-                        "description": "",
-                        "status": "UPLOADING" | "COMPLETE" | "WAITING"
-                    }
+                "data": {
+                    "id": "MQ==",
+                    "name": "Acquisition XY",
+                    "description": "",
+                    "status": "UPLOADING" | "COMPLETE" | "WAITING"
                 }
             }
 
@@ -1055,15 +952,14 @@ def get_acquisition(experiment_id, acquisition_id):
         return jsonify(data=acquisition)
 
 
-@api.route('/experiments/<experiment_id>/acquisitions/id', methods=['GET'])
+@api.route('/experiments/<experiment_id>/acquisitions', methods=['GET'])
 @jwt_required()
-@assert_query_params('plate_name', 'acquisition_name')
 @decode_query_ids('read')
-def get_acquisition_id(experiment_id):
+def get_acquisitions(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/plates/id
+    .. http:get:: /api/experiments/(string:experiment_id)/acquisitions
 
-        Get the id of an acquistion given its name.
+        Get acquisitions for the specified experiment.
 
         **Example response**:
 
@@ -1073,32 +969,39 @@ def get_acquisition_id(experiment_id):
             Content-Type: application/json
 
             {
-                "id": "MQ=="
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "name": "Acquisition XY",
+                        "description": "",
+                        "status": "UPLOADING" | "COMPLETE" | "WAITING"
+                    },
+                    ...
+                ]
             }
 
-        :query plate_name: the plates's name (required)
-        :query acquisition_name: the acquistion's name (required)
+        :query plate_name: name of a parent plate (optional)
+        :query acquisition_name: name of an acquistion (optional)
+
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
         :statuscode 404: no such experiment found
 
     """
-    plate_name = request.args.get('plate_name')
-    acquisition_name = request.args.get('acquisition_name')
-    logger.info(
-        'get ID of acquistion "%s" for plate "%s" from experiment %d',
-        acquisition_name, plate_name, experiment_id
-    )
+    plate_name = request.args.get('plate_name', None)
+    acquisition_name = request.args.get('acquisition_name', None)
+    logger.info('get acquistions for experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        acquisition = session.query(tm.Acquisition).\
-            join(tm.Plate).\
-            filter(
-                tm.Plate.name == plate_name,
-                tm.Acquisition.name == acquisition_name
-            ).\
-            one()
+        acquisitions = session.query(tm.Acquisition)
+        if acquisition_name is not None:
+            acquisitions = acquisitions.\
+                filter_by(name=acquisition_name)
+        if plate_name is not None:
+            acquisitions = acquisitions.\
+                join(tm.Plate).\
+                filter(tm.Plate.name == plate_name)
         return jsonify({
-            'id': encode_pk(acquisition.id)
+            'data': acquisitions.all()
         })
 
 

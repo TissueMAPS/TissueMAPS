@@ -21,6 +21,7 @@ import json
 import logging
 from flask import jsonify, request, current_app
 from flask_jwt import jwt_required, current_identity
+from sqlalchemy import distinct
 
 import tmlib.models as tm
 from tmlib import cfg as tmlib_cfg
@@ -100,6 +101,7 @@ def get_tools():
         :statuscode 200: no error
 
     """
+    logger.info('get available tools')
     tool_descriptions = list()
     available_tools = get_available_tools()
     for name in available_tools:
@@ -154,12 +156,11 @@ def process_tool_request(experiment_id):
         :statuscode 200: no error
 
     """
+    logger.info('process request of tool "%s"', tool_name)
     data = request.get_json()
     payload = data.get('payload', {})
     session_uuid = data.get('session_uuid')
     tool_name = data.get('tool_name')
-
-    logger.info('process request of tool "%s"', tool_name)
 
     verbosity = LEVELS_TO_VERBOSITY[server_cfg.log_level]
     manager = ToolRequestManager(experiment_id, tool_name, verbosity)
@@ -180,9 +181,10 @@ def process_tool_request(experiment_id):
 
 
 @api.route(
-    '/experiments/<experiment_id>/tools/result/<tool_result_id>',
+    '/experiments/<experiment_id>/tools/results/<tool_result_id>',
     methods=['GET']
 )
+@jwt_required()
 @decode_query_ids('read')
 def get_tool_result(experiment_id, tool_result_id):
     """
@@ -220,7 +222,7 @@ def get_tool_result(experiment_id, tool_result_id):
 
     """
     submission_id = request.args.get('submission_id', type=int)
-    logger.info('get ID of tool result for submission %d', submission_id)
+    logger.info('get tool result for submission %d', submission_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         tool_result = session.query(tm.ToolResult).get(tool_result_id)
         if tool_result is None:
@@ -228,13 +230,13 @@ def get_tool_result(experiment_id, tool_result_id):
         return jsonify(data=tool_result)
 
 @api.route(
-    '/experiments/<experiment_id>/tools/result/id', methods=['GET']
+    '/experiments/<experiment_id>/tools/results', methods=['GET']
 )
+@jwt_required()
 @decode_query_ids('read')
-@assert_query_params('submission_id')
-def get_tool_result_id(experiment_id):
+def get_tool_results(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/tools/result/id
+    .. http:get:: /api/experiments/(string:experiment_id)/tools/result
 
         Get the result of a previous tool request including a label layer that
         can be queried for tiled cell labels as well as optional plots.
@@ -273,28 +275,41 @@ def get_tool_result_id(experiment_id):
                 }
             }
 
+        :query submission_id: ID of the corresponding submission (optional)
+
         :statuscode 400: malformed request
         :statuscode 200: no error
 
     """
-    submission_id = request.args.get('submission_id', type=int)
-    logger.info('get ID of tool result for submission %d', submission_id)
+    submission_id = request.args.get('submission_id', None)
+    logger.info('get tool results')
+
+    if submission_id is not None:
+        logging.info(
+            'filter tool results for submissions %d', int(submission_id)
+        )
+        submission_ids = [int(submission_id)]
+    else:
+        with tm.utils.MainSession() as session:
+            logger.debug('filter tool results for current user')
+            submissions = session.query(tm.Submission.id).\
+                filter_by(user_id=current_identity.id, program='tool').\
+                all()
+            submission_ids = [s.id for s in submissions]
     with tm.utils.ExperimentSession(experiment_id) as session:
-        tool_result = session.query(tm.ToolResult).\
-            filter_by(
-                submission_id=submission_id, user_id=current_identity.id
-            ).\
-            order_by(tm.ToolResult.submission_id.desc()).\
-            first()
-        if tool_result is None:
-            raise ResourceNotFoundError(tm.ToolResult)
-        return jsonify(id=encode_pk(tool_result.id))
+        tool_results = session.query(tm.ToolResult).\
+            filter(tm.ToolResult.submission_id.in_(submission_ids)).\
+            order_by(tm.ToolResult.submission_id).\
+            distinct(tm.ToolResult.submission_id).\
+            all()
+        return jsonify(data=tool_results)
 
 
 @api.route(
     '/experiments/<experiment_id>/tools/result/<tool_result_id>',
     methods=['DELETE']
 )
+@jwt_required()
 @decode_query_ids('read')
 def delete_tool_result(experiment_id, tool_result_id):
     """
@@ -328,6 +343,7 @@ def delete_tool_result(experiment_id, tool_result_id):
 @api.route(
     '/experiments/<experiment_id>/tools/status', methods=['GET']
 )
+@jwt_required()
 @decode_query_ids('read')
 def get_tool_job_status(experiment_id):
     """
