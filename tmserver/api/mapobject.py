@@ -213,7 +213,10 @@ def get_mapobject_feature_values(experiment_id, object_type):
 
     .. note:: The first row of the table are column (feature) names.
     """
-    experiment_name = check_permissions(experiment_id)
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        experiment_name = experiment.name
+
     with tm.utils.ExperimentSession(experiment_id) as session:
         try:
             mapobject_type = session.query(tm.MapobjectType).\
@@ -287,7 +290,10 @@ def get_mapobject_metadata(experiment_id, object_type):
         :statuscode 404: not found
 
     """
-    experiment_name = check_permissions(experiment_id)
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        experiment_name = experiment.name
+
     with tm.utils.ExperimentSession(experiment_id) as session:
         try:
             mapobject_type = session.query(tm.MapobjectType).\

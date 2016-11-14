@@ -69,7 +69,7 @@ def get_cycles(experiment_id):
             }
 
         :query plate_name: the name of the plate (optional)
-        :query cycle_index: the cycle's index (optional)
+        :query index: the cycle's index (optional)
 
         :statuscode 200: no error
         :statuscode 404: no matching cycle found
@@ -77,7 +77,7 @@ def get_cycles(experiment_id):
     """
     logger.info('get cycles for experiment %d', experiment_id)
     plate_name = request.args.get('plate_name', None)
-    cycle_index = request.args.get('cycle_index', None)
+    cycle_index = request.args.get('index', None)
     with tm.utils.ExperimentSession(experiment_id) as session:
         cycles = session.query(tm.Cycle.id)
         if cycle_index is not None:
@@ -467,7 +467,7 @@ def get_experiments():
                 )
             )
         if experiment_name is not None:
-            logger.info('filter experiments for name "%s"', name)
+            logger.info('filter experiments for name "%s"', experiment_name)
             experiments = experiments.filter_by(name=experiment_name)
         return jsonify({
             'data': experiments.all()
@@ -981,7 +981,7 @@ def get_acquisitions(experiment_id):
             }
 
         :query plate_name: name of a parent plate (optional)
-        :query acquisition_name: name of an acquistion (optional)
+        :query name: name of an acquistion (optional)
 
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
@@ -989,7 +989,7 @@ def get_acquisitions(experiment_id):
 
     """
     plate_name = request.args.get('plate_name', None)
-    acquisition_name = request.args.get('acquisition_name', None)
+    acquisition_name = request.args.get('name', None)
     logger.info('get acquistions for experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisitions = session.query(tm.Acquisition)
