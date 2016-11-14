@@ -104,7 +104,7 @@ class TmapsConfig(object):
     def db_password(self):
         '''str: database password'''
         try:
-            return self._config.get('DEFAULT', 'db_password')
+            return self._config.get('DEFAULT', 'db_password', raw=True)
         except NoOptionError:
             raise ValueError(
                 'Parameter "db_password" is required in "DEFAULT" '
@@ -117,7 +117,9 @@ class TmapsConfig(object):
             raise ValueError(
                 'Configuration parameter "db_password" must have type str.'
             )
-        # NOTE: we need to escape special characters
+        # NOTE: Interpolation is turned off for this attribute.
+        # However, let's put the password between quotes to not break editor
+        # formatting.
         self._config.set('DEFAULT', 'db_password', '"%s"' % str(value))
 
     @property
