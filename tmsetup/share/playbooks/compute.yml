@@ -22,7 +22,7 @@
 #     msg: Variable {{ item }} is not defined!
 #   with_items:
 
-- name: Install TmToolbox, TmLibrary, JtModules, and JtLibrary packages
+- name: Install TmLibrary, JtModules, and JtLibrary packages
   hosts: tissuemaps_compute
   roles:
     - tmaps-compute

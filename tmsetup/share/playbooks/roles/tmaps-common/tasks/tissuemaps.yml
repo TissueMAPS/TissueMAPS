@@ -32,6 +32,7 @@
     # matplotlib:
     - pyqt4-dev-tools
     - libfreetype6-dev
+    - python-tk
     # shapely:
     - libgeos-dev
   tags:
@@ -40,7 +41,7 @@
 - name: Install numpy and cython Python packages
   become: yes
   command: /usr/local/bin/pip install cython --upgrade
-  # Using the pip module doesn't work???
+  # TODO: Using the pip module doesn't work???
   # pip: name=cython
   tags:
     - tissuemaps
@@ -123,29 +124,6 @@
 # - name: Install tmlibrary package
 #   pip:
 #     name: "git+{{ tm_github_url }}/tmlibrary@{{ tmlibrary_branch }}#egg=tmlibrary"
-#     extra_args: "--user --process-dependency-links"
-#   tags:
-#     - tissuemaps
-
-- name: Clone TmToolbox repository
-  git:
-    repo={{ tm_github_url }}/tmtoolbox
-    dest={{ ansible_env.HOME }}/tmtoolbox
-    version={{ tmtoolbox_branch }}
-  tags:
-    - tissuemaps
-
-- name: Install tmtoolbox package
-  shell: pip install -e {{ ansible_env.HOME }}/tmtoolbox --user --process-dependency-links
-  args:
-    chdir={{ ansible_env.HOME }}/tmtoolbox/
-    executable=/bin/bash
-  tags:
-    - tissuemaps
-
-# - name: Install tmtoolbox package
-#   pip:
-#     name: "git+{{ tm_github_url }}/tmtoolbox@{{ tmtoolbox_branch }}#egg=tmtoolbox"
 #     extra_args: "--user --process-dependency-links"
 #   tags:
 #     - tissuemaps
