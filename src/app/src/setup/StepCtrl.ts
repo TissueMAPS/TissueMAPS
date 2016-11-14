@@ -64,6 +64,8 @@ class StepCtrl {
             if (this.uiScrollingAdapter.topVisibleScope != undefined) {
                 var viewIndex = this.uiScrollingAdapter.topVisibleScope.$index;
                 this.uiScrollingAdapter.reload(viewIndex);
+            } else {
+                this.uiScrollingAdapter.reload(0);
             }
         });
     }
