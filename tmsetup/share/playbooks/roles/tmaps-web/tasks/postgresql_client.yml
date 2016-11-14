@@ -31,13 +31,13 @@
   tags:
     - db
 
-- name: Update db password to TissueMAPS configuration
+- name: Update db password in TissueMAPS configuration
   ini_file:
     dest={{ tmaps_config_file }}
     section=DEFAULT
     state=present
     option=db_password
-    value={{ db_password }}
+    value="\"{{ db_password }}\""
   tags:
     - db
     - tissuemaps

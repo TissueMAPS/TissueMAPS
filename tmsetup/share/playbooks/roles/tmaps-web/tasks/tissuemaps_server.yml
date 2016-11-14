@@ -38,15 +38,3 @@
 #   tags:
 #     - tissuemaps
 #     - tmserver
-
-- name: Add server config to TissuMAPS configuration file
-  command: "{{ tmaps_install_location }}/tm_create_config --server"
-  tags:
-    - tissuemaps
-    - tmserver
-
-- name: Add scripts to start and stop server
-  template: src={{ item }}.j2 dest={{ ansible_env.HOME }}/{{ item }}
-  with_items:
-    - start_server.sh
-    - stop_server.sh

@@ -133,10 +133,3 @@
   tags:
     - tissuemaps
     - config
-
-- name: Create TissuMAPS library part of the configuration
-  shell: "{{ tmaps_install_location }}/tm_create_config"
-  tags:
-    - tissuemaps
-    - config
-

@@ -15,20 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Place script for creation of slurm users
+- name: Place conventience scripts
   template:
-    src={{ playbook_dir }}/roles/tmaps-web/templates/create_slurm_account.sh.j2
-    dest={{ ansible_env.HOME }}/create_slurm_account.sh
+    src={{ playbook_dir }}/roles/tmaps-web/templates/{{ item }}.j2
+    dest={{ ansible_env.HOME }}/{{ item }}
     mode="u+x"
-
-- name: Place script for starting TissueMAPS server (web and application servers)
-  template:
-    src={{ playbook_dir }}/roles/tmaps-web/templates/start_server.sh.j2
-    dest={{ ansible_env.HOME }}/start_server.sh
-    mode="u+x"
-
-- name: Place script for stopping TissueMAPS server (web and application servers)
-  template:
-    src={{ playbook_dir }}/roles/tmaps-web/templates/stop_server.sh.j2
-    dest={{ ansible_env.HOME }}/stop_server.sh
-    mode="u+x"
+  with_items:
+    - create_slurm_account.sh
+    - start_server.sh
+    - stop_server.sh

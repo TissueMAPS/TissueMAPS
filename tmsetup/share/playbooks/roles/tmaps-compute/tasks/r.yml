@@ -19,16 +19,12 @@
 - name: Add apt key for R repo
   become: yes
   apt_key: id="E084DAB9" keyserver="keyserver.ubuntu.com" state=present
-  # shell: |
-  #   gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9 \
-  #   gpg -a --export E084DAB9 | become apt-key add -
   tags:
     - r
 
 - name: Add R repo
   become: yes
   apt_repository: repo="deb http://cran.rstudio.com/bin/linux/ubuntu {{ ansible_distribution_release|lower }}/"
-  #validate_certs=no
   tags:
     - r
 
