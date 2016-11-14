@@ -27,6 +27,7 @@ from cStringIO import StringIO
 from tmclient.base import HttpClient
 from tmclient.log import configure_logging
 from tmclient.log import map_logging_verbosity
+from tmclient.errors import QueryError
 
 
 logger = logging.getLogger(__name__)
@@ -354,12 +355,18 @@ class TmClient(HttpClient):
         '''
         logger.debug('get ID for experiment "%s"', experiment_name)
         params = {
-            'experiment_name': experiment_name,
+            'name': experiment_name,
         }
-        url = self.build_url('/api/experiments/id', params)
+        url = self.build_url('/api/experiments', params)
         res = self.session.get(url)
         res.raise_for_status()
-        return res.json()['id']
+        data = res.json()['data']
+        if len(data) > 1:
+            raise QueryError(
+                'More than one experiment found with name "%s"' %
+                experiment_name
+            )
+        return data[0]['id']
 
     def create_experiment(self, microscope_type, plate_format,
             plate_acquisition_mode):
@@ -409,14 +416,19 @@ class TmClient(HttpClient):
         '''
         logger.debug('get ID for plate "%s"' % plate_name)
         params = {
-            'plate_name': plate_name,
+            'name': plate_name,
         }
         url = self.build_url(
-            '/api/experiments/%s/plates/id' % self._experiment_id, params
+            '/api/experiments/%s/plates' % self._experiment_id, params
         )
         res = self.session.get(url)
         res.raise_for_status()
-        return res.json()['id']
+        data = res.json()['data']
+        if len(data) > 1:
+            raise QueryError(
+                'More than one plate found with name "%s"' % name
+            )
+        return data[0]['id']
 
     def create_plate(self, plate_name):
         '''Creates a new plate.
@@ -461,15 +473,21 @@ class TmClient(HttpClient):
         )
         params = {
             'plate_name': plate_name,
-            'acquisition_name': acquisition_name
+            'name': acquisition_name
         }
         url = self.build_url(
-            '/api/experiments/%s/acquisitions/id' % self._experiment_id,
+            '/api/experiments/%s/acquisitions' % self._experiment_id,
             params
         )
         res = self.session.get(url)
         res.raise_for_status()
-        return res.json()['id']
+        data = res.json()['data']
+        if len(data) > 1:
+            raise QueryError(
+                'More than one acquisition found with name "%s" and '
+                'plate name "%s"' % (acquisition_name, plate_name)
+            )
+        return data[0]['id']
 
     def create_acquisition(self, plate_name, acquisition_name):
         '''Creates a new acquisition.
@@ -522,14 +540,20 @@ class TmClient(HttpClient):
         )
         params = {
             'plate_name': plate_name,
-            'cycle_index': cycle_index
+            'index': cycle_index
         }
         url = self.build_url(
             '/api/experiments/%s/cycles/id' % self._experiment_id, params
         )
         res = self.session.get(url)
         res.raise_for_status()
-        return res.json()['id']
+        data = res.json()['data']
+        if len(data) > 1:
+            raise QueryError(
+                'More than one cycle found with index %d and '
+                'plate name "%s"' % (cycle_index, plate_name)
+            )
+        return data[0]['id']
 
     def _get_channel_id(self, channel_name):
         '''Gets the ID of a channel given its name.
@@ -547,14 +571,19 @@ class TmClient(HttpClient):
         '''
         logger.debug('get channel ID given channel "%s"', channel_name)
         params = {
-            'channel_name': channel_name,
+            'name': channel_name,
         }
         url = self.build_url(
-            '/api/experiments/%s/channels/id' % self._experiment_id, params
+            '/api/experiments/%s/channels' % self._experiment_id, params
         )
         res = self.session.get(url)
         res.raise_for_status()
-        return res.json()['id']
+        data = res.json()['data']
+        if len(data) > 1:
+            raise QueryError(
+                'More than one channel found with name "%s"' % channel_name
+            )
+        return data[0]['id']
 
     def _get_channel_layer_id(self, channel_name, tpoint=0, zplane=0):
         '''Gets the ID of a channel layer given the name of the parent channel
@@ -585,12 +614,18 @@ class TmClient(HttpClient):
             'zplane': zplane
         }
         url = self.build_url(
-            '/api/experiments/%s/channel_layers/id' % self._experiment_id,
+            '/api/experiments/%s/channel_layers' % self._experiment_id,
             params
         )
         res = self.session.get(url)
         res.raise_for_status()
-        return res.json()['id']
+        data = res.json()['data']
+        if len(data) > 1:
+            raise QueryError(
+                'More than one channel layer found with channel name "%s" '
+                'tpoint %d and zplane %d' % (channel_name, tpoint, zplane)
+            )
+        return data[0]['id']
 
     def get_uploaded_filenames(self, plate_name, acquisition_name):
         '''Gets the names of files that have already been successfully
