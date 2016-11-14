@@ -156,11 +156,11 @@ def process_tool_request(experiment_id):
         :statuscode 200: no error
 
     """
-    logger.info('process request of tool "%s"', tool_name)
     data = request.get_json()
     payload = data.get('payload', {})
     session_uuid = data.get('session_uuid')
     tool_name = data.get('tool_name')
+    logger.info('process request of tool "%s"', tool_name)
 
     verbosity = LEVELS_TO_VERBOSITY[server_cfg.log_level]
     manager = ToolRequestManager(experiment_id, tool_name, verbosity)
