@@ -526,10 +526,6 @@ def get_experiment(experiment_id):
     logger.info('get experiment %d', experiment_id)
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        if not experiment.can_be_viewed_by(current_identity.id):
-            raise NotAuthorizedError(
-                'No permissions to view experiment "%s"' % experiment.name
-            )
         return jsonify({
             'data': experiment
         })
@@ -691,10 +687,6 @@ def delete_experiment(experiment_id):
     logger.info('delete experiment %d', experiment_id)
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        if not experiment.can_be_modified_by(current_identity.id):
-            raise NotAuthorizedError(
-                'No permissions to delete experiment "%s"' % experiment.name
-            )
         session.query(tm.ExperimentReference).\
             filter_by(id=experiment_id).\
             delete()
@@ -816,12 +808,6 @@ def delete_plate(experiment_id, plate_id):
 
     """
     logger.info('delete plate %d from experiment %d', plate_id, experiment_id)
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        if not experiment.can_be_modified_by(current_identity.id):
-            raise NotAuthorizedError(
-                'No permissions to modify experiment "%s"' % experiment.name
-            )
     with tm.utils.ExperimentSession(experiment_id) as session:
         session.query(tm.Plate).filter_by(id=plate_id).delete()
     return jsonify(message='ok')
@@ -1021,12 +1007,6 @@ def delete_acquisition(experiment_id, acquisition_id):
         'delete acquisition %d from experiment %d',
         acquisition_id, experiment_id
     )
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        if not experiment.can_be_modified_by(current_identity.id):
-            raise NotAuthorizedError(
-                'No permissions to modify experiment "%s"' % experiment.name
-            )
     with tm.utils.ExperimentSession(experiment_id) as session:
         session.query(tm.Acquisition).filter_by(id=acquisition_id).delete()
     return jsonify(message='ok')
