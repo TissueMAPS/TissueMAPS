@@ -866,7 +866,6 @@ class ClassifierPandasInterface(ClassifierInterface):
                 'min_samples_leaf': [1, 3, 10]
             }
         }
-        n_samples = labeled_feature_data.shape[0]
 
         X = labeled_feature_data.drop('label', axis=1)
         y = labeled_feature_data.label
@@ -879,7 +878,7 @@ class ClassifierPandasInterface(ClassifierInterface):
         predictions = pd.DataFrame(
             gs.predict(unlabeled_feature_data).astype(float), columns=['label']
         )
-        predictions['mapobject_id'] = feature_data.index.astype(int)
+        predictions['mapobject_id'] = unlabeled_feature_data.index.astype(int)
         return predictions
 
     def classify_unsupervised(self, feature_data, k, method):
