@@ -60,6 +60,7 @@ On the deploying machine, you need to install the software required for the setu
 
 First, install non-Python dependencies::
 
+    sudo apt-get update
     sudo apt-get -y install git build-essential python-pip python-dev libc6-dev libffi-dev libssl-dev
 
 and then the `tmsetup` Python package::
