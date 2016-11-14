@@ -17,7 +17,7 @@
 ---
 - name: Add apt-get repository for latest version of Python2.7
   become: yes
-  apt_repository: repo="ppa:fkrull/deadsnakes-python2.7" state=present 
+  apt_repository: repo="ppa:fkrull/deadsnakes-python2.7" state=present
   tags:
     - python
 
@@ -39,6 +39,8 @@
     - python-pip
     - python-setuptools
     - build-essential
+    - ipython
+    - ipdb
 
 - name: Upgrade pip
   pip: name=pip extra_args='--upgrade' editable=false
