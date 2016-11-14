@@ -96,6 +96,7 @@ setuptools.setup(
         'mahotas>=1.4.0',
         'centrosome>=1.0.5',
         'pytest>=2.8.2',
-        'tox>=2.3.1'
+        'tox>=2.3.1',
+        'jtlibrary>=0.1.0'
     ]
 )
