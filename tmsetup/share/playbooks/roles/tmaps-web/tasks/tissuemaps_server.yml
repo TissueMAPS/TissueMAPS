@@ -44,3 +44,9 @@
   tags:
     - tissuemaps
     - tmserver
+
+- name: Add scripts to start and stop server
+  template: src={{ item }}.j2 dest={{ ansible_env.HOME }}/{{ item }}
+  with_items:
+    - start_server.sh
+    - stop_server.sh
