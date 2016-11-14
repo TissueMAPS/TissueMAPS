@@ -12,14 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 class ResultsControlsCtrl {
-    static $inject = ['$scope'];
+    static $inject = ['$scope', '$stateParams'];
 
-    constructor(private _$scope: ResultsSettingsScope) {}
+    constructor(private _$scope: ResultsSettingsScope, private _$stateParams) {
+    }
 
     removeSelectedResults() {
         var $scope = this._$scope;
+        var dao = new ToolResultDAO(this._$stateParams.experimentid);
         $scope.selectionBox.getSelectedItems().forEach((res) => {
-            $scope.resultsSettingsCtrl.viewer.deleteSavedResult(res);
+            dao.delete(res.id).then(() => {
+                $scope.resultsSettingsCtrl.viewer.deleteSavedResult(res);
+            },
+            (err) => {
+                console.log(err);
+            });
         });
     };
 

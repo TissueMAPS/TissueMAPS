@@ -32,6 +32,10 @@ class ToolResult {
     private _visible: boolean;
     private _viewer: Viewer = null;
 
+    get viewer() {
+        return this._viewer;
+    }
+
     get visible() {
         return this._visible;
     }

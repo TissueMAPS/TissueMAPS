@@ -18,10 +18,17 @@
               <i ng-hide="result.visible" ng-click="result.visible = true" class="fa fa-circle-thin"></i>
           </span>
 
-          <!-- <input type="text" ng-model="result.name" tm-stop-click></input> -->
-          <span contenteditable strip-br="true" ng-model="result.name"
-               select-non-editable="true">
+          <span class="inline-layer-control"
+            ng-click="resultCtrl.toggleRenamingMode()"
+            ng-class="{'active': resultCtrl.inRenamingMode}"
+            tm-stop-click>
+            <i class="fa fa-pencil-square" aria-hidden="true"></i>
           </span>
+
+          <input type="text" ng-model="result.name"
+            ng-change="resultCtrl.changeName()"
+            ng-model-options="{ updateOn: 'blur' }"
+            ng-disabled="!resultCtrl.inRenamingMode" tm-stop-click>
 
         </tm-selectable-tab-content>
 

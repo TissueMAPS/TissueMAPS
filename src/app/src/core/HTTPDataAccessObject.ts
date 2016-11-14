@@ -118,4 +118,21 @@ abstract class HTTPDataAccessObject<T extends Model> {
             return resp.data.error;
         });
     }
+
+    /**
+     * Update a server-side object given its id.
+     * @param {number} id - The id of the object to be deleted.
+     * @param {Object} props - A mapping of property names to their values.
+     * @returns {ng.IPromise<T | APIError>} Either boolean indicator flag wrapped
+     *          in a promise or an object of type APIError.
+     */
+    update(id: string, props: any): ng.IPromise<boolean | APIError> {
+        return this._$http.put(this.url + '/' + id, props)
+        .then((resp) => {
+            return true;
+        })
+        .catch((resp) => {
+            return resp.data.error;
+        });
+    }
 }

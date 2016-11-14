@@ -15,6 +15,9 @@ class ResultCtrl {
     result: ToolResult;
 
     private _opacityInput: number;
+    private _origName: string;
+
+    inRenamingMode: boolean = false;
 
     get opacityInput() {
         return this._opacityInput;
@@ -25,11 +28,28 @@ class ResultCtrl {
         this.result.layer.opacity = v / 100;
     }
 
+    toggleRenamingMode() {
+        this.inRenamingMode = !this.inRenamingMode;
+    }
+
+    changeName() {
+        var dao = new ToolResultDAO(this.result.viewer.experiment.id);
+        var newName = this.result.name;
+        dao.update(this.result.id, {
+            name: this.result.name
+        }).then(() => {
+            this.result.name = newName;
+        }, () => {
+            this.result.name = this._origName;
+        });
+    }
+
     static $inject = ['$scope'];
 
-    constructor($scope: any) {
+    constructor($scope: any, private _$stateParams) {
         this.result = $scope.result;
         this.opacityInput = this.result.layer.opacity * 100;
+        this._origName = this.result.name;
     }
 }
 

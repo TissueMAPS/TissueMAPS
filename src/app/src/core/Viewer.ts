@@ -101,7 +101,6 @@ class Viewer {
     getTools(): ng.IPromise<any> {
         return this._$http.get('/api/tools')
         .then((resp: any) => {
-            // console.log(resp)
             return resp.data.data.map((t) => {
                 return new Tool(t);
             });
@@ -207,7 +206,6 @@ class Viewer {
     private _handleSuccessfulToolResult(res: SerializedToolResult) {
         // TODO: Send event to Viewer messagebox
         // var sessionUUID = data.session_uuid;
-        console.log('ToolService: HANDLE REQUEST.');
         var result = (new ToolResultDAO(this.experiment.id)).fromJSON(res);
         result.attachToViewer(this);
         result.visible = false;
@@ -215,7 +213,6 @@ class Viewer {
         // session.results.push(result);
         if (this.currentResult !== null) {
             if (result.submissionId > this.currentResult.submissionId) {
-                console.log('update current result: ', result)
                 this.saveCurrentResult();
                 this.currentResult = result;
             } else {
@@ -224,17 +221,14 @@ class Viewer {
                         return res.submissionId;
                     })
                     if (submissionIds.indexOf(result.submissionId) == -1) {
-                        console.log('save result: ', result)
                         this.savedResults.push(result);
                     }
                 }
             }
         } else {
-            console.log('update current result: ', result)
             this.currentResult = result;
         }
         // TODO: Send event to Viewer messagebox
-        console.log('ToolService: DONE.');
     }
 
 
@@ -243,12 +237,18 @@ class Viewer {
      * there is such a result, add it to the viewer.
      */
     private _getAndHandleToolResult(submissionId: number) {
-        return this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + submissionId)
-        .then((resp: any) => {
-            var result = resp.data.data;
-            this._handleSuccessfulToolResult(result);
-            return result;
-        });
+        return this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result/id?submission_id=' + submissionId)
+        .then((resp) => {
+            return resp.data.data.id;
+        })
+        .then((resultId) => {
+            return this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result/' + resultId)
+            .then((resp: any) => {
+                var result = resp.data.data;
+                this._handleSuccessfulToolResult(result);
+                return result;
+            });
+        })
     }
 
     /**
