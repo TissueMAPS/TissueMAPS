@@ -41,7 +41,7 @@
     state: present
     name: "{{ network }}"
     fwname: web
-    allowed: tcp:22,80,443;icmp
+    allowed: tcp:22,80,443,8080;icmp
     ipv4_range: 0.0.0.0/0
     target_tags:
       - web
