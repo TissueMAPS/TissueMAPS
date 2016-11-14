@@ -479,7 +479,6 @@ class _Session(object):
                 'after_bulk_delete', self._after_bulk_delete_callback
             )
         self._session.close()
-        DATABASE_ENGINES[self._db_uri].dispose()
 
     def _after_bulk_delete_callback(self, delete_context):
         '''Deletes locations defined by instances of :class`tmlib.Model`
