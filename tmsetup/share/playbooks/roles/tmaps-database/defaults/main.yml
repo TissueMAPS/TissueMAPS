@@ -29,6 +29,6 @@ db_name: tissuemaps
 # Override them according to node flavor used for server
 pg_shared_buffers: 128MB               # 20-40% of total memory
 pg_effective_cache_size: 4GB           # 50-75% of total memory
-pg_max_connections: 100                # at least: number of nodes x pool size
+pg_max_connections: 500                # at least: number of nodes x pool size
 pg_max_worker_processes: 4
 pg_max_parallel_workers_per_gather: 0  # 0 turns off parallization of select queries
