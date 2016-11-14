@@ -262,10 +262,10 @@ def upload_file(experiment_id, acquisition_id):
 
         # TODO: Status codes
         if file_obj.status == FileUploadStatus.COMPLETE:
-            logger.info('file "%s" already uploaded')
+            logger.info('file "%s" already uploaded', filename)
             return jsonify(message='File already uploaded')
         elif file_obj.status == FileUploadStatus.UPLOADING:
-            logger.info('file "%s" already uploading')
+            logger.info('file "%s" already uploading', filename)
             return jsonify(message='File upload already in progress')
 
         logger.info('upload file "%s"', filename)
