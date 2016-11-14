@@ -265,16 +265,11 @@ class Viewer {
         });
 
         // Query the server for running jobs and start monitoring their status
-        // TODO: Add option to get filter status by state, i.e.
-        // GET /api/experiments/xxx/tools/status?state=RUNNING
-        this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status')
+        this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status?state=RUNNING')
         .then((resp: any) => {
             var jobStati = resp.data.data;
             _(jobStati).each((st) => {
-                var jobStillRunning = st.state === 'RUNNING';
-                if (jobStillRunning) {
-                    this._startMonitoringForToolResult(st.submission_id);
-                }
+                this._startMonitoringForToolResult(st.submission_id);
             });
         });
     }
