@@ -310,5 +310,5 @@ if __name__ == '__main__':
     for param in func_inputs.args:
         if param not in vars(args):
             raise ValueError('Required argument "%s" not provided.' % param)
-        kwargs[param] = args.get(param)
+        kwargs[param] = getattr(args, param)
     func(**kwargs)
