@@ -30,7 +30,7 @@
   hosts: tissuemaps_web
   tasks:
     - name: Create default user "testuser"
-      command: "{{ tmaps_install_location }}/tm_create_user --name testuser --password {{ tm_testuser_password }} --email testuser@tissuemaps.org"
+      command: "{{ tmaps_install_location }}/tm_add user --name testuser --password {{ tm_testuser_password }} --email testuser@tissuemaps.org"
       tags:
         - db
         - tissuemaps
