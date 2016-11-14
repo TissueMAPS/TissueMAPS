@@ -157,15 +157,20 @@ def get_segmentation_image(experiment_id, object_type):
         for seg in segmentations:
             polygons[(tpoint, zplane, seg.label)] = seg.geom_poly
 
-        height = site.height - (
-            site.intersection.lower_overhang + site.intersection.upper_overhang
-        )
-        width = site.width - (
-            site.intersection.left_overhang + site.intersection.right_overhang
-        )
         y_offset, x_offset = site.offset
-        y_offset += site.intersection.lower_overhang
-        x_offset += site.intersection.right_overhang
+        height = site.height
+        width = site.width
+        if site.intersection is not None:
+            height = height - (
+                site.intersection.lower_overhang +
+                site.intersection.upper_overhang
+            )
+            width = width - (
+                site.intersection.left_overhang +
+                site.intersection.right_overhang
+            )
+            y_offset += site.intersection.lower_overhang
+            x_offset += site.intersection.right_overhang
 
         filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
             experiment_name, site.well.name, site.x, site.y, zplane, tpoint,
@@ -176,7 +181,7 @@ def get_segmentation_image(experiment_id, object_type):
         polygons, y_offset, x_offset, (height, width)
     )
     f = StringIO()
-    f.write(img.encode('png'))
+    f.write(img.png_encode())
     f.seek(0)
     return send_file(
         f,
