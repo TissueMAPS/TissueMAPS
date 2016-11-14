@@ -181,7 +181,7 @@ def get_segmentation_image(experiment_id, object_type):
         polygons, y_offset, x_offset, (height, width)
     )
     f = StringIO()
-    f.write(img.encode('png'))
+    f.write(img.png_encode())
     f.seek(0)
     return send_file(
         f,
