@@ -249,25 +249,29 @@ class Viewer {
                 this._handleSuccessfulToolResult(result);
                 return result;
             }
+        }, (resp) => {
+            console.log(resp.data);
         });
     }
 
-    /**
-     * Check all terminated and running jobs for the current user and experiment.
-     * If a job has terminated already, get the result it produced and add it to
-     * the viewer.
-     */
     private _getExistingToolResults() {
+        // Get existing results
+        this._$http.get('/api/experiments/' + this.experiment.id + '/tools/results')
+        .then((resp: any) => {
+            var results = resp.data.data;
+            _(results).each((result) => {
+                this._handleSuccessfulToolResult(result);
+            });
+        });
+
+        // Query the server for running jobs and start monitoring their status
+        // TODO: Add option to get filter status by state, i.e.
+        // GET /api/experiments/xxx/tools/status?state=RUNNING
         this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status')
         .then((resp: any) => {
             var jobStati = resp.data.data;
             _(jobStati).each((st) => {
-                var didJobEnd = st.state === 'TERMINATING' || st.state === 'TERMINATED';
-                var jobSuccessful = didJobEnd && st.exitcode === 0;
                 var jobStillRunning = st.state === 'RUNNING';
-                if (jobSuccessful) {
-                    this._getAndHandleToolResult(st.submission_id);
-                }
                 if (jobStillRunning) {
                     this._startMonitoringForToolResult(st.submission_id);
                 }
