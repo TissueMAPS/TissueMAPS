@@ -6,6 +6,6 @@ socket = $(HOME)/.tmaps/uwsgi.sock
 chmod-socket = 666
 vacuum = true
 master = true
-processes = 16
+processes = "{{ uwsgi_processes }}"
 gevent = 100
 die-on-term = true
