@@ -437,6 +437,7 @@ def get_tool_job_status(experiment_id):
 
     """
     submission_id = request.args.get('submission_id', type=int)
+    state_query_arg = request.args.get('state')
 
     if submission_id is None:
         logger.info('get status of tool jobs for experiment %d', experiment_id)
@@ -449,13 +450,17 @@ def get_tool_job_status(experiment_id):
             ).\
             join(tm.Submission)
         if submission_id is None:
-            tool_jobs = query.\
+            tool_jobs_query = query.\
             filter(
                 tm.Submission.program == 'tool',
                 tm.Submission.experiment_id == experiment_id,
                 tm.Submission.user_id == current_identity.id
-            ).\
-            all()
+            )
+            if state_query_arg is not None:
+                tool_jobs_query = tool_jobs_query.filter(
+                    tm.Task.state == state_query_arg
+                )
+            tool_jobs = tool_jobs_query.all()
             tool_job_status = [
                 {
                     'state': j.state,
