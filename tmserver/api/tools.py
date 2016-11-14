@@ -188,7 +188,7 @@ def process_tool_request(experiment_id):
 @decode_query_ids('read')
 def get_tool_result(experiment_id, tool_result_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/tools/result
+    .. http:get:: /api/experiments/(string:experiment_id)/tools/results/(string:tool_result_id)
 
         Get the result of a previous tool request including a label layer that
         can be queried for tiled cell labels as well as optional plots.
@@ -221,13 +221,63 @@ def get_tool_result(experiment_id, tool_result_id):
         :statuscode 200: no error
 
     """
-    submission_id = request.args.get('submission_id', type=int)
-    logger.info('get tool result for submission %d', submission_id)
+    logger.info(
+        'get tool result %d for experiment %d', tool_result_id, experiment_id
+    )
     with tm.utils.ExperimentSession(experiment_id) as session:
         tool_result = session.query(tm.ToolResult).get(tool_result_id)
         if tool_result is None:
             raise ResourceNotFoundError(tm.ToolResult)
         return jsonify(data=tool_result)
+
+
+@api.route(
+    '/experiments/<experiment_id>/tools/results/<tool_result_id>',
+    methods=['PUT']
+)
+@jwt_required()
+@decode_query_ids('read')
+def rename_tool_result(experiment_id, tool_result_id):
+    """
+    .. http:put:: /api/experiments/(string:experiment_id)/tools/result/(string:tool_result_id)
+
+        Rename a tool result.
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "name": "New Name"
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+
+    """
+    data = request.get_json()
+    name = data.get('name')
+    logger.info(
+        'rename tool result %d of experiment %d', tool_result_id, experiment_id
+    )
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        tool_result = session.query(tm.ToolResult).get(tool_result_id)
+        tool_result.name = name
+    return jsonify(message='ok')
+
 
 @api.route(
     '/experiments/<experiment_id>/tools/results', methods=['GET']
@@ -285,7 +335,7 @@ def get_tool_results(experiment_id):
     logger.info('get tool results')
 
     if submission_id is not None:
-        logging.info(
+        logger.info(
             'filter tool results for submissions %d', int(submission_id)
         )
         submission_ids = [int(submission_id)]
@@ -306,7 +356,7 @@ def get_tool_results(experiment_id):
 
 
 @api.route(
-    '/experiments/<experiment_id>/tools/result/<tool_result_id>',
+    '/experiments/<experiment_id>/tools/results/<tool_result_id>',
     methods=['DELETE']
 )
 @jwt_required()
