@@ -12,10 +12,10 @@
     <tr ui-scroll="job in stepCtrl.jobsDataSource" buffer-size="50" start-index="0" adapter="stepCtrl.uiScrollingAdapter">
       <td>
         <i class="fa fa-exclamation-circle" aria-hidden="true" style="color: red;"
-          ng-show="job.status.failed">
+          ng-show="job.failed">
         </i>
         <i class="fa fa-check-circle" aria-hidden="true" style="color: green;"
-          ng-hide="job.status.failed">
+          ng-hide="job.failed">
         </i>
       </td>
       <td>{{ job.name }}</td>

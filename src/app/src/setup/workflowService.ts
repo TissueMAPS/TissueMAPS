@@ -224,9 +224,14 @@ class WorkflowService {
         var data = {
             description: this.workflow.getDescription(index)
         };
+        this._$rootScope.$emit('updateJobStatus')
         return this._$http.post('/api/experiments/' + experiment.id + '/workflow/submit', data)
         .then((resp) => {
             // console.log(resp);
+            // data.description.stages[index-1].steps.map((step, stepIndex) => {
+            //     console.log('UPDATE JOBS for step ', step.name)
+            //     return this._$rootScope.$emit('updateJobStatus', step.name);
+            // });
             return resp;
         })
         .catch((resp) => {
@@ -245,8 +250,6 @@ class WorkflowService {
         return this._$http.post('/api/experiments/' + experiment.id + '/workflow/resubmit', data)
         .then((resp) => {
             // console.log(resp)
-            // TODO: remove jobs from stepCtrl.jobsDataSource upon
-            // successful resubmission
             return resp;
         })
         .catch((resp) => {

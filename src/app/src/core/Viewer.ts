@@ -325,11 +325,15 @@ class Viewer {
         console.log('ToolService: START REQUEST.');
         return $http.post(url, request).then(
         (resp: any) => {
-            var submissionId = resp.data.data.submission_id;
-            this._startMonitoringForToolResult(submissionId);
-            var dialogService = $injector.get<DialogService>('dialogService');
-            dialogService.info('Job submission successful!');
-            return true;
+            if (resp.data.data) {
+                var submissionId = resp.data.data.submission_id;
+                this._startMonitoringForToolResult(submissionId);
+                var dialogService = $injector.get<DialogService>('dialogService');
+                dialogService.info('Job submission successful!');
+                return true;
+            } else {
+                return false;
+            }
         },
         (err) => {
             // TODO: Dialog to show that submission was successful

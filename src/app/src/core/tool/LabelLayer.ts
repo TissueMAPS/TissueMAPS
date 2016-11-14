@@ -92,7 +92,7 @@ abstract class LabelLayer extends VectorTileLayer {
             }
         };
         var url = '/api/experiments/' + args.experimentId +
-            '/labellayers/' + args.id +
+            '/label_layers/' + args.id +
             '/tiles?x={x}&y={y}&z={z}' + '&zplane=' + args.zplane +
             '&tpoint=' + args.tpoint;
 

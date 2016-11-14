@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 angular.module('jtui.runner')
-.controller('RunnerCtrl', ['$scope', '$state', '$stateParams', '$uibModal', '$window', '$sce', 'hotkeys',
-        function ($scope, $state, $stateParams, $uibModal, $window, $sce, hotkeys) {
+.controller('RunnerCtrl', ['$scope', '$state', '$stateParams', '$uibModal', '$window', 'hotkeys', 'projectService',
+        function ($scope, $state, $stateParams, $uibModal, $window, hotkeys,
+            projectService) {
 
     var currentModuleName = $stateParams.moduleName;
     // Get the current module
@@ -98,13 +99,13 @@ angular.module('jtui.runner')
             // windowTopClass: 'figure-window',
             resolve: {
                 figure: ['projectService', function(projectService){
-                            return projectService.getModuleFigure(
-                                    $stateParams.experimentid,
-                                    $stateParams.projectName,
-                                    $scope.module.name,
-                                    $scope.jobs[jobIndex].id
-                                );
-                        }],
+                    return projectService.getModuleFigure(
+                            $stateParams.experimentid,
+                            $stateParams.projectName,
+                            $scope.module.name,
+                            $scope.jobs[jobIndex].id
+                        );
+                }],
                 name: function () {
                     return $scope.module.name;
                 },
@@ -134,34 +135,16 @@ angular.module('jtui.runner')
       description: 'go to next module (downstream in the pipeline)',
       callback: $scope.goToNextModule
     })
-    // .add({
-    //   combo: 'o',
-    //   description: 'show log output of current job',
-    //   callback: $scope.showJobLog
-    // })
-    // .add({
-    //   combo: 'f',
-    //   description: 'show figure of current module and job',
-    //   callback: $scope.showFigure
-    // })
-
-    // $scope.showThumbnail = function () {
-    //     if ($scope.jobs.currentId) {
-    //         var jobIndex = $scope.jobs.output.map(function (e) {
-    //             return e.id;
-    //         }).indexOf($scope.jobs.currentId);
-    //         for (i in $scope.jobs.output) {
-    //             if (i == jobIndex) {
-    //                 for (j in $scope.jobs.output[jobIndex].modules) {
-    //                     if ($scope.jobs.output[jobIndex].modules[j].name == currentModuleName) {
-    //                         var thumbnail = $scope.jobs.output[jobIndex].modules[j].thumbnail;
-    //                         return thumbnail;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }   
-    // };
+    .add({
+      combo: 'o',
+      description: 'show log output of current job',
+      callback: $scope.showJobLog
+    })
+    .add({
+      combo: 'f',
+      description: 'show figure of current module and job',
+      callback: $scope.showFigure
+    })
 
     $scope.reportBug = function(){
         $window.open('https://github.com/TissueMAPS/JtLibrary/issues', '_blank');

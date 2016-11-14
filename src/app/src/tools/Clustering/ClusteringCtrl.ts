@@ -32,8 +32,10 @@ class ClusteringCtrl extends ToolCtrl {
         this.sendRequest({
             chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
             selected_features: selectedFeatures,
-            k: this.nClusters,
-            method: this.algorithm
+            options: {
+                k: this.nClusters,
+                method: this.algorithm
+            }
         });
     }
 }

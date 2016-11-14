@@ -71,13 +71,13 @@ class Workflow extends JobCollection {
             stages: this.stages.map((stage, idx) => {
                 if (idx > 0 && stage.name != 'upload') {
                     // skip "upload" stage
-                    var getDescriptiondStage = stage.getDescription();
+                    var stageDescription = stage.getDescription();
                     if (idx <= index) {
-                        getDescriptiondStage.active = true;
+                        stageDescription.active = true;
                     } else {
-                        getDescriptiondStage.active = false;
+                        stageDescription.active = false;
                     }
-                    return getDescriptiondStage;
+                    return stageDescription;
                 }
             })
             .filter((stage) => {

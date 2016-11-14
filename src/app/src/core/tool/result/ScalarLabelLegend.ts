@@ -26,15 +26,16 @@ class ScalarLabelLegend extends Legend {
 
         var color;
         for (var i = 0; i < labels.length; i++) {
+            var str = ('     ' + labels[i]).slice(-15);
             annotations.push({
-                x: 0.60,
+                x: 6,
                 y: (i + 1) * 10 - 5,
-                text: labels[i],
-                xanchor: 'center',
+                text: str,
+                xanchor: 'right',
                 yanchor: 'center',
                 showarrow: false,
                 font: {
-                    size: 22,
+                    size: 10,
                     color: 'white',
                     style: 'bold'
                 }

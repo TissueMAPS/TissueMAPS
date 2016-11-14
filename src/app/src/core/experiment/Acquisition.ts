@@ -144,6 +144,7 @@ class Acquisition {
                                 name: file.name, status: 'COMPLETE'
                             });
                             namesUploadedFiles.push(file.name)
+                            this.nFiles = this.nFiles + 1;
                         }
                     }
                 });
