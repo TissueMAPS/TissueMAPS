@@ -81,8 +81,6 @@ def add_acquisition(experiment_name, plate_name, acquisition_name):
             raise ValueError(
                 'Experiment "%s" does not exist!' % experiment_name
             )
-        except:
-            raise
 
     with tm.utils.ExperimentSession(experiment_id) as session:
         try:
@@ -94,8 +92,6 @@ def add_acquisition(experiment_name, plate_name, acquisition_name):
                 'Plate "%s" does not exist for experiment "%s"!'
                 % (plate_name, experiment_name)
             )
-        except:
-            raise
         acquisition = session.get_or_create(
             tm.Acquisition, name=acquisition_name, plate_id=plate.id
         )
@@ -113,8 +109,6 @@ def add_plate(experiment_name, plate_name):
             raise ValueError(
                 'Experiment "%s" does not exist!' % experiment_name
             )
-        except:
-            raise
 
     with tm.utils.ExperimentSession(experiment_id) as session:
         plate = session.get_or_create(tm.Plate, name=plate_name)
@@ -132,8 +126,6 @@ def add_files(experiment_name, plate_name, acquisition_name):
             raise ValueError(
                 'Experiment "%s" does not exist!' % experiment_name
             )
-        except:
-            raise
 
     with tm.utils.ExperimentSession(experiment_id) as session:
 
@@ -191,8 +183,13 @@ def add_files(experiment_name, plate_name, acquisition_name):
 
 def add_user(name, password, email):
     with tm.utils.MainSession() as session:
-        user = tm.User(name=name, password=password, email=email)
-        session.add(user)
+        try:
+            user = session.query(tm.User).filter_by(name=name).one()
+            user.email = email
+            user.password = password
+        except sqlalchemy.orm.exc.NoResultFound:
+            user = tm.User(name=name, password=password, email=email)
+            session.add(user)
 
 
 if __name__ == '__main__':

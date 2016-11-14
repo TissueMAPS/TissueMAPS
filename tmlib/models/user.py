@@ -16,6 +16,7 @@
 from passlib.hash import sha256_crypt
 from sqlalchemy import Column, String
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.base import MainModel, DateMixIn
 
@@ -39,7 +40,7 @@ class User(MainModel, DateMixIn):
     email = Column(String, unique=True, nullable=False)
 
     #: str: encoded password
-    password = Column(String, nullable=False)
+    _password = Column('password', String, nullable=False)
 
     #: List[tmlib.models.experiment.ExperimentReferences]: references to
     #: owned experiments
@@ -58,7 +59,16 @@ class User(MainModel, DateMixIn):
         '''
         self.name = name
         self.email = email
-        self.password = sha256_crypt.encrypt(password)
+        self.password = password
+
+    @hybrid_property
+    def password(self):
+        '''str: encoded password'''
+        return self._password
+
+    @password.setter
+    def password(self, value):
+        self._password = sha256_crypt.encrypt(str(value))
 
     def __repr__(self):
         return '<User(id=%r, name=%r)>' % (self.id, self.name)
