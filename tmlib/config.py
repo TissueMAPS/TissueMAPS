@@ -117,7 +117,8 @@ class TmapsConfig(object):
             raise ValueError(
                 'Configuration parameter "db_password" must have type str.'
             )
-        self._config.set('DEFAULT', 'db_password', str(value))
+        # NOTE: we need to escape special characters
+        self._config.set('DEFAULT', 'db_password', '"%s"' % str(value))
 
     @property
     def db_host(self):
