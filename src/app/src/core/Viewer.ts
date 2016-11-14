@@ -237,8 +237,8 @@ class Viewer {
      * there is such a result, add it to the viewer.
      */
     private _getAndHandleToolResult(submissionId: number) {
-        return this._$http.get('/api/experiments/' + this.experiment.id + '/tools/result?submission_id=' + submissionId)
-        .then((resp) => {
+        return this._$http.get('/api/experiments/' + this.experiment.id + '/tools/results?submission_id=' + submissionId)
+        .then((resp: any) => {
             var results = resp.data.data;
             if (results.length === 0) {
                 console.log('ERROR: No result found with submission_id ' + submissionId);
