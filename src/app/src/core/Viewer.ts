@@ -284,18 +284,25 @@ class Viewer {
         var monitor = () => {
             this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status?submission_id=' + submissionId)
             .then((resp: any) => {
-                var st = resp.data.data;
-                var didJobEnd = st.state === 'TERMINATING' || st.state === 'TERMINATED';
-                var jobSuccessful = didJobEnd && st.exitcode === 0;
-                var jobFailed = st.state === didJobEnd && st.exitcode == 1;
-                if (didJobEnd) {
-                    this._$interval.cancel(subscription);
-                }
-                if (jobSuccessful) {
-                    this._getAndHandleToolResult(st.submission_id);
-                }
-                if (jobFailed) {
-                    // TODO: Handle error
+                var results = resp.data.data;
+                if (results.length === 0) {
+                    console.log('ERROR: No result found with submission_id ' + submissionId);
+                } else if (results.length > 1) {
+                    console.log('ERROR: Multiple results founds for submission_id ' + submissionId);
+                } else {
+                    var st = results[0];
+                    var didJobEnd = st.state === 'TERMINATING' || st.state === 'TERMINATED';
+                    var jobSuccessful = didJobEnd && st.exitcode === 0;
+                    var jobFailed = st.state === didJobEnd && st.exitcode == 1;
+                    if (didJobEnd) {
+                        this._$interval.cancel(subscription);
+                    }
+                    if (jobSuccessful) {
+                        this._getAndHandleToolResult(st.submission_id);
+                    }
+                    if (jobFailed) {
+                        // TODO: Handle error
+                    }
                 }
             });
         };
