@@ -99,3 +99,10 @@
   tags:
     - opencv
     - python
+
+- name: Fix OpenCV driver issue
+  become: yes
+  shell: ln /dev/null /dev/raw1394
+  tags:
+    - opencv
+    - python
