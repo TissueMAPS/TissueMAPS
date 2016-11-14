@@ -158,12 +158,14 @@ def get_segmentation_image(experiment_id, object_type):
             polygons[(tpoint, zplane, seg.label)] = seg.geom_poly
 
         y_offset, x_offset = site.offset
+        height = site.height
+        width = site.width
         if site.intersection is not None:
-            height = site.height - (
+            height = height - (
                 site.intersection.lower_overhang +
                 site.intersection.upper_overhang
             )
-            width = site.width - (
+            width = width - (
                 site.intersection.left_overhang +
                 site.intersection.right_overhang
             )
