@@ -148,8 +148,6 @@ class CloudSection(SetupSection):
         self.ip_range = '10.65.4.0/24'
         self.network = 'tmaps'
         self.key_name = 'tmaps'
-        self.key_file_public = '~/.ssh/tmaps.pub'
-        self.key_file_private = '~/.ssh/tmaps'
         super(CloudSection, self).__init__(description)
 
     @property
@@ -244,6 +242,8 @@ class CloudSection(SetupSection):
         :attr:`key_name <tmsetup.config.CloudSection.key_name>` in ``~/.ssh``
         directory)
         '''
+        if not hasattr(self, '_key_file_private'):
+            self.key_file_private = '~/%s' % self.key_name
         return self._key_file_private
 
     @key_file_private.setter
@@ -268,6 +268,8 @@ class CloudSection(SetupSection):
         :attr:`key_name <tmsetup.config.CloudSection.key_name>` in ``~/.ssh``
         directory)
         '''
+        if not hasattr(self, '_key_file_public'):
+            self.key_file_public = '~/%s.pub' % self.key_name
         return self._key_file_public
 
     @key_file_public.setter
