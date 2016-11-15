@@ -50,7 +50,7 @@
   git:
     repo={{ tm_github_url }}/jtlibrary
     dest={{ ansible_env.HOME }}/jtlibrary
-    version={{ jtlibrary_branch }}
+    version={{ tm_release_tag }}
     force=yes
   tags:
     - tissuemaps
@@ -63,18 +63,11 @@
   tags:
     - tissuemaps
 
-# - name: Install jtlibrary package
-#   pip:
-#     name: "git+{{ tm_github_url }}/jtlibrary@{{ jtlibrary_branch }}#egg=jtlibrary"
-#     extra_args: "--user --process-dependency-links"
-#   tags:
-#     - tissuemaps
-
 - name: Clone JtModules repository
   git:
     repo={{ tm_github_url }}/jtmodules
     dest={{ ansible_env.HOME }}/jtmodules
-    version={{ jtmodules_branch }}
+    version={{ tm_release_tag }}
     force=yes
   tags:
     - tissuemaps
@@ -86,13 +79,6 @@
     executable=/bin/bash
   tags:
     - tissuemaps
-
-# - name: Install jtmodules package
-#   pip:
-#     name: "git+{{ tm_github_url }}/jtmodules@{{ jtmodules_branch }}#egg=jtmodules"
-#     extra_args: "--user --process-dependency-links"
-#   tags:
-#     - tissuemaps
 
 # NOTE: When including the GC3Pie dependency via --process-dependency-links
 # upon installation of tmlibrary, I get HTTP erros when installing on multiple
@@ -108,7 +94,7 @@
   git:
     repo={{ tm_github_url }}/tmlibrary
     dest={{ ansible_env.HOME }}/tmlibrary
-    version={{ tmlibrary_branch }}
+    version={{ tm_release_tag }}
     force=yes
   tags:
     - tissuemaps
@@ -120,13 +106,6 @@
     executable=/bin/bash
   tags:
     - tissuemaps
-
-# - name: Install tmlibrary package
-#   pip:
-#     name: "git+{{ tm_github_url }}/tmlibrary@{{ tmlibrary_branch }}#egg=tmlibrary"
-#     extra_args: "--user --process-dependency-links"
-#   tags:
-#     - tissuemaps
 
 - name: Create directory for TissueMAPS related files
   file: path={{ ansible_env.HOME }}/.tmaps state=directory

@@ -16,9 +16,7 @@
 
 ---
 tm_github_url: https://github.com/TissueMAPS
-
-tmserver_branch: master
-tmui_branch: master
+tm_release_tag: v0.1.0
 
 tm_admins: []  # Github user names of TissueMAPS system administrators
 tm_users: []   # Github user names of TissueMAPS users

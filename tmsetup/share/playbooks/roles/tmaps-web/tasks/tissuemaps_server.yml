@@ -19,7 +19,7 @@
   git:
     repo={{ tm_github_url }}/tmserver
     dest={{ ansible_env.HOME }}/tmserver
-    version={{ tmserver_branch }}
+    version={{ tm_release_tag }}
   tags:
     - tissuemaps
 
@@ -31,10 +31,12 @@
   tags:
     - tissuemaps
 
-# - name: Install tmserver package
-#   pip:
-#     name: "git+{{ tm_github_url }}/tmserver@{{ tmserver_branch }}#egg=tmserver"
-#     extra_args: "--user --process-dependency-links"
-#   tags:
-#     - tissuemaps
-#     - tmserver
+- name: Create storage directory
+  become: yes
+  file:
+    state=directory
+    path={{ tm_storage_home }}
+    owner={{ ansible_user }}
+    group={{ ansible_group }}
+  tags:
+    - tissuemaps

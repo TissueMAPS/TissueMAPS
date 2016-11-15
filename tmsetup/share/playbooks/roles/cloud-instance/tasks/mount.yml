@@ -51,13 +51,3 @@
     # opts={{ item.mount_options }}
   tags:
     - volume
-
-- name: Create "experiment" subdirectory
-  become: yes
-  file:
-    path={{ volume_mountpoint }}/experiments
-    owner={{ ansible_user }}
-    group={{ ansible_user }}
-    state=present
-  tags:
-    - volume

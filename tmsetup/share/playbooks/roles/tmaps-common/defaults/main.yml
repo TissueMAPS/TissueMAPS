@@ -15,8 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-volume_mount_point: /data
-
 cluster_mode: no
 
 opencv_version: 3.1.0
@@ -27,7 +25,4 @@ python_version: 2.7.12
 
 tm_github_url: https://github.com/TissueMAPS
 
-tmtoolbox_branch: master
-tmlibrary_branch: master
-jtmodules_branch: master
-jtlibrary_branch: master
+tm_release_tag: v0.1.0

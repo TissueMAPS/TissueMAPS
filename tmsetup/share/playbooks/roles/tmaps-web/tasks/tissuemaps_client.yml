@@ -49,7 +49,7 @@
 - name: Get the latest tmui code
   git:
     repo={{ tm_github_url }}/tmui
-    version={{ tmui_branch }}
+    version={{ tm_release_tag }}
     recursive=yes
     dest={{ ansible_env.HOME }}/tmui
   tags:
