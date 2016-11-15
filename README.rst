@@ -5,7 +5,7 @@ TissueMAPS
 Online documentation
 --------------------
 
-For the moment, documentation is available at `tissuemaps.org <https://tissuemaps.org>`_ and requires authentication. Use can login with your *Github* username.
+For the moment, documentation is available at `tissuemaps.org <http://tissuemaps.org/>`_ and requires authentication. Use can login with your *Github* username.
 
 Once repositories will be public, documentation will be hosted on `Read the Docs <https://readthedocs.org/>`_.
 
