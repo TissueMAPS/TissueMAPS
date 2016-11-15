@@ -182,4 +182,7 @@ def create_app(config_overrides={}, verbosity=None):
             task = gc3pie.retrieve_single_job(tid)
             gc3pie.continue_jobs(task)
 
+    # For uWSGI fork()
+    engine.dispose()
+
     return app
