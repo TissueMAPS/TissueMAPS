@@ -104,7 +104,11 @@ class TmapsConfig(object):
     def db_password(self):
         '''str: database password'''
         try:
-            return self._config.get('DEFAULT', 'db_password', raw=True)
+            # Workaround special characters like %
+            value = self._config.get('DEFAULT', 'db_password', raw=True)
+            if value.startswith('"') and value.endswith('"'):
+                value = value[1:-1]
+            return value
         except NoOptionError:
             raise ValueError(
                 'Parameter "db_password" is required in "DEFAULT" '
