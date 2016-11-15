@@ -17,6 +17,7 @@
 ---
 tm_github_url: https://github.com/TissueMAPS
 tm_release_tag: v0.1.0
+tm_storage_home: /data/experiments
 
 tm_admins: []  # Github user names of TissueMAPS system administrators
 tm_users: []   # Github user names of TissueMAPS users
