@@ -40,7 +40,7 @@ Installation
 
 The `tmclient` package can be installed via `pip`::
 
-    pip install git+https://github.com/tissuemaps/tmclient.git
+    pip install tmclient
 
 
 .. _matlab-client:
@@ -119,16 +119,18 @@ Requirements
 
         curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
         sudo apt-get -y install nodejs
+        sudo npm install npm -g
 
     On MacOSX::
 
         brew install node
+        npm install npm -g
 
 * `Git <https://git-scm.com/>`_:
 
     On Ubuntu::
 
-        sudo apt-get install git
+        sudo apt-get -y install git
 
     On MacOSX::
 
@@ -154,17 +156,18 @@ Clone the `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository (including sub
     git clone --recursive https://github.com/TissueMAPS/TmUI.git ~/tmui
     cd ~/tmui/src
 
-Install `node` packages (globally)::
+Install `node` packages and add executables to the ``PATH``::
 
     npm install
+    echo 'export PATH=$PATH:$HOME/tmui/src/node_modules/.bin' >> ~/.bash_profile
 
 Install `bower <https://bower.io/>`_ packages::
 
-    node_modules/bower/bin/bower install
+    bower install
 
 Build cliet code for production deployment::
 
-    node_modules/gulp/bin/gulp.js build --production
+    gulp build --production
 
 This will create a ``build`` subdirectory. The contents of this directory can now be served by a HTTP web server, such as `NGINX`.
 
@@ -173,7 +176,9 @@ This will create a ``build`` subdirectory. The contents of this directory can no
 Configuration
 ^^^^^^^^^^^^^
 
-When using `NGINX`, create an application-specific site and set the path to the ``build`` directory in ``/etc/nginx/sites-available/tissuemaps``::
+When using `NGINX`, create an application-specific site and set the path to the ``build`` directory in ``/etc/nginx/sites-available/tissuemaps`` (exemplified here for the ``ubuntu`` user):
+
+.. code-block:: none
 
     server {
         listen 80;
@@ -196,11 +201,14 @@ When using `NGINX`, create an application-specific site and set the path to the 
         }
     }
 
-Enable the ``tissuemaps`` site by creating the following softlink::
+Enable the ``tissuemaps`` site by creating the following softlink and remove the ``default`` site::
 
     sudo ln -s /etc/nginx/sites-available/tissuemaps /etc/nginx/sites-enabled/tissuemaps
+    sudo rm /etc/nginx/sites-enabled/default
 
-Set the following application-specific parameters in ``/etc/nginx/conf.d/tissuemaps.conf`` (the values may need to be adapated for your use case)::
+Set the following application-specific parameters in ``/etc/nginx/conf.d/tissuemaps.conf`` (the values may need to be adapated for your use case):
+
+.. code-block:: none
 
     uwsgi_read_timeout 3600;
     uwsgi_buffering off;
@@ -223,7 +231,9 @@ Requirements
 * `Python <https://www.python.org/>`_ (version 2.7): Ubuntu (up to version 14.04) and MacOSX come with Python included. However, installing a newer version (2.7.9 or higher) is recommended. On MacOSX make sure you use the version installed via `Homebrew`!
 * `Pip <https://pip.pypa.io/en/stable/>`_: The Python package manager is typically already installed with the Python distributions, but we need to update it to make sure we use the most recent version.
 
-    On Ubuntu::
+    On Ubuntu:
+
+    .. code-block:: none
 
         sudo add-apt-repository ppa:fkrull/deadsnakes-python2.7
         sudo apt-get update
@@ -238,6 +248,7 @@ Requirements
         brew install python
         sudo pip install --upgrade pip
         sudo pip install --upgrade setuptools
+
 
 .. _application-server-installation:
 
@@ -342,7 +353,9 @@ Requirements
 
 * `PostgreSQL <http://postgresxl.org/>`_ (version 9.6): `PostgreSQL` is available on Ubuntu by default, but we want a more recent version with improved performanced. On MacOSX `PostgreSQL` is avaible via `homebrew`, but the `PostgresApp <http://postgresapp.com/>`_ is a convenient alternative.
 
-    On Ubuntu::
+    On Ubuntu:
+
+    .. code-block:: none
 
         sudo sh -c "echo 'deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
 
@@ -354,7 +367,9 @@ Requirements
 
         sudo apt-get -y install python-psycopg2
 
-    On MacOSX::
+    On MacOSX:
+
+    .. code-block:: none
 
         brew tap petere/postgresql
         brew install postgresql-9.6 && brew link -f postgresql-9.6
@@ -369,8 +384,8 @@ Requirements
 
     On Ubuntu the `apt-get` package manager currently only provides version 2.4. Version 3.1 needs to be `build from source <http://docs.opencv.org/3.1.0/d7/d9f/tutorial_linux_install.html>`_::
 
-        git clone https://github.com/Itseez/opencv.git $HOME/opencv
-        cd $HOME/opencv
+        git clone https://github.com/Itseez/opencv.git ~/opencv
+        cd ~/opencv
         mkdir build && cd build
 
         sudo pip install numpy
@@ -424,11 +439,13 @@ Requirements
         brew tab ome/alt
         brew install bioformats51
 
-* `Spark <http://spark.apache.org/>`_ (version 2.0): Requires installation with support for `YARN <http://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html>`_ for running Spark on a cluster as well as `Hive <https://hive.apache.org/>`_ and `JDBC <http://docs.oracle.com/javase/tutorial/jdbc/overview/index.html>`_ for `Spark SQL <http://spark.apache.org/docs/latest/sql-programming-guide.html#overview>`_ integration. It is important to `build <http://spark.apache.org/docs/latest/building-spark.html#specifying-the-hadoop-version>`_ Spark againgst the `HDFS <http://hadoop.apache.org/docs/r1.2.1/hdfs_design.html>`_ version available in your cluster environment, since `HDFS` is not compatible across versions. Pyspark further requires the same minor version of Python in both drivers and workers.
+* `Spark <http://spark.apache.org/>`_ (version 2.0.1 or higher):
 
-    On Ubuntu::
+    On Ubuntu:
 
-        sudo apt-get install openjdk-7-jdk
+    .. code-block:: none
+
+        sudo apt-get -y install openjdk-7-jdk
         export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
 
         sudo apt-get -y install maven
@@ -441,17 +458,37 @@ Requirements
         cd spark
         ./build/mvn -Pyarn -Phadoop-2.7 -Dhadoop.version=2.7.1 -Phive -Phive-thriftserver -DskipTests clean package
 
-        echo 'export PATH=$PATH:$HOME/spark/bin' >> $HOME/.bash_profile
+        echo 'export PATH=$PATH:$HOME/spark/bin' >> ~/.bash_profile
 
     On MacOSX::
 
         brew install apache-spark
 
+    .. note:: Requires installation with support for `YARN <http://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html>`_ for running Spark on a cluster as well as `Hive <https://hive.apache.org/>`_ and `JDBC <http://docs.oracle.com/javase/tutorial/jdbc/overview/index.html>`_ for `Spark SQL <http://spark.apache.org/docs/latest/sql-programming-guide.html#overview>`_ integration. It is important to `build <http://spark.apache.org/docs/latest/building-spark.html#specifying-the-hadoop-version>`_ Spark againgst the `HDFS <http://hadoop.apache.org/docs/r1.2.1/hdfs_design.html>`_ version available in your cluster environment, since `HDFS` is not compatible across versions. Pyspark further requires the same minor version of Python in both drivers and workers.
+
+* `R <https://www.r-project.org/>`_ (version 3.3.2 or higher): optional - only required for support of R Jterator modules
+
+    On Ubuntu (examplified here for 14.04 "Trusty"):
+
+    .. code-block:: none
+
+        sudo sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list'
+        gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
+        gpg -a --export E084DAB9 | sudo apt-key add -
+        sudo apt-get update
+        sudo apt-get -y install r-base r-base-dev
+
+    On MacOSX::
+
+        brew tap homebrew/science
+        brew install Caskroom/cask/xquartz
+        brew install r
+
 * other:
 
     On Ubuntu::
 
-        sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
+        sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev libssl-dev libffi-dev
         sudo apt-get -y install libgeos-dev
 
 .. _application-installation:
@@ -459,15 +496,9 @@ Requirements
 Installation
 ^^^^^^^^^^^^
 
-Download the server code from Github::
+Install the *tmserver* application via `pip`::
 
-    git clone https://github.com/TissueMAPS/TmServer.git ~/tmserver
-
-Install the `tmserver` Python package via `pip`::
-
-    cd ~/tmserver && pip install -e . --user
-
-This will install the package in `editable mode <https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs>`_, which allows you to modify code locally without having to reinstall the package.
+    pip install tmserver
 
 .. _application-configuration:
 
@@ -481,36 +512,34 @@ PostgreSQL
 
 Create a `database cluster <https://www.postgresql.org/docs/current/static/creating-cluster.html>`_ using the default ``data_directory`` and start the server (here demonstrated for `PostgreSQL` version 9.6). These steps might have already been performed automatically upon installation:
 
-    On Ubuntu (as ``postgres`` user)::
+    On Ubuntu (as ``postgres`` user):
 
-        sudo su - postgres
-        /usr/lib/postgresql/9.6/bin/initdb -D /var/lib/postgresql/9.6/main
-        /usr/lib/postgresql/9.6/bin/pg_ctl -D /var/lib/postgresql/9.6/main -l logfile restart
+        .. code-block:: none
 
-    On MacOsX (as current user)::
+            sudo su - postgres
+            /usr/lib/postgresql/9.6/bin/initdb -D /var/lib/postgresql/9.6/main
+            /usr/lib/postgresql/9.6/bin/pg_ctl -D /var/lib/postgresql/9.6/main -l logfile restart
+            exit
 
-        /usr/local/opt/postgresql-9.6/bin/initdb -D /usr/local/var/lib/postgresql/9.6/main
-        /usr/local/opt/postgresql-9.6/bin/pg_ctrl -D /usr/local/var/lib/postgresql/9.6/main -l logfile restart
+    On MacOsX (as current user):
 
-On MacOSX you may want to add the `PostgreSQL` executables to the ``$PATH`` in your ``~/.bash_profile`` file:
+        .. code-block:: none
 
-.. code-block:: bash
+            /usr/local/opt/postgresql-9.6/bin/initdb -D /usr/local/var/lib/postgresql/9.6/main
+            /usr/local/opt/postgresql-9.6/bin/pg_ctrl -D /usr/local/var/lib/postgresql/9.6/main -l logfile restart
 
-        export PATH=$PATH:/usr/local/opt/postgresql-9.6/bin
-        export MANPATH=$MANPATH:/usr/local/opt/postgresql-9.6/share/man
+        You may want to add the `PostgreSQL` executables to the ``$PATH`` in your ``~/.bash_profile`` file:
 
-On Ubuntu ``service`` can also be used to start and stop the database server::
+        .. code-block:: bash
 
-        sudo service postgresql restart
+                export PATH=$PATH:/usr/local/opt/postgresql-9.6/bin
+                export MANPATH=$MANPATH:/usr/local/opt/postgresql-9.6/share/man
 
-Configure postgres in ``/etc/postgresql/9.6/main/postgresql.conf``:
+.. On Ubuntu ``service`` can also be used to start and stop the database server::
 
-.. code-block:: sql
+..         sudo service postgresql restart
 
-    listen_addresses = '*'
-    host  all  all  .0.0.0/0  md5
-
-Now enter `psql` console:
+Enter `psql` console:
 
     On Ubuntu (as ``postgres`` user)::
 
@@ -520,7 +549,7 @@ Now enter `psql` console:
 
         psql postgres
 
-to change permissions for the postgres user (it may already exist) and set a new password:
+and change permissions for the postgres user (it may already exist) and set a new password:
 
 .. code-block:: sql
 
@@ -544,12 +573,23 @@ Now, you should be able to connect to the database as ``postgres`` user with you
 
     psql -h localhost tissuemaps postgres
 
-It's convenient to use a `pgpass file <https://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_ to be able to connect to the database without having to type the password every time::
+.. tip:: It is convenient to use a `pgpass file <https://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_ to be able to connect to the database without having to type the password every time:
 
-    echo "*:5432:tissuemaps:postgres:XXX" > ~/.pgpass
-    chmod 0600 ~/.pgpass
+    .. code-block:: none
+
+        echo 'localhost:5432:tissuemaps:postgres:XXX' > ~/.pgpass
+        chmod 0600 ~/.pgpass
+
+.. tip:: You may also want to add an alias to ``~/.bash_profile`` to simplify connecting to the database via the ``psql`` console:
+
+    .. code-block:: bash
+
+        echo 'alias db="psql -h localhost tissuemaps postgres"' >> ~/.bash_profile
+        . ~/.bash_profile
 
 When using a mounted filesystem for data storage, you can create a symlink to ``data_dirctory`` or use an alternative directory. Make sure, however, to set the correct permissions for the parent directory of the desired data directory. For more information please refer to the PostgreSQL online documentation on `file locations <https://www.postgresql.org/docs/current/static/runtime-config-file-locations.html>`_ and `creation of a new database cluster <https://www.postgresql.org/docs/9.6/static/app-initdb.html>`_.
+
+
 
 .. _application-configuration-tissuemaps:
 
@@ -563,11 +603,19 @@ Create a `TissueMAPS` configuration file ``~/.tmaps/tissuemaps.cfg`` and set the
     [DEFAULT]
     db_password = XXX
 
-Additional parameters can be set. Please refer to :doc:`tmlib.config.Setup <tmlib.config>`.
+Additional parameters may need to be set. Please refer to :class:`LibraryConfig <tmlib.config.LibraryConfig>` and :class:`ServerConfig <tmserver.config.ServerConfig>`.
+The default configuration assumes, for example, sets :attr:`storage_home <tmlib.config.LibraryConfig.storage_home>` to ``/data/experiments`` (because that's were an additional volume would be mounted upon automated deployment). You may either configure an alternative directory or create the default directory (exemplified here for ``ubuntu`` user)::
 
-Finally, populate the ``tissuemaps`` database with the tables defined in the :doc:`tmlib.models` package. To this, call the following utility script::
+     sudo mkdir -p /data/experiments
+     sudo chown -R ubuntu:ubuntu /data/experiments
+
+Finally, populate the ``tissuemaps`` database with the tables defined in the :doc:`tmlib.models` package::
 
     tm_create_tables
+
+and create a *TissueMAPS* user account for yourself::
+
+    tm_add user --name XXX --password XXX --email XXX
 
 
 .. _application-configuration-gc3pie:
@@ -637,5 +685,3 @@ The client installation also provides a `development web server <https://www.npm
 This will automatically start the server on localhost (port 8002). To access the website, point your browser to ``http://localhost:8002/``.
 
 Both dev servers provide live reload functionality. They will auto-watch files and rebuild code upon changes, which is useful for local development and testing.
-
-.. note:: The dev server can sometimes behave a bit funny and may use more database transactions than provided by the pool or create too many database connections. Restarting the database server helps.
