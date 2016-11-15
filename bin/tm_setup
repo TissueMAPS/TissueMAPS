@@ -123,6 +123,7 @@ def build_ansible_commands(action, verbosity, groups_to_deploy):
         tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
         playbook = os.path.join(tmsetup_playbooks_dir, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
+        del variables['ansible_become']
         cmd = _build_command(
             verbosity, playbook, variables, set(groups_to_deploy.keys())
         )
