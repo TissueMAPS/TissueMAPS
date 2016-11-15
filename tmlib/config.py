@@ -102,13 +102,15 @@ class TmapsConfig(object):
 
     @property
     def db_password(self):
-        '''str: database password'''
+        '''str: database password
+
+        Note
+        ----
+        Must be an alphanumeric string without any special characters.
+        '''
         try:
             # Workaround special characters like %
-            value = self._config.get('DEFAULT', 'db_password', raw=True)
-            if value.startswith('"') and value.endswith('"'):
-                value = value[1:-1]
-            return value
+            value = self._config.get('DEFAULT', 'db_password')
         except NoOptionError:
             raise ValueError(
                 'Parameter "db_password" is required in "DEFAULT" '
@@ -121,10 +123,11 @@ class TmapsConfig(object):
             raise ValueError(
                 'Configuration parameter "db_password" must have type str.'
             )
-        # NOTE: Interpolation is turned off for this attribute.
-        # However, let's put the password between quotes to not break editor
-        # formatting.
-        self._config.set('DEFAULT', 'db_password', '"%s"' % str(value))
+        if not value.isalnum():
+            raise ValueError(
+                'Argument "db_password" must be alphanumeric.'
+            )
+        self._config.set('DEFAULT', 'db_password', value)
 
     @property
     def db_host(self):
