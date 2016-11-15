@@ -102,7 +102,10 @@
 
 - name: Fix OpenCV driver issue
   become: yes
-  shell: ln /dev/null /dev/raw1394
+  file:
+    src=/dev/null
+    dest=/dev/raw1394
+    state=hard
   tags:
     - opencv
     - python

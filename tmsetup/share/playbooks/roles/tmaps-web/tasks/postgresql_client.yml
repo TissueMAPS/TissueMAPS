@@ -34,6 +34,7 @@
 - name: Update db password in TissueMAPS configuration
   ini_file:
     dest={{ tmaps_config_file }}
+    create=yes
     section=DEFAULT
     state=present
     option=db_password

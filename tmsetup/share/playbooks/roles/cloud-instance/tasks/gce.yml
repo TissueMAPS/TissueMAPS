@@ -33,6 +33,7 @@
     subnet_region: "{{ region | regex_replace('^(.*)-[a-z]$', '\\1') }}"
     ipv4_range: "{{ ip_range }}"
   run_once: yes
+  register: network_facts
   when: instance_state == "present"
 
 - name: Create web firewall
@@ -46,7 +47,9 @@
     target_tags:
       - web
   run_once: yes
-  when: instance_state == "present"
+  # TODO: There seems to be a bug in Ansible with already existing firewalls
+  # and subnetworks
+  when: instance_state == "present" and network_facts.changed
 
 - name: Create compute-storage firewall
   local_action: gce_net
@@ -63,7 +66,7 @@
       - compute
       - storage
   run_once: yes
-  when: instance_state == "present"
+  when: instance_state == "present" and network_facts.changed
 
 - name: Create boot disk
   local_action: gce_pd
