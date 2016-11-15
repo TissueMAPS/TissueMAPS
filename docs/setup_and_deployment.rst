@@ -129,6 +129,12 @@ The provided template sets up a machine with 4 CPU cores and 3.75 GB of RAM per 
 
 .. note:: The resulting virtual machine instance will have the name ``tissuemaps-standalone-server-001``. This naming convention seems a bit of an overkill for a single server. However, it becomes useful when building a large grid composed of multiple `clusters` with different `types` of nodes. For consistency, we stick to this naming conventing also for the single-node use case.
 
+.. tip:: You can reuse variables using `YAML node anchors and aliases <http://yaml.org/spec/1.2/spec.html#id2785586>`_ (``&`` and ``*``)::
+
+        foo: &foo bla bla
+
+        bar: *foo
+
 .. _multi-node-setup:
 
 Multi-node setup
