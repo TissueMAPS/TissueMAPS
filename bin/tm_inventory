@@ -51,7 +51,8 @@ def _get_host_ip_os(region, network, host_name, host_vars):
     if len(addresses) > 1:
         # Which one to choose? OS-EXT-IPS:type?
         logger.warn(
-            'more than one address found for network "%s"', network
+            'more than one address found for host "%s" and network "%s"',
+            host_name, network
         )
         logger.info('try to use floating address (if existing)')
         floating_addresses = [
@@ -142,12 +143,14 @@ def _get_host_ip_gce(region, network, host_name, host_vars):
         )
     elif len(networks) > 1:
         logger.warn(
-            'more than one network with name "%s".', network
+            'more than one address found for host "%s" and network "%s"',
+            host_name, network
         )
     addresses = [addr['natIP'] for addr in networks[0]['accessConfigs']]
     if len(addresses) > 1:
         logger.warn(
-            'more than one address found for network "%s"', network
+            'more than one address found for host "%s" and network "%s"',
+            host_name, network
         )
     elif len(addresses) == 0:
         raise CloudError(
