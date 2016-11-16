@@ -114,36 +114,37 @@ def create_app(config_overrides={}, verbosity=None):
     tmserver_logger.setLevel(cfg.log_level)
     tmserver_logger.addHandler(file_handler)
     tmserver_logger.addHandler(stdout_handler)
-    wsgi_logger = logging.getLogger('wsgi')
-    wsgi_logger.setLevel(cfg.log_level)
-    wsgi_logger.addHandler(file_handler)
-    wsgi_logger.addHandler(stdout_handler)
     tmlib_logger = logging.getLogger('tmlib')
     tmlib_logger.setLevel(cfg.log_level)
     tmlib_logger.addHandler(file_handler)
     tmlib_logger.addHandler(stdout_handler)
     apscheduler_logger = logging.getLogger('apscheduler')
-    apscheduler_logger.setLevel(logging.CRITICAL)
     apscheduler_logger.addHandler(file_handler)
     apscheduler_logger.addHandler(stdout_handler)
+    wsgi_logger = logging.getLogger('wsgi')
+    wsgi_logger.addHandler(file_handler)
+    wsgi_logger.addHandler(stdout_handler)
     gc3pie_logger = logging.getLogger('gc3.gc3libs')
-    if verbosity > 4:
-        gc3pie_logger.setLevel(logging.DEBUG)
-    elif verbosity > 3:
-        gc3pie_logger.setLevel(logging.INFO)
-    else:
-        gc3pie_logger.setLevel(logging.CRITICAL)
     gc3pie_logger.addHandler(file_handler)
     gc3pie_logger.addHandler(stdout_handler)
     werkzeug_logger = logging.getLogger('werkzeug')
-    if verbosity > 4:
-        werkzeug_logger.setLevel(logging.DEBUG)
-    elif verbosity > 3:
-        werkzeug_logger.setLevel(logging.INFO)
-    else:
-        werkzeug_logger.setLevel(logging.CRITICAL)
     werkzeug_logger.addHandler(file_handler)
     werkzeug_logger.addHandler(stdout_handler)
+    if verbosity > 4:
+        gc3pie_logger.setLevel(logging.DEBUG)
+        wsgi_logger.setLevel(logging.DEBUG)
+        werkzeug_logger.setLevel(logging.DEBUG)
+        apscheduler_logger.setLevel(logging.DEBUG)
+    elif verbosity > 3:
+        gc3pie_logger.setLevel(logging.INFO)
+        wsgi_logger.setLevel(logging.INFO)
+        werkzeug_logger.setLevel(logging.INFO)
+        apscheduler_logger.setLevel(logging.INFO)
+    else:
+        gc3pie_logger.setLevel(logging.CRITICAL)
+        wsgi_logger.setLevel(logging.CRITICAL)
+        werkzeug_logger.setLevel(logging.CRITICAL)
+        apscheduler_logger.setLevel(logging.CRITICAL)
 
     ## Set the JSON encoder
     app.json_encoder = TmJSONEncoder
