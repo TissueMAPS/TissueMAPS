@@ -229,15 +229,21 @@ def update_static_inventory(inventory_info, setup):
                         'variable "ansible_host" is not defined for host "%s"',
                         host
                     )
-            # if 'web' in host_vars['tags']:
-            #     # All SSH connections must go via a bastion host, i.e. a host
-            #     # tagged with "web", which gets a public IP assigned
-            #     inventory_info['all']['ansible_ssh_common_args'] = \
-            #         '-o ProxyCommand="ssh -i {file} -W %h:%p -q {user}@{host}"'.format(
-            #             file=host_vars['ansible_ssh_private_key_file'],
-            #             user=host_vars['ansible_user'],
-            #             host=host_vars['ansible_host']
-            #         )
+            if 'web' in host_vars['tags']:
+                # NOTE: We use an architecture where hosts are part of a private
+                # network and have security group settings that prevent access
+                # from outside. Only some hosts have a public IP (those tagged
+                # with "web") and all other hosts have private IPs.
+                # So when the deploying machine is not part of the private
+                # network, Ansible can only connect to the "web" host directly.
+                # We therefore use the "web" host as a bastion host through
+                # which we can connect to other hosts.
+                inventory_info['all']['ansible_ssh_common_args'] = \
+                    '-o ProxyCommand="ssh -i {file} -W %h:%p -q {user}@{host}"'.format(
+                        file=host_vars['ansible_ssh_private_key_file'],
+                        user=host_vars['ansible_user'],
+                        host=host_vars['ansible_host']
+                    )
             # Update inventory with host and group variables
             inventory_info['_meta']['hostvars'][host].update(host_vars)
             write_yaml_file(host_vars_file, host_vars)
