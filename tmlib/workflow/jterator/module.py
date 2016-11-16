@@ -22,10 +22,6 @@ import collections
 import importlib
 import traceback
 import numpy as np
-import rpy2.robjects
-from rpy2.robjects import numpy2ri
-from rpy2.robjects import pandas2ri
-from rpy2.robjects.packages import importr
 from cStringIO import StringIO
 
 
@@ -215,6 +211,16 @@ class ImageAnalysisModule(object):
         return self.handles['output']
 
     def _exec_r_module(self):
+        try:
+            import rpy2.robjects
+            from rpy2.robjects import numpy2ri
+            from rpy2.robjects import pandas2ri
+            from rpy2.robjects.packages import importr
+        except ImportError:
+            raise ImportError(
+                'Jtertor R modules cannot be run, because '
+                'rpy2 package is not available.'
+            )
         logger.debug('sourcing module: "%s"' % self.source_file)
         # rpy2.robjects.r('source("{0}")'.format(self.source_file))
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
