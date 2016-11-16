@@ -26,5 +26,3 @@ db_user: postgres
 db_port: 5432
 db_name: tissuemaps
 db_host: localhost
-
-uwsgi_processes: 4
