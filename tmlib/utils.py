@@ -401,21 +401,6 @@ def assert_path_exists(*expected):
         when a name is provided that is not an argument of the function
     OSError
         when the path specified by the function argument doesn't exists on disk
-
-    Examples
-    --------
-    from tmlib.utils import assert_path_exists
-    import os
-
-    class LocationCheckExample(object):
-
-        @assert_path_exists('value1')
-        def test(self, value1, value2=None):
-            print 'content of directory "%s":\n%s' % (value1, os.listdir(value1))
-
-    example = LocationCheckExample()
-    example.test('/tmp')
-    example.test('/blabla')  # raises OSError
     '''
     @decorator
     def wrapper(func, *args, **kwargs):
