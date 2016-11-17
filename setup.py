@@ -191,6 +191,5 @@ setuptools.setup(
         'https://github.com/jmcgeheeiv/pyfakefs/tarball/master#egg=pyfakefs',
         'https://github.com/tissuemaps/gc3pie/tarball/master#egg=gc3pie-2.5.dev',
         # 'https://github.com/tissuemaps/sqlalchemy-utils/tarball/master#egg=sqlalchemy_utils'
-    ],
-    setup_cfg=True
+    ]
 )
