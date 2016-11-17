@@ -54,7 +54,7 @@ class MicroscopeImageFile(FileModel, DateMixIn):
     __distribute_by_hash__ = 'id'
 
     #: str: name given by the microscope
-    name = Column(String(50), index=True)
+    name = Column(String(100), index=True)
 
     #: str: OMEXML metadata
     omexml = Column(Text)
@@ -136,7 +136,7 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
     __distribute_by_hash__ = 'id'
 
     #: str: name given by the microscope
-    name = Column(String(50), index=True)
+    name = Column(String(100), index=True)
 
     #: str: upload status
     status = Column(String(20), index=True)
