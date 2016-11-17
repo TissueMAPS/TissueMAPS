@@ -91,6 +91,8 @@ For more details on the individual sections of the setup file, please refer to t
 
 In the following, we will walk you through the setup and deployment process for the ``gce`` provider. The procedure is the same for the other cloud providers, but variables need to be adjusted (names of images, machine type flavors, etc).
 
+.. note:: The *tm_setup* script uses an *SSH* ``ProxyCommand`` to connect to remote hosts within the private network via a *bastion host*. This creates problems with the Ansible `become_user <http://docs.ansible.com/ansible/become.html#becoming-an-unprivileged-user>`_ module. To workaround this issue, you need to set ``allow_world_readable_tmpfiles = True`` in the ``/etc/ansible/ansible.cfg`` file.
+
 .. _single-node-setup:
 
 Single-node setup
