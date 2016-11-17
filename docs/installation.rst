@@ -159,7 +159,6 @@ Clone the `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository (including sub
 Install `node` packages and add executables to the ``PATH``::
 
     npm install
-    echo 'export PATH=$PATH:$HOME/tmui/src/node_modules/.bin' >> ~/.bash_profile
 
 Install `bower <https://bower.io/>`_ packages::
 
@@ -308,6 +307,7 @@ and configure `uWSGI` in ``~/.tmaps/uwsgi.ini``:
     master = true
     processes = 16
     gevent = 100
+    lazy-apps = true
 
 Ensure that the server runs in `gevent <http://www.gevent.org/>`_ mode and
 adapt configurations according to available computational resources.
