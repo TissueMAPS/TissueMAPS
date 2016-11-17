@@ -141,11 +141,11 @@ setuptools.setup(
        'numpy>=1.10.1',
        'scipy>=0.16.0',
        'cached-property>=1.3.0',
-       'decorator==3.4.2',
+       'decorator>=3.4.2',
        'FITS-tools',
        'geoalchemy2>=0.3.0',
        'h5py>=2.5.0',
-       'image-registration==0.2.1',
+       'image-registration>=0.2.1',
        'mahotas>=1.4.1',
        'matlab-wrapper>=0.9.6',
        'mock>=1.0.1',
@@ -154,7 +154,7 @@ setuptools.setup(
        'openslide-python>=1.1.0',
        'pandas>=0.17.1',
        'passlib>=1.6.5',
-       'paramiko==1.15.3',
+       'paramiko>=1.15.3',
        'parsedatetime>=1.5',
        'prettytable>=0.7.2',
        'pyparsing>=2.0.3',
@@ -177,13 +177,13 @@ setuptools.setup(
        'tables>=3.2.2',
        'ruamel.yaml>=0.10.11'
        'pyfakefs',
-       'gc3pie==2.5.dev',
        'APScheduler>=3.0.5',
        # Ubuntu: sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        # 'rpy2>=2.7.4'
        'whichcraft>=0.4.0',
-       'jtmodules>=0.1.0'
+       'jtmodules>=0.1.0',
+       'gc3pie==2.5.dev',
     ],
     dependency_links=[
         # The dependency_links functionality has been deprecated, but it can
@@ -192,4 +192,5 @@ setuptools.setup(
         'https://github.com/tissuemaps/gc3pie/tarball/master#egg=gc3pie-2.5.dev',
         # 'https://github.com/tissuemaps/sqlalchemy-utils/tarball/master#egg=sqlalchemy_utils'
     ],
+    setup_cfg=True
 )
