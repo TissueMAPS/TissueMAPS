@@ -55,8 +55,11 @@ You may find the following steps helpful:
     else
         exit 1
     fi
-
-    PACKAGES=(jtlibrary jtmodules gc3pie tmlibrary tmserver)
+    
+    git clone github:tissuemaps/gc3pie  $HOME/gc3pie
+    cd $HOME/gc3pie && pip install -e . && cd
+    
+    PACKAGES=(jtlibrary jtmodules tmlibrary tmserver)
     RELEASE="v0.1.0"
     for p in "${PACKAGES[@]}"
     do
@@ -64,6 +67,6 @@ You may find the following steps helpful:
         cd $HOME/$p && git checkout $RELEASE && pip install -e . && cd
     done
 
-* Packages can be either optained individually or via the main *TissueMAPS* repository. Individual repositories will by default be checked out at the latest commit. If you want the current release version you need to `checkout <https://git-scm.com/docs/git-checkout>`_ tag ``v0.1.0``. The main *TissueMAPS* repository contains the other repositories as submodules, which will automatically get checked out at the current release tag.::
+* Packages can be either optained individually (as in the above script) or via the main *TissueMAPS* repository. Individual repositories will by default get checked out at the latest commit. If you want the current release version you need to `checkout <https://git-scm.com/docs/git-checkout>`_ tag ``v0.1.0``. The main *TissueMAPS* repository contains the other repositories as submodules, which will automatically get checked out at the current release tag::
 
     git clone --recursive https://github.com/TissueMAPS/TissueMAPS.git ~/tissuemaps
