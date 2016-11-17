@@ -32,13 +32,13 @@ class Site(ExperimentModel, DateMixIn):
 
     Attributes
     ----------
-    shifts: [tmlib.models.SiteShifts]
+    shifts: [tmlib.models.alignment.SiteShifts]
         shifts belonging to the site
-    intersection: tmlib.models.SiteIntersection
+    intersection: tmlib.models.alignment.SiteIntersection
         intersection belongings to the site
-    channel_image_files: List[tmlib.models.ChannelImageFile]
+    channel_image_files: List[tmlib.models.file.ChannelImageFile]
         channel image files belonging to the site
-    mapobject_segmentations: List[tmlib.models.MapobjectSegmentation]
+    mapobject_segmentations: List[tmlib.models.mapobject.MapobjectSegmentation]
         segmentations belonging to the site
     '''
 
