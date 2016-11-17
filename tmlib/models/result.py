@@ -38,6 +38,8 @@ class ToolResult(ExperimentModel):
 
     __tablename__ = 'tool_results'
 
+    __distribute_by_replication__ = True
+
     #: str: name of the result given by the user
     name = Column(String(50), index=True)
 

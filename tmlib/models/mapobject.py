@@ -49,6 +49,8 @@ class MapobjectType(ExperimentModel, DateMixIn):
 
     __tablename__ = 'mapobject_types'
 
+    __distribute_by_replication__ = True
+
     __table_args__ = (UniqueConstraint('name'), )
 
     _max_poly_zoom = Column('max_poly_zoom', Integer)
@@ -413,12 +415,13 @@ class Mapobject(ExperimentModel):
 class MapobjectSegmentation(ExperimentModel):
 
     '''A *mapobject segmentation* provides the geographic representation
-    of a *mapobject* and associates it with the corresponding image acquisition
-    *site* in which the object was identified.
+    of a :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and associates
+    it with the corresponding :class:`Site <tmlib.models.site.Site>`
+    in which the object was identified.
 
     Attributes
     ----------
-    mapobject: tmlib.models.Mapobject
+    mapobject: tmlib.models.mapobject.Mapobject
         parent mapobject to which the outline belongs
     '''
 

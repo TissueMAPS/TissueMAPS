@@ -57,6 +57,7 @@ def _compile_create_table(element, compiler, **kwargs):
         )
         sql += ' DISTRIBUTE BY HASH(' + distribution_column + ')'
     else:
+        # NOTE: In PostrgresXL every table needs to be distributed.
         logger.info(
             'distribute table "%s" by replication', table.name
         )
@@ -80,3 +81,43 @@ def compile_array_agg(element, compiler, **kw):
         text(compiled),
         cast(postgresql.array(element.default), element.type)
     ).compile(compiler))
+
+
+
+class CitusDialect_psycopg2(PGDialect_psycopg2):
+
+    '''SQLAlchemy dialect for
+    `Citus <https://docs.citusdata.com/en/v6.0/index.html>`_ PostgreSQL
+    extension.
+    '''
+    name = 'citus'
+
+
+@compiles(CreateTable, 'citus')
+def _compile_create_table(element, compiler, **kwargs):
+    table = element.element
+    logger.info('create table "%s"', table.name)
+    distribute_by_hash = 'distribute_by_hash' in table.info
+    distribute_by_replication = 'distribute_by_replication' in table.info
+    sql = compiler.visit_create_table(element)
+    if distribute_by_hash or distribute_by_replication:
+        if distribute_by_hash:
+            distribution_column = table.info['distribute_by_hash']
+            logger.info(
+                'distribute table "%s" by hash "%s"', table.name,
+                distribution_column
+            )
+            sql += 'SELECT create_distributed_table(\'%s\', \'%s\');' % (
+                table.name, distribution_column
+            )
+        elif distribute_by_replication:
+            logger.info(
+                'distribute table "%s" by replication', table.name
+            )
+            sql += 'SELECT create_reference_table(\'%s\');' % table.name
+    # NOTE: In contrast to PostgresXL, tables don't have to be distributed.
+    # If they don't get distributed, they live a happy live as normal
+    # PostgreSQL tables on the master node.
+    # However, distributed tables can only be joined with distributed tables!!
+    return sql
+

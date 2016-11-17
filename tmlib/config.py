@@ -68,6 +68,7 @@ class TmapsConfig(object):
         self.db_user = 'postgres'
         self.db_host = 'localhost'
         self.db_port = 5432
+        self.db_driver = 'postgresql'
 
     def read(self):
         '''Reads the configuration from a file
@@ -156,16 +157,38 @@ class TmapsConfig(object):
         self._config.set('DEFAULT', 'db_port', str(value))
 
     @property
+    def db_driver(self):
+        '''str: database driver (default: ``"postgresql"``,
+        options: ``{"postgresql", "postgresxl", "citus"}```)
+        '''
+        return self._db_driver
+
+    @db_driver.setter
+    def db_driver(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError(
+                'Configuration parameters "db_driver" must have type str.'
+            )
+        options = {'postgresql', 'postgresxl', 'citus'}
+        if not value in options:
+            raise TypeError(
+                'Configuration parameters "db_driver" must be either "%s".' %
+                '" or "'.join(options)
+            )
+        self._db_driver = value
+
+    @property
     def db_uri_sqla(self):
-        '''str: database URI in `SQLAlchemy` format'''
-        return 'postgresql://{user}:{pw}@{host}:{port}/tissuemaps'.format(
+        '''str: database URI in *SQLAlchemy* format'''
+        return '{driver}://{user}:{pw}@{host}:{port}/tissuemaps'.format(
+            driver=self.db_driver,
             user=self.db_user, pw=self.db_password,
             host=self.db_host, port=self.db_port
         )
 
     @property
     def db_uri_spark(self):
-        '''str: database URI in `JDBC` format as required by `Spark`'''
+        '''str: database URI in *JDBC* format as required by *Spark*'''
         return 'jdbc:postgresql://{host}:{port}/tissuemaps?user={user}&password={pw}'.format(
             user=self.db_user, pw=self.db_password,
             host=self.db_host, port=self.db_port

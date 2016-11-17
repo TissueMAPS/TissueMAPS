@@ -38,6 +38,8 @@ class Feature(ExperimentModel):
 
     __tablename__ = 'features'
 
+    __distribute_by_replication__ = True
+
     __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
 
     #: str: name given to the feature (e.g. by jterator)
@@ -92,7 +94,7 @@ class FeatureValue(ExperimentModel):
         UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
     )
 
-    __distribute_by_hash__ = 'mapobject_id'
+    __distribute_by_hash__ = 'feature_id'  # or mapobject_id ???
 
     #: float: the actual extracted feature value
     value = Column(Float(precision=15))
@@ -161,6 +163,8 @@ class LabelValue(ExperimentModel):
     '''
 
     __tablename__ = 'label_values'
+
+    __distribute_by_hash__ = 'tool_result_id'
 
     #: float: the actual label value
     value = Column(Float(precision=15))
