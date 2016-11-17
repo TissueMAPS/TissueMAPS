@@ -37,7 +37,7 @@ class DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
     '''Metaclass for declarative base classes.'''
 
     def __init__(self, name, bases, d):
-        distribute_by_hash = (
+        distribution_column = (
             d.pop('__distribute_by_hash__', None) or
             getattr(self, '__bind_key__', None)
         )
@@ -46,15 +46,15 @@ class DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
         )
         DeclarativeMeta.__init__(self, name, bases, d)
         if hasattr(self, '__table__'):
-            if distribute_by_hash is not None:
+            if distribution_column is not None:
                 column_names = [c.name for c in self.__table__.columns]
-                if distribute_by_hash not in column_names:
+                if distribution_column not in column_names:
                     raise ValueError(
                         'Hash for distribution "%s" '
                         'is not a column of table "%s"'
-                        % (distribute_by_hash, self.__table__.name)
+                        % (distribution_column, self.__table__.name)
                     )
-                self.__table__.info['distribute_by_hash'] = distribute_by
+                self.__table__.info['distribute_by_hash'] = distribution_column
             elif distribute_by_replication:
                 self.__table__.info['distribute_by_replication'] = True
 
