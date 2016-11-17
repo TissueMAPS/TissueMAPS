@@ -111,7 +111,8 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         'requests>=2.10.0',
-        'pandas>=0.19.1'
+        'pandas>=0.19.1',
+        'PyYAML>=3.11'
     ]
 )
 
