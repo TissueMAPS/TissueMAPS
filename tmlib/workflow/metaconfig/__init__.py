@@ -25,16 +25,16 @@ configures metadata extracted from image files in the
 information from microscope-specific metadata files or user input.
 
 This is achieved via microscope-specific implementations of
-:class:`tmlib.workflow.metaconfig.base.MetadataReader` and
-:class:`tmlib.workflow.metaconfig.base.MetadataHanlder`. The step already
-supports a variety of microscopes. New microscope types can be registered by
-by implementing :class:`tmlib.workflow.metaconfig.base.MetadataReader` and
-:class:`tmlib.workflow.metaconfig.base.MetadataHandler` in a separate module.
-The name of the microscope type is determined from the name of the module.
+:class:`MetadataReader <tmlib.workflow.metaconfig.base.MetadataReader>` and
+:class:`MetadataHandler <tmlib.workflow.metaconfig.base.MetadataHandler>` in
+a separate module of :mod:`tmlib.workflow.metaconfig`.
+The name given to the module determines the microscope type, e.g.
+:mod:`tmlib.workflow.metaconfig.cellvoyager` is the module for the
+``cellvoyager`` microscope type.
 
-To make the micorscope type available for usage add the its name (name of the
+To make the micorscope type available for usage add its name (name of the
 implemented module) to
-:const:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`.
+:const:`SUPPORTED_MICROSCOPE_TYPES <tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES>`.
 '''
 import re
 import importlib
