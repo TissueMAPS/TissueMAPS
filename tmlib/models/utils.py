@@ -94,9 +94,10 @@ def _create_db_if_not_exists(engine, create_tables=True):
         connection.close()
     except sqlalchemy.exc.OperationalError:
         db_url = make_url(engine.url)
+        db_url.database = 'template1'
         db_name = db_url.database
         logger.debug('create database %s', db_name)
-        with _Connection(db_uri) as conn:
+        with _Connection(db_url) as conn:
             conn.execute('CREATE DATABASE {name}'.format(
                 name=quote(engine, db_name))
             )
