@@ -207,6 +207,14 @@ class ToolSparkInterface(ToolInterface):
         # We run the actual query in SQL, since this performs way better
         # compared to loading the table and then filtering it via Spark
         # NOTE: the alias is required for compatibility with DataFrameReader
+        if not mapobject_type_name.isalnum():
+            raise ValueError(
+                'Argument "mapobject_type_name" must be alphanumeric.'
+            )
+        if not feature_name.isalnum():
+            raise ValueError(
+                'Argument "feature_name" must be alphanumeric.'
+            )
         return '''
             (SELECT v.value, v.mapobject_id, v.id FROM feature_values AS v
             JOIN features AS f ON f.id=v.feature_id
@@ -215,8 +223,8 @@ class ToolSparkInterface(ToolInterface):
             AND t.name=\'{mapobject_type_name}\'
             ) AS t
         '''.format(
-            mapobject_type_name=mapobject_type_name.replace(';', ''),
-            feature_name=feature_name.replace(';', '')
+            mapobject_type_name=mapobject_type_name,
+            feature_name=feature_name
         )
 
     def load_feature_values(self, mapobject_type_name, feature_name):
