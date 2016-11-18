@@ -69,6 +69,7 @@ class TmapsConfig(object):
         self.db_host = 'localhost'
         self.db_port = 5432
         self.db_driver = 'postgresql'
+        self.db_worker_hosts = []
 
     def read(self):
         '''Reads the configuration from a file
@@ -132,7 +133,7 @@ class TmapsConfig(object):
 
     @property
     def db_host(self):
-        '''str: database host (default: ``"localhost"``)'''
+        '''str: IP address of database host (default: ``"localhost"``)'''
         return self._config.get('DEFAULT', 'db_host')
 
     @db_host.setter
@@ -142,6 +143,33 @@ class TmapsConfig(object):
                 'Configuration parameter "db_host" must have type str.'
             )
         self._config.set('DEFAULT', 'db_host', value)
+
+    @property
+    def db_worker_hosts(self):
+        '''List[str]: IP addresses of database worker hosts (default: ``[]``)
+
+        Note
+        ----
+        This is only relevant for database clusters, such as
+        `Citus <https://docs.citusdata.com/en/stable/index.html>`_.
+        However, when :attr:`db_driver <tmlib.config.DefaultConfig.db_driver>`
+        is ``citus``, the parameter must be set.
+        '''
+        value = self._config.get('DEFAULT', 'db_worker_hosts', value)
+        return [v.strip() for v in value.split(',')]
+
+    @db_worker_hosts.setter
+    def db_worker_hosts(self, value):
+        if not isinstance(value, list):
+            raise TypeError(
+                'Configuration parameter "db_worker_hosts" must have type list.'
+            )
+        if self.db_driver == 'citus' and len(value) == 0:
+            raise ValueError(
+                'Configuration parameter "db_worker_hosts" is required when '
+                '"db_driver" is set to "citus".'
+            )
+        self._config.set('DEFAULT', 'db_worker_hosts', ','.join(value))
 
     @property
     def db_port(self):
@@ -177,21 +205,28 @@ class TmapsConfig(object):
             )
         self._db_driver = value
 
-    @property
-    def db_uri_sqla(self):
+    @staticmethod
+    def _get_database_name(experiment_id=None):
+        database = 'tissuemaps'
+        if experiment_id is not None:
+            database += '_experiment_%d' % experiment_id
+        return database
+
+    def get_db_uri_sqla(self, experiment_id=None, host=None):
         '''str: database URI in *SQLAlchemy* format'''
-        return '{driver}://{user}:{pw}@{host}:{port}/tissuemaps'.format(
+        return '{driver}://{user}:{pw}@{host}:{port}/{database}'.format(
             driver=self.db_driver,
             user=self.db_user, pw=self.db_password,
-            host=self.db_host, port=self.db_port
+            host=self.db_host, port=self.db_port,
+            database=self._get_database_name(experiment_id)
         )
 
-    @property
-    def db_uri_spark(self):
+    def get_db_uri_spark(self, experiment_id=None):
         '''str: database URI in *JDBC* format as required by *Spark*'''
-        return 'jdbc:postgresql://{host}:{port}/tissuemaps?user={user}&password={pw}'.format(
+        return 'jdbc:postgresql://{host}:{port}/{database}?user={user}&password={pw}'.format(
             user=self.db_user, pw=self.db_password,
-            host=self.db_host, port=self.db_port
+            host=self.db_host, port=self.db_port,
+            database=self._get_database_name(experiment_id)
         )
 
     @property

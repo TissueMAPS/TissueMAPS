@@ -27,144 +27,103 @@ from sqlalchemy_utils.functions import create_database
 from sqlalchemy_utils.functions import drop_database
 from sqlalchemy_utils.functions import quote
 from sqlalchemy.event import listens_for
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from psycopg2.extras import DictCursor
 
 from tmlib.models.base import ExperimentModel, FileSystemModel
-from tmlib.config import LibraryConfig
+from tmlib import cfg
 
 logger = logging.getLogger(__name__)
-
-_DATABASE_URI = None
 
 #: Dict[str, sqlalchemy.engine.base.Engine]: mapping of chached database
 #: engine objects for reuse within the current Python process hashable by URL
 DATABASE_ENGINES = {}
 
 
-def get_db_uri(experiment_id=None):
-    '''Gets the URI for the main ``tissuemaps`` database from the configuration.
-
-    Parameters
-    ----------
-    experiment_id: int, optional
-        ID of an :class:`Experiment <tmlib.models.experiment.Experiment>`
-
-    Returns
-    -------
-    str
-        database URI
-
-    Note
-    ----
-    When `experiment_id` is provided, the URI for the experiment-specific
-    database will be returned. Otherwise, the URI of the main database will
-    be returned.
-    '''
-    # TODO: could be done more elegantly
-    # http://docs.sqlalchemy.org/en/latest/core/pooling.html#using-a-custom-connection-function
-    global _DATABASE_URI
-    if _DATABASE_URI is None:
-        cfg = LibraryConfig()
-        _DATABASE_URI = cfg.db_uri_sqla
-    if experiment_id is not None:
-        if not isinstance(experiment_id, int):
-            raise TypeError('Argument "experiment_id" must have type int.')
-        return '{main}_experiment_{id}'.format(
-            main=_DATABASE_URI, id=experiment_id
-        )
-    else:
-        return _DATABASE_URI
-
-
-def set_db_uri(db_uri):
-    '''Sets the database URI for the current Python process and all child
-    processes.
-
-    Parameters
-    ----------
-    db_uri: str
-        database URI
-
-    Returns
-    -------
-    str
-        database URI
-    '''
-    global _DATABASE_URI
-    _DATABASE_URI = db_uri
-    return _DATABASE_URI
-
-
-def create_db_engine(db_uri):
-    '''Creates a database engine with only one connection.
+def create_db_engine(db_uri, cache=True, pool_size=5):
+    '''Creates a database engine with a given pool size.
 
     Parameters
     ----------
     db_uri: str
         database uri
+    cache: bool, optional
+        whether engine should be cached for reuse (default: ``True``)
+    pool_size: int, optional
+        number of pooled database connections (default: ``5``)
 
     Returns
     -------
     sqlalchemy.engine.base.Engine
         created database engine
 
-    Warning
-    -------
-    The engine gets cached in :attr:`tmlib.models.utils.DATABASE_ENGINES`
-    and reused within the same Python process.
     '''
     if db_uri not in DATABASE_ENGINES:
         logger.debug('create database engine for process %d', os.getpid())
-        DATABASE_ENGINES[db_uri] = sqlalchemy.create_engine(
+        engine = sqlalchemy.create_engine(
             db_uri, poolclass=sqlalchemy.pool.QueuePool,
-            pool_size=5, max_overflow=10,
-            # PostgreSQL uses autocommit by default. SQLAlchemy
-            # (or actually psycopg2) makes use of multi-statement transactions
-            # using BEGIN and COMMIT/ROLLBACK. This may cause problems when sharding
-            # tables with Citusdata, for example. We may want to  turn it off to
+            pool_size=pool_size, max_overflow=pool_size*2,
+            # SQLAlchemy (or actually psycopg2) makes use of multi-statement
+            # transactions using BEGIN and COMMIT/ROLLBACK. The BEGIN is
+            # automatically issued. This may cause problems when sharding
+            # tables with Citus, for example. We may want to  turn it off to
             # use the Postgres default mode:
             # https://gist.github.com/carljm/57bfb8616f11bceaf865
         )
+        if cache:
+            logger.debug('cache database engine for reuse')
+            DATABASE_ENGINES[db_uri] = engine
     else:
         logger.debug('reuse cached database engine for process %d', os.getpid())
     return DATABASE_ENGINES[db_uri]
 
 
-def _try_to_connect_to_db(db_uri):
+def _try_to_connect_to_db(engine):
     try:
-        engine = create_db_engine(db_uri)
         connection = engine.connect()
         connection.close()
     except sqlalchemy.exc.OperationalError:
-        db_url = make_url(db_uri)
-        db_name = url.database
+        db_url = make_url(engine.url)
+        db_name = db_url.database
         raise ValueError('Cannot connect to database "%s".' % db_name)
 
 
-def _create_db_if_not_exists(db_uri):
+def _create_db_if_not_exists(engine, create_tables=True):
     try:
-        engine = create_db_engine(db_uri)
         connection = engine.connect()
         connection.close()
     except sqlalchemy.exc.OperationalError:
-        db_url = make_url(db_uri)
-        db_name = url.database
+        db_url = make_url(engine.url)
+        db_name = db_url.database
         logger.debug('create database %s', db_name)
-        with _RawConnection(db_uri) as conn:
-            engine = DATABASE_ENGINES[db_uri]
+        with _Connection(db_uri) as conn:
             conn.execute('CREATE DATABASE {name}'.format(
                 name=quote(engine, db_name))
             )
             if engine.name == 'citus':
-                # TODO: we need to create the database on all worker nodes
                 logger.debug('create citus extension for database %s', db_name)
                 conn.execute('CREATE EXTENSION citus;')
             logger.debug('create postgis extension for database %s', db_name)
             conn.execute('CREATE EXTENSION postgis;')
             logger.debug('create tables for database %s', db_name)
-            if db_name.endswith('tissuemaps'):
+
+        if create_tables:
+            if db_name == 'tissuemaps':
+                logger.debug(
+                    'create tables of models derived from %s',
+                    MainModel.__name__
+                )
                 MainModel.metadata.create_all(engine)
             else:
+                logger.debug(
+                    'create tables of models derived from %s',
+                    ExperimentModel.__name__
+                )
                 ExperimentModel.metadata.create_all(engine)
+                logger.debug(
+                    'set storage type of "pixels" column of '
+                    '"channel_layer_tiles" table to MAIN'
+                )
                 conn.execute(
                     'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
                 )
@@ -310,9 +269,15 @@ class Query(sqlalchemy.orm.query.Query):
                 experiments = self.from_self(cls.id).all()
                 for exp in experiments:
                     logger.debug('drop database of experiment %d', exp.id)
-                    db_uri = get_db_uri(exp.id)
-                    # TODO: must be done on all citus workers
-                    drop_database('%s_experiment_%d' % (db_uri, exp.id))
+                    db_uri = cfg.get_db_uri_sqla(experiment_id=exp.id)
+                    engine = create_db_engine(db_uri)
+                    _drop_db_if_exists(engine)
+                    for host in cfg.db_worker_hosts:
+                        url = cfg.get_db_uri_sqla(
+                            experiment_id=experiment_id, host=host
+                        )
+                        engine = create_db_engine(db_uri, cache=False)
+                        _drop_db_if_exists(engine)
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
         logger.debug(
@@ -329,9 +294,8 @@ class Query(sqlalchemy.orm.query.Query):
 
 class SQLAlchemy_Session(object):
 
-    '''A wrapper around an instance of
-    :class:`sqlalchemy.orm.session.Session` that manages persistence of
-    database model objects.
+    '''A wrapper around an instance of an *SQLAlchemy* session
+    that manages persistence of database model objects.
     '''
 
     def __init__(self, session):
@@ -339,7 +303,7 @@ class SQLAlchemy_Session(object):
         Parameters
         ----------
         session: sqlalchemy.orm.session.Session
-            `SQLAlchemy` database session
+            *SQLAlchemy* database session
         '''
         self._session = session
 
@@ -516,14 +480,13 @@ class _Session(object):
     def __init__(self, db_uri):
         self._db_uri = db_uri
         if self._db_uri not in self.__class__._session_factories:
-            engine = create_db_engine(self._db_uri)
             self.__class__._session_factories[self._db_uri] = \
-                create_db_session_factory(engine)
+                create_db_session_factory(self.engine)
 
     @property
     def engine(self):
         '''sqlalchemy.engine: engine object for the currently used database'''
-        return DATABASE_ENGINES[self._db_uri]
+        return create_db_engine(self._db_uri)
 
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
@@ -558,7 +521,7 @@ class _Session(object):
 
 class MainSession(_Session):
 
-    '''Session scopes for interaction with the main `TissueMAPS` database.
+    '''Session scopes for interaction with the main ``tissuemaps`` database.
     All changes get automatically committed at the end of the interaction.
     In case of an error, a rollback is issued.
 
@@ -583,9 +546,10 @@ class MainSession(_Session):
             the environment variable ``TMPAS_DB_URI`` (default: ``None``)
         '''
         if db_uri is None:
-            db_uri = get_db_uri()
+            db_uri = cfg.get_db_uri_sqla()
         super(MainSession, self).__init__(db_uri)
-        _try_to_connect_to_db(db_uri)
+        engine = create_db_engine(db_uri)
+        _try_to_connect_to_db(engine)
 
 
 class ExperimentSession(_Session):
@@ -611,15 +575,21 @@ class ExperimentSession(_Session):
         Parameters
         ----------
         experiment_id: int
-            ID of the experiment that should be accessed
+            ID of the experiment that should be queried
         db_uri: str, optional
             URI of the main ``tissuemaps`` database; defaults to the value
-            returned by :func:`get_db_uri <tmlib.models.utils.get_db_uri>`
+            returned by
+            :meth:`get_db_uri_sqla <tmlib.config.LibraryConfig.get_db_uri_sqla>`
         '''
         if db_uri is None:
-            db_uri = get_db_uri(experiment_id)
+            db_uri = cfg.get_db_uri_sqla(experiment_id=experiment_id)
         self.experiment_id = experiment_id
-        _create_db_if_not_exists(db_uri)
+        engine = create_db_engine(db_uri)
+        _create_db_if_not_exists(engine)
+        for host in cfg.db_worker_hosts:
+            url = cfg.get_db_uri_sqla(experiment_id=experiment_id, host=host)
+            engine = create_db_engine(db_uri, cache=False, pool_size=1)
+            _create_db_if_not_exists(engine, create_tables=False)
         super(ExperimentSession, self).__init__(db_uri)
 
     def __enter__(self):
@@ -628,15 +598,13 @@ class ExperimentSession(_Session):
         return self._session
 
 
-class _RawConnection(object):
+class _Connection(object):
 
     def __init__(self, db_uri):
         self._db_uri = db_uri
         create_db_engine(self._db_uri)
 
     def __enter__(self):
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-        from psycopg2.extras import DictCursor
         self._connection = DATABASE_ENGINES[self._db_uri].raw_connection()
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self._cursor = self._connection.cursor(cursor_factory=DictCursor)
@@ -646,7 +614,7 @@ class _RawConnection(object):
         self._connection.close()
 
 
-class ExperimentRawConnection(_RawConnection):
+class ExperimentConnection(_Connection):
 
     '''Database connection for executing raw SQL statements for an
     experiment-specific database outside of a transaction context.
@@ -655,45 +623,72 @@ class ExperimentRawConnection(_RawConnection):
     --------
     >>> import tmlib.models as tm
 
-    >>> with tm.utils.ExperimentRawConnection(experiment_id=1) as connection:
+    >>> with tm.utils.ExperimentConnection(experiment_id=1) as connection:
     >>>     connection.execute('SELECT mapobject_id, value FROM feature_values;')
     >>>     print connection.fetchall()
 
     Warning
     -------
-    Use only if absolutely necessary, otherwise use
+    Use raw connections only if absolutely necessary, otherwise use
     :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
+
+    See also
+    --------
+    :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
     '''
 
     def __init__(self, experiment_id, db_uri=None):
+        '''
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the experiment that should be queried
+        db_uri: str, optional
+            database URI; defaults to the value returned by
+            :meth:`get_db_uri_sqla <tmlib.config.DefaultConfig.get_db_uri_sqla>`
+            given the provided `experiment_id`
+        '''
         if db_uri is None:
-            db_uri = get_db_uri(experiment_id)
-        _create_db_if_not_exists(db_uri)
-        super(ExperimentRawConnection, self).__init__(db_uri)
+            db_uri = cfg.get_db_uri_sqla(experiment_id=experiment_id)
+        engine = create_db_engine(db_uri)
+        _create_db_if_not_exists(engine)
+        super(ExperimentConnection, self).__init__(db_uri)
         self.experiment_id = experiment_id
 
 
-class MainRawConnection(_RawConnection):
+class MainConnection(_Connection):
 
-    '''Database connection for executing raw SQL statements for an
-    experiment-specific database outside of a transaction context.
+    '''Database connection for executing raw SQL statements for the
+    main ``tissuemaps`` database outside of a transaction context.
 
     Examples
     --------
     >>> import tmlib.models as tm
 
-    >>> with tm.utils.MainRawConnection() as connection:
+    >>> with tm.utils.MainConnection() as connection:
     >>>     connection.execute('SELECT name FROM plates;')
     >>>     connection.fetchall()
 
     Warning
     -------
-    Use only if absolutely necessary, otherwise use
+    Use raw connnections only if absolutely necessary, otherwise use
     :class:`MainSession <tmlib.models.utils.MainSession>`.
+
+    See also
+    --------
+    :class:`MainModel <tmlib.models.base.MainModel>`
     '''
 
     def __init__(self, db_uri=None):
+        '''
+        Parameters
+        ----------
+        db_uri: str, optional
+            database URI; defaults to the value returned by
+            :meth:`get_db_uri_sqla <tmlib.config.DefaultConfig.get_db_uri_sqla>`
+        '''
         if db_uri is None:
-            db_uri = get_db_uri()
-        _try_to_connect_to_db(db_uri)
-        super(MainRawConnection, self).__init__(db_uri)
+            db_uri = cfg.get_db_uri_sqla()
+        engine = create_db_engine(db_uri)
+        _try_to_connect_to_db(engine)
+        super(MainConnection, self).__init__(db_uri)
