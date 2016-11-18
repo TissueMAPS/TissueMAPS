@@ -182,7 +182,7 @@ class TmapsConfig(object):
         '''str: database driver (default: ``"postgresql"``,
         options: ``{"postgresql", "postgresxl", "citus"}```)
         '''
-        return self._db_driver
+        self._config.get('DEFAULT', 'db_driver')
 
     @db_driver.setter
     def db_driver(self, value):
@@ -196,7 +196,7 @@ class TmapsConfig(object):
                 'Configuration parameters "db_driver" must be either "%s".' %
                 '" or "'.join(options)
             )
-        self._db_driver = value
+        self._config.set('DEFAULT', 'db_driver', str(value))
 
     @staticmethod
     def _get_database_name(experiment_id=None):
