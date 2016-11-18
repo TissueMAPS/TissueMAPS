@@ -128,21 +128,26 @@ def create_app(config_overrides={}, verbosity=None):
     werkzeug_logger = logging.getLogger('werkzeug')
     werkzeug_logger.addHandler(file_handler)
     werkzeug_logger.addHandler(stdout_handler)
-    if verbosity > 4:
+    if verbosity > 5:
         gc3pie_logger.setLevel(logging.DEBUG)
         wsgi_logger.setLevel(logging.DEBUG)
         werkzeug_logger.setLevel(logging.DEBUG)
         apscheduler_logger.setLevel(logging.DEBUG)
-    elif verbosity > 3:
+    elif verbosity > 4:
         gc3pie_logger.setLevel(logging.INFO)
+        wsgi_logger.setLevel(logging.DEBUG)
+        werkzeug_logger.setLevel(logging.DEBUG)
+        apscheduler_logger.setLevel(logging.DEBUG)
+    elif verbosity > 3:
+        gc3pie_logger.setLevel(logging.ERROR)
         wsgi_logger.setLevel(logging.INFO)
         werkzeug_logger.setLevel(logging.INFO)
         apscheduler_logger.setLevel(logging.INFO)
     else:
         gc3pie_logger.setLevel(logging.CRITICAL)
-        wsgi_logger.setLevel(logging.CRITICAL)
-        werkzeug_logger.setLevel(logging.CRITICAL)
-        apscheduler_logger.setLevel(logging.CRITICAL)
+        wsgi_logger.setLevel(logging.ERROR)
+        werkzeug_logger.setLevel(logging.ERROR)
+        apscheduler_logger.setLevel(logging.ERROR)
 
     ## Set the JSON encoder
     app.json_encoder = TmJSONEncoder
