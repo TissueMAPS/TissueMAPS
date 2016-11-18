@@ -48,7 +48,7 @@ class ChannelLayerTile(ExperimentModel):
         )
     )
 
-    __distribute_by_hash__ = 'id'
+    __distribute_by_hash__ = 'channel_layer_id'
 
     _pixels = Column('pixels', BYTEA)
 

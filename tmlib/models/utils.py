@@ -99,15 +99,16 @@ def _create_db_if_not_exists(engine):
         db_url.database = 'template1'
         logger.debug('create database %s', db_name)
         with Connection(db_url) as conn:
-            conn.execute('CREATE DATABASE {name}'.format(
+            conn.execute('CREATE DATABASE {name};'.format(
                 name=quote(engine, db_name))
             )
             if engine.name == 'citus':
                 logger.debug('create citus extension for database %s', db_name)
-                conn.execute('CREATE EXTENSION IF NOT EXISTS citus')
+                conn.execute('CREATE EXTENSION IF NOT EXISTS citus;')
             logger.debug('create postgis extension for database %s', db_name)
-            conn.execute('CREATE EXTENSION IF NOT EXISTS postgis')
+            conn.execute('CREATE EXTENSION IF NOT EXISTS postgis;')
             logger.debug('create tables for database %s', db_name)
+        db_url.database = db_name
 
 
 def _create_db_tables(engine):
@@ -128,7 +129,7 @@ def _create_db_tables(engine):
         )
         with Connection(db_url) as conn:
             conn.execute(
-                'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN'
+                'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
             )
 
 # @listens_for(sqlalchemy.pool.Pool, 'connect')

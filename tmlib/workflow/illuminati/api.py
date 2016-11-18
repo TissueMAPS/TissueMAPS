@@ -496,20 +496,37 @@ class PyramidBuilder(ClusterRoutines):
                                 'Tile shouldn\'t be in this batch!'
                             )
 
-                    clt = session.get_or_create(
-                        tm.ChannelLayerTile,
-                        level=level, row=row, column=column,
-                        channel_layer_id=layer.id,
-                    )
-                    # clt.pixels = tile
-                    channel_layer_tiles.append({
-                        'id': clt.id, '_pixels': tile.jpeg_encode()
-                    })
+                    with tm.utils.ExperimentConnection() as conn:
+                        # Upsert the tile entry, i.e. insert or update if exists
+                        sql = '''
+                            INSERT INTO channel_layer_tiles
+                            (level, row, column, channel_layer_id, pixels)
+                            VALUES (%(level)s, %(row)s, %(col)s, %(layer_id)s, %(pixels)s)
+                            ON CONFLICT ON CONSTRAINT DO UPDATE
+                            SET pixels=%(pixels)s
+                            WHERE level=%(level)s row=%(row)s column=%(col)s
+                            channel_layer_id=%(layer_id)s;
+                        '''
+                        conn.execute(sql, {
+                            'level': level, 'row': row, 'col': column,
+                            'layer_id': channel_layer_id,
+                            'pixels': tile.jpeg_encode()
+                        })
 
-                # session.bulk_save_objects(channel_layer_tiles)
-                session.bulk_update_mappings(
-                    tm.ChannelLayerTile, channel_layer_tiles
-                )
+                    # clt = session.get_or_create(
+                    #     tm.ChannelLayerTile,
+                    #     level=level, row=row, column=column,
+                    #     channel_layer_id=layer.id,
+                    # )
+                    # # clt.pixels = tile
+                    # channel_layer_tiles.append({
+                    #     'id': clt.id, '_pixels': tile.jpeg_encode()
+                    # })
+
+                # # session.bulk_save_objects(channel_layer_tiles)
+                # session.bulk_update_mappings(
+                    # tm.ChannelLayerTile, channel_layer_tiles
+                # )
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
