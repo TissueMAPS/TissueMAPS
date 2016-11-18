@@ -79,7 +79,7 @@ def create_db_engine(db_uri, cache=True, pool_size=5):
     return DATABASE_ENGINES[db_uri]
 
 
-def _try_to_connect_to_db(engine):
+def _assert_db_exists(engine):
     try:
         connection = engine.connect()
         connection.close()
@@ -89,7 +89,7 @@ def _try_to_connect_to_db(engine):
         raise ValueError('Cannot connect to database "%s".' % db_name)
 
 
-def _create_db_if_not_exists(engine, create_tables=True):
+def _create_db_if_not_exists(engine):
     try:
         connection = engine.connect()
         connection.close()
@@ -100,36 +100,35 @@ def _create_db_if_not_exists(engine, create_tables=True):
         logger.debug('create database %s', db_name)
         with _Connection(db_url) as conn:
             conn.execute('CREATE DATABASE {name}'.format(
-                name=quote(engine, db_url.database))
+                name=quote(engine, db_name))
             )
             if engine.name == 'citus':
                 logger.debug('create citus extension for database %s', db_name)
-                conn.execute('CREATE EXTENSION citus;')
+                conn.execute('CREATE EXTENSION IF NOT EXISTS citus')
             logger.debug('create postgis extension for database %s', db_name)
-            conn.execute('CREATE EXTENSION postgis;')
+            conn.execute('CREATE EXTENSION IF NOT EXISTS postgis')
             logger.debug('create tables for database %s', db_name)
 
-        if create_tables:
-            if db_name == 'tissuemaps':
-                logger.debug(
-                    'create tables of models derived from %s',
-                    MainModel.__name__
-                )
-                MainModel.metadata.create_all(engine)
-            else:
-                logger.debug(
-                    'create tables of models derived from %s',
-                    ExperimentModel.__name__
-                )
-                ExperimentModel.metadata.create_all(engine)
-                logger.debug(
-                    'set storage type of "pixels" column of '
-                    '"channel_layer_tiles" table to MAIN'
-                )
-                conn.execute(
-                    'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
-                )
 
+def _create_db_tables(engine):
+    db_url = make_url(engine.url)
+    db_name = str(db_url.database)
+    if db_name == 'tissuemaps':
+        logger.debug(
+            'create tables of models derived from %s', MainModel.__name__
+        )
+        MainModel.metadata.create_all(engine)
+    else:
+        logger.debug(
+            'create tables of models derived from %s', ExperimentModel.__name__
+        )
+        ExperimentModel.metadata.create_all(engine)
+        logger.debug(
+            'change storage of "pixels" column of "channel_layer_tiles" table'
+        )
+        conn.execute(
+            'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN'
+        )
 
 # @listens_for(sqlalchemy.pool.Pool, 'connect')
 # def _on_pool_connect(dbapi_con, connection_record):
@@ -551,7 +550,7 @@ class MainSession(_Session):
             db_uri = cfg.get_db_uri_sqla()
         super(MainSession, self).__init__(db_uri)
         engine = create_db_engine(db_uri)
-        _try_to_connect_to_db(engine)
+        _assert_db_exists(engine)
 
 
 class ExperimentSession(_Session):
@@ -590,8 +589,9 @@ class ExperimentSession(_Session):
         _create_db_if_not_exists(engine)
         for host in cfg.db_worker_hosts:
             url = cfg.get_db_uri_sqla(experiment_id=experiment_id, host=host)
-            engine = create_db_engine(db_uri, cache=False, pool_size=1)
-            _create_db_if_not_exists(engine, create_tables=False)
+            worker_engine = create_db_engine(db_uri, cache=False, pool_size=1)
+            _create_db_if_not_exists(worker_engine)
+        _create_db_tables(engine)
         super(ExperimentSession, self).__init__(db_uri)
 
     def __enter__(self):
@@ -654,6 +654,7 @@ class ExperimentConnection(_Connection):
             db_uri = cfg.get_db_uri_sqla(experiment_id=experiment_id)
         engine = create_db_engine(db_uri)
         _create_db_if_not_exists(engine)
+        _create_db_tables(engine)
         super(ExperimentConnection, self).__init__(db_uri)
         self.experiment_id = experiment_id
 
@@ -692,5 +693,5 @@ class MainConnection(_Connection):
         if db_uri is None:
             db_uri = cfg.get_db_uri_sqla()
         engine = create_db_engine(db_uri)
-        _try_to_connect_to_db(engine)
+        _assert_db_exists(engine)
         super(MainConnection, self).__init__(db_uri)
