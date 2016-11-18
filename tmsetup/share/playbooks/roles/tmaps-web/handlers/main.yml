@@ -17,16 +17,27 @@
 ---
 - name: restart redis
   become: yes
-  service: name=redis-server state=restarted
+  service:
+    name: redis-server
+    state: restarted
 
 - name: restart postgresql
   become: yes
-  service: name=postgresql state=restarted
+  service:
+    name: postgresql
+    state: restarted
+    enabled: yes
 
 - name: restart uwsgi
   become: yes
-  service: name=uwsgi state=restarted
+  service:
+    name: uwsgi
+    state: restarted
+    enabled: yes
 
 - name: restart nginx
   become: yes
-  service: name=nginx state=restarted
+  service:
+    name: nginx
+    state: restarted
+    enabled: yes

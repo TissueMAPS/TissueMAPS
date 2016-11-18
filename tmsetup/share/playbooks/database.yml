@@ -21,26 +21,10 @@
   hosts: all
   gather_facts: yes
 
-# - name: Format volume and use as db diskspace
-#   hosts:
-#     - postgresql_server
-#   remote_user: "{{ ansible_ssh_user }}"
-#   tags:
-#     - db
-#   vars:
-#     disk_mount_point: /data
-#     disk_additional_disks:
-#       - disk: /dev/vdb
-#         fstype: ext4
-#         mount_options: defaults
-#         mount: "{{ disk_mount_point }}"
-#   roles:
-#     - linux-disk
-
 - name: Configure PostgreSQL database server
   hosts:
     - tissuemaps_database
-  remote_user: "{{ ansible_ssh_user }}"
+  remote_user: "{{ ansible_user }}"
   vars:
     create_db_with_ansible: yes
   roles:
