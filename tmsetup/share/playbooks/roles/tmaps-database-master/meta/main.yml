@@ -13,13 +13,6 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
-# handlers file for tmaps-db-server
-- name: restart postgresql
-  become: yes
-  service:
-    name=postgresql
-    state=restarted
-    enabled=yes
-    pattern='/usr/lib/postgresql/{{ postgresql_version }}/bin/postgres -D '
+dependencies:
+  - tmaps-database-common
