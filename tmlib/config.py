@@ -182,7 +182,7 @@ class TmapsConfig(object):
         '''str: database driver (default: ``"postgresql"``,
         options: ``{"postgresql", "postgresxl", "citus"}```)
         '''
-        self._config.get('DEFAULT', 'db_driver')
+        return self._config.get('DEFAULT', 'db_driver')
 
     @db_driver.setter
     def db_driver(self, value):
