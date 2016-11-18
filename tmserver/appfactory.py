@@ -23,9 +23,7 @@ import gc3libs
 
 import tmlib.models as tm
 from tmlib.log import map_logging_verbosity
-from tmlib.models.utils import (
-    create_db_engine, create_db_session_factory, set_db_uri
-)
+from tmlib.models.utils import create_db_engine, create_db_session_factory
 
 from tmserver.extensions import jwt
 from tmserver.extensions import redis_store
