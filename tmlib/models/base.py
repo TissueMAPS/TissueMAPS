@@ -168,8 +168,7 @@ class FileModel(FileSystemModel):
         pass
 
 
-registry.register('postgresxl', 'tmlib.models.dialect', 'PGXLDialect_psycopg2')
-registry.register('citus', 'tmlib.models.dialect', 'CitusDialect_psycopg2')
+registry.register('postgresql.xl', 'tmlib.models.dialect', 'PGXLDialect_psycopg2')
 
 
 @compiles(DropTable, 'postgresql')
