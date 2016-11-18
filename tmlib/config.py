@@ -152,8 +152,6 @@ class TmapsConfig(object):
         ----
         This is only relevant for database clusters, such as
         `Citus <https://docs.citusdata.com/en/stable/index.html>`_.
-        However, when :attr:`db_driver <tmlib.config.DefaultConfig.db_driver>`
-        is ``citus``, the parameter must be set.
         '''
         value = self._config.get('DEFAULT', 'db_worker_hosts')
         return [v.strip() for v in value.split(',')]
@@ -163,11 +161,6 @@ class TmapsConfig(object):
         if not isinstance(value, list):
             raise TypeError(
                 'Configuration parameter "db_worker_hosts" must have type list.'
-            )
-        if self.db_driver == 'citus' and len(value) == 0:
-            raise ValueError(
-                'Configuration parameter "db_worker_hosts" is required when '
-                '"db_driver" is set to "citus".'
             )
         self._config.set('DEFAULT', 'db_worker_hosts', ','.join(value))
 
@@ -214,10 +207,12 @@ class TmapsConfig(object):
 
     def get_db_uri_sqla(self, experiment_id=None, host=None):
         '''str: database URI in *SQLAlchemy* format'''
+        if host is None:
+            host = self.db_host
         return '{driver}://{user}:{pw}@{host}:{port}/{database}'.format(
             driver=self.db_driver,
             user=self.db_user, pw=self.db_password,
-            host=self.db_host, port=self.db_port,
+            host=host, port=self.db_port,
             database=self._get_database_name(experiment_id)
         )
 

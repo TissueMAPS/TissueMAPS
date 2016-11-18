@@ -76,16 +76,21 @@ def create_db_engine(db_uri, cache=True, pool_size=5):
             DATABASE_ENGINES[db_uri] = engine
     else:
         logger.debug('reuse cached database engine for process %d', os.getpid())
-    return DATABASE_ENGINES[db_uri]
+        engine = DATABASE_ENGINES[db_uri]
+    return engine
 
 
 def _assert_db_exists(engine):
+    db_url = make_url(engine.url)
+    db_name = db_url.database
     try:
+        logger.debug('try to connect to database "%s": %s', db_name, db_url)
         connection = engine.connect()
         connection.close()
-    except sqlalchemy.exc.OperationalError:
+    except sqlalchemy.exc.OperationalError as err:
         db_url = make_url(engine.url)
         db_name = db_url.database
+        logger.error('could not connect to database "%s": %s', db_name, str(err))
         raise ValueError('Cannot connect to database "%s".' % db_name)
 
 
@@ -93,6 +98,7 @@ def _create_db_if_not_exists(engine):
     try:
         connection = engine.connect()
         connection.close()
+        return True
     except sqlalchemy.exc.OperationalError:
         db_url = make_url(engine.url)
         db_name = str(db_url.database)
@@ -109,6 +115,7 @@ def _create_db_if_not_exists(engine):
             conn.execute('CREATE EXTENSION IF NOT EXISTS postgis;')
             logger.debug('create tables for database %s', db_name)
         db_url.database = db_name
+        return False
 
 
 def _create_db_tables(engine):
@@ -275,6 +282,8 @@ class Query(sqlalchemy.orm.query.Query):
                     db_uri = cfg.get_db_uri_sqla(experiment_id=exp.id)
                     engine = create_db_engine(db_uri)
                     _drop_db_if_exists(engine)
+                    if len(cfg.db_worker_hosts) == 0 and cfg.db_driver == 'citus':
+                        logger.warn('no database worker hosts specified')
                     for host in cfg.db_worker_hosts:
                         url = cfg.get_db_uri_sqla(
                             experiment_id=experiment_id, host=host
@@ -588,12 +597,13 @@ class ExperimentSession(_Session):
             db_uri = cfg.get_db_uri_sqla(experiment_id=experiment_id)
         self.experiment_id = experiment_id
         engine = create_db_engine(db_uri)
-        _create_db_if_not_exists(engine)
-        for host in cfg.db_worker_hosts:
-            url = cfg.get_db_uri_sqla(experiment_id=experiment_id, host=host)
-            worker_engine = create_db_engine(db_uri, cache=False, pool_size=1)
-            _create_db_if_not_exists(worker_engine)
-        _create_db_tables(engine)
+        exists = _create_db_if_not_exists(engine)
+        if not exists:
+            for host in cfg.db_worker_hosts:
+                url = cfg.get_db_uri_sqla(experiment_id=experiment_id, host=host)
+                worker_engine = create_db_engine(db_uri, cache=False, pool_size=1)
+                _create_db_if_not_exists(worker_engine)
+            _create_db_tables(engine)
         super(ExperimentSession, self).__init__(db_uri)
 
     def __enter__(self):
@@ -674,8 +684,7 @@ class ExperimentConnection(Connection):
         if db_uri is None:
             db_uri = cfg.get_db_uri_sqla(experiment_id=experiment_id)
         engine = create_db_engine(db_uri)
-        _create_db_if_not_exists(engine)
-        _create_db_tables(engine)
+        _assert_db_exists(engine)
         super(ExperimentConnection, self).__init__(db_uri)
         self.experiment_id = experiment_id
 
