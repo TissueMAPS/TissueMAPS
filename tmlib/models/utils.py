@@ -98,7 +98,7 @@ def _create_db_if_not_exists(engine):
         db_name = str(db_url.database)
         db_url.database = 'template1'
         logger.debug('create database %s', db_name)
-        with _Connection(db_url) as conn:
+        with Connection(db_url) as conn:
             conn.execute('CREATE DATABASE {name}'.format(
                 name=quote(engine, db_name))
             )
@@ -126,9 +126,10 @@ def _create_db_tables(engine):
         logger.debug(
             'change storage of "pixels" column of "channel_layer_tiles" table'
         )
-        conn.execute(
-            'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN'
-        )
+        with Connection(db_url) as conn:
+            conn.execute(
+                'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN'
+            )
 
 # @listens_for(sqlalchemy.pool.Pool, 'connect')
 # def _on_pool_connect(dbapi_con, connection_record):
@@ -600,9 +601,28 @@ class ExperimentSession(_Session):
         return self._session
 
 
-class _Connection(object):
+class Connection(object):
+
+    '''A "raw" database connection which uses autocommit mode and is not
+    part of a transaction.
+
+    Such connections are required to issues statements such as
+    ``CREATE DATABASE``, for example.
+
+    Warning
+    -------
+    Only use a raw connection when absolutely required and when you know what
+    you are doing.
+    '''
 
     def __init__(self, db_uri):
+        '''
+        Parameters
+        ----------
+        db_uri: str
+            URI of the database to connect to in the format required by
+            *SQLAlchemy*
+        '''
         self._db_uri = db_uri
         create_db_engine(self._db_uri)
 
@@ -616,7 +636,7 @@ class _Connection(object):
         self._connection.close()
 
 
-class ExperimentConnection(_Connection):
+class ExperimentConnection(Connection):
 
     '''Database connection for executing raw SQL statements for an
     experiment-specific database outside of a transaction context.
@@ -659,7 +679,7 @@ class ExperimentConnection(_Connection):
         self.experiment_id = experiment_id
 
 
-class MainConnection(_Connection):
+class MainConnection(Connection):
 
     '''Database connection for executing raw SQL statements for the
     main ``tissuemaps`` database outside of a transaction context.

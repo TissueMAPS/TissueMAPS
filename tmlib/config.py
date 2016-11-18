@@ -155,7 +155,7 @@ class TmapsConfig(object):
         However, when :attr:`db_driver <tmlib.config.DefaultConfig.db_driver>`
         is ``citus``, the parameter must be set.
         '''
-        value = self._config.get('DEFAULT', 'db_worker_hosts', value)
+        value = self._config.get('DEFAULT', 'db_worker_hosts')
         return [v.strip() for v in value.split(',')]
 
     @db_worker_hosts.setter
