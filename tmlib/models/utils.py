@@ -94,6 +94,17 @@ def _assert_db_exists(engine):
         raise ValueError('Cannot connect to database "%s".' % db_name)
 
 
+def _add_db_worker(engine, host, port):
+    db_url = make_url(engine.url)
+    db_name = db_url.database
+    logger.debug('add worker node %s to datbase %s', host, db_name)
+    with Connection(db_url) as conn:
+        conn.execute(
+            'SELECT * from master_add_node(%(host)s, %(port)s);',
+            {'host': host, 'port': port}
+        )
+
+
 def _create_db_if_not_exists(engine):
     try:
         connection = engine.connect()
@@ -113,7 +124,6 @@ def _create_db_if_not_exists(engine):
                 conn.execute('CREATE EXTENSION IF NOT EXISTS citus;')
             logger.debug('create postgis extension for database %s', db_name)
             conn.execute('CREATE EXTENSION IF NOT EXISTS postgis;')
-            logger.debug('create tables for database %s', db_name)
         db_url.database = db_name
         return False
 
@@ -285,11 +295,11 @@ class Query(sqlalchemy.orm.query.Query):
                     if len(cfg.db_worker_hosts) == 0 and cfg.db_driver == 'citus':
                         logger.warn('no database worker hosts specified')
                     for host in cfg.db_worker_hosts:
-                        url = cfg.get_db_uri_sqla(
+                        worker_url = cfg.get_db_uri_sqla(
                             experiment_id=experiment_id, host=host
                         )
-                        engine = create_db_engine(db_uri, cache=False)
-                        _drop_db_if_exists(engine)
+                        worker_engine = create_db_engine(worker_url, cache=False)
+                        _drop_db_if_exists(worker_engine)
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
         logger.debug(
@@ -596,14 +606,25 @@ class ExperimentSession(_Session):
         if db_uri is None:
             db_uri = cfg.get_db_uri_sqla(experiment_id=experiment_id)
         self.experiment_id = experiment_id
-        engine = create_db_engine(db_uri)
-        exists = _create_db_if_not_exists(engine)
+        master_engine = create_db_engine(db_uri)
+        exists = _create_db_if_not_exists(master_engine)
         if not exists:
+            # NOTE: citus master does not propagate CREATE DATABASE and
+            # CREATE EXTENTION to worker nodes. This needs to be done manually
+            # on each worker. In addition, workers must be added for each
+            # database.
             for host in cfg.db_worker_hosts:
-                url = cfg.get_db_uri_sqla(experiment_id=experiment_id, host=host)
-                worker_engine = create_db_engine(db_uri, cache=False, pool_size=1)
+                worker_url = cfg.get_db_uri_sqla(
+                    experiment_id=experiment_id, host=host
+                )
+                worker_engine = create_db_engine(
+                    worker_url, cache=False, pool_size=1
+                )
+                _add_db_worker(master_engine, host, cfg.db_port)
                 _create_db_if_not_exists(worker_engine)
-            _create_db_tables(engine)
+            # The CREATE TABLE command is propagated and only needs to be
+            # called on the master.
+            _create_db_tables(master_engine)
         super(ExperimentSession, self).__init__(db_uri)
 
     def __enter__(self):

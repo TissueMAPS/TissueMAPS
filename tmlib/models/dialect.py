@@ -13,12 +13,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 from sqlalchemy import func, text, cast
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy_utils.expressions import array_agg
 from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.schema import UniqueConstraint, PrimaryKeyConstraint
 from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
+
+logger = logging.getLogger(__name__)
 
 
 def _update_table_constraints(table, distribution_column):
@@ -51,23 +54,19 @@ def _compile_create_table(element, compiler, **kwargs):
     distribute_by_hash = 'distribute_by_hash' in table.info
     if distribute_by_hash:
         distribution_column = table.info['distribute_by_hash']
-        # The distributed column must be part of the UNIQUE and
-        # PRIMARY KEY constraints
-        # TODO: consider hacking "visit_primary_key_constraint" and
-        # "visit_unique_constraint" instead
-        table = _update_table_constaints(table, distribution_column)
-    sql = compiler.visit_create_table(element)
-    if distribute_by_hash:
+        table = _update_table_constraints(table, distribution_column)
         logger.info(
             'distribute table "%s" by hash "%s"', table.name,
             distribution_column
         )
+        sql = compiler.visit_create_table(element)
         sql += ' DISTRIBUTE BY HASH(' + distribution_column + ')'
     else:
         # NOTE: In PostrgresXL every table needs to be distributed.
         logger.info(
             'distribute table "%s" by replication', table.name
         )
+        sql = compiler.visit_create_table(element)
         sql += ' DISTRIBUTE BY REPLICATION'
     return sql
 
@@ -106,15 +105,15 @@ def _compile_create_table(element, compiler, **kwargs):
     logger.info('create table "%s"', table.name)
     distribute_by_hash = 'distribute_by_hash' in table.info
     distribute_by_replication = 'distribute_by_replication' in table.info
-    sql = compiler.visit_create_table(element)
     if distribute_by_hash or distribute_by_replication:
         if distribute_by_hash:
             distribution_column = table.info['distribute_by_hash']
-            table = _update_table_constaints(table, distribution_column)
+            table = _update_table_constraints(table, distribution_column)
             logger.info(
                 'distribute table "%s" by hash "%s"', table.name,
                 distribution_column
             )
+            sql = compiler.visit_create_table(element)
             sql += ';SELECT create_distributed_table(\'%s\', \'%s\');' % (
                 table.name, distribution_column
             )
@@ -123,20 +122,20 @@ def _compile_create_table(element, compiler, **kwargs):
             # included in UNIQUE and PRIMARY KEY constraints.
             # NOTE: This assumes that "id" column is the first column. This is
             # ensured by the IdMixIn on MainModel and ExperimentModel base
-            # classes, but may get screwed up by including additional mixins.
-            if list(t.columns)[0].name != 'id':
+            # classes, but may get screwed up by additional mixins.
+            if list(table.columns)[0].name != 'id':
                 raise ValueError(
                     'Column "id" must be the first column of table "%s"'
                     'to distribute it by replication.' % table.name
                 )
-            table = _update_table_constaints(table, 'id')
+            table = _update_table_constraints(table, 'id')
             logger.info(
                 'distribute table "%s" by replication', table.name
             )
+            sql = compiler.visit_create_table(element)
             sql += ';SELECT create_reference_table(\'%s\');' % table.name
     # NOTE: In contrast to PostgresXL, tables don't have to be distributed.
     # If they don't get distributed, they live a happy live as normal
     # PostgreSQL tables on the master node.
-    # However, distributed tables can only be joined with distributed tables!!
     return sql
 
