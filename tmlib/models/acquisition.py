@@ -178,8 +178,6 @@ class ImageFileMapping(ExperimentModel):
 
     __tablename__ = 'image_file_mappings'
 
-    __distribute_by_hash__ = 'id'
-
     #: int: zero-based time point index in the time series
     tpoint = Column(Integer, index=True)
 
