@@ -30,8 +30,6 @@ class SiteShift(ExperimentModel):
 
     __tablename__ = 'site_shifts'
 
-    __distribute_by_hash__ = 'id'
-
     #: int: horizontal translation in pixels relative to the corresponding
     #: site of the reference cycle
     #: (positive value -> right, negative value -> left)
@@ -105,8 +103,6 @@ class SiteIntersection(ExperimentModel):
     '''
 
     __tablename__ = 'site_intersections'
-
-    __distribute_by_hash__ = 'id'
 
     #: number of overhanging pixels at the top, which would need to be cropped
     #: at the bottom for overlay
