@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''Base classes for data analysis tools.'''
+import re
 import logging
 import inspect
 import importlib
@@ -204,17 +205,18 @@ class ToolSparkInterface(ToolInterface):
 
     @staticmethod
     def _build_feature_values_query(mapobject_type_name, feature_name):
-        # We run the actual query in SQL, since this performs way better
-        # compared to loading the table and then filtering it via Spark
+        r = re.compile('^[\.a-zA-z0-9_-]+$')
+        if not r.match(mapobject_type_name):
+            raise ValueError(
+                'Argument "mapobject_type_name" may only contain alphanumeric '
+                'and the following special characters: [._-]'
+            )
+        if not r.match(feature_name):
+            raise ValueError(
+                'Argument "feature_name" may only contain alphanumeric '
+                'and the following special characters: [._-]'
+            )
         # NOTE: the alias is required for compatibility with DataFrameReader
-        if not mapobject_type_name.isalnum():
-            raise ValueError(
-                'Argument "mapobject_type_name" must be alphanumeric.'
-            )
-        if not feature_name.isalnum():
-            raise ValueError(
-                'Argument "feature_name" must be alphanumeric.'
-            )
         return '''
             (SELECT v.value, v.mapobject_id, v.id FROM feature_values AS v
             JOIN features AS f ON f.id=v.feature_id
