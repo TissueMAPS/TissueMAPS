@@ -180,7 +180,7 @@ class TmapsConfig(object):
     @property
     def db_driver(self):
         '''str: database driver (default: ``"postgresql"``,
-        options: ``{"postgresql", "postgresxl", "citus"}```)
+        options: ``{"postgresql", "citus"}```)
         '''
         return self._config.get('DEFAULT', 'db_driver')
 
@@ -190,7 +190,7 @@ class TmapsConfig(object):
             raise TypeError(
                 'Configuration parameters "db_driver" must have type str.'
             )
-        options = {'postgresql', 'postgresxl', 'citus'}
+        options = {'postgresql', 'citus'}
         if not value in options:
             raise TypeError(
                 'Configuration parameters "db_driver" must be either "%s".' %
@@ -206,7 +206,20 @@ class TmapsConfig(object):
         return database
 
     def get_db_uri_sqla(self, experiment_id=None, host=None):
-        '''str: database URI in *SQLAlchemy* format'''
+        '''Builds the database URI in the format required by *SQLAlchemy*.
+
+        Parameters
+        ----------
+        experiment_id: int, optional
+            ID of an experiment
+        host: str, optional
+            IP address of database server host
+
+        Returns
+        -------
+        str
+            database URI
+        '''
         if host is None:
             host = self.db_host
         return '{driver}://{user}:{pw}@{host}:{port}/{database}'.format(
@@ -217,7 +230,18 @@ class TmapsConfig(object):
         )
 
     def get_db_uri_spark(self, experiment_id=None):
-        '''str: database URI in *JDBC* format as required by *Spark*'''
+        '''Builds the database URI in *JDBC* format as required by *Spark*.
+
+        Parameters
+        ----------
+        experiment_id: int, optional
+            ID of an experiment
+
+        Returns
+        -------
+        str
+            database URI
+        '''
         return 'jdbc:postgresql://{host}:{port}/{database}?user={user}&password={pw}'.format(
             user=self.db_user, pw=self.db_password,
             host=self.db_host, port=self.db_port,

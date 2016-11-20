@@ -42,7 +42,7 @@ from tmlib import utils
 logger = logging.getLogger(__name__)
 
 
-class DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
+class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
 
     '''Metaclass for declarative base classes.'''
 
@@ -70,11 +70,11 @@ class DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
 
 
 _MainBase = declarative_base(
-    name='MainBase', metaclass=DeclarativeABCMeta
+    name='MainBase', metaclass=_DeclarativeABCMeta
 )
 
 _ExperimentBase = declarative_base(
-    name='ExperimentBase', metaclass=DeclarativeABCMeta
+    name='ExperimentBase', metaclass=_DeclarativeABCMeta
 )
 
 

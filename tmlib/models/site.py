@@ -38,8 +38,6 @@ class Site(ExperimentModel, DateMixIn):
         intersection belongings to the site
     channel_image_files: List[tmlib.models.file.ChannelImageFile]
         channel image files belonging to the site
-    mapobject_segmentations: List[tmlib.models.mapobject.MapobjectSegmentation]
-        segmentations belonging to the site
     '''
 
     __tablename__ = 'sites'

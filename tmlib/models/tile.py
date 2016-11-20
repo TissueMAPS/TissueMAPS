@@ -48,7 +48,7 @@ class ChannelLayerTile(ExperimentModel):
         )
     )
 
-    __distribute_by_hash__ = 'channel_layer_id'
+    __distribute_by_hash__ = 'id'
 
     _pixels = Column('pixels', BYTEA)
 
@@ -61,20 +61,8 @@ class ChannelLayerTile(ExperimentModel):
     #: int: zero-baesed horizontal (x) index
     column = Column(Integer)
 
-    #ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;
-
     #: int: ID of parent channel layer
-    channel_layer_id = Column(
-        Integer,
-        ForeignKey('channel_layers.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: tmlib.models.layer.ChannelLayer: parent channel layer
-    channel_layer = relationship(
-        'ChannelLayer',
-        backref=backref('pyramid_tile_files', cascade='all, delete-orphan')
-    )
+    channel_layer_id = Column(Integer, index=True, nullable=False)
 
     def __init__(self, level, row, column, channel_layer_id, pixels=None):
         '''

@@ -38,8 +38,6 @@ class ToolResult(ExperimentModel):
 
     __tablename__ = 'tool_results'
 
-    __distribute_by_replication__ = True
-
     #: str: name of the result given by the user
     name = Column(String(50), index=True)
 
@@ -47,20 +45,10 @@ class ToolResult(ExperimentModel):
     tool_name = Column(String(30), index=True)
 
     #: int: ID of the corresponding job submission
-    submission_id = Column(Integer, index=True)
+    submission_id = Column(Integer, index=True, nullable=False)
 
     #: int: id of the parent mapobject
-    mapobject_type_id = Column(
-        Integer,
-        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
-    mapobject_type = relationship(
-        'MapobjectType',
-        backref=backref('label_layers', cascade='all, delete-orphan')
-    )
+    mapobject_type_id = Column(Integer, index=True, nullable=False)
 
     def __init__(self, submission_id, tool_name, mapobject_type_id, name=None):
         '''A persisted result that can be interpreted and visualized by the

@@ -30,10 +30,6 @@ class Feature(ExperimentModel):
     would correspond to a vector where each value would reflect the area of an
     individual *map object* of a given *map object type*.
 
-    Attributes
-    ----------
-    values: List[tmlib.models.FeatureValues]
-        values belonging to the feature
     '''
 
     __tablename__ = 'features'
@@ -49,17 +45,7 @@ class Feature(ExperimentModel):
     is_aggregate = Column(Boolean, index=True)
 
     #: int: ID of parent mapobject type
-    mapobject_type_id = Column(
-        Integer,
-        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
-    mapobject_type = relationship(
-        'MapobjectType',
-        backref=backref('features', cascade='all, delete-orphan')
-    )
+    mapobject_type_id = Column(Integer, index=True, nullable=False)
 
     def __init__(self, name, mapobject_type_id, is_aggregate=False):
         '''
@@ -94,15 +80,7 @@ class FeatureValue(ExperimentModel):
         UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
     )
 
-    # Probably, its better to distribute by feature_id rather than by
-    # mapobject_id, because it's more useful to join the table with the
-    # features table. Note, that mapobject_types table can be joined with
-    # features table allowing the following query in an efficient way:
-    # SELECT v.value, v.mapobject_id FROM values v
-    # JOIN features f on f.id = v.feature_id
-    # JOIN mapobject_types t on t.id = f.mapobject_type_id
-    # WHERE f.name = 'Morphology_Area' AND t.name = 'Cells'
-    __distribute_by_hash__ = 'feature_id'
+    __distribute_by_hash__ = 'mapobject_id'
 
     #: float: the actual extracted feature value
     value = Column(Float(precision=15))
@@ -111,31 +89,10 @@ class FeatureValue(ExperimentModel):
     tpoint = Column(Integer, index=True)
 
     #: int: ID of the parent feature
-    feature_id = Column(
-        Integer,
-        ForeignKey('features.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
+    feature_id = Column(Integer, index=True, nullable=False)
 
     #: int: ID of the parent mapobject
-    mapobject_id = Column(
-        Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: tmlib.models.feature.Feature: parent feature
-    feature = relationship(
-        'Feature',
-        backref=backref('values', cascade='all, delete-orphan')
-    )
-
-    #: tmlib.models.mapobject.Mapobject: parent mapobject
-    #: for which the feature was extracted
-    mapobject = relationship(
-        'Mapobject',
-        backref=backref('feature_values', cascade='all, delete-orphan')
-    )
+    mapobject_id = Column(Integer, index=True, nullable=False)
 
     def __init__(self, feature_id, mapobject_id, value=None, tpoint=None):
         '''
@@ -172,7 +129,7 @@ class LabelValue(ExperimentModel):
 
     __tablename__ = 'label_values'
 
-    __distribute_by_hash__ = 'tool_result_id'
+    __distribute_by_hash__ = 'mapobject_id'
 
     #: float: the actual label value
     value = Column(Float(precision=15))
@@ -181,30 +138,10 @@ class LabelValue(ExperimentModel):
     tpoint = Column(Integer, index=True)
 
     #: int: ID of the parent mapobject
-    mapobject_id = Column(
-        Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
+    mapobject_id = Column(Integer, index=True, nullable=False)
 
     #: int: ID of the parent label layer
-    tool_result_id = Column(
-        Integer,
-        ForeignKey('tool_results.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: tmlib.models.mapobject.Mapobject: parent mapobject
-    mapobject = relationship(
-        'Mapobject',
-        backref=backref('label_values', cascade='all, delete-orphan')
-    )
-
-    #: tmlib.models.result.ToolResult: parent tool result
-    tool_result = relationship(
-        'ToolResult',
-        backref=backref('label_values', cascade='all, delete-orphan')
-    )
+    tool_result_id = Column(Integer, index=True, nullable=False)
 
     def __init__(self, tool_result_id, mapobject_id, value=None, tpoint=None):
         '''

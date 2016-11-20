@@ -51,8 +51,6 @@ class MicroscopeImageFile(FileModel, DateMixIn):
 
     __table_args__ = (UniqueConstraint('name', 'acquisition_id'), )
 
-    __distribute_by_hash__ = 'id'
-
     #: str: name given by the microscope
     name = Column(String(100), index=True)
 
@@ -132,8 +130,6 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
     __tablename__ = 'microscope_metadata_files'
 
     __table_args__ = (UniqueConstraint('name', 'acquisition_id'), )
-
-    __distribute_by_hash__ = 'id'
 
     #: str: name given by the microscope
     name = Column(String(100), index=True)
@@ -218,8 +214,6 @@ class ChannelImageFile(FileModel, DateMixIn):
     __table_args__ = (
         UniqueConstraint('tpoint', 'site_id', 'cycle_id', 'channel_id'),
     )
-
-    __distribute_by_hash__ = 'id'
 
     _n_planes = Column('n_planes', Integer, index=True)
 

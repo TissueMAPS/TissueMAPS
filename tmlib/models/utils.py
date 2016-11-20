@@ -113,7 +113,7 @@ def _create_db_if_not_exists(engine):
     except sqlalchemy.exc.OperationalError:
         db_url = make_url(engine.url)
         db_name = str(db_url.database)
-        db_url.database = 'template1'
+        db_url.database = 'postgres'
         logger.debug('create database %s', db_name)
         with Connection(db_url) as conn:
             conn.execute('CREATE DATABASE {name};'.format(
@@ -131,7 +131,7 @@ def _create_db_if_not_exists(engine):
 def _drop_db_if_exists(engine):
     db_url = make_url(engine.url)
     db_name = str(db_url.database)
-    db_url.database = 'template1'
+    db_url.database = 'postgres'
     logger.debug('drop database %s', db_name)
     with Connection(db_url) as conn:
         conn.execute('DROP DATABASE {name};'.format(
@@ -308,7 +308,7 @@ class Query(sqlalchemy.orm.query.Query):
                         logger.warn('no database worker hosts specified')
                     for host in cfg.db_worker_hosts:
                         worker_url = cfg.get_db_uri_sqla(
-                            experiment_id=experiment_id, host=host
+                            experiment_id=exp.id, host=host
                         )
                         worker_engine = create_db_engine(worker_url, cache=False)
                         _drop_db_if_exists(worker_engine)

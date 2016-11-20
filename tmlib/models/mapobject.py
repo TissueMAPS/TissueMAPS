@@ -35,7 +35,7 @@ from tmlib.utils import autocreate_directory_property
 logger = logging.getLogger(__name__)
 
 
-class MapobjectType(ExperimentModel, DateMixIn):
+class MapobjectType(ExperimentModel):
 
     '''A *mapobject type* represents a conceptual group of *mapobjects*
     (segmented objects) that reflect different biological entities,
@@ -62,19 +62,6 @@ class MapobjectType(ExperimentModel, DateMixIn):
     #: bool: whether object outlines are static, i.e. don't depend on
     #: image analysis (examples are "plates" or "wells")
     is_static = Column(Boolean, index=True)
-
-    # #: int: ID of parent experiment
-    # experiment_id = Column(
-    #     Integer,
-    #     ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
-    #     index=True
-    # )
-
-    # #: tmlib.models.experiment.Experiment: parent experiment
-    # experiment = relationship(
-    #     'Experiment',
-    #     backref=backref('mapobject_types', cascade='all, delete-orphan')
-    # )
 
     def __init__(self, name, is_static=False, parent_id=None):
         '''
@@ -357,10 +344,6 @@ class Mapobject(ExperimentModel):
     image. It has outlines for drawing on the map and may also be associated
     with measurements (*features*), which can be queried or used for analysis.
 
-    Attributes
-    ----------
-    feature_values: List[tmlib.models.FeatureValues]
-        feature values belonging to the mapobject
     '''
 
     #: str: name of the corresponding database table
@@ -373,26 +356,28 @@ class Mapobject(ExperimentModel):
     parent_id = Column(Integer, index=True)
 
     #: int: ID of parent mapobject type
-    mapobject_type_id = Column(
-        Integer,
-        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
+    mapobject_type_id = Column(Integer, index=True, nullable=False)
 
-    #: tmlib.models.mapobject.MapobjecType: parent mapobject type
-    mapobject_type = relationship(
-        'MapobjectType',
-        backref=backref('mapobjects', cascade='all, delete-orphan')
-    )
+    # mapobject_type_id = Column(
+    #     Integer,
+    #     ForeignKey('mapobject_types.id', ondelete='CASCADE'),
+    #     index=True
+    # )
 
-    #: List[tmlib.models.MapobjectSegmentation]: segmentations belonging to
-    #: the mapobject
-    segmentations = relationship(
-        'MapobjectSegmentation',
-        backref=backref(
-            'mapobject', cascade='all, delete-orphan', single_parent=True
-        )
-    )
+    # #: tmlib.models.mapobject.MapobjecType: parent mapobject type
+    # mapobject_type = relationship(
+    #     'MapobjectType',
+    #     backref=backref('mapobjects', cascade='all, delete-orphan')
+    # )
+
+    # #: List[tmlib.models.MapobjectSegmentation]: segmentations belonging to
+    # #: the mapobject
+    # segmentations = relationship(
+    #     'MapobjectSegmentation',
+    #     backref=backref(
+    #         'mapobject', cascade='all, delete-orphan', single_parent=True
+    #     )
+    # )
 
     def __init__(self, mapobject_type_id, parent_id=None):
         '''
@@ -419,10 +404,6 @@ class MapobjectSegmentation(ExperimentModel):
     it with the corresponding :class:`Site <tmlib.models.site.Site>`
     in which the object was identified.
 
-    Attributes
-    ----------
-    mapobject: tmlib.models.mapobject.Mapobject
-        parent mapobject to which the outline belongs
     '''
 
     __tablename__ = 'mapobject_segmentations'
@@ -456,26 +437,10 @@ class MapobjectSegmentation(ExperimentModel):
     geom_centroid = Column(Geometry('POINT'))
 
     #: int: ID of parent site
-    site_id = Column(
-        Integer,
-        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
+    site_id = Column(Integer, index=True, nullable=False)
 
     #: int: ID of parent mapobject
-    mapobject_id = Column(
-        Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: tmlib.models.site.Site: parent site
-    site = relationship(
-        'Site',
-        backref=backref(
-            'mapobject_segmentations', cascade='all, delete-orphan'
-        )
-    )
+    mapobject_id = Column(Integer, index=True, nullable=False)
 
     def __init__(self, geom_poly, geom_centroid, mapobject_id, label=None,
             is_border=None, tpoint=None, zplane=None, pipeline=None, site_id=None):
