@@ -501,17 +501,22 @@ class PyramidBuilder(ClusterRoutines):
                         sql = '''
                             INSERT INTO channel_layer_tiles
                             (level, row, column, channel_layer_id, pixels)
-                            VALUES (%(level)s, %(row)s, %(col)s, %(layer_id)s, %(pixels)s)
+                            VALUES
+                            (%(level)s, %(row)s, %(col)s, %(layer_id)s, %(pixels)s)
                             ON CONFLICT ON CONSTRAINT DO UPDATE
                             SET pixels=%(pixels)s
-                            WHERE level=%(level)s row=%(row)s column=%(col)s
-                            channel_layer_id=%(layer_id)s;
+                            WHERE level=%(level)s
+                            AND row=%(row)s
+                            AND column=%(col)s
+                            AND channel_layer_id=%(layer_id)s;
                         '''
-                        conn.execute(sql, {
-                            'level': level, 'row': row, 'col': column,
-                            'layer_id': channel_layer_id,
-                            'pixels': tile.jpeg_encode()
-                        })
+                        conn.execute(
+                            sql, {
+                                'level': level, 'row': row, 'col': column,
+                                'layer_id': channel_layer_id,
+                                'pixels': tile.jpeg_encode()
+                            }
+                        )
 
                     # clt = session.get_or_create(
                     #     tm.ChannelLayerTile,
