@@ -27,7 +27,6 @@ class ToolResult(ExperimentModel):
 
     '''A tool result bundles all elements that should be visualized together
     client side.
-
     Attributes
     ----------
     layer: tmlib.tools.result.LabelLayer
@@ -45,11 +44,20 @@ class ToolResult(ExperimentModel):
     tool_name = Column(String(30), index=True)
 
     #: int: ID of the corresponding job submission
-    submission_id = Column(Integer, index=True, nullable=False)
+    submission_id = Column(Integer, index=True)
 
     #: int: id of the parent mapobject
-    mapobject_type_id = Column(Integer, index=True, nullable=False)
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
 
+    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
+    mapobject_type = relationship(
+        'MapobjectType',
+        backref=backref('label_layers', cascade='all, delete-orphan')
+    )
     def __init__(self, submission_id, tool_name, mapobject_type_id, name=None):
         '''A persisted result that can be interpreted and visualized by the
         client.

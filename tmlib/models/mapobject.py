@@ -41,10 +41,6 @@ class MapobjectType(ExperimentModel):
     (segmented objects) that reflect different biological entities,
     such as "cells" or "nuclei" for example.
 
-    Attributes
-    ----------
-    mapobjects: List[tmlib.models.mapobject.Mapobject]
-        mapobjects belonging to the mapobject type
     '''
 
     __tablename__ = 'mapobject_types'
@@ -62,6 +58,19 @@ class MapobjectType(ExperimentModel):
     #: bool: whether object outlines are static, i.e. don't depend on
     #: image analysis (examples are "plates" or "wells")
     is_static = Column(Boolean, index=True)
+
+    #: int: ID of parent experiment
+    experiment_id = Column(
+        Integer,
+        ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: tmlib.models.experiment.Experiment: parent experiment
+    experiment = relationship(
+        'Experiment',
+        backref=backref('mapobject_types', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, is_static=False, parent_id=None):
         '''
