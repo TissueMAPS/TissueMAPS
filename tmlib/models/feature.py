@@ -94,7 +94,15 @@ class FeatureValue(ExperimentModel):
         UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
     )
 
-    __distribute_by_hash__ = 'feature_id'  # or mapobject_id ???
+    # Probably, its better to distribute by feature_id rather than by
+    # mapobject_id, because it's more useful to join the table with the
+    # features table. Note, that mapobject_types table can be joined with
+    # features table allowing the following query in an efficient way:
+    # SELECT v.value, v.mapobject_id FROM values v
+    # JOIN features f on f.id = v.feature_id
+    # JOIN mapobject_types t on t.id = f.mapobject_type_id
+    # WHERE f.name = 'Morphology_Area' AND t.name = 'Cells'
+    __distribute_by_hash__ = 'feature_id'
 
     #: float: the actual extracted feature value
     value = Column(Float(precision=15))

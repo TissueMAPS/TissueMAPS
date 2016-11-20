@@ -63,18 +63,18 @@ class MapobjectType(ExperimentModel, DateMixIn):
     #: image analysis (examples are "plates" or "wells")
     is_static = Column(Boolean, index=True)
 
-    #: int: ID of parent experiment
-    experiment_id = Column(
-        Integer,
-        ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
+    # #: int: ID of parent experiment
+    # experiment_id = Column(
+    #     Integer,
+    #     ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
+    #     index=True
+    # )
 
-    #: tmlib.models.experiment.Experiment: parent experiment
-    experiment = relationship(
-        'Experiment',
-        backref=backref('mapobject_types', cascade='all, delete-orphan')
-    )
+    # #: tmlib.models.experiment.Experiment: parent experiment
+    # experiment = relationship(
+    #     'Experiment',
+    #     backref=backref('mapobject_types', cascade='all, delete-orphan')
+    # )
 
     def __init__(self, name, is_static=False, parent_id=None):
         '''

@@ -13,10 +13,20 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''Abstract base and mixin classes for database models.'''
+'''Abstract base and mixin classes for database models.
+
+Note
+----
+Mixin classes must implement additional table columns using the
+`declared_attr <http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/api.html#sqlalchemy.ext.declarative.declared_attr>`_
+decorator.
+
+'''
 import os
 import logging
-from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
+from sqlalchemy.ext.declarative import (
+    declarative_base, DeclarativeMeta, declared_attr
+)
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy import func
 from sqlalchemy.schema import DropTable, CreateTable
@@ -74,15 +84,19 @@ class DateMixIn(object):
     database table.
     '''
 
-    #: datetime: date and time when the row was inserted into the column
-    created_at = Column(
-        DateTime, default=func.now()
-    )
+    # NOTE: We use the "declared_attr" property for the mixin to ensure that
+    # the columns are added to the end of the columns list. This simplifies
+    # table distribution.
 
-    #: datetime: date and time when the row was last updated
-    updated_at = Column(
-        DateTime, default=func.now(), onupdate=func.now()
-    )
+    @declared_attr
+    def created_at(cls):
+        '''datetime: date and time when the row was inserted into the column'''
+        return Column(DateTime, default=func.now())
+
+    @declared_attr
+    def updated_at(cls):
+        '''datetime: date and time when the row was last updated'''
+        return Column(DateTime, default=func.now(), onupdate=func.now())
 
 
 class IdMixIn(object):

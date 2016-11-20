@@ -21,6 +21,21 @@ from sqlalchemy.schema import UniqueConstraint, PrimaryKeyConstraint
 from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
 
 
+def _update_table_constraints(table, distribution_column):
+    # The distribution column must be part of the UNIQUE and
+    # PRIMARY KEY constraints.
+    for c in table.constraints:
+        if (isinstance(c, PrimaryKeyConstraint) or
+                isinstance(c, UniqueConstraint)):
+            if distribution_column not in c.columns:
+                c.columns.add(table.columns[distribution_column])
+    # # The distributed column must be part of any INDEX
+    # for i in table.indexes:
+    #     if distribution_column not in i.columns:
+    #         i.columns.add(table.columns[distribution_column])
+    return table
+
+
 class PGXLDialect_psycopg2(PGDialect_psycopg2):
 
     '''SQLAlchemy dialect for `PostgresXL <http://www.postgres-xl.org/>`_
@@ -40,15 +55,7 @@ def _compile_create_table(element, compiler, **kwargs):
         # PRIMARY KEY constraints
         # TODO: consider hacking "visit_primary_key_constraint" and
         # "visit_unique_constraint" instead
-        for c in table.constraints:
-            if (isinstance(c, PrimaryKeyConstraint) or
-                    isinstance(c, UniqueConstraint)):
-                if distribution_column not in c.columns:
-                    c.columns.add(table.columns[distribution_column])
-        # The distributed column must be part of any INDEX
-        for i in table.indexes:
-            if distribution_column not in i.columns:
-                i.columns.add(table.columns[distribution_column])
+        table = _update_table_constaints(table, distribution_column)
     sql = compiler.visit_create_table(element)
     if distribute_by_hash:
         logger.info(
@@ -103,6 +110,7 @@ def _compile_create_table(element, compiler, **kwargs):
     if distribute_by_hash or distribute_by_replication:
         if distribute_by_hash:
             distribution_column = table.info['distribute_by_hash']
+            table = _update_table_constaints(table, distribution_column)
             logger.info(
                 'distribute table "%s" by hash "%s"', table.name,
                 distribution_column
@@ -111,6 +119,17 @@ def _compile_create_table(element, compiler, **kwargs):
                 table.name, distribution_column
             )
         elif distribute_by_replication:
+            # The first column will be used as partition column and must be
+            # included in UNIQUE and PRIMARY KEY constraints.
+            # NOTE: This assumes that "id" column is the first column. This is
+            # ensured by the IdMixIn on MainModel and ExperimentModel base
+            # classes, but may get screwed up by including additional mixins.
+            if list(t.columns)[0].name != 'id':
+                raise ValueError(
+                    'Column "id" must be the first column of table "%s"'
+                    'to distribute it by replication.' % table.name
+                )
+            table = _update_table_constaints(table, 'id')
             logger.info(
                 'distribute table "%s" by replication', table.name
             )
