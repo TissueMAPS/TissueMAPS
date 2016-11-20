@@ -78,7 +78,7 @@ def _compile_create_table(element, compiler, **kwargs):
             # NOTE: This assumes that "id" column is the first column. This is
             # ensured by the IdMixIn on MainModel and ExperimentModel base
             # classes, but may get screwed up by additional mixins.
-            if not isinstance(element.columns[0].element, PrimaryKeyConstraint):
+            if not element.columns[0].element.primary_key:
                 raise DataModelError(
                     'First column of table "%s" must be the PRIMARY KEY '
                     'to be able to distribute the table by replication.' %
