@@ -128,6 +128,18 @@ def _create_db_if_not_exists(engine):
         return False
 
 
+def _drop_db_if_exists(engine):
+    db_url = make_url(engine.url)
+    db_name = str(db_url.database)
+    db_url.database = 'template1'
+    logger.debug('drop database %s', db_name)
+    with Connection(db_url) as conn:
+        conn.execute('DROP DATABASE {name};'.format(
+            name=quote(engine, db_name))
+        )
+    db_url.database = db_name
+
+
 def _create_db_tables(engine):
     db_url = make_url(engine.url)
     db_name = str(db_url.database)
