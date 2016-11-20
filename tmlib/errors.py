@@ -107,3 +107,8 @@ class DataIntegrityError(Exception):
 
 class RegistryError(Exception):
     '''Error class that is raised when a class is not registered.'''
+
+class DataModelError(Exception):
+    '''Error class that is raise when a model class has attributes that are
+    not supported.
+    '''
