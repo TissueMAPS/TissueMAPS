@@ -45,8 +45,6 @@ class MapobjectType(ExperimentModel):
 
     __tablename__ = 'mapobject_types'
 
-    __distribute_by_replication__ = True
-
     __table_args__ = (UniqueConstraint('name'), )
 
     _max_poly_zoom = Column('max_poly_zoom', Integer)
