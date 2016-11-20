@@ -115,7 +115,7 @@ def _compile_create_table(element, compiler, **kwargs):
                 'distribute table "%s" by hash "%s"', table.name,
                 distribution_column
             )
-            sql += 'SELECT create_distributed_table(\'%s\', \'%s\');' % (
+            sql += ';SELECT create_distributed_table(\'%s\', \'%s\');' % (
                 table.name, distribution_column
             )
         elif distribute_by_replication:
@@ -133,7 +133,7 @@ def _compile_create_table(element, compiler, **kwargs):
             logger.info(
                 'distribute table "%s" by replication', table.name
             )
-            sql += 'SELECT create_reference_table(\'%s\');' % table.name
+            sql += ';SELECT create_reference_table(\'%s\');' % table.name
     # NOTE: In contrast to PostgresXL, tables don't have to be distributed.
     # If they don't get distributed, they live a happy live as normal
     # PostgreSQL tables on the master node.
