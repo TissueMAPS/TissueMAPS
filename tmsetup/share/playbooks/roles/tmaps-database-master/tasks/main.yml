@@ -1,8 +1,4 @@
 # TmSetup - Automated setup and deployment of TissueMAPS in the cloud.
-<<<<<<< HEAD
-=======
-# TmSetup - Automated setup and deployment of TissueMAPS in the cloud.
->>>>>>> e0029f68052faa39a5f1ab5ee75f0a93be4200a7
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
@@ -17,30 +13,7 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-<<<<<<< HEAD
 ---
 - include: configure.yml
 
 - include: create_database.yml
-=======
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
-
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
----
-- name: Add PostgreSQL worker nodes
-  become: yes
-  become_user: postgres
-  command: psql -c "SELECT * from master_add_node('{{ item }}', 5432)"
-  with_items: "{{ groups['tissuemaps_database_worker'] }}"
->>>>>>> e0029f68052faa39a5f1ab5ee75f0a93be4200a7
