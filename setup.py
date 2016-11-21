@@ -108,7 +108,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
-       'ansible==2.1.0',
+       'ansible>=2.2.0',
        'elasticluster>=1.3.dev',
        'apache-libcloud>=1.3.0',
        'PyYAML>=3.11',
