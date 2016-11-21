@@ -91,7 +91,7 @@ def build_inventory_information(setup):
                 for k, v in node_type.instance.to_dict().iteritems():
                     if k == 'tags':
                         security_groups = ''
-                        if 'compute' in v or 'storage' in 'web':
+                        if 'compute' in v or 'storage' in v:
                             host_vars['assign_public_ip'] = 'no'
                             security_groups = 'compute-storage'
                         if 'web' in v:
