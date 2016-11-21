@@ -163,8 +163,6 @@ class Task(MainModel):
 
     __tablename__ = 'tasks'
 
-    __distribute_by_hash__ = 'id'
-
     #: str: procssing state, e.g. ``"RUNNING"`` or ``"TERMINATED"``
     state = Column(String, index=True)
 
