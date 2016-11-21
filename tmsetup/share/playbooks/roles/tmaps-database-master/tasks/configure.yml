@@ -32,9 +32,9 @@
   tags:
     - database
 
-- name: Configure PostgreSQL max_parallel_worker_per_gather
+- name: Configure PostgreSQL max_parallel_workers_per_gather
   become: yes
-  command: pg_conftool {{ postgresql_version }} main set max_parallel_worker_per_gather {{ pg_max_worker_processes }}
+  command: pg_conftool {{ postgresql_version }} main set max_parallel_workers_per_gather {{ pg_max_worker_processes }}
   tags:
     - database
 

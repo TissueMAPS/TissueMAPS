@@ -18,7 +18,7 @@
   become: yes
   service: name=postgresql state=stopped
   tags:
-    - postgresql
+    - database
 
 # Symlink /var/lib/postgresql -> /data/storage/postgresql/
 - name: Create data directory (source for symlink) at /var/lib
@@ -27,7 +27,7 @@
     path=/var/lib/postgresql
     state=absent
   tags:
-    - postgresql
+    - database
 
 - name: Create data directory (target for symlink) on mounted filesystem
   become: yes
@@ -37,7 +37,7 @@
     owner=postgres
     group=postgres
   tags:
-    - postgresql
+    - database
 
 - name: Symlink data directory to mounted filesystem
   become: yes
@@ -48,7 +48,7 @@
     owner=postgres
     group=postgres
   tags:
-    - postgresql
+    - database
 
 - name: Create version-specific data subdirectory
   become: yes
@@ -57,7 +57,7 @@
     owner=postgres
     group=postgres
   tags:
-    - postgresql
+    - database
 
 - name: Change ownership for data directory (give permissions to postgres user)
   become: yes
@@ -66,7 +66,7 @@
     owner=postgres
     group=postgres
   tags:
-    - postgresql
+    - database
 
 - name: Create log directory (source for symlink) at /var/log/postgresql
   become: yes
@@ -74,7 +74,7 @@
     path=/var/log/postgresql
     state=absent
   tags:
-    - postgresql
+    - database
 
 - name: Create log directory (target for symlink) on mounted filesystem
   become: yes
@@ -84,7 +84,7 @@
     owner=postgres
     group=postgres
   tags:
-    - postgresql
+    - database
 
 - name: Symlink log directory to mounted filesystem
   become: yes
@@ -95,10 +95,8 @@
     force=yes
     owner=postgres
     group=postgres
-  notify:
-    - restart postgresql
   tags:
-    - postgresql
+    - database
 
 - name: Install setfacl support
   become: yes
@@ -106,7 +104,13 @@
     pkg=acl
     state=installed
   tags:
-    - postgresql
+    - database
+
+- name: Ensure the PostgreSQL service is running
+  become: yes
+  service: name=postgresql state=started enabled=yes
+  tags:
+    - database
 
 - name: Initialize database cluster at created data directory
   become: yes
@@ -115,4 +119,4 @@
   args:
     creates: /var/lib/postgresql/{{ postgresql_version }}/main/base
   tags:
-    - postgresql
+    - database
