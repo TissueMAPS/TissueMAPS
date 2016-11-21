@@ -19,7 +19,6 @@
   hosts: all
   gather_facts: yes
 
-<<<<<<< HEAD
 - name: Update Python
   hosts: all
   tasks:
@@ -38,14 +37,6 @@
   hosts:
     - tissuemaps_database_worker
   remote_user: "{{ ansible_user }}"
-=======
-- name: Configure PostgreSQL database server
-  hosts:
-    - tissuemaps_database
-  remote_user: "{{ ansible_user }}"
-  vars:
-    create_db_with_ansible: yes
->>>>>>> e0029f68052faa39a5f1ab5ee75f0a93be4200a7
   roles:
     - tmaps-database-worker
   tags:
