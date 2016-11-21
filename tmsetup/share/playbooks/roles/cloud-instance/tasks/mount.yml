@@ -17,7 +17,7 @@
 ---
 - name: Ensure that group exists for storage volume
   become: yes
-  group: name={{ volume_group }}
+  group: name={{ volume_user }}
   tags:
     - volume
 
@@ -25,7 +25,7 @@
   become: yes
   user:
       name={{ volume_user }}
-      group={{ volume_group }}
+      group={{ volume_user }}
       shell=/bin/bash
   tags:
     - volume
@@ -35,7 +35,7 @@
   file:
     path={{ volume_mountpoint }}
     owner={{ volume_user }}
-    group={{ volume_group }}
+    group={{ volume_user }}
     state=directory
   tags:
     - volume

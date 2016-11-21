@@ -501,7 +501,8 @@ class AnsibleHostVariableSection(SetupSection):
     '''
 
     _OPTIONAL_ATTRS = {
-        'disk_size', 'volume_size', 'assign_public_ip', 'tags'
+        'disk_size', 'volume_size', 'volume_mountpoint', 'volume_user',
+        'assign_public_ip', 'tags'
     }
 
     def __init__(self, description):
@@ -531,6 +532,26 @@ class AnsibleHostVariableSection(SetupSection):
     def volume_size(self, value):
         self._check_value_type(value, 'volume_size', int)
         self._volume_size = value
+
+    @property
+    def volume_mountpoint(self):
+        '''str: mountpoint of an additional storage volume (optional)'''
+        return self._volume_mountpoint
+
+    @volume_mountpoint.setter
+    def volume_mountpoint(self, value):
+        self._check_value_type(value, 'volume_mountpoint', basestring)
+        self._volume_mountpoint = str(value)
+
+    @property
+    def volume_user(self):
+        '''str: user of an additional storage volume (optional)'''
+        return self._volume_user
+
+    @volume_user.setter
+    def volume_user(self, value):
+        self._check_value_type(value, 'volume_user', basestring)
+        self._volume_user = str(value)
 
     @property
     def image(self):
