@@ -21,8 +21,8 @@
   vars:
     instance_state: present
   tasks:
-    - name: Include defaults defined in "cloud-instance" role
-      include_vars: roles/cloud-instance/defaults/main.yml
+    # We cannot include the defaults here, because they would override
+    # any provided variables
     - name: Include variables defined in "cloud-instance" role
       include_vars: roles/cloud-instance/vars/main.yml
     - include: roles/cloud-instance/tasks/format.yml

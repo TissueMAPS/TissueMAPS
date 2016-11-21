@@ -506,6 +506,8 @@ class AnsibleHostVariableSection(SetupSection):
     }
 
     def __init__(self, description):
+        self.volume_mountpoint = '/data'
+        self.volume_user = 'ubuntu'
         super(AnsibleHostVariableSection, self).__init__(description)
 
     @property
@@ -592,18 +594,6 @@ class AnsibleHostVariableSection(SetupSection):
     def flavor(self, value):
         self._check_value_type(value, 'flavor', str)
         self._flavor = value
-
-    # @property
-    # def security_group(self):
-    #     '''str: name or ID of the security_group (firewall) that should be
-    #     assigned to the virtual machine
-    #     '''
-    #     return self._security_group
-
-    # @security_group.setter
-    # def security_group(self, value):
-    #     self._check_value_type(value, 'security_group', str)
-    #     self._security_group = value
 
     @property
     def tags(self):
