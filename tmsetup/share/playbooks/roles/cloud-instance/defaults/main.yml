@@ -19,5 +19,3 @@ security_groups: default
 network: default
 assign_public_ip: yes
 volume_mountpoint: /data
-
-volume_user: root
