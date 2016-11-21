@@ -97,10 +97,10 @@ def _assert_db_exists(engine):
 def _add_db_worker(engine, host, port):
     db_url = make_url(engine.url)
     db_name = db_url.database
-    logger.debug('add worker node %s to datbase %s', host, db_name)
+    logger.debug('add worker node %s to database %s', host, db_name)
     with Connection(db_url) as conn:
         conn.execute(
-            'SELECT * from master_add_node(%(host)s, %(port)s);',
+            'SELECT master_add_node(%(host)s, %(port)s);',
             {'host': host, 'port': port}
         )
 
