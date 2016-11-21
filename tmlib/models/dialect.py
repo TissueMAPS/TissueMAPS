@@ -98,6 +98,23 @@ def _compile_create_table(element, compiler, **kwargs):
     return sql
 
 
+@compiles(DropTable, 'citus')
+def _compile_drop_table(element, compiler, **kwargs):
+    table = element.element
+    logger.debug('drop table "%s" with cascade', table.name)
+    return compiler.visit_drop_table(element) + ' CASCADE'
+
+
+@compiles(array_agg, 'citus')
+def compile_array_agg(element, compiler, **kw):
+    compiled = "%s(%s)" % (element.name, compiler.process(element.clauses))
+    if element.default is None:
+        return compiled
+    return str(func.coalesce(
+        text(compiled),
+        cast(postgresql.array(element.default), element.type)
+    ).compile(compiler))
+
 
 # class PGXLDialect_psycopg2(PGDialect_psycopg2):
 

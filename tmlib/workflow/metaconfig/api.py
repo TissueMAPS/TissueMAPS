@@ -119,7 +119,9 @@ class MetadataConfigurator(ClusterRoutines):
         # Distributed tables cannot be dropped within a transaction
         logger.info('delete existing channel layer tiles')
         with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            connection.execute('DROP TABLE channel_layer_tiles;')
+            connection.execute('''
+                DROP TABLE channel_layer_tiles;
+            ''')
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             logger.info('delete existing channels')

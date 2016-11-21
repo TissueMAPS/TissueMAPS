@@ -305,20 +305,20 @@ class ImageAnalysisPipeline(ClusterRoutines):
             ''')
             connection.execute('''
                 SELECT master_modify_multiple_shards(
-                    'DELETE FROM mapbobject_segmentations s
-                     WHERE mapobject_id in (SELECT id FROM mapobject_ids)'
+                    \'DELETE FROM mapbobject_segmentations s
+                      WHERE mapobject_id in (SELECT id FROM mapobject_ids)\'
                 );
             ''')
             connection.execute('''
                 SELECT master_modify_multiple_shards(
-                    'DELETE FROM mapbobjects
-                     WHERE id in (SELECT id FROM mapobject_ids)'
+                    \'DELETE FROM mapbobjects
+                      WHERE id in (SELECT id FROM mapobject_ids)\'
                 );
             ''')
             connection.execute('''
                 SELECT master_modify_multiple_shards(
-                    'DELETE FROM mapobject_types
-                     WHERE id in (SELECT id FROM mapobject_type_ids)'
+                    \'DELETE FROM mapobject_types
+                      WHERE id in (SELECT id FROM mapobject_type_ids)\'
                 );
             ''')
             connection.execute('''
@@ -491,7 +491,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
             else:
                 plotting_active = False
             if plot and plotting_active:
-                # TODO: don't store figures per job_id
                 figure_file = module.build_figure_filename(
                     self.figures_location, job_id
                 )
@@ -503,6 +502,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     def _save_pipeline_outputs(self, store):
         logger.info('save pipeline outputs')
         # TODO: use ExperimentConnection for distributed tables
+        # nextval('mapobjects_id_seq')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             mapobject_ids = dict()
             layer = session.query(tm.ChannelLayer).first()

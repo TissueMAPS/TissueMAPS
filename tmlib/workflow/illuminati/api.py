@@ -238,11 +238,18 @@ class PyramidBuilder(ClusterRoutines):
         logger.debug('delete existing static mapobject types')
         with tm.utils.ExperimentConnection(self.experiment_id) as connection:
             connection.execute('''
-                DELETE FROM mapobjects m
-                USING mapobject_types t
-                WHERE t.id = m.mapobject_type_id
-                AND t.is_static = TRUE;
+                SELECT FROM mapobject_types
+                WHERE is_static = TRUE;
             ''')
+            mapobject_type_id = connection.fetchone()
+            connection.execute('''
+                SELECT master_modify_multiple_shards(
+                    \'DELETE FROM mapobjects
+                      WHERE mapobject_type_id = %(mapobject_type_id)s;\'
+                )
+            ''', {
+                'mapobject_type_id': mapobject_type_id
+            })
             connection.execute('''
                 DELETE FROM mapobject_types
                 WHERE is_static = TRUE;
@@ -400,6 +407,7 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('align images between cycles')
 
         for fid in batch['image_file_ids']:
+            channel_layer_tiles = list()
             with tm.utils.ExperimentSession(self.experiment_id) as session:
                 layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
 
@@ -420,7 +428,6 @@ class PyramidBuilder(ClusterRoutines):
                 image_store[file.id] = image
 
                 extra_file_map = layer.map_base_tile_to_images(file.site)
-                channel_layer_tiles = list()
                 for t in tiles:
                     level = batch['level']
                     row = t['row']
@@ -509,44 +516,30 @@ class PyramidBuilder(ClusterRoutines):
                                 'Tile shouldn\'t be in this batch!'
                             )
 
-                    with tm.utils.ExperimentConnection() as conn:
-                        # Upsert the tile entry, i.e. insert or update if exists
-                        sql = '''
-                            INSERT INTO channel_layer_tiles AS t
-                            (level, row, "column", channel_layer_id, pixels)
-                            VALUES
-                            (%(level)s, %(row)s, %(col)s, %(layer_id)s, %(pixels)s)
-                            ON CONFLICT
-                            ON CONSTRAINT channel_layer_tiles_level_row_column_channel_layer_id_id_key
-                            DO UPDATE
-                            SET pixels=%(pixels)s
-                            WHERE t.level=%(level)s
-                            AND t.row=%(row)s
-                            AND t."column"=%(col)s
-                            AND t.channel_layer_id=%(layer_id)s;
-                        '''
-                        conn.execute(
-                            sql, {
-                                'level': level, 'row': row, 'col': column,
-                                'layer_id': channel_layer_id,
-                                'pixels': tile.jpeg_encode()
-                            }
-                        )
+                    channel_layer_tiles.append({
+                        'level': level, 'row': row, 'col': column,
+                        'layer_id': channel_layer_id,
+                        'pixels': tile.jpeg_encode()
+                    })
 
-                    # clt = session.get_or_create(
-                    #     tm.ChannelLayerTile,
-                    #     level=level, row=row, column=column,
-                    #     channel_layer_id=layer.id,
-                    # )
-                    # # clt.pixels = tile
-                    # channel_layer_tiles.append({
-                    #     'id': clt.id, '_pixels': tile.jpeg_encode()
-                    # })
-
-                # # session.bulk_save_objects(channel_layer_tiles)
-                # session.bulk_update_mappings(
-                    # tm.ChannelLayerTile, channel_layer_tiles
-                # )
+            upsert_statement = '''
+                INSERT INTO channel_layer_tiles AS t
+                (level, row, "column", channel_layer_id, pixels)
+                VALUES
+                (%(level)s, %(row)s, %(col)s, %(layer_id)s, %(pixels)s)
+                ON CONFLICT
+                ON CONSTRAINT channel_layer_tiles_level_row_column_channel_layer_id_id_key
+                DO UPDATE
+                SET pixels=%(pixels)s
+                WHERE t.level=%(level)s
+                AND t.row=%(row)s
+                AND t."column"=%(col)s
+                AND t.channel_layer_id=%(layer_id)s;
+            '''
+            with tm.utils.ExperimentConnection(self.experiment_id) as c:
+                # Upsert the tile entry, i.e. insert or update if exists
+                for t in channel_layer_tiles:
+                    conn.execute(upsert_statement, t)
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
