@@ -24,8 +24,6 @@ import sqlalchemy.orm
 import sqlalchemy.pool
 import sqlalchemy.exc
 from sqlalchemy.engine.url import make_url
-from sqlalchemy_utils.functions import create_database
-from sqlalchemy_utils.functions import drop_database
 from sqlalchemy_utils.functions import quote
 from sqlalchemy.event import listens_for
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -64,12 +62,6 @@ def create_db_engine(db_uri, cache=True, pool_size=5):
         engine = sqlalchemy.create_engine(
             db_uri, poolclass=sqlalchemy.pool.QueuePool,
             pool_size=pool_size, max_overflow=pool_size*2,
-            # SQLAlchemy (or actually psycopg2) makes use of multi-statement
-            # transactions using BEGIN and COMMIT/ROLLBACK. The BEGIN is
-            # automatically issued. This may cause problems when sharding
-            # tables with Citus, for example. We may want to  turn it off to
-            # use the Postgres default mode:
-            # https://gist.github.com/carljm/57bfb8616f11bceaf865
         )
         if cache:
             logger.debug('cache database engine for reuse')
@@ -133,6 +125,8 @@ def _drop_db_if_exists(engine):
     db_name = str(db_url.database)
     db_url.database = 'postgres'
     logger.debug('drop database %s', db_name)
+    # We first need to close all checked in connections
+    engine.dispose()
     with Connection(db_url) as conn:
         conn.execute('DROP DATABASE {name};'.format(
             name=quote(engine, db_name))
@@ -156,30 +150,34 @@ def _create_db_tables(engine):
         logger.debug(
             'change storage of "pixels" column of "channel_layer_tiles" table'
         )
-        with Connection(db_url) as conn:
-            conn.execute(
-                'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
-            )
-
-# @listens_for(sqlalchemy.pool.Pool, 'connect')
-# def _on_pool_connect(dbapi_con, connection_record):
-#     logger.debug('create database connection: %d', dbapi_con.get_backend_pid())
+        # with Connection(db_url) as conn:
+        #     conn.execute(
+        #         'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
+        #     )
 
 
-# @listens_for(sqlalchemy.pool.Pool, 'checkin')
-# def _on_pool_checkin(dbapi_con, connection_record):
-#     logger.debug(
-#         'database connection returned to pool: %d',
-#         dbapi_con.get_backend_pid()
-#     )
+@listens_for(sqlalchemy.pool.Pool, 'connect')
+def _on_pool_connect(dbapi_con, connection_record):
+    logger.debug(
+        'database connection created for pool: %d',
+        dbapi_con.get_backend_pid()
+    )
 
 
-# @listens_for(sqlalchemy.pool.Pool, 'checkout')
-# def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
-#     logger.debug(
-#         'database connection retrieved from pool: %d',
-#         dbapi_con.get_backend_pid()
-#     )
+@listens_for(sqlalchemy.pool.Pool, 'checkin')
+def _on_pool_checkin(dbapi_con, connection_record):
+    logger.debug(
+        'database connection returned to pool: %d',
+        dbapi_con.get_backend_pid()
+    )
+
+
+@listens_for(sqlalchemy.pool.Pool, 'checkout')
+def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
+    logger.debug(
+        'database connection retrieved from pool: %d',
+        dbapi_con.get_backend_pid()
+    )
 
 
 def create_db_session_factory(engine):
@@ -330,6 +328,19 @@ class SQLAlchemy_Session(object):
 
     '''A wrapper around an instance of an *SQLAlchemy* session
     that manages persistence of database model objects.
+
+    An instance of this class will be exposed via
+    :class:`MainSession <tmlib.models.utils.MainSession>` and
+    :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
+
+    Examples
+    --------
+    >>> import tmlib.models as tm
+
+    >>> with tm.utils.MainSession() as session:
+    >>>     # session has type SQLAlchemy_Session
+    >>>     session.drop_and_recreate(tm.Submission)
+
     '''
 
     def __init__(self, session):
@@ -348,7 +359,7 @@ class SQLAlchemy_Session(object):
             return getattr(self, attr)
         else:
             raise AttributeError(
-                'Object "%s" doens\'t have an attribute "%s".'
+                'Object "%s" doens\'t have attribute "%s".'
                 % (self.__class__.__name__, attr)
             )
 
@@ -531,7 +542,6 @@ class _Session(object):
         if except_value:
             self._session.rollback()
         else:
-            # TODO: if experiment is deleted, also delete its database
             self._session.commit()
             sqlalchemy.event.listen(
                 self._session_factories[self._db_uri],
