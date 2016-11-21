@@ -365,27 +365,6 @@ class Mapobject(ExperimentModel):
     #: int: ID of parent mapobject type
     mapobject_type_id = Column(Integer, index=True, nullable=False)
 
-    # mapobject_type_id = Column(
-    #     Integer,
-    #     ForeignKey('mapobject_types.id', ondelete='CASCADE'),
-    #     index=True
-    # )
-
-    # #: tmlib.models.mapobject.MapobjecType: parent mapobject type
-    # mapobject_type = relationship(
-    #     'MapobjectType',
-    #     backref=backref('mapobjects', cascade='all, delete-orphan')
-    # )
-
-    # #: List[tmlib.models.MapobjectSegmentation]: segmentations belonging to
-    # #: the mapobject
-    # segmentations = relationship(
-    #     'MapobjectSegmentation',
-    #     backref=backref(
-    #         'mapobject', cascade='all, delete-orphan', single_parent=True
-    #     )
-    # )
-
     def __init__(self, mapobject_type_id, parent_id=None):
         '''
         Parameters

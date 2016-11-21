@@ -304,16 +304,22 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 AND s.pipeline = %(project);
             ''')
             connection.execute('''
-                DELETE FROM mapbobject_segmentations s
-                WHERE mapobject_id in (SELECT id FROM mapobject_ids);
+                SELECT master_modify_multiple_shards(
+                    'DELETE FROM mapbobject_segmentations s
+                     WHERE mapobject_id in (SELECT id FROM mapobject_ids)'
+                );
             ''')
             connection.execute('''
-                DELETE FROM mapbobjects
-                WHERE id in (SELECT id FROM mapobject_ids);
+                SELECT master_modify_multiple_shards(
+                    'DELETE FROM mapbobjects
+                     WHERE id in (SELECT id FROM mapobject_ids)'
+                );
             ''')
             connection.execute('''
-                DELETE FROM mapobject_types
-                WHERE id in (SELECT id FROM mapobject_type_ids);
+                SELECT master_modify_multiple_shards(
+                    'DELETE FROM mapobject_types
+                     WHERE id in (SELECT id FROM mapobject_type_ids)'
+                );
             ''')
             connection.execute('''
                 DROP TABLE mapobject_type_ids mapobject_ids;
