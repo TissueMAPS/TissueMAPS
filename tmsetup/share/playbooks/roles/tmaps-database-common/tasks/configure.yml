@@ -14,36 +14,61 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
+<<<<<<< HEAD
+=======
+- name: Build hosts file
+  become: yes
+  lineinfile:
+    dest=/etc/hosts
+    regexp=".*{{ item }}$"
+    line="{{ hostvars[item].ansible_default_ipv4.address }} {{ item }}"
+    state=present
+  when: hostvars[item].ansible_default_ipv4.address is defined
+  with_items: "{{ groups['all'] }}"
+
+>>>>>>> e0029f68052faa39a5f1ab5ee75f0a93be4200a7
 - name: Preload Citus extension
   become: yes
   command: pg_conftool {{ postgresql_version }} main set shared_preload_libraries citus
   tags:
     - database
 
+<<<<<<< HEAD
 - name: Configure PostgreSQL listen_addresses
+=======
+- name: Configure PostgreSQL connection
+>>>>>>> e0029f68052faa39a5f1ab5ee75f0a93be4200a7
   become: yes
   command: pg_conftool {{ postgresql_version }} main set listen_addresses '*'
   tags:
     - database
 
+<<<<<<< HEAD
 - name: Configure PostgreSQL max_connections
   become: yes
   command: pg_conftool {{ postgresql_version }} main set max_conncections {{ pg_max_connections }}
   tags:
     - database
 
+=======
+>>>>>>> e0029f68052faa39a5f1ab5ee75f0a93be4200a7
 - name: Configure PostgreSQL authentication
   become: yes
   lineinfile:
     dest=/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf
     state=present
     regexp="^host\s+all\s+all\s+md5"
+<<<<<<< HEAD
     line="host    all             all             {{ ip_range }}               md5"
+=======
+    line="host    all             all             10.0.0.0/0               md5"
+>>>>>>> e0029f68052faa39a5f1ab5ee75f0a93be4200a7
   notify:
     - restart postgresql
   tags:
     - database
 
+<<<<<<< HEAD
 - name: Increase kernel limits for semaphores
   become: yes
   shell: sysctl -w kernel.sem="250 60000 32 250"
@@ -61,3 +86,15 @@
 - name: Set password for postgres user
   shell: echo "ALTER USER {{ db_user }} WITH PASSWORD '{{ db_password }}'" | sudo -u {{ db_user }} psql
 
+=======
+- name: Create Citus extension for postgres table
+  become: yes
+  become_user: postgres
+  command: psql -c "CREATE EXTENSION IF NOT EXISTS citus;"
+  # register: create_citus_extension
+  # failed_when:
+  #   - "'already exists' not in create_citus_extension.stderr"
+  #   - "create_citus_extension.rc != 0"
+  tags:
+    - database
+>>>>>>> e0029f68052faa39a5f1ab5ee75f0a93be4200a7

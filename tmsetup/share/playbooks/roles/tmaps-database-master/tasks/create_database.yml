@@ -13,41 +13,30 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
-- name: Collecting facts
-  hosts: all
-  gather_facts: yes
-
-<<<<<<< HEAD
-- name: Update Python
-  hosts: all
-  tasks:
-    - include: roles/tmaps-common/tasks/python.yml
-
-- name: Configure PostgreSQL master
-  hosts:
-    - tissuemaps_database_master
-  remote_user: "{{ ansible_user }}"
-  roles:
-    - tmaps-database-master
+- name: Ensure the PostgreSQL service is running
+  become: yes
+  service: name=postgresql state=started enabled=yes
   tags:
     - database
 
-- name: Configure PostgreSQL workers
-  hosts:
-    - tissuemaps_database_worker
-  remote_user: "{{ ansible_user }}"
-=======
-- name: Configure PostgreSQL database server
-  hosts:
-    - tissuemaps_database
-  remote_user: "{{ ansible_user }}"
+- name: Create database
+  become: yes
+  become_user: postgres
   vars:
-    create_db_with_ansible: yes
->>>>>>> e0029f68052faa39a5f1ab5ee75f0a93be4200a7
-  roles:
-    - tmaps-database-worker
+      ansible_ssh_pipelining: true
+  postgresql_db: name={{ db_name }}
+  tags:
+    - database
+
+- name: Init postgis extension
+  become: yes
+  become_user: postgres
+  vars:
+      ansible_ssh_pipelining: true
+  shell: "echo 'CREATE EXTENSION postgis;' | psql tissuemaps "
+  args:
+    executable: /bin/bash
   tags:
     - database
 
