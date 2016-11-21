@@ -106,12 +106,6 @@
   tags:
     - database
 
-- name: Ensure the PostgreSQL service is running
-  become: yes
-  service: name=postgresql state=started enabled=yes
-  tags:
-    - database
-
 - name: Initialize database cluster at created data directory
   become: yes
   become_user: postgres

@@ -14,11 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-volume_mountpoint: /data
-
 db_user: postgres
 db_port: 5432
-db_host: localhost
 db_name: tissuemaps
 
 # These are the PostgreSQL default values in postgresql.conf
