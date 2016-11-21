@@ -97,6 +97,14 @@ def _add_db_worker(engine, host, port):
         )
 
 
+def _set_db_shard_replication_factor(engine, n):
+    db_url = make_url(engine.url)
+    db_name = db_url.database
+    logger.debug('set citus.shard_replication_factor for database %s', db_name)
+    with Connection(db_url) as conn:
+        conn.execute('SET citus.shard_replication_factor = %(n)s;', {'n': n})
+
+
 def _create_db_if_not_exists(engine):
     try:
         connection = engine.connect()
@@ -111,12 +119,13 @@ def _create_db_if_not_exists(engine):
             conn.execute('CREATE DATABASE {name};'.format(
                 name=quote(engine, db_name))
             )
+        db_url.database = db_name
+        with Connection(db_url) as conn:
             if engine.name == 'citus':
                 logger.debug('create citus extension for database %s', db_name)
                 conn.execute('CREATE EXTENSION IF NOT EXISTS citus;')
             logger.debug('create postgis extension for database %s', db_name)
             conn.execute('CREATE EXTENSION IF NOT EXISTS postgis;')
-        db_url.database = db_name
         return False
 
 
@@ -298,18 +307,17 @@ class Query(sqlalchemy.orm.query.Query):
             elif cls.__name__ == 'ExperimentReference':
                 experiments = self.from_self(cls.id).all()
                 for exp in experiments:
-                    logger.debug('drop database of experiment %d', exp.id)
+                    logger.info('drop database of experiment %d', exp.id)
                     db_uri = cfg.get_db_uri_sqla(experiment_id=exp.id)
                     engine = create_db_engine(db_uri)
                     _drop_db_if_exists(engine)
-                    if len(cfg.db_worker_hosts) == 0 and cfg.db_driver == 'citus':
-                        logger.warn('no database worker hosts specified')
                     for host in cfg.db_worker_hosts:
                         worker_url = cfg.get_db_uri_sqla(
                             experiment_id=exp.id, host=host
                         )
                         worker_engine = create_db_engine(worker_url, cache=False)
                         _drop_db_if_exists(worker_engine)
+                        worker_engine.dispose()
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
         logger.debug(
@@ -635,15 +643,18 @@ class ExperimentSession(_Session):
             # CREATE EXTENTION to worker nodes. This needs to be done manually
             # on each worker. In addition, workers must be added for each
             # database.
+            n_hosts = len(cfg.db_worker_hosts)
+            _set_db_shard_replication_factor(master_engine, n_hosts)
             for host in cfg.db_worker_hosts:
+                _add_db_worker(master_engine, host, cfg.db_port)
                 worker_url = cfg.get_db_uri_sqla(
                     experiment_id=experiment_id, host=host
                 )
                 worker_engine = create_db_engine(
                     worker_url, cache=False, pool_size=1
                 )
-                _add_db_worker(master_engine, host, cfg.db_port)
                 _create_db_if_not_exists(worker_engine)
+                worker_engine.dispose()
             # The CREATE TABLE command is propagated and only needs to be
             # called on the master.
             _create_db_tables(master_engine)
@@ -678,10 +689,10 @@ class Connection(object):
             *SQLAlchemy*
         '''
         self._db_uri = db_uri
-        create_db_engine(self._db_uri)
+        self._engine = create_db_engine(self._db_uri)
 
     def __enter__(self):
-        self._connection = DATABASE_ENGINES[self._db_uri].raw_connection()
+        self._connection = self._engine.raw_connection()
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self._cursor = self._connection.cursor(cursor_factory=DictCursor)
         return self._cursor
@@ -689,6 +700,12 @@ class Connection(object):
     def __exit__(self, except_type, except_value, except_trace):
         self._connection.close()
 
+    def drop_and_recreate(self, model):
+        table_name = model.__table__.name
+        logger.debug('drop table "%s"', table_name)
+        self._cursor.execute(
+            'DROP TABLE %(table)s', quote(self._engine, table_name)
+        )
 
 class ExperimentConnection(Connection):
 

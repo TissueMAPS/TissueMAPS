@@ -116,6 +116,11 @@ class MetadataConfigurator(ClusterRoutines):
         :class:`tm.Well`, and :class:`tm.Channel` as
         well as all children for the processed experiment.
         '''
+        # Distributed tables cannot be dropped within a transaction
+        logger.info('delete existing channel layer tiles')
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+            connection.execute('DROP TABLE channel_layer_tiles;')
+
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             logger.info('delete existing channels')
             session.drop_and_recreate(tm.ChannelLayerTile)

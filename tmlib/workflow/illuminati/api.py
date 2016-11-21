@@ -219,21 +219,34 @@ class PyramidBuilder(ClusterRoutines):
         return job_descriptions
 
     def delete_previous_job_output(self):
-        '''Deletes all instances of class
-        :class:`tm.ChannelLayer` and instances of class
-        :class:`tm.MapobjectType` where ``is_static == True``
+        '''Deletes all instances of
+        :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>` and
+        *static* instances of
+        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
         as well as all children instances for the processed experiment.
         '''
         logger.debug('delete existing channel layers and pyramid tile files')
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+            connection.execute('''
+                DROP TABLE channel_layer_tiles;
+            ''')
+
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             session.drop_and_recreate(tm.ChannelLayer)
             session.drop_and_recreate(tm.ChannelLayerTile)
 
         logger.debug('delete existing static mapobject types')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            mapobject_types = session.query(tm.MapobjectType).\
-                filter_by(is_static=True).\
-                delete()
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+            connection.execute('''
+                DELETE FROM mapobjects m
+                USING mapobject_types t
+                WHERE t.id = m.mapobject_type_id
+                AND t.is_static = TRUE;
+            ''')
+            connection.execute('''
+                DELETE FROM mapobject_types
+                WHERE is_static = TRUE;
+            ''')
 
     def create_run_job_collection(self, submission_id):
         '''tmlib.workflow.job.MultiRunJobCollection: collection of "run" jobs
@@ -499,16 +512,18 @@ class PyramidBuilder(ClusterRoutines):
                     with tm.utils.ExperimentConnection() as conn:
                         # Upsert the tile entry, i.e. insert or update if exists
                         sql = '''
-                            INSERT INTO channel_layer_tiles
-                            (level, row, column, channel_layer_id, pixels)
+                            INSERT INTO channel_layer_tiles AS t
+                            (level, row, "column", channel_layer_id, pixels)
                             VALUES
                             (%(level)s, %(row)s, %(col)s, %(layer_id)s, %(pixels)s)
-                            ON CONFLICT ON CONSTRAINT DO UPDATE
+                            ON CONFLICT
+                            ON CONSTRAINT channel_layer_tiles_level_row_column_channel_layer_id_id_key
+                            DO UPDATE
                             SET pixels=%(pixels)s
-                            WHERE level=%(level)s
-                            AND row=%(row)s
-                            AND column=%(col)s
-                            AND channel_layer_id=%(layer_id)s;
+                            WHERE t.level=%(level)s
+                            AND t.row=%(row)s
+                            AND t."column"=%(col)s
+                            AND t.channel_layer_id=%(layer_id)s;
                         '''
                         conn.execute(
                             sql, {
@@ -656,6 +671,7 @@ class PyramidBuilder(ClusterRoutines):
                 'Sites': session.query(tm.Site)
             }
 
+            # TODO: use ExperimentConnection for distributed tables
             for name, query in mapobjects.iteritems():
 
                 logger.info('create mapobject type "%s"', name)
