@@ -28,7 +28,7 @@
 
 - name: Configure PostgreSQL max_connections
   become: yes
-  command: pg_conftool {{ postgresql_version }} main set max_conncections {{ pg_max_connections }}
+  command: pg_conftool {{ postgresql_version }} main set max_connections {{ pg_max_connections }}
   tags:
     - database
 
