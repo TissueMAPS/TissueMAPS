@@ -37,5 +37,8 @@
   with_items:
     - postgresql-{{ postgresql_version }}-citus
     - postgis
+    - postgresql-contrib-{{ postgresql_version }}
+    - postgresql-server-dev-all
+    - python-psycopg2
   tags:
     - database

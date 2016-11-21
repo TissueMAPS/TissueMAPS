@@ -14,25 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Build hosts file
-  become: yes
-  lineinfile:
-    dest=/etc/hosts
-    regexp=".*{{ item }}$"
-    line="{{ hostvars[item].ansible_default_ipv4.address }} {{ item }}"
-    state=present
-  when: hostvars[item].ansible_default_ipv4.address is defined
-  with_items: "{{ groups['all'] }}"
-
 - name: Preload Citus extension
   become: yes
   command: pg_conftool {{ postgresql_version }} main set shared_preload_libraries citus
   tags:
     - database
 
-- name: Configure PostgreSQL connection
+- name: Configure PostgreSQL listen_addresses
   become: yes
   command: pg_conftool {{ postgresql_version }} main set listen_addresses '*'
+  tags:
+    - database
+
+- name: Configure PostgreSQL max_connections
+  become: yes
+  command: pg_conftool {{ postgresql_version }} main set max_conncections {{ pg_max_connections }}
   tags:
     - database
 
@@ -42,19 +38,26 @@
     dest=/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf
     state=present
     regexp="^host\s+all\s+all\s+md5"
-    line="host    all             all             10.0.0.0/0               md5"
+    line="host    all             all             {{ ip_range }}               md5"
   notify:
     - restart postgresql
   tags:
     - database
 
-- name: Create Citus extension for postgres table
+- name: Increase kernel limits for semaphores
   become: yes
-  become_user: postgres
-  command: psql -c "CREATE EXTENSION IF NOT EXISTS citus;"
-  # register: create_citus_extension
-  # failed_when:
-  #   - "'already exists' not in create_citus_extension.stderr"
-  #   - "create_citus_extension.rc != 0"
+  shell: sysctl -w kernel.sem="250 60000 32 250"
   tags:
-    - database
+    - postgresql
+
+- name: Increaese limit for number of open files
+  become: yes
+  lineinfile:
+    dest="/etc/security/limits.conf"
+    line="postgres soft nofile 10000"
+  tags:
+    - postgresql
+
+- name: Set password for postgres user
+  shell: echo "ALTER USER {{ db_user }} WITH PASSWORD '{{ db_password }}'" | sudo -u {{ db_user }} psql
+

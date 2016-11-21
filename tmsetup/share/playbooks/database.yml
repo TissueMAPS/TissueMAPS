@@ -14,21 +14,31 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Deploy storage
-#
 ---
 - name: Collecting facts
   hosts: all
   gather_facts: yes
 
-- name: Configure PostgreSQL database server
+- name: Update Python
+  hosts: all
+  tasks:
+    - include: roles/tmaps-common/tasks/python.yml
+
+- name: Configure PostgreSQL master
   hosts:
-    - tissuemaps_database
+    - tissuemaps_database_master
   remote_user: "{{ ansible_user }}"
-  vars:
-    create_db_with_ansible: yes
   roles:
-    - tmaps-database
+    - tmaps-database-master
   tags:
-    - db
+    - database
+
+- name: Configure PostgreSQL workers
+  hosts:
+    - tissuemaps_database_worker
+  remote_user: "{{ ansible_user }}"
+  roles:
+    - tmaps-database-worker
+  tags:
+    - database
 

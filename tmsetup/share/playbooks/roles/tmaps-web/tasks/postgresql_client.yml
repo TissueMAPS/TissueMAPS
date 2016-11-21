@@ -24,14 +24,14 @@
     mode=600
     # mode="u=rw"
   tags:
-    - db
+    - database
 
 - name: Place script for recreating the database
   template: src=resetdb.sql.j2 dest={{ ansible_env.HOME }}/resetdb.sql
   tags:
-    - db
+    - database
 
-- name: Update db password in TissueMAPS configuration
+- name: Update db_password in TissueMAPS configuration
   ini_file:
     dest={{ tmaps_config_file }}
     create=yes
@@ -40,16 +40,27 @@
     option=db_password
     value={{ db_password }}
   tags:
-    - db
+    - database
     - tissuemaps
 
-- name: Change db host in TissueMAPS configuration
+- name: Update db_host in TissueMAPS configuration
   ini_file:
     dest={{ tmaps_config_file }}
     section=DEFAULT
     state=present
     option=db_host
-    value={{ db_host }}
+    value={{ hostvars[groups['tissuemaps_database_master'][0]]['ansible_default_ipv4']['address'] }}
   tags:
-    - db
+    - database
+    - tissuemaps
+
+- name: Change db_worker_hosts in TissueMAPS configuration
+  ini_file:
+    dest={{ tmaps_config_file }}
+    section=DEFAULT
+    state=present
+    option=db_worker_hosts
+    value={{ groups['tissuemaps_database_worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(',') }}
+  tags:
+    - database
     - tissuemaps
