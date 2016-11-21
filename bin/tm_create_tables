@@ -17,7 +17,7 @@ def create_tables(db_uri=None):
         URI of the database
     '''
     if db_uri is None:
-        db_uri = cfg.db_uri_sqla
+        db_uri = cfg.get_db_uri_sqla()
     engine = tm.utils.create_db_engine(db_uri)
     tm.MainModel.metadata.create_all(engine)
 
