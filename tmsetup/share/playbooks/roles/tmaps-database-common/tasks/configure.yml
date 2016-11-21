@@ -57,15 +57,3 @@
     line="postgres soft nofile 10000"
   tags:
     - database
-
-- name: Ensure the PostgreSQL service is running
-  become: yes
-  service: name=postgresql state=started enabled=yes
-  tags:
-    - database
-
-- name: Set password for postgres user
-  shell: echo "ALTER USER {{ db_user }} WITH PASSWORD '{{ db_password }}'" | sudo -u {{ db_user }} psql
-  tags:
-    - database
-
