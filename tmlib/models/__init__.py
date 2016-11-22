@@ -22,25 +22,39 @@ maps to an individual table entry, i.e. a row.
 
 The central organizational unit of `TissueMAPS` is an
 :class:`Experiment <tmlib.models.experiment.Experiment>`. Each `experiment`
-is represented by a separate database, which contains the actual images and
-related data.
+is represented by a separate database
+`schema <https://www.postgresql.org/docs/current/static/ddl-schemas.html>`_,
+which contains the actual images and related data.
 
-There is also a "main" database that holds data beyond the scope of an
-individual `experiment`, such as user credentials
-(see :class:`User <tmlib.models.user.User>`) or the status of submitted
-computational tasks (see :class:`Task <tmlib.models.submission.Task>`).
-This database further provides reference to existing *experiment*-specific
-databases
-(:class:`ExperimentRerefence <tmlib.models.experiment.ExperimentReference>`)
+There is also a "main" schema (its actually the "public" schema) that
+holds data beyond the scope of an individual *experiment*, such as credentials
+of a :class:`User <tmlib.models.user.User>`) or the status of a submitted
+computational :class:`Task <tmlib.models.submission.Task>`.
+This schema further provides reference to existing *experiment*-specific
+database schemas
+(see :class:`ExperimentRerefence <tmlib.models.experiment.ExperimentReference>`)
 and information on *experiment*-specific user permissions
-(:class:`ExperimentShare <tmlib.models.experiment.ExperimentShare>`).
+(see :class:`ExperimentShare <tmlib.models.experiment.ExperimentShare>`).
 
-*Main* and *experiment*-specific databases can accessed programmatically
+*Main* and *experiment*-specific databases schemas can accessed programmatically
 using :class:`MainSession <tmlib.models.utils.MainSession>` or
 :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, respectively.
 These sessions provide a database transaction that bundles all enclosing
 statements into an all-or-nothing operation to ensure that either all or no
 changes are persisted in the database.
+
+Some of the data models can be distributed, i.e. the tables can be shared.
+To this end, *TissueMAPS* uses
+`Citus <https://docs.citusdata.com/en/stable/index.html>`_, a
+`PostgreSQL extension <https://www.postgresql.org/docs/current/static/extend-extensions.html>`_.
+These models are flagged with either ``__distribute_by_replication__`` or
+``__distribute_by_hash__``, which will either replicate the table
+(so called "reference" tables) or distributed it accross all available nodes
+of the database cluster. Table distribution is implemented in form of a
+`SQLAlchemy dialect <>`_ named ``citus``. To active it, set
+:attr:`db_driver <tmlib.config.DefaultConfig.db_driver>` configuration
+variable to ``citus``. Note, however, that the extension must have been
+installed and nodes activated. More more details refer to :mod:`tmsetup`.
 
 The *ORM* is convient and easy to use. This convenience comes at a cost:
 performance. For performance-critical operations (in particular large number

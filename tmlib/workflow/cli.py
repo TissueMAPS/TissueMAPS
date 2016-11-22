@@ -252,6 +252,7 @@ class CommandLineInterface(WorkflowSubmissionManager):
         apscheduler_logger = logging.getLogger('apscheduler')
         apscheduler_logger.setLevel(logging.CRITICAL)
 
+        tm.utils.set_pool_size(1)
         try:
             logger.debug('instantiate API class "%s"', cls._api_class.__name__)
             # Derived CLI classes may provide additional arguments for the main

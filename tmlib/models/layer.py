@@ -33,9 +33,10 @@ from tmlib.models.file import ChannelImageFile
 from tmlib.models.site import Site
 from tmlib.models.well import Well
 from tmlib.models.feature import FeatureValue, LabelValue
+from tmlib.models.tile import ChannelLayerTile
 from tmlib.models.plate import Plate
 from tmlib.models.base import ExperimentModel
-from tmlib.models.utils import ExperimentConnection
+from tmlib.models.utils import ExperimentConnection, ExperimentSession
 from tmlib.errors import RegexError
 from tmlib.image import PyramidTile
 
@@ -858,12 +859,6 @@ def delete_channel_layers_cascade(experiment_id):
     table of :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`
     might be distributed over a cluster.
     '''
-    with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-        logger.debug('drop table "channel_layer_tiles"')
-        connection.execute('''
-            DROP TABLE channel_layer_tiles;
-        ''')
-
-    with tm.utils.ExperimentSession(self.experiment_id) as session:
-        session.drop_and_recreate(tm.ChannelLayerTile)
-        session.drop_and_recreate(tm.ChannelLayer)
+    with ExperimentSession(experiment_id) as session:
+        session.drop_and_recreate(ChannelLayerTile)
+        session.drop_and_recreate(ChannelLayer)

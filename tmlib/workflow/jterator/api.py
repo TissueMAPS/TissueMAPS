@@ -48,6 +48,7 @@ from tmlib.workflow.jterator.handles import SegmentedObjects
 from tmlib.workflow.jterator.checkers import PipelineChecker
 from tmlib.workflow import register_step_api
 from tmlib.models.mapobject import delete_mapobjects_cascade
+from tmlib.models.mapobject import delete_invalid_mapobjects_cascade
 from tmlib import cfg
 
 logger = logging.getLogger(__name__)
@@ -728,26 +729,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             job description
         '''
         logger.info('clean-up mapobjects with invalid segmentations')
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            connection.execute('''
-                SELECT mapobject_id FROM mapbobject_segmentations
-                WHERE NOT ST_IsValid(geom_poly)
-            ''')
-            mapobject_segm = connection.fetchall()
-            mapobject_ids = [s.mapobject_id for s in mapobject_segm]
-            if mapobject_ids:
-                connnection.execute('''
-                    DELETE FROM mapobjects
-                    WHERE id IN %(mapobject_ids)s;
-                ''', {
-                    'mapobject_ids': mapobject_ids
-                })
-                connnection.execute('''
-                    DELETE FROM mapobject_segmentations
-                    WHERE mapobject_id IN %(mapobject_ids)s;
-                ''', {
-                    'mapobject_ids': mapobject_ids
-                })
+        delete_invalid_mapobjects_cascade(self.experiment_id)
 
         logger.info(
             'calculate minimal/maximal zoom level for representation of '

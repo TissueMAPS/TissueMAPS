@@ -154,6 +154,8 @@ class TmapsConfig(object):
         `Citus <https://docs.citusdata.com/en/stable/index.html>`_.
         '''
         value = self._config.get('DEFAULT', 'db_worker_hosts')
+        if not value:
+            return []
         return [v.strip() for v in value.split(',')]
 
     @db_worker_hosts.setter
@@ -205,42 +207,19 @@ class TmapsConfig(object):
             database += '_experiment_%d' % experiment_id
         return database
 
-    def get_db_uri_sqla(self, experiment_id=None, host=None):
-        '''Builds the database URI in the format required by *SQLAlchemy*.
-
-        Parameters
-        ----------
-        experiment_id: int, optional
-            ID of an experiment
-        host: str, optional
-            IP address of database server host
-
-        Returns
-        -------
-        str
-            database URI
+    @property
+    def db_uri_sqla(self):
+        '''str: database URI in the format required by *SQLAlchemy*.
         '''
-        if host is None:
-            host = self.db_host
-        return '{driver}://{user}:{pw}@{host}:{port}/{database}'.format(
+        return '{driver}://{user}:{pw}@{host}:{port}/tissuemaps'.format(
             driver=self.db_driver,
             user=self.db_user, pw=self.db_password,
-            host=host, port=self.db_port,
-            database=self._get_database_name(experiment_id)
+            host=self.db_host, port=self.db_port,
         )
 
-    def get_db_uri_spark(self, experiment_id=None):
-        '''Builds the database URI in *JDBC* format as required by *Spark*.
-
-        Parameters
-        ----------
-        experiment_id: int, optional
-            ID of an experiment
-
-        Returns
-        -------
-        str
-            database URI
+    @property
+    def db_uri_spark(self):
+        '''str: database URI in *JDBC* format as required by *Spark*.
         '''
         return 'jdbc:postgresql://{host}:{port}/{database}?user={user}&password={pw}'.format(
             user=self.db_user, pw=self.db_password,

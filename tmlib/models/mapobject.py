@@ -547,10 +547,9 @@ def delete_mapobject_types_cascade(experiment_id, is_static,
             all()
         mapobject_type_ids = [t.id for t in mapobject_types]
 
-    if mapobject_type_ids:
-        delete_mapobjects_cascade(
-            experiment_id, mapobject_type_ids, site_id, pipeline
-        )
+    delete_mapobjects_cascade(
+        experiment_id, mapobject_type_ids, site_id, pipeline
+    )
 
     with ExperimentSession(experiment_id) as session:
         logger.info('delete tool results')
@@ -582,48 +581,8 @@ def delete_mapobject_types_cascade(experiment_id, is_static,
             })
 
 
-def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
-        site_id=None, pipeline=None):
-    '''Deletes all instances of
-    :class:`Mapobject <tmlib.models.mapobject.Mapobject>` as well as all
-    "children" instances of
-    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-    :class:`FeatureValue <tmlib.models.feature.FeatureValue>`,
-    :class:`LabelValue <tmlib.models.feature.LabelValue>`.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
-    mapobject_type_ids: List[int]
-        IDs of parent :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-    site_id: int, optional
-        ID of the parent :class:`Site <tmlib.models.site.Site>`
-    pipeline: str, optional
-        the pipeline in which mapobjects were genereated
-        (not required for non-*static* mapobject types)
-
-    Note
-    ----
-    This is not possible via the standard *SQLAlchemy* approach, because the
-    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
-    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-    might be distributed over a cluster.
-    '''
+def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
     with ExperimentConnection(experiment_id) as connection:
-        connection.execute('''
-            SELECT m.id FROM mapobjects m
-            JOIN mapobject_segmentations s ON s.mapobject_id = m.id
-            WHERE m.mapobject_type_id IN (%(mapobject_type_ids)s)
-            AND s.site_id = %(site_id)s
-            AND s.pipeline = %(pipeline)s;
-        ''', {
-            'site_id': site_id,
-            'pipeline': pipeline,
-            'mapobject_type_ids': mapobject_type_ids
-        })
-        mapobjects = connection.fetchall()
-        mapobject_ids = [m.id for m in mapobjects]
         if mapobject_ids:
             if cfg.db_driver == 'citus':
                 logger.info('delete mapobjects')
@@ -692,3 +651,80 @@ def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
                     'mapobject_ids': mapobject_ids
                 })
 
+
+def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
+        site_id=None, pipeline=None):
+    '''Deletes all instances of
+    :class:`Mapobject <tmlib.models.mapobject.Mapobject>` as well as all
+    "children" instances of
+    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    :class:`FeatureValue <tmlib.models.feature.FeatureValue>`,
+    :class:`LabelValue <tmlib.models.feature.LabelValue>`.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
+    mapobject_type_ids: List[int]
+        IDs of parent :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+    site_id: int, optional
+        ID of the parent :class:`Site <tmlib.models.site.Site>`
+    pipeline: str, optional
+        the pipeline in which mapobjects were genereated
+        (not required for non-*static* mapobject types)
+
+    Note
+    ----
+    This is not possible via the standard *SQLAlchemy* approach, because the
+    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    might be distributed over a cluster.
+    '''
+    if mapobject_type_ids:
+        with ExperimentConnection(experiment_id) as connection:
+            connection.execute('''
+                SELECT m.id FROM mapobjects m
+                JOIN mapobject_segmentations s ON s.mapobject_id = m.id
+                WHERE m.mapobject_type_id IN (%(mapobject_type_ids)s)
+                AND s.site_id = %(site_id)s
+                AND s.pipeline = %(pipeline)s;
+            ''', {
+                'site_id': site_id,
+                'pipeline': pipeline,
+                'mapobject_type_ids': mapobject_type_ids
+            })
+            mapobjects = connection.fetchall()
+            mapobject_ids = [m.id for m in mapobjects]
+
+        _delete_mapobjects_cascade(experiment_id, mapobject_ids)
+
+
+def delete_invalid_mapobjects_cascade(experiment_id):
+    '''Deletes all instances of
+    :class:`Mapobject <tmlib.models.mapobject.Mapobject>` with invalid
+    geometries as well as all "children" instances of
+    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    :class:`FeatureValue <tmlib.models.feature.FeatureValue>`,
+    :class:`LabelValue <tmlib.models.feature.LabelValue>`.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
+
+    Note
+    ----
+    This is not possible via the standard *SQLAlchemy* approach, because the
+    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    might be distributed over a cluster.
+    '''
+    with tm.utils.ExperimentConnection(experiment_id) as connection:
+        connection.execute('''
+            SELECT mapobject_id FROM mapbobject_segmentations
+            WHERE NOT ST_IsValid(geom_poly);
+        ''')
+        mapobject_segm = connection.fetchall()
+        mapobject_ids = [s.mapobject_id for s in mapobject_segm]
+
+    _delete_mapobjects_cascade(experiment_id, mapobject_ids)

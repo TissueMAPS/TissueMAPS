@@ -29,7 +29,7 @@ from sqlalchemy.event import listens_for
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import NamedTupleCursor
 
-from tmlib.models.base import ExperimentModel, FileSystemModel
+from tmlib.models.base import MainModel, ExperimentModel, FileSystemModel
 from tmlib import cfg
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,16 @@ logger = logging.getLogger(__name__)
 DATABASE_ENGINES = {}
 
 #: int: number of pooled database connections
-POOL_SIZE = 1
+POOL_SIZE = 5
+
+_SCHEMA_NAME_FORMAT_STRING = 'experiment_{experiment_id}'
+
+
+def set_pool_size(n):
+    '''Sets the pool size for database connections of the current Python
+    process.
+    '''
+    POOL_SIZE = n
 
 
 def create_db_engine(db_uri, cache=True, pool_size=POOL_SIZE):
@@ -61,7 +70,10 @@ def create_db_engine(db_uri, cache=True, pool_size=POOL_SIZE):
 
     '''
     if db_uri not in DATABASE_ENGINES:
-        logger.debug('create database engine for process %d', os.getpid())
+        logger.debug(
+            'create database engine for process %d with pool size %d',
+            os.getpid(), pool_size
+        )
         engine = sqlalchemy.create_engine(
             db_uri, poolclass=sqlalchemy.pool.QueuePool,
             pool_size=pool_size, max_overflow=pool_size*2,
@@ -94,18 +106,24 @@ def _add_db_worker(engine, host, port):
     db_name = db_url.database
     logger.debug('add worker node %s to database %s', host, db_name)
     with Connection(db_url) as conn:
-        conn.execute(
-            'SELECT master_add_node(%(host)s, %(port)s);',
-            {'host': host, 'port': port}
-        )
+        conn.execute('''
+            SELECT master_add_node(%(host)s, %(port)s);
+        ''', {
+            'host': host, 'port': port
+        })
 
 
 def _set_db_shard_replication_factor(engine, n):
-    db_url = make_url(engine.url)
-    db_name = db_url.database
-    logger.debug('set citus.shard_replication_factor for database %s', db_name)
-    with Connection(db_url) as conn:
-        conn.execute('SET citus.shard_replication_factor = %(n)s;', {'n': n})
+    if n > 0:
+        db_url = make_url(engine.url)
+        db_name = db_url.database
+        logger.debug('set shard_replication_factor for database %s', db_name)
+        with Connection(db_url) as conn:
+            conn.execute('''
+                SET citus.shard_replication_factor = %(n)s;
+            ''', {
+                'n': n
+            })
 
 
 def _create_db_if_not_exists(engine):
@@ -146,22 +164,65 @@ def _drop_db_if_exists(engine):
     db_url.database = db_name
 
 
-def _create_db_tables(engine):
+def _create_schema_if_exists(engine, experiment_id):
     db_url = make_url(engine.url)
     db_name = str(db_url.database)
-    if db_name == 'tissuemaps':
+    schema_name = _SCHEMA_NAME_FORMAT_STRING.format(experiment_id=experiment_id)
+    with Connection(db_url) as conn:
+        conn.execute('''
+            SELECT EXISTS(
+                SELECT 1 FROM pg_namespace WHERE nspname = %(schema)s
+            );
+        ''', {
+            'schema': schema_name
+        })
+        schema = conn.fetchone()
+        if schema.exists:
+            return True
+        else:
+            logger.debug(
+                'create schema "%s" for database "%s"', schema_name, db_name
+            )
+            sql = 'CREATE SCHEMA IF NOT EXISTS %s;' % schema_name
+            conn.execute(sql)
+            return False
+
+
+def _drop_schema(engine, experiment_id):
+    db_url = make_url(engine.url)
+    db_name = str(db_url.database)
+    schema_name = _SCHEMA_NAME_FORMAT_STRING.format(experiment_id=experiment_id)
+    logger.debug('drop schema "%s" for database "%s"', schema_name, db_name)
+    with Connection(db_url) as conn:
+        sql = 'DROP SCHEMA %s CASCADE;' % schema_name
+        conn.execute(sql)
+
+
+def _create_db_tables(engine, experiment_id=None):
+    db_url = make_url(engine.url)
+    db_name = str(db_url.database)
+    if experiment_id is None:
         logger.debug(
-            'create tables of models derived from %s', MainModel.__name__
+            'create tables of models derived from %s for "public" schema of '
+            'database "%s"', MainModel.__name__, db_name
         )
+        for name, table in MainModel.metadata.tables.iteritems():
+            table.schema = 'public'
         MainModel.metadata.create_all(engine)
     else:
-        logger.debug(
-            'create tables of models derived from %s', ExperimentModel.__name__
+        schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
+            experiment_id=experiment_id
         )
+        logger.debug(
+            'create tables of models derived from %s for schema "%s" of '
+            'database "%s"', ExperimentModel.__name__, schema_name, db_name
+        )
+        for name, table in ExperimentModel.metadata.tables.iteritems():
+            table.schema = schema_name
         ExperimentModel.metadata.create_all(engine)
-        logger.debug(
-            'change storage of "pixels" column of "channel_layer_tiles" table'
-        )
+        # logger.debug(
+        #     'change storage of "pixels" column of "channel_layer_tiles" table'
+        # )
         # with Connection(db_url) as conn:
         #     conn.execute(
         #         'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
@@ -309,18 +370,10 @@ class Query(sqlalchemy.orm.query.Query):
                 )
             elif cls.__name__ == 'ExperimentReference':
                 experiments = self.from_self(cls.id).all()
+                engine = create_db_engine(cfg.db_uri_sqla)
                 for exp in experiments:
-                    logger.info('drop database of experiment %d', exp.id)
-                    db_uri = cfg.get_db_uri_sqla(experiment_id=exp.id)
-                    engine = create_db_engine(db_uri)
-                    _drop_db_if_exists(engine)
-                    for host in cfg.db_worker_hosts:
-                        worker_url = cfg.get_db_uri_sqla(
-                            experiment_id=exp.id, host=host
-                        )
-                        worker_engine = create_db_engine(worker_url, cache=False)
-                        _drop_db_if_exists(worker_engine)
-                        worker_engine.dispose()
+                    logger.info('drop schema of experiment %d', exp.id)
+                    _drop_schema(engine, exp.id)
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
         logger.debug(
@@ -354,14 +407,18 @@ class SQLAlchemy_Session(object):
 
     '''
 
-    def __init__(self, session):
+    def __init__(self, session, schema=None):
         '''
         Parameters
         ----------
         session: sqlalchemy.orm.session.Session
             *SQLAlchemy* database session
+        schema: str, optional
+            name of a database schema
         '''
         self._session = session
+        self._schema = schema
+
 
     def __getattr__(self, attr):
         if hasattr(self._session, attr):
@@ -466,6 +523,11 @@ class SQLAlchemy_Session(object):
             self._session.commit()  # circumvent locking
             table.drop(engine)
         logger.info('create table "%s"', table.name)
+        if self._schema is not None:
+            for name, t in ExperimentModel.metadata.tables.iteritems():
+                t.schema = self._schema
+        for name, t in MainModel.metadata.tables.iteritems():
+            t.schema = 'public'
         table.create(engine)
         logger.info('remove "%s" locations on disk', model.__name__)
         for loc in locations_to_remove:
@@ -533,8 +595,9 @@ class _Session(object):
     '''
     _session_factories = dict()
 
-    def __init__(self, db_uri):
+    def __init__(self, db_uri, schema=None):
         self._db_uri = db_uri
+        self._schema = schema
         if self._db_uri not in self.__class__._session_factories:
             self.__class__._session_factories[self._db_uri] = \
                 create_db_session_factory(self.engine)
@@ -546,7 +609,24 @@ class _Session(object):
 
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
-        self._session = SQLAlchemy_Session(session_factory())
+        self._session = SQLAlchemy_Session(session_factory(), self._schema)
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_begin', self._after_begin
+        )
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_commit', self._after_commit
+        )
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_rollback', self._after_rollback
+        )
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_flush', self._after_flush
+        )
+
         return self._session
 
     def __exit__(self, except_type, except_value, except_trace):
@@ -560,6 +640,26 @@ class _Session(object):
             )
         self._session.close()
 
+    def _set_search_path(self):
+        if self._schema is not None:
+            self._session.execute('''
+                SET search_path TO 'public', :schema;
+            ''', {
+                'schema': self._schema
+            })
+
+    def _after_begin(self, session, transaction, connection):
+        self._set_search_path()
+
+    def _after_commit(self, session):
+        self._set_search_path()
+
+    def _after_flush(self, session, flush_context):
+        self._set_search_path()
+
+    def _after_rollback(self, session):
+        self._set_search_path()
+
     def _after_bulk_delete_callback(self, delete_context):
         '''Deletes locations defined by instances of :class`tmlib.Model`
         after they have been deleted en bulk.
@@ -572,6 +672,7 @@ class _Session(object):
             'deleted %d rows from table "%s"',
             delete_context.rowcount, delete_context.primary_table.name
         )
+        self._set_search_path()
 
 
 class MainSession(_Session):
@@ -597,11 +698,11 @@ class MainSession(_Session):
         Parameters
         ----------
         db_uri: str, optional
-            URI of the main `TissueMAPS` database; defaults to the value of
-            the environment variable ``TMPAS_DB_URI`` (default: ``None``)
+            URI of the ``tissuemaps`` database; defaults to the value of
+            :attr:`db_uri_sqla <tmlib.config.DefaultConfig.db_uri_sqla>`
         '''
         if db_uri is None:
-            db_uri = cfg.get_db_uri_sqla()
+            db_uri = cfg.db_uri_sqla
         super(MainSession, self).__init__(db_uri)
         engine = create_db_engine(db_uri)
         _assert_db_exists(engine)
@@ -632,38 +733,34 @@ class ExperimentSession(_Session):
         experiment_id: int
             ID of the experiment that should be queried
         db_uri: str, optional
-            URI of the main ``tissuemaps`` database; defaults to the value
-            returned by
-            :meth:`get_db_uri_sqla <tmlib.config.LibraryConfig.get_db_uri_sqla>`
+            URI of the ``tissuemaps`` database; defaults to the value of
+            :attr:`db_uri_sqla <tmlib.config.LibraryConfig.db_uri_sqla>`
         '''
         if db_uri is None:
-            db_uri = cfg.get_db_uri_sqla(experiment_id=experiment_id)
+            db_uri = cfg.db_uri_sqla
         self.experiment_id = experiment_id
-        master_engine = create_db_engine(db_uri)
-        exists = _create_db_if_not_exists(master_engine)
+        engine = create_db_engine(db_uri)
+        exists = _create_schema_if_exists(engine, experiment_id)
         if not exists:
-            # NOTE: citus master does not propagate CREATE DATABASE and
-            # CREATE EXTENTION to worker nodes. This needs to be done manually
-            # on each worker. In addition, workers must be added for each
-            # database.
-            n_hosts = len(cfg.db_worker_hosts)
-            _set_db_shard_replication_factor(master_engine, n_hosts)
-            for host in cfg.db_worker_hosts:
-                _add_db_worker(master_engine, host, cfg.db_port)
-                worker_url = cfg.get_db_uri_sqla(
-                    experiment_id=experiment_id, host=host
-                )
-                worker_engine = create_db_engine(worker_url, cache=False)
-                _create_db_if_not_exists(worker_engine)
-                worker_engine.dispose()
-            # The CREATE TABLE command is propagated and only needs to be
-            # called on the master.
-            _create_db_tables(master_engine)
+            # # TODO: move to playbooks
+            # n_hosts = len(cfg.db_worker_hosts)
+            # _set_db_shard_replication_factor(master_engine, n_hosts)
+            # for host in cfg.db_worker_hosts:
+            #     _add_db_worker(master_engine, host, cfg.db_port)
+            _create_db_tables(engine, experiment_id)
         super(ExperimentSession, self).__init__(db_uri)
 
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory())
+        schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
+            experiment_id=self.experiment_id
+        )
+        self._session.execute('''
+            SET search_path TO 'public', :schema;
+        ''', {
+            'schema': schema_name
+        })
         return self._session
 
 
@@ -681,32 +778,35 @@ class Connection(object):
     you are doing.
     '''
 
-    def __init__(self, db_uri):
+    def __init__(self, db_uri, schema=None):
         '''
         Parameters
         ----------
         db_uri: str
             URI of the database to connect to in the format required by
             *SQLAlchemy*
+        schema: str, optional
+            a database schema that should be added to the search path
         '''
         self._db_uri = db_uri
+        self._schema = schema
         self._engine = create_db_engine(self._db_uri)
 
     def __enter__(self):
         self._connection = self._engine.raw_connection()
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
+        if self._schema:
+            logger.error('set search path for schema "%s"', self._schema)
+            self._cursor.execute('''
+                SET search_path TO 'public', %(schema)s;
+            ''', {
+                'schema': self._schema
+            })
         return self._cursor
 
     def __exit__(self, except_type, except_value, except_trace):
         self._connection.close()
-
-    def drop_and_recreate(self, model):
-        table_name = model.__table__.name
-        logger.debug('drop table "%s"', table_name)
-        self._cursor.execute(
-            'DROP TABLE {table}'.format(table=quote(self._engine, table_name))
-        )
 
 
 class ExperimentConnection(Connection):
@@ -724,7 +824,8 @@ class ExperimentConnection(Connection):
 
     Warning
     -------
-    Use raw connections only if absolutely necessary, otherwise use
+    Use raw connections only if absolutely necessary, such as for inserting
+    into or updating distributed tables. Otherwise use
     :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
 
     See also
@@ -739,15 +840,15 @@ class ExperimentConnection(Connection):
         experiment_id: int
             ID of the experiment that should be queried
         db_uri: str, optional
-            database URI; defaults to the value returned by
-            :meth:`get_db_uri_sqla <tmlib.config.DefaultConfig.get_db_uri_sqla>`
-            given the provided `experiment_id`
+            database URI; defaults to the value of
+            :attr:`db_uri_sqla <tmlib.config.DefaultConfig.db_uri_sqla>`
         '''
         if db_uri is None:
-            db_uri = cfg.get_db_uri_sqla(experiment_id=experiment_id)
-        engine = create_db_engine(db_uri)
-        _assert_db_exists(engine)
-        super(ExperimentConnection, self).__init__(db_uri)
+            db_uri = cfg.db_uri_sqla
+        schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
+            experiment_id=experiment_id
+        )
+        super(ExperimentConnection, self).__init__(db_uri, schema_name)
         self.experiment_id = experiment_id
 
 
@@ -766,7 +867,8 @@ class MainConnection(Connection):
 
     Warning
     -------
-    Use raw connnections only if absolutely necessary, otherwise use
+    Use raw connnections only if absolutely necessary, such as when inserting
+    into or updating distributed tables. Otherwise use
     :class:`MainSession <tmlib.models.utils.MainSession>`.
 
     See also
@@ -780,10 +882,8 @@ class MainConnection(Connection):
         ----------
         db_uri: str, optional
             database URI; defaults to the value returned by
-            :meth:`get_db_uri_sqla <tmlib.config.DefaultConfig.get_db_uri_sqla>`
+            :attr:`db_uri_sqla <tmlib.config.DefaultConfig.db_uri_sqla>`
         '''
         if db_uri is None:
-            db_uri = cfg.get_db_uri_sqla()
-        engine = create_db_engine(db_uri)
-        _assert_db_exists(engine)
+            db_uri = cfg.db_uri_sqla
         super(MainConnection, self).__init__(db_uri)
