@@ -30,6 +30,7 @@ from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.types import ST_ExteriorRing
+from tmlib.models.utils import ExperimentConnection
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
@@ -530,7 +531,7 @@ class MapobjectSegmentation(ExperimentModel):
 
 
 def delete_mapobject_types_cascade(experiment_id, is_static, pipeline=None):
-    '''Deletes all instance of
+    '''Deletes all instances of
     :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` as well as
     as "children" instances of
     :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
@@ -545,10 +546,14 @@ def delete_mapobject_types_cascade(experiment_id, is_static, pipeline=None):
     pipeline: str, optional
         the pipeline in which mapobjects were genereated
         (not required for non-*static* mapobject types)
+
+    Note
+    ----
+    This is not possible via the standard *SQLAlchemy* approach, because the
+    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    might be distributed over a cluster.
     '''
-
-    from tmlib.models.utils import ExperimentConnection
-
     with ExperimentConnection(experiment_id) as connection:
         connection.execute('''
             SELECT t.id FROM mapobject_types t
@@ -571,22 +576,37 @@ def delete_mapobject_types_cascade(experiment_id, is_static, pipeline=None):
             mapobjects = connection.fetchall()
             mapobject_ids = [m.id for m in mapobjects]
             if mapobject_ids:
-                connection.execute('''
-                    SELECT master_modify_multiple_shards(
-                        \'DELETE FROM mapobject_segmentations s
-                          WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
-                    );
-                ''', {
-                    'mapobject_ids': mapobject_ids
-                })
-                connection.execute('''
-                    SELECT master_modify_multiple_shards(
-                        \'DELETE FROM mapobjects
-                          WHERE id = ANY(%(mapobject_ids)s)\'
-                    );
-                ''', {
-                    'mapobject_ids': mapobject_ids
-                })
+                if cfg.db_driver == 'citus':
+                    connection.execute('''
+                        SELECT master_modify_multiple_shards(
+                            \'DELETE FROM mapobject_segmentations s
+                              WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
+                        );
+                    ''', {
+                        'mapobject_ids': mapobject_ids
+                    })
+                    connection.execute('''
+                        SELECT master_modify_multiple_shards(
+                            \'DELETE FROM mapobjects
+                              WHERE id = ANY(%(mapobject_ids)s)\'
+                        );
+                    ''', {
+                        'mapobject_ids': mapobject_ids
+                    })
+                else:
+                    connection.execute('''
+                        DELETE FROM mapobject_segmentations s
+                        WHERE mapobject_id = ANY(%(mapobject_ids)s);
+                    ''', {
+                        'mapobject_ids': mapobject_ids
+                    })
+                    connection.execute('''
+                        DELETE FROM mapobjects
+                        WHERE id = ANY(%(mapobject_ids)s);
+                    ''', {
+                        'mapobject_ids': mapobject_ids
+                    })
+
 
             connection.execute('''
                 DELETE FROM mapobject_types

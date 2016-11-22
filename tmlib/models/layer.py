@@ -35,6 +35,7 @@ from tmlib.models.well import Well
 from tmlib.models.feature import FeatureValue, LabelValue
 from tmlib.models.plate import Plate
 from tmlib.models.base import ExperimentModel
+from tmlib.models.utils import ExperimentConnection
 from tmlib.errors import RegexError
 from tmlib.image import PyramidTile
 
@@ -837,3 +838,32 @@ class HeatmapLabelLayer(ContinuousLabelLayer):
             ).
             all()
         )
+
+
+def delete_channel_layers_cascade(experiment_id):
+    '''Deletes all instances of
+    :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>` as well as
+    as "children" instances of
+    :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the parent experiment
+
+
+    Note
+    ----
+    This is not possible via the standard *SQLAlchemy* approach, because the
+    table of :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`
+    might be distributed over a cluster.
+    '''
+    with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+        logger.debug('drop table "channel_layer_tiles"')
+        connection.execute('''
+            DROP TABLE channel_layer_tiles;
+        ''')
+
+    with tm.utils.ExperimentSession(self.experiment_id) as session:
+        session.drop_and_recreate(tm.ChannelLayerTile)
+        session.drop_and_recreate(tm.ChannelLayer)

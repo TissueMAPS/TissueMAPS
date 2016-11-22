@@ -33,6 +33,8 @@ from tmlib.image import Image
 from tmlib.errors import DataIntegrityError
 from tmlib.errors import WorkflowError
 from tmlib.models.utils import delete_location
+from tmlib.models.layer import delete_channel_layers_cascade
+from tmlib.models.mapobject import delete_mapobject_types_cascade
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
@@ -244,35 +246,11 @@ class PyramidBuilder(ClusterRoutines):
         :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
         as well as all children instances for the processed experiment.
         '''
-        logger.debug('delete existing channel layers and pyramid tile files')
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            connection.execute('''
-                DROP TABLE channel_layer_tiles;
-            ''')
-
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.drop_and_recreate(tm.ChannelLayer)
-            session.drop_and_recreate(tm.ChannelLayerTile)
+        logger.debug('delete existing channel layers')
+        delete_channel_layers_cascade(self.experiment_id)
 
         logger.debug('delete existing static mapobject types')
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            connection.execute('''
-                SELECT FROM mapobject_types
-                WHERE is_static = TRUE;
-            ''')
-            mapobject_type_id = connection.fetchone()
-            connection.execute('''
-                SELECT master_modify_multiple_shards(
-                    \'DELETE FROM mapobjects
-                      WHERE mapobject_type_id = %(mapobject_type_id)s;\'
-                )
-            ''', {
-                'mapobject_type_id': mapobject_type_id
-            })
-            connection.execute('''
-                DELETE FROM mapobject_types
-                WHERE is_static = TRUE;
-            ''')
+        delete_mapobject_types_cascade(self.experiment_id, is_static=True)
 
     def create_run_job_collection(self, submission_id):
         '''tmlib.workflow.job.MultiRunJobCollection: collection of "run" jobs
@@ -696,7 +674,7 @@ class PyramidBuilder(ClusterRoutines):
                     contour = np.array([ur, ul, ll, lr, ur])
                     polygon = shapely.geometry.Polygon(contour)
 
-                    with tm.utils.ExperimentCollection(self.experiment_id) as conn:
+                    with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                         conn.execute('''
                             SELECT * FROM nextval('mapobjects_id_seq');
                         ''')
