@@ -46,10 +46,12 @@ logger = logging.getLogger(__name__)
 
 
 _UPSERT_STATEMENT = '''
-    INSERT INTO channel_layer_tiles AS t
-    (level, row, "column", channel_layer_id, pixels)
-    VALUES
-    (%(level)s, %(row)s, %(column)s, %(channel_layer_id)s, %(pixels)s)
+    INSERT INTO channel_layer_tiles AS t (
+        level, row, "column", channel_layer_id, pixels
+    )
+    VALUES (
+        %(level)s, %(row)s, %(column)s, %(channel_layer_id)s, %(pixels)s
+    )
     ON CONFLICT
     ON CONSTRAINT channel_layer_tiles_level_row_column_channel_layer_id_key
     DO UPDATE
@@ -682,17 +684,25 @@ class PyramidBuilder(ClusterRoutines):
                         mapobject_id = val.nextval
 
                         conn.execute('''
-                            INSERT INTO mapobjects (id, mapobject_type_id)
-                            VALUES (%(mapobject_id)s, %(mapobject_type_id)s);
+                            INSERT INTO mapobjects (
+                                id, mapobject_type_id
+                            )
+                            VALUES (
+                                %(mapobject_id)s, %(mapobject_type_id)s
+                            );
                         ''', {
                             'mapobject_id': mapobject_id,
                             'mapobject_type_id': mapobject_type_id
                         })
 
                         conn.execute('''
-                            INSERT INTO mapobject_segmentations
-                            (mapobject_id, geom_poly, geom_centroid)
-                            VALUES (%(mapobject_id)s, %(geom_poly)s, %(geom_centroid)s);
+                            INSERT INTO mapobject_segmentations (
+                                mapobject_id, geom_poly, geom_centroid
+                            )
+                            VALUES (
+                                %(mapobject_id)s,
+                                %(geom_poly)s, %(geom_centroid)s
+                            );
                         ''', {
                             'mapobject_id': mapobject_id,
                             'geom_poly': polygon.wkt,

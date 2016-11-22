@@ -36,7 +36,7 @@ class Feature(ExperimentModel):
 
     __distribute_by_replication__ = True
 
-    __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
+    __table_args__ = (UniqueConstraint('name', 'mapobject_type_id', 'id'), )
 
     #: str: name given to the feature (e.g. by jterator)
     name = Column(String, index=True)

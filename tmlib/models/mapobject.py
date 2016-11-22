@@ -29,7 +29,6 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
 
 from tmlib.models.base import ExperimentModel, DateMixIn
-from tmlib.models.types import ST_ExteriorRing
 from tmlib.models.utils import ExperimentConnection
 from tmlib.utils import autocreate_directory_property
 
@@ -149,43 +148,75 @@ class MapobjectType(ExperimentModel):
 
         do_simplify = max_poly_zoom <= z < min_poly_zoom
         do_nothing = z < max_poly_zoom
+        min_x, min_y, max_x, max_y = MapobjectSegmentation.bounding_box(
+            x, y, z, maxzoom
+        )
         with tm.utils.ExperimentConnection(experiment_id) as connection:
-            if do_simplify:
-                logger.debug('represent object by centroid')
-                connection.execute('''
-                    SELECT s.mapobject_id, s.geom_centroid
-                    FROM mapobject_segmentations s
-                    JOIN mapobjects m ON m.id = s.mapobject_id
-                    WHERE m.mapobject_type = %(mapobject_type_id)s
-                    AND s.ST_
-                ''')
-                select_stmt = session.query(
-                    MapobjectSegmentation.mapobject_id,
-                    MapobjectSegmentation.geom_centroid.ST_AsGeoJSON())
-            elif do_nothing:
+            if do_nothing:
                 logger.debug('dont\'t represent object')
                 return list()
+            elif do_simplify:
+                logger.debug('represent object by centroid')
+                sql = '''
+                    SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_centroid)
+                '''
+                selection = connection.fetchall()
             else:
                 logger.debug('represent object as polygon')
-                select_stmt = session.query(
-                    MapobjectSegmentation.mapobject_id,
-                    MapobjectSegmentation.geom_poly.ST_AsGeoJSON()
+                sql = '''
+                    SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_poly)
+                '''
+
+            # The outlines should not lie on the top or left border since
+            # this would otherwise lead to requests for neighboring tiles
+            # receiving the same objects.
+            # This in turn leads to overplotting and is noticeable
+            # when the objects have a fill color with an opacity != 0 or != 1.
+            sql += '''
+                FROM mapobject_segmentations s
+                JOIN mapobjects m ON m.id = s.mapobject_id
+                WHERE m.mapobject_type_id = %(mapobject_type_id)s
+                AND s.tpoint = %(tpoint)s
+                AND s.zplane = %(zplane)s
+                AND s.ST_Intersects(
+                    s.geom_poly,
+                    ST_GeomFromText(
+                        'POLYGON((
+                            %(x2)s %(y2)s, %(x1)s %(y2)s, %(x1)s %(y1)s,
+                            %(x2)s %(y1)s, %(x2)s %(y2)s
+                        ))'
+                    )
                 )
-
-            outlines = select_stmt.\
-                join(Mapobject).\
-                join(MapobjectType).\
-                filter(
-                    (MapobjectType.id == self.id) &
-                    ((MapobjectType.is_static) |
-                     (MapobjectSegmentation.tpoint == tpoint) &
-                     (MapobjectSegmentation.zplane == zplane)
-                    ) &
-                    (MapobjectSegmentation.intersection_filter(x, y, z, maxzoom))
-                ).\
-                all()
-
-        return outlines
+                AND CASE
+                    WHEN %(not_left_border_tile)s THEN
+                        NOT ST_Intersects(
+                            ST_ExteriorRing(s.geom_poly),
+                            ST_GeomFromText(
+                                'LINESTRING(%(x1)s %(y2)s, %(x1)s %(y1)s)'
+                            )
+                        )
+                    ELSE
+                        TRUE
+                    END
+                AND CASE
+                    WHEN %(not_top_border_tile)s THEN
+                        NOT ST_Intersects(
+                            ST_ExteriorRing(s.geom_poly),
+                            ST_GeomFromText(
+                                'LINESTRING(%(x1)s %(y2)s, %(x2)s %(y2)s)'
+                            )
+                        )
+                    ELSE
+                        TRUE
+                    END
+            '''
+            connection.execute(sql, {
+                'mapobject_type_id': mapobject_type_id,
+                'tpoint': tpoint, 'zplane': zplane,
+                'not_top_border_tile': x != 0, 'not_left_border_tile': y != 0,
+                'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2
+            })
+            return connections.fetchall()
 
     def calculate_min_max_poly_zoom(self, maxzoom_level):
         '''Calculates the minimum zoom level above which mapobjects are
@@ -468,57 +499,6 @@ class MapobjectSegmentation(ExperimentModel):
         maxy = -y0
         return (minx, miny, maxx, maxy)
 
-    @staticmethod
-    def intersection_filter(x, y, z, maxzoom):
-        '''Generates an `SQLalchemy` query filter to select mapobject outlines
-        for a given `y`, `x`, `z` pyramid coordinate.
-
-        Parameters
-        ----------
-        x: int
-            column map coordinate at the given `z` level
-        y: int
-            row map coordinate at the given `z` level
-        z: int
-            zoom level
-        maxzoom: int
-            maximal zoom level of layers belonging to the visualized experiment
-
-        Returns
-        -------
-        ???
-        '''
-        minx, miny, maxx, maxy = MapobjectSegmentation.bounding_box(x, y, z, maxzoom)
-        # TODO: use shapely to create objects
-        tile = 'POLYGON(({maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
-            minx=minx, maxx=maxx, miny=miny, maxy=maxy
-        )
-        # The outlines should not lie on the top or left border since this
-        # would otherwise lead to requests for neighboring tiles receiving
-        # the same objects.
-        # This in turn leads to overplotting and is noticeable when the objects
-        # have a fill color with an opacity != 0 or != 1.
-        top_border = 'LINESTRING({minx} {maxy}, {maxx} {maxy})'.format(
-            minx=minx, maxx=maxx, maxy=maxy
-        )
-        left_border = 'LINESTRING({minx} {maxy}, {minx} {miny})'.format(
-            minx=minx, maxy=maxy, miny=miny
-        )
-
-        spatial_filter = (MapobjectSegmentation.geom_poly.ST_Intersects(tile))
-        if x != 0:
-            spatial_filter = spatial_filter & \
-                not_(ST_ExteriorRing(MapobjectSegmentation.geom_poly).\
-                     ST_Intersects(left_border)
-                )
-        if y != 0:
-            spatial_filter = spatial_filter & \
-                not_(ST_ExteriorRing(MapobjectSegmentation.geom_poly).\
-                     ST_Intersects(top_border)
-                )
-
-        return spatial_filter
-
     def __repr__(self):
         return (
             '<%s('
@@ -529,20 +509,96 @@ class MapobjectSegmentation(ExperimentModel):
         )
 
 
-
-def delete_mapobject_types_cascade(experiment_id, is_static, pipeline=None):
+def delete_mapobject_types_cascade(experiment_id, is_static,
+        site_id=None, pipeline=None):
     '''Deletes all instances of
     :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` as well as
     as "children" instances of
-    :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+    :class:`Mapobject <tmlib.models.mapobject.Mapobject>`,
     :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    :class:`Feature <tmlib.models.feature.Feature>`,
+    :class:`ToolResult <tmlib.models.result.ToolResult>`,
+    :class:`LabelLayer <tmlib.models.layer.LabelLayer>`,
+    :class:`FeatureValue <tmlib.models.feature.FeatureValue>` and
+    :class:`LabelValue <tmlib.models.feature.LabelValue>`.
 
     Parameters
     ----------
     experiment_id: int
-        ID of the parent experiment
+        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
     is_static: bool
         whether mapojbects of *static* types should be deleted
+    site_id: int, optional
+        ID of the parent :class:`Site <tmlib.models.site.Site>`
+    pipeline: str, optional
+        the pipeline in which mapobjects were genereated
+        (not required for non-*static* mapobject types)
+
+    Note
+    ----
+    This is not possible via the standard *SQLAlchemy* approach, because the
+    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    might be distributed over a cluster.
+    '''
+    with ExperimentSession(experiment_id) as session:
+        mapobject_types = session.query(MapobjectType).\
+            filter(MapobjectType.is_static == is_static).\
+            all()
+        mapobject_type_ids = [t.id for t in mapobject_types]
+
+    if mapobject_type_ids:
+        delete_mapobjects_cascade(
+            experiment_id, mapobject_type_ids, site_id, pipeline
+        )
+
+    with ExperimentSession(experiment_id) as session:
+        logger.info('delete tool results')
+        session.query(tm.ToolResult).\
+            filter(tm.ToolResult.mapobject_type_id.in_(mapobject_type_ids)).\
+            delete()
+        logger.info('delete mapobject types')
+        session.query(tm.MapobjectType).\
+            filter(tm.MapobjectType.id.in_(mapobject_type_ids)).\
+            delete()
+
+    with ExperimentConnection(experiment_id) as session:
+        logger.info('delete features')
+        if cfg.db_driver == 'citus':
+            connection.execute('''
+                SELECT master_modify_multiple_shards(
+                    DELETE FROM features
+                    WHERE mapobject_type_id IN (%(mapobject_type_ids)s);
+                );
+            ''', {
+                'mapobject_type_ids': mapobject_type_ids
+            })
+        else:
+            connection.execute('''
+                DELETE FROM features
+                WHERE mapobject_type_id IN (%(mapobject_type_ids)s);
+            ''', {
+                'mapobject_type_ids': mapobject_type_ids
+            })
+
+
+def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
+        site_id=None, pipeline=None):
+    '''Deletes all instances of
+    :class:`Mapobject <tmlib.models.mapobject.Mapobject>` as well as all
+    "children" instances of
+    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    :class:`FeatureValue <tmlib.models.feature.FeatureValue>`,
+    :class:`LabelValue <tmlib.models.feature.LabelValue>`.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
+    mapobject_type_ids: List[int]
+        IDs of parent :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+    site_id: int, optional
+        ID of the parent :class:`Site <tmlib.models.site.Site>`
     pipeline: str, optional
         the pipeline in which mapobjects were genereated
         (not required for non-*static* mapobject types)
@@ -556,61 +612,83 @@ def delete_mapobject_types_cascade(experiment_id, is_static, pipeline=None):
     '''
     with ExperimentConnection(experiment_id) as connection:
         connection.execute('''
-            SELECT t.id FROM mapobject_types t
-            WHERE t.is_static = %(is_static)s;
+            SELECT m.id FROM mapobjects m
+            JOIN mapobject_segmentations s ON s.mapobject_id = m.id
+            WHERE m.mapobject_type_id IN (%(mapobject_type_ids)s)
+            AND s.site_id = %(site_id)s
+            AND s.pipeline = %(pipeline)s;
         ''', {
-            'is_static': is_static
+            'site_id': site_id,
+            'pipeline': pipeline,
+            'mapobject_type_ids': mapobject_type_ids
         })
-        mapobject_types = connection.fetchall()
-        mapobject_type_ids = [t.id for t in mapobject_types]
-        if mapobject_type_ids:
-            connection.execute('''
-                SELECT m.id FROM mapobjects m
-                JOIN mapobject_segmentations s ON s.mapobject_id = m.id
-                WHERE m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
-                AND s.pipeline = %(pipeline)s;
-            ''', {
-                'pipeline': pipeline,
-                'mapobject_type_ids': mapobject_type_ids
-            })
-            mapobjects = connection.fetchall()
-            mapobject_ids = [m.id for m in mapobjects]
-            if mapobject_ids:
-                if cfg.db_driver == 'citus':
-                    connection.execute('''
-                        SELECT master_modify_multiple_shards(
-                            \'DELETE FROM mapobject_segmentations s
-                              WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
-                        );
-                    ''', {
-                        'mapobject_ids': mapobject_ids
-                    })
-                    connection.execute('''
-                        SELECT master_modify_multiple_shards(
-                            \'DELETE FROM mapobjects
-                              WHERE id = ANY(%(mapobject_ids)s)\'
-                        );
-                    ''', {
-                        'mapobject_ids': mapobject_ids
-                    })
-                else:
-                    connection.execute('''
-                        DELETE FROM mapobject_segmentations s
-                        WHERE mapobject_id = ANY(%(mapobject_ids)s);
-                    ''', {
-                        'mapobject_ids': mapobject_ids
-                    })
-                    connection.execute('''
-                        DELETE FROM mapobjects
-                        WHERE id = ANY(%(mapobject_ids)s);
-                    ''', {
-                        'mapobject_ids': mapobject_ids
-                    })
+        mapobjects = connection.fetchall()
+        mapobject_ids = [m.id for m in mapobjects]
+        if mapobject_ids:
+            if cfg.db_driver == 'citus':
+                logger.info('delete mapobjects')
+                connection.execute('''
+                    SELECT master_modify_multiple_shards(
+                        \'DELETE FROM mapobject_segmentations
+                          WHERE mapobject_id IN (%(mapobject_ids)s)\'
+                    );
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
+                logger.info('delete feature values')
+                connection.execute('''
+                    SELECT master_modify_multiple_shards(
+                        \'DELETE FROM feature_values
+                          WHERE mapobject_id IN (%(mapobject_ids)s)\'
+                    );
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
+                logger.info('delete label values')
+                connection.execute('''
+                    SELECT master_modify_multiple_shards(
+                        \'DELETE FROM label_values
+                          WHERE mapobject_id IN (%(mapobject_ids)s)\'
+                    );
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
+                logger.info('delete mapobjects')
+                connection.execute('''
+                    SELECT master_modify_multiple_shards(
+                        \'DELETE FROM mapobjects
+                          WHERE id IN (%(mapobject_ids)s)\'
+                    );
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
+            else:
+                logger.info('delete mapobject segmentations')
+                connection.execute('''
+                    DELETE FROM mapobject_segmentations s
+                    WHERE mapobject_id IN (%(mapobject_ids)s);
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
+                logger.info('delete feature values')
+                connection.execute('''
+                    DELETE FROM feauture_values
+                    WHERE mapobject_id IN (%(mapobject_ids)s);
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
+                logger.info('delete label values')
+                connection.execute('''
+                    DELETE FROM label_values
+                    WHERE mapobject_id IN (%(mapobject_ids)s);
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
+                logger.info('delete mapobjects')
+                connection.execute('''
+                    DELETE FROM mapobjects
+                    WHERE id IN (%(mapobject_ids)s);
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
 
-
-            connection.execute('''
-                DELETE FROM mapobject_types
-                WHERE id = ANY(%(mapobject_type_ids)s);
-            ''', {
-                'mapobject_type_ids': mapobject_type_ids
-            })

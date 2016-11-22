@@ -38,8 +38,11 @@ logger = logging.getLogger(__name__)
 #: engine objects for reuse within the current Python process hashable by URL
 DATABASE_ENGINES = {}
 
+#: int: number of pooled database connections
+POOL_SIZE = 1
 
-def create_db_engine(db_uri, cache=True, pool_size=5):
+
+def create_db_engine(db_uri, cache=True, pool_size=POOL_SIZE):
     '''Creates a database engine with a given pool size.
 
     Parameters
@@ -49,7 +52,7 @@ def create_db_engine(db_uri, cache=True, pool_size=5):
     cache: bool, optional
         whether engine should be cached for reuse (default: ``True``)
     pool_size: int, optional
-        number of pooled database connections (default: ``5``)
+        number of pooled database connections (default: ``1``)
 
     Returns
     -------
@@ -650,9 +653,7 @@ class ExperimentSession(_Session):
                 worker_url = cfg.get_db_uri_sqla(
                     experiment_id=experiment_id, host=host
                 )
-                worker_engine = create_db_engine(
-                    worker_url, cache=False, pool_size=1
-                )
+                worker_engine = create_db_engine(worker_url, cache=False)
                 _create_db_if_not_exists(worker_engine)
                 worker_engine.dispose()
             # The CREATE TABLE command is propagated and only needs to be
@@ -706,6 +707,7 @@ class Connection(object):
         self._cursor.execute(
             'DROP TABLE {table}'.format(table=quote(self._engine, table_name))
         )
+
 
 class ExperimentConnection(Connection):
 
