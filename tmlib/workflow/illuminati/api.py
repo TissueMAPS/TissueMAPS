@@ -117,7 +117,9 @@ class PyramidBuilder(ClusterRoutines):
         '''
         logger.info('performing data integrity tests')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            n_images_per_site = session.query(func.count(tm.ChannelImageFile.id)).\
+            n_images_per_site = session.query(
+                    func.count(tm.ChannelImageFile.id)
+                ).\
                 group_by(tm.ChannelImageFile.site_id).\
                 all()
             if len(set(n_images_per_site)) > 1:
@@ -642,19 +644,24 @@ class PyramidBuilder(ClusterRoutines):
             self._create_lower_zoom_level_tiles(batch)
 
     def collect_job_output(self, batch):
-        '''Creates default instances of :class:`tm.MapobjectType`
-        for :class:`tm.Site`, :class:`tm.Well`,
-        and :class:`tm.Plate` and creates for each instance an
-        instance of :class:`tm.Mapobject` and the corresponding
-        :class:`tm.MapobjectSegmentation`.
+        '''Creates instances of
+        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        for :class:`Site <tmlib.models.site.Site>`,
+        :class:`Well <tmlib.models.well.Well>`,
+        and :class:`Plate <tmlib.models.plate.Plate>`
+        and creates for each instance an instance of
+        :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
+        as well as the corresponding
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`.
 
+        The resulting *objects* can subsequently be visualized on the map.
+
+        Parameters
+        ----------
         batch: dict
             job description
         '''
-        logger.debug('delete existing mapobjects of static type')
-        from tmlib.models.mapbobject import delete_mapobject_types_cascade
-        delete_mapobject_types_cascade(self.experiment_id, is_static=True)
-
+        logger.info('create mapobjects of static type')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).first()
 
@@ -691,7 +698,7 @@ class PyramidBuilder(ClusterRoutines):
 
                     with tm.utils.ExperimentCollection(self.experiment_id) as conn:
                         conn.execute('''
-                            SELECT * FROM nextval('mapobject_id_seq');
+                            SELECT * FROM nextval('mapobjects_id_seq');
                         ''')
                         val = conn.fetchone()
                         mapobject_id = val.nextval
@@ -713,4 +720,5 @@ class PyramidBuilder(ClusterRoutines):
                             'geom_poly': polygon.wkt,
                             'geom_centroid': polygon.centroid.wkt
                         })
+
 

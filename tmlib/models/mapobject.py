@@ -558,38 +558,39 @@ def delete_mapobject_types_cascade(experiment_id, is_static, pipeline=None):
         })
         mapobject_types = connection.fetchall()
         mapobject_type_ids = [t.id for t in mapobject_types]
-        connection.execute('''
-            SELECT m.id FROM mapobjects m
-            JOIN mapobject_segmentations s ON s.mapobject_id = m.id
-            WHERE m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
-            AND s.pipeline = %(pipeline);
-        ''', {
-            'pipeline': pipeline,
-            'mapobject_type_ids': mapobject_type_ids
-        })
-        mapobjects = connection.fetchall()
-        mapobject_ids = [m.id for m in mapobjects]
-        connection.execute('''
-            SELECT master_modify_multiple_shards(
-                \'DELETE FROM mapbobject_segmentations s
-                  WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
-            );
-        ''', {
-            'mapobject_ids': mapobject_ids
-        })
-        connection.execute('''
-            SELECT master_modify_multiple_shards(
-                \'DELETE FROM mapbobjects
-                  WHERE id = ANY(%(mapobject_ids)s)\'
-            );
-        ''', {
-            'mapobject_ids': mapobject_ids
-        })
-        connection.execute('''
-            SELECT master_modify_multiple_shards(
-                \'DELETE FROM mapobject_types
-                  WHERE id = ANY(%(mapobject_type_ids)s)\'
-            );
-        ''', {
-            'mapobject_type_ids': mapobject_type_ids
-        })
+        if mapobject_type_ids:
+            connection.execute('''
+                SELECT m.id FROM mapobjects m
+                JOIN mapobject_segmentations s ON s.mapobject_id = m.id
+                WHERE m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
+                AND s.pipeline = %(pipeline)s;
+            ''', {
+                'pipeline': pipeline,
+                'mapobject_type_ids': mapobject_type_ids
+            })
+            mapobjects = connection.fetchall()
+            mapobject_ids = [m.id for m in mapobjects]
+            if mapobject_ids:
+                connection.execute('''
+                    SELECT master_modify_multiple_shards(
+                        \'DELETE FROM mapobject_segmentations s
+                          WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
+                    );
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
+                connection.execute('''
+                    SELECT master_modify_multiple_shards(
+                        \'DELETE FROM mapobjects
+                          WHERE id = ANY(%(mapobject_ids)s)\'
+                    );
+                ''', {
+                    'mapobject_ids': mapobject_ids
+                })
+
+            connection.execute('''
+                DELETE FROM mapobject_types
+                WHERE id = ANY(%(mapobject_type_ids)s);
+            ''', {
+                'mapobject_type_ids': mapobject_type_ids
+            })
