@@ -27,7 +27,7 @@ from sqlalchemy.engine.url import make_url
 from sqlalchemy_utils.functions import quote
 from sqlalchemy.event import listens_for
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from psycopg2.extras import DictCursor
+from psycopg2.extras import NamedTupleCursor
 
 from tmlib.models.base import ExperimentModel, FileSystemModel
 from tmlib import cfg
@@ -694,7 +694,7 @@ class Connection(object):
     def __enter__(self):
         self._connection = self._engine.raw_connection()
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        self._cursor = self._connection.cursor(cursor_factory=DictCursor)
+        self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         return self._cursor
 
     def __exit__(self, except_type, except_value, except_trace):
@@ -704,7 +704,7 @@ class Connection(object):
         table_name = model.__table__.name
         logger.debug('drop table "%s"', table_name)
         self._cursor.execute(
-            'DROP TABLE %(table)s', quote(self._engine, table_name)
+            'DROP TABLE {table}'.format(table=quote(self._engine, table_name))
         )
 
 class ExperimentConnection(Connection):

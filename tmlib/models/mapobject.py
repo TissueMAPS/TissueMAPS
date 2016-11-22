@@ -134,44 +134,59 @@ class MapobjectType(ExperimentModel):
         by points and if `z` < `max_poly_zoom` they are not displayed at all.
         '''
         logger.debug('get mapobject outlines falling into tile')
-        maxzoom = self.experiment.channels[0].layers[0].maxzoom_level_index
 
-        session = Session.object_session(self)
+        with ExperimentSession(experiment_id) as session:
+            layer = session.query(tm.ChannelLayer).first()
+            maxzoom = layer.maxzoom_level_index
 
-        do_simplify = self.max_poly_zoom <= z < self.min_poly_zoom
-        do_nothing = z < self.max_poly_zoom
-        if do_simplify:
-            logger.debug('represent object by centroid')
-            select_stmt = session.query(
-                MapobjectSegmentation.mapobject_id,
-                MapobjectSegmentation.geom_centroid.ST_AsGeoJSON())
-        elif do_nothing:
-            logger.debug('dont\'t represent object')
-            return list()
-        else:
-            logger.debug('represent object as polygon')
-            select_stmt = session.query(
-                MapobjectSegmentation.mapobject_id,
-                MapobjectSegmentation.geom_poly.ST_AsGeoJSON()
-            )
+            mapobject_type = session.query(tm.MapobjectType.id).\
+                filter_by(name=mapobject_type_name).\
+                one()
+            mapobject_type_id = mapobject_type.id
+            max_poly_zoom = mapobject_type.max_poly_zoom
+            min_poly_zoom = mapobject_type.min_poly_zoom
 
-        outlines = select_stmt.\
-            join(Mapobject).\
-            join(MapobjectType).\
-            filter(
-                (MapobjectType.id == self.id) &
-                ((MapobjectType.is_static) |
-                 (MapobjectSegmentation.tpoint == tpoint) &
-                 (MapobjectSegmentation.zplane == zplane)
-                ) &
-                (MapobjectSegmentation.intersection_filter(x, y, z, maxzoom))
-            ).\
-            all()
+        do_simplify = max_poly_zoom <= z < min_poly_zoom
+        do_nothing = z < max_poly_zoom
+        with tm.utils.ExperimentConnection(experiment_id) as connection:
+            if do_simplify:
+                logger.debug('represent object by centroid')
+                connection.execute('''
+                    SELECT s.mapobject_id, s.geom_centroid
+                    FROM mapobject_segmentations s
+                    JOIN mapobjects m ON m.id = s.mapobject_id
+                    WHERE m.mapobject_type = %(mapobject_type_id)s
+                    AND s.ST_
+                ''')
+                select_stmt = session.query(
+                    MapobjectSegmentation.mapobject_id,
+                    MapobjectSegmentation.geom_centroid.ST_AsGeoJSON())
+            elif do_nothing:
+                logger.debug('dont\'t represent object')
+                return list()
+            else:
+                logger.debug('represent object as polygon')
+                select_stmt = session.query(
+                    MapobjectSegmentation.mapobject_id,
+                    MapobjectSegmentation.geom_poly.ST_AsGeoJSON()
+                )
+
+            outlines = select_stmt.\
+                join(Mapobject).\
+                join(MapobjectType).\
+                filter(
+                    (MapobjectType.id == self.id) &
+                    ((MapobjectType.is_static) |
+                     (MapobjectSegmentation.tpoint == tpoint) &
+                     (MapobjectSegmentation.zplane == zplane)
+                    ) &
+                    (MapobjectSegmentation.intersection_filter(x, y, z, maxzoom))
+                ).\
+                all()
 
         return outlines
 
-    def calculate_min_max_poly_zoom(self, maxzoom_level, segmentation_ids,
-                                n_sample=10, n_points_per_tile_limit=3000):
+    def calculate_min_max_poly_zoom(self, maxzoom_level):
         '''Calculates the minimum zoom level above which mapobjects are
         represented on the map as polygons instead of centroids and the
         maximum zoom level below which mapobjects are no longer visualized.
@@ -180,69 +195,13 @@ class MapobjectType(ExperimentModel):
         ----------
         maxzoom_level: int
             maximum zoom level of the pyramid
-        segmentation_ids: List[int]
-            IDs of instances of :class:`tmlib.models.mapobject.MapobjectSegmentation`
-        n_sample: int, optional
-            number of tiles that should be sampled (default: ``10``)
-        n_points_per_tile_limit: int, optional
-            maximum number of points per tile that are allowed before the
-            polygon geometry is simplified to a point (default: ``3000``)
 
         Returns
         -------
         Tuple[int]
             minimal and maximal zoom level
         '''
-        # session = Session.object_session(self)
-
-        # n_points_in_tile_per_z = dict()
-        # for z in range(maxzoom_level, -1, -1):
-            # tilesize = 256 * 2 ** (6 - z)
-
-            # rand_xs = [random.randrange(0, 2**z) for _ in range(n_sample)]
-            # rand_ys = [random.randrange(0, 2**z) for _ in range(n_sample)]
-
-            # n_points_in_tile_samples = []
-            # for x, y in zip(rand_xs, rand_ys):
-            #     x0 = x * tilesize
-            #     y0 = -y * tilesize
-
-            #     minx = x0
-            #     maxx = x0 + tilesize
-            #     miny = y0 - tilesize
-            #     maxy = y0
-
-            #     tile = (
-            #         'LINESTRING({maxx} {maxy},{minx} {maxy}, {minx} {miny}, '
-            #         '{maxx} {miny}, {maxx} {maxy})'.format(
-            #                 minx=minx, maxx=maxx, miny=miny, maxy=maxy
-            #             )
-            #     )
-
-            #     n_points_in_tile = session.query(
-            #             func.sum(MapobjectSegmentation.geom_poly.ST_NPoints())
-            #         ).\
-            #         filter(
-            #             MapobjectSegmentation.id.in_(mapobject_outline_ids),
-            #             MapobjectSegmentation.geom_poly.intersects(tile)
-            #         ).\
-            #         scalar()
-
-            #     if n_points_in_tile is not None:
-            #         n_points_in_tile_samples.append(n_points_in_tile)
-            #     else:
-            #         n_points_in_tile_samples.append(0)
-
-            # n_points_in_tile_per_z[z] = int(
-            #     float(sum(n_points_in_tile_samples)) /
-            #     len(n_points_in_tile_samples)
-            # )
-
-        # min_poly_zoom = min([
-            # z for z, n in n_points_in_tile_per_z.items()
-            # if n <= n_points_per_tile_limit
-        # ])
-        # TODO: calculate the optimal zoom level
+        # TODO: this is too simplistic
         if self.is_static:
             min_poly_zoom = 0
             max_poly_zoom = 0
@@ -423,7 +382,7 @@ class MapobjectSegmentation(ExperimentModel):
     geom_centroid = Column(Geometry('POINT'))
 
     #: int: ID of parent site
-    site_id = Column(Integer, index=True, nullable=False)
+    site_id = Column(Integer, index=True)
 
     #: int: ID of parent mapobject
     mapobject_id = Column(Integer, index=True, nullable=False)
@@ -567,3 +526,70 @@ class MapobjectSegmentation(ExperimentModel):
             % (self.__class__.__name__, self.id, self.label, self.tpoint,
                 self.zplane, self.site_id, self.mapobject_id)
         )
+
+
+
+def delete_mapobject_types_cascade(experiment_id, is_static, pipeline=None):
+    '''Deletes all instance of
+    :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` as well as
+    as "children" instances of
+    :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the parent experiment
+    is_static: bool
+        whether mapojbects of *static* types should be deleted
+    pipeline: str, optional
+        the pipeline in which mapobjects were genereated
+        (not required for non-*static* mapobject types)
+    '''
+
+    from tmlib.models.utils import ExperimentConnection
+
+    with ExperimentConnection(experiment_id) as connection:
+        connection.execute('''
+            SELECT t.id FROM mapobject_types t
+            WHERE t.is_static = %(is_static)s;
+        ''', {
+            'is_static': is_static
+        })
+        mapobject_types = connection.fetchall()
+        mapobject_type_ids = [t.id for t in mapobject_types]
+        connection.execute('''
+            SELECT m.id FROM mapobjects m
+            JOIN mapobject_segmentations s ON s.mapobject_id = m.id
+            WHERE m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
+            AND s.pipeline = %(pipeline);
+        ''', {
+            'pipeline': pipeline,
+            'mapobject_type_ids': mapobject_type_ids
+        })
+        mapobjects = connection.fetchall()
+        mapobject_ids = [m.id for m in mapobjects]
+        connection.execute('''
+            SELECT master_modify_multiple_shards(
+                \'DELETE FROM mapbobject_segmentations s
+                  WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
+            );
+        ''', {
+            'mapobject_ids': mapobject_ids
+        })
+        connection.execute('''
+            SELECT master_modify_multiple_shards(
+                \'DELETE FROM mapbobjects
+                  WHERE id = ANY(%(mapobject_ids)s)\'
+            );
+        ''', {
+            'mapobject_ids': mapobject_ids
+        })
+        connection.execute('''
+            SELECT master_modify_multiple_shards(
+                \'DELETE FROM mapobject_types
+                  WHERE id = ANY(%(mapobject_type_ids)s)\'
+            );
+        ''', {
+            'mapobject_type_ids': mapobject_type_ids
+        })

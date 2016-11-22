@@ -19,6 +19,7 @@ import numpy as np
 import collections
 import itertools
 import shapely.geometry
+import psycopg2
 import sqlalchemy.orm
 from sqlalchemy import func
 from sqlalchemy.orm.exc import NoResultFound
@@ -535,7 +536,7 @@ class PyramidBuilder(ClusterRoutines):
                     channel_layer_tiles.append({
                         'level': level, 'row': row, 'column': column,
                         'channel_layer_id': layer.id,
-                        'pixels': str(tile.jpeg_encode())
+                        'pixels': psycopg2.Binary(tile.jpeg_encode().tostring())
                     })
 
             with tm.utils.ExperimentConnection(self.experiment_id) as conn:
@@ -560,6 +561,7 @@ class PyramidBuilder(ClusterRoutines):
                     level, row, column
                 )
                 layer_id = layer.id
+                zoom_factor = layer.zoom_factor
 
             logger.debug(
                 'creating tile: level=%d, row=%d, column=%d', level, row, column
@@ -583,7 +585,7 @@ class PyramidBuilder(ClusterRoutines):
                         })
                         pre_tile = conn.fetchone()
                         if pre_tile:
-                            pre_tile = PyramidTile.create_from_binary(
+                            pre_tile = PyramidTile.create_from_buffer(
                                 pre_tile.pixels
                             )
                         else:
@@ -600,29 +602,29 @@ class PyramidBuilder(ClusterRoutines):
                                  batch['level']+1, r, c
                             )
                             pre_tile = PyramidTile.create_as_background()
-                    # We have to temporally treat it as an "image",
-                    # since a tile can per definition not be larger
-                    # than 256x256 pixels.
-                    img = Image(pre_tile.array)
-                    if j == 0:
-                        row_img = img
+                        # We have to temporally treat it as an "image",
+                        # since a tile can per definition not be larger
+                        # than 256x256 pixels.
+                        img = Image(pre_tile.array)
+                        if j == 0:
+                            row_img = img
+                        else:
+                            row_img = row_img.join(img, 'x')
+                    if i == 0:
+                        mosaic_img = row_img
                     else:
-                        row_img = row_img.join(img, 'x')
-                if i == 0:
-                    mosaic_img = row_img
-                else:
-                    mosaic_img = mosaic_img.join(row_img, 'y')
+                        mosaic_img = mosaic_img.join(row_img, 'y')
             # Create the tile at the current level by downsampling the
             # mosaic image, which is composed of the 4 tiles of the next
             # higher zoom level
             with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                 # Upsert the tile entry, i.e. insert or update if exists
-                tile = PyramidTile(mosaic_img.shrink(layer.zoom_factor).array)
+                tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
                 conn.execute(
                     _UPSERT_STATEMENT, {
                         'level': level, 'row': row, 'column': column,
                         'channel_layer_id': layer_id,
-                        'pixels': str(tile.jpeg_encode())
+                        'pixels': psycopg2.Binary(tile.jpeg_encode().tostring())
                     }
                 )
 
@@ -650,42 +652,33 @@ class PyramidBuilder(ClusterRoutines):
             job description
         '''
         logger.debug('delete existing mapobjects of static type')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            mapobject_ids = session.query(tm.Mapobject.id).\
-                join(tm.MapobjectType).\
-                filter(tm.MapobjectType.is_static).\
-                all()
-            mapobject_ids = [m.id for m in mapobject_ids]
-            if mapobject_ids:
-                session.query(tm.Mapobject).\
-                    filter(tm.Mapobject.id.in_(mapobject_ids)).\
-                    delete()
+        from tmlib.models.mapbobject import delete_mapobject_types_cascade
+        delete_mapobject_types_cascade(self.experiment_id, is_static=True)
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-
             layer = session.query(tm.ChannelLayer).first()
+
             mapobjects = {
                 'Plate': session.query(tm.Plate),
                 'Wells': session.query(tm.Well),
                 'Sites': session.query(tm.Site)
             }
 
-            # TODO: use ExperimentConnection for distributed tables
             for name, query in mapobjects.iteritems():
 
                 logger.info('create mapobject type "%s"', name)
                 mapobject_type = session.get_or_create(
                     tm.MapobjectType, name=name, is_static=True
                 )
+                min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
+                    layer.maxzoom_level_index
+                )
+                mapobject_type.min_poly_zoom = min_zoom
+                mapobject_type.max_poly_zoom = max_zoom
+                mapobject_type_id = mapobject_type.id
 
                 logger.info('create mapobjects of type "%s"', name)
-                mapobject_outlines = list()
                 for obj in query:
-
-                    mapobject = tm.Mapobject(mapobject_type.id)
-                    session.add(mapobject)
-                    session.flush()
-
                     # First element: x axis
                     # Second element: inverted y axis
                     ul = (obj.offset[1], -1 * obj.offset[0])
@@ -695,20 +688,29 @@ class PyramidBuilder(ClusterRoutines):
                     # Closed circle with coordinates sorted counter-clockwise
                     contour = np.array([ur, ul, ll, lr, ur])
                     polygon = shapely.geometry.Polygon(contour)
-                    mapobject_outlines.append(
-                        tm.MapobjectSegmentation(
-                            mapobject_id=mapobject.id,
-                            geom_poly=polygon.wkt,
-                            geom_centroid=polygon.centroid.wkt
-                        )
-                    )
-                session.add_all(mapobject_outlines)
-                session.commit()
 
-                min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
-                    layer.maxzoom_level_index,
-                    segmentation_ids=[o.id for o in mapobject_outlines]
-                )
-                mapobject_type.min_poly_zoom = min_zoom
-                mapobject_type.max_poly_zoom = max_zoom
+                    with tm.utils.ExperimentCollection(self.experiment_id) as conn:
+                        conn.execute('''
+                            SELECT * FROM nextval('mapobject_id_seq');
+                        ''')
+                        val = conn.fetchone()
+                        mapobject_id = val.nextval
+
+                        conn.execute('''
+                            INSERT INTO mapobjects (id, mapobject_type_id)
+                            VALUES (%(mapobject_id)s, %(mapobject_type_id)s);
+                        ''', {
+                            'mapobject_id': mapobject_id,
+                            'mapobject_type_id': mapobject_type_id
+                        })
+
+                        conn.execute('''
+                            INSERT INTO mapobject_segmentations
+                            (mapobject_id, geom_poly, geom_centroid)
+                            VALUES (%(mapobject_id)s, %(geom_poly)s, %(geom_centroid)s);
+                        ''', {
+                            'mapobject_id': mapobject_id,
+                            'geom_poly': polygon.wkt,
+                            'geom_centroid': polygon.centroid.wkt
+                        })
 

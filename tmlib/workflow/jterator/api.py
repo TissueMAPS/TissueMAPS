@@ -290,40 +290,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
         children instances for the processed experiment.
         '''
         logger.info('delete existing mapobjects and mapobject types')
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            connection.execute('''
-                CREATE TEMPORARY TABLE mapobject_type_ids AS
-                SELECT t.id FROM mapobject_types t
-                WHERE t.is_static = FALSE;
-            ''')
-            connection.execute('''
-                CREATE TEMPORARY TABLE mapobject_ids AS
-                SELECT m.id FROM mapobjects m
-                JOIN mapobject_segmentations s ON s.mapobject_id = m.id
-                WHERE m.mapobject_type_id in (SELECT id FROM mapobject_type_ids)
-                AND s.pipeline = %(project);
-            ''')
-            connection.execute('''
-                SELECT master_modify_multiple_shards(
-                    \'DELETE FROM mapbobject_segmentations s
-                      WHERE mapobject_id in (SELECT id FROM mapobject_ids)\'
-                );
-            ''')
-            connection.execute('''
-                SELECT master_modify_multiple_shards(
-                    \'DELETE FROM mapbobjects
-                      WHERE id in (SELECT id FROM mapobject_ids)\'
-                );
-            ''')
-            connection.execute('''
-                SELECT master_modify_multiple_shards(
-                    \'DELETE FROM mapobject_types
-                      WHERE id in (SELECT id FROM mapobject_type_ids)\'
-                );
-            ''')
-            connection.execute('''
-                DROP TABLE mapobject_type_ids mapobject_ids;
-            ''')
+        from tmlib.models.mapbobject import delete_mapobject_types_cascade
+
+        delete_mapobject_types_cascade(
+            self.experiment_id, is_static=False, pipeline=self.project.name
+        )
 
     def _build_run_command(self, job_id):
         # Overwrite method to include "--pipeline" argument
