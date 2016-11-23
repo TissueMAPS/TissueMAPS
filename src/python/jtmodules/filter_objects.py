@@ -44,7 +44,7 @@ def main(mask, feature, lower_threshold=None, upper_threshold=None,
         binary image that should be filtered
     feature: str
         name of the feature based on which the image should be filtered
-        (options: ``{"area", "perimeter", "eccentricity", "roundness"})
+        (options: ``{"area", "perimeter", "eccentricity", "roundness"}``)
     lower_threshold:
         minimal `feature` value objects must have
         (default: ``None``; type depends on the chosen `feature`)
