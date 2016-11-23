@@ -1,5 +1,5 @@
 ---
-version: 0.0.2
+version: 0.0.3
 
 input:
 
@@ -23,7 +23,7 @@ input:
     help: >
       Contrast threshold for automatic separation of foreground from
       background based on locally adaptive thresholding (when 0 defaults to
-      manual threshold using "min_threshold").
+      manual threshold using "min_threshold" and "max_threshold").
 
   - name: min_threshold
     type: Numeric
@@ -31,6 +31,13 @@ input:
     help: >
       Minimal foreground value to default to; pixels below this value are
       considered background.
+
+  - name: max_threshold
+    type: Numeric
+    value: 140
+    help: >
+      Maximal background value to default to; pixels above this value are
+      considered foreground.
 
   - name: plot
     type: Plot

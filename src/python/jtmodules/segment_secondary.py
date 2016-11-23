@@ -21,13 +21,13 @@ import collections
 
 logger = logging.getLogger(__name__)
 
-version = '0.0.2'
+version = '0.0.3'
 
 Output = collections.namedtuple('Output', ['secondary_label_image', 'figure'])
 
 
 def main(primary_label_image, intensity_image, contrast_threshold,
-        min_threshold, plot=False):
+        min_threshold=None, max_threshold=None, plot=False):
     '''Detects secondary objects in an image by expanding the primary objects
     encoded in `primary_label_image`. The outlines of secondary objects are
     determined based on the watershed transform of `intensity_image` using the
@@ -45,9 +45,12 @@ def main(primary_label_image, intensity_image, contrast_threshold,
         contrast threshold for automatic separation of forground from background
         based on locally adaptive thresholding (when ``0`` threshold defaults
         to `min_threshold` manual thresholding)
-    min_threshold: int
+    min_threshold: int, optional
         minimal foreground value; pixels below `min_threshold` are considered
         background
+    max_threshold: int, optional
+        maximal foreground value; pixels above `max_threshold` are considered
+        foreground
     plot: bool, optional
         whether a plot should be generated
 
@@ -55,6 +58,10 @@ def main(primary_label_image, intensity_image, contrast_threshold,
     -------
     jtmodules.segment_secondary.Output
 
+    Note
+    ----
+    Setting `min_threshold` and `max_threshold` to the same value reduces
+    to manual thresholding.
     '''
     if np.any(primary_label_image == 0):
         has_background = True
@@ -73,7 +80,17 @@ def main(primary_label_image, intensity_image, contrast_threshold,
         background_mask = mh.thresholding.bernsen(
             intensity_image, 5, contrast_threshold
         )
-        background_mask += intensity_image < min_threshold
+        if min_threshold is not None:
+            logger.info(
+                'set lower threshold level to %d', min_threshold
+            )
+            background_mask[intensity_image < min_threshold] = True
+
+        if max_threshold is not None:
+            logger.info(
+                'set upper threshold level to %d', max_threshold
+            )
+            background_mask[intensity_image > max_threshold] = False
         # background_mask = mh.morph.open(background_mask)
         background_label_image = mh.label(background_mask)[0]
         background_label_image[background_mask] += n_objects
