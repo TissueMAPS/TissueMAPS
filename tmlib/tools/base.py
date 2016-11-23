@@ -203,35 +203,28 @@ class ToolSparkInterface(ToolInterface):
         )
         return df.cache()
 
-    @staticmethod
-    def _build_feature_values_query(mapobject_type_name, feature_name):
-        r = re.compile('^[\.a-zA-z0-9_-]+$')
-        if not r.match(mapobject_type_name):
-            raise ValueError(
-                'Argument "mapobject_type_name" may only contain alphanumeric '
-                'and the following special characters: [._-]'
-            )
-        if not r.match(feature_name):
-            raise ValueError(
-                'Argument "feature_name" may only contain alphanumeric '
-                'and the following special characters: [._-]'
-            )
+    def _build_feature_values_query(self, mapobject_type_name, feature_name):
+        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+            conn.execute('''
+                SELECT f.id FROM features f
+                JOIN mapobject_types t ON t.id = f.mapobject_type_id
+                WHERE f.name = %(feature_name)s
+                AND t.name = %(mapobject_type_name)s;
+            ''', {
+                'feature_name': feature_name,
+                'mapobject_type_name': mapobject_type_name
+            })
+            feature_id = conn.fetchone()
         # NOTE: the alias is required for compatibility with DataFrameReader
         return '''
             (SELECT v.value, v.mapobject_id, v.id FROM feature_values AS v
-            JOIN features AS f ON f.id=v.feature_id
-            JOIN mapobject_types AS t ON t.id=f.mapobject_type_id
-            WHERE f.name=\'{feature_name}\'
-            AND t.name=\'{mapobject_type_name}\'
+            WHERE feature_id = {feature_id}
             ) AS t
-        '''.format(
-            mapobject_type_name=mapobject_type_name,
-            feature_name=feature_name
-        )
+        '''.format(feature_id=feature_id)
 
     def load_feature_values(self, mapobject_type_name, feature_name):
         '''Selects all values from table "feature_values" for mapobjects of
-        a given :class:`tmlib.models.MapbojectType` and
+        a given :class:`tmlib.models.MapobjectType` and
         :class:`tmlib.models.Feature`.
 
         Parameters
@@ -270,12 +263,14 @@ class ToolSparkInterface(ToolInterface):
         :class:`tmlib.models.feature.LabelValue`
         '''
         import pyspark.sql.functions as sp
-        url = cfg.db_uri_spark.replace(
-            'tissuemaps', 'tissuemaps_experiment_%s' % self.experiment_id
+        url = cfg.db_uri_spark
+        table = 'experiment_%d.%s' % (
+            self.experiment_id, tm.LabelValue.__table__.name
         )
-        table = tm.LabelValue.__table__.name
         formatted_data = data.withColumnRenamed('label', 'value')
-        formatted_data = formatted_data.withColumn('tool_result_id', sp.lit(result_id))
+        formatted_data = formatted_data.withColumn(
+            'tool_result_id', sp.lit(result_id)
+        )
         formatted_data.write.jdbc(url=url, table=table, mode='append')
 
     def calculate_extrema(self, data, column):
@@ -315,8 +310,8 @@ class ToolPandasInterface(ToolInterface):
 
     def load_feature_values(self, mapobject_type_name, feature_name):
         '''Selects all values from table "feature_values" for mapobjects of
-        a given :class:`tmlib.models.MapbojectType` and
-        :class:`tmlib.models.Feature`.
+        a given :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        and :class:`Feature <tmlib.models.feature.Feature>`.
 
         Parameters
         ----------
@@ -331,18 +326,24 @@ class ToolPandasInterface(ToolInterface):
             data frame with columns "mapobject_id" and "value" and
             a row for each mapobject
         '''
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            feature_values = session.query(
-                    tm.FeatureValue.mapobject_id,
-                    tm.FeatureValue.value
-                ).\
-                join(tm.Feature).\
-                join(tm.MapobjectType).\
-                filter(
-                    tm.Feature.name == feature_name,
-                    tm.MapobjectType.name == mapobject_type_name
-                ).\
-                all()
+        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+            conn.execute('''
+                SELECT f.id FROM features f
+                JOIN mapobject_types t ON t.id = f.mapobject_type_id
+                WHERE f.name = %(feature_name)s
+                AND t.name = %(mapobject_type_name)s;
+            ''', {
+                'feature_name': feature_name,
+                'mapobject_type_name': mapobject_type_name
+            })
+            feature_id = conn.fetchone()
+            conn.execute('''
+                SELECT mapobject_id, value FROM feature_values
+                WHERE feature_id = %(feature_id)s;
+            ''', {
+                'feature_id': feature_id
+            })
+            feature_values = conn.fetchall()
         return pd.DataFrame(
             feature_values, columns=['mapobject_id', 'value']
         )
@@ -361,16 +362,20 @@ class ToolPandasInterface(ToolInterface):
         --------
         :class:`tmlib.models.feature.LabelValue`
         '''
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            label_mappings = [
-                {
-                    'value': row.label,
+        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+            for index, row in data.iterrows():
+                conn.execute('''
+                    INSERT INTO label_values (
+                        mapobject_id, value, tool_result_id
+                    )
+                    VALUES (
+                        %(mapobject_id)s, %(value)s, %(tool_result_id)s
+                    )
+                ''', {
                     'mapobject_id': row.mapobject_id,
+                    'value': row.label,
                     'tool_result_id': result_id
-                }
-                for index, row in data.iterrows()
-            ]
-            session.bulk_insert_mappings(tm.LabelValue, label_mappings)
+                })
 
     def calculate_extrema(self, data, column):
         '''Calculates the minimum and maximum of values in `column`.
@@ -504,17 +509,26 @@ class Tool(object):
             return result.id
 
     def _determine_bounds(self, mapobject_type_name, feature_name):
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            query = session.query(tm.FeatureValue.id).\
-                join(tm.Feature).\
-                join(tm.MapobjectType).\
-                filter(
-                    tm.Feature.name == feature_name,
-                    tm.MapobjectType.name == mapobject_type_name
-                )
-            lower = query.order_by(tm.FeatureValue.id).limit(1).one()
-            upper = query.order_by(tm.FeatureValue.id.desc()).limit(1).one()
-            return (lower.id, upper.id)
+        with tm.utils.ExperimentConnnection(self.experiment_id) as conn:
+            conn.execute('''
+                SELECT id, mapobject_type_id FROM features
+                WHERE name = %(name)s;
+            ''', {
+                'name': feature_name
+            })
+            feature_id, mapobject_type_id = conn.fetchone()
+            # NOTE: This assumes that features have continous ids.
+            conn.execute('''
+                SELECT min(v.id), max(v.id) FROM feature_values v
+                JOIN mapobjects m ON m.id = v.mapobject_id
+                WHERE m.mapobject_type_id = %(mapobject_type_id)s
+                AND v.feature_id = %(feature_id)s;
+            ''', {
+                'feature_id': feature_id,
+                'mapobject_type_id': mapobject_type_id
+            })
+            lower, upper = conn.fetchone()
+            return (lower, upper)
 
     @abstractmethod
     def process_request(self, submission_id, payload):
@@ -773,26 +787,32 @@ class ClassifierPandasInterface(ClassifierInterface):
             dataframe where columns are features and rows are mapobjects
             indexable by `mapobject_id`
         '''
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            mapobject_type_id = session.query(tm.MapobjectType.id).\
-                filter_by(name=mapobject_type_name).\
-                one()
-            feature_values = session.query(
-                    tm.Feature.name,
-                    tm.FeatureValue.mapobject_id,
-                    tm.FeatureValue.value
-                ).\
-                join(tm.FeatureValue).\
-                filter(
-                    (tm.Feature.name.in_(feature_names)) &
-                    (tm.Feature.mapobject_type_id == mapobject_type_id)).\
-                all()
-        feature_df_long = pd.DataFrame(feature_values)
-        feature_df_long.columns = ['features', 'mapobject', 'value']
-        return pd.pivot_table(
-            feature_df_long, values='value', index='mapobject',
-            columns='features'
+        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+            conn.execute('''
+                SELECT f.id, f.name FROM features f
+                JOIN mapobject_types t ON t.id = f.mapobject_type_id
+                WHERE f.name = ANY(%(feature_names)s)
+                AND t.name = %(mapobject_type_name)s;
+            ''', {
+                'feature_names': feature_names,
+                'mapobject_type_name': mapobject_type_name
+            })
+            features = conn.fetchall()
+            feature_map = {f.id: f.name for f in features}
+            conn.execute('''
+                SELECT feature_id, mapobject_id, value FROM feature_values
+                WHERE feature_id = ANY(%(feature_ids)s);
+            ''', {
+                'feature_ids': feature_map.keys(),
+            })
+            feature_values = conn.fetchall()
+        df_long = pd.DataFrame(feature_values)
+        df_long.columns = ['feature_id', 'mapobject_id', 'value']
+        df = pd.pivot_table(
+            df_long, values='value', index='mapobject_id', columns='feature_id'
         )
+        df.columns = [feature_map[fid] for fid in df.columns]
+        return df
 
     def calculate_unique(self, data, column):
         '''Calculates the set of unique values for `column`.

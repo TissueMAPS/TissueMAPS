@@ -18,7 +18,9 @@ from sqlalchemy import Column, String, Integer, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models import ExperimentModel
+from tmlib.models.base import ExperimentModel
+from tmlib.models.utils import ExperimentConnection
+from tmlib import cfg
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +36,7 @@ class Feature(ExperimentModel):
 
     __tablename__ = 'features'
 
-    __distribute_by_replication__ = True
-
-    __table_args__ = (UniqueConstraint('name', 'mapobject_type_id', 'id'), )
+    __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
 
     #: str: name given to the feature (e.g. by jterator)
     name = Column(String, index=True)
@@ -44,8 +44,18 @@ class Feature(ExperimentModel):
     #: bool: whether the feature is an aggregate of child object features
     is_aggregate = Column(Boolean, index=True)
 
-    #: int: ID of parent mapobject type
-    mapobject_type_id = Column(Integer, index=True, nullable=False)
+    #: int: id of the parent mapobject type
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
+    mapobject_type = relationship(
+        'MapobjectType',
+        backref=backref('features', cascade='all, delete-orphan')
+    )
 
     def __init__(self, name, mapobject_type_id, is_aggregate=False):
         '''
@@ -70,7 +80,7 @@ class Feature(ExperimentModel):
 class FeatureValue(ExperimentModel):
 
     '''An individual value of a :class:`tmlib.models.feature.Feature`
-    that was extracted for a given :class:`tmlib.models.mapobject.Mapbobject`
+    that was extracted for a given :class:`tmlib.models.mapobject.Mapobject`
     as part of a :mod:`tmlib.workflow.jterator` pipeline.
     '''
 
@@ -122,7 +132,7 @@ class FeatureValue(ExperimentModel):
 class LabelValue(ExperimentModel):
 
     '''An individual value of a :class:`tmlib.models.feature.Feature`
-    that was assigned to a given :class:`tmlib.models.mapobject.Mapbobject`
+    that was assigned to a given :class:`tmlib.models.mapobject.Mapobject`
     as part of a :class:`tmlib.models.result.ToolResult` generated for a client
     tool request.
     '''
@@ -166,3 +176,58 @@ class LabelValue(ExperimentModel):
             '<LabelValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
             % (self.id, self.tpoint, self.mapobject_id, self.feature_id)
         )
+
+
+def delete_features_cascade(experiment_id, is_aggregate):
+    '''Deletes all instances of
+    :class:`Feature <tmlib.models.feature.Feature>` as well as
+    as "children" instances of
+    :class:`FeatureValue <tmlib.models.feature.FeatureValue>`.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
+    is_aggregate: bool
+        whether aggregate or single-object features should be deleted
+
+    Note
+    ----
+    This is not possible via the standard *SQLAlchemy* approach, because the
+    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    might be distributed over a cluster.
+    '''
+    with ExperimentConnection(experiment_id) as connection:
+        connection.execute('''
+            SELECT id FROM features
+            WHERE is_aggregate = %(is_aggregate)s;
+        ''', {
+            'is_aggregate': is_aggregate
+        })
+        features = connection.fetchall()
+        feature_ids = [f.id for f in features]
+        if cfg.db_driver == 'citus':
+            logger.info('delete feature values')
+            connection.execute('''
+                SELECT master_modify_multiple_shards(
+                    'DELETE FROM feature_values
+                     WHERE feature_id = ANY(%(feature_ids)s)'
+                );
+            ''', {
+                'feature_ids': feature_ids
+            })
+        else:
+            logger.info('delete feature values')
+            connection.execute('''
+                DELETE FROM feature_values
+                WHERE feature_id = ANY(%(feature_ids)s);
+            ''', {
+                'feature_ids': feature_ids
+            })
+        connection.execute('''
+            DELETE FROM features
+            WHERE id = ANY(%(feature_ids)s)
+        ''', {
+            'feature_ids': feature_ids
+        })

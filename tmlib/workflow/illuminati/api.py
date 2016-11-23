@@ -168,7 +168,7 @@ class PyramidBuilder(ClusterRoutines):
                         tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
                     )
 
-                    for index, level in enumerate(reversed(range(layer.n_levels))):
+                    for index, level in enumerate(reversed(range(layer.depth))):
                         logger.debug('pyramid level %d', level)
                         # The layer "level" increases from top to bottom.
                         # We build the layer bottom-up, therefore, the "index"
@@ -652,7 +652,6 @@ class PyramidBuilder(ClusterRoutines):
             }
 
             for name, query in mapobjects.iteritems():
-
                 logger.info('create mapobject type "%s"', name)
                 mapobject_type = session.get_or_create(
                     tm.MapobjectType, name=name, is_static=True

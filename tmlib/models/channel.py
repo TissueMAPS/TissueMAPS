@@ -32,6 +32,11 @@ class Channel(ExperimentModel, DateMixIn):
     '''A *channel* represents all *images* across different time points and
     spatial positions that were acquired with the same illumination and
     microscope filter settings.
+
+    Attributes
+    ----------
+    layers: List[tmlib.models.layer.ChannelLayer]
+        layers belonging to the channel
     '''
 
     __tablename__ = 'channels'

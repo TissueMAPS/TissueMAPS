@@ -28,8 +28,11 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
 
+from tmlib import cfg
 from tmlib.models.base import ExperimentModel, DateMixIn
-from tmlib.models.utils import ExperimentConnection
+from tmlib.models.result import ToolResult
+from tmlib.models.utils import ExperimentConnection, ExperimentSession
+from tmlib.models.feature import Feature
 from tmlib.utils import autocreate_directory_property
 
 logger = logging.getLogger(__name__)
@@ -41,6 +44,12 @@ class MapobjectType(ExperimentModel):
     (segmented objects) that reflect different biological entities,
     such as "cells" or "nuclei" for example.
 
+    Attributes
+    ----------
+    results: List[tmlib.models.result.ToolResult]
+        results belonging to the mapobject type
+    features: List[tmlib.models.feature.Feature]
+        features belonging to the mapobject type
     '''
 
     __tablename__ = 'mapobject_types'
@@ -105,119 +114,6 @@ class MapobjectType(ExperimentModel):
     def max_poly_zoom(self, value):
         self._max_poly_zoom = value
 
-    def get_mapobject_outlines_within_tile(self, x, y, z, tpoint, zplane):
-        '''Get outlines of all objects that fall within a given pyramid tile,
-        defined by their `y`, `x`, `z` coordinates.
-
-        Parameters
-        ----------
-        x: int
-            column map coordinate at the given `z` level
-        y: int
-            row map coordinate at the given `z` level
-        z: int
-            zoom level
-        tpoint: int
-            time point index
-        zplane: int
-            z-plane index
-
-        Returns
-        -------
-        List[Tuple[int, str]]
-            GeoJSON string for each selected map object
-
-        Note
-        ----
-        If `z` > `min_poly_zoom` mapobjects are represented by polygons.
-        If `min_poly_zoom` > `z` > `max_poly_zoom`, mapobjects are represented
-        by points and if `z` < `max_poly_zoom` they are not displayed at all.
-        '''
-        logger.debug('get mapobject outlines falling into tile')
-
-        with ExperimentSession(experiment_id) as session:
-            layer = session.query(tm.ChannelLayer).first()
-            maxzoom = layer.maxzoom_level_index
-
-            mapobject_type = session.query(tm.MapobjectType.id).\
-                filter_by(name=mapobject_type_name).\
-                one()
-            mapobject_type_id = mapobject_type.id
-            max_poly_zoom = mapobject_type.max_poly_zoom
-            min_poly_zoom = mapobject_type.min_poly_zoom
-
-        do_simplify = max_poly_zoom <= z < min_poly_zoom
-        do_nothing = z < max_poly_zoom
-        min_x, min_y, max_x, max_y = MapobjectSegmentation.bounding_box(
-            x, y, z, maxzoom
-        )
-        with tm.utils.ExperimentConnection(experiment_id) as connection:
-            if do_nothing:
-                logger.debug('dont\'t represent object')
-                return list()
-            elif do_simplify:
-                logger.debug('represent object by centroid')
-                sql = '''
-                    SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_centroid)
-                '''
-                selection = connection.fetchall()
-            else:
-                logger.debug('represent object as polygon')
-                sql = '''
-                    SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_poly)
-                '''
-
-            # The outlines should not lie on the top or left border since
-            # this would otherwise lead to requests for neighboring tiles
-            # receiving the same objects.
-            # This in turn leads to overplotting and is noticeable
-            # when the objects have a fill color with an opacity != 0 or != 1.
-            sql += '''
-                FROM mapobject_segmentations s
-                JOIN mapobjects m ON m.id = s.mapobject_id
-                WHERE m.mapobject_type_id = %(mapobject_type_id)s
-                AND s.tpoint = %(tpoint)s
-                AND s.zplane = %(zplane)s
-                AND s.ST_Intersects(
-                    s.geom_poly,
-                    ST_GeomFromText(
-                        'POLYGON((
-                            %(x2)s %(y2)s, %(x1)s %(y2)s, %(x1)s %(y1)s,
-                            %(x2)s %(y1)s, %(x2)s %(y2)s
-                        ))'
-                    )
-                )
-                AND CASE
-                    WHEN %(not_left_border_tile)s THEN
-                        NOT ST_Intersects(
-                            ST_ExteriorRing(s.geom_poly),
-                            ST_GeomFromText(
-                                'LINESTRING(%(x1)s %(y2)s, %(x1)s %(y1)s)'
-                            )
-                        )
-                    ELSE
-                        TRUE
-                    END
-                AND CASE
-                    WHEN %(not_top_border_tile)s THEN
-                        NOT ST_Intersects(
-                            ST_ExteriorRing(s.geom_poly),
-                            ST_GeomFromText(
-                                'LINESTRING(%(x1)s %(y2)s, %(x2)s %(y2)s)'
-                            )
-                        )
-                    ELSE
-                        TRUE
-                    END
-            '''
-            connection.execute(sql, {
-                'mapobject_type_id': mapobject_type_id,
-                'tpoint': tpoint, 'zplane': zplane,
-                'not_top_border_tile': x != 0, 'not_left_border_tile': y != 0,
-                'x1': x1, 'x2': x2, 'y1': y1, 'y2': y2
-            })
-            return connections.fetchall()
-
     def calculate_min_max_poly_zoom(self, maxzoom_level):
         '''Calculates the minimum zoom level above which mapobjects are
         represented on the map as polygons instead of centroids and the
@@ -244,93 +140,55 @@ class MapobjectType(ExperimentModel):
             max_poly_zoom = 0 if max_poly_zoom < 0 else max_poly_zoom
         return (min_poly_zoom, max_poly_zoom)
 
-    def get_feature_value_matrix(self, feature_names=[]):
-        '''Gets a feature matrix for all mapobjects of this type.
+    # def get_feature_value_matrix(self, feature_names=[]):
+    #     '''Gets a feature matrix for all mapobjects of this type.
 
-        Parameters
-        ----------
-        feature_names: List[str], optional
-            names of features that should be included (default: ``[]``);
-            all features will be used by default
+    #     Parameters
+    #     ----------
+    #     feature_names: List[str], optional
+    #         names of features that should be included (default: ``[]``);
+    #         all features will be used by default
 
-        Returns
-        -------
-        pandas.DataFrame
-            *n*x*p* matrix, where *n* is the number of mapobjects and *p*
-            the number of features.
-            The index is set to the IDs of the mapobjects.
+    #     Returns
+    #     -------
+    #     pandas.DataFrame
+    #         *n*x*p* matrix, where *n* is the number of mapobjects and *p*
+    #         the number of features.
+    #         The index is set to the IDs of the mapobjects.
 
-        Warning
-        -------
-        This may not be a good idea in case of a large experiment, because
-        the data may not fit into memory.
-        '''
-        from tmlib.models import Feature, FeatureValue
-        session = Session.object_session(self)
-        if feature_names:
-            feature_values = session.query(
-                    Feature.name, FeatureValue.mapobject_id, FeatureValue.value
-                ).\
-                join(FeatureValue).\
-                filter(
-                    (Feature.name.in_(set(feature_names))) &
-                    (Feature.mapobject_type_id == self.id)
-                ).\
-                order_by(FeatureValue.mapobject_id).\
-                all()
-        else:
-            feature_values = session.query(
-                Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
-                join(FeatureValue).\
-                filter(Feature.mapobject_type_id == self.id).\
-                order_by(FeatureValue.mapobject_id).\
-                all()
+    #     Warning
+    #     -------
+    #     This may not be a good idea in case of a large experiment, because
+    #     the data may not fit into memory.
+    #     '''
+    #     from tmlib.models import Feature, FeatureValue
+    #     session = Session.object_session(self)
+    #     if feature_names:
+    #         feature_values = session.query(
+    #                 Feature.name, FeatureValue.mapobject_id, FeatureValue.value
+    #             ).\
+    #             join(FeatureValue).\
+    #             filter(
+    #                 (Feature.name.in_(set(feature_names))) &
+    #                 (Feature.mapobject_type_id == self.id)
+    #             ).\
+    #             order_by(FeatureValue.mapobject_id).\
+    #             all()
+    #     else:
+    #         feature_values = session.query(
+    #             Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
+    #             join(FeatureValue).\
+    #             filter(Feature.mapobject_type_id == self.id).\
+    #             order_by(FeatureValue.mapobject_id).\
+    #             all()
 
-        feature_df_long = pd.DataFrame(feature_values)
-        feature_df_long.columns = ['feature', 'mapobject', 'value']
-        feature_df = pd.pivot_table(
-            feature_df_long, values='value',
-            index='mapobject', columns='feature'
-        )
-        return feature_df
-
-    def get_metadata_matrix(self):
-        '''Gets the metadata for all mapobjects of this type.
-
-        Returns
-        -------
-        pandas.DataFrame
-            *n*x*q* matrix, where *n* is the number of mapobjects and *q*
-            the number of metadata attributes.
-            The index is set to the IDs of the mapobjects.
-        '''
-        from tmlib.models import Plate, Well, Site
-        session = Session.object_session(self)
-        metadata = pd.DataFrame(
-            session.query(
-                MapobjectSegmentation.tpoint,
-                MapobjectSegmentation.zplane,
-                Plate.name,
-                Well.name,
-                Site.y,
-                Site.x,
-                MapobjectSegmentation.label,
-                MapobjectSegmentation.mapobject_id
-            ).\
-            join(Mapobject).\
-            join(Site).\
-            join(Well).\
-            join(Plate).\
-            filter(Mapobject.mapobject_type_id == self.id).\
-            order_by(Mapobject.id).\
-            all()
-        )
-        metadata.columns = [
-            'tpoint', 'zplane', 'plate', 'well', 'y', 'x', 'label', 'mapobject'
-        ]
-        metadata.sort(['mapobject'], inplace=True)
-        metadata.set_index('mapobject', inplace=True)
-        return metadata
+    #     feature_df_long = pd.DataFrame(feature_values)
+    #     feature_df_long.columns = ['feature', 'mapobject', 'value']
+    #     feature_df = pd.pivot_table(
+    #         feature_df_long, values='value',
+    #         index='mapobject', columns='feature'
+    #     )
+    #     return feature_df
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
@@ -551,45 +409,25 @@ def delete_mapobject_types_cascade(experiment_id, is_static,
         experiment_id, mapobject_type_ids, site_id, pipeline
     )
 
-    with ExperimentSession(experiment_id) as session:
-        logger.info('delete tool results')
-        session.query(tm.ToolResult).\
-            filter(tm.ToolResult.mapobject_type_id.in_(mapobject_type_ids)).\
-            delete()
-        logger.info('delete mapobject types')
-        session.query(tm.MapobjectType).\
-            filter(tm.MapobjectType.id.in_(mapobject_type_ids)).\
-            delete()
+    if mapobject_type_ids:
+        with ExperimentSession(experiment_id) as session:
+            logger.info('delete mapobject types')
+            session.query(MapobjectType).\
+                filter(MapobjectType.id.in_(mapobject_type_ids)).\
+                delete()
 
-    with ExperimentConnection(experiment_id) as session:
-        logger.info('delete features')
-        if cfg.db_driver == 'citus':
-            connection.execute('''
-                SELECT master_modify_multiple_shards(
-                    DELETE FROM features
-                    WHERE mapobject_type_id IN (%(mapobject_type_ids)s);
-                );
-            ''', {
-                'mapobject_type_ids': mapobject_type_ids
-            })
-        else:
-            connection.execute('''
-                DELETE FROM features
-                WHERE mapobject_type_id IN (%(mapobject_type_ids)s);
-            ''', {
-                'mapobject_type_ids': mapobject_type_ids
-            })
 
 
 def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
-    with ExperimentConnection(experiment_id) as connection:
-        if mapobject_ids:
+    # NOTE: Using ANY with an ARRAY is more performant than using IN.
+    if mapobject_ids:
+        with ExperimentConnection(experiment_id) as connection:
             if cfg.db_driver == 'citus':
                 logger.info('delete mapobjects')
                 connection.execute('''
                     SELECT master_modify_multiple_shards(
                         \'DELETE FROM mapobject_segmentations
-                          WHERE mapobject_id IN (%(mapobject_ids)s)\'
+                          WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
                     );
                 ''', {
                     'mapobject_ids': mapobject_ids
@@ -598,7 +436,7 @@ def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
                 connection.execute('''
                     SELECT master_modify_multiple_shards(
                         \'DELETE FROM feature_values
-                          WHERE mapobject_id IN (%(mapobject_ids)s)\'
+                          WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
                     );
                 ''', {
                     'mapobject_ids': mapobject_ids
@@ -607,7 +445,7 @@ def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
                 connection.execute('''
                     SELECT master_modify_multiple_shards(
                         \'DELETE FROM label_values
-                          WHERE mapobject_id IN (%(mapobject_ids)s)\'
+                          WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
                     );
                 ''', {
                     'mapobject_ids': mapobject_ids
@@ -616,7 +454,7 @@ def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
                 connection.execute('''
                     SELECT master_modify_multiple_shards(
                         \'DELETE FROM mapobjects
-                          WHERE id IN (%(mapobject_ids)s)\'
+                          WHERE id = ANY(%(mapobject_ids)s)\'
                     );
                 ''', {
                     'mapobject_ids': mapobject_ids
@@ -625,28 +463,28 @@ def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
                 logger.info('delete mapobject segmentations')
                 connection.execute('''
                     DELETE FROM mapobject_segmentations s
-                    WHERE mapobject_id IN (%(mapobject_ids)s);
+                    WHERE mapobject_id = ANY(%(mapobject_ids)s);
                 ''', {
                     'mapobject_ids': mapobject_ids
                 })
                 logger.info('delete feature values')
                 connection.execute('''
                     DELETE FROM feauture_values
-                    WHERE mapobject_id IN (%(mapobject_ids)s);
+                    WHERE mapobject_id = ANY(%(mapobject_ids)s);
                 ''', {
                     'mapobject_ids': mapobject_ids
                 })
                 logger.info('delete label values')
                 connection.execute('''
                     DELETE FROM label_values
-                    WHERE mapobject_id IN (%(mapobject_ids)s);
+                    WHERE mapobject_id = ANY(%(mapobject_ids)s);
                 ''', {
                     'mapobject_ids': mapobject_ids
                 })
                 logger.info('delete mapobjects')
                 connection.execute('''
                     DELETE FROM mapobjects
-                    WHERE id IN (%(mapobject_ids)s);
+                    WHERE id = ANY(%(mapobject_ids)s);
                 ''', {
                     'mapobject_ids': mapobject_ids
                 })
@@ -682,13 +520,20 @@ def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
     '''
     if mapobject_type_ids:
         with ExperimentConnection(experiment_id) as connection:
-            connection.execute('''
+            sql = '''
                 SELECT m.id FROM mapobjects m
                 JOIN mapobject_segmentations s ON s.mapobject_id = m.id
-                WHERE m.mapobject_type_id IN (%(mapobject_type_ids)s)
-                AND s.site_id = %(site_id)s
-                AND s.pipeline = %(pipeline)s;
-            ''', {
+                WHERE m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
+            '''
+            if site_id is not None:
+                sql += '''
+                    AND s.site_id = %(site_id)s
+                '''
+            if pipeline is not None:
+                sql += '''
+                    AND s.pipeline = %(pipeline)s
+                '''
+            connection.execute(sql, {
                 'site_id': site_id,
                 'pipeline': pipeline,
                 'mapobject_type_ids': mapobject_type_ids
@@ -719,12 +564,148 @@ def delete_invalid_mapobjects_cascade(experiment_id):
     :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
     might be distributed over a cluster.
     '''
-    with tm.utils.ExperimentConnection(experiment_id) as connection:
+    with ExperimentConnection(experiment_id) as connection:
         connection.execute('''
-            SELECT mapobject_id FROM mapbobject_segmentations
+            SELECT mapobject_id FROM mapobject_segmentations
             WHERE NOT ST_IsValid(geom_poly);
         ''')
         mapobject_segm = connection.fetchall()
         mapobject_ids = [s.mapobject_id for s in mapobject_segm]
 
     _delete_mapobjects_cascade(experiment_id, mapobject_ids)
+
+
+def get_mapobject_outlines_within_tile(experiment_id, mapobject_type_name,
+        x, y, z, tpoint, zplane):
+    '''Get outlines of all objects that fall within a given pyramid tile.
+
+    Parameters
+    ----------
+    experiment_id: int
+        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
+    mapobject_type_name: str
+        name of the :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+    x: int
+        column map coordinate at the given `z` level
+    y: int
+        row map coordinate at the given `z` level
+    z: int
+        zoom level
+    tpoint: int
+        time point index
+    zplane: int
+        z-plane index
+
+    Returns
+    -------
+    List[Tuple[int, str]]
+        GeoJSON string for each selected map object
+
+    Note
+    ----
+    If `z` > `min_poly_zoom` mapobjects are represented by polygons.
+    If `min_poly_zoom` > `z` > `max_poly_zoom`, mapobjects are represented
+    by points and if `z` < `max_poly_zoom` they are not displayed at all.
+    '''
+    logger.debug('get mapobject outlines falling into tile')
+    with ExperimentConnection(experiment_id) as connection:
+        # NOTE: Column "depth" is implemented as a hybrid_property on the
+        # data model class. The property must have been accessed once for this
+        # query to work.
+        connection.execute('''
+            SELECT depth FROM channel_layers
+            LIMIT 1
+        ''')
+        layer = connection.fetchone()
+        maxzoom = layer.depth - 1
+
+        connection.execute('''
+            SELECT id, is_static, min_poly_zoom, max_poly_zoom
+            FROM mapobject_types
+            WHERE name = %(name)s;
+        ''', {
+            'name': mapobject_type_name
+        })
+        mapobject_type_id, is_static, min_poly_zoom, max_poly_zoom = \
+            connection.fetchone()
+        do_simplify = max_poly_zoom <= z < min_poly_zoom
+        do_nothing = z < max_poly_zoom
+        min_x, min_y, max_x, max_y = MapobjectSegmentation.bounding_box(
+            x, y, z, maxzoom
+        )
+        if do_nothing:
+            logger.debug('dont\'t represent object')
+            return list()
+        elif do_simplify:
+            logger.debug('represent object by centroid')
+            sql = '''
+                SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_centroid)
+            '''
+            selection = connection.fetchall()
+        else:
+            logger.debug('represent object as polygon')
+            sql = '''
+                SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_poly)
+            '''
+
+        # The outlines should not lie on the top or left border since
+        # this would otherwise lead to requests for neighboring tiles
+        # receiving the same objects.
+        # This in turn leads to overplotting and is noticeable
+        # when the objects have a fill color with an opacity != 0 or != 1.
+        sql += '''
+            FROM mapobject_segmentations s
+            JOIN mapobjects m ON m.id = s.mapobject_id
+            WHERE m.mapobject_type_id = %(mapobject_type_id)s
+            AND ST_Intersects(
+                    s.geom_poly,
+                    ST_GeomFromText(
+                        'POLYGON((
+                            %(max_x)s %(max_y)s, %(min_x)s %(max_y)s,
+                            %(min_x)s %(min_y)s, %(max_x)s %(min_y)s,
+                            %(max_x)s %(max_y)s
+                        ))'
+                    )
+                )
+        '''
+        if not is_static:
+            sql += '''
+                AND s.tpoint = %(tpoint)s
+                AND s.zplane = %(zplane)s
+                AND CASE
+                    WHEN %(not_left_border_tile)s THEN
+                        ST_Disjoint(
+                            ST_ExteriorRing(s.geom_poly),
+                            ST_GeomFromText(
+                                'LINESTRING(
+                                    %(min_x)s %(max_y)s, %(min_x)s %(min_y)s
+                                )'
+                            )
+                        )
+                    ELSE
+                        TRUE
+                    END
+                AND CASE
+                    WHEN %(not_top_border_tile)s THEN
+                        ST_Disjoint(
+                            ST_ExteriorRing(s.geom_poly),
+                            ST_GeomFromText(
+                                'LINESTRING(
+                                    %(min_x)s %(max_y)s, %(max_x)s %(max_y)s
+                                )'
+                            )
+                        )
+                    ELSE
+                        TRUE
+                    END
+            '''
+        connection.execute(sql, {
+            'is_static': is_static,
+            'mapobject_type_id': mapobject_type_id,
+            'tpoint': tpoint, 'zplane': zplane,
+            'not_top_border_tile': x != 0, 'not_left_border_tile': y != 0,
+            'min_x': min_x, 'max_x': max_x, 'min_y': min_y, 'max_y': max_y
+        })
+
+        return connection.fetchall()
+

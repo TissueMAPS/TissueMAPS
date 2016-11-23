@@ -15,52 +15,97 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''Database models.
 
-A database `model` is an object-relational mapping (ORM) of Python objects
-to database entries. A class represents a database table and class
+A database *model* is an object-relational mapping (ORM) of Python objects
+to relational database entries. A class represents a database table and class
 attributes correspond to columns of that table. Each instances of the class
-maps to an individual table entry, i.e. a row.
+maps to an individual row of table.
 
-The central organizational unit of `TissueMAPS` is an
-:class:`Experiment <tmlib.models.experiment.Experiment>`. Each `experiment`
-is represented by a separate database
+The central organizational unit of *TissueMAPS* is an
+:class:`Experiment <tmlib.models.experiment.Experiment>`. In the database,
+each *experiment* is represented by a separate
 `schema <https://www.postgresql.org/docs/current/static/ddl-schemas.html>`_,
-which contains the actual images and related data.
+which contains tables for images and related data.
 
-There is also a "main" schema (its actually the "public" schema) that
-holds data beyond the scope of an individual *experiment*, such as credentials
+There is also a "main" (or "public") schema that
+holds data beyond the scope of individual *experiments*, such as credentials
 of a :class:`User <tmlib.models.user.User>`) or the status of a submitted
 computational :class:`Task <tmlib.models.submission.Task>`.
-This schema further provides reference to existing *experiment*-specific
-database schemas
+It further provides reference to existing *experiments*
 (see :class:`ExperimentRerefence <tmlib.models.experiment.ExperimentReference>`)
 and information on *experiment*-specific user permissions
 (see :class:`ExperimentShare <tmlib.models.experiment.ExperimentShare>`).
 
-*Main* and *experiment*-specific databases schemas can accessed programmatically
-using :class:`MainSession <tmlib.models.utils.MainSession>` or
+*Main* and *experiment*-specific databases schemas can be accessed
+programmatically using :class:`MainSession <tmlib.models.utils.MainSession>` or
 :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, respectively.
 These sessions provide a database transaction that bundles all enclosing
 statements into an all-or-nothing operation to ensure that either all or no
 changes are persisted in the database.
 
-Some of the data models can be distributed, i.e. the tables can be shared.
+.. code-block:: python
+
+    import tmlib.models as tm
+
+    with tm.utils.ExperimentSession(experiment_id=1) as session:
+        plates = session.query(tm.Plates).all()
+        print plates
+        print plates[0].name
+
+Some *SQL* statements cannot be performed within a transaction. To this end,
+:class:`MainConnection <tmlib.models.utils.MainConnection>` or
+:class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>` can
+be used. These classes create individual database connections and bypass the
+*ORM*. *Sessions* and *connections* have a different interface.
+In contrast to *sessions*, *connections* don't use the *ORM* but require
+raw *SQL* statements.
+
+.. code-block:: python
+
+    import tmlib.models as tm
+
+    with tm.utils.ExperimentConnection(experiment_id=1) as connection:
+        connection.execute('SELECT * FROM plates;')
+        plates = connection.fetchall()
+        print plates
+        print plates[0].name
+
+Warning
+-------
+The *sessions* and *connections* utility classes automatically set the
+experiment-specific schema to the search path at runtime. To access the
+data models outside the scope of a *session* or *connection*, you either need
+to set the search path manually or specify the schema, e.g.
+``experiment_1.plates``.
+
+Note
+----
+Some of the data models can be distributed, i.e. the respective tables can be
+sharded to scale out the database backend on a cluster.
 To this end, *TissueMAPS* uses
 `Citus <https://docs.citusdata.com/en/stable/index.html>`_, a
 `PostgreSQL extension <https://www.postgresql.org/docs/current/static/extend-extensions.html>`_.
-These models are flagged with either ``__distribute_by_replication__`` or
-``__distribute_by_hash__``, which will either replicate the table
-(so called "reference" tables) or distributed it accross all available nodes
-of the database cluster. Table distribution is implemented in form of a
-`SQLAlchemy dialect <>`_ named ``citus``. To active it, set
-:attr:`db_driver <tmlib.config.DefaultConfig.db_driver>` configuration
-variable to ``citus``. Note, however, that the extension must have been
-installed and nodes activated. More more details refer to :mod:`tmsetup`.
+Distributed models are flagged with ``__distribute_by_replication__`` or
+``__distribute_by_hash__``, which will either replicate tables
+(so called "reference" tables) or distribute them accross all available
+database server nodes. *Citus* functionality is implemented in form of a
+`SQLAlchemy dialect <http://docs.sqlalchemy.org/en/latest/dialects/>`_ named
+``citus``. It can be used by setting the
+:attr:`db_driver <tmlib.config.DefaultConfig.db_driver>` configuration variable
+to ``citus``. Note, however, that the extension must have been installed on
+all nodes and worker nodes must have added on the master node.
+For more details on how to set up a database cluster, please refer to
+:doc:`setup_and_deployment`.
 
-The *ORM* is convient and easy to use. This convenience comes at a cost:
-performance. For performance-critical operations (in particular large number
-of inserts), we therfore rely on
-`bulk operations <http://docs.sqlalchemy.org/en/latest/orm/persistence_techniques.html#bulk-operations>`_,
-which bypass most of the *ORM* functionality.
+Warning
+-------
+Distributed tables can be accessed via the *ORM* for reading (``SELECT``) using
+:class:`MainSession <tmlib.models.utils.MainSession>` or
+:class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`; however,
+they cannot be updated (``INSERT`` or ``UPDATE``) via the *ORM*,
+because *Citus* doesn't support multi-statement transactions for distributed
+tables. These tables must therefore be updated using either
+:class:`MainConnection <tmlib.models.utils.MainConnection>` or
+:class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`.
 
 '''
 

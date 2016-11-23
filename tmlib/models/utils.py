@@ -48,10 +48,12 @@ def set_pool_size(n):
     '''Sets the pool size for database connections of the current Python
     process.
     '''
+    logger.debug('set size of database pool to %d', n)
+    global POOL_SIZE
     POOL_SIZE = n
 
 
-def create_db_engine(db_uri, cache=True, pool_size=POOL_SIZE):
+def create_db_engine(db_uri, cache=True):
     '''Creates a database engine with a given pool size.
 
     Parameters
@@ -60,8 +62,6 @@ def create_db_engine(db_uri, cache=True, pool_size=POOL_SIZE):
         database uri
     cache: bool, optional
         whether engine should be cached for reuse (default: ``True``)
-    pool_size: int, optional
-        number of pooled database connections (default: ``1``)
 
     Returns
     -------
@@ -72,11 +72,22 @@ def create_db_engine(db_uri, cache=True, pool_size=POOL_SIZE):
     if db_uri not in DATABASE_ENGINES:
         logger.debug(
             'create database engine for process %d with pool size %d',
-            os.getpid(), pool_size
+            os.getpid(), POOL_SIZE
         )
+        if POOL_SIZE > 1:
+            overflow_size = POOL_SIZE * 2
+        elif POOL_SIZE == 1:
+            # NOTE: We assume that exactly one connection should be used.
+            # We use QueuePool instead of StaticPool because according to the
+            # docs the latter doesn't support all pool features. However, by
+            # setting max_overflow to -1 we ensure that only one connection
+            # gets checked out.
+            overflow_size = -1
+        else:
+            raise ValueError('Pool size must be a positive integer.')
         engine = sqlalchemy.create_engine(
             db_uri, poolclass=sqlalchemy.pool.QueuePool,
-            pool_size=pool_size, max_overflow=pool_size*2,
+            pool_size=POOL_SIZE, max_overflow=overflow_size,
         )
         if cache:
             logger.debug('cache database engine for reuse')
@@ -101,18 +112,6 @@ def _assert_db_exists(engine):
         raise ValueError('Cannot connect to database "%s".' % db_name)
 
 
-def _add_db_worker(engine, host, port):
-    db_url = make_url(engine.url)
-    db_name = db_url.database
-    logger.debug('add worker node %s to database %s', host, db_name)
-    with Connection(db_url) as conn:
-        conn.execute('''
-            SELECT master_add_node(%(host)s, %(port)s);
-        ''', {
-            'host': host, 'port': port
-        })
-
-
 def _set_db_shard_replication_factor(engine, n):
     if n > 0:
         db_url = make_url(engine.url)
@@ -124,44 +123,6 @@ def _set_db_shard_replication_factor(engine, n):
             ''', {
                 'n': n
             })
-
-
-def _create_db_if_not_exists(engine):
-    try:
-        connection = engine.connect()
-        connection.close()
-        return True
-    except sqlalchemy.exc.OperationalError:
-        db_url = make_url(engine.url)
-        db_name = str(db_url.database)
-        db_url.database = 'postgres'
-        logger.debug('create database %s', db_name)
-        with Connection(db_url) as conn:
-            conn.execute('CREATE DATABASE {name};'.format(
-                name=quote(engine, db_name))
-            )
-        db_url.database = db_name
-        with Connection(db_url) as conn:
-            if engine.name == 'citus':
-                logger.debug('create citus extension for database %s', db_name)
-                conn.execute('CREATE EXTENSION IF NOT EXISTS citus;')
-            logger.debug('create postgis extension for database %s', db_name)
-            conn.execute('CREATE EXTENSION IF NOT EXISTS postgis;')
-        return False
-
-
-def _drop_db_if_exists(engine):
-    db_url = make_url(engine.url)
-    db_name = str(db_url.database)
-    db_url.database = 'postgres'
-    logger.debug('drop database %s', db_name)
-    # We first need to close all checked in connections
-    engine.dispose()
-    with Connection(db_url) as conn:
-        conn.execute('DROP DATABASE {name};'.format(
-            name=quote(engine, db_name))
-        )
-    db_url.database = db_name
 
 
 def _create_schema_if_exists(engine, experiment_id):
@@ -419,7 +380,6 @@ class SQLAlchemy_Session(object):
         self._session = session
         self._schema = schema
 
-
     def __getattr__(self, attr):
         if hasattr(self._session, attr):
             return getattr(self._session, attr)
@@ -465,7 +425,9 @@ class SQLAlchemy_Session(object):
         to decide whether a new entry would be considred a duplication.
         '''
         try:
-            instance = self.query(model).filter_by(**kwargs).one()
+            instance = self._session.query(model).\
+                filter_by(**kwargs).\
+                one()
             logger.debug('found existing instance: %r', instance)
         except sqlalchemy.orm.exc.NoResultFound:
             # We have to protect against situations when several worker
@@ -482,7 +444,9 @@ class SQLAlchemy_Session(object):
                 )
                 self._session.rollback()
                 try:
-                    instance = self.query(model).filter_by(**kwargs).one()
+                    instance = self._session.query(model).\
+                        filter_by(**kwargs).\
+                        one()
                     logger.debug('found existing instance: %r', instance)
                 except:
                     raise
@@ -515,6 +479,12 @@ class SQLAlchemy_Session(object):
         table = model.__table__
         engine = self._session.get_bind()
         locations_to_remove = []
+        # We need to update the schema on each data model, such that tables
+        # will be created for the correct experiment-specific schema and not
+        # created for the "public" schema.
+        logger.debug('update schema on data model classes')
+        for t in ExperimentModel.metadata.tables.values():
+            t.schema = self._schema
         if table.exists(engine):
             if issubclass(model, FileSystemModel):
                 model_instances = self._session.query(model).all()
@@ -523,58 +493,11 @@ class SQLAlchemy_Session(object):
             self._session.commit()  # circumvent locking
             table.drop(engine)
         logger.info('create table "%s"', table.name)
-        if self._schema is not None:
-            for name, t in ExperimentModel.metadata.tables.iteritems():
-                t.schema = self._schema
-        for name, t in MainModel.metadata.tables.iteritems():
-            t.schema = 'public'
         table.create(engine)
         logger.info('remove "%s" locations on disk', model.__name__)
         for loc in locations_to_remove:
             logger.debug('remove "%s"', loc)
             delete_location(loc)
-
-    def get_or_create_all(self, model, args):
-        '''Gets a collection of instances of a model class if they already
-        exist or create them otherwise.
-
-        Parameters
-        ----------
-        model: type
-            an implementation of the :class:`tmlib.models.ExperimentModel`
-            or :class:`tmlib.models.base.MainModel` abstract base class
-        args: List[dict]
-            keyword arguments for each instance that can be passed to the
-            constructor of `model` or to
-            ::meth:`sqlalchemy.orm.query.Query.filter_by`
-
-        Returns
-        -------
-        List[tmlib.models.Model]
-            instances of `model`
-        '''
-        instances = list()
-        for kwargs in args:
-            instances.extend(
-                self.query(model).filter_by(**kwargs).all()
-            )
-        if not instances:
-            try:
-                instances = list()
-                for kwargs in args:
-                    instances.append(model(**kwargs))
-                self._session.add_all(instances)
-                self._session.commit()
-            except sqlalchemy.exc.IntegrityError:
-                self._session.rollback()
-                instances = list()
-                for kwargs in args:
-                    instances.extend(
-                        self.query(model).filter_by(**kwargs).all()
-                    )
-            except:
-                raise
-        return instances
 
 
 class _Session(object):
@@ -610,6 +533,7 @@ class _Session(object):
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory(), self._schema)
+        self._set_search_path()
         sqlalchemy.event.listen(
             self._session_factories[self._db_uri],
             'after_begin', self._after_begin
@@ -748,18 +672,18 @@ class ExperimentSession(_Session):
             # for host in cfg.db_worker_hosts:
             #     _add_db_worker(master_engine, host, cfg.db_port)
             _create_db_tables(engine, experiment_id)
-        super(ExperimentSession, self).__init__(db_uri)
+        self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
+            experiment_id=self.experiment_id
+        )
+        super(ExperimentSession, self).__init__(db_uri, self._schema)
 
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
-        self._session = SQLAlchemy_Session(session_factory())
-        schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
-            experiment_id=self.experiment_id
-        )
+        self._session = SQLAlchemy_Session(session_factory(), self._schema)
         self._session.execute('''
             SET search_path TO 'public', :schema;
         ''', {
-            'schema': schema_name
+            'schema': self._schema
         })
         return self._session
 
@@ -797,7 +721,7 @@ class Connection(object):
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         if self._schema:
-            logger.error('set search path for schema "%s"', self._schema)
+            logger.debug('set search path for schema "%s"', self._schema)
             self._cursor.execute('''
                 SET search_path TO 'public', %(schema)s;
             ''', {

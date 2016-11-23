@@ -47,8 +47,11 @@ from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.handles import SegmentedObjects
 from tmlib.workflow.jterator.checkers import PipelineChecker
 from tmlib.workflow import register_step_api
-from tmlib.models.mapobject import delete_mapobjects_cascade
-from tmlib.models.mapobject import delete_invalid_mapobjects_cascade
+from tmlib.models.mapobject import (
+    delete_mapobject_types_cascade, delete_mapobjects_cascade,
+    delete_invalid_mapobjects_cascade
+)
+from tmlib.models.feature import delete_features_cascade
 from tmlib import cfg
 
 logger = logging.getLogger(__name__)
@@ -293,7 +296,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         children instances for the processed experiment.
         '''
         logger.info('delete existing mapobjects and mapobject types')
-        from tmlib.models.mapobject import delete_mapobject_types_cascade
         delete_mapobject_types_cascade(
             self.experiment_id, is_static=False, pipeline=self.project.name
         )
@@ -481,11 +483,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
         logger.info('save pipeline outputs')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).first()
-            logger.debug('add mapobject type "%s"', obj_name)
+            mapobject_type_ids = dict()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
+                logger.debug('add mapobject type "%s"', obj_name)
                 mapobject_type = session.get_or_create(
                     tm.MapobjectType, name=obj_name
                 )
+                mapobject_type_ids[obj_name] = mapobject_type.id
                 # We will update this in collect phase, but we need to set some
                 # limits in case the user already starts viewing objects on the
                 # map. Without any contraints the user interface might explode.
@@ -505,13 +509,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             mapobject_ids = dict()
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
-                conn.execute('''
-                    SELECT id FROM mapobject_types
-                    WHERE name = %(name)s
-                ''', {
-                    'name': obj_name
-                })
-                mapobject_type = conn.fetchone()
                 # Delete existing mapobjects for this site when they were
                 # generated in a previous run of the same pipeline. In case
                 # they were passed to the pipeline as inputs don't delete them
@@ -526,139 +523,74 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     )
                     delete_mapobjects_cascade(
                         self.experiment_id,
-                        mapobject_type_ids=[mapobject_type.id],
-                        site_id=batch['site_id'], pipeline=self.project.name
+                        mapobject_type_ids=[mapobject_type_ids[obj_name]],
+                        site_id=store['site_id'], pipeline=self.project.name
                     )
 
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             for obj_name, segm_objs in store['segmented_objects'].iteritems():
-
                 logger.info('create objects of type "%s"', obj_name)
-                conn.execute('''
-                    INSERT INTO mapobject_types (name, is_static)
-                    VALUES (%(name)s, %(is_static)s)
-                    ON CONFLICT
-                    ON CONSTRAINT mapobject_types_name_key
-                    DO NOTHING
-                ''', {
-                    'name': obj_name, 'is_static': False
-                })
-                conn.execute('''
-                    SELECT id FROM mapobject_types
-                    WHERE name = %(name)s
-                ''', {
-                    'name': obj_name
-                })
-                mapobject_type = conn.fetchone()
+
                 # Get existing mapobjects for this site in case they were
                 # created by a previous pipeline or create new mapobjects in
                 # case they didn't exist (or got just deleted).
+                mapobject_ids = dict()
                 for label in segm_objs.labels:
                     logger.debug('create object #%d', label)
-                    conn.execute('''
-                        SELECT * FROM nextval('mapobjects_id_seq');
-                    ''')
-                    val = conn.fetchone()
-                    mapobject_id = val.nextval
+                    mapobject_ids[label] = self._add_mapobject(
+                        conn, mapobject_type_ids[obj_name]
+                    )
 
-                    conn.execute('''
-                        INSERT INTO mapobjects (id, mapobject_type_id)
-                        VALUES (%(mapobject_id)s, %(mapobject_type_id)s);
-                    ''', {
-                        'mapobject_id': mapobject_id,
-                        'mapobject_type_id': mapobject_type.id
-                    })
-
-                    # Save segmentations, i.e. create a polygon for each
-                    # segmented object based on the cooridinates of their
-                    # contours.
-                    logger.debug('create segmentations for object #%d', label)
-                    polygons = segm_objs.to_polygons(y_offset, x_offset)
-                    for (t, z, label), outline in polygons.iteritems():
-                        if outline.is_empty:
-                            logger.warn('object without outline')
-                            continue
-                        conn.execute('''
-                            INSERT INTO mapobject_segmentations (
-                                mapobject_id,
-                                geom_poly, geom_centroid,
-                                tpoint, zplane,
-                                site_id, is_border
-                            )
-                            VALUES (
-                                %(mapobject_id)s,
-                                %(geom_poly)s, %(geom_centroid)s,
-                                %(tpoint)s, %s(zplane)s,
-                                %(site_id)s, %(is_border)s
-                            );
-                        ''', {
-                            'mapobject_id': mapobject_id,
-                            'geom_poly': polygon.wkt,
-                            'geom_centroid': polygon.centroid.wkt,
-                            'tpoint': t, 'zplane': z,
-                            'site_id': store['site_id'],
-                            'is_border': bool(segm_objs.is_border[t][label])
-                        })
+                # Save segmentations, i.e. create a polygon for each
+                # segmented object based on the cooridinates of their
+                # contours.
+                logger.debug('create segmentations for object #%d', label)
+                border_indices = segm_objs.is_border
+                polygons = segm_objs.to_polygons(y_offset, x_offset)
+                for (t, z, label), polygon in polygons.iteritems():
+                    logger.debug(
+                        'create segmentation for tpoint %d and zplane %d', t, z
+                    )
+                    if polygon.is_empty:
+                        logger.warn(
+                            'object #%d of type %s doesn\'t have a polygon',
+                            index, obj_name
+                        )
+                        continue
+                    self._add_mapobject_segmentation(
+                        conn, mapobject_ids[label], polygon, t, z,
+                        store['site_id'], bool(border_indices[t][label])
+                    )
 
                 logger.info(
                     'add features for objects of type "%s"', obj_name
                 )
+                feature_ids = dict()
                 for fname in segm_objs.measurements[0].columns:
-                    try:
-                        conn.execute('''
-                            SELECT id FROM features
-                            WHERE name = %(name)s
-                            AND mapobject_type_id = %(mapobject_type_id);
-                        ''', {
-                            'name': fname,
-                            'mapobject_type_id': mapobject_type.id
-                        })
-                        feature = conn.fetchone()
-                        feature_id = feature.id
-                    except ProgrammingError:
-                        conn.execute('''
-                            SELECT * FROM nextval('features_id_seq');
-                        ''')
-                        val = conn.fetchone()
-                        feature_id = val.nextval
-                        conn.execute('''
-                            INSERT INTO features (id, name, mapobject_type_id)
-                            VALUES (%(id)s, %(name)s, %(mapobject_type_id))
-                            ON CONFLICT
-                            ON CONSTRAINT features_name_mapobject_type_id_id_key
-                            DO NOTHING
-                        ''', {
-                            'feature_id': feature_id,
-                            'name': fname,
-                            'mapobject_type_id': mapobject_type.id
-                        })
-                    # Create an entry for each measured featured value.
-                    # This is quite a heavy write operation, since we have nxp
-                    # feature values, where n is the number of mapobjects and
-                    # p the number of extracted features.
-                    logger.info('save values for feature "%s"' % fname)
-                    for t, measurement in enumerate(segm_objs.measurements):
-                        if measurement.empty:
-                            logger.warn('empty "%s" measurement', fname)
-                            continue
-                        elif fname not in measurement.columns:
-                            continue
-                        for label in measurement.index:
-                            fvalue = measurement.loc[label, fname]
-                            conn.execute('''
-                                INSERT INTO feature_values (
-                                    mapobject_id, feature_id, tpoint, value
-                                )
-                                VALUES (
-                                    %(mapobject_id)s, %(feature_id)s,
-                                    %(tpoint)s, %(value)s
-                                )
-                            ''', {
-                                'mapobject_id': mapobject_id,
-                                'value': float(fvalue),
-                                'tpoint': t,
-                                'feature_id': feature_id
-                            })
+                    logger.debug('add feature "%s"', fname)
+                    feature_ids[fname] = self._add_feature(
+                        conn, fname, mapobject_type_ids[obj_name], False
+                    )
+
+                # Create an entry for each measured featured value.
+                # This is quite a heavy write operation, since we have nxp
+                # feature values, where n is the number of mapobjects and
+                # p the number of extracted features.
+                for t, measurement in enumerate(segm_objs.measurements):
+                    if measurement.empty:
+                        logger.warn('empty measurement at time point %d', t)
+                        continue
+                    for fname, values in measurement.iteritems():
+                        logger.info(
+                            'add values for feature "%s" at time point %d',
+                            fname, t
+                        )
+                        for label, value in values.iteritems():
+                            logger.debug('add value for object %d', label)
+                            self._add_feature_value(
+                                conn, value, mapobject_ids[label],
+                                feature_ids[fname], t
+                            )
 
     def run_job(self, batch):
         '''Runs the pipeline, i.e. executes modules sequentially. After
@@ -753,46 +685,71 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 mapobject_type.min_poly_zoom = min_poly_zoom
                 mapobject_type.max_poly_zoom = max_poly_zoom
 
-        # TODO: for non-static objects do this in parallel in a separate
-        # workflow step
-        logger.info('compute statistics over features of children mapobjects')
-        logger.info('delete existing aggregate features')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.query(tm.Feature).\
-                filter_by(is_aggregate=True).\
-                delete()
-
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             # For now, calculate moments only for "static" mapobjects,
             # such as "Wells" or "Sites"
-            parent_types = session.query(tm.MapobjectType).\
-                filter_by(is_static=True)
+            parent_types = session.query(
+                    tm.MapobjectType.id, tm.MapobjectType.name
+                ).\
+                filter_by(is_static=True).\
+                all()
+            logger.info('delete existing aggregate features')
+            delete_features_cascade(self.experiment_id, is_aggregate=True)
 
-            statistics = {'Mean', 'Std', 'Sum', 'Min', 'Max', 'Count'}
+            logger.info('compute aggregate features for parent objects')
+            statistics = {'Mean', 'Std', 'Sum', 'Min', 'Max'}
             for parent_type in parent_types:
                 # Moments are computed only over "non-static" mapobjects,
                 # i.e. segmented objects within a pipeline
-                child_types = session.query(tm.MapobjectType).\
-                    filter_by(is_static=False)
+                child_types = session.query(
+                        tm.MapobjectType.id, tm.MapobjectType.name
+                    ).\
+                    filter_by(is_static=False).\
+                    all()
 
                 logger.info(
-                    'compute features for parent mapobjects of type "%s"',
+                    'compute features for parent objects of type "%s"',
                     parent_type.name
                 )
-
                 # Create the database entries for the new parent features,
                 # e.g. mean area of cells per well
                 for child_type in child_types:
                     if child_type.name == parent_type.name:
                         continue
-                    child_features = session.query(tm.Feature).\
-                        filter_by(mapobject_type_id=child_type.id)
 
-                    with tm.utils.ExperimentConnection(self.experiment) as conn:
+                    child_features = session.query(
+                            tm.Feature.id, tm.Feature.name
+                        ).\
+                        filter_by(mapobject_type_id=child_type.id).\
+                        all()
+
+                    if not child_features:
+                        continue
+
+                    with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                         logger.info(
-                            'compute statistics on features of child '
-                            'mapobjects of type "%s"', child_type.name
+                            'compute statistics over child objects of '
+                            'type "%s"', child_type.name
                         )
+
+                        feature_map = dict()
+                        for feature in child_features:
+                            for stat in statistics:
+                                name = '{name}_{stat}-{type}'.format(
+                                    name=feature.name, stat=stat,
+                                    type=child_type.name
+                                )
+                                fid = self._add_feature(
+                                    conn, name, parent_type.id, True
+                                )
+                                feature_map[(stat, feature.id)] = fid
+                        name = 'Count-{type}'.format(
+                            type=child_type.name
+                        )
+                        fid = self._add_feature(
+                            conn, name, parent_type.id, True
+                        )
+                        feature_map[('Count', feature.id)] = fid
 
                         # For each parent mapobject calculate statistics on
                         # features of children, i.e. mapobjects that are covered
@@ -809,108 +766,161 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                 'process parent mapobject #%d of type "%s"', i,
                                 parent_type.name
                             )
-                            conn.execute('''
-                                SELECT (
-                                    avg(v.value), stddev(v.value), sum(v.value),
-                                    min(v.value), max(v.value), count(v.value),
-                                    v.feature_id, v.tpoint
-                                )
-                                FROM feature_values v
-                                JOIN mapobjects m ON m.id = v.mapobject_id
-                                JOIN mapobject_segmentation s ON s.mapobject_id = m.id
-                                WHERE v.value is NOT NULL
-                                AND m.mapobject_type_id = %(child_type_id)
-                                AND ST_CoveredBy(
-                                    s.geom_poly,
-                                    (SELECT geom_poly FROM s
-                                     WHERE s.mapobject_id = %(parent_id)s
-                                     ORDER BY s.mapobject_id
-                                     LIMIT 1)
-                                )
-                                GROUP BY (v.feature_id, v.tpoint);
-                            ''', {
-                                'child_type_id': child_type.id,
-                                'parent_id': parent.id
-                            })
+                            data = self._get_aggregate_data(
+                                conn, parent.id, child_type.id
+                            )
+                            if data is None:
+                                continue
                             df = pd.DataFrame(
-                                conn.fetchall(),
+                                data,
                                 columns = [
                                     'Mean', 'Std', 'Sum',
                                     'Min', 'Max', 'Count',
                                     'feature_id', 'tpoint'
                                 ]
                             )
-                            if df.empty:
-                                continue
 
-                            for feature in child_features:
-                                for stat in statistics:
-                                    if stat == 'Count':
-                                        name = 'Count-{type}'.format(
-                                            type=child_type.name
-                                        )
-                                    else:
-                                        name = '{name}_{stat}-{type}'.format(
-                                            name=feature.name, stat=stat,
-                                            type=child_type.name
-                                        )
-                                    logger.info(
-                                        'create aggregate feature "%s"', name
-                                    )
-
-                                    conn.execute('''
-                                        SELECT * FROM nextval('features_id_seq');
-                                    ''')
-                                    val = conn.fetchone()
-                                    feature_id = val.nextval
-
-                                    conn.execute('''
-                                        INSERT INTO features f (
-                                            id, name,
-                                            mapobject_type_id,
-                                            is_aggregate
-                                        )
-                                        VALUES (
-                                            %(id)s, %(name)s,
-                                            %(mapobject_type_id)s,
-                                            %(is_aggregate)s
-                                        )
-                                    ''', {
-                                        'id': feature_id,
-                                        'name': name,
-                                        'mapobject_type_id': parent_type.id,
-                                        'is_aggregate': True
-                                    })
-
+                            tpoints = np.unique(df.tpoint)
+                            for (stat, c_fid), p_fid in feature_map.iteritems():
+                                for t in tpoints:
                                     logger.debug(
-                                        'insert values of feature "%s"', name
+                                        'insert value for time point %d', t
+                                    )
+                                    index = np.logical_and(
+                                        df.feature_id == c_fid,
+                                        df.tpoint == t
+                                    )
+                                    value = float(df.loc[index, stat])
+                                    self._add_feature_value(
+                                        conn, value, parent.id, p_fid, t
                                     )
 
-                                    for t in np.unique(df.tpoint):
-                                        index = np.logical_and(
-                                            df.feature_id == feature.id,
-                                            df.tpoint == t
-                                        )
-                                        val = float(df.loc[index, stat])
-                                        conn.execute('''
-                                            INSERT INTO feature_values (
-                                                value,
-                                                mapobject_id,
-                                                feature_id,
-                                                tpoint
-                                            )
-                                            VALUES (
-                                                %(value)s,
-                                                %(mapobject_id)s,
-                                                %(feature_id)s,
-                                                %(tpoint)s)
-                                        ''', {
-                                            'value': val,
-                                            'mapobject_id': parent.id,
-                                            'feature_id': feature_ids[i],
-                                            'tpoint': t
-                                        })
-
-                    # TODO: population context
+                    # TODO: population context as a separate step
                     # tm.types.ST_Expand()
 
+    @staticmethod
+    def _add_feature(conn, name, mapobject_type_id, is_aggregate):
+        conn.execute('''
+            SELECT id FROM features
+            WHERE name = %(name)s
+            AND mapobject_type_id = %(mapobject_type_id)s;
+        ''', {
+            'name': name,
+            'mapobject_type_id': mapobject_type_id,
+            'is_aggregate': is_aggregate
+        })
+        feature = conn.fetchone()
+        if feature is None:
+            conn.execute('''
+                SELECT * FROM nextval('features_id_seq');
+            ''')
+            val = conn.fetchone()
+            feature_id = val.nextval
+            conn.execute('''
+                INSERT INTO features (
+                    id, name,
+                    mapobject_type_id, is_aggregate
+                )
+                VALUES (
+                    %(id)s, %(name)s,
+                    %(mapobject_type_id)s, %(is_aggregate)s
+                )
+                ON CONFLICT
+                ON CONSTRAINT features_name_mapobject_type_id_key
+                DO NOTHING
+            ''', {
+                'id': feature_id,
+                'name': name,
+                'mapobject_type_id': mapobject_type_id,
+                'is_aggregate': is_aggregate
+            })
+        else:
+            feature_id = feature.id
+        return feature_id
+
+    @staticmethod
+    def _add_feature_value(conn, value, mapobject_id, feature_id, tpoint):
+        conn.execute('''
+            INSERT INTO feature_values (
+                value, mapobject_id, feature_id, tpoint
+            )
+            VALUES (
+                %(value)s, %(mapobject_id)s, %(feature_id)s, %(tpoint)s)
+        ''', {
+            'value': float(value),
+            'mapobject_id': mapobject_id,
+            'feature_id': feature_id,
+            'tpoint': tpoint
+        })
+
+    @staticmethod
+    def _get_aggregate_data(conn, parent_mapobject_id,
+            child_mapobject_type_id):
+        conn.execute('''
+            SELECT geom_poly FROM mapobject_segmentations
+            WHERE mapobject_id = %(mapobject_id)s
+            ORDER BY mapobject_id
+            LIMIT 1;
+        ''', {
+            'mapobject_id': parent_mapobject_id
+        })
+        parent_geom_poly = conn.fetchone()[0]
+        conn.execute('''
+            SELECT
+                avg(v.value), stddev(v.value), sum(v.value),
+                min(v.value), max(v.value), count(v.value),
+                v.feature_id, v.tpoint
+            FROM feature_values v
+            JOIN mapobjects m ON m.id = v.mapobject_id
+            JOIN mapobject_segmentations s ON s.mapobject_id = m.id
+            WHERE v.value is NOT NULL
+            AND m.mapobject_type_id = %(mapobject_type_id)s
+            AND ST_CoveredBy(s.geom_poly, %(geom_poly)s)
+            GROUP BY (v.feature_id, v.tpoint);
+        ''', {
+            'mapobject_type_id': child_mapobject_type_id,
+            'geom_poly': parent_geom_poly
+        })
+        return conn.fetchall()
+
+    @staticmethod
+    def _add_mapobject(conn, mapobject_type_id):
+        conn.execute('''
+            SELECT * FROM nextval('mapobjects_id_seq');
+        ''')
+        val = conn.fetchone()
+        mapobject_id = val.nextval
+
+        conn.execute('''
+            INSERT INTO mapobjects (id, mapobject_type_id)
+            VALUES (%(mapobject_id)s, %(mapobject_type_id)s);
+        ''', {
+            'mapobject_id': mapobject_id,
+            'mapobject_type_id': mapobject_type_id
+        })
+        return mapobject_id
+
+    @staticmethod
+    def _add_mapobject_segmentation(conn, mapobject_id, polygon, t, z,
+            site_id, is_border):
+        conn.execute('''
+            INSERT INTO mapobject_segmentations (
+                mapobject_id,
+                geom_poly, geom_centroid,
+                tpoint, zplane,
+                site_id, is_border
+            )
+            VALUES (
+                %(mapobject_id)s,
+                %(geom_poly)s, %(geom_centroid)s,
+                %(tpoint)s, %(zplane)s,
+                %(site_id)s, %(is_border)s
+            );
+        ''', {
+            'mapobject_id': mapobject_id,
+            'geom_poly': polygon.wkt,
+            'geom_centroid': polygon.centroid.wkt,
+            'tpoint': t, 'zplane': z,
+            'site_id': site_id,
+            'is_border': is_border
+        })

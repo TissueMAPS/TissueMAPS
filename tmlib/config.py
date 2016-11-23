@@ -69,7 +69,6 @@ class TmapsConfig(object):
         self.db_host = 'localhost'
         self.db_port = 5432
         self.db_driver = 'postgresql'
-        self.db_worker_hosts = []
 
     def read(self):
         '''Reads the configuration from a file
@@ -143,28 +142,6 @@ class TmapsConfig(object):
                 'Configuration parameter "db_host" must have type str.'
             )
         self._config.set('DEFAULT', 'db_host', value)
-
-    @property
-    def db_worker_hosts(self):
-        '''List[str]: IP addresses of database worker hosts (default: ``[]``)
-
-        Note
-        ----
-        This is only relevant for database clusters, such as
-        `Citus <https://docs.citusdata.com/en/stable/index.html>`_.
-        '''
-        value = self._config.get('DEFAULT', 'db_worker_hosts')
-        if not value:
-            return []
-        return [v.strip() for v in value.split(',')]
-
-    @db_worker_hosts.setter
-    def db_worker_hosts(self, value):
-        if not isinstance(value, list):
-            raise TypeError(
-                'Configuration parameter "db_worker_hosts" must have type list.'
-            )
-        self._config.set('DEFAULT', 'db_worker_hosts', ','.join(value))
 
     @property
     def db_port(self):

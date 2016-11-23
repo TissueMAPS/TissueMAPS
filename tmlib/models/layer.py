@@ -60,6 +60,7 @@ class ChannelLayer(ExperimentModel):
 
     _height = Column('height', Integer)
     _width = Column('width', Integer)
+    _depth = Column('depth', Integer)
 
     #: int: zero-based index in z stack
     zplane = Column(Integer, index=True)
@@ -102,8 +103,6 @@ class ChannelLayer(ExperimentModel):
         self.tpoint = tpoint
         self.zplane = zplane
         self.channel_id = channel_id
-        self._height = None
-        self._width = None
 
     @hybrid_property
     def height(self):
@@ -122,6 +121,15 @@ class ChannelLayer(ExperimentModel):
             self._width = self._maxzoom_image_size[1]
         return self._width
 
+    @hybrid_property
+    def depth(self):
+        '''int: number of pixels along horizontal axis at highest resolution
+        level
+        '''
+        if self._depth is None:
+            self._depth = len(self.dimensions)
+        return self._depth
+
     @property
     def tile_size(self):
         '''int: maximal number of pixels along an axis of a tile'''
@@ -131,11 +139,6 @@ class ChannelLayer(ExperimentModel):
     def zoom_factor(self):
         '''int: factor by which resolution increases per pyramid level'''
         return self.channel.experiment.zoom_factor
-
-    @property
-    def n_levels(self):
-        '''int: number of zoom levels'''
-        return len(self.dimensions)
 
     @property
     def n_tiles(self):
@@ -826,16 +829,13 @@ class HeatmapLabelLayer(ContinuousLabelLayer):
             mapping of mapobject ID to feature value
         '''
         session = Session.object_session(self)
-        layer = session.query(self.__class__).\
-            filter_by(tool_result_id=self.tool_result_id).\
-            one()
         return dict(
             session.query(
                 FeatureValue.mapobject_id, FeatureValue.value
             ).
             filter(
                 FeatureValue.mapobject_id.in_(mapobject_ids),
-                FeatureValue.feature_id == layer.attributes['feature_id']
+                FeatureValue.feature_id == self.attributes['feature_id']
             ).
             all()
         )
@@ -859,6 +859,13 @@ def delete_channel_layers_cascade(experiment_id):
     table of :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`
     might be distributed over a cluster.
     '''
+    with ExperimentSession(experiment_id) as session:
+        logger.debug('drop table "channel_layer_tiles"')
+        j
+        connection.execute('''
+            DROP TABLE channel_layer_tiles;
+        ''')
+
     with ExperimentSession(experiment_id) as session:
         session.drop_and_recreate(ChannelLayerTile)
         session.drop_and_recreate(ChannelLayer)
