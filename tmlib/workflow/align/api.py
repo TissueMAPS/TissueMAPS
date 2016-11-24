@@ -107,7 +107,7 @@ class ImageRegistrator(ClusterRoutines):
                             join(tm.Channel).\
                             filter(tm.Cycle.id == cycle.id).\
                             filter(tm.Channel.wavelength == args.ref_wavelength).\
-                            filter(~tm.ChannelImageFile.omitted).\
+                            filter(~tm.Site.omitted).\
                             count()
 
                         if n == 0:
@@ -126,7 +126,7 @@ class ImageRegistrator(ClusterRoutines):
                                 filter(tm.Site.id == s).\
                                 filter(tm.Cycle.id == cycle.id).\
                                 filter(tm.Channel.wavelength == args.ref_wavelength).\
-                                filter(~tm.ChannelImageFile.omitted).\
+                                filter(~tm.Site.omitted).\
                                 all()
 
                             if not files:
