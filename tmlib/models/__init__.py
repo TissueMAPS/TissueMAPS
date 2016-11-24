@@ -55,9 +55,8 @@ Some *SQL* statements cannot be performed within a transaction. To this end,
 :class:`MainConnection <tmlib.models.utils.MainConnection>` or
 :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>` can
 be used. These classes create individual database connections and bypass the
-*ORM*. *Sessions* and *connections* have a different interface.
-In contrast to *sessions*, *connections* don't use the *ORM* but require
-raw *SQL* statements.
+*ORM*. *Sessions* and *connections* have a different interface, however.
+While *sessions* use the *ORM* *connections* requires raw *SQL* statements.
 
 .. code-block:: python
 
@@ -72,10 +71,11 @@ raw *SQL* statements.
 Warning
 -------
 The *sessions* and *connections* utility classes automatically set the
-experiment-specific schema to the search path at runtime. To access the
-data models outside the scope of a *session* or *connection*, you either need
-to set the search path manually or specify the schema, e.g.
-``experiment_1.plates``.
+experiment-specific schema to the
+`search path <https://www.postgresql.org/docs/current/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_
+at runtime. To access data models outside the scope of a *session* or
+*connection*, you either need to set the search path manually or specify the
+schema, e.g. ``SELECT * FROM experiment_1.plates``.
 
 Note
 ----
