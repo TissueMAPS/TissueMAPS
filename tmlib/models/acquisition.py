@@ -111,7 +111,7 @@ class Acquisition(DirectoryModel, DateMixIn):
                     'create location for acquisition "%s": %s',
                     self.name, self._location
                 )
-                os.mkdirs(self._location)
+                os.mkdir(self._location)
         return self._location
 
     @autocreate_directory_property

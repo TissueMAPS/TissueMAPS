@@ -70,7 +70,7 @@ def _compile_create_table(element, compiler, **kwargs):
             )
             sql = compiler.visit_create_table(element)
             sql += ';SELECT create_distributed_table(\'%s.%s\', \'%s\');' % (
-                schema.name, table.name, distribution_column
+                table.schema, table.name, distribution_column
             )
         elif distribute_by_replication:
             # The first column will be used as partition column and must be

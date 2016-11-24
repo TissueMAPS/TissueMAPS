@@ -126,8 +126,6 @@ class Plate(DirectoryModel, DateMixIn):
         self.name = name
         self.description = description
         self.experiment_id = 1
-        # Trigger creation of directory and insert entry into table
-        self.location
 
     @hybrid_property
     def location(self):
@@ -147,6 +145,7 @@ class Plate(DirectoryModel, DateMixIn):
                     'create location for plate "%s": %s',
                     self.name, self._location
                 )
+                os.mkdir(self._location)
         return self._location
 
     @autocreate_directory_property
