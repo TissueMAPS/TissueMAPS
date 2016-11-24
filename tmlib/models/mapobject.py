@@ -331,9 +331,9 @@ class MapobjectSegmentation(ExperimentModel):
         Parameters
         ----------
         x: int
-            horizontal tile coordiante
+            horizontal tile coordinate
         y: int
-            vertical tile coordiante
+            vertical tile coordinate
         z: int
             zoom level
         maxzoom: int
@@ -469,7 +469,7 @@ def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
                 })
                 logger.info('delete feature values')
                 connection.execute('''
-                    DELETE FROM feauture_values
+                    DELETE FROM feature_values
                     WHERE mapobject_id = ANY(%(mapobject_ids)s);
                 ''', {
                     'mapobject_ids': mapobject_ids
@@ -634,16 +634,15 @@ def get_mapobject_outlines_within_tile(experiment_id, mapobject_type_name,
             x, y, z, maxzoom
         )
         if do_nothing:
-            logger.debug('dont\'t represent object')
+            logger.debug('dont\'t represent objects')
             return list()
         elif do_simplify:
-            logger.debug('represent object by centroid')
+            logger.debug('represent objects as centroid')
             sql = '''
                 SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_centroid)
             '''
-            selection = connection.fetchall()
         else:
-            logger.debug('represent object as polygon')
+            logger.debug('represent objects as polygon')
             sql = '''
                 SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_poly)
             '''
@@ -707,5 +706,13 @@ def get_mapobject_outlines_within_tile(experiment_id, mapobject_type_name,
             'min_x': min_x, 'max_x': max_x, 'min_y': min_y, 'max_y': max_y
         })
 
-        return connection.fetchall()
+        outlines = connection.fetchall()
+        if len(outlines) == 0:
+            logger.warn(
+                'no outlines found for objects of type "%s" within tile: '
+                'x=%d, y=%d, z=%d, tpoint=%d, zplane=%d',
+                mapobject_type_name, x, y, z, tpoint, zplane
+            )
+
+        return outlines
 

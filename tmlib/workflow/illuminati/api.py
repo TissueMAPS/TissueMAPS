@@ -34,7 +34,9 @@ from tmlib.errors import DataIntegrityError
 from tmlib.errors import WorkflowError
 from tmlib.models.utils import delete_location
 from tmlib.models.layer import delete_channel_layers_cascade
-from tmlib.models.mapobject import delete_mapobject_types_cascade
+from tmlib.models.mapobject import (
+    delete_mapobject_types_cascade, delete_mapobjects_cascade
+)
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
@@ -663,49 +665,57 @@ class PyramidBuilder(ClusterRoutines):
                 mapobject_type.max_poly_zoom = max_zoom
                 mapobject_type_id = mapobject_type.id
 
-                logger.info('create mapobjects of type "%s"', name)
-                for obj in query:
-                    # First element: x axis
-                    # Second element: inverted y axis
-                    ul = (obj.offset[1], -1 * obj.offset[0])
-                    ll = (ul[0] + obj.image_size[1], ul[1])
-                    ur = (ul[0], ul[1] - obj.image_size[0])
-                    lr = (ll[0], ul[1] - obj.image_size[0])
-                    # Closed circle with coordinates sorted counter-clockwise
-                    contour = np.array([ur, ul, ll, lr, ur])
-                    polygon = shapely.geometry.Polygon(contour)
+                delete_mapobjects_cascade(
+                    self.experiment_id, [mapobject_type_id]
+                )
+                with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+                    logger.info('create mapobjects of type "%s"', name)
+                    for obj in query:
+                        # First element: x axis
+                        # Second element: inverted y axis
+                        ul = (obj.offset[1], -1 * obj.offset[0])
+                        ll = (ul[0] + obj.image_size[1], ul[1])
+                        ur = (ul[0], ul[1] - obj.image_size[0])
+                        lr = (ll[0], ul[1] - obj.image_size[0])
+                        # Closed circle with coordinates sorted counter-clockwise
+                        contour = np.array([ur, ul, ll, lr, ur])
+                        polygon = shapely.geometry.Polygon(contour)
 
-                    with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-                        conn.execute('''
-                            SELECT * FROM nextval('mapobjects_id_seq');
-                        ''')
-                        val = conn.fetchone()
-                        mapobject_id = val.nextval
+                        mapobject_id = self._add_mapobject(
+                            conn, mapobject_type_id
+                        )
+                        self._add_mapobject_segmentation(
+                            conn, mapobject_id, polygon
+                        )
 
-                        conn.execute('''
-                            INSERT INTO mapobjects (
-                                id, mapobject_type_id
-                            )
-                            VALUES (
-                                %(mapobject_id)s, %(mapobject_type_id)s
-                            );
-                        ''', {
-                            'mapobject_id': mapobject_id,
-                            'mapobject_type_id': mapobject_type_id
-                        })
+    @staticmethod
+    def _add_mapobject(conn, mapobject_type_id):
+        conn.execute('''
+            SELECT * FROM nextval('mapobjects_id_seq');
+        ''')
+        val = conn.fetchone()
+        mapobject_id = val.nextval
 
-                        conn.execute('''
-                            INSERT INTO mapobject_segmentations (
-                                mapobject_id, geom_poly, geom_centroid
-                            )
-                            VALUES (
-                                %(mapobject_id)s,
-                                %(geom_poly)s, %(geom_centroid)s
-                            );
-                        ''', {
-                            'mapobject_id': mapobject_id,
-                            'geom_poly': polygon.wkt,
-                            'geom_centroid': polygon.centroid.wkt
-                        })
+        conn.execute('''
+            INSERT INTO mapobjects (id, mapobject_type_id)
+            VALUES (%(mapobject_id)s, %(mapobject_type_id)s);
+        ''', {
+            'mapobject_id': mapobject_id,
+            'mapobject_type_id': mapobject_type_id
+        })
+        return mapobject_id
 
-
+    @staticmethod
+    def _add_mapobject_segmentation(conn, mapobject_id, polygon):
+        conn.execute('''
+            INSERT INTO mapobject_segmentations (
+                mapobject_id, geom_poly, geom_centroid
+            )
+            VALUES (
+                %(mapobject_id)s, %(geom_poly)s, %(geom_centroid)s
+            );
+        ''', {
+            'mapobject_id': mapobject_id,
+            'geom_poly': polygon.wkt,
+            'geom_centroid': polygon.centroid.wkt
+        })
