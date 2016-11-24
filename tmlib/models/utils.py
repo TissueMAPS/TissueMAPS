@@ -266,10 +266,6 @@ def remove_location_upon_delete(cls):
     def after_delete_callback(mapper, connection, target):
         delete_location(target.location)
 
-    if not hasattr(cls, 'location'):
-        raise AttributeError(
-            'Decorated class must have a "location" attribute'
-        )
     sqlalchemy.event.listen(cls, 'after_delete', after_delete_callback)
     return cls
 
@@ -557,11 +553,14 @@ class _Session(object):
         if except_value:
             self._session.rollback()
         else:
-            self._session.commit()
-            sqlalchemy.event.listen(
-                self._session_factories[self._db_uri],
-                'after_bulk_delete', self._after_bulk_delete_callback
-            )
+            try:
+                self._session.commit()
+                sqlalchemy.event.listen(
+                    self._session_factories[self._db_uri],
+                    'after_bulk_delete', self._after_bulk_delete_callback
+                )
+            except RuntimeError:
+                logger.error('commit failed due to RuntimeError???')
         self._session.close()
 
     def _set_search_path(self):

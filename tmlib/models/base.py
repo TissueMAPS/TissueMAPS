@@ -142,7 +142,7 @@ class FileSystemModel(ExperimentModel):
     def location(self):
         '''str: location on disk
 
-        Devired classes must implement `location` as
+        Devired classes must implement `location` and decorate it with
         :func:`sqlalchemy.ext.hybrid.hyprid_property`.
         '''
         pass

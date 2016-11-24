@@ -86,7 +86,7 @@ class MicroscopeImageFile(FileModel, DateMixIn):
         self.acquisition_id = acquisition_id
         self.status = FileUploadStatus.WAITING
 
-    @property
+    @hybrid_property
     def location(self):
         '''str: location of the file'''
         if self._location is None:
@@ -165,7 +165,7 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
         self.acquisition_id = acquisition_id
         self.status = FileUploadStatus.WAITING
 
-    @property
+    @hybrid_property
     def location(self):
         '''str: location of the file'''
         if self._location is None:
@@ -363,7 +363,7 @@ class ChannelImageFile(FileModel, DateMixIn):
     def n_planes(self, value):
         self._n_planes = value
 
-    @property
+    @hybrid_property
     def location(self):
         '''str: location of the file'''
         if self._location is None:
@@ -477,7 +477,7 @@ class IllumstatsFile(FileModel, DateMixIn):
             f.write('/percentiles/keys', data.percentiles.keys())
             f.write('/percentiles/values', data.percentiles.values())
 
-    @property
+    @hybrid_property
     def location(self):
         '''str: location of the file'''
         if self._location is None:

@@ -69,8 +69,8 @@ def _compile_create_table(element, compiler, **kwargs):
                 distribution_column
             )
             sql = compiler.visit_create_table(element)
-            sql += ';SELECT create_distributed_table(\'%s\', \'%s\');' % (
-                table.name, distribution_column
+            sql += ';SELECT create_distributed_table(\'%s.%s\', \'%s\');' % (
+                schema.name, table.name, distribution_column
             )
         elif distribute_by_replication:
             # The first column will be used as partition column and must be
@@ -87,7 +87,9 @@ def _compile_create_table(element, compiler, **kwargs):
             table = _update_table_constraints(table, 'id')
             logger.info('distribute table "%s" by replication', table.name)
             sql = compiler.visit_create_table(element)
-            sql += ';SELECT create_reference_table(\'%s\');' % table.name
+            sql += ';SELECT create_reference_table(\'%s.%s\');' % (
+                table.schema, table.name
+            )
         else:
             sql = compiler.visit_create_table(element)
     else:

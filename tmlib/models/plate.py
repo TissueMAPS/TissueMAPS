@@ -20,6 +20,7 @@ from cached_property import cached_property
 from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.base import DirectoryModel, DateMixIn
 from tmlib.models.utils import remove_location_upon_delete
@@ -125,19 +126,28 @@ class Plate(DirectoryModel, DateMixIn):
         self.name = name
         self.description = description
         self.experiment_id = 1
+        # Trigger creation of directory and insert entry into table
+        self.location
 
-    @autocreate_directory_property
+    @hybrid_property
     def location(self):
         '''str: location were the plate is stored'''
-        if self.id is None:
-            raise AttributeError(
-                'Plate "%s" doesn\'t have an entry in the database yet. '
-                'Therefore, its location cannot be determined.' % self.name
+        if self._location is None:
+            if self.id is None:
+                raise AttributeError(
+                    'Plate "%s" doesn\'t have an entry in the database yet. '
+                    'Therefore, its location cannot be determined.' % self.name
+                )
+            self._location = os.path.join(
+                self.experiment.plates_location,
+                PLATE_LOCATION_FORMAT.format(id=self.id)
             )
-        return os.path.join(
-            self.experiment.plates_location,
-            PLATE_LOCATION_FORMAT.format(id=self.id)
-        )
+            if not os.path.exists(self._location):
+                logger.debug(
+                    'create location for plate "%s": %s',
+                    self.name, self._location
+                )
+        return self._location
 
     @autocreate_directory_property
     def acquisitions_location(self):
