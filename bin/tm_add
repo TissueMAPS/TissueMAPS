@@ -4,11 +4,15 @@ import sys
 import argparse
 import inspect
 import sqlalchemy.orm.exc
+from werkzeug import secure_filename
 
 import tmlib.models as tm
-from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
+from tmlib.workflow.metaconfig import (
+    SUPPORTED_MICROSCOPE_TYPES, get_microscope_type_regex
+)
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
+from tmlib import cfg
 
 # Don't trash the user with long tracebacks
 sys.tracebacklimit = 0
@@ -35,7 +39,7 @@ def add_experiment(experiment_name, user_name, microscope_type, plate_format,
             experiment = session.query(tm.ExperimentReference).\
                 filter_by(
                     name=experiment_name, user_id=user.id,
-                    root_directory=os.environ['TMAPS_STORAGE_HOME']
+                    root_directory=cfg.storage_home
                 ).\
                 one()
             already_exists = True
@@ -43,7 +47,7 @@ def add_experiment(experiment_name, user_name, microscope_type, plate_format,
             already_exists = False
             experiment = tm.ExperimentReference(
                 name=experiment_name, user_id=user.id,
-                root_directory=os.environ['TMAPS_STORAGE_HOME']
+                root_directory=cfg.storage_home
             )
             session.add(experiment)
             session.flush()
@@ -115,7 +119,7 @@ def add_plate(experiment_name, plate_name):
         return plate.id
 
 
-def add_files(experiment_name, plate_name, acquisition_name):
+def add_files(experiment_name, plate_name, acquisition_name, source_directory):
     with tm.utils.MainSession() as session:
         try:
             experiment = session.query(tm.ExperimentReference).\
