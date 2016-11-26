@@ -665,6 +665,7 @@ class PyramidBuilder(ClusterRoutines):
                 mapobject_type.max_poly_zoom = max_zoom
                 mapobject_type_id = mapobject_type.id
 
+                logger.debug('delete existing static mapobjects')
                 delete_mapobjects_cascade(
                     self.experiment_id, [mapobject_type_id]
                 )
