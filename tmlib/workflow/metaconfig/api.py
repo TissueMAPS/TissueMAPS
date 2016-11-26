@@ -192,18 +192,8 @@ class MetadataConfigurator(ClusterRoutines):
             )
             mdhandler.configure_metadata_from_filenames(
                 plate_dimensions=plate_dimensions,
-                regex=batch['regex']
+                regex=regexp
             )
-            if (batch['regex'] is None and
-                    mdhandler.IMAGE_FILE_REGEX_PATTERN is None):
-                logger.warning(
-                    'required metadata information is still missing: "%s"',
-                    '", "'.join(missing)
-                )
-                logger.info(
-                    'you can provide a regular expression in order to '
-                    'retrieve the missing information from filenames'
-                )
         missing = mdhandler.determine_missing_metadata()
         if missing:
             raise MetadataError(
