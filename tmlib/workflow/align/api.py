@@ -148,6 +148,7 @@ class ImageRegistrator(ClusterRoutines):
                     job_descriptions['run'].append({
                         'id': job_count,
                         'input_ids': input_ids,
+                        'smooth': args.smooth,
                         'inputs': dict(),
                         'outputs': dict(),
                     })
@@ -191,7 +192,9 @@ class ImageRegistrator(ClusterRoutines):
                         'calculate shifts for cycle %d', target_file.cycle_id
                     )
                     target_img = target_file.get().project().array
-                    y, x = reg.calculate_shift(target_img, reference_img)
+                    y, x = reg.calculate_shift(
+                        target_img, reference_img, batch['smooth']
+                    )
 
                     session.get_or_create(
                         tm.SiteShift,

@@ -190,9 +190,10 @@ class MetadataConfigurator(ClusterRoutines):
                 'try to retrieve missing metadata from filenames '
                 'using regular expression'
             )
+            if regexp is None:
+                logger.warn('no regular expression provided')
             mdhandler.configure_metadata_from_filenames(
-                plate_dimensions=plate_dimensions,
-                regex=regexp
+                plate_dimensions=plate_dimensions, regex=regexp
             )
         missing = mdhandler.determine_missing_metadata()
         if missing:
