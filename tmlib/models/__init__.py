@@ -35,12 +35,17 @@ It further provides reference to existing *experiments*
 and information on *experiment*-specific user permissions
 (see :class:`ExperimentShare <tmlib.models.experiment.ExperimentShare>`).
 
-*Main* and *experiment*-specific databases schemas can be accessed
+*Main* and *experiment*-specific database schemas can be accessed
 programmatically using :class:`MainSession <tmlib.models.utils.MainSession>` or
 :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, respectively.
 These sessions provide a database transaction that bundles all enclosing
 statements into an all-or-nothing operation to ensure that either all or no
-changes are persisted in the database.
+changes are persisted in the database. The transaction will be automatically
+committed or rolled back in case an error occurs.
+The ``session`` context exposes an instance of
+:class:`SQLAlchemySession <tmlib.models.utils.SQLAlchemySession>` and queries
+return instances of data model classes derived from
+:class:`ExperimentModel <tmlib.models.base.ExperimentModel>`:
 
 .. code-block:: python
 
@@ -50,13 +55,23 @@ changes are persisted in the database.
         plates = session.query(tm.Plates).all()
         print plates
         print plates[0].name
+        print plates[0].acquisitions
 
-Some *SQL* statements cannot be performed within a transaction. To this end,
+Some *SQL* statements cannot be performed within a transaction. In addition,
+the *ORM* comes with a performance overhead and is not optimal for inserting
+or updating a large number of rows. In these situations,
 :class:`MainConnection <tmlib.models.utils.MainConnection>` or
 :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>` can
 be used. These classes create individual database connections and bypass the
-*ORM*. *Sessions* and *connections* have a different interface, however.
-While *sessions* use the *ORM* *connections* requires raw *SQL* statements.
+*ORM*. They futher make use of *autocommit* mode, where each statement gets
+directly committed such that all changes are immediately effective.
+*Sessions* and *connections* are entirely different beasts and expose a
+different interface. While *sessions* use the *ORM*, *connections* requires
+raw *SQL* statements. In addition, they don't return instance of data model
+classes, but light-weight instances of a
+`namedtuple <https://docs.python.org/2/library/collections.html#collections.namedtuple>`_. Similar to data models, columns can be accessed via
+attributes, but the objects only return the query result and have no relations
+to other objects:
 
 .. code-block:: python
 
@@ -68,44 +83,45 @@ While *sessions* use the *ORM* *connections* requires raw *SQL* statements.
         print plates
         print plates[0].name
 
-Warning
--------
-The *sessions* and *connections* utility classes automatically set the
+Note
+----
+The *session* and *connection* contexts automatically add the
 experiment-specific schema to the
 `search path <https://www.postgresql.org/docs/current/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_
 at runtime. To access data models outside the scope of a *session* or
 *connection*, you either need to set the search path manually or specify the
-schema, e.g. ``SELECT * FROM experiment_1.plates``.
+schema explicitly, e.g. ``SELECT * FROM experiment_1.plates``.
 
 Note
 ----
 Some of the data models can be distributed, i.e. the respective tables can be
-sharded to scale out the database backend on a cluster.
-To this end, *TissueMAPS* uses
-`Citus <https://docs.citusdata.com/en/stable/index.html>`_, a
-`PostgreSQL extension <https://www.postgresql.org/docs/current/static/extend-extensions.html>`_.
+sharded accross different servers to scale out the database backend over a
+cluster. To this end, *TissueMAPS* uses
+`Citus <https://docs.citusdata.com/en/stable/index.html>`_.
 Distributed models are flagged with ``__distribute_by_replication__`` or
-``__distribute_by_hash__``, which will either replicate tables
-(so called "reference" tables) or distribute them accross all available
-database server nodes. *Citus* functionality is implemented in form of a
-`SQLAlchemy dialect <http://docs.sqlalchemy.org/en/latest/dialects/>`_ named
-``citus``. It can be used by setting the
-:attr:`db_driver <tmlib.config.DefaultConfig.db_driver>` configuration variable
-to ``citus``. Note, however, that the extension must have been installed on
-all nodes and worker nodes must have added on the master node.
-For more details on how to set up a database cluster, please refer to
-:doc:`setup_and_deployment`.
+``__distribute_by_hash__``, which will either replicate the table
+(so called "reference" table) or distribute it accross all available
+database server nodes. *Citus* functionality is implemented in form of the
+`dialect <http://docs.sqlalchemy.org/en/latest/dialects/>`_ named ``citus``,
+which automatically distributes tables. To make use of table distribution,
+you need to set the :attr:`db_driver <tmlib.config.DefaultConfig.db_driver>`
+configuration variable to ``citus``. Note, however, that the extension must
+have been installed on all database servers and worker nodes must have been
+registered on the master node.For more details on how to set up a database
+cluster, please refer to :doc:`setup_and_deployment`.
 
 Warning
 -------
 Distributed tables can be accessed via the *ORM* for reading (``SELECT``) using
-:class:`MainSession <tmlib.models.utils.MainSession>` or
 :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`; however,
 they cannot be updated (``INSERT`` or ``UPDATE``) via the *ORM*,
 because *Citus* doesn't support multi-statement transactions for distributed
-tables. These tables must therefore be updated using either
-:class:`MainConnection <tmlib.models.utils.MainConnection>` or
+tables. These tables must therefore be updated using
 :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`.
+*Citus* currently also doesn't support ``FOREIGN KEY`` constraints on
+distributed tables. For consistency, distributed tables generally have no
+foreign keys, even if the normal ``postgresql`` driver is used. Care must
+therefore be taken when deleting objects to keep data consistent.
 
 '''
 
