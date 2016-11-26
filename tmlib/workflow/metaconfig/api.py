@@ -188,8 +188,7 @@ class MetadataConfigurator(ClusterRoutines):
                 'using regular expression'
             )
             mdhandler.configure_metadata_from_filenames(
-                plate_dimensions=plate_dimensions,
-                regex=batch['regex']
+                plate_dimensions=plate_dimensions, regex=regexp
             )
             if (batch['regex'] is None and
                     mdhandler.IMAGE_FILE_REGEX_PATTERN is None):

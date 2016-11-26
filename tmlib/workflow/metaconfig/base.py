@@ -508,9 +508,6 @@ class MetadataHandler(object):
             )
 
         if not regex:
-            logger.info('using default regular expression')
-            regex = self.IMAGE_FILE_REGEX_PATTERN
-        if not regex:
             raise RegexError('No regular expression provided.')
 
         provided_fields = re.findall(r'\(\?P\<(\w+)\>', regex)
