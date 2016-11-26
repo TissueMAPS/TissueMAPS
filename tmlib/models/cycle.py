@@ -18,6 +18,7 @@ import logging
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.base import DirectoryModel, DateMixIn
 from tmlib.models.utils import remove_location_upon_delete
@@ -83,18 +84,26 @@ class Cycle(DirectoryModel, DateMixIn):
         self.tpoint = tpoint
         self.plate_id = plate_id
 
-    @autocreate_directory_property
+    @hybrid_property
     def location(self):
         '''str: location were cycle content is stored'''
-        if self.id is None:
-            raise AttributeError(
-                'Cycle "%s" doesn\'t have an entry in the database yet. '
-                'Therefore, its location cannot be determined.' % self.name
+        if self._location is None:
+            if self.id is None:
+                raise AttributeError(
+                    'Cycle "%s" doesn\'t have an entry in the database yet. '
+                    'Therefore, its location cannot be determined.' % self.name
+                )
+            self._location = os.path.join(
+                self.plate.cycles_location,
+                CYCLE_LOCATION_FORMAT.format(id=self.id)
             )
-        return os.path.join(
-            self.plate.cycles_location,
-            CYCLE_LOCATION_FORMAT.format(id=self.id)
-        )
+            if not os.path.exists(self._location):
+                logger.debug(
+                    'create location for cycle #%d: %s',
+                    self.index, self._location
+                )
+                os.mkdir(self._location)
+        return self._location
 
     @autocreate_directory_property
     def channel_images_location(self):
