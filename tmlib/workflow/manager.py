@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 
 
-class WorkflowManager(SubmissionManager):
+class WorkflowManager(WorkflowSubmissionManager):
 
     '''Command line interface for submitting, and monitoring
     `TissueMAPS` workflows.
