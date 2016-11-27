@@ -419,16 +419,17 @@ class Experiment(DirectoryModel):
     def plate_grid(self):
         '''numpy.ndarray[int]: IDs of plates arranged according to
         their relative position of the plate within the experiment overview
-        image
+        image (sorted row-wise by plate names)
         '''
         n = len(self.plates)
         dimensions = guess_stitch_dimensions(n)
         cooridinates = itertools.product(
-            range(dimensions[0]), range(dimensions[1])
+            range(dimensions[1]), range(dimensions[0])
         )
         grid = np.zeros(dimensions, dtype=int)
-        for i, (y, x) in enumerate(cooridinates):
-            grid[y, x] = self.plates[i].id
+        plates = sorted(self.plates, key=lambda p: p.name)
+        for i, (x, y) in enumerate(cooridinates):
+            grid[y, x] = plates[i].id
         return grid
 
     def get_mapobject_type(self, name):
