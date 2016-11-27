@@ -78,7 +78,10 @@ class WorkflowSubmissionManager(SubmissionManager):
         '''
         with tm.utils.MainSession() as session:
             submission = session.query(tm.Submission).\
-                filter_by(experiment_id=self.experiment_id, program=self.name).\
+                filter_by(
+                    experiment_id=self.experiment_id,
+                    program=self.program_name
+                ).\
                 order_by(tm.Submission.id.desc()).\
                 first()
             return submission.top_task_id
