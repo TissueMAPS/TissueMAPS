@@ -311,7 +311,7 @@ class MetadataConfigurator(ClusterRoutines):
                 t_index = 0
                 w_index = 0
                 c_index = 0
-                for acquisition in plate.acquisitions:
+                for acquisition in reversed(plate.acquisitions):
                     logger.info('configure acquisition "%s"', acquisition.name)
                     df = pd.DataFrame(
                         session.query(
