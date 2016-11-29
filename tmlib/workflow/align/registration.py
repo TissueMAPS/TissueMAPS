@@ -16,12 +16,11 @@
 import logging
 import image_registration
 import numpy as np
-import mahotas as mh
 
 logger = logging.getLogger(__name__)
 
 
-def calculate_shift(target_image, reference_image, smooth=False, sigma=10):
+def calculate_shift(target_image, reference_image):
     '''Calculates the displacement between two images acquired at the same
     site in different cycles based on fast Fourier transform.
 
@@ -31,24 +30,13 @@ def calculate_shift(target_image, reference_image, smooth=False, sigma=10):
         image that should be registered
     reference_image: numpy.ndarray
         image that should be used as a reference
-    smooth: bool, optional
-        whether images should be smoothed with a low-pass filter before
-        calculating the shift between them (default: ``False``)
-    sigma: int, optional
-        standard deviation of the gaussian kernel used for smoothing
-        (default: ``10``)
 
     Returns
     -------
     Tuple[int]
         shift in y and x direction
     '''
-    if smooth:
-        t_img = mh.gaussian_filter(target_image, sigma=sigma)
-        r_img = mh.gaussian_filter(reference_image, sigma=sigman)
-    else:
-        t_img = target_image
-        r_img = reference_image
+    logger.debug('calculate shift between target and reference image')
     x, y, a, b = image_registration.chi2_shift(t_img, r_img)
     x = int(x)
     y = int(y)

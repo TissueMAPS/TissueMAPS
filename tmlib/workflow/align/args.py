@@ -40,10 +40,6 @@ class AlignBatchArguments(BatchArguments):
         help='number of image files that should be processed per job'
     )
 
-    smooth = Argument(
-        type=bool, default=False, flag='s',
-        help='whether images should be smoothed before calculating shift'
-    )
 
 @register_step_submission_args('align')
 class AlignSubmissionArguments(SubmissionArguments):
