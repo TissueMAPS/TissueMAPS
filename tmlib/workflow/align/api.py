@@ -132,7 +132,7 @@ class ImageRegistrator(ClusterRoutines):
                             if not files:
                                 # We don't raise an Execption here, because
                                 # there may be situations were an aquisition
-                                # failed at a given site in one cycle, but was
+                                # failed at a given site in one cycle, but
                                 # is present in the other cycles.
                                 logger.warning(
                                     'no files for site %d and cycle %d',
