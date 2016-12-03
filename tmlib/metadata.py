@@ -330,27 +330,27 @@ class PyramidTileMetadata(object):
 
     '''Class for metadata to describe a pyramid tile.'''
 
-    def __init__(self, level, row, column, channel_layer_id):
+    def __init__(self, z, y, x, channel_layer_id):
         '''
         Parameters
         ----------
-        level: int
+        z: int
             zero-based zoom level index
-        row: int
+        y: int
             zero-based row index
-        column: int
+        x: int
             zero-based column index
         channel_layer_id: int
             channel layer ID
         '''
-        self.level = level
-        self.row = row
-        self.column = column
+        self.z = z
+        self.y = y
+        self.x = x
         self.channel_layer_id = channel_layer_id
 
     def __repr__(self):
-        return '%s(level=%r, row=%r, column=%r, channel_layer_id=%r)' % (
-            self.__class__.__name__, self.level, self.row, self.column,
+        return '%s(z=%r, y=%r, x=%r, channel_layer_id=%r)' % (
+            self.__class__.__name__, self.z, self.y, self.x,
             self.channel_layer_id
         )
 

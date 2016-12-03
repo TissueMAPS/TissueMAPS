@@ -40,11 +40,11 @@ class ChannelLayerTile(ExperimentModel):
 
     __table_args__ = (
         UniqueConstraint(
-            'level', 'row', 'column', 'channel_layer_id'
+            'z', 'y', 'x', 'channel_layer_id'
         ),
         Index(
-            'ix_channel_layer_tiles_level_row_column_channel_layer_id',
-            'level', 'row', 'column', 'channel_layer_id'
+            'ix_channel_layer_tiles_z_y_x_channel_layer_id',
+            'z', 'y', 'x', 'channel_layer_id'
         )
     )
 
@@ -52,36 +52,36 @@ class ChannelLayerTile(ExperimentModel):
 
     _pixels = Column('pixels', BYTEA)
 
-    #: int: zero-based zoom level (z) index
-    level = Column(Integer)
+    #: int: zero-based zoom level index
+    z = Column(Integer)
 
-    #: int: zero-baesed vertical (y) index
-    row = Column(Integer)
+    #: int: zero-based coordinate on vertical axis
+    y = Column(Integer)
 
-    #: int: zero-baesed horizontal (x) index
-    column = Column(Integer)
+    #: int: zero-based coordinate on horizontal axis
+    x = Column(Integer)
 
     #: int: ID of parent channel layer
     channel_layer_id = Column(Integer, index=True, nullable=False)
 
-    def __init__(self, level, row, column, channel_layer_id, pixels=None):
+    def __init__(self, z, y, x, channel_layer_id, pixels=None):
         '''
         Parameters
         ----------
-        level: int
+        z: int
             zero-based zoom level index
-        row: int
-            zero-based row index of the tile at given `level`
-        column: int
-            zero-based column index of the tile at given zoom `level`
+        y: int
+            zero-based row index of the tile at given zoom level
+        x: int
+            zero-based column index of the tile at given zoom level
         channel_layer_id: int
             ID of the parent channel pyramid
         pixels: tmlib.image.PyramidTile, optional
             pixels array (default: ``None``)
         '''
-        self.row = row
-        self.column = column
-        self.level = level
+        self.y = y
+        self.x = x
+        self.z = z
         self.channel_layer_id = channel_layer_id
         self.pixels = pixels
 
@@ -90,7 +90,7 @@ class ChannelLayerTile(ExperimentModel):
         '''tmlib.image.PyramidTile: JPEG encoded tile'''
         # TODO: consider creating a custom SQLAlchemy column type
         metadata = PyramidTileMetadata(
-            level=self.level, row=self.row, column=self.column,
+            z=self.z, y=self.y, x=self.x,
             channel_layer_id=self.channel_layer.id
         )
         return PyramidTile.create_from_binary(self._pixels, metadata)
@@ -105,8 +105,8 @@ class ChannelLayerTile(ExperimentModel):
             self._pixels = None
 
     def __repr__(self):
-        return '<%s(id=%r, row=%r, column=%r, level=%r)>' % (
-            self.__class__.__name__, self.id, self.row, self.column, self.level
+        return '<%s(id=%r, z=%r, y=%r, x=%r)>' % (
+            self.__class__.__name__, self.id, self.z, self.y, self.x
         )
 
 

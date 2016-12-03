@@ -645,8 +645,10 @@ class MetadataHandler(object):
 
         n_sites = n_acquisitions_per_well[0]
 
-        logger.debug('stitch layout: {0}; stitch dimensions: {1}'.format(
-                     stitch_layout, stitch_dimensions))
+        logger.debug(
+            'stitch layout: {0}; stitch dimensions: {1}'.format(
+            stitch_layout, stitch_dimensions)
+        )
 
         coordinates = stitch.calc_grid_coordinates_from_layout(
             stitch_dimensions, stitch_layout

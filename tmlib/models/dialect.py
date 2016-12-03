@@ -52,7 +52,7 @@ class CitusDialect_psycopg2(PGDialect_psycopg2):
 @compiles(CreateTable, 'citus')
 def _compile_create_table(element, compiler, **kwargs):
     table = element.element
-    logger.info('create table "%s"', table.name)
+    logger.debug('create table "%s"', table.name)
     distribute_by_hash = 'distribute_by_hash' in table.info
     distribute_by_replication = 'distribute_by_replication' in table.info
     if distribute_by_hash or distribute_by_replication:
@@ -64,7 +64,7 @@ def _compile_create_table(element, compiler, **kwargs):
         if distribute_by_hash:
             distribution_column = table.info['distribute_by_hash']
             table = _update_table_constraints(table, distribution_column)
-            logger.info(
+            logger.debug(
                 'distribute table "%s" by hash "%s"', table.name,
                 distribution_column
             )
@@ -85,7 +85,7 @@ def _compile_create_table(element, compiler, **kwargs):
                     table.name
                 )
             table = _update_table_constraints(table, 'id')
-            logger.info('distribute table "%s" by replication', table.name)
+            logger.debug('distribute table "%s" by replication', table.name)
             sql = compiler.visit_create_table(element)
             sql += ';SELECT create_reference_table(\'%s.%s\');' % (
                 table.schema, table.name
@@ -129,12 +129,12 @@ def compile_array_agg(element, compiler, **kw):
 # @compiles(CreateTable, 'postgresxl')
 # def _compile_create_table(element, compiler, **kwargs):
 #     table = element.element
-#     logger.info('create table "%s"', table.name)
+#     logger.debug('create table "%s"', table.name)
 #     distribute_by_hash = 'distribute_by_hash' in table.info
 #     if distribute_by_hash:
 #         distribution_column = table.info['distribute_by_hash']
 #         table = _update_table_constraints(table, distribution_column)
-#         logger.info(
+#         logger.debug(
 #             'distribute table "%s" by hash "%s"', table.name,
 #             distribution_column
 #         )
@@ -142,7 +142,7 @@ def compile_array_agg(element, compiler, **kw):
 #         sql += ' DISTRIBUTE BY HASH(' + distribution_column + ')'
 #     else:
 #         # NOTE: In PostrgresXL every table needs to be distributed.
-#         logger.info(
+#         logger.debug(
 #             'distribute table "%s" by replication', table.name
 #         )
 #         sql = compiler.visit_create_table(element)

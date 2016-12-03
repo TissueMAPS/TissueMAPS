@@ -282,8 +282,8 @@ class ChannelLayer(ExperimentModel):
         Returns
         -------
         List[Dict[str, Tuple[int]]]
-            array of mappings with "row" and "column" coordinate as well as
-            "y_offset" and "x_offset" relative to `image_file` for each tile
+            array of mappings with *y* and *x* coordinate as well as
+            *y_offset* and *x_offset* relative to `image_file` for each tile
             whose pixels are part of `image_file`
 
         Note
@@ -334,31 +334,31 @@ class ChannelLayer(ExperimentModel):
             count()
         has_lower_neighbor = lower_neighbor_count > 0
         has_right_neighbor = right_neighbor_count > 0
-        for i, row in enumerate(row_info['indices']):
+        for i, y in enumerate(row_info['indices']):
             y_offset = row_info['offsets'][i]
             is_overhanging_vertically = (
                 (y_offset + self.tile_size) > site.image_size[0]
             )
-            is_not_lower_plate_border = (row + 1) != self.dimensions[-1][0]
+            is_not_lower_plate_border = (y + 1) != self.dimensions[-1][0]
             is_not_lower_well_border = (site.y + 1) != well.dimensions[0]
             if is_overhanging_vertically and has_lower_neighbor:
                 if (is_not_lower_plate_border and
                         is_not_lower_well_border):
                     continue
-            for j, col in enumerate(col_info['indices']):
+            for j, x in enumerate(col_info['indices']):
                 x_offset = col_info['offsets'][j]
                 is_overhanging_horizontally = (
                     (x_offset + self.tile_size) > site.image_size[1]
                 )
-                is_not_right_plate_border = (col + 1) != self.dimensions[-1][1]
+                is_not_right_plate_border = (x + 1) != self.dimensions[-1][1]
                 is_not_right_well_border = (site.x + 1) != well.dimensions[1]
                 if is_overhanging_horizontally and has_right_neighbor:
                     if (is_not_right_plate_border and
                             is_not_right_well_border):
                         continue
                 mappings.append({
-                    'row': row,
-                    'column': col,
+                    'y': y,
+                    'x': x,
                     'y_offset': y_offset,
                     'x_offset': x_offset
                 })
@@ -430,7 +430,7 @@ class ChannelLayer(ExperimentModel):
         -------
         Dict[Tuple[int], List[int]]
             IDs of images intersecting with a given tile hashable by tile
-            row, column coordinates
+            y, x coordinates
         '''
         experiment = self.channel.experiment
         session = Session.object_session(self)
@@ -461,8 +461,8 @@ class ChannelLayer(ExperimentModel):
                 x_offset_site, current_site.image_size[1],
                 experiment.horizontal_site_displacement
             )
-            for row, col in itertools.product(row_indices, col_indices):
-                mapping[(row, col)].append(fid)
+            for y, x in itertools.product(row_indices, col_indices):
+                mapping[(y, x)].append(fid)
 
         return mapping
 
@@ -495,21 +495,21 @@ class ChannelLayer(ExperimentModel):
                 x_offset_site, site.image_size[1],
                 experiment.horizontal_site_displacement
             )
-            for row, col in itertools.product(row_indices, col_indices):
-                mapping[(row, col)].append(fid)
+            for y, x in itertools.product(row_indices, col_indices):
+                mapping[(y, x)].append(fid)
         return mapping
 
-    def calc_coordinates_of_next_higher_level(self, level, row, column):
+    def calc_coordinates_of_next_higher_level(self, z, y, x):
         '''Calculates for a given tile the coordinates of the 4 tiles at the
         next higher zoom level that represent the tile at the current level.
 
         Parameters
         ----------
-        level: int
+        z: int
             zero-based index of the current zoom level
-        row: int
+        y: int
             zero-based index of the current row
-        column: int
+        x: int
             zero-based index of the current column
 
         Returns
@@ -519,14 +519,14 @@ class ChannelLayer(ExperimentModel):
         '''
         coordinates = list()
         experiment = self.channel.experiment
-        max_row, max_column = self.dimensions[level+1]
+        max_row, max_column = self.dimensions[z+1]
         rows = range(
-            row * experiment.zoom_factor,
-            (row * experiment.zoom_factor + experiment.zoom_factor - 1) + 1
+            y * experiment.zoom_factor,
+            (y * experiment.zoom_factor + experiment.zoom_factor - 1) + 1
         )
         cols = range(
-            column * experiment.zoom_factor,
-            (column * experiment.zoom_factor + experiment.zoom_factor - 1) + 1
+            x * experiment.zoom_factor,
+            (x * experiment.zoom_factor + experiment.zoom_factor - 1) + 1
         )
         for r, c in itertools.product(rows, cols):
             if r < max_row and c < max_column:

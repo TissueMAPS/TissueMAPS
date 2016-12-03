@@ -48,20 +48,16 @@ logger = logging.getLogger(__name__)
 
 
 _UPSERT_STATEMENT = '''
-    INSERT INTO channel_layer_tiles AS t (
-        level, row, "column", channel_layer_id, pixels
-    )
-    VALUES (
-        %(level)s, %(row)s, %(column)s, %(channel_layer_id)s, %(pixels)s
-    )
+    INSERT INTO channel_layer_tiles AS t (z, y, x, channel_layer_id, pixels)
+    VALUES (%(z)s, %(y)s, %(x)s, %(channel_layer_id)s, %(pixels)s)
     ON CONFLICT
-    ON CONSTRAINT channel_layer_tiles_level_row_column_channel_layer_id_key
+    ON CONSTRAINT channel_layer_tiles_z_y_x_channel_layer_id_key
     DO UPDATE
     SET pixels=%(pixels)s
-    WHERE t.level=%(level)s
-    AND t.row=%(row)s
-    AND t."column"=%(column)s
-    AND t.channel_layer_id=%(channel_layer_id)s;
+    WHERE t.channel_layer_id=%(channel_layer_id)s
+    AND t.z=%(z)s
+    AND t.y=%(y)s
+    AND t.x=%(x)s;
 '''
 
 
@@ -431,11 +427,10 @@ class PyramidBuilder(ClusterRoutines):
                 extra_file_map = layer.map_base_tile_to_images(file.site)
                 for t in tiles:
                     level = batch['level']
-                    row = t['row']
-                    column = t['column']
+                    row = t['y']
+                    column = t['x']
                     logger.debug(
-                        'create tile: level=%d, row=%d, column=%d',
-                        level, row, column
+                        'create tile: z=%d, y=%d, x=%d', level, row, column
                     )
                     tile = layer.extract_tile_from_image(
                         image_store[file.id], t['y_offset'], t['x_offset']
@@ -518,7 +513,7 @@ class PyramidBuilder(ClusterRoutines):
                             )
 
                     channel_layer_tiles.append({
-                        'level': level, 'row': row, 'column': column,
+                        'z': level, 'y': row, 'x': column,
                         'channel_layer_id': layer.id,
                         'pixels': psycopg2.Binary(tile.jpeg_encode().tostring())
                     })
@@ -548,7 +543,7 @@ class PyramidBuilder(ClusterRoutines):
                 zoom_factor = layer.zoom_factor
 
             logger.debug(
-                'creating tile: level=%d, row=%d, column=%d', level, row, column
+                'creating tile: z=%d, y=%d, x=%d', level, row, column
             )
             rows = np.unique([c[0] for c in coordinates])
             cols = np.unique([c[1] for c in coordinates])
@@ -559,12 +554,12 @@ class PyramidBuilder(ClusterRoutines):
                     for j, c in enumerate(cols):
                         conn.execute('''
                             SELECT pixels FROM channel_layer_tiles
-                            WHERE level=%(level)s
-                            AND "row"=%(row)s
-                            AND "column"=%(column)s
+                            WHERE z=%(z)s
+                            AND y=%(y)s
+                            AND x=%(x)s
                             AND channel_layer_id=%(channel_layer_id)s;
                         ''', {
-                            'level': level+1, 'row': r, 'column': c,
+                            'z': level+1, 'y': r, 'x': c,
                             'channel_layer_id': layer_id
                         })
                         pre_tile = conn.fetchone()
@@ -606,7 +601,7 @@ class PyramidBuilder(ClusterRoutines):
                 tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
                 conn.execute(
                     _UPSERT_STATEMENT, {
-                        'level': level, 'row': row, 'column': column,
+                        'z': level, 'y': row, 'x': column,
                         'channel_layer_id': layer_id,
                         'pixels': psycopg2.Binary(tile.jpeg_encode().tostring())
                     }
