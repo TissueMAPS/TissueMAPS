@@ -181,19 +181,9 @@ def get_channel_layer_tile(experiment_id, channel_layer_id):
             'get channel layer tile: x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
             x, y, z, channel_layer.zplane, channel_layer.tpoint
         )
-        layer_id = channel_layer.id
-
-    with tm.utils.ExperimentConnection(experiment_id) as connection:
-        connection.execute('''
-            SELECT pixels FROM channel_layer_tiles
-            WHERE level=%(level)s
-            AND "row"=%(row)s
-            AND "column"=%(column)s
-            AND channel_layer_id=%(channel_layer_id)s;
-        ''', {
-            'level': z, 'row': y, 'column': x, 'channel_layer_id': layer_id
-        })
-        tile = connection.fetchone()
+        tile = session.query(tm.ChannelLayerTile).\
+            filter_by(channel_layer_id=channel_layer.id, z=z, y=y, x=x).\
+            one_or_none()
         if tile is not None:
             pixels = np.frombuffer(tile.pixels, np.uint8)
         else:
