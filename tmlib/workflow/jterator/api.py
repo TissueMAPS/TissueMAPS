@@ -554,7 +554,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     if polygon.is_empty:
                         logger.warn(
                             'object #%d of type %s doesn\'t have a polygon',
-                            index, obj_name
+                            label, obj_name
                         )
                         continue
                     self._add_mapobject_segmentation(
