@@ -48,4 +48,4 @@ def main(label_image, plot=False):
     else:
         figure = str()
 
-    return Outputs(measurements, figure)
+    return Output(measurements, figure)
