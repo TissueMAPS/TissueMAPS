@@ -53,11 +53,11 @@ _UPSERT_STATEMENT = '''
     ON CONFLICT
     ON CONSTRAINT channel_layer_tiles_z_y_x_channel_layer_id_key
     DO UPDATE
-    SET pixels=%(pixels)s
-    WHERE t.channel_layer_id=%(channel_layer_id)s
-    AND t.z=%(z)s
-    AND t.y=%(y)s
-    AND t.x=%(x)s;
+    SET pixels = %(pixels)s
+    WHERE t.channel_layer_id = %(channel_layer_id)s
+    AND t.z = %(z)s
+    AND t.y = %(y)s
+    AND t.x = %(x)s;
 '''
 
 
