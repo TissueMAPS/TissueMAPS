@@ -52,6 +52,22 @@ def create_timestamp():
     return datetime.datetime.fromtimestamp(t).strftime('%H-%M-%S')
 
 
+def create_directory(location):
+    '''Creates a directory on disk in a safe way.
+
+    Parameters
+    ----------
+    location: str
+        absolute path to the directory that should be created
+    '''
+    try:
+        os.mkdir(location)
+    except OSError as err:
+        if err.errno != 17:
+            raise
+        pass
+
+
 def regex_from_format_string(format_string):
     '''Converts a format string with keywords into a named regular expression.
 
@@ -479,12 +495,7 @@ class autocreate_directory_property(object):
             )
         if not os.path.exists(value):
             logger.debug('create directory: %s', value)
-            try:
-                os.mkdir(value)
-            except OSError as err:
-                if err.errno != 17:
-                    raise
-                pass
+            create_directory(value)
         return value
 
 

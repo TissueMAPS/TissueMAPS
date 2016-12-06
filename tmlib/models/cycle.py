@@ -22,7 +22,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.base import DirectoryModel, DateMixIn
 from tmlib.models.utils import remove_location_upon_delete
-from tmlib.utils import autocreate_directory_property
+from tmlib.utils import autocreate_directory_property, create_directory
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ class Cycle(DirectoryModel, DateMixIn):
                     'create location for cycle #%d: %s',
                     self.index, self._location
                 )
-                os.mkdir(self._location)
+                create_directory(self._location)
         return self._location
 
     @autocreate_directory_property
