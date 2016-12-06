@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, Boolean
+from sqlalchemy import Column, String, Integer, Float, ForeignKey, Boolean, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
@@ -87,45 +88,40 @@ class FeatureValue(ExperimentModel):
     __tablename__ = 'feature_values'
 
     __table_args__ = (
-        UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
+        UniqueConstraint('tpoint', 'mapobject_id'),
+        Index('ix_feature_values_values', 'values', postgresql_using='gin')
     )
 
     __distribute_by_hash__ = 'mapobject_id'
 
-    #: float: the actual extracted feature value
-    value = Column(Float(precision=15))
+    #: Dict[str, float]: mapping of feature ID to value
+    values = Column(JSONB)
 
     #: int: zero-based time point index
     tpoint = Column(Integer, index=True)
 
-    #: int: ID of the parent feature
-    feature_id = Column(Integer, index=True, nullable=False)
-
     #: int: ID of the parent mapobject
     mapobject_id = Column(Integer, index=True, nullable=False)
 
-    def __init__(self, feature_id, mapobject_id, value=None, tpoint=None):
+    def __init__(self, mapobject_id, values={}, tpoint=None):
         '''
         Parameters
         ----------
-        feature_id: int
-            ID of parent feature
         mapobject_id: int
             ID of parent mapobject
-        value: float, optional
-            actual measurement (default: ``None``)
+        values: Dict[int, int], optional
+            mapping of feature ID to string (default: ``{}``)
         tpoint: int, optional
             zero-based time point index (default: ``None``)
         '''
         self.tpoint = tpoint
-        self.feature_id = feature_id
         self.mapobject_id = mapobject_id
-        self.value = value
+        self.values = values
 
     def __repr__(self):
         return (
-            '<FeatureValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
-            % (self.id, self.tpoint, self.mapobject_id, self.feature_id)
+            '<FeatureValue(id=%d, tpoint=%d, mapobject=%r)>'
+            % (self.id, self.tpoint, self.mapobject_id)
         )
 
 
@@ -209,22 +205,23 @@ def delete_features_cascade(experiment_id, is_aggregate):
         feature_ids = [f.id for f in features]
         if cfg.db_driver == 'citus':
             logger.info('delete feature values')
-            connection.execute('''
-                SELECT master_modify_multiple_shards(
-                    'DELETE FROM feature_values
-                     WHERE feature_id = ANY(%(feature_ids)s)'
-                );
-            ''', {
-                'feature_ids': feature_ids
-            })
+            # NOTE: fields can also be deleted using - more than once
+            for fid in feature_ids:
+                connection.execute('''
+                    SELECT master_modify_multiple_shards(
+                        'UPDATE feature_values SET values = values - %(feature_id)s;'
+                    );
+                ''', {
+                    'feature_id': str(fid)
+                })
         else:
             logger.info('delete feature values')
-            connection.execute('''
-                DELETE FROM feature_values
-                WHERE feature_id = ANY(%(feature_ids)s);
-            ''', {
-                'feature_ids': feature_ids
-            })
+            for fid in feature_ids:
+                connection.execute('''
+                    UPDATE feature_values SET values = values - %(feature_id)s;
+                ''', {
+                    'feature_id': str(fid)
+                })
         connection.execute('''
             DELETE FROM features
             WHERE id = ANY(%(feature_ids)s)

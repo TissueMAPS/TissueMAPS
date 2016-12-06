@@ -572,25 +572,18 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         conn, fname, mapobject_type_ids[obj_name], False
                     )
 
-                # Create an entry for each measured featured value.
-                # This is quite a heavy write operation, since we have nxp
-                # feature values, where n is the number of mapobjects and
-                # p the number of extracted features.
-                for t, measurement in enumerate(segm_objs.measurements):
-                    if measurement.empty:
+                for t, data in enumerate(segm_objs.measurements):
+                    if data.empty:
                         logger.warn('empty measurement at time point %d', t)
                         continue
-                    for fname, values in measurement.iteritems():
+                    for label, vals in data.rename(columns=feature_ids).iterrows():
                         logger.info(
-                            'add values for feature "%s" at time point %d',
-                            fname, t
+                            'add values for object #%d at time point %d',
+                            label, t
                         )
-                        for label, value in values.iteritems():
-                            logger.debug('add value for object %d', label)
-                            self._add_feature_value(
-                                conn, value, mapobject_ids[label],
-                                feature_ids[fname], t
-                            )
+                        self._add_feature_values(
+                            conn, dict(vals), mapobject_ids[label], t
+                        )
 
     def run_job(self, batch):
         '''Runs the pipeline, i.e. executes modules sequentially. After
@@ -779,21 +772,30 @@ class ImageAnalysisPipeline(ClusterRoutines):
                                     'feature_id', 'tpoint'
                                 ]
                             )
+                            if len(np.unique(df.Count)) > 1:
+                                raise ValueError(
+                                    'Some feature values were not cleaned up '
+                                    'correctly.'
+                                )
 
                             tpoints = np.unique(df.tpoint)
-                            for (stat, c_fid), p_fid in feature_map.iteritems():
-                                for t in tpoints:
-                                    logger.debug(
-                                        'insert value for time point %d', t
-                                    )
+                            for t in tpoints:
+                                logger.debug(
+                                    'insert values at time point %d', t
+                                )
+                                vals = dict()
+                                for (stat, c_fid), p_fid in feature_map.iteritems():
                                     index = np.logical_and(
                                         df.feature_id == c_fid,
                                         df.tpoint == t
                                     )
-                                    value = float(df.loc[index, stat])
-                                    self._add_feature_value(
-                                        conn, value, parent.id, p_fid, t
-                                    )
+                                    if stat == 'Std' and int(df.loc[index, 'Count']) == 1:
+                                        vals[p_fid] = 'NaN'
+                                    else:
+                                        vals[p_fid] = df.loc[index, stat].values[0]
+                                self._add_feature_values(
+                                    conn, vals, parent.id, t
+                                )
 
                     # TODO: population context as a separate step
                     # tm.types.ST_Expand()
@@ -839,17 +841,20 @@ class ImageAnalysisPipeline(ClusterRoutines):
         return feature_id
 
     @staticmethod
-    def _add_feature_value(conn, value, mapobject_id, feature_id, tpoint):
+    def _add_feature_values(conn, values, mapobject_id, tpoint):
+        from psycopg2.extras import Json
         conn.execute('''
-            INSERT INTO feature_values (
-                value, mapobject_id, feature_id, tpoint
-            )
-            VALUES (
-                %(value)s, %(mapobject_id)s, %(feature_id)s, %(tpoint)s)
+            INSERT INTO feature_values AS v (values, mapobject_id, tpoint)
+            VALUES (%(values)s, %(mapobject_id)s, %(tpoint)s)
+            ON CONFLICT
+            ON CONSTRAINT feature_values_tpoint_mapobject_id_key
+            DO UPDATE
+            SET values = v.values || %(values)s
+            WHERE v.mapobject_id = %(mapobject_id)s
+            AND v.tpoint = %(tpoint)s;
         ''', {
-            'value': float(value),
+            'values': Json(values),
             'mapobject_id': mapobject_id,
-            'feature_id': feature_id,
             'tpoint': tpoint
         })
 
@@ -865,18 +870,26 @@ class ImageAnalysisPipeline(ClusterRoutines):
             'mapobject_id': parent_mapobject_id
         })
         parent_geom_poly = conn.fetchone()[0]
+        # TODO: aggregate JSONB
         conn.execute('''
             SELECT
-                avg(v.value), stddev(v.value), sum(v.value),
-                min(v.value), max(v.value), count(v.value),
-                v.feature_id, v.tpoint
-            FROM feature_values v
-            JOIN mapobjects m ON m.id = v.mapobject_id
-            JOIN mapobject_segmentations s ON s.mapobject_id = m.id
-            WHERE v.value is NOT NULL
-            AND m.mapobject_type_id = %(mapobject_type_id)s
-            AND ST_CoveredBy(s.geom_poly, %(geom_poly)s)
-            GROUP BY (v.feature_id, v.tpoint);
+                avg(value::double precision),
+                stddev(value::double precision),
+                sum(value::double precision),
+                min(value::double precision),
+                max(value::double precision),
+                count(value::double precision),
+                key::integer,
+                tmp.tpoint
+            FROM (
+                SELECT v.tpoint, v.values FROM feature_values v
+                JOIN mapobjects m ON m.id = v.mapobject_id
+                JOIN mapobject_segmentations s ON s.mapobject_id = m.id
+                WHERE v.values is NOT NULL
+                AND m.mapobject_type_id = %(mapobject_type_id)s
+                AND ST_CoveredBy(s.geom_poly, %(geom_poly)s)
+            ) AS tmp, jsonb_each_text(tmp.values)
+            GROUP BY (key, tmp.tpoint);
         ''', {
             'mapobject_type_id': child_mapobject_type_id,
             'geom_poly': parent_geom_poly
