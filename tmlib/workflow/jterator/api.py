@@ -559,7 +559,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         continue
                     self._add_mapobject_segmentation(
                         conn, mapobject_ids[label], polygon, t, z,
-                        store['site_id'], bool(border_indices[t][label])
+                        store['site_id'], bool(border_indices[t][label]),
+                        self.project.name
                     )
 
                 logger.info(
@@ -915,19 +916,19 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     @staticmethod
     def _add_mapobject_segmentation(conn, mapobject_id, polygon, t, z,
-            site_id, is_border):
+            site_id, is_border, pipeline):
         conn.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id,
                 geom_poly, geom_centroid,
                 tpoint, zplane,
-                site_id, is_border
+                site_id, is_border, pipeline
             )
             VALUES (
                 %(mapobject_id)s,
                 %(geom_poly)s, %(geom_centroid)s,
                 %(tpoint)s, %(zplane)s,
-                %(site_id)s, %(is_border)s
+                %(site_id)s, %(is_border)s, %(pipeline)s
             );
         ''', {
             'mapobject_id': mapobject_id,
@@ -935,5 +936,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
             'geom_centroid': polygon.centroid.wkt,
             'tpoint': t, 'zplane': z,
             'site_id': site_id,
-            'is_border': is_border
+            'is_border': is_border,
+            'pipeline': pipeline
         })
