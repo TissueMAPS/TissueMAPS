@@ -721,11 +721,18 @@ class Connection(object):
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         if self._schema:
             logger.debug('set search path for schema "%s"', self._schema)
+            logger.debug('make modifications commutative')
             self._cursor.execute('''
                 SET search_path TO 'public', %(schema)s;
             ''', {
                 'schema': self._schema
             })
+            # For performance reasons we UPDATE in parallel:
+            # https://docs.citusdata.com/en/v6.0/performance/scaling_data_ingestion.html#real-time-updates-0-50k-s
+            if cfg.db_driver == 'citus':
+                self._cursor.execute('''
+                    SET citus.all_modifications_commutative TO on;
+                ''')
         return self._cursor
 
     def __exit__(self, except_type, except_value, except_trace):
