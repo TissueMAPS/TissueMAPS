@@ -185,7 +185,11 @@ def get_channel_layer_tile(experiment_id, channel_layer_id):
             filter_by(channel_layer_id=channel_layer.id, z=z, y=y, x=x).\
             one_or_none()
         if tile is not None:
-            pixels = np.frombuffer(tile.pixels, np.uint8)
+            # TODO: We shouldn't access the "privat" attribute, but it's more
+            # performant in this case, since it provides direct access to the
+            # column without accessing the property.
+            pixels = tile._pixels
+            # pixels = tile.pixels.jpeg_encode()
         else:
             logger.warn('tile does not exist - create empty')
             tile = PyramidTile.create_as_background()
