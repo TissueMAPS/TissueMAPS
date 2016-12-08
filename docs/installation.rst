@@ -498,7 +498,17 @@ Installation
 
 Install the *tmserver* application via `pip`::
 
-    pip install tmserver
+    % pip install tmserver
+    mkdir tmserver
+    cd tmserver
+    git clone https://github.com/TissueMAPS/TmServer.git .
+    
+    install Cython: 
+    pip install Cython
+
+    and then run the script:
+
+    https://github.com/TissueMAPS/TissueMAPS#installation-of-tissuemaps-python-packages-during-pre-release-phase
 
 .. _application-configuration:
 
@@ -516,6 +526,14 @@ Create a `database cluster <https://www.postgresql.org/docs/current/static/creat
 
         .. code-block:: none
 
+            To create postgres user:
+            
+            sudo -u postgres psql postgres
+            \password postgres
+            \q
+            
+            To access the postgres user:
+            
             sudo su - postgres
             /usr/lib/postgresql/9.6/bin/initdb -D /var/lib/postgresql/9.6/main
             /usr/lib/postgresql/9.6/bin/pg_ctl -D /var/lib/postgresql/9.6/main -l logfile restart
