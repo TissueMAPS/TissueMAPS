@@ -168,10 +168,13 @@ class MetadataConfigurator(ClusterRoutines):
                 for f in acquisition.microscope_image_files
             }
 
-        with MetadataReader() as mdreader:
-            omexml_metadata = mdreader.read(
-                metadata_filenames, omexml_images.keys()
-            )
+        if metadata_filenames:
+            with MetadataReader() as mdreader:
+                omexml_metadata = mdreader.read(
+                    metadata_filenames, omexml_images.keys()
+                )
+        else:
+            omexml_metadata = None
 
         MetadataHandler = metadata_handler_factory(batch['microscope_type'])
         mdhandler = MetadataHandler(omexml_images, omexml_metadata)
