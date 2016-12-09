@@ -278,6 +278,8 @@ def get_channel_image(experiment_id, channel_name):
         :query y: the y-coordinate (required)
         :query tpoint: the time point (required)
         :query zplane: the z-plane (required)
+        :query illumcorr: correct image for illumination artifacts (optional)
+        :query align: align image relative to reference cycle (optional)
 
         :statuscode 200: no error
         :statuscode 404: no matching image found
@@ -296,6 +298,7 @@ def get_channel_image(experiment_id, channel_name):
     tpoint = request.args.get('tpoint', type=int)
     zplane = request.args.get('zplane', type=int)
     illumcorr = request.args.get('correct', type=bool)
+    align = request.args.get('align', type=bool)
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         experiment_name = experiment.name
@@ -337,7 +340,8 @@ def get_channel_image(experiment_id, channel_name):
                 )
             stats = illumstats_file.get()
             img = img.correct(stats)
-    img = img.align()
+    if align:
+        img = img.align()
     f = StringIO()
     f.write(img.png_encode())
     f.seek(0)
