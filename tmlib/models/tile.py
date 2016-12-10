@@ -91,7 +91,7 @@ class ChannelLayerTile(ExperimentModel):
         # TODO: consider creating a custom SQLAlchemy column type
         metadata = PyramidTileMetadata(
             z=self.z, y=self.y, x=self.x,
-            channel_layer_id=self.channel_layer.id
+            channel_layer_id=self.channel_layer_id
         )
         return PyramidTile.create_from_binary(self._pixels, metadata)
 
