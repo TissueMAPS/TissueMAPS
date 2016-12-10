@@ -727,7 +727,9 @@ class Connection(object):
             ''', {
                 'schema': self._schema
             })
-            # For performance reasons we UPDATE in parallel:
+            # NOTE: To achieve high throughput on UPDATE or DELETE, we
+            # need to perform queries in parallel under the assumption that
+            # order of records is not important (i.e. that they are commutative).
             # https://docs.citusdata.com/en/v6.0/performance/scaling_data_ingestion.html#real-time-updates-0-50k-s
             if cfg.db_driver == 'citus':
                 self._cursor.execute('''
