@@ -28,6 +28,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def create_partitions(li, n):
+    '''Creates a list of lists from a list, where each sublist has length n.
+
+    Parameters
+    ----------
+    li: list
+        list that should be partitioned
+    n: int
+        number of items per sublist
+
+    Returns
+    -------
+    List[list]
+    '''
+    n = max(1, n)
+    return [li[i:i + n] for i in range(0, len(li), n)]
+
+
 def create_datetimestamp():
     '''Creates a datetimestamp in the form "year-month-day_hour-minute-second".
 

@@ -179,9 +179,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
     @staticmethod
     def _create_batches(li, n):
-        # Create a list of lists from a list, where each sublist has length n
-        n = max(1, n)
-        return [li[i:i + n] for i in range(0, len(li), n)]
+        return utils.create_partitions(li, n)
 
     @utils.autocreate_directory_property
     def step_location(self):

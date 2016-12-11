@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, Boolean
+from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
@@ -38,7 +39,7 @@ class Feature(ExperimentModel):
 
     __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
 
-    #: str: name given to the feature (e.g. by jterator)
+    #: str: name given to the feature
     name = Column(String, index=True)
 
     #: bool: whether the feature is an aggregate of child object features
@@ -87,45 +88,40 @@ class FeatureValue(ExperimentModel):
     __tablename__ = 'feature_values'
 
     __table_args__ = (
-        UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
+        UniqueConstraint('tpoint', 'mapobject_id'),
+        # Index('ix_feature_values_values', 'values', postgresql_using='gin')
     )
 
     __distribute_by_hash__ = 'mapobject_id'
 
-    #: float: the actual extracted feature value
-    value = Column(Float(precision=15))
+    #: Dict[str, float]: mapping of feature ID to value
+    values = Column(JSONB)
 
     #: int: zero-based time point index
     tpoint = Column(Integer, index=True)
 
-    #: int: ID of the parent feature
-    feature_id = Column(Integer, index=True, nullable=False)
-
     #: int: ID of the parent mapobject
     mapobject_id = Column(Integer, index=True, nullable=False)
 
-    def __init__(self, feature_id, mapobject_id, value=None, tpoint=None):
+    def __init__(self, mapobject_id, values={}, tpoint=None):
         '''
         Parameters
         ----------
-        feature_id: int
-            ID of parent feature
         mapobject_id: int
             ID of parent mapobject
-        value: float, optional
-            actual measurement (default: ``None``)
+        values: Dict[int, int], optional
+            mapping of feature ID to string (default: ``{}``)
         tpoint: int, optional
             zero-based time point index (default: ``None``)
         '''
         self.tpoint = tpoint
-        self.feature_id = feature_id
         self.mapobject_id = mapobject_id
-        self.value = value
+        self.values = values
 
     def __repr__(self):
         return (
-            '<FeatureValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
-            % (self.id, self.tpoint, self.mapobject_id, self.feature_id)
+            '<FeatureValue(id=%d, tpoint=%d, mapobject=%r)>'
+            % (self.id, self.tpoint, self.mapobject_id)
         )
 
 
@@ -141,8 +137,13 @@ class LabelValue(ExperimentModel):
 
     __distribute_by_hash__ = 'mapobject_id'
 
-    #: float: the actual label value
-    value = Column(Float(precision=15))
+    __table_args__ = (
+        UniqueConstraint('tpoint', 'mapobject_id'),
+        # Index('ix_label_values_values', 'values', postgresql_using='gin')
+    )
+
+    #: Dict[str, float]: mapping of tool result ID to label value
+    values = Column(JSONB, nullable=False)
 
     #: int: zero-based time point index
     tpoint = Column(Integer, index=True)
@@ -150,39 +151,33 @@ class LabelValue(ExperimentModel):
     #: int: ID of the parent mapobject
     mapobject_id = Column(Integer, index=True, nullable=False)
 
-    #: int: ID of the parent label layer
-    tool_result_id = Column(Integer, index=True, nullable=False)
-
-    def __init__(self, tool_result_id, mapobject_id, value=None, tpoint=None):
+    def __init__(self, mapobject_id, values={}, tpoint=None):
         '''
         Parameters
         ----------
-        tool_result_id: int
-            ID of the parent tool result
         mapobject_id: int
             ID of the mapobject to which the value is assigned
-        value:
-            label value (default: ``None``)
+        values: Dict[str, float]
+            mapping of parent tool result ID to label value (default: ``{}``)
         tpoint: int, optional
             zero-based time point index (default: ``None``)
         '''
         self.tpoint = tpoint
-        self.value = value
-        self.label_id = label_id
+        self.values = values
         self.mapobject_id = mapobject_id
 
     def __repr__(self):
         return (
-            '<LabelValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
-            % (self.id, self.tpoint, self.mapobject_id, self.feature_id)
+            '<LabelValue(id=%d, tpoint=%d, mapobject=%r)>'
+            % (self.id, self.tpoint, self.mapobject_id)
         )
 
 
 def delete_features_cascade(experiment_id, is_aggregate):
     '''Deletes all instances of
     :class:`Feature <tmlib.models.feature.Feature>` as well as
-    as "children" instances of
-    :class:`FeatureValue <tmlib.models.feature.FeatureValue>`.
+    as the referencing fields in
+    :attr:`FeatureValue.values <tmlib.models.feature.FeatureValue.values>`.
 
     Parameters
     ----------
@@ -194,40 +189,44 @@ def delete_features_cascade(experiment_id, is_aggregate):
     Note
     ----
     This is not possible via the standard *SQLAlchemy* approach, because the
-    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
-    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+    table of :class:`FeatureValue <tmlib.models.feature.FeatureValue>`
     might be distributed over a cluster.
     '''
     with ExperimentConnection(experiment_id) as connection:
         connection.execute('''
-            SELECT id FROM features
+            SELECT id, mapobject_type_id FROM features
             WHERE is_aggregate = %(is_aggregate)s;
         ''', {
             'is_aggregate': is_aggregate
         })
         features = connection.fetchall()
         feature_ids = [f.id for f in features]
-        if cfg.db_driver == 'citus':
+        mapobject_type_ids = [f.mapobject_type_id for f in features]
+        if feature_ids:
+            if cfg.db_driver == 'citus':
+                sql = 'SELECT master_modify_multiple_shards(\''
+            else:
+                sql = ''
             logger.info('delete feature values')
+            # Delete fields with values for selected features
+            sql += 'UPDATE feature_values AS v SET values = values - '
+            placeholders = ['%%(f%d)s' % i for i in range(len(feature_ids))]
+            sql += ' - '.join(placeholders)
+            sql += '''
+                FROM mapobjects AS m
+                WHERE m.id = v.mapobject_id
+                AND m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
+            '''
+            if cfg.db_driver == 'citus':
+                sql += '\')'
+            placeholder_mapping = {
+                'f%d' % i: str(fid) for i, fid in enumerate(feature_ids)
+            }
+            placeholder_mapping['mapobject_type_ids'] = mapobject_type_ids
+            connection.execute(sql, placeholder_mapping)
             connection.execute('''
-                SELECT master_modify_multiple_shards(
-                    'DELETE FROM feature_values
-                     WHERE feature_id = ANY(%(feature_ids)s)'
-                );
+                DELETE FROM features
+                WHERE id = ANY(%(feature_ids)s)
             ''', {
                 'feature_ids': feature_ids
             })
-        else:
-            logger.info('delete feature values')
-            connection.execute('''
-                DELETE FROM feature_values
-                WHERE feature_id = ANY(%(feature_ids)s);
-            ''', {
-                'feature_ids': feature_ids
-            })
-        connection.execute('''
-            DELETE FROM features
-            WHERE id = ANY(%(feature_ids)s)
-        ''', {
-            'feature_ids': feature_ids
-        })

@@ -33,7 +33,7 @@ from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.result import ToolResult
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
 from tmlib.models.feature import Feature
-from tmlib.utils import autocreate_directory_property
+from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
 
@@ -260,10 +260,10 @@ class MapobjectSegmentation(ExperimentModel):
     pipeline = Column(String, index=True)
 
     #: int: zero-based index in time series
-    tpoint = Column(Integer, index=True)
+    tpoint = Column(Integer, index=True, nullable=False)
 
     #: int: zero-based index in z stack
-    zplane = Column(Integer, index=True)
+    zplane = Column(Integer, index=True, nullable=False)
 
     #: EWKT polygon geometry
     geom_poly = Column(Geometry('POLYGON'))
@@ -417,76 +417,69 @@ def delete_mapobject_types_cascade(experiment_id, is_static,
                 delete()
 
 
+def _compile_distributed_query(sql):
+    # This is required for modification of distributed tables
+    # TODO: alter queries in "citus" dialect
+    if cfg.db_driver == 'citus':
+        return '''
+            SELECT master_modify_multiple_shards('
+                {query}
+            ')
+        '''.format(query=sql)
+    else:
+        return sql
+
 
 def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
     # NOTE: Using ANY with an ARRAY is more performant than using IN.
+    # TODO: Figure out a way to DELETE entries from a hash-distributed table
+    # with a complex WHERE clause.
     if mapobject_ids:
+        mapobject_id_partitions = create_partitions(mapobject_ids, 100000)
         with ExperimentConnection(experiment_id) as connection:
-            if cfg.db_driver == 'citus':
-                logger.info('delete mapobjects')
-                connection.execute('''
-                    SELECT master_modify_multiple_shards(
-                        \'DELETE FROM mapobject_segmentations
-                          WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
-                    );
-                ''', {
-                    'mapobject_ids': mapobject_ids
+
+            logger.info('delete mapobject segmentations')
+            sql = '''
+                DELETE FROM mapobject_segmentations
+                WHERE mapobject_id = ANY(%(mapobject_ids)s);
+            '''
+            for mids in mapobject_id_partitions:
+                connection.execute(
+                    _compile_distributed_query(sql), {
+                    'mapobject_ids': mids
                 })
-                logger.info('delete feature values')
-                connection.execute('''
-                    SELECT master_modify_multiple_shards(
-                        \'DELETE FROM feature_values
-                          WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
-                    );
-                ''', {
-                    'mapobject_ids': mapobject_ids
+
+            logger.info('delete feature values')
+            sql = '''
+                DELETE FROM feature_values
+                WHERE mapobject_id = ANY(%(mapobject_ids)s);
+            '''
+            for mids in mapobject_id_partitions:
+                connection.execute(
+                    _compile_distributed_query(sql), {
+                    'mapobject_ids': mids
                 })
-                logger.info('delete label values')
-                connection.execute('''
-                    SELECT master_modify_multiple_shards(
-                        \'DELETE FROM label_values
-                          WHERE mapobject_id = ANY(%(mapobject_ids)s)\'
-                    );
-                ''', {
-                    'mapobject_ids': mapobject_ids
+
+            logger.info('delete label values')
+            sql = '''
+                DELETE FROM label_values
+                WHERE mapobject_id = ANY(%(mapobject_ids)s);
+            '''
+            for mids in mapobject_id_partitions:
+                connection.execute(
+                    _compile_distributed_query(sql), {
+                    'mapobject_ids': mids
                 })
-                logger.info('delete mapobjects')
-                connection.execute('''
-                    SELECT master_modify_multiple_shards(
-                        \'DELETE FROM mapobjects
-                          WHERE id = ANY(%(mapobject_ids)s)\'
-                    );
-                ''', {
-                    'mapobject_ids': mapobject_ids
-                })
-            else:
-                logger.info('delete mapobject segmentations')
-                connection.execute('''
-                    DELETE FROM mapobject_segmentations s
-                    WHERE mapobject_id = ANY(%(mapobject_ids)s);
-                ''', {
-                    'mapobject_ids': mapobject_ids
-                })
-                logger.info('delete feature values')
-                connection.execute('''
-                    DELETE FROM feature_values
-                    WHERE mapobject_id = ANY(%(mapobject_ids)s);
-                ''', {
-                    'mapobject_ids': mapobject_ids
-                })
-                logger.info('delete label values')
-                connection.execute('''
-                    DELETE FROM label_values
-                    WHERE mapobject_id = ANY(%(mapobject_ids)s);
-                ''', {
-                    'mapobject_ids': mapobject_ids
-                })
-                logger.info('delete mapobjects')
-                connection.execute('''
-                    DELETE FROM mapobjects
-                    WHERE id = ANY(%(mapobject_ids)s);
-                ''', {
-                    'mapobject_ids': mapobject_ids
+
+            logger.info('delete mapobjects')
+            sql = '''
+                DELETE FROM mapobjects
+                WHERE id = ANY(%(mapobject_ids)s);
+            '''
+            for mids in mapobject_id_partitions:
+                connection.execute(
+                    _compile_distributed_query(sql), {
+                    'mapobject_ids': mids
                 })
 
 
