@@ -33,7 +33,7 @@ from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.result import ToolResult
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
 from tmlib.models.feature import Feature
-from tmlib.utils import autocreate_directory_property
+from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
 
@@ -432,48 +432,55 @@ def _compile_distributed_query(sql):
 
 def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
     # NOTE: Using ANY with an ARRAY is more performant than using IN.
+    # TODO: Figure out a way to DELETE entries from a hash-distributed table
+    # with a complex WHERE clause.
     if mapobject_ids:
+        mapobject_id_partitions = create_partitions(mapobject_ids, 100000)
         with ExperimentConnection(experiment_id) as connection:
 
             logger.info('delete mapobject segmentations')
             sql = '''
-                DELETE FROM mapobject_segmentations s
+                DELETE FROM mapobject_segmentations
                 WHERE mapobject_id = ANY(%(mapobject_ids)s);
             '''
-            connection.execute(
-                _compile_distributed_query(sql), {
-                'mapobject_ids': mapobject_ids
-            })
+            for mids in mapobject_id_partitions:
+                connection.execute(
+                    _compile_distributed_query(sql), {
+                    'mapobject_ids': mids
+                })
 
             logger.info('delete feature values')
             sql = '''
                 DELETE FROM feature_values
                 WHERE mapobject_id = ANY(%(mapobject_ids)s);
             '''
-            connection.execute(
-                _compile_distributed_query(sql), {
-                'mapobject_ids': mapobject_ids
-            })
+            for mids in mapobject_id_partitions:
+                connection.execute(
+                    _compile_distributed_query(sql), {
+                    'mapobject_ids': mids
+                })
 
             logger.info('delete label values')
             sql = '''
                 DELETE FROM label_values
                 WHERE mapobject_id = ANY(%(mapobject_ids)s);
             '''
-            connection.execute(
-                _compile_distributed_query(sql), {
-                'mapobject_ids': mapobject_ids
-            })
+            for mids in mapobject_id_partitions:
+                connection.execute(
+                    _compile_distributed_query(sql), {
+                    'mapobject_ids': mids
+                })
 
             logger.info('delete mapobjects')
             sql = '''
                 DELETE FROM mapobjects
                 WHERE id = ANY(%(mapobject_ids)s);
             '''
-            connection.execute(
-                _compile_distributed_query(sql), {
-                'mapobject_ids': mapobject_ids
-            })
+            for mids in mapobject_id_partitions:
+                connection.execute(
+                    _compile_distributed_query(sql), {
+                    'mapobject_ids': mids
+                })
 
 
 def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
