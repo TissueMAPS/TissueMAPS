@@ -367,7 +367,7 @@ class MapobjectSegmentation(ExperimentModel):
         )
 
 
-def delete_mapobject_types_cascade(experiment_id, is_static,
+def delete_mapobject_types_cascade(experiment_id, is_static=None,
         site_id=None, pipeline=None):
     '''Deletes all instances of
     :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` as well as
@@ -384,13 +384,14 @@ def delete_mapobject_types_cascade(experiment_id, is_static,
     ----------
     experiment_id: int
         ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
-    is_static: bool
-        whether mapojbects of *static* types should be deleted
+    is_static: bool, optional
+        whether mapobjects of *static* or *non-static* types should be deleted
     site_id: int, optional
         ID of the parent :class:`Site <tmlib.models.site.Site>`
+        (not required for *static* mapobject types)
     pipeline: str, optional
         the pipeline in which mapobjects were genereated
-        (not required for non-*static* mapobject types)
+        (not required for *static* mapobject types)
 
     Note
     ----
@@ -399,6 +400,28 @@ def delete_mapobject_types_cascade(experiment_id, is_static,
     :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
     might be distributed over a cluster.
     '''
+    if is_static is None and site_id is None and pipline is None:
+        # NOTE: In case all mapobjects and corresponding feature values
+        # should be deleted, we can simply drop all the tables.
+        with ExperimentConnection(experiment_id) as connection:
+            logger.debug('drop table "feature_values"')
+            connection.execute('DROP TABLE feature_values;')
+            logger.debug('drop table "label_values"')
+            connection.execute('DROP TABLE label_values;')
+            logger.debug('drop table "mapobject_segmentations"')
+            connection.execute('DROP TABLE mapobject_segmentations;')
+            logger.debug('drop table "mapobjects"')
+            connection.execute('DROP TABLE mapobjects;')
+
+        with ExperimentSession(experiment_id) as session:
+            session.drop_and_recreate(LabelValue)
+            session.drop_and_recreate(ToolResult)
+            session.drop_and_recreate(FeatureValue)
+            session.drop_and_recreate(Feature)
+            session.drop_and_recreate(MapobjectSegmentation)
+            session.drop_and_recreate(Mapobject)
+            session.drop_and_recreate(MapobjectType)
+
     with ExperimentSession(experiment_id) as session:
         mapobject_types = session.query(MapobjectType).\
             filter(MapobjectType.is_static == is_static).\

@@ -29,6 +29,7 @@ from cached_property import cached_property
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 from psycopg2 import ProgrammingError
+from psycopg2.extras import Json
 
 import tmlib.models as tm
 from tmlib.utils import autocreate_directory_property
@@ -640,14 +641,16 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 self._save_pipeline_outputs(store)
 
     def collect_job_output(self, batch):
-        '''Performs the following calculations after the pipeline has been
-        run for all jobs:
-
-            - Zoom level at which mapobjects should be represented on the map
-              by centroid points rather than the outline polygons.
-            - Statistics over features of child mapobjects, i.e. mapobjects
-              that are contained by a given mapobject of another type, such as
-              the average area of cells within a well.
+        '''Creates :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        instances for :class:`Site <tmlib.models.site.Site>`,
+        :class:`Well <tmlib.models.well.Well>`,
+        and :class:`Plate <tmlib.models.plate.Plate>`
+        and creates for each object an instance of
+        :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
+        as well as the corresponding
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`.
+        It further computes aggregate features over intersecting child mapobjects,
+        e.g. the number of cells within a well.
 
         Parameters
         ----------
@@ -662,37 +665,70 @@ class ImageAnalysisPipeline(ClusterRoutines):
             'mapobjects as polygons or points'
         )
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-
             layer = session.query(tm.ChannelLayer).first()
             mapobject_types = session.query(tm.MapobjectType).\
                 filter_by(is_static=False)
 
+            maxzoom = layer.maxzoom_level_index
             for mapobject_type in mapobject_types:
-                min_poly_zoom, max_poly_zoom = \
-                    mapobject_type.calculate_min_max_poly_zoom(
-                        layer.maxzoom_level_index
-                    )
+                min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
+                    maxzoom
+                )
                 logger.info(
                     'zoom level for mapobjects of type "%s": %d',
                     mapobject_type.name, min_poly_zoom
                 )
-                mapobject_type.min_poly_zoom = min_poly_zoom
-                mapobject_type.max_poly_zoom = max_poly_zoom
+                mapobject_type.min_poly_zoom = min_zoom
+                mapobject_type.max_poly_zoom = max_zoom
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             # For now, calculate moments only for "static" mapobjects,
             # such as "Wells" or "Sites"
-            parent_types = session.query(
-                    tm.MapobjectType.id, tm.MapobjectType.name
-                ).\
-                filter_by(is_static=True).\
-                all()
+            mapobject_mappings = {
+                'Plate': session.query(tm.Plate),
+                'Wells': session.query(tm.Well),
+                'Sites': session.query(tm.Site)
+            }
             logger.info('delete existing aggregate features')
             delete_features_cascade(self.experiment_id, is_aggregate=True)
 
             logger.info('compute aggregate features for parent objects')
             statistics = {'Mean', 'Std', 'Sum', 'Min', 'Max'}
-            for parent_type in parent_types:
+            for name, query in mapobject_mappings.iteritems():
+                logger.info('create static mapobject type "%s"', name)
+                parent_type = session.get_or_create(
+                    tm.MapobjectType, name=name, is_static=True
+                )
+                min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
+                    maxzoom
+                )
+                mapobject_type.min_poly_zoom = min_zoom
+                mapobject_type.max_poly_zoom = max_zoom
+                mapobject_type_id = parent_type.id
+
+                logger.debug('delete existing static mapobjects')
+                delete_mapobjects_cascade(self.experiment_id, [parent_type.id])
+
+                with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+                    logger.info('create mapobjects of type "%s"', name)
+                    for obj in query:
+                        # First element: x axis
+                        # Second element: inverted y axis
+                        ul = (obj.offset[1], -1 * obj.offset[0])
+                        ll = (ul[0] + obj.image_size[1], ul[1])
+                        ur = (ul[0], ul[1] - obj.image_size[0])
+                        lr = (ll[0], ul[1] - obj.image_size[0])
+                        # Closed circle with coordinates sorted counter-clockwise
+                        contour = np.array([ur, ul, ll, lr, ur])
+                        polygon = shapely.geometry.Polygon(contour)
+
+                        mapobject_id = self._add_mapobject(
+                            conn, mapobject_type_id
+                        )
+                        self._add_mapobject_segmentation(
+                            conn, mapobject_id, polygon
+                        )
+
                 # Moments are computed only over "non-static" mapobjects,
                 # i.e. segmented objects within a pipeline
                 child_types = session.query(
@@ -843,7 +879,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     @staticmethod
     def _add_feature_values(conn, values, mapobject_id, tpoint):
-        from psycopg2.extras import Json
         conn.execute('''
             INSERT INTO feature_values AS v (values, mapobject_id, tpoint)
             VALUES (%(values)s, %(mapobject_id)s, %(tpoint)s)
@@ -915,8 +950,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         return mapobject_id
 
     @staticmethod
-    def _add_mapobject_segmentation(conn, mapobject_id, polygon, t, z,
-            site_id, is_border, pipeline):
+    def _add_mapobject_segmentation(conn, mapobject_id, polygon, t=None, z=None,
+            site_id=None, is_border=None, pipeline=None):
         conn.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id,
@@ -932,10 +967,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             );
         ''', {
             'mapobject_id': mapobject_id,
-            'geom_poly': polygon.wkt,
-            'geom_centroid': polygon.centroid.wkt,
+            'geom_poly': polygon.wkt, 'geom_centroid': polygon.centroid.wkt,
             'tpoint': t, 'zplane': z,
-            'site_id': site_id,
-            'is_border': is_border,
-            'pipeline': pipeline
+            'site_id': site_id, 'is_border': is_border, 'pipeline': pipeline
         })

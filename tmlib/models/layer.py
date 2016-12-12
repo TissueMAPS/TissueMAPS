@@ -861,9 +861,7 @@ def delete_channel_layers_cascade(experiment_id):
     '''
     with ExperimentConnection(experiment_id) as connection:
         logger.debug('drop table "channel_layer_tiles"')
-        connection.execute('''
-            DROP TABLE channel_layer_tiles;
-        ''')
+        connection.execute('DROP TABLE channel_layer_tiles;')
 
     with ExperimentSession(experiment_id) as session:
         session.drop_and_recreate(ChannelLayerTile)

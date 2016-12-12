@@ -27,7 +27,7 @@ from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
 import tmlib.models as tm
-from tmlib import utils
+from tmlib.utils import flatten, notimplemented
 from tmlib.image import PyramidTile
 from tmlib.image import Image
 from tmlib.errors import DataIntegrityError
@@ -85,21 +85,23 @@ class PyramidBuilder(ClusterRoutines):
         '''
         files = list()
         if batches['run']:
-            run_files = utils.flatten([
+            run_files = flatten([
                 self._make_paths_absolute(j)['inputs'].values()
                 for j in batches['run']
                 if j['index'] == 0  # only base tile inputs
             ])
             if all([isinstance(f, list) for f in run_files]):
-                run_files = utils.flatten(run_files)
+                run_files = flatten(run_files)
                 if all([isinstance(f, list) for f in run_files]):
-                    run_files = utils.flatten(run_files)
+                    run_files = flatten(run_files)
                 files.extend(run_files)
             elif any([isinstance(f, dict) for f in run_files]):
-                files.extend(utils.flatten([
-                    utils.flatten(f.values())
-                    for f in run_files if isinstance(f, dict)
-                ]))
+                files.extend(
+                    flatten([
+                        flatten(f.values())
+                        for f in run_files if isinstance(f, dict)
+                    ])
+                )
             else:
                 files.extend(run_files)
         return files
@@ -620,98 +622,6 @@ class PyramidBuilder(ClusterRoutines):
         else:
             self._create_lower_zoom_level_tiles(batch)
 
+    @notimplemented
     def collect_job_output(self, batch):
-        '''Creates instances of
-        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-        for :class:`Site <tmlib.models.site.Site>`,
-        :class:`Well <tmlib.models.well.Well>`,
-        and :class:`Plate <tmlib.models.plate.Plate>`
-        and creates for each instance an instance of
-        :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
-        as well as the corresponding
-        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`.
-
-        The resulting *objects* can subsequently be visualized on the map.
-
-        Parameters
-        ----------
-        batch: dict
-            job description
-        '''
-        logger.info('create mapobjects of static type')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            layer = session.query(tm.ChannelLayer).first()
-
-            mapobjects = {
-                'Plate': session.query(tm.Plate),
-                'Wells': session.query(tm.Well),
-                'Sites': session.query(tm.Site)
-            }
-
-            for name, query in mapobjects.iteritems():
-                logger.info('create mapobject type "%s"', name)
-                mapobject_type = session.get_or_create(
-                    tm.MapobjectType, name=name, is_static=True
-                )
-                min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
-                    layer.maxzoom_level_index
-                )
-                mapobject_type.min_poly_zoom = min_zoom
-                mapobject_type.max_poly_zoom = max_zoom
-                mapobject_type_id = mapobject_type.id
-
-                logger.debug('delete existing static mapobjects')
-                delete_mapobjects_cascade(
-                    self.experiment_id, [mapobject_type_id]
-                )
-                with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-                    logger.info('create mapobjects of type "%s"', name)
-                    for obj in query:
-                        # First element: x axis
-                        # Second element: inverted y axis
-                        ul = (obj.offset[1], -1 * obj.offset[0])
-                        ll = (ul[0] + obj.image_size[1], ul[1])
-                        ur = (ul[0], ul[1] - obj.image_size[0])
-                        lr = (ll[0], ul[1] - obj.image_size[0])
-                        # Closed circle with coordinates sorted counter-clockwise
-                        contour = np.array([ur, ul, ll, lr, ur])
-                        polygon = shapely.geometry.Polygon(contour)
-
-                        mapobject_id = self._add_mapobject(
-                            conn, mapobject_type_id
-                        )
-                        self._add_mapobject_segmentation(
-                            conn, mapobject_id, polygon
-                        )
-
-    @staticmethod
-    def _add_mapobject(conn, mapobject_type_id):
-        conn.execute('''
-            SELECT * FROM nextval('mapobjects_id_seq');
-        ''')
-        val = conn.fetchone()
-        mapobject_id = val.nextval
-
-        conn.execute('''
-            INSERT INTO mapobjects (id, mapobject_type_id)
-            VALUES (%(mapobject_id)s, %(mapobject_type_id)s);
-        ''', {
-            'mapobject_id': mapobject_id,
-            'mapobject_type_id': mapobject_type_id
-        })
-        return mapobject_id
-
-    @staticmethod
-    def _add_mapobject_segmentation(conn, mapobject_id, polygon):
-        conn.execute('''
-            INSERT INTO mapobject_segmentations (
-                mapobject_id, geom_poly, geom_centroid
-            )
-            VALUES (
-                %(mapobject_id)s, %(geom_poly)s, %(geom_centroid)s
-            );
-        ''', {
-            'mapobject_id': mapobject_id,
-            'geom_poly': polygon.wkt,
-            'geom_centroid': polygon.centroid.wkt
-        })
+        pass
