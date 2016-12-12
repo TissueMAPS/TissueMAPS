@@ -168,13 +168,10 @@ class MetadataConfigurator(ClusterRoutines):
                 for f in acquisition.microscope_image_files
             }
 
-        if metadata_filenames:
-            with MetadataReader() as mdreader:
-                omexml_metadata = mdreader.read(
-                    metadata_filenames, omexml_images.keys()
-                )
-        else:
-            omexml_metadata = None
+        with MetadataReader() as mdreader:
+            omexml_metadata = mdreader.read(
+                metadata_filenames, omexml_images.keys()
+            )
 
         if not isinstance(omexml_metadata, bioformats.omexml.OMEXML):
             raise TypeError('Metadata must have type bioformats.omexml.OMEXML.')

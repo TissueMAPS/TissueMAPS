@@ -857,7 +857,7 @@ class MetadataReader(object):
 
         Returns
         -------
-        str
+        bioformats.omexml.OMEXML
             OMEXML metadata
         '''
         pass
