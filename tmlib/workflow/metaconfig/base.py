@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 import sys
 import traceback
+import bioformats
 from natsort import natsorted
 from collections import defaultdict
 from collections import OrderedDict
@@ -67,7 +68,7 @@ class MetadataHandler(object):
             OMEXML metadata generated based on microscope metadata files
         '''
         for name, md in omexml_images.iteritems():
-            if not isinstance(md, bioformats.omexml.OMEXL):
+            if not isinstance(md, bioformats.omexml.OMEXML):
                 raise TypeError(
                     'Value of key "%s" of argument "omexml_images" must '
                     'have type bioformats.omexml.OMEXL.' % name
