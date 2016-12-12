@@ -297,9 +297,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         children instances for the processed experiment.
         '''
         logger.info('delete existing mapobjects and mapobject types')
-        delete_mapobject_types_cascade(
-            self.experiment_id, is_static=False, pipeline=self.project.name
-        )
+        delete_mapobject_types_cascade(self.experiment_id)
 
     def _build_run_command(self, job_id):
         # Overwrite method to include "--pipeline" argument
