@@ -173,6 +173,9 @@ class MetadataConfigurator(ClusterRoutines):
                 metadata_filenames, omexml_images.keys()
             )
 
+        if not isinstance(omexml_metadata, bioformats.omexml.OMEXML):
+            raise TypeError('Metadata must have type bioformats.omexml.OMEXML.')
+
         MetadataHandler = metadata_handler_factory(batch['microscope_type'])
         mdhandler = MetadataHandler(omexml_images, omexml_metadata)
         mdhandler.configure_omexml_from_image_files()
@@ -190,16 +193,6 @@ class MetadataConfigurator(ClusterRoutines):
             mdhandler.configure_metadata_from_filenames(
                 plate_dimensions=plate_dimensions, regex=regexp
             )
-            if (batch['regex'] is None and
-                    mdhandler.IMAGE_FILE_REGEX_PATTERN is None):
-                logger.warning(
-                    'required metadata information is still missing: "%s"',
-                    '", "'.join(missing)
-                )
-                logger.info(
-                    'you can provide a regular expression in order to '
-                    'retrieve the missing information from filenames'
-                )
         missing = mdhandler.determine_missing_metadata()
         if missing:
             raise MetadataError(

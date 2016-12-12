@@ -66,7 +66,18 @@ class MetadataHandler(object):
         omexml_metadata: bioformats.omexml.OMEXML, optional
             OMEXML metadata generated based on microscope metadata files
         '''
+        for name, md in omexml_images.iteritems():
+            if not isinstance(md, bioformats.omexml.OMEXL):
+                raise TypeError(
+                    'Value of key "%s" of argument "omexml_images" must '
+                    'have type bioformats.omexml.OMEXL.' % name
+                )
         self.omexml_images = omexml_images
+        if not isinstance(omexml_metadata, bioformats.omexml.OMEXML):
+            raise TypeError(
+                'Argument "omexml_metadata" must have type '
+                'bioformats.omexml.OMEXL.'
+            )
         self.omexml_metadata = omexml_metadata
         self.metadata = pd.DataFrame()
         self._file_mapper_list = list()
@@ -511,8 +522,8 @@ class MetadataHandler(object):
             raise RegexError('No regular expression provided.')
 
         provided_fields = re.findall(r'\(\?P\<(\w+)\>', regex)
-        possible_fields = {'w', 'c', 'z', 's', 't'}
-        defaults = {'w': 'A01', 'z': 0, 't': 0}
+        possible_fields = {'w', 'c', 'z', 't', 's'}
+        defaults = {'w': 'A01', 'z': 0, 't': 0, 's': 0}
         for name in provided_fields:
             if name not in possible_fields:
                 raise RegexError(
@@ -544,7 +555,7 @@ class MetadataHandler(object):
             # Not every microscope provides all the information in the filename.
             capture = match.groupdict()
             md.at[i, 'channel_name'] = str(capture['c'])
-            md.at[i, 'site'] = int(capture['s'])
+            md.at[i, 'site'] = int(capture.get('s', defaults['s']))
             md.at[i, 'zplane'] = int(capture.get('z', defaults['z']))
             md.at[i, 'tpoint'] = int(capture.get('t', defaults['t']))
             md.at[i, 'well_name'] = str(capture.get('w', defaults['w']))
