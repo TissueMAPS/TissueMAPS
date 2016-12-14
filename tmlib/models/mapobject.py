@@ -32,7 +32,7 @@ from tmlib import cfg
 from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.result import ToolResult
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
-from tmlib.models.feature import Feature
+from tmlib.models.feature import Feature, FeatureValue, LabelValue
 from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
@@ -400,18 +400,20 @@ def delete_mapobject_types_cascade(experiment_id, is_static=None,
     :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
     might be distributed over a cluster.
     '''
-    if is_static is None and site_id is None and pipline is None:
+    if is_static is None and site_id is None and pipeline is None:
         # NOTE: In case all mapobjects and corresponding feature values
-        # should be deleted, we can simply drop all the tables.
+        # should be deleted, we can simply drop the tables and subsequently
+        # recreate them. We have to call DROP TABLE outside of a transaction
+        # block, which implies not using SQLAlchemy.
         with ExperimentConnection(experiment_id) as connection:
             logger.debug('drop table "feature_values"')
-            connection.execute('DROP TABLE feature_values;')
+            connection.execute('DROP TABLE IF EXISTS feature_values;')
             logger.debug('drop table "label_values"')
-            connection.execute('DROP TABLE label_values;')
+            connection.execute('DROP TABLE IF EXISTS label_values;')
             logger.debug('drop table "mapobject_segmentations"')
-            connection.execute('DROP TABLE mapobject_segmentations;')
+            connection.execute('DROP TABLE IF EXISTS mapobject_segmentations;')
             logger.debug('drop table "mapobjects"')
-            connection.execute('DROP TABLE mapobjects;')
+            connection.execute('DROP TABLE IF EXISTS mapobjects;')
 
         with ExperimentSession(experiment_id) as session:
             session.drop_and_recreate(LabelValue)
