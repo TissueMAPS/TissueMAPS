@@ -208,7 +208,7 @@ class Argument(object):
         if self.type == str:
             if not isinstance(value, basestring) and value is not None:
                 raise TypeError(
-                    'Argument "%s" must have type basestring.'
+                    'Argument "%s" must have type basestring.' % self.name
                 )
         elif self.type == float:
             # Workaround decimal Javascript issue
