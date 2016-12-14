@@ -68,7 +68,7 @@ def main(image_1, image_2, plot=False):
                 image_2, 'ur', colorscale=colorscale
             ),
             plotting.create_mask_image_plot(
-                combined_image, 'll', colorscale=colorscale
+                clipped_image, 'll', colorscale=colorscale
             )
         ]
         figure = plotting.create_figure(plots, title='clipped image')
