@@ -543,12 +543,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # Save segmentations, i.e. create a polygon for each
                 # segmented object based on the cooridinates of their
                 # contours.
-                logger.debug('create segmentations for object #%d', label)
                 border_indices = segm_objs.is_border
                 polygons = segm_objs.to_polygons(y_offset, x_offset)
                 for (t, z, label), polygon in polygons.iteritems():
                     logger.debug(
-                        'create segmentation for tpoint %d and zplane %d', t, z
+                        'create segmentation for object #%d at tpoint %d and '
+                        'zplane %d', label, t, z
                     )
                     if polygon.is_empty:
                         logger.warn(
@@ -904,7 +904,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
             'mapobject_id': parent_mapobject_id
         })
         parent_geom_poly = conn.fetchone()[0]
-        # TODO: aggregate JSONB
         conn.execute('''
             SELECT
                 avg(value::double precision),
