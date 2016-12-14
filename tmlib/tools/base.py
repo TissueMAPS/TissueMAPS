@@ -217,10 +217,12 @@ class ToolSparkInterface(ToolInterface):
             feature_id = conn.fetchone()
         # NOTE: the alias is required for compatibility with DataFrameReader
         return '''
-            (SELECT v.value, v.mapobject_id, v.id FROM feature_values AS v
-            WHERE feature_id = {feature_id}
-            ) AS t
-        '''.format(feature_id=feature_id)
+            (
+             SELECT (values->>'{feature_id}')::double precision AS value, mapobject_id, id
+             FROM feature_values
+            )
+            AS t
+        '''.format(feature_id=str(feature_id))
 
     def load_feature_values(self, mapobject_type_name, feature_name):
         '''Selects all values from table "feature_values" for mapobjects of
@@ -237,7 +239,7 @@ class ToolSparkInterface(ToolInterface):
         Returns
         -------
         pyspark.sql.DataFrame
-            data frame with columns "mapobject_id" and "value" and
+            data frame with columns "id", "mapobject_id" and "value" and
             a row for each mapobject
         '''
         query = self._build_feature_values_query(
@@ -268,6 +270,7 @@ class ToolSparkInterface(ToolInterface):
             self.experiment_id, tm.LabelValue.__table__.name
         )
         formatted_data = data.withColumnRenamed('label', 'value')
+        # TODO: JSONB column
         formatted_data = formatted_data.withColumn(
             'tool_result_id', sp.lit(result_id)
         )
@@ -338,15 +341,13 @@ class ToolPandasInterface(ToolInterface):
             })
             feature_id = conn.fetchone()
             conn.execute('''
-                SELECT mapobject_id, value FROM feature_values
-                WHERE feature_id = %(feature_id)s;
+                SELECT mapobject_id, (values->>%(feature_id)s)::double precision AS value
+                FROM feature_values
             ''', {
                 'feature_id': feature_id
             })
             feature_values = conn.fetchall()
-        return pd.DataFrame(
-            feature_values, columns=['mapobject_id', 'value']
-        )
+        return pd.DataFrame(feature_values, columns=['mapobject_id', 'value'])
 
     def save_label_values(self, result_id, data):
         '''Saves the generated label values in the corresponding database table.
@@ -365,16 +366,18 @@ class ToolPandasInterface(ToolInterface):
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             for index, row in data.iterrows():
                 conn.execute('''
-                    INSERT INTO label_values (
-                        mapobject_id, value, tool_result_id
-                    )
-                    VALUES (
-                        %(mapobject_id)s, %(value)s, %(tool_result_id)s
-                    )
+                    INSERT INTO label_values AS v (mapobject_id, values)
+                    VALUES (%(mapobject_id)s, %(values)s)
+                    ON CONFLICT
+                    ON CONSTRAINT label_values_tpoint_mapobject_id_key
+                    DO UPDATE
+                    SET values = v.values || %(values)s
+                    WHERE v.mapobject_id = %(mapobject_id)s
+                    AND v.tpoint = %(tpoint)s;
                 ''', {
                     'mapobject_id': row.mapobject_id,
-                    'value': row.label,
-                    'tool_result_id': result_id
+                    'values': {str(result_id): row.label},
+                    'tpoint': 0  # TODO
                 })
 
     def calculate_extrema(self, data, column):
@@ -519,12 +522,10 @@ class Tool(object):
             feature_id, mapobject_type_id = conn.fetchone()
             # NOTE: This assumes that features have continous ids.
             conn.execute('''
-                SELECT min(v.id), max(v.id) FROM feature_values v
+                SELECT min(v.id), max(v.id) FROM feature_values AS v
                 JOIN mapobjects m ON m.id = v.mapobject_id
                 WHERE m.mapobject_type_id = %(mapobject_type_id)s
-                AND v.feature_id = %(feature_id)s;
             ''', {
-                'feature_id': feature_id,
                 'mapobject_type_id': mapobject_type_id
             })
             lower, upper = conn.fetchone()
@@ -799,9 +800,10 @@ class ClassifierPandasInterface(ClassifierInterface):
             })
             features = conn.fetchall()
             feature_map = {f.id: f.name for f in features}
+            # TODO
             conn.execute('''
-                SELECT feature_id, mapobject_id, value FROM feature_values
-                WHERE feature_id = ANY(%(feature_ids)s);
+                SELECT mapobject_id, (values->>%(feature_id)s)::double precision AS value
+                FROM feature_values
             ''', {
                 'feature_ids': feature_map.keys(),
             })
