@@ -656,11 +656,11 @@ class MetadataHandler(object):
 
         sites = acquisitions_per_well.groups.values()
 
+        y_coordinates = [c[0] for c in coordinates]
+        x_coordinates = [c[1] for c in coordinates]
         for indices in sites:
-            # TODO: make sure metadata is sorted according to
-            # acquisition site
-            y_coordinates = [c[0] for c in coordinates]
-            x_coordinates = [c[1] for c in coordinates]
+            if len(indices) != len(coordinates):
+                raise ValueError('Incorrect stitch dimensions provided.')
             md.loc[indices, 'well_position_y'] = y_coordinates
             md.loc[indices, 'well_position_x'] = x_coordinates
 
