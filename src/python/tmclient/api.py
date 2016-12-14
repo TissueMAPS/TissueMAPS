@@ -242,6 +242,10 @@ class TmClient(HttpClient):
             description='Download data.',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter
         )
+        download_parser.add_argument(
+            '-d', '--directory',
+            help='path to directory where files should be downloaded to'
+        )
 
         download_subparsers = download_parser.add_subparsers(
             dest='file_type', help='file type'
