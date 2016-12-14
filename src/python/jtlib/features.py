@@ -36,7 +36,7 @@ class Features(object):
 
     Warning
     -------
-    This is currently only implemented for 2D images!
+    Currently only implemented for 2D images!
     '''
 
     __metaclass__ = ABCMeta
@@ -174,6 +174,11 @@ class Features(object):
 
 class Intensity(Features):
 
+    '''Class for calculating intensity statistics, such as mean and variation
+    of pixel values within segmented objects.
+
+    '''
+
     def __init__(self, label_image, intensity_image):
         '''
         Parameters
@@ -263,11 +268,15 @@ class Morphology(Features):
             features[name] = list()
         for obj in self.object_ids:
             region = self.object_properties[obj]
+            if region.perimeter == 0:
+                form_factor = 0
+            else:
+                form_factor = (4.0 * np.pi * region.area) / (region.perimeter**2)
             feats = [
                 region.area,
                 region.eccentricity,
                 region.solidity,
-                (4.0 * np.pi * region.area) / (region.perimeter**2),
+                form_factor
             ]
             if len(feats) != len(self.names):
                 raise IndexError(
@@ -283,7 +292,7 @@ class Haralick(Features):
 
     References
     ----------
-    ..[1] Haralick R.M. (1979): "Statistical and structural approaches to texture". Proceedings of the IEEE
+    .. [1] Haralick R.M. (1979). "Statistical and structural approaches to texture". Proceedings of the IEEE
     '''
 
     def __init__(self, label_image, intensity_image):
@@ -334,9 +343,6 @@ class Haralick(Features):
         pandas.DataFrame
             extracted feature values for each object in `label_image`
 
-        See also
-        --------
-        func:`mahotas.features.haralick`
         '''
         # Create an empty dataset in case no objects were detected
         logger.info('extract Haralick features')
@@ -367,11 +373,11 @@ class Haralick(Features):
 class TAS(Features):
 
     '''Class for calculating Threshold Adjacency Statistics based on
-    Hamilton [1]_.
+    Hamilton [5]_.
 
     References
     ----------
-    .. [1] Hamilton N.A. et al. (2007): "Fast automated cell phenotype image classification". BMC Bioinformatics
+    .. [5] Hamilton N.A. et al. (2007). "Fast automated cell phenotype image classification". BMC Bioinformatics
     '''
 
     def __init__(self, label_image, intensity_image):
@@ -407,9 +413,6 @@ class TAS(Features):
         pandas.DataFrame
             extracted feature values for each object in `label_image`
 
-        See also
-        --------
-        func:`mahotas.features.haralick`
         '''
         # Create an empty dataset in case no objects were detected
         logger.info('extract Threshold Adjacency Statistics features')
@@ -478,10 +481,6 @@ class Gabor(Features):
         pandas.DataFrame
             extracted feature values for each object in `label_image`
 
-        See also
-        --------
-        class:`cellprofiler.modules.measuretexture.MeasureTexture`
-        func:`centrosome.filter.gabor`
         '''
         # Create an empty dataset in case no objects were detected
         logger.info('extract Gabor features')
@@ -518,11 +517,11 @@ class Gabor(Features):
 
 class Hu(Features):
 
-    '''Class for calculating Hu moments based on Hu [1]_.
+    '''Class for calculating Hu moments based on Hu [3]_.
 
     References
     ----------
-    ..[1] M. K. Hu (1962): "Visual Pattern Recognition by Moment Invariants", IRE Trans. Info. Theory
+    .. [3] Hu M.K. (1962). "Visual Pattern Recognition by Moment Invariants", IRE Trans. Info. Theory
     '''
 
     def __init__(self, label_image, intensity_image):
