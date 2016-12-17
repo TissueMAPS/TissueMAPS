@@ -297,7 +297,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
         children instances for the processed experiment.
         '''
         logger.info('delete existing mapobjects and mapobject types')
-        delete_mapobject_types_cascade(self.experiment_id)
+        delete_mapobject_types_cascade(
+            self.experiment_id, pipeline=self.project.name
+        )
 
     def _build_run_command(self, job_id):
         # Overwrite method to include "--pipeline" argument
@@ -577,7 +579,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         logger.warn('empty measurement at time point %d', t)
                         continue
                     for label, vals in data.rename(columns=feature_ids).iterrows():
-                        logger.info(
+                        logger.debug(
                             'add values for object #%d at time point %d',
                             label, t
                         )
@@ -672,14 +674,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
                     maxzoom
                 )
-                logger.info(
-                    'zoom level for mapobjects of type "%s": %d',
-                    mapobject_type.name, min_poly_zoom
-                )
                 mapobject_type.min_poly_zoom = min_zoom
                 mapobject_type.max_poly_zoom = max_zoom
 
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
             # For now, calculate moments only for "static" mapobjects,
             # such as "Wells" or "Sites"
             mapobject_mappings = {
@@ -895,6 +892,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     @staticmethod
     def _get_aggregate_data(conn, parent_mapobject_id,
             child_mapobject_type_id):
+        # TODO: time points
         conn.execute('''
             SELECT geom_poly FROM mapobject_segmentations
             WHERE mapobject_id = %(mapobject_id)s
@@ -903,7 +901,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
         ''', {
             'mapobject_id': parent_mapobject_id
         })
-        parent_geom_poly = conn.fetchone()[0]
+        segmentation = conn.fetchone()
+        if segmentation is None:
+            return []
+        else:
+            parent_geom_poly = segmentation.geom_poly
         conn.execute('''
             SELECT
                 avg(value::double precision),
