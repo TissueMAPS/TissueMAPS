@@ -101,7 +101,11 @@ class FeatureValue(ExperimentModel):
     tpoint = Column(Integer, index=True)
 
     #: int: ID of the parent mapobject
-    mapobject_id = Column(Integer, index=True, nullable=False)
+    mapobject_id = Column(
+        Integer,
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
 
     def __init__(self, mapobject_id, values={}, tpoint=None):
         '''
@@ -149,7 +153,11 @@ class LabelValue(ExperimentModel):
     tpoint = Column(Integer, index=True)
 
     #: int: ID of the parent mapobject
-    mapobject_id = Column(Integer, index=True, nullable=False)
+    mapobject_id = Column(
+        Integer,
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
 
     def __init__(self, mapobject_id, values={}, tpoint=None):
         '''

@@ -65,8 +65,12 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
                         % (distribution_column, self.__table__.name)
                     )
                 self.__table__.info['distribute_by_hash'] = distribution_column
+                self.is_distributed = True
             elif distribute_by_replication:
                 self.__table__.info['distribute_by_replication'] = True
+                self.is_distributed = True
+            else:
+                self.is_distributed = False
 
 
 _MainBase = declarative_base(
@@ -96,6 +100,7 @@ class DateMixIn(object):
     @declared_attr
     def updated_at(cls):
         '''datetime: date and time when the row was last updated'''
+        # TODO: CREATE TRIGGER to update independent of ORM
         return Column(DateTime, default=func.now(), onupdate=func.now())
 
 

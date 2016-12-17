@@ -19,7 +19,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy_utils.expressions import array_agg
 from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.schema import UniqueConstraint, PrimaryKeyConstraint
-from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
+# from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
 
 from tmlib.errors import DataModelError
 
@@ -40,16 +40,7 @@ def _update_table_constraints(table, distribution_column):
     return table
 
 
-class CitusDialect_psycopg2(PGDialect_psycopg2):
-
-    '''*SQLAlchemy* dialect for
-    `Citus <https://docs.citusdata.com/en/v6.0/index.html>`_ *PostgreSQL*
-    extension.
-    '''
-    name = 'citus'
-
-
-@compiles(CreateTable, 'citus')
+@compiles(CreateTable, 'postgres')
 def _compile_create_table(element, compiler, **kwargs):
     table = element.element
     logger.debug('create table "%s"', table.name)
@@ -57,10 +48,7 @@ def _compile_create_table(element, compiler, **kwargs):
     distribute_by_replication = 'distribute_by_replication' in table.info
     if distribute_by_hash or distribute_by_replication:
         if table.foreign_keys:
-            raise DataModelError(
-                'Distributed table "%s" must not have FOREIGN KEY constraints.'
-                % table.name
-            )
+            # TODO: check if colocalized
         if distribute_by_hash:
             distribution_column = table.info['distribute_by_hash']
             table = _update_table_constraints(table, distribution_column)
@@ -68,8 +56,10 @@ def _compile_create_table(element, compiler, **kwargs):
                 'distribute table "%s" by hash "%s"', table.name,
                 distribution_column
             )
+            # No replication of tables.
+            sql = 'SET citus.shard_replication_factor = 1;\n'
             sql = compiler.visit_create_table(element)
-            sql += ';SELECT create_distributed_table(\'%s.%s\', \'%s\');' % (
+            sql += ';\nSELECT create_distributed_table(\'%s.%s\', \'%s\');' % (
                 table.schema, table.name, distribution_column
             )
         elif distribute_by_replication:
@@ -86,28 +76,29 @@ def _compile_create_table(element, compiler, **kwargs):
                 )
             table = _update_table_constraints(table, 'id')
             logger.debug('distribute table "%s" by replication', table.name)
+            sql = 'SET citus.shard_replication_factor = %s;\n' % cfg.db_nodes
             sql = compiler.visit_create_table(element)
-            sql += ';SELECT create_reference_table(\'%s.%s\');' % (
+            sql += ';\nSELECT create_reference_table(\'%s.%s\');' % (
                 table.schema, table.name
             )
         else:
             sql = compiler.visit_create_table(element)
     else:
         sql = compiler.visit_create_table(element)
-    # NOTE: In contrast to PostgresXL, tables don't have to be distributed.
-    # If they don't get distributed, they live a happy live as normal
+    # NOTE: Tables don't have to be distributed.
+    # If they don't get distributed, they live happily as normal
     # PostgreSQL tables on the master node.
     return sql
 
 
-@compiles(DropTable, 'citus')
+@compiles(DropTable, 'postgres')
 def _compile_drop_table(element, compiler, **kwargs):
     table = element.element
     logger.debug('drop table "%s" with cascade', table.name)
     return compiler.visit_drop_table(element) + ' CASCADE'
 
 
-@compiles(array_agg, 'citus')
+@compiles(array_agg, 'postgres')
 def compile_array_agg(element, compiler, **kw):
     compiled = "%s(%s)" % (element.name, compiler.process(element.clauses))
     if element.default is None:
@@ -148,22 +139,3 @@ def compile_array_agg(element, compiler, **kw):
 #         sql = compiler.visit_create_table(element)
 #         sql += ' DISTRIBUTE BY REPLICATION'
 #     return sql
-
-
-# @compiles(DropTable, 'postgresxl')
-# def _compile_drop_table(element, compiler, **kwargs):
-#     table = element.element
-#     logger.debug('drop table "%s" with cascade', table.name)
-#     return compiler.visit_drop_table(element) + ' CASCADE'
-
-
-# @compiles(array_agg, 'postgresxl')
-# def compile_array_agg(element, compiler, **kw):
-#     compiled = "%s(%s)" % (element.name, compiler.process(element.clauses))
-#     if element.default is None:
-#         return compiled
-#     return str(func.coalesce(
-#         text(compiled),
-#         cast(postgresql.array(element.default), element.type)
-#     ).compile(compiler))
-

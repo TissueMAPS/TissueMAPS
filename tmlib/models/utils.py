@@ -112,11 +112,26 @@ def _assert_db_exists(engine):
         raise ValueError('Cannot connect to database "%s".' % db_name)
 
 
+def _set_db_shard_count(engine, n):
+    if n > 0:
+        db_url = make_url(engine.url)
+        db_name = db_url.database
+        logger.debug('set shard_count for database %s to %d', db_name, n)
+        with Connection(db_url) as conn:
+            conn.execute('''
+                SET citus.shard_count = %(n)s;
+            ''', {
+                'n': n
+            })
+
+
 def _set_db_shard_replication_factor(engine, n):
     if n > 0:
         db_url = make_url(engine.url)
         db_name = db_url.database
-        logger.debug('set shard_replication_factor for database %s', db_name)
+        logger.debug(
+            'set shard_replication_factor for database %s to %d', db_name, n
+        )
         with Connection(db_url) as conn:
             conn.execute('''
                 SET citus.shard_replication_factor = %(n)s;
@@ -315,6 +330,11 @@ class Query(sqlalchemy.orm.query.Query):
         classes = [d['type'] for d in self.column_descriptions]
         locations = list()
         for cls in classes:
+            if cls.is_distributed:
+                raise ValueError(
+                    'Records of distributed model "%s" cannot be deleted '
+                    'within a transaction.' % cls.__name__
+                )
             if hasattr(cls, '_location'):
                 locations.extend(self.from_self(cls._location).all())
             elif hasattr(cls, 'location'):
@@ -665,11 +685,9 @@ class ExperimentSession(_Session):
         engine = create_db_engine(db_uri)
         exists = _create_schema_if_exists(engine, experiment_id)
         if not exists:
-            # # TODO: move to playbooks
-            # n_hosts = len(cfg.db_worker_hosts)
-            # _set_db_shard_replication_factor(master_engine, n_hosts)
-            # for host in cfg.db_worker_hosts:
-            #     _add_db_worker(master_engine, host, cfg.db_port)
+            # No replication of shards!
+            _set_db_shard_replication_factor(engine, 1)
+            _set_db_shard_count(engine, 20 * cfg.db_nodes)
             _create_db_tables(engine, experiment_id)
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=self.experiment_id

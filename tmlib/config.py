@@ -65,10 +65,11 @@ class TmapsConfig(object):
         self._section = self.__class__.__module__.split('.')[0]
         if not self._config.has_section(self._section):
             self._config.add_section(self._section)
-        self.db_user = 'postgres'
+        self.db_user = 'tissuemaps'
         self.db_host = 'localhost'
         self.db_port = 5432
         self.db_driver = 'postgresql'
+        self.db_nodes = 2
 
     def read(self):
         '''Reads the configuration from a file
@@ -90,7 +91,7 @@ class TmapsConfig(object):
 
     @property
     def db_user(self):
-        '''str: database user (default: ``"postgres"``)'''
+        '''str: database user (default: ``"tissuemaps"``)'''
         return self._config.get('DEFAULT', 'db_user')
 
     @db_user.setter
@@ -132,7 +133,9 @@ class TmapsConfig(object):
 
     @property
     def db_host(self):
-        '''str: IP address of database host (default: ``"localhost"``)'''
+        '''str: IP address or DNS name of master database
+        (default: ``"localhost"``)
+        '''
         return self._config.get('DEFAULT', 'db_host')
 
     @db_host.setter
@@ -145,7 +148,7 @@ class TmapsConfig(object):
 
     @property
     def db_port(self):
-        '''str: database port (default: ``5432``)'''
+        '''str: port of the master database (default: ``5432``)'''
         return self._config.getint('DEFAULT', 'db_port')
 
     @db_port.setter
@@ -157,25 +160,17 @@ class TmapsConfig(object):
         self._config.set('DEFAULT', 'db_port', str(value))
 
     @property
-    def db_driver(self):
-        '''str: database driver (default: ``"postgresql"``,
-        options: ``{"postgresql", "citus"}```)
-        '''
-        return self._config.get('DEFAULT', 'db_driver')
+    def db_nodes(self):
+        '''int: number of database worker nodes (default: ``2``)'''
+        return self._config.getint('DEFAULT', 'db_nodes')
 
-    @db_driver.setter
-    def db_driver(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError(
-                'Configuration parameters "db_driver" must have type str.'
+    @db_nodes.setter
+    def db_nodes(self, value):
+        if not isinstance(value, int):
+            raise ValueError(
+                'Configuration parameter "db_nodes" must have type int.'
             )
-        options = {'postgresql', 'citus'}
-        if not value in options:
-            raise TypeError(
-                'Configuration parameters "db_driver" must be either "%s".' %
-                '" or "'.join(options)
-            )
-        self._config.set('DEFAULT', 'db_driver', str(value))
+        self._config.set('DEFAULT', 'db_nodes', str(value))
 
     @staticmethod
     def _get_database_name(experiment_id=None):
@@ -186,18 +181,15 @@ class TmapsConfig(object):
 
     @property
     def db_uri_sqla(self):
-        '''str: database URI in the format required by *SQLAlchemy*.
-        '''
-        return '{driver}://{user}:{pw}@{host}:{port}/tissuemaps'.format(
-            driver=self.db_driver,
+        '''str: database URI in the format required by *SQLAlchemy*.'''
+        return 'postgresql://{user}:{pw}@{host}:{port}/tissuemaps'.format(
             user=self.db_user, pw=self.db_password,
             host=self.db_host, port=self.db_port,
         )
 
     @property
     def db_uri_spark(self):
-        '''str: database URI in *JDBC* format as required by *Spark*.
-        '''
+        '''str: database URI in *JDBC* format as required by *Spark*.'''
         return 'jdbc:postgresql://{host}:{port}/{database}?user={user}&password={pw}'.format(
             user=self.db_user, pw=self.db_password,
             host=self.db_host, port=self.db_port,

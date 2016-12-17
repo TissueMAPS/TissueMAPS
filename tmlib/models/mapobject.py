@@ -260,22 +260,26 @@ class MapobjectSegmentation(ExperimentModel):
     pipeline = Column(String, index=True)
 
     #: int: zero-based index in time series
-    tpoint = Column(Integer, index=True, nullable=False)
+    tpoint = Column(Integer, index=True)
 
     #: int: zero-based index in z stack
-    zplane = Column(Integer, index=True, nullable=False)
+    zplane = Column(Integer, index=True)
 
     #: EWKT polygon geometry
     geom_poly = Column(Geometry('POLYGON'))
 
     #: EWKT entroid geometry
-    geom_centroid = Column(Geometry('POINT'))
+    geom_centroid = Column(Geometry('POINT'), nullable=False)
 
     #: int: ID of parent site
     site_id = Column(Integer, index=True)
 
     #: int: ID of parent mapobject
-    mapobject_id = Column(Integer, index=True, nullable=False)
+    mapobject_id = Column(
+        Integer,
+        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
 
     def __init__(self, geom_poly, geom_centroid, mapobject_id, label=None,
             is_border=None, tpoint=None, zplane=None, pipeline=None, site_id=None):
@@ -416,13 +420,13 @@ def delete_mapobject_types_cascade(experiment_id, is_static=None,
             connection.execute('DROP TABLE IF EXISTS mapobjects;')
 
         with ExperimentSession(experiment_id) as session:
-            session.drop_and_recreate(LabelValue)
-            session.drop_and_recreate(ToolResult)
-            session.drop_and_recreate(FeatureValue)
-            session.drop_and_recreate(Feature)
-            session.drop_and_recreate(MapobjectSegmentation)
-            session.drop_and_recreate(Mapobject)
             session.drop_and_recreate(MapobjectType)
+            session.drop_and_recreate(Feature)
+            session.drop_and_recreate(ToolResult)
+            session.drop_and_recreate(Mapobject)
+            session.drop_and_recreate(MapobjectSegmentation)
+            session.drop_and_recreate(LabelValue)
+            session.drop_and_recreate(FeatureValue)
 
     with ExperimentSession(experiment_id) as session:
         mapobject_types = session.query(MapobjectType).\
@@ -455,57 +459,23 @@ def _compile_distributed_query(sql):
         return sql
 
 
-def _delete_mapobjects_cascade(experiment_id, mapobject_ids):
+def _delete_mapobjects_cascade(connection, experiment_id, mapobject_ids):
     # NOTE: Using ANY with an ARRAY is more performant than using IN.
     # TODO: Figure out a way to DELETE entries from a hash-distributed table
     # with a complex WHERE clause.
     if mapobject_ids:
         mapobject_id_partitions = create_partitions(mapobject_ids, 100000)
-        with ExperimentConnection(experiment_id) as connection:
-
-            logger.info('delete mapobject segmentations')
-            sql = '''
-                DELETE FROM mapobject_segmentations
-                WHERE mapobject_id = ANY(%(mapobject_ids)s);
-            '''
-            for mids in mapobject_id_partitions:
-                connection.execute(
-                    _compile_distributed_query(sql), {
-                    'mapobject_ids': mids
-                })
-
-            logger.info('delete feature values')
-            sql = '''
-                DELETE FROM feature_values
-                WHERE mapobject_id = ANY(%(mapobject_ids)s);
-            '''
-            for mids in mapobject_id_partitions:
-                connection.execute(
-                    _compile_distributed_query(sql), {
-                    'mapobject_ids': mids
-                })
-
-            logger.info('delete label values')
-            sql = '''
-                DELETE FROM label_values
-                WHERE mapobject_id = ANY(%(mapobject_ids)s);
-            '''
-            for mids in mapobject_id_partitions:
-                connection.execute(
-                    _compile_distributed_query(sql), {
-                    'mapobject_ids': mids
-                })
-
-            logger.info('delete mapobjects')
-            sql = '''
-                DELETE FROM mapobjects
-                WHERE id = ANY(%(mapobject_ids)s);
-            '''
-            for mids in mapobject_id_partitions:
-                connection.execute(
-                    _compile_distributed_query(sql), {
-                    'mapobject_ids': mids
-                })
+        # NOTE: this will DELETE all records of referenced tables as well
+        logger.info('delete mapobjects')
+        sql = '''
+            DELETE FROM mapobjects
+            WHERE id = ANY(%(mapobject_ids)s);
+        '''
+        for mids in mapobject_id_partitions:
+            connection.execute(
+                _compile_distributed_query(sql), {
+                'mapobject_ids': mids
+            })
 
 
 def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
@@ -559,7 +529,7 @@ def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
             mapobjects = connection.fetchall()
             mapobject_ids = [m.id for m in mapobjects]
 
-        _delete_mapobjects_cascade(experiment_id, mapobject_ids)
+            _delete_mapobjects_cascade(connection, experiment_id, mapobject_ids)
 
 
 def delete_invalid_mapobjects_cascade(experiment_id):
@@ -590,7 +560,7 @@ def delete_invalid_mapobjects_cascade(experiment_id):
         mapobject_segm = connection.fetchall()
         mapobject_ids = [s.mapobject_id for s in mapobject_segm]
 
-    _delete_mapobjects_cascade(experiment_id, mapobject_ids)
+        _delete_mapobjects_cascade(connection, experiment_id, mapobject_ids)
 
 
 def get_mapobject_outlines_within_tile(experiment_id, mapobject_type_name,
