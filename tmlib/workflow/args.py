@@ -500,7 +500,7 @@ class SubmissionArguments(ArgumentCollection):
     '''
 
     duration = Argument(
-            type=str, default='06:00:00', meta='HH:MM:SS',
+        type=str, default='06:00:00', meta='HH:MM:SS',
         help='''
             walltime that should be allocated to a each "run" job
             in the format "HH:MM:SS"
@@ -509,12 +509,13 @@ class SubmissionArguments(ArgumentCollection):
     )
 
     # NOTE: This reflects the job's real memory, which is typically lower than
-    # the total memory of each CPU. Where we assume that CPUs have 4GB memory.
+    # the total memory of each CPU. Here it's assumed that CPUs have 4GB memory.
     memory = Argument(
-        type=int, default=3500, meta='MB',
+        type=int, default=2000, meta='MB',
         help='''
             amount of memory that should be allocated to each "run" job
-            in megabytes (MB)
+            in megabytes
+            (try to keep below real memory of cores for maximal parallelization)
         '''
     )
 
