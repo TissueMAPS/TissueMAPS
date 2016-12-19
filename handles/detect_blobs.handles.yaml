@@ -10,7 +10,7 @@ input:
 
     - name: threshold_factor
       type: Scalar
-      value: 
+      value: 5
       help: >
           Factor by which pixel values in "image" must be above background RMS
           noise to be considered part of a blob.
