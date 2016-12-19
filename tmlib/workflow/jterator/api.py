@@ -250,7 +250,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
 
-            sites = session.query(tm.Site.id).all()
+            sites = session.query(tm.Site.id).order_by(tm.Site.id).all()
             site_ids = [s.id for s in sites]
 
             batches = self._create_batches(site_ids, args.batch_size)
