@@ -21,7 +21,7 @@ import collections
 
 logger = logging.getLogger(__name__)
 
-version = '0.0.3'
+VERSION = '0.0.3'
 
 Output = collections.namedtuple('Output', ['secondary_label_image', 'figure'])
 
@@ -120,8 +120,8 @@ def main(primary_label_image, intensity_image, contrast_threshold,
             fill_value = fill_value[fill_value > 0][0]
             regions[holes_labeled == i] = fill_value
 
-        # Remove objects that are obviously too small, i.e. smaller than its
-        # seeds (this could happen when we remove certain parts of objects
+        # Remove objects that are obviously too small, i.e. smaller than any of
+        # the seeds (this could happen when we remove certain parts of objects
         # after the watershed region growing)
         # TODO: Ensure that mapping of objects is one-to-one, i.e. each primary
         # object has exactly one secondary object
@@ -150,6 +150,10 @@ def main(primary_label_image, intensity_image, contrast_threshold,
                 )
                 lut[i] = np.where(orig_count == np.max(orig_count))[0][0]
         secondary_label_image = lut[new_label_image]
+
+    # Ensure that primary objects are fully contained within primary objects
+    index = (primary_label_image - secondary_label_image) > 0
+    secondary_label_image[index] = primary_label_image[index]
 
     if plot:
         from jtlib import plotting
