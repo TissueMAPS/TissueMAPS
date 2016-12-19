@@ -41,16 +41,19 @@ class Features(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, label_image, intensity_image=None):
+    def __init__(self, label_image, ref_label_image, intensity_image=None):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zero and
-            and pixels belonging to a segmented object (connected component)
-            are labeled with a unique identifier value
-        intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8], optional
-            intensity image (default: ``None``)
+            labeled image encoding objects (connected pixel components)
+            for which features should be extracted
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image encoding objects to which extracted features
+            should be assigned
+        intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
+            grayscale image from which texture features should be extracted
+            (default: ``None``)
 
         Raises
         ------
@@ -59,11 +62,25 @@ class Features(object):
         ValueError
             when `intensity_image` and `label_image` don't have identical shape
             or when `label_image` is not 2D
+        ValueError
+            when objects in `label_image` are not contained by objects in
+            `ref_label_image`
         '''
         self.label_image = label_image
+        self.ref_label_image = ref_label_image
         if len(label_image.shape) > 2:
             raise ValueError(
                 'Feature extraction is only implemented for 2D images.'
+            )
+        if self.label_image.shape != self.ref_label_image.shape:
+            raise ValueError(
+                'Images "label_image" and "ref_label_image" must have '
+                'the same dimensions.'
+            )
+        if np.any((label_image - ref_label_image) > 0):
+            raise ValueError(
+                'All object in "label_image" must be contained by objects '
+                'in "ref_label_image".'
             )
         self.intensity_image = intensity_image
         if self.intensity_image is not None:
@@ -74,13 +91,15 @@ class Features(object):
                 )
             if self.label_image.shape != self.intensity_image.shape:
                 raise ValueError(
-                    'Arrays "label_image" and "intensity_image" must have '
-                    'identical shape.'
+                    'Images "label_image" and "intensity_image" must have '
+                    'the same dimensions.'
                 )
 
     @cached_property
     def names(self):
-        '''List[str]: names of the features'''
+        '''List[str]: names of features that should be extracted from
+        :attr:`label_image <jtlib.featues.Features.label_image>`
+        '''
         return [
             '{feature_group}_{feature_name}'.format(
                 feature_group=self._feature_group, feature_name=f
@@ -96,6 +115,41 @@ class Features(object):
     def _feature_names(self):
         pass
 
+    @cached_property
+    def _aggregate_statistics(self):
+        '''Dict[str, function]: mapping of statistics name to corresponding
+        function that can be used to compute the statistic
+        '''
+        return {
+            'mean': np.nanmean,
+            'std': np.nanstd,
+            'sum': np.nansum,
+            'count': lambda x: len(x)
+        }
+
+    def extract_aggregate(self):
+        '''Extracts aggregate features for segmented objects.
+
+        Returns
+        -------
+        pandas.DataFrame[float]
+            extracted feature values for each object in
+            :attr:`ref_label_image <jtlib.featues.Features.ref_label_image>`;
+            *n*x*p* dataframe, where *n* is the number of objects and
+            *p* is the number of features times the number of aggregate
+            statistics computed for each feature
+        '''
+        values = dict()
+        features = self.extract()
+        for ref_label in self.ref_object_ids:
+            labels = np.unique(
+                self.label_image[self.ref_label_image == ref_label]
+            )
+            for name, vals in features.loc(labels).iteritems():
+                for stat, func in self._aggregate_statistics:
+                    values['%s_%s' % (stat, name)] = func(vals)
+        return pd.DataFrame(values, index=self.ref_object_ids)
+
     @abstractmethod
     def extract(self):
         '''Extracts features for segmented objects.
@@ -103,30 +157,50 @@ class Features(object):
         Returns
         -------
         pandas.DataFrame[float]
-            extracted feature values for each mapobject; *n*x*p* data frame
-            where *n* is the number of objects detected in `label_image` and
+            extracted feature values for each object in
+            :attr:`label_image <jtlib.featues.Features.label_image>`;
+            *n*x*p* dataframe, where *n* is the number of objects and
             *p* is the number of features
 
         Note
         ----
         The index must match the object labels in the range [1, *n*], where
-        *n* is the number of segmented objects.
+        *n* is the number of objects in
+        :attr:`label_image <jtlib.featues.Features.label_image>`.
         '''
         pass
 
     @property
+    def ref_object_ids(self):
+        '''numpy.array[numpy.int]: label of each object in
+        :attr:`ref_label_image <jtlib.features.Features.ref_label_image>`.
+        '''
+        return np.unique(self.ref_label_image[self.ref_label_image > 0])
+
+    @property
     def object_ids(self):
-        '''numpy.array[numpy.int]: one-based unique id of each object in
-        `label_image`'''
-        return np.unique(self.label_image[self.label_image > 0])
+        '''numpy.array[numpy.int]: label of each object in
+        :attr:`label_image <jtlib.features.Features.label_image>`.
+        '''
+        return np.unique(self.ref_label_image[self.label_image > 0])
 
     @property
     def n_objects(self):
-        '''int: number of objects in `label_image`'''
+        '''int: number of objects in
+        :attr:`label_image <jtlib.features.Features.label_image>`.
+        '''
         return len(self.object_ids)
 
+    @property
+    def n_ref_objects(self):
+        '''int: number of objects in
+        :attr:`ref_label_image <jtlib.features.Features.ref_label_image>`.
+        '''
+        return len(self.ref_object_ids)
+
     def get_object_mask_image(self, object_id):
-        '''Extracts the bounding box for a given object from `label_image`.
+        '''Extracts the bounding box for a given object from `label_image`
+        :attr:`label_image <jtlib.features.Features.label_image>`.
 
         Returns
         -------
@@ -138,7 +212,8 @@ class Features(object):
         return img == object_id
 
     def get_object_intensity_image(self, object_id):
-        '''Extracts the bounding box for a given object from `intensity_image`.
+        '''Extracts the bounding box for a given object from
+        :attr:`intensity_image <jtlib.features.Features.intensity_image>`.
 
         Returns
         -------
@@ -152,14 +227,15 @@ class Features(object):
     @cached_property
     def bboxes(self):
         '''List[numpy.ndarray]: bounding boxes for each object in
-        attr:`jtlib.features.Features.label_image`
+        :attr:`label_image <jtlib.features.Features.label_image>`.
         '''
         return mh.labeled.bbox(self.label_image)
 
     @cached_property
     def object_properties(self):
         '''Dict[int, skimage.measure._regionprops._RegionProperties]: mapping
-        of object id to properties for each object in `label_image`
+        of object id to properties for each object in
+        :attr:`label_image <jtlib.features.Features.label_image>`.
         '''
         logger.debug('measure object properties')
         props = measure.regionprops(
@@ -169,6 +245,7 @@ class Features(object):
 
     def plot(self):
         # TODO
+        logger.warn('no plot created: not yet implemented')
         return str()
 
 
@@ -179,18 +256,22 @@ class Intensity(Features):
 
     '''
 
-    def __init__(self, label_image, intensity_image):
+    def __init__(self, label_image, ref_label_image, intensity_image):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zero and
-            and pixels belonging to a segmented object (connected component)
-            are labeled with a unique identifier value
+            labeled image encoding objects (connected pixel components)
+            for which features should be extracted
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image encoding objects to which extracted features
+            should be assigned
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
-            intensity image
+            grayscale image from which texture features should be extracted
         '''
-        super(Intensity, self).__init__(label_image, intensity_image)
+        super(Intensity, self).__init__(
+            label_image, ref_label_image, intensity_image
+        )
 
     @property
     def _feature_names(self):
@@ -227,24 +308,28 @@ class Intensity(Features):
             ]
             if len(feats) != len(self.names):
                 raise IndexError(
-                        'Number of features for object %d is incorrect.', obj)
+                    'Number of features for object %d is incorrect.', obj
+                )
             for i, name in enumerate(self.names):
                 features[name].append(feats[i])
         return pd.DataFrame(features, index=self.object_ids)
 
 
+
 class Morphology(Features):
 
-    def __init__(self, label_image):
+    def __init__(self, label_image, ref_label_image):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zero and
-            and pixels belonging to a segmented object (connected component)
-            are labeled with a unique identifier value
+            labeled image encoding objects (connected pixel components)
+            for which features should be extracted
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image encoding objects to which extracted features
+            should be assigned
         '''
-        super(Morphology, self).__init__(label_image)
+        super(Morphology, self).__init__(label_image, ref_label_image)
 
     @property
     def _feature_names(self):
@@ -295,14 +380,16 @@ class Haralick(Features):
     .. [1] Haralick R.M. (1979). "Statistical and structural approaches to texture". Proceedings of the IEEE
     '''
 
-    def __init__(self, label_image, intensity_image):
+    def __init__(self, label_image, ref_label_image, intensity_image):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zero and
-            and pixels belonging to a segmented object (connected component)
-            are labeled with a unique identifier value
+            labeled image encoding objects (connected pixel components)
+            for which features should be extracted
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image encoding objects to which extracted features
+            should be assigned
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             intensity image
 
@@ -315,7 +402,9 @@ class Haralick(Features):
         `Mahotas FAQs <http://mahotas.readthedocs.org/en/latest/faq.html#i-ran-out-of-memory-computing-haralick-features-on-16-bit-images-is-it-not-supported>`_  
         '''
         intensity_image = mh.stretch(intensity_image)
-        super(Haralick, self).__init__(label_image, intensity_image)
+        super(Haralick, self).__init__(
+            label_image, ref_label_image, intensity_image
+        )
 
     @property
     def _feature_names(self):
@@ -380,18 +469,20 @@ class TAS(Features):
     .. [5] Hamilton N.A. et al. (2007). "Fast automated cell phenotype image classification". BMC Bioinformatics
     '''
 
-    def __init__(self, label_image, intensity_image):
+    def __init__(self, label_image, ref_label_image, intensity_image):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zero and
-            and pixels belonging to a segmented object (connected component)
-            are labeled with a unique identifier value
+            labeled image encoding objects (connected pixel components)
+            for which features should be extracted
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image encoding objects to which extracted features
+            should be assigned
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
-            intensity image
+            grayscale image from which texture features should be extracted
         '''
-        super(TAS, self).__init__(label_image, intensity_image)
+        super(TAS, self).__init__(label_image, ref_label_image, intensity_image)
         self.threshold = filters.threshold_otsu(intensity_image)
 
     @property
@@ -438,24 +529,28 @@ class Gabor(Features):
 
     '''Class for calculating Gabor texture features.'''
 
-    def __init__(self, label_image, intensity_image,
+    def __init__(self, label_image, ref_label_image, intensity_image,
                  theta_range=4, frequencies={1, 5, 10}):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zero and
-            and pixels belonging to a segmented object (connected component)
-            are labeled with a unique identifier value
+            labeled image encoding objects (connected pixel components)
+            for which features should be extracted
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image encoding objects to which extracted features
+            should be assigned
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
-            intensity image
+            grayscale image from which texture features should be extracted
         theta_range: int, optional
             number of angles to define the orientations of the Gabor
             filters (default: ``4``)
         frequencies: Set[int], optional
             frequencies of the Gabor filters (default: ``{1, 5, 10}``)
         '''
-        super(Gabor, self).__init__(label_image, intensity_image)
+        super(Gabor, self).__init__(
+            label_image, ref_label_image, intensity_image
+        )
         self.theta_range = theta_range
         self.frequencies = frequencies
         if not isinstance(theta_range, int):
@@ -524,18 +619,20 @@ class Hu(Features):
     .. [3] Hu M.K. (1962). "Visual Pattern Recognition by Moment Invariants", IRE Trans. Info. Theory
     '''
 
-    def __init__(self, label_image, intensity_image):
+    def __init__(self, label_image, ref_label_image, intensity_image):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zero and
-            and pixels belonging to a segmented object (connected component)
-            are labeled with a unique identifier value
+            labeled image encoding objects (connected pixel components)
+            for which features should be extracted
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image encoding objects to which extracted features
+            should be assigned
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
-            intensity image
+            grayscale image from which texture features should be extracted
         '''
-        super(Hu, self).__init__(label_image, intensity_image)
+        super(Hu, self).__init__(label_image, ref_label_image, intensity_image)
 
     @property
     def _feature_names(self):
@@ -569,19 +666,21 @@ class Zernike(Features):
 
     '''Class for calculating Zernike moments.'''
 
-    def __init__(self, label_image, radius=100):
+    def __init__(self, label_image, ref_label_image, radius=100):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
-            labeled image, where background pixels are zero and
-            and pixels belonging to a segmented object (connected component)
-            are labeled with a unique identifier value
+            labeled image encoding objects (connected pixel components)
+            for which features should be extracted
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image encoding objects to which extracted features
+            should be assigned
         radius: int, optional
             radius for rescaling of images to achieve scale invariance
             (default: ``100``)
         '''
-        super(Zernike, self).__init__(label_image)
+        super(Zernike, self).__init__(label_image, ref_label_image)
         self.radius = radius
         self.degree = 12
 
