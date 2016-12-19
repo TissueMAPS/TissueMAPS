@@ -39,18 +39,18 @@ FIGURE_WIDTH = 800
 
 #: Mapping for the position of the colorbar relative to the figure.
 COLORBAR_POSITION_MAPPING = {
-    'ul': (1-PLOT_HEIGHT, PLOT_WIDTH),
-    'ur': (1-PLOT_HEIGHT, 1),
-    'll': (0, PLOT_WIDTH),
-    'lr': (0, 1),
+    "ul": (1-PLOT_HEIGHT, PLOT_WIDTH),
+    "ur": (1-PLOT_HEIGHT, 1),
+    "ll": (0, PLOT_WIDTH),
+    "lr": (0, 1),
 }
 
 #: Mapping for the position of the plot relative to the figure.
 PLOT_POSITION_MAPPING = {
-    'ul': ('y1', 'x1'),
-    'ur': ('y2', 'x2'),
-    'll': ('y3', 'x3'),
-    'lr': ('y4', 'x4'),
+    "ul": ('y1', 'x1'),
+    "ur": ('y2', 'x2'),
+    "ll": ('y3', 'x3'),
+    "lr": ('y4', 'x4'),
 }
 
 #: The factor by which the size of an image should be reduced for plotting.
@@ -59,7 +59,7 @@ IMAGE_RESIZE_FACTOR = 10
 
 
 def _check_position_argument(position):
-    supported_positions = {'ul', 'ur', 'll', 'lr'}
+    supported_positions = {"ul", "ur", "ll", "lr"}
     if not isinstance(position, basestring):
         raise TypeError('Argument "position" must have type basestring.')
     if position not in supported_positions:
@@ -78,9 +78,9 @@ def create_histogram_plot(data, position, color='grey'):
     data: list or numpy.array
         data that should be plotted
     position: str
-        one-based figure coordinate that defines the relative position of the
-        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
-        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+        coordinate that defines the relative position of the
+        plot within the figure; ``"ul"`` -> upper left, ``"ur"`` -> upper
+        right, ``"ll"`` lower left, ``"lr"`` -> lower right
     color: str, optional
         color that should be used for the marker
 
@@ -108,13 +108,13 @@ def create_scatter_plot(y_data, x_data, position, color='grey', marker_size=4):
     x_data: list or numpy.array
         data that should be plotted along the x-axis
     position: str
-        one-based figure coordinate that defines the relative position of the
-        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
-        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+        coordinate that defines the relative position of the
+        plot within the figure; ``"ul"`` -> upper left, ``"ur"`` -> upper
+        right, ``"ll"`` lower left, ``"lr"`` -> lower right
     color: str, optional
         color of the points (default: ``"grey"``)
-    marker_size: int, optional (default: ``4``)
-        size of the points
+    marker_size: int, optional
+        size of the points (default: ``4``)
 
 
     Returns
@@ -141,9 +141,9 @@ def create_line_plot(y_data, x_data, position, color='grey', line_width=4):
     x_data: list or numpy.array
         data that should be plotted along the x-axis
     position: str
-        one-based figure coordinate that defines the relative position of the
-        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
-        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+        coordinate that defines the relative position of the
+        plot within the figure; ``"ul"`` -> upper left, ``"ur"`` -> upper
+        right, ``"ll"`` lower left, ``"lr"`` -> lower right
     color: str, optional
         color of the line (default: ``"grey"``)
     line_width: int, optional
@@ -173,9 +173,9 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
     image: numpy.ndarray[numpy.uint8 or numpy.uint16]
         2D intensity image
     position: str
-        one-based figure coordinate that defines the relative position of the
-        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
-        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+        coordinate that defines the relative position of the
+        plot within the figure; ``"ul"`` -> upper left, ``"ur"`` -> upper
+        right, ``"ll"`` lower left, ``"lr"`` -> lower right
     clip: bool, optional
         whether intensity values should be clipped (default: ``True``)
     clip_value: int, optional
@@ -242,9 +242,9 @@ def create_float_image_plot(image, position, colorscale=None):
     image: numpy.ndarray[numpy.float]
         2D floating point image
     position: str
-        one-based figure coordinate that defines the relative position of the
-        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
-        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+        coordinate that defines the relative position of the
+        plot within the figure; ``"ul"`` -> upper left, ``"ur"`` -> upper
+        right, ``"ll"`` lower left, ``"lr"`` -> lower right
     colorscale: List[List[int, str]], optional
         colors that should be used to visually highlight the objects in the
         mask image; a default continous colorscale will be created if none
@@ -304,9 +304,9 @@ def create_mask_image_plot(mask, position, colorscale=None):
     mask: numpy.ndarray[numpy.bool or numpy.int32]
         binary or labeled 2D mask image
     position: str
-        one-based figure coordinate that defines the relative position of the
-        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
-        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+        coordinate that defines the relative position of the
+        plot within the figure; ``"ul"`` -> upper left, ``"ur"`` -> upper
+        right, ``"ll"`` lower left, ``"lr"`` -> lower right
     colorscale: List[List[int, str]]
         colors that should be used to visually highlight the objects in the
         mask image; a default color map will be used if not provided;
@@ -372,9 +372,9 @@ def create_intensity_overlay_image_plot(image, mask, position,
     image: numpy.ndarray[numpy.uint8 or numpy.uint16]
         2D intensity image
     position: str
-        one-based figure coordinate that defines the relative position of the
-        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
-        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+        coordinate that defines the relative position of the
+        plot within the figure; ``"ul"`` -> upper left, ``"ur"`` -> upper
+        right, ``"ll"`` lower left, ``"lr"`` -> lower right
     clip: bool, optional
         whether intensity values should be clipped (default: ``True``)
     clip_value: int, optional
@@ -469,9 +469,9 @@ def create_mask_overlay_image_plot(mask, mask2, position, color=None):
     outlines: numpy.ndarray[numpy.bool]
         2D mask image that should be overlayed
     position: str
-        one-based figure coordinate that defines the relative position of the
-        plot within the figure; ``'ul'`` -> upper left, ``'ur'`` -> upper
-        right, ``'ll'`` lower left, ``'lr'`` -> lower right
+        coordinate that defines the relative position of the
+        plot within the figure; ``"ul"`` -> upper left, ``"ur"`` -> upper
+        right, ``"ll"`` lower left, ``"lr"`` -> lower right
     color: str, optional
         color of the mask outline; defaults to
         attribute:`jtlib.plotting.OBJECT_COLOR` in case no color
@@ -531,7 +531,7 @@ def create_mask_overlay_image_plot(mask, mask2, position, color=None):
     )
 
 
-def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
+def create_figure(plots, plot_positions=["ul", "ur", "ll", "lr"],
                   plot_is_image=[True, True, True, True], title=''):
     '''Creates a figure based on one or more subplots. Plots will be arranged as
     a 2x2 grid.
@@ -544,9 +544,9 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
         same figure position
     plot_positions: List[str], optional
         relative position of each plot in the figure;
-        ``'ul'`` -> upper left, ``'ur'`` -> upper
-        right, ``'ll'`` lower left, ``'lr'`` -> lower right
-        (default: ``['ul', 'ur', 'll', 'lr']``)
+        ``"ul"`` -> upper left, ``"ur"`` -> upper
+        right, ``"ll"`` lower left, ``"lr"`` -> lower right
+        (default: ``["ul", "ur", "ll", "lr"]``)
     plot_is_image: List[bool], optional
         whether a plot represents an image; for images the y axis is inverted
         accounting for the fact that the 0,0 coordinate is located in
@@ -583,28 +583,28 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
     data = list()
     layout = plotly.graph_objs.Layout(title=title)
     for i, p in enumerate(plots):
-        if plot_positions[i] == 'ul':
+        if plot_positions[i] == "ul":
             layout.update(
                 xaxis1=dict(domain=[0, PLOT_WIDTH], anchor='y1'),
                 yaxis1=dict(domain=[1-PLOT_HEIGHT, 1], anchor='x1')
             )
             if plot_is_image[i]:
                 layout['yaxis1']['autorange'] = 'reversed'
-        elif plot_positions[i] == 'ur':
+        elif plot_positions[i] == "ur":
             layout.update(
                 xaxis2=dict(domain=[1-PLOT_WIDTH, 1], anchor='y2'),
                 yaxis2=dict(domain=[1-PLOT_HEIGHT, 1], anchor='x2')
             )
             if plot_is_image[i]:
                 layout['yaxis2']['autorange'] = 'reversed'
-        elif plot_positions[i] == 'll':
+        elif plot_positions[i] == "ll":
             layout.update(
                 xaxis3=dict(domain=[0, PLOT_WIDTH], anchor='y3'),
                 yaxis3=dict(domain=[0, PLOT_HEIGHT], anchor='x3')
             )
             if plot_is_image[i]:
                 layout['yaxis3']['autorange'] = 'reversed'
-        elif plot_positions[i] == 'lr':
+        elif plot_positions[i] == "lr":
             layout.update(
                 xaxis4=dict(domain=[1-PLOT_WIDTH, 1], anchor='y4'),
                 yaxis4=dict(domain=[0, PLOT_HEIGHT], anchor='x4')
@@ -614,7 +614,7 @@ def create_figure(plots, plot_positions=['ul', 'ur', 'll', 'lr'],
         else:
             raise ValueError(
                 'Options for values of argument "plot_positions" are: %s'
-                % ', '.join(map(str, ['ul', 'ur', 'll', 'lr']))
+                % ', '.join(map(str, ["ul", "ur", "ll", "lr"]))
             )
 
         # Flatten potentially nested list
@@ -693,17 +693,17 @@ def create_colorscale(name, n=256, permute=False, add_background=False,
 
     Examples
     --------
-    >>>create_colorscale('Greys', 5)
-    [[0.0, 'rgb(255,255,255)'],
+    >>> create_colorscale('Greys', 5)
+    [[0.0,  'rgb(255,255,255)'],
      [0.25, 'rgb(216,216,216)'],
-     [0.5, 'rgb(149,149,149)'],
+     [0.5,  'rgb(149,149,149)'],
      [0.75, 'rgb(82,82,82)'],
-     [1.0, 'rgb(0,0,0)']]
+     [1.0,  'rgb(0,0,0)']]
 
-    Note
-    ----
+    Notes
+    -----
     You can invert a colorscale in a `plotly` graph using the
-    attr:`reversescale` argument.
+    :attr:`reversescale` argument.
     '''
     cmap = cm.get_cmap(name)
     if add_background:
