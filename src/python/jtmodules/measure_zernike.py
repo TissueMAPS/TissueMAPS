@@ -15,19 +15,25 @@
 import collections
 import jtlib.features
 
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
 
 def main(label_image, plot=False):
-    '''Measures texture features for objects in `label_image` based
-    on grayscale values in `intensity_image`.
+    '''Measures morphology features for objects in `extract_objects`
+    and assign them to `assign_objects`.
 
     Parameters
     ----------
-    label_image: numpy.ndarray[int32]
-        label image with objects that should be measured
+    extract_objects: numpy.ndarray[int32]
+        label image with objects for which features should be extracted
+    assign_objects: numpy.ndarray[int32]
+        label image with objects to which extracted features should be
+        assigned; if different from `label_image` aggregates are computed
+    aggregate: bool, optional
+        whether features extracted for objects in `extract_objects` should be
+        aggregated for objects in `assign_objects` (default: ``False``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -39,9 +45,14 @@ def main(label_image, plot=False):
     --------
     :class:`jtlib.features.Zernike`
     '''
-    f = jtlib.features.Zernike(label_image=label_image)
+    f = jtlib.features.Zernike(
+        label_image=extract_objects, ref_label_image=assign_objects
+    )
 
-    measurements = [f.extract()]
+    if aggregate:
+        measurements = [f.extract_aggregate()]
+    else:
+        measurements = [f.extract()]
 
     if plot:
         figure = f.plot()

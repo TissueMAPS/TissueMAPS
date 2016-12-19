@@ -1,20 +1,35 @@
 ---
-version: 0.0.1
+version: 0.1.0
 
 input:
 
-    - name: label_image
+    - name: extract_objects
       type: SegmentedObjects
       key:
       help: >
-        Labeled image containing the objects
+        Labeled image with registered objects
         for which Hu features should be extracted.
+
+    - name: assign_objects
+      type: SegmentedObjects
+      key:
+      help: >
+        Labeled image with registered objects to which Hu features
+        should be assigned. Objects must either be "extract_objects" or
+        contain those in "extract_objects".
 
     - name: intensity_image
       type: IntensityImage
-      key: 
+      key:
       help: >
         Greyscale image whose pixel values should be used for the measurement.
+
+    - name: aggregate
+      type: Boolean
+      value: false
+      help: >
+        Should aggregate statistics be computed for "assign_objects"
+        over features extracted for "extract_objects"?
 
     - name: plot
       type: Plot
@@ -25,7 +40,8 @@ output:
 
     - name: measurements
       type: Measurement
-      objects_ref: label_image
+      objects: assign_image
+      objects_ref: extract_image
       channel_ref: intensity_image
       help: Extracted Hu features.
 

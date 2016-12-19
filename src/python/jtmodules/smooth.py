@@ -107,10 +107,10 @@ def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
         clip_value = np.percentile(image, 99.99)
         data = [
             plotting.create_intensity_image_plot(
-                image, 'ul', clip_value=clip_value
+                image, 'ul', clip=True, clip_value=clip_value
             ),
             plotting.create_intensity_image_plot(
-                smoothed_image, 'ur', clip_value=clip_value
+                smoothed_image, 'ur', clip=True, clip_value=clip_value
             ),
         ]
         figure = plotting.create_figure(

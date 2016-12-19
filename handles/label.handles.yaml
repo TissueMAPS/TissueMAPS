@@ -5,7 +5,7 @@ input:
 
     - name: mask
       type: BinaryImage
-      key: 
+      key:
       help: Binary image that should be labeled.
 
     - name: plot

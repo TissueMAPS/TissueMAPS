@@ -1,14 +1,29 @@
 ---
-version: 0.0.1
+version: 0.1.0
 
 input:
 
-    - name: label_image
+    - name: extract_objects
       type: SegmentedObjects
-      key: 
+      key:
       help: >
-        Labeled image containing the objects
+        Labeled image with registered objects
         for which Zernike features should be extracted.
+
+    - name: assign_objects
+      type: SegmentedObjects
+      key:
+      help: >
+        Labeled image with registered objects to which Zernike features
+        should be assigned. Objects must either be "extract_objects" or
+        contain those in "extract_objects".
+
+    - name: aggregate
+      type: Boolean
+      value: false
+      help: >
+        Should aggregate statistics be computed for "assign_objects"
+        over features extracted for "extract_objects"?
 
     - name: plot
       type: Plot
