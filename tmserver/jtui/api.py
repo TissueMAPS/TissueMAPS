@@ -318,14 +318,19 @@ def create_joblist(experiment_id, project_name):
     )
     metadata = dict()
     with tm.utils.ExperimentSession(experiment_id) as session:
-        for index, site in enumerate(session.query(tm.Site)):
-            # TODO: Include time point here?
-            # Depends on batching in Jterator.
+        query = session.query(
+                tm.Site.y, tm.Site.x,
+                tm.Well.name.alias('well'), tm.Plate.name.alias('plate')
+            ).\
+            join(tm.Well).\
+            join(tm.Plate).\
+            order_by(tm.Site.id)
+        for index, record in enumerate(query):
             metadata[index+1] = {
-                'plate': site.well.plate.name,
-                'well': site.well.name,
-                'y': site.y,
-                'x': site.x,
+                'plate': record.plate,
+                'well': record.well,
+                'y': record.y,
+                'x': record.x,
             }
     return jsonify({'joblist': metadata})
 
