@@ -9,19 +9,9 @@ input:
       help: >
         Labeled image containing the objects whose segmentation should be saved.
 
-    - name: as_polygons
-      type: Boolean
-      value: true
-      help: Should objects be represented as polygons?
-
 output:
 
     - name: objects
       type: SegmentedObjects
       key:
       help: Name that should be given to the objects in "label_image".
-
-    - name: as_polygons
-      type: Attribute
-      objects: objects
-      help: Whether objects should be represented as polygons.

@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 VERSION = '0.0.1'
 
-Output = collections.namedtuple('Output', ['objects', 'as_polygons'])
+Output = collections.namedtuple('Output', ['objects'])
 
 
-def main(label_image, as_polygons=True):
+def main(label_image):
     '''Registeres segmented objects in a labeled image for use by other
     (measurement) modules downstream in the pipeline.
 
@@ -33,9 +33,6 @@ def main(label_image, as_polygons=True):
     ----------
     label_image: numpy.ndarray[int32]
         labeled image where pixel values encode objects IDs
-    as_polygons: boolean, optional
-        whether objects should be represented as polygons;
-        if ``False`` they will only be represented as points (default: ``True``)
 
     Returns
     -------
@@ -45,4 +42,4 @@ def main(label_image, as_polygons=True):
     --------
     :class:`tmlib.workflow.jterator.handles.SegmentedObjects`
     '''
-    return Output(label_image, as_polygons)
+    return Output(label_image)
