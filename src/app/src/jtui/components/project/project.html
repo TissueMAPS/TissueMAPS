@@ -36,7 +36,7 @@
 
         <div class="panel-body">
 
-          <p>Select <b>channels</b> for processing:</p>
+          <p>Select <b>channels</b> that should be available in the pipeline:</p>
           <p></p>
 
           <div class="col-sm-12">
@@ -168,6 +168,53 @@
 
         </div>
       </div>
+
+      <div class="panel panel-default">
+
+        <div class="panel-heading">
+            Output
+        </div>
+
+        <div class="panel-body">
+
+          <p>Select <b>objects</b> that should be saved:</p>
+          <p></p>
+
+          <div class="col-sm-12">
+            <form class="form-horizontal">
+              <div class="form-group"
+                  ng-repeat="object in project.pipe.description.output.objects">
+
+                <select class="form-control" id="objectName"
+                    ng-model="object.name"
+                    ng-options="n for n in getSelectableObjectNames($index)">
+                </select>
+
+                <span>Represent as polygons</span>
+                <input type="checkbox" ng-model="object.as_polygons">
+
+              </div>
+            </form>
+          </div>
+
+          <div btn-group role="group">
+            <button type="button" class="btn btn-default"
+                                  ng-click="addObject()">
+              <i class="fa fa-plus"></i>
+              Add
+            </button>
+
+            <button type="button" class="btn btn-default"
+                                ng-click="removeObject()">
+              <i class="fa fa-minus"></i>
+              Remove
+            </button>
+
+          </div>
+
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

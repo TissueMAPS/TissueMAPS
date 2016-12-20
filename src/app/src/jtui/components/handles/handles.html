@@ -37,7 +37,7 @@
         <!-- piped -->
         <span ng-show="isPipeline(inarg.name)" class="ng-hide">
 
-          <select class="form-control" id="inputArg" ng-model="inarg.key" ng-options="a for a in getArgList(inarg)">
+          <select class="form-control" id="inputArg" ng-model="inarg.key" ng-options="a for a in getArgList(inarg.type)">
             <option key="">
             </option>
           </select>

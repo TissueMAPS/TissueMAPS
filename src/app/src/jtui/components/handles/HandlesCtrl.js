@@ -32,7 +32,7 @@ angular.module('jtui.handles')
 
     // Get list of upstream output values that are available as input
     // values in the current module
-    $scope.getArgList = function(arg) {
+    $scope.getArgList = function(type) {
         var availableArguments = [];
         var pipeline = $scope.project.pipe.description.pipeline;
         var handles = $scope.project.handles;
@@ -49,7 +49,7 @@ angular.module('jtui.handles')
                 if ('key' in upstreamOutputHandle) {
                     // Only handles with matching type
                     if (upstreamOutputHandle.key != null &&
-                            upstreamOutputHandle.type == arg.type) {
+                            upstreamOutputHandle.type == type) {
                         availableArguments.push(
                             handle.description.output[j].key
                         );
@@ -58,13 +58,13 @@ angular.module('jtui.handles')
             }
         }
         // Also consider pipeline inputs provided by Jterator
-        if (arg.type === 'IntensityImage') {
+        if (type === 'IntensityImage') {
             var channels = $scope.project.pipe.description.input.channels;
             for (var i in channels) {
                 availableArguments.push(channels[i].name);
             }
         }
-        return availableArguments
+        return availableArguments;
     }
 
     $scope.isDuplicate = function(output_arg) {

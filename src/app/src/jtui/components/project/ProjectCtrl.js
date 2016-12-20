@@ -225,19 +225,55 @@ angular.module('jtui.project')
 
 
     $scope.getSelectableChannelNames = function(index) {
-        selectableImageNames = [];
-        selectedImageNames = [];
+        availableChannels = [];
+        selectedChannels = [];
         for (var i in $scope.project.pipe.description.input.channels) {
             if (i != index) {
-                selectedImageNames.push($scope.project.pipe.description.input.channels[i].name);
+                var channelName = $scope.project.pipe.description.input.channels[i].name;
+                selectedChannels.push(channelName);
             }
         }
         for (var i in $scope.channels) {
-            if (selectedImageNames.indexOf($scope.channels[i]) == -1) {
-                selectableImageNames.push($scope.channels[i]);
+            var channelName = $scope.channels[i];
+            if (selectedChannels.indexOf(channelName) == -1) {
+                availableChannels.push(channelName);
             }
         }
-        return selectableImageNames;
+        return availableChannels;
+    };
+
+    $scope.getSelectableObjectNames = function(index) {
+        var availableObjects = [];
+        var selectedObjects = [];
+        for (var i in $scope.project.pipe.description.output.objects) {
+            if (i != index) {
+                var objectName = $scope.project.pipe.description.output.objects[i].name;
+                selectedObjects.push(objectName);
+            }
+        }
+        var pipeline = $scope.project.pipe.description.pipeline;
+        var handles = $scope.project.handles;
+        var handleNames = handles.map(function(h) {return h.name});
+        for (var i in pipeline) {
+            var module = pipeline[i];
+            // Make sure we're dealing with the correct handles object
+            var index = handleNames.indexOf(module.name);
+            var handle = handles[index];
+            for (var j in handle.description.output) {
+                var upstreamOutputHandle = handle.description.output[j];
+                if ('key' in upstreamOutputHandle) {
+                    // Only handles with matching type
+                    if (upstreamOutputHandle.key != null &&
+                            upstreamOutputHandle.type == 'SegmentedObjects') {
+                            var objectName = handle.description.output[j].key;
+                        if (selectedObjects.indexOf(objectName) == -1) {
+                            availableObjects.push(objectName);
+                        }
+                    }
+                }
+            }
+        }
+        return availableObjects;
     };
 
     // Initialize empty array for selection of modules
@@ -470,9 +506,22 @@ angular.module('jtui.project')
     };
 
     $scope.removeChannel = function() {
-        // Remove last pattern in list
         $scope.project.pipe.description.input.channels.pop();
         // console.log('removed last channel')
+    };
+
+    $scope.addObject = function() {
+        var newObject = {
+            name: '',
+            as_polygons: true
+        };
+        $scope.project.pipe.description.output.objects.push(newObject);
+        // console.log('added new object')
+    };
+
+    $scope.removeObject = function() {
+        $scope.project.pipe.description.output.objects.pop();
+        // console.log('removed last object')
     };
 
     $scope.addedModuleNames = [];
