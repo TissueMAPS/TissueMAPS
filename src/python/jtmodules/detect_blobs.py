@@ -69,14 +69,13 @@ def main(image, threshold_factor, plot=False):
     if plot:
         logger.info('create plot')
         from jtlib import plotting
-        blobs_img = mh.morph.dilate(mask)
         n_objects = len(np.unique(label_img[1:]))
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
         plots = [
-            plotting.create_intensity_overlay_image_plot(
-                image, blobs_img, 'ul', clip=True
+            plotting.create_intensity_image_plot(
+                image, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
                 label_img, 'ur', colorscale=colorscale
