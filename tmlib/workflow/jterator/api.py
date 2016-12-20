@@ -953,7 +953,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     @staticmethod
     def _add_mapobject(conn, mapobject_type_id):
         conn.execute('''
-            SELECT * FROM nextval('mapobjects_id_seq');
+            SELECT nextval FROM nextval('mapobjects_id_seq');
         ''')
         val = conn.fetchone()
         mapobject_id = val.nextval
@@ -974,7 +974,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
         if polygon is None and centroid is None:
             raise ValueError('Either "polygon" or "centroid" must be provided.')
         if centroid is None:
-            centroid = polygon.centroid
+            geom_centroid = polygon.centroid.wkt
+            geom_poly = polygon.wkt
+        else:
+            geom_centroid = centroid.wkt
+            # If no polygon is available, we generate an empty geometry
+            # which we can filter using the Postgis function ST_IsEmpty().
+            polygon = shapely.geometry.Polygon()
+            geom_poly = polygon.wkt  # GEOMETRYCOLLECTION EMPTY
         conn.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id,
@@ -990,7 +997,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             );
         ''', {
             'mapobject_id': mapobject_id,
-            'geom_poly': polygon.wkt, 'geom_centroid': centroid.wkt,
+            'geom_poly': geom_poly, 'geom_centroid': geom_centroid,
             'tpoint': t, 'zplane': z, 'label': label,
             'site_id': site_id, 'is_border': is_border, 'pipeline': pipeline
         })
