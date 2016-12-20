@@ -520,9 +520,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 y_offset += site.intersection.lower_overhang
                 x_offset += site.intersection.right_overhang
 
-        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-            mapobject_ids = dict()
-            for obj_name, segm_objs in store['segmented_objects'].iteritems():
+        mapobject_ids = dict()
+        for obj_name, segm_objs in store['segmented_objects'].iteritems():
+            with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                 # Delete existing mapobjects for this site when they were
                 # generated in a previous run of the same pipeline. In case
                 # they were passed to the pipeline as inputs don't delete them
@@ -541,10 +541,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         site_id=store['site_id'], pipeline=self.project.name
                     )
 
-        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-            for obj_name, segm_objs in store['segmented_objects'].iteritems():
-                logger.info('create objects of type "%s"', obj_name)
-
+        for obj_name, segm_objs in store['segmented_objects'].iteritems():
+            logger.info('create objects of type "%s"', obj_name)
+            with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                 # Get existing mapobjects for this site in case they were
                 # created by a previous pipeline or create new mapobjects in
                 # case they didn't exist (or got just deleted).
@@ -563,11 +562,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 )
                 border_indices = segm_objs.is_border
                 if segm_objs.attributes['as_polygons']:
+                    logger.debug('represent segmented objects as polygons')
                     # TODO: don't calculate polygons for single-pixel objects
                     polygons = segm_objs.to_polygons(y_offset, x_offset)
                     for (t, z, label), polygon in polygons:
                         logger.debug(
-                            'create segmentation for object #%d at '
+                            'add segmentation for object #%d at '
                             'tpoint %d and zplane %d', label, t, z
                         )
                         if polygon.is_empty:
@@ -584,8 +584,13 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             pipeline=self.project.name
                         )
                 else:
+                    logger.debug('represent segmented objects only as points')
                     centroids = segm_objs.to_points(y_offset, x_offset)
                     for (t, z, label), centroid in centroids:
+                        logger.debug(
+                            'add segmentation for object #%d at '
+                            'tpoint %d and zplane %d', label, t, z
+                        )
                         self._add_mapobject_segmentation(
                             conn, mapobject_id=mapobject_ids[label],
                             centroid=centroid, t=t, z=z, label=label,
@@ -978,10 +983,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             geom_poly = polygon.wkt
         else:
             geom_centroid = centroid.wkt
-            # If no polygon is available, we generate an empty geometry
-            # which we can filter using the Postgis function ST_IsEmpty().
-            polygon = shapely.geometry.Polygon()
-            geom_poly = polygon.wkt  # GEOMETRYCOLLECTION EMPTY
+            geom_poly = None
         conn.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id,

@@ -367,7 +367,7 @@ class SegmentedObjects(LabelImage):
                     int(np.mean(x)) + x_offset,
                     -1 * (int(np.mean(y)) + y_offset),
                 )
-                yield ((t, z, label), point)
+                yield ((t, z, int(label)), point)
 
     def to_polygons(self, y_offset, x_offset, tolerance=2):
         '''Creates a polygon representation for each segmented object.
@@ -526,7 +526,7 @@ class SegmentedObjects(LabelImage):
                         areas = [g.area for g in poly.geoms]
                         index = areas.index(np.max(areas))
                         poly = poly.geoms[index]
-                yield ((t, z, label), poly)
+                yield ((t, z, int(label)), poly)
 
     def from_polygons(self, polygons, y_offset, x_offset, dimensions):
         '''Creates a label image representation of segmented objects based
