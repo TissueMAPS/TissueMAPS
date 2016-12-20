@@ -1,3 +1,16 @@
+# Copyright 2016 Markus D. Herrmann, University of Zurich
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 '''Jterator module for detection of blobs in images.'''
 import sep
 import numpy as np
@@ -5,13 +18,13 @@ import mahotas as mh
 import collections
 import logging
 
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 
 logger = logging.getLogger(__name__)
 
 sep.set_extract_pixstack(10**6)
 
-Output = collections.namedtuple('Output', ['mask', 'figure'])
+Output = collections.namedtuple('Output', ['mask', 'label_image', 'figure'])
 
 
 def main(image, threshold_factor, plot=False):
@@ -46,7 +59,10 @@ def main(image, threshold_factor, plot=False):
     img_sub = img - bkg
 
     logger.info('detect blobs')
-    out = sep.extract(img_sub, threshold_factor, err=bkg.globalrms)
+    out, label_img = sep.extract(
+        img_sub, threshold_factor, err=bkg.globalrms,
+        segmentation_map=True
+    )
     mask = np.zeros(img.shape, dtype=bool)
     mask[out['y'].astype(int), out['x'].astype(int)] = True
 
@@ -54,7 +70,7 @@ def main(image, threshold_factor, plot=False):
         logger.info('create plot')
         from jtlib import plotting
         blobs_img = mh.morph.dilate(mask)
-        label_img, n_objects = mh.label(blobs_img)
+        n_objects = len(np.unique(label_img[1:]))
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
@@ -67,9 +83,9 @@ def main(image, threshold_factor, plot=False):
             )
         ]
         figure = plotting.create_figure(
-            plots, title='detected #%d blobs' % len(out['y'])
+            plots, title='detected #%d blobs' % n_objects
         )
     else:
         figure = str()
 
-    return Output(mask, figure)
+    return Output(mask, label_img, figure)

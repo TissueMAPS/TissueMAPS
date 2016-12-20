@@ -1,5 +1,5 @@
 ---
-version: 0.0.1
+version: 0.1.0
 
 input:
 
@@ -25,7 +25,12 @@ output:
     - name: mask
       type: BinaryImage
       key: detect_blobs.mask
-      help: Mask for blobs detected in "image".
+      help: Mask with centroids of blobs detected in "image".
+
+    - name: label_image
+      type: LabelImage
+      key: detect_blobs.label_image
+      help: Blobs detected in "image".
 
     - name: figure
       type: Figure
