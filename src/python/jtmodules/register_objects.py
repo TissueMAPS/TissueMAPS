@@ -35,7 +35,7 @@ def main(label_image, as_polygons=True):
         labeled image where pixel values encode objects IDs
     as_polygons: boolean, optional
         whether objects should be represented as polygons;
-        if ``False`` they will be represented as lines (default: ``True``)
+        if ``False`` they will only be represented as points (default: ``True``)
 
     Returns
     -------
