@@ -87,13 +87,13 @@ class PipelineChecker(object):
                     'of the pipe file must be an array.' % key
                 )
             # Check for presence of required keys
-            REQUIRED_HANDLE_ITEM_KEYS = set()
-            possible_subkeys = REQUIRED_HANDLE_ITEM_KEYS.union(
-                {'correct', 'align', 'name', 'path'}
+            REQUIRED_INPUT_ITEM_KEYS = {'name'}
+            possible_subkeys = REQUIRED_INPUT_ITEM_KEYS.union(
+                {'correct', 'align', 'path'}
             )
             inputs = self.pipe_description['input'][key]
             for inpt in inputs:
-                for k in REQUIRED_HANDLE_ITEM_KEYS:
+                for k in REQUIRED_INPUT_ITEM_KEYS:
                     if k not in inpt:
                         raise PipelineDescriptionError(
                             'Each element of "%s" in the "inputs" '
@@ -110,30 +110,35 @@ class PipelineChecker(object):
         # Check "pipeline" section
         if 'pipeline' not in self.pipe_description.keys():
             raise PipelineDescriptionError(
-                    'Pipeline file must contain the key "pipeline".')
+                'Pipeline file must contain the key "pipeline".'
+            )
         if not isinstance(self.pipe_description['pipeline'], list):
             raise PipelineDescriptionError(
-                    'The value of "pipeline" in the pipe file must be a list.')
+                'The value of "pipeline" in the pipe file must be a list.'
+            )
 
-        required_subkeys = {'handles', 'source', 'active'}
+        required_pipeline_keys = {'handles', 'source', 'active'}
         for module_description in self.pipe_description['pipeline']:
-            for key in required_subkeys:
+            for key in required_pipeline_keys:
                 if key not in module_description:
                     raise PipelineDescriptionError(
-                            'Each element in "pipeline" '
-                            'in the pipe file needs a key "%s".' % key)
+                        'Each element in "pipeline" '
+                        'in the pipe file needs a key "%s".' % key
+                    )
                 if key == 'active':
                     if not isinstance(module_description[key], bool):
                         raise PipelineDescriptionError(
-                                'The value of "%s" in the '
-                                '"pipeline" section of the pipe '
-                                'file must be boolean.' % key)
+                            'The value of "%s" in the '
+                            '"pipeline" section of the pipe '
+                            'file must be boolean.' % key
+                        )
                 else:
                     if not isinstance(module_description[key], basestring):
                         raise PipelineDescriptionError(
-                                'The value of "%s" in the '
-                                '"pipeline" section of the pipe '
-                                'file must be a string.' % key)
+                            'The value of "%s" in the '
+                            '"pipeline" section of the pipe '
+                            'file must be a string.' % key
+                        )
 
         # Ensure that handles filenames are unique
         n = Counter([
@@ -215,14 +220,16 @@ class PipelineChecker(object):
                         )
                     if not isinstance(handles[key], list):
                         raise PipelineDescriptionError(
-                                'The value of "%s" in module "%s" '
-                                'must be a list.' % (key, module['name']))
+                            'The value of "%s" in module "%s" '
+                            'must be a list.' % (key, module['name'])
+                        )
 
             for key in handles:
                 if key not in possible_keys:
                     raise PipelineDescriptionError(
-                                'Possible keys in module "%s" are: "%s"'
-                                % (module['name'], '" or "'.join(possible_keys)))
+                        'Possible keys in module "%s" are: "%s"'
+                        % (module['name'], '" or "'.join(possible_keys))
+                    )
 
             n = len(set(([o['name'] for o in handles['input']])))
             if n < len(handles['input']):

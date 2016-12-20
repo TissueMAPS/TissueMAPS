@@ -320,7 +320,35 @@ class ImageAnalysisPipeline(ClusterRoutines):
         command.append('collect')
         return command
 
-    def _load_pipeline_inputs(self, site_id, debug=False):
+    def _load_pipeline_inputs_debug(self):
+        logger.info('load pipeline inputs from files for debugging')
+        # Use an in-memory store for pipeline data and only insert outputs
+        # into the database once the whole pipeline has completed successfully.
+        store = {
+            'pipe': dict(),
+            'current_figure': list(),
+            'segmented_objects': dict(),
+            'channels': list()
+        }
+
+        channel_input = self.project.pipe['description']['input'].get(
+            'channels', list()
+        )
+        for item in channel_input:
+            path = item.get('path', None)
+            if path is None:
+                raise JobDescriptionError(
+                    'Input items require key "path" in debug mode.'
+                )
+            logger.info(
+                'load image for channel "%s" from file: %s',
+                item['name'], path
+            )
+            with ImageReader(path) as f:
+                store['pipe'][item['name']] = f.read()
+        return store
+
+    def _load_pipeline_inputs(self, site_id):
         logger.info('load pipeline inputs')
         # Use an in-memory store for pipeline data and only insert outputs
         # into the database once the whole pipeline has completed successfully.
@@ -349,100 +377,85 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # a file on disk. The image is not further processed, such as
                 # corrected for illuminatiion artifacts or aligned.
                 images = collections.defaultdict(list)
-                if debug:
-                    path = item.get('path', None)
-                    if path is None:
-                        raise JobDescriptionError(
-                            'Input items require key "path" in debug mode.'
+                site = session.query(tm.Site).get(site_id)
+                if item['correct']:
+                    logger.info('load illumination statistics')
+                    try:
+                        stats_file = session.query(tm.IllumstatsFile).\
+                            join(tm.Channel).\
+                            join(tm.Cycle).\
+                            filter(tm.Channel.name == item['name']).\
+                            filter(tm.Cycle.plate_id == site.well.plate_id).\
+                            one()
+                    except NoResultFound:
+                        raise PipelineDescriptionError(
+                            'No illumination statistics file found for '
+                            'channel "%s"' % item['name']
                         )
-                    logger.info(
-                        'load image for channel "%s" from file: %s',
-                        item['name'], path
-                    )
-                    with ImageReader(path) as f:
-                        array = f.read()
-                    images = {0: array}
-                else:
-                    site = session.query(tm.Site).get(site_id)
+                    stats = stats_file.get()
+
+                logger.info('load images for channel "%s"', item['name'])
+                image_files = session.query(tm.ChannelImageFile).\
+                    join(tm.Channel).\
+                    filter(
+                        tm.Channel.name == item['name'],
+                        tm.ChannelImageFile.site_id == site.id
+                    ).\
+                    all()
+
+                for f in image_files:
+                    logger.info('load image %d', f.id)
+                    img = f.get()
                     if item['correct']:
-                        logger.info('load illumination statistics')
-                        try:
-                            stats_file = session.query(tm.IllumstatsFile).\
-                                join(tm.Channel).\
-                                join(tm.Cycle).\
-                                filter(tm.Channel.name == item['name']).\
-                                filter(tm.Cycle.plate_id == site.well.plate_id).\
-                                one()
-                        except NoResultFound:
-                            raise PipelineDescriptionError(
-                                'No illumination statistics file found for '
-                                'channel "%s"' % item['name']
-                            )
-                        stats = stats_file.get()
-
-                    logger.info('load images for channel "%s"', item['name'])
-                    image_files = session.query(tm.ChannelImageFile).\
-                        join(tm.Channel).\
-                        filter(
-                            tm.Channel.name == item['name'],
-                            tm.ChannelImageFile.site_id == site.id
-                        ).\
-                        all()
-
-                    for f in image_files:
-                        logger.info('load image %d', f.id)
-                        img = f.get()
-                        if item['correct']:
-                            logger.info('correct image %d', f.id)
-                            img = img.correct(stats)
-                        logger.debug('align image %d', f.id)
-                        img = img.align()  # shifted and cropped!
-                        images[f.tpoint].append(img.array)
+                        logger.info('correct image %d', f.id)
+                        img = img.correct(stats)
+                    logger.debug('align image %d', f.id)
+                    img = img.align()  # shifted and cropped!
+                    images[f.tpoint].append(img.array)
 
                 store['pipe'][item['name']] = np.stack(images.values(), axis=-1)
 
             # Load outlins of mapobjects of the specified types and reconstruct
             # the label images required by modules.
-            if not debug:
-                for mapobject_type_name in mapobject_type_names:
-                    mapobject_type = session.query(tm.MapobjectType.id).\
-                        filter_by(name=mapobject_type_name).\
-                        one()
-                    segmentations = session.query(
-                            tm.MapobjectSegmentation.tpoint,
-                            tm.MapobjectSegmentation.zplane,
-                            tm.MapobjectSegmentation.label,
-                            tm.MapobjectSegmentation.geom_poly
-                        ).\
-                        join(
-                            tm.Mapobject,
-                            tm.Mapobject.id == tm.MapojbectSegmentation.mapobject_id
-                        ).\
-                        filter(
-                            tm.Mapobject.mapobject_type_id == mapobject_type.id,
-                            tm.MapobjectSegmentation.site_id == site_id
-                        ).\
-                        all()
-                    dims = store['pipe'].values()[0].shape
-                    # Add the labeled image to the pipeline and create a handle
-                    # object to later add measurements for the objects.
-                    handle = SegmentedObjects(
-                        name=mapobject_type_name, key=mapobject_type_name
-                    )
-                    polygons = {
-                        (s.tpoint, s.zplane, s.label): s.geom_poly
-                        for s in segmentations
-                    }
-                    # The polygon coordinates are global, i.e. relative to the
-                    # map overview. Therefore we have to provide the offsets
-                    # for each axis.
-                    site = session.query(tm.Site).get(site_id)
-                    y_offset, x_offset = site.offset
-                    y_offset += site.intersection.lower_overhang
-                    x_offset += site.intersection.right_overhang
-                    handle.from_polygons(polygons, y_offset, x_offset, dims)
-                    store['pipe'][handle.key] = handle.value
-                    store['segmented_objects'][handle.key] = handle
+            for mapobject_type_name in mapobject_type_names:
+                mapobject_type = session.query(tm.MapobjectType.id).\
+                    filter_by(name=mapobject_type_name).\
+                    one()
+                segmentations = session.query(
+                        tm.MapobjectSegmentation.tpoint,
+                        tm.MapobjectSegmentation.zplane,
+                        tm.MapobjectSegmentation.label,
+                        tm.MapobjectSegmentation.geom_poly
+                    ).\
+                    join(
+                        tm.Mapobject,
+                        tm.Mapobject.id == tm.MapojbectSegmentation.mapobject_id
+                    ).\
+                    filter(
+                        tm.Mapobject.mapobject_type_id == mapobject_type.id,
+                        tm.MapobjectSegmentation.site_id == site_id
+                    ).\
+                    all()
+                dims = store['pipe'].values()[0].shape
+                # Add the labeled image to the pipeline and create a handle
+                # object to later add measurements for the objects.
+                handle = SegmentedObjects(
+                    name=mapobject_type_name, key=mapobject_type_name
+                )
+                polygons = {
+                    (s.tpoint, s.zplane, s.label): s.geom_poly
+                    for s in segmentations
+                }
+                # The polygon coordinates are global, i.e. relative to the
+                # map overview. Therefore we have to provide the offsets
+                # for each axis.
+                site = session.query(tm.Site).get(site_id)
+                y_offset, x_offset = site.offset
+                y_offset += site.intersection.lower_overhang
+                x_offset += site.intersection.right_overhang
+                handle.from_polygons(polygons, y_offset, x_offset, dims)
+                store['pipe'][handle.key] = handle.value
+                store['segmented_objects'][handle.key] = handle
 
         # Remove single-dimensions from image arrays.
         # NOTE: It would be more consistent to preserve shape, but most people
@@ -546,35 +559,48 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # segmented object based on the cooridinates of their
                 # contours.
                 border_indices = segm_objs.is_border
-                polygons = segm_objs.to_polygons(y_offset, x_offset)
-                for (t, z, label), polygon in polygons.iteritems():
-                    logger.debug(
-                        'create segmentation for object #%d at tpoint %d and '
-                        'zplane %d', label, t, z
-                    )
-                    if polygon.is_empty:
-                        logger.warn(
-                            'object #%d of type %s doesn\'t have a polygon',
-                            label, obj_name
+                if segm_objs.attributes['as_polygons']:
+                    # TODO: don't calculate polygons for single-pixel objects
+                    polygons = segm_objs.to_polygons(y_offset, x_offset)
+                    for (t, z, label), polygon in polygons:
+                        logger.debug(
+                            'create segmentation for object #%d at '
+                            'tpoint %d and zplane %d', label, t, z
                         )
-                        continue
-                    self._add_mapobject_segmentation(
-                        conn, mapobject_ids[label], polygon, t, z,
-                        store['site_id'], bool(border_indices[t][label]),
-                        self.project.name
-                    )
+                        if polygon.is_empty:
+                            logger.warn(
+                                'object #%d of type %s doesn\'t have a polygon',
+                                label, obj_name
+                            )
+                            continue
+                        self._add_mapobject_segmentation(
+                            conn, mapobject_id=mapobject_ids[label],
+                            polygon=polygon, t=t, z=z, label=label,
+                            site_id=store['site_id'],
+                            is_border=border_indices[t, z, label],
+                            pipeline=self.project.name
+                        )
+                else:
+                    centroids = segm_objs.to_points(y_offset, x_offset)
+                    for (t, z, label), centroid in centroids:
+                        self._add_mapobject_segmentation(
+                            conn, mapobject_id=mapobject_ids[label],
+                            centroid=centroid, t=t, z=z, label=label,
+                            site_id=store['site_id'],
+                            is_border=border_indices[t, z, label],
+                            pipeline=self.project.name
+                        )
 
-                logger.info(
-                    'add features for objects of type "%s"', obj_name
-                )
+                logger.info('add features for objects of type "%s"', obj_name)
+                measurements = segm_objs.measurements
                 feature_ids = dict()
-                for fname in segm_objs.measurements[0].columns:
+                for fname in measurements[0].columns:
                     logger.debug('add feature "%s"', fname)
                     feature_ids[fname] = self._add_feature(
                         conn, fname, mapobject_type_ids[obj_name], False
                     )
 
-                for t, data in enumerate(segm_objs.measurements):
+                for t, data in enumerate(measurements):
                     if data.empty:
                         logger.warn('empty measurement at time point %d', t)
                         continue
@@ -619,25 +645,15 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # Enable debugging of pipelines by providing the full path to images.
         # This requires a work around for "plot" and "job_id" arguments.
         if batch['debug']:
-            site_ids = [None]
-            plot = False
-            job_id = None
+            store = self._load_pipeline_inputs_debug()
+            # We use job_id 0 for debugging, which does normally not exist since
+            # IDs are one based.
+            store = self._run_pipeline(store, 0, True)
         else:
-            site_ids = batch['site_ids']
-            plot = batch.get('plot')
-            job_id = batch.get('id')
-
-        for sid in site_ids:
-            logger.info('process site %d', sid)
-            # Load inputs
-            store = self._load_pipeline_inputs(sid, batch['debug'])
-            # Run pipeline
-            store = self._run_pipeline(store, job_id, plot)
-            # Write output
-            if batch['debug']:
-                logger.info('debug mode: no output written')
-                sys.exit(0)
-            else:
+            for site_id in batch['site_ids']:
+                logger.info('process site %d', site_id)
+                store = self._load_pipeline_inputs(site_id)
+                store = self._run_pipeline(store, batch['id'], batch['plot'])
                 self._save_pipeline_outputs(store)
 
     def collect_job_output(self, batch):
@@ -721,7 +737,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             conn, mapobject_type_id
                         )
                         self._add_mapobject_segmentation(
-                            conn, mapobject_id, polygon
+                            conn, mapobject_id=mapobject_id, polygon=polygon
                         )
 
                 # Moments are computed only over "non-static" mapobjects,
@@ -760,7 +776,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         feature_map = dict()
                         for feature in child_features:
                             for stat in statistics:
-                                name = '{name}_{stat}-{type}'.format(
+                                name = '{type}_{stat}_{name}'.format(
                                     name=feature.name, stat=stat,
                                     type=child_type.name
                                 )
@@ -949,24 +965,29 @@ class ImageAnalysisPipeline(ClusterRoutines):
         return mapobject_id
 
     @staticmethod
-    def _add_mapobject_segmentation(conn, mapobject_id, polygon, t=None, z=None,
-            site_id=None, is_border=None, pipeline=None):
+    def _add_mapobject_segmentation(conn, mapobject_id, polygon=None,
+            centroid=None, t=None, z=None, label=None, site_id=None,
+            is_border=None, pipeline=None):
+        if polygon is None and centroid is None:
+            raise ValueError('Either "polygon" or "centroid" must be provided.')
+        if centroid is None:
+            centroid = polygon.centroid
         conn.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id,
                 geom_poly, geom_centroid,
-                tpoint, zplane,
+                tpoint, zplane, label,
                 site_id, is_border, pipeline
             )
             VALUES (
                 %(mapobject_id)s,
                 %(geom_poly)s, %(geom_centroid)s,
-                %(tpoint)s, %(zplane)s,
+                %(tpoint)s, %(zplane)s, %(label)s,
                 %(site_id)s, %(is_border)s, %(pipeline)s
             );
         ''', {
             'mapobject_id': mapobject_id,
-            'geom_poly': polygon.wkt, 'geom_centroid': polygon.centroid.wkt,
-            'tpoint': t, 'zplane': z,
+            'geom_poly': polygon.wkt, 'geom_centroid': centroid.wkt,
+            'tpoint': t, 'zplane': z, 'label': label,
             'site_id': site_id, 'is_border': is_border, 'pipeline': pipeline
         })

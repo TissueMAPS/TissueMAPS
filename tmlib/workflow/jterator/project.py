@@ -369,7 +369,8 @@ class Project(object):
                 os.remove(f)
 
     def to_dict(self):
-        '''Returns the attributes as key-value pairs.
+        '''Returns the attributes "name", "pipe" and "handles" as
+        key-value pairs.
 
         Returns
         -------
@@ -441,9 +442,7 @@ class Project(object):
             self._create_handles_folder()
 
     def remove(self):
-        '''
-        Remove a Jterator project, i.e. kill the folder on disk.
-        '''
+        '''Removes a Jterator project.'''
         # remove_pipe_file(self.step_location, self.pipe['name'])
         # remove_handles_folder(self.step_location)
         if not os.path.exists(self.step_location):
