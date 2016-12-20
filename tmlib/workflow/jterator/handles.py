@@ -361,7 +361,7 @@ class SegmentedObjects(LabelImage):
         '''
         points = dict()
         for (t, z), plane in self.iterplanes():
-            for label in np.unique(plane):
+            for label in np.unique(plane[plane > 0]):
                 y, x = np.where(plane == label)
                 point = shapely.geometry.Point(
                     int(np.mean(x)) + x_offset,
@@ -816,10 +816,10 @@ class Plot(InputHandle):
 
 class Measurement(OutputHandle):
 
-    '''Handle for a measurement whose value is a two-dimensional labeled
-    array with *n* rows and *p* columns of type ``float``, where *n* is the
-    number of segmented objects and *p* the number of features that were
-    measured for the referenced segmented objects.
+    '''Handle for a measurement whose value is a list of two-dimensional labeled
+    arrays with *n* rows and *p* columns, where *n* is the number of segmented
+    objects and *p* the number of features that were measured for the
+    referenced segmented objects.
     '''
 
     _NAME_PATTERN = re.compile(r'^[A-Za-z0-9_-]+$')
@@ -839,6 +839,7 @@ class Measurement(OutputHandle):
             object type to which features should are assigned
         objects_ref: str
             reference to object type for which features were extracted
+            (may be the same as `objects`)
         channel_ref: str, optional
             reference to channel from which features were extracted
             (default: ``None``)

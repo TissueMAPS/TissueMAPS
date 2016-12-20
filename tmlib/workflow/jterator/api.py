@@ -558,6 +558,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # Save segmentations, i.e. create a polygon for each
                 # segmented object based on the cooridinates of their
                 # contours.
+                logger.info(
+                    'add segmentations for objects of type "%s"', obj_name
+                )
                 border_indices = segm_objs.is_border
                 if segm_objs.attributes['as_polygons']:
                     # TODO: don't calculate polygons for single-pixel objects
