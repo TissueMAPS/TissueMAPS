@@ -46,18 +46,18 @@ def main(image, threshold_factor, plot=False):
     img_sub = img - bkg
 
     logger.info('detect blobs')
-    out, label_img = sep.extract(img_sub, threshold_factor, err=bkg.globalrms)
+    out = sep.extract(img_sub, threshold_factor, err=bkg.globalrms)
     mask = np.zeros(img.shape, dtype=bool)
     mask[out['y'].astype(int), out['x'].astype(int)] = True
 
     if plot:
         logger.info('create plot')
         from jtlib import plotting
-        n_objects = len(np.unique(label_img)[1:])
+        blobs_img = mh.morph.dilate(mask)
+        label_img, n_objects = mh.label(blobs_img)
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
-        blobs_img = mh.morph.dilate(mask)
         plots = [
             plotting.create_intensity_overlay_image_plot(
                 image, blobs_img, 'ul', clip=True
