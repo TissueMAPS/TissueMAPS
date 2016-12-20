@@ -5,6 +5,7 @@ import mahotas as mh
 import collections
 import logging
 
+VERSION = '0.0.1'
 
 logger = logging.getLogger(__name__)
 
@@ -45,23 +46,29 @@ def main(image, threshold_factor, plot=False):
     img_sub = img - bkg
 
     logger.info('detect blobs')
-    out, label_image = sep.extract(
-        img_sub, threshold_factor, err=bkg.globalrms, segmentation_map=True
-    )
+    out, label_img = sep.extract(img_sub, threshold_factor, err=bkg.globalrms)
     mask = np.zeros(img.shape, dtype=bool)
     mask[out['y'].astype(int), out['x'].astype(int)] = True
 
     if plot:
         logger.info('create plot')
         from jtlib import plotting
-        outlines = mh.morph.dilate(mh.labeled.bwperim(label_image))
+        n_objects = len(np.unique(label_img)[1:])
+        colorscale = plotting.create_colorscale(
+            'Spectral', n=n_objects, permute=True, add_background=True
+        )
+        blobs_img = mh.morph.dilate(mask)
         plots = [
             plotting.create_intensity_overlay_image_plot(
-                image, outlines, 'ul', clip=True
+                image, blobs_img, 'ul', clip=True
             ),
-            plotting.create_mask_image_plot(label_image, 'ur')
+            plotting.create_mask_image_plot(
+                label_img, 'ur', colorscale=colorscale
+            )
         ]
-        figure = plotting.create_figure(plots, title='detected blobs')
+        figure = plotting.create_figure(
+            plots, title='detected #%d blobs' % len(out['y'])
+        )
     else:
         figure = str()
 
