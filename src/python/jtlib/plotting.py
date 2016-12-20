@@ -205,9 +205,9 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
 
     if clip:
         if clip_value is None:
-            clip_value = np.percentile(image, 99.99)
+            clip_value = round(np.percentile(image, 99))
     else:
-        clip_value = np.max(image)
+        clip_value = round(np.max(image))
 
     return plotly.graph_objs.Heatmap(
         z=ds_img,
@@ -218,7 +218,7 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
         colorscale='Greys',
         # Rescale pixel intensity values for display.
         zmax=clip_value,
-        zmin=0,
+        zmin=round(np.min(image)),
         zauto=False,
         colorbar=dict(
             thickness=10,
@@ -442,7 +442,7 @@ def create_intensity_overlay_image_plot(image, mask, position,
         reversescale=True,
         # Rescale pixel intensity values for display.
         zmax=clip_value,
-        zmin=0,
+        zmin=round(np.min(clip_value)),
         zauto=False,
         colorbar=dict(
             thickness=10,
