@@ -329,7 +329,8 @@ class SegmentedObjects(LabelImage):
         '''
         super(SegmentedObjects, self).__init__(name, key, help)
         self._features = collections.defaultdict(list)
-        self._attributes = dict()
+        self._save = False
+        self._represent_as_polygons = True
 
     @property
     def labels(self):
@@ -359,9 +360,11 @@ class SegmentedObjects(LabelImage):
         ----
         The *y*-axis of coordinates is inverted.
         '''
+        logger.debug('calculate centroids for objects of type "%s"', self.key)
         points = dict()
         for (t, z), plane in self.iterplanes():
             for label in np.unique(plane[plane > 0]):
+                logger.debug('calculate centroid for object #%d', label)
                 y, x = np.where(plane == label)
                 point = shapely.geometry.Point(
                     int(np.mean(x)) + x_offset,
@@ -399,7 +402,7 @@ class SegmentedObjects(LabelImage):
         ----
         The *y*-axis of coordinates is inverted.
         '''
-        logger.debug('calculate outlines for mapobject type "%s"', self.key)
+        logger.debug('calculate polygons for objects type "%s"', self.key)
 
         # Set border pixels to background to find complete contours of
         # objects at the border of the image
@@ -575,26 +578,28 @@ class SegmentedObjects(LabelImage):
         return mapping
 
     @property
-    def attributes(self):
-        '''Dict[str, Union[int, float, str, bool]]: attributes for segmented
-        objects
-        '''
-        return self._attributes
+    def save(self):
+        '''bool: whether objects should be saved'''
+        return self._save
 
-    def add_attribute(self, attribute):
-        '''Adds an additional attribute.
+    @save.setter
+    def save(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "save" must have type bool.')
+        self._save = value
 
-        Parameters
-        ----------
-        attribute: tmlib.workflow.jterator.handles.Attribute
-            attribute for segmented objects
-        '''
-        if not isinstance(attribute, Attribute):
+    @property
+    def represent_as_polygons(self):
+        '''bool: whether objects should be represented as polygons'''
+        return self._represent_as_polygons
+
+    @represent_as_polygons.setter
+    def represent_as_polygons(self, value):
+        if not isinstance(value, bool):
             raise TypeError(
-                'Argument "attribute" must have type '
-                'tmlib.workflow.jterator.handles.Attribute.'
+                'Attribute "represent_as_polygons" must have type bool.'
             )
-        self._attributes[attribute.name] = attribute.value
+        self._represent_as_polygons = value
 
     @property
     def measurements(self):
@@ -882,46 +887,6 @@ class Measurement(OutputHandle):
 
     def __str__(self):
         return '<Measurement(name=%r, objects=%r)>' % (self.name, self.objects)
-
-
-class Attribute(OutputHandle):
-
-    '''Handle for an attribute whose value is a scalar that describes a
-    characteristic of its corresponding segmented objects.
-    '''
-
-    @assert_type(objects='basestring')
-    def __init__(self, name, objects, help=''):
-        '''
-        Parameters
-        ----------
-        name: str
-            name of the item, which must match a parameter of the module
-            function
-        objects: str
-            reference to object type that the attribute characterizes
-        help: str, optional
-            help message (default: ``""``)
-        '''
-        super(Attribute, self).__init__(name, help)
-        self.objects = objects
-
-    @property
-    def value(self):
-        '''int or float or str or bool: characteristic of segmented objects'''
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        if not np.isscalar(value):
-            raise TypeError('Value of key "%s" must be a scalar.' % self.name)
-        self._value = value
-
-    def __str__(self):
-        return (
-            '<Attribute(name=%r, objects=%r)>'
-            % (self.name, self.objects)
-        )
 
 
 class Figure(OutputHandle):

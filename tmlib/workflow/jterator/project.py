@@ -167,10 +167,10 @@ class Project(object):
             # descriptor file or 'input' and 'output' keys in the module
             # descriptor file
             if isinstance(v1, dict):
-                # this affects 'project' and 'jobs'
+                # this affects 'pipeline'
                 for k2, v2 in v1.iteritems():
                     if isinstance(v2, list):
-                        # this is the array of 'layers' in the 'images' section
+                        # this is the array of 'channels' in the 'input' section
                         old[k1][k2] = []
                         for i, element in enumerate(new[k1][k2]):
                             if isinstance(element, dict):
@@ -284,7 +284,10 @@ class Project(object):
                     {'name': str(), 'correct': True}
                 ]
             },
-            'pipeline': list()
+            'pipeline': list(),
+            'output': {
+                'objects': []
+            }
         }
         with YamlWriter(filename) as f:
             f.write(pipe)

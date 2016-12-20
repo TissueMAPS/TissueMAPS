@@ -54,7 +54,6 @@ class PipelineChecker(object):
 
     def check_pipeline(self):
         '''Check pipeline structure.'''
-        # Check "project" section
         if 'description' not in self.pipe_description.keys():
             raise PipelineDescriptionError(
                 'Pipeline file must contain the key "description".'
@@ -68,22 +67,21 @@ class PipelineChecker(object):
                         'The path defined by "lib" in your '
                         'pipeline file is not valid.'
                     )
-        # Check "jobs" section
         if 'input' not in self.pipe_description.keys():
             raise PipelineDescriptionError(
                 'Pipe file must contain the key "input".'
             )
-        possible_keys = {'channels', 'mapobject_types'}
+        possible_keys = {'channels', 'objects'}
         for key in self.pipe_description['input']:
             if key not in possible_keys:
                 raise PipelineDescriptionError(
-                    'Possible subkeys of "inputs" are: "%s"'
+                    'Possible subkeys of "input" are: "%s"'
                     % ", ".join(possible_keys)
                 )
 
             if not isinstance(self.pipe_description['input'][key], list):
                 raise PipelineDescriptionError(
-                    'The value of "%s" in the "inputs" section '
+                    'The value of "%s" in the "input" section '
                     'of the pipe file must be an array.' % key
                 )
             # Check for presence of required keys
@@ -96,7 +94,7 @@ class PipelineChecker(object):
                 for k in REQUIRED_INPUT_ITEM_KEYS:
                     if k not in inpt:
                         raise PipelineDescriptionError(
-                            'Each element of "%s" in the "inputs" '
+                            'Each element of "%s" in the "input" '
                             'section of the pipe file requires '
                             'key "%s".' % (key, k)
                         )
@@ -104,7 +102,36 @@ class PipelineChecker(object):
                     if k not in possible_subkeys:
                         raise PipelineDescriptionError(
                             'Unknown key "%s" for "%s" '
-                            'in "inputs" section of the pipe file.' % (k, key)
+                            'in "input" section of the pipe file.' % (k, key)
+                        )
+
+        if 'output' not in self.pipe_description.keys():
+            raise PipelineDescriptionError(
+                'Pipe file must contain the key "output".'
+            )
+        possible_keys = {'objects'}
+        for key in self.pipe_description['output']:
+            if key not in possible_keys:
+                raise PipelineDescriptionError(
+                    'Possible subkeys of "output" are: "%s"'
+                    % ", ".join(possible_keys)
+                )
+
+            if not isinstance(self.pipe_description['output'][key], list):
+                raise PipelineDescriptionError(
+                    'The value of "%s" in the "output" section '
+                    'of the pipe file must be an array.' % key
+                )
+            # Check for presence of required keys
+            REQUIRED_OUTPUT_ITEM_KEYS = {'name', 'as_polygons'}
+            outputs = self.pipe_description['output'][key]
+            for outpt in outputs:
+                for k in REQUIRED_OUTPUT_ITEM_KEYS:
+                    if k not in outpt:
+                        raise PipelineDescriptionError(
+                            'Each element of "%s" in the "output" '
+                            'section of the pipe file requires '
+                            'key "%s".' % (key, k)
                         )
 
         # Check "pipeline" section

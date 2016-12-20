@@ -421,7 +421,7 @@ class ImageAnalysisModule(object):
             if isinstance(handle, hdls.Figure):
                 store['current_figure'] = handle.value
             elif isinstance(handle, hdls.SegmentedObjects):
-                store['segmented_objects'][handle.key] = handle
+                store['objects'][handle.key] = handle
                 store['pipe'][handle.key] = handle.value
             elif isinstance(handle, hdls.Measurement):
                 ref_objects_name = self._get_reference_objects_name(handle)
@@ -438,12 +438,8 @@ class ImageAnalysisModule(object):
                     new_names.append(new_name)
                 for t in range(len(handle.value)):
                     handle.value[t].columns = new_names
-                obj_handle = store['segmented_objects'][objects_name]
+                obj_handle = store['objects'][objects_name]
                 obj_handle.add_measurement(handle)
-            elif isinstance(handle, hdls.Attribute):
-                objects_name = self._get_objects_name(handle)
-                obj_handle = store['segmented_objects'][objects_name]
-                obj_handle.add_attribute(handle)
             else:
                 store['pipe'][handle.key] = handle.value
         return store
