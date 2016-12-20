@@ -205,9 +205,12 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
 
     if clip:
         if clip_value is None:
-            clip_value = round(np.percentile(image, 99))
+            clip_upper = round(np.percentile(image, 99))
+        else:
+            clip_upper = clip_value
     else:
-        clip_value = round(np.max(image))
+        clip_upper = round(np.max(image))
+    clip_lower = round(np.min(image))
 
     return plotly.graph_objs.Heatmap(
         z=ds_img,
@@ -217,8 +220,8 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
         # as grey values.
         colorscale='Greys',
         # Rescale pixel intensity values for display.
-        zmax=clip_value,
-        zmin=round(np.min(image)),
+        zmax=clip_upper,
+        zmin=clip_lower,
         zauto=False,
         colorbar=dict(
             thickness=10,
@@ -417,10 +420,14 @@ def create_intensity_overlay_image_plot(image, mask, position,
 
     if clip:
         if clip_value is None:
-            clip_value = round(np.percentile(image, 99.99))
+            clip_upper = round(np.percentile(image, 99.99))
+        else:
+            clip_upper = clip_value
     else:
-        clip_value = round(np.max(image))
-    colorscale = create_colorscale('Greys', clip_value)
+        clip_upper = round(np.max(image))
+    clip_lower = round(np.min(image))
+
+    colorscale = create_colorscale('Greys', clip_upper - clip_lower)
     # Insert the color for the outlines into the colorscale. We insert it
     # at the end, but later reverse the scale for display, so zero values
     # in the image will be labeled with that color.
@@ -441,8 +448,8 @@ def create_intensity_overlay_image_plot(image, mask, position,
         colorscale=colorscale,
         reversescale=True,
         # Rescale pixel intensity values for display.
-        zmax=clip_value,
-        zmin=round(np.min(clip_value)),
+        zmax=clip_upper,
+        zmin=clip_lower,
         zauto=False,
         colorbar=dict(
             thickness=10,
