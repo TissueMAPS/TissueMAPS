@@ -1,5 +1,5 @@
 ---
-version: 0.1.0
+version: 0.1.1
 
 input:
 
@@ -15,21 +15,24 @@ input:
       key:
       help: >
         Labeled image with registered objects to which intensity features
-        should be assigned. Objects must either be "extract_objects" or
-        contain those in "extract_objects".
+        should be assigned. "extract_objects" and "assign_objects" must either
+        have a one-to-one or a many-to-one relationship and "extract_objects"
+        must be fully contained by "assign_objects".
 
     - name: intensity_image
       type: IntensityImage
       key:
       help: >
-        Greyscale image whose pixel values should be used for the measurement.
+        Greyscale image from which features should be extracted, i.e.
+        whose pixel values should be used for the measurement.
 
     - name: aggregate
       type: Boolean
       value: false
       help: >
-        Should aggregate statistics be computed for "assign_objects"
-        over features extracted for "extract_objects"?
+        Do feature values need to be aggregated? Values must be scalars, so in
+        case "extract_objects" and "assign_objects" have a many-to-one
+        relationship aggregation must be performed.
 
     - name: plot
       type: Plot

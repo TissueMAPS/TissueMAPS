@@ -15,13 +15,13 @@
 import collections
 import jtlib.features
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
 
-def main(extract_objects, assign_objects, intensity_image,
-        aggregate=True, plot=False):
+def main(extract_objects, assign_objects, intensity_image, aggregate,
+        plot=False):
     '''Measures intensity features for objects in `extract_objects` based
     on grayscale values in `intensity_image` and assign them to `assign_objects`.
 
@@ -30,31 +30,31 @@ def main(extract_objects, assign_objects, intensity_image,
     extract_objects: numpy.ndarray[int32]
         label image with objects for which features should be extracted
     assign_objects: numpy.ndarray[int32]
-        label image with objects to which extracted features should be
-        assigned; if different from `label_image` aggregates are computed
+        label image with objects to which extracted features should be assigned
     intensity_image: numpy.ndarray[unit8 or uint16]
         grayscale image from which features should be extracted
     aggregate: bool, optional
-        whether features extracted for objects in `extract_objects` should be
-        aggregated for objects in `assign_objects` (default: ``False``)
+        whether measurements should be aggregated in case `extract_objects`
+        and `assign_objects` have a many-to-one relationship
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    jtmodules.measure_intensity.Output
+    jtmodules.measure_intensity.Output[Union[List[pandas.DataFrame], str]]
 
     See also
     --------
     :class:`jtlib.features.Intensity`
     '''
     f = jtlib.features.Intensity(
-        label_image=extract_objects, ref_label_image=assign_objects,
-        intensity_image=intensity_image
+        label_image=extract_objects, intensity_image=intensity_image
     )
 
+    f.check_assignment(assign_objects, aggregate)
+
     if aggregate:
-        measurements = [f.extract_aggregate()]
+        measurements = [f.extract_aggregate(assign_objects)]
     else:
         measurements = [f.extract()]
 

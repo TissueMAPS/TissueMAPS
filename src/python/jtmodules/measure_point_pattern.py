@@ -11,46 +11,55 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-'''Jterator module for measuring Zernike features.'''
+'''Jterator module for measuring point pattern of objects within parent objects.
+'''
 import collections
+import mahotas as mh
+
 import jtlib.features
 
-VERSION = '0.1.0'
+
+VERSION = '0.1.1'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
 
-def main(label_image, plot=False):
-    '''Measures morphology features for objects in `extract_objects`
-    and assign them to `assign_objects`.
+def main(extract_objects, ref_objects, assign_objects, aggregate, plot=False):
+    '''Measures point pattern features for objects in `extract_objects`
+    within `ref_objects` and assign them to `assign_objects`.
 
     Parameters
     ----------
     extract_objects: numpy.ndarray[int32]
         label image with objects for which features should be extracted
+    ref_objects: numpy.ndarray[int32]
+        label image with objects relative to which pattern should be assessed
+        (`ref_objects` must contain `extract_objects`)
     assign_objects: numpy.ndarray[int32]
-        label image with objects to which extracted features should be
-        assigned; if different from `label_image` aggregates are computed
+        label image with objects to which extracted features should be assigned
     aggregate: bool, optional
-        whether features extracted for objects in `extract_objects` should be
-        aggregated for objects in `assign_objects` (default: ``False``)
+        whether measurements should be aggregated in case `extract_objects`
+        and `assign_objects` have a many-to-one relationship
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    jtmodules.measure_zernike.Output
+    jtmodules.measure_point_pattern.Output[Union[List[pandas.DataFrame], str]]
 
     See also
     --------
-    :class:`jtlib.features.Zernike`
+    :class:`jtlib.features.PointPattern`
+
     '''
-    f = jtlib.features.Zernike(
-        label_image=extract_objects, ref_label_image=assign_objects
+    f = jtlib.features.PointPattern(
+        label_image=extract_objects, parent_label_image=ref_objects
     )
 
+    f.check_assignment(assign_objects, aggregate)
+
     if aggregate:
-        measurements = [f.extract_aggregate()]
+        measurements = [f.extract_aggregate(assign_objects)]
     else:
         measurements = [f.extract()]
 
@@ -60,3 +69,4 @@ def main(label_image, plot=False):
         figure = str()
 
     return Output(measurements, figure)
+
