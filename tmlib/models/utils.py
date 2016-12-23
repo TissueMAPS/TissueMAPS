@@ -756,6 +756,7 @@ class Connection(object):
         return self._cursor
 
     def __exit__(self, except_type, except_value, except_trace):
+        self._cursor.close()
         self._connection.close()
 
 
