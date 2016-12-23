@@ -14,6 +14,7 @@
 import numpy as np
 import pandas as pd
 import mahotas as mh
+import pysal as ps
 import logging
 from abc import ABCMeta
 from abc import abstractproperty
@@ -23,9 +24,10 @@ from skimage import measure
 from skimage import filters
 from scipy import ndimage as ndi
 # from mahotas.features import surf
-# from scipy.spatial import distance
+from scipy.spatial.distance import squareform, pdist
 from centrosome.filter import gabor
 from jtlib import utils
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +43,13 @@ class Features(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, label_image, ref_label_image, intensity_image=None):
+    def __init__(self, label_image, intensity_image=None):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
             labeled image encoding objects (connected pixel components)
             for which features should be extracted
-        ref_label_image: numpy.ndarray[numpy.int32]
-            reference label image encoding objects to which extracted features
-            should be assigned
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             grayscale image from which texture features should be extracted
             (default: ``None``)
@@ -62,25 +61,11 @@ class Features(object):
         ValueError
             when `intensity_image` and `label_image` don't have identical shape
             or when `label_image` is not 2D
-        ValueError
-            when objects in `label_image` are not contained by objects in
-            `ref_label_image`
         '''
         self.label_image = label_image
-        self.ref_label_image = ref_label_image
         if len(label_image.shape) > 2:
             raise ValueError(
                 'Feature extraction is only implemented for 2D images.'
-            )
-        if self.label_image.shape != self.ref_label_image.shape:
-            raise ValueError(
-                'Images "label_image" and "ref_label_image" must have '
-                'the same dimensions.'
-            )
-        if np.any((label_image - ref_label_image) > 0):
-            raise ValueError(
-                'All object in "label_image" must be contained by objects '
-                'in "ref_label_image".'
             )
         self.intensity_image = intensity_image
         if self.intensity_image is not None:
@@ -127,28 +112,65 @@ class Features(object):
             'count': lambda x: len(x)
         }
 
-    def extract_aggregate(self):
+    def check_assignment(self, ref_label_image, aggregate):
+        '''Determines whether aggregation of features is required in order to
+        assign the values to objects in `ref_label_image`.
+
+        Parameters
+        ----------
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image to which feature values should be assigned
+        aggregate: bool
+            whether feature values should be aggregated
+
+        Raises
+        ------
+        ValueError
+            when assignment of feature values to objects is not possible
+        '''
+        if self.label_image.shape != ref_label_image.shape:
+            raise ValueError(
+                'Image "ref_label_image" has incorrect dimensions.'
+            )
+        if not aggregate:
+            if np.any((self.label_image - ref_label_image) > 0):
+                raise ValueError(
+                    'All objects must be contained by the corresponding '
+                    'objects in "ref_label_image".'
+                )
+        else:
+            if np.any(self.label_image[ref_label_image == 0] > 0):
+                raise ValueError(
+                    'All objects must be contained by objects in '
+                    '"ref_label_image".'
+                )
+
+    def extract_aggregate(self, ref_label_image):
         '''Extracts aggregate features for segmented objects.
+
+        Parameters
+        ----------
+        ref_label_image: numpy.ndarray[numpy.int32]
+            reference label image encoding objects to which computed aggregate
+            features should be assigned
 
         Returns
         -------
         pandas.DataFrame[float]
-            extracted feature values for each object in
-            :attr:`ref_label_image <jtlib.featues.Features.ref_label_image>`;
+            extracted feature values for each object in `ref_label_image`
             *n*x*p* dataframe, where *n* is the number of objects and
             *p* is the number of features times the number of aggregate
             statistics computed for each feature
         '''
         values = dict()
         features = self.extract()
-        for ref_label in self.ref_object_ids:
-            labels = np.unique(
-                self.label_image[self.ref_label_image == ref_label]
-            )
-            for name, vals in features.loc(labels).iteritems():
+        ref_object_ids = np.unique(ref_label_image)[1:]
+        for ref_label in ref_object_ids:
+            labels = np.unique(self.label_image[ref_label_image == ref_label])
+            for name, vals in features.loc[labels, :].iteritems():
                 for stat, func in self._aggregate_statistics:
                     values['%s_%s' % (stat, name)] = func(vals)
-        return pd.DataFrame(values, index=self.ref_object_ids)
+        return pd.DataFrame(values, index=ref_object_ids)
 
     @abstractmethod
     def extract(self):
@@ -171,18 +193,11 @@ class Features(object):
         pass
 
     @property
-    def ref_object_ids(self):
-        '''numpy.array[numpy.int]: label of each object in
-        :attr:`ref_label_image <jtlib.features.Features.ref_label_image>`.
-        '''
-        return np.unique(self.ref_label_image[self.ref_label_image > 0])
-
-    @property
     def object_ids(self):
         '''numpy.array[numpy.int]: label of each object in
         :attr:`label_image <jtlib.features.Features.label_image>`.
         '''
-        return np.unique(self.ref_label_image[self.label_image > 0])
+        return np.unique(self.label_image[self.label_image > 0])
 
     @property
     def n_objects(self):
@@ -191,15 +206,8 @@ class Features(object):
         '''
         return len(self.object_ids)
 
-    @property
-    def n_ref_objects(self):
-        '''int: number of objects in
-        :attr:`ref_label_image <jtlib.features.Features.ref_label_image>`.
-        '''
-        return len(self.ref_object_ids)
-
     def get_object_mask_image(self, object_id):
-        '''Extracts the bounding box for a given object from `label_image`
+        '''Extracts the bounding box for a given object from
         :attr:`label_image <jtlib.features.Features.label_image>`.
 
         Returns
@@ -207,7 +215,7 @@ class Features(object):
         numpy.ndarray[bool]
             mask image for given object
         '''
-        bbox = self.bboxes[object_id]
+        bbox = self._bboxes[object_id]
         img = utils.extract_bbox_image(self.label_image, bbox=bbox, pad=1)
         return img == object_id
 
@@ -221,11 +229,13 @@ class Features(object):
             intensity image for given object; the size of the image is
             determined by the bounding box of the object
         '''
-        bbox = self.bboxes[object_id]
+        if self.intensity_image is None:
+            raise ValueError('No intensity image available.')
+        bbox = self._bboxes[object_id]
         return utils.extract_bbox_image(self.intensity_image, bbox=bbox, pad=1)
 
     @cached_property
-    def bboxes(self):
+    def _bboxes(self):
         '''List[numpy.ndarray]: bounding boxes for each object in
         :attr:`label_image <jtlib.features.Features.label_image>`.
         '''
@@ -256,22 +266,17 @@ class Intensity(Features):
 
     '''
 
-    def __init__(self, label_image, ref_label_image, intensity_image):
+    def __init__(self, label_image, intensity_image):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
             labeled image encoding objects (connected pixel components)
             for which features should be extracted
-        ref_label_image: numpy.ndarray[numpy.int32]
-            reference label image encoding objects to which extracted features
-            should be assigned
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             grayscale image from which texture features should be extracted
         '''
-        super(Intensity, self).__init__(
-            label_image, ref_label_image, intensity_image
-        )
+        super(Intensity, self).__init__(label_image, intensity_image)
 
     @property
     def _feature_names(self):
@@ -289,9 +294,7 @@ class Intensity(Features):
         '''
         # Create an empty dataset in case no objects were detected
         logger.info('extract intensity features')
-        features = dict()
-        for i, name in enumerate(self.names):
-            features[name] = list()
+        features = list()
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
             img = self.get_object_intensity_image(obj)
@@ -299,247 +302,113 @@ class Intensity(Features):
             img_nan = img.astype(np.float)
             img_nan[~mask] = np.nan
             region = self.object_properties[obj]
-            feats = [
+            values = [
                 region.max_intensity,
                 region.mean_intensity,
                 region.min_intensity,
                 np.nansum(img_nan),
                 np.nanstd(img_nan),
             ]
-            if len(feats) != len(self.names):
-                raise IndexError(
-                    'Number of features for object %d is incorrect.', obj
-                )
-            for i, name in enumerate(self.names):
-                features[name].append(feats[i])
-        return pd.DataFrame(features, index=self.object_ids)
-
+            features.append(values)
+        return pd.DataFrame(features, columns=self.names, index=self.object_ids)
 
 
 class Morphology(Features):
 
-    def __init__(self, label_image, ref_label_image):
+    '''Class for extracting morphology features.'''
+
+    def __init__(self, label_image, compute_zernike=False):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
             labeled image encoding objects (connected pixel components)
             for which features should be extracted
-        ref_label_image: numpy.ndarray[numpy.int32]
-            reference label image encoding objects to which extracted features
-            should be assigned
+        compute_zernike: bool, optional
+            whether Zernike moments should be computed (default: ``False``)
         '''
-        super(Morphology, self).__init__(label_image, ref_label_image)
+        super(Morphology, self).__init__(label_image)
+        self._degree = 12
+        self.compute_zernike = compute_zernike
 
     @property
     def _feature_names(self):
-        return [
-            'area', 'eccentricity', 'solidity', 'form-factor'
-        ]
+        names = ['Area', 'Eccentricity', 'Convexity', 'Circularity']
+        if self.compute_zernike:
+            for n in xrange(self._degree+1):
+                for m in xrange(n+1):
+                    if (n-m) % 2 == 0:
+                        names.append('Zernike-%s-%s' % (n, m))
+        return names
 
     def extract(self):
-        '''Extracts morphology features, such as the size and the shape of
-        each object in the image.
+        '''Extracts morphology features, i.e. the size and shape of objects.
 
         Returns
         -------
         pandas.DataFrame
             extracted feature values for each object in `label_image`
         '''
-        # Create an empty dataset in case no objects were detected
         logger.info('extract morphology features')
-        features = dict()
-        for i, name in enumerate(self.names):
-            features[name] = list()
+        features = list()
         for obj in self.object_ids:
             region = self.object_properties[obj]
+            logger.debug('extract basic area/shape features for object #%d', obj)
             if region.perimeter == 0:
-                form_factor = 0
+                circularity = np.nan
             else:
-                form_factor = (4.0 * np.pi * region.area) / (region.perimeter**2)
-            feats = [
+                circularity = (4.0 * np.pi * region.area) / (region.perimeter**2)
+            values = [
                 region.area,
                 region.eccentricity,
                 region.solidity,
-                form_factor
+                circularity
             ]
-            if len(feats) != len(self.names):
-                raise IndexError(
-                        'Number of features for object %d is incorrect.', obj)
-            for i, name in enumerate(self.names):
-                features[name].append(feats[i])
-        return pd.DataFrame(features, index=self.object_ids)
+            if self.compute_zernike:
+                logger.debug('extract Zernike moments for object #%d', obj)
+                r = 100
+                mask = self.get_object_mask_image(obj)
+                mask_rs = mh.imresize(mask, [r*2, r*2])
+                zernike_values = mh.features.zernike_moments(
+                        mask_rs, degree=self._degree, radius=r
+                    )
+                values.extend(zernike_values)
+            features.append(values)
+        return pd.DataFrame(features, columns=self.names, index=self.object_ids)
 
 
-class Haralick(Features):
+class Texture(Features):
 
-    '''Class for calculating Haralick texture features based on Haralick [1]_.
+    '''Class for calculating texture features based on Haralick [1]_,
+    Gabor [2], Hu [3]_, Threshold Adjancency Statistics (TAS) [4]_ and
+    Local Binary Patterns [5]_.
 
     References
     ----------
     .. [1] Haralick R.M. (1979). "Statistical and structural approaches to texture". Proceedings of the IEEE
+    .. [2] Fogel I. et al. (1989). "Gabor filters as texture discriminator". Biological Cybernetics
+    .. [3] Hu M.K. (1962). "Visual Pattern Recognition by Moment Invariants", IRE Trans. Info. Theory
+    .. [4] Hamilton N.A. et al. (2007). "Fast automated cell phenotype image classification". BMC Bioinformatics
+    .. [5] Ojala T. et al. (2000). "Gray Scale and Rotation Invariant Texture Classification with Local Binary Patterns". Lecture Notes in Computer Science
+
+    Note
+    ----
+    Computation of Haralick features is computational intensive and may
+    require a lot of memory, in particular for 16 bit images. Therefore,
+    the `intensity_image` is "stretched" to the range [0, 255].
+    For further details see
+    `Mahotas FAQs <http://mahotas.readthedocs.org/en/latest/faq.html#i-ran-out-of-memory-computing-haralick-features-on-16-bit-images-is-it-not-supported>`_.
     '''
 
-    def __init__(self, label_image, ref_label_image, intensity_image):
+    def __init__(self, label_image, intensity_image,
+            theta_range=4, frequencies={1, 5, 10}, radius={1, 5, 10},
+            threshold=None, compute_haralick=False):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
             labeled image encoding objects (connected pixel components)
             for which features should be extracted
-        ref_label_image: numpy.ndarray[numpy.int32]
-            reference label image encoding objects to which extracted features
-            should be assigned
-        intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
-            intensity image
-
-        Note
-        ----
-        Computation of Haralick features is computational intensive and may
-        require a lot of memory, in particular for 16 bit images. Therefore,
-        the `intensity_image` is "stretched" to the range [0, 255].
-        For further details see
-        `Mahotas FAQs <http://mahotas.readthedocs.org/en/latest/faq.html#i-ran-out-of-memory-computing-haralick-features-on-16-bit-images-is-it-not-supported>`_  
-        '''
-        intensity_image = mh.stretch(intensity_image)
-        super(Haralick, self).__init__(
-            label_image, ref_label_image, intensity_image
-        )
-
-    @property
-    def _feature_names(self):
-        return [
-            'angular-second-moment',
-            'contrast',
-            'correlation',
-            'sum-of-squares',
-            'inverse-diff-moment',
-            'sum-avg',
-            'sum-var',
-            'sum-entropy',
-            'entropy',
-            'diff-var',
-            'diff-entropy',
-            'info-measure-corr-1',
-            'info-measure-corr-2'
-        ]
-
-    def extract(self):
-        '''Extracts Haralick texture features.
-
-        Returns
-        -------
-        pandas.DataFrame
-            extracted feature values for each object in `label_image`
-
-        '''
-        # Create an empty dataset in case no objects were detected
-        logger.info('extract Haralick features')
-        features = dict()
-        for i, name in enumerate(self.names):
-            features[name] = list()
-        for obj in self.object_ids:
-            mask = self.get_object_mask_image(obj)
-            img = self.get_object_intensity_image(obj)  # TODO: normalize
-            # Set all non-object pixels to zero
-            img[~mask] = 0
-            feats = mh.features.haralick(
-                        img, ignore_zeros=False, return_mean=True)
-            # TODO: the output changed in the latest version of Mahotas
-            if not isinstance(feats, np.ndarray):
-                # NOTE: setting `ignore_zeros` to True creates problems for some
-                # objects, when all values of the adjacency matrices are zeros
-                feats = np.empty((13, ), dtype=float)
-                feats[:] = np.NAN
-            if len(feats) != len(self.names):
-                raise IndexError(
-                        'Number of features for object %d is incorrect.', obj)
-            for i, name in enumerate(self.names):
-                features[name].append(feats[i])
-        return pd.DataFrame(features, index=self.object_ids)
-
-
-class TAS(Features):
-
-    '''Class for calculating Threshold Adjacency Statistics based on
-    Hamilton [5]_.
-
-    References
-    ----------
-    .. [5] Hamilton N.A. et al. (2007). "Fast automated cell phenotype image classification". BMC Bioinformatics
-    '''
-
-    def __init__(self, label_image, ref_label_image, intensity_image):
-        '''
-        Parameters
-        ----------
-        label_image: numpy.ndarray[numpy.int32]
-            labeled image encoding objects (connected pixel components)
-            for which features should be extracted
-        ref_label_image: numpy.ndarray[numpy.int32]
-            reference label image encoding objects to which extracted features
-            should be assigned
-        intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
-            grayscale image from which texture features should be extracted
-        '''
-        super(TAS, self).__init__(label_image, ref_label_image, intensity_image)
-        self.threshold = filters.threshold_otsu(intensity_image)
-
-    @property
-    def _feature_names(self):
-        return (
-            ['center-%s' % i for i in xrange(9)] +
-            ['n-center-%s' % i for i in xrange(9)] +
-            ['mu-margin-%s' % i for i in xrange(9)] +
-            ['n-mu-margin-%s' % i for i in xrange(9)] +
-            ['mu-%s' % i for i in xrange(9)] +
-            ['n-mu-%s' % i for i in xrange(9)]
-        )
-
-    def extract(self):
-        '''Extracts Threshold Adjacency Statistics.
-
-        Returns
-        -------
-        pandas.DataFrame
-            extracted feature values for each object in `label_image`
-
-        '''
-        # Create an empty dataset in case no objects were detected
-        logger.info('extract Threshold Adjacency Statistics features')
-        features = dict()
-        for i, name in enumerate(self.names):
-            features[name] = list()
-        for obj in self.object_ids:
-            mask = self.get_object_mask_image(obj)
-            img = self.get_object_intensity_image(obj)
-            # Set all non-object pixels to zero
-            img[~mask] = 0
-            feats = mh.features.pftas(img, T=self.threshold)
-            if len(feats) != len(self.names):
-                raise IndexError(
-                    'Number of features for object %d is incorrect.', obj
-                )
-            for i, name in enumerate(self.names):
-                features[name].append(feats[i])
-        return pd.DataFrame(features, index=self.object_ids)
-
-
-class Gabor(Features):
-
-    '''Class for calculating Gabor texture features.'''
-
-    def __init__(self, label_image, ref_label_image, intensity_image,
-                 theta_range=4, frequencies={1, 5, 10}):
-        '''
-        Parameters
-        ----------
-        label_image: numpy.ndarray[numpy.int32]
-            labeled image encoding objects (connected pixel components)
-            for which features should be extracted
-        ref_label_image: numpy.ndarray[numpy.int32]
-            reference label image encoding objects to which extracted features
-            should be assigned
         intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
             grayscale image from which texture features should be extracted
         theta_range: int, optional
@@ -547,12 +416,27 @@ class Gabor(Features):
             filters (default: ``4``)
         frequencies: Set[int], optional
             frequencies of the Gabor filters (default: ``{1, 5, 10}``)
+        threshold: int, optional
+            threshold value for Threshold Adjacency Statistics (TAS)
+            (defaults to value computed by Otsu's method)
+        radius: Set[int], optional
+            radius for defining pixel neighbourhood for Local Binary Patterns
+            (LBP) (default: ``{1, 5, 10}``)
+        compute_haralick: bool, optional
+            whether Haralick features should be computed
+            (the computation is computationally expensive) (default: ``False``)
         '''
-        super(Gabor, self).__init__(
-            label_image, ref_label_image, intensity_image
-        )
+        super(Texture, self).__init__(label_image, intensity_image)
         self.theta_range = theta_range
         self.frequencies = frequencies
+        self.radius = radius
+        if threshold is None:
+            self._threshold = mh.otsu(intensity_image)
+        else:
+            if not isinstance(threshold, int):
+                raise ValueError('Argument "threshold" must have type int.')
+            self._threshold = threshold
+        self._clip_value = np.percentile(intensity_image, 99.999)
         if not isinstance(theta_range, int):
             raise TypeError(
                 'Argument "theta_range" must have type int.'
@@ -561,10 +445,37 @@ class Gabor(Features):
             raise TypeError(
                 'Elements of argument "frequencies" must have type int.'
             )
+        self.compute_haralick = compute_haralick
 
     @property
     def _feature_names(self):
-        return ['frequency-%d' % f for f in self.frequencies]
+        names = ['Gabor-frequency-%d' % f for f in self.frequencies]
+        names.extend(['TAS-center-%d' % i for i in xrange(9)])
+        names.extend(['TAS-n-center-%d' % i for i in xrange(9)])
+        names.extend(['TAS-mu-margin-%d' % i for i in xrange(9)])
+        names.extend(['TAS-n-mu-margin-%d' % i for i in xrange(9)])
+        names.extend(['TAS-mu-%d' % i for i in xrange(9)])
+        names.extend(['TAS-n-mu-%d' % i for i in xrange(9)])
+        names.extend(['Hu-%d' % i for i in xrange(7)])
+        for r in self.radius:
+            names.extend(['LBP-radius-%d-%d' % (r, i) for i in xrange(36)])
+        if self.compute_haralick:
+            names.extend([
+                'Haralick-angular-second-moment',
+                'Haralick-contrast',
+                'Haralick-correlation',
+                'Haralick-sum-of-squares',
+                'Haralick-inverse-diff-moment',
+                'Haralick-sum-avg',
+                'Haralick-sum-var',
+                'Haralick-sum-entropy',
+                'Haralick-entropy',
+                'Haralick-diff-var',
+                'Haralick-diff-entropy',
+                'Haralick-info-measure-corr-1',
+                'Haralick-info-measure-corr-2'
+            ])
+        return names
 
     def extract(self):
         '''Extracts Gabor texture features by filtering the intensity image with
@@ -575,18 +486,18 @@ class Gabor(Features):
         -------
         pandas.DataFrame
             extracted feature values for each object in `label_image`
-
         '''
         # Create an empty dataset in case no objects were detected
-        logger.info('extract Gabor features')
-        features = dict()
-        for i, name in enumerate(self.names):
-            features[name] = list()
+        logger.info('extract texture features')
+        features = list()
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
             label = mask.astype(np.int32)
             img = self.get_object_intensity_image(obj)
-            feats = list()
+            img[~mask] = 0
+            values = list()
+            # Gabor
+            logger.debug('extract Gabor features for object #%d', obj)
             for freq in self.frequencies:
                 best_score = 0
                 for angle in range(self.theta_range):
@@ -600,187 +511,184 @@ class Gabor(Features):
                     )
                     score = np.sqrt(score_r**2 + score_i**2)
                     best_score = np.max([best_score, score])
-                feats.append(best_score)
-            if len(feats) != len(self.names):
-                raise IndexError(
-                    'Number of features for object %d is incorrect.', obj
-                )
-            for i, name in enumerate(self.names):
-                features[name].append(feats[i])
-        return pd.DataFrame(features, index=self.object_ids)
-
-
-class Hu(Features):
-
-    '''Class for calculating Hu moments based on Hu [3]_.
-
-    References
-    ----------
-    .. [3] Hu M.K. (1962). "Visual Pattern Recognition by Moment Invariants", IRE Trans. Info. Theory
-    '''
-
-    def __init__(self, label_image, ref_label_image, intensity_image):
-        '''
-        Parameters
-        ----------
-        label_image: numpy.ndarray[numpy.int32]
-            labeled image encoding objects (connected pixel components)
-            for which features should be extracted
-        ref_label_image: numpy.ndarray[numpy.int32]
-            reference label image encoding objects to which extracted features
-            should be assigned
-        intensity_image: numpy.ndarray[numpy.uint16 or numpy.uint8]
-            grayscale image from which texture features should be extracted
-        '''
-        super(Hu, self).__init__(label_image, ref_label_image, intensity_image)
-
-    @property
-    def _feature_names(self):
-        return map(str, range(7))
-
-    def extract(self):
-        '''Extracts Hu moments.
-
-        Returns
-        -------
-        pandas.DataFrame
-            extracted feature values for each object in `label_image`
-        '''
-        # Create an empty dataset in case no objects were detected
-        logger.info('extract Hu features')
-        features = dict()
-        for i, name in enumerate(self.names):
-            features[name] = list()
-        for obj in self.object_ids:
+                values.append(best_score)
+            # Threshold Adjacency Statistics
+            logger.debug('extract TAS features for object #%d', obj)
+            tas_values = mh.features.pftas(img, T=self._threshold)
+            values.extend(tas_values)
+            # Hu
+            logger.debug('extract Hu moments for object #%d', obj)
             region = self.object_properties[obj]
-            feats = region.weighted_moments_hu
-            if len(feats) != len(self.names):
-                raise IndexError(
-                        'Number of features for object %d is incorrect.', obj)
-            for i, name in enumerate(self.names):
-                features[name].append(feats[i])
-        return pd.DataFrame(features, index=self.object_ids)
+            hu_values = region.weighted_moments_hu
+            values.extend(hu_values)
+            # Local Binary Pattern
+            logger.debug('extract Local Binary Patterns for object #%d', obj)
+            for r in self.radius:
+                # We may want to use more points, but the number of features
+                # increases exponentially with the number of neighbourhood
+                # points.
+                vals = mh.features.lbp(img, radius=r, points=8)
+                values.extend(vals)
+            if self.compute_haralick:
+                # Haralick
+                logger.debug('extract Haralick features for object #%d', obj)
+                # NOTE: Haralick features are computed on 8-bit images.
+                clipped_img = np.clip(img, 0, self._clip_value)
+                rescaled_img = mh.stretch(clipped_img)
+                haralick_values = mh.features.haralick(
+                    img, ignore_zeros=False, return_mean=True
+                )
+                if not isinstance(haralick_values, np.ndarray):
+                    # NOTE: setting `ignore_zeros` to True creates problems for some
+                    # objects, when all values of the adjacency matrices are zeros
+                    haralick_values = np.empty((len(self.names), ), dtype=float)
+                    haralick_values[:] = np.NAN
+                values.extend(haralick_values)
+            features.append(values)
+        return pd.DataFrame(features, columns=self.names, index=self.object_ids)
 
 
-class Zernike(Features):
+class PointPattern(Features):
 
-    '''Class for calculating Zernike moments.'''
+    '''Class for performing a point pattern analysis.'''
 
-    def __init__(self, label_image, ref_label_image, radius=100):
+    def __init__(self, label_image, parent_label_image):
         '''
         Parameters
         ----------
         label_image: numpy.ndarray[numpy.int32]
             labeled image encoding objects (connected pixel components)
-            for which features should be extracted
-        ref_label_image: numpy.ndarray[numpy.int32]
-            reference label image encoding objects to which extracted features
-            should be assigned
-        radius: int, optional
-            radius for rescaling of images to achieve scale invariance
-            (default: ``100``)
+            for which point pattern should be assessed
+        parent_label_image: numpy.ndarray[numpy.int32]
+            labeled image encoding parent objects (connected pixel components)
+            relative to which point patterns should be assessed
         '''
-        super(Zernike, self).__init__(label_image, ref_label_image)
-        self.radius = radius
-        self.degree = 12
+        super(PointPattern, self).__init__(label_image)
+        self.parent_label_image = parent_label_image
+        if self.label_image.shape != self.parent_label_image.shape:
+            raise ValueError(
+                'Image "parent_label_image" must have same dimensions as '
+                '"label_image".'
+            )
+
+    def get_points_object_label_image(self, parent_object_id):
+        '''Extracts the bounding box for a given parent object from
+        :attr:`label_image <jtlib.features.PointPattern.label_image>`.
+
+        Paramters
+        ---------
+        parant_object_id: int
+            ID of object in
+            :attr:`parent_label_image <jtlib.features.PointPattern.parent_label_image>`
+
+        Returns
+        -------
+        numpy.ndarray[numpy.int32]
+            label image for all objects falling within the bounding box of the
+            given parent object
+
+        Note
+        ----
+        Represents objects as points (centroids).
+        '''
+        bbox = self._parent_bboxes[parent_object_id]
+        parent_img = self.get_parent_object_mask_image(parent_object_id)
+        img = utils.extract_bbox_image(self.label_image, bbox=bbox, pad=1)
+        img[~parent_img] = 0
+        mh.labeled.relabel(img, inplace=True)[0]
+        return img
+
+    def get_parent_object_mask_image(self, parent_object_id):
+        '''Extracts the bounding box for a given parent object from
+        :attr:`parent_label_image <jtlib.features.PointPattern.parent_label_image>`.
+
+        Returns
+        -------
+        numpy.ndarray[bool]
+            mask image for given object
+        '''
+        bbox = self._parent_bboxes[parent_object_id]
+        img = utils.extract_bbox_image(self.parent_label_image, bbox=bbox, pad=1)
+        return img == parent_object_id
+
+    @cached_property
+    def _parent_bboxes(self):
+        '''List[numpy.ndarray]: bounding boxes for each object in
+        :attr:`parent_label_image <jtlib.features.PointPattern.parent_label_image>`.
+        '''
+        return mh.labeled.bbox(self.parent_label_image)
+
+    @property
+    def parent_object_ids(self):
+        '''List[int]: IDs of objects in
+        :attr:`parent_label_image <jtlib.features.PointPattern.parent_label_image>`
+        '''
+        return np.unique(self.parent_label_image)[1:].tolist()
 
     @property
     def _feature_names(self):
-        feats = list()
-        for n in xrange(self.degree+1):
-            for l in xrange(n+1):
-                if (n-l) % 2 == 0:
-                    feats.append('%s-%s' % (n, l))
-        return feats
+        return [
+            'absolute-distance-to-border',
+            'relative-distance-to-border',
+            'absolute-distance-to-nearest-neighbor',
+            'relative-distance-to-nearest-neighbor',
+            'mean-absolute-distance-to-neighbors',
+            'std-absolute-distance-to-neighbors',
+            'mean-relative-distance-to-neighbors',
+            'std-relative-distance-to-neighbors',
+        ]
 
     def extract(self):
-        '''Extracts Zernike moments.
+        '''Extracts point pattern features.
 
         Returns
         -------
         pandas.DataFrame
-            extracted feature values for each object in `label_image`
+            extracted feature values for each object in
+            :attr:`label_image <jtlib.features.PointPattern.label_image>`
         '''
-        # Create an empty dataset in case no objects were detected
-        logger.info('extract Zernike features')
-        features = dict()
-        for i, name in enumerate(self.names):
-            features[name] = list()
-        for obj in self.object_ids:
-            mask = self.get_object_mask_image(obj)
-            mask_rs = mh.imresize(mask, [self.radius*2, self.radius*2])
-            feats = mh.features.zernike_moments(
-                mask_rs, degree=self.degree, radius=self.radius
-            )
-            if len(feats) != len(self.names):
-                raise IndexError(
-                    'Number of features for object %d is incorrect.', obj
-                )
-            for i, name in enumerate(self.names):
-                features[name].append(feats[i])
-        return pd.DataFrame(features, index=self.object_ids)
-
-
-# def measure_surf(im, mask):
-#     '''
-#     Calculate statisics based on the Speeded-Up Robust Features (SURF).
-
-#     Parameters
-#     ----------
-#     im: numpy.ndarray[int]
-#         intensity image
-#     mask: numpy.ndarray[bool]
-#         mask image containing one object (i.e. one connected pixel component);
-#         must have the same size as `im`
-
-#     Returns
-#     -------
-#     dict
-#         features
-
-#     Raises
-#     ------
-#     ValueError
-#         when `im` and `mask` don't have the same size
-#     TypeError
-#         when elements of `mask` don't have type bool
-
-#     See also
-#     --------
-#     func:`mahotas.features.surf`
-#     '''
-#     if not im.shape == mask.shape:
-#         raise ValueError('Images must have the same size.')
-#     if not mask.dtype == 'bool':
-#         raise TypeError('Mask image must have type bool.')
-
-#     points = surf.surf(im, descriptor_only=True)
-
-#     features = dict()
-#     if len(points) == 0:
-#         features['SURF_n-points'] = 0
-#         features['SURF_mean-inter-point-distance'] = np.nan
-#         features['SURF_var-inter-point-distance'] = np.nan
-#         features['SURF_mean-point-scale'] = np.nan
-#         features['SURF_var-point-scale'] = np.nan
-#         features['SURF_mean-descriptor-value'] = np.nan
-#         features['SURF_var-descriptor-value'] = np.nan
-#     else:
-#         # Number of detected interest points
-#         features['SURF_n-points'] = len(points)
-#         # Mean distance between interest points normalized for object size
-#         # (size of the image, which represents the bounding box of the object)
-#         y = points[:, 0]
-#         x = points[:, 1]
-#         coordinates = np.array((y, x)).T
-#         dist = distance.cdist(coordinates, coordinates)
-#         features['SURF_mean-inter-point-distance'] = np.mean(dist) / im.size
-#         features['SURF_var-inter-point-distance'] = np.var(dist) / im.size
-#         # Mean scale of interest points
-#         scale = points[:, 2]
-#         features['SURF_mean-point-scale'] = np.mean(scale)
-#         features['SURF_var-point-scale'] = np.var(scale)
-#         descriptors = points[:, 6:]
-#         features['SURF_mean-descriptor-value'] = np.mean(descriptors)
-#         features['SURF_var-descriptor-value'] = np.var(descriptors)
-#     return features
+        logger.info('extract point pattern features')
+        features = list()
+        for obj in self.parent_object_ids:
+            parent_obj_img = self.get_parent_object_mask_image(obj)
+            points_img = self.get_points_object_label_image(obj)
+            size = np.sum(parent_obj_img)
+            abs_border_dist_img = mh.distance(parent_obj_img).astype(float)
+            rel_border_dist_img = abs_border_dist_img / size
+            # NOTE: We calculate pattern based on centroids. Be careful with
+            # interpreting values for "points" larger than a single pixel.
+            centroids = mh.center_of_mass(points_img, labels=points_img)
+            centroids = centroids[1:, :].astype(int)
+            abs_distance_matrix = squareform(pdist(centroids))
+            rel_distance_matrix = abs_distance_matrix / size
+            indexer = np.arange(centroids.shape[0])
+            if len(indexer) == 0:
+                continue
+            if len(indexer) == 1:
+                y, x = centroids[0, :]
+                values = [
+                    abs_border_dist_img[y, x],
+                    rel_border_dist_img[y, x],
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                    np.nan,
+                    np.nan
+                ]
+                features.append(values)
+                continue
+            for i, (y, x) in enumerate(centroids):
+                idx = indexer != i
+                values = [
+                    abs_border_dist_img[y, x],
+                    rel_border_dist_img[y, x],
+                    np.nanmin(abs_distance_matrix[i, idx]),
+                    np.nanmin(rel_distance_matrix[i, idx]),
+                    np.nanmean(abs_distance_matrix[i, idx]),
+                    np.nanstd(abs_distance_matrix[i, idx]),
+                    np.nanmean(rel_distance_matrix[i, idx]),
+                    np.nanstd(rel_distance_matrix[i, idx]),
+                ]
+                features.append(values)
+        return pd.DataFrame(features, columns=self.names, index=self.object_ids)
