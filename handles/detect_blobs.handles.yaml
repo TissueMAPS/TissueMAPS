@@ -5,7 +5,7 @@ input:
 
     - name: image
       type: IntensityImage
-      key: 
+      key:
       help: Image in which blobs should be detected.
 
     - name: threshold_factor

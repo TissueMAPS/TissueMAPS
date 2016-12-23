@@ -27,7 +27,7 @@ sep.set_extract_pixstack(10**6)
 Output = collections.namedtuple('Output', ['mask', 'label_image', 'figure'])
 
 
-def main(image, threshold_factor=5, min_area=None, max_area=None, plot=False):
+def main(image, threshold_factor=5, plot=False):
     '''Detects blobs in `image` using a Python implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
 
@@ -38,10 +38,6 @@ def main(image, threshold_factor=5, min_area=None, max_area=None, plot=False):
     threshold_factor: int, optional
         factor by which pixel values must be above background RMS noise
         to be considered part of a blob (default: ``5``)
-    min_area: int, optional
-        minimal size blobs must have (default: ``None``)
-    max_area: int, optional
-        maximal size blobs can have (default: ``None``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -68,17 +64,9 @@ def main(image, threshold_factor=5, min_area=None, max_area=None, plot=False):
         segmentation_map=True
     )
 
-    sizes = mh.labeled.labeled_size(blobs_img)
-    if min_area is None:
-        min_area = np.min(sizes[1:])
-    if max_area is None:
-        max_area = np.max(sizes[1:])
-    filter_criteria = np.logical_or(sizes < min_area, sizes > max_area)
-    blobs_img = mh.labeled.remove_regions(blobs_img, np.where(filter_criteria))
-
     centroids_img = np.zeros(img.shape, dtype=bool)
-    y = out['y'][~filter_criteria[1:]].astype(int)
-    x = out['x'][~filter_criteria[1:]].astype(int)
+    y = out['y'].astype(int)
+    x = out['x'].astype(int)
     centroids_img[y, x] = True
 
     if plot:
