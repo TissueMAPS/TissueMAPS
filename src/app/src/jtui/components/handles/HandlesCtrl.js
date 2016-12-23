@@ -18,16 +18,23 @@ angular.module('jtui.handles')
     // Scope inherited from parent (project)
     var currentModuleName = $stateParams.moduleName;
 
-    for (i in $scope.project.pipe.description.pipeline) {
-        if ($scope.project.pipe.description.pipeline[i].name == currentModuleName) {
-            var currentModuleIndex = i;
+    $scope.getCurrentModuleIndex = function(pipeline) {
+        for (i in pipeline) {
+            if (pipeline[i].name == currentModuleName) {
+                return i;
+            }
         }
     }
 
-    $scope.module = $scope.project.handles[currentModuleIndex];
-    $scope.source = $scope.project.pipe.description.pipeline[currentModuleIndex].source.substring(
-        0, $scope.project.pipe.description.pipeline[currentModuleIndex].source.lastIndexOf('.')
-    );
+    $scope.setCurrentModule = function() {
+        $scope.index = $scope.getCurrentModuleIndex($scope.project.pipe.description.pipeline);
+        $scope.module = $scope.project.handles[$scope.index];
+        $scope.source = $scope.project.pipe.description.pipeline[$scope.index].source.substring(
+            0, $scope.project.pipe.description.pipeline[$scope.index].source.lastIndexOf('.')
+        );
+    }
+
+    $scope.setCurrentModule();
 
     $scope.$watch('project.pipe.description.pipeline', function(pipeline) {
         // The order of modules in the pipeline is tracked for the pipeline
@@ -36,9 +43,16 @@ angular.module('jtui.handles')
         var moduleNames = pipeline.map(function(m) {
             return m.name;
         })
-        $scope.project.handles.sort(function(h) {
-            return moduleNames.indexOf(h.name);
+        $scope.project.handles.sort(function(a, b) {
+            if (moduleNames.indexOf(a.name) < moduleNames.indexOf(b.name)) {
+                return -1;
+            }
+            if (moduleNames.indexOf(a.name) > moduleNames.indexOf(b.name)) {
+                return 1;
+            }
+            return 0;
         });
+        $scope.setCurrentModule();
     });
 
     // Get list of upstream output values that are available as input
