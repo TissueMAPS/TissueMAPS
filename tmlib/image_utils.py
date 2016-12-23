@@ -248,7 +248,7 @@ def find_border_objects(img):
 
     Returns
     -------
-    List[bool]
+    Dict[int: bool]
         ``True`` if an object lies at the border of the `img` and
         ``False`` otherwise
     '''
@@ -260,7 +260,7 @@ def find_border_objects(img):
     # Count only unique ids and remove 0 since it signals 'empty space'
     border_ids = list(reduce(set.union, map(set, edges)).difference({0}))
     object_ids = np.unique(img[img != 0])
-    return [True if o in border_ids else False for o in object_ids]
+    return {o: True if o in border_ids else False for o in object_ids}
 
 
 def correct_illumination(img, mean, std, log_transform=True):
