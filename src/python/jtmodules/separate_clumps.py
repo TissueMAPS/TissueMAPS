@@ -62,8 +62,7 @@ def find_concave_regions(mask, max_dist):
 
 
 def calc_features(mask):
-    '''Calcuates `area` and shape features `form factor` and `solidity`
-    for the given object.
+    '''Calcuates *area*, *form factor* and *convexity* for the given object.
 
     Parameters
     ----------
@@ -73,20 +72,23 @@ def calc_features(mask):
     Returns
     -------
     numpy.ndarray[numpy.float64]
-        area, form factor and solidity
+        area, form factor and convexity
     '''
     mask = mask > 0
     area = np.float64(np.count_nonzero(mask))
     perimeter = mh.labeled.perimeter(mask)
-    form_factor = (4.0 * np.pi * area) / (perimeter**2)
+    if perimeter == 0:
+        circularity = np.nan
+    else:
+        circularity = (4.0 * np.pi * area) / (perimeter**2)
     convex_hull = mh.polygon.fill_convexhull(mask)
     area_convex_hull = np.count_nonzero(convex_hull)
-    solidity = area / area_convex_hull
+    convexity = area / area_convex_hull
     # eccentricity = mh.features.eccentricity(mask)
     # roundness = mh.features.roundness(mask)
     # major_axis, minor_axis = mh.features.ellipse_axes(mask)
     # elongation = (major_axis - minor_axis) / major_axis
-    return np.array([area, form_factor, solidity])
+    return np.array([area, circularity, convexity])
 
 
 def create_feature_images(label_image):
@@ -118,7 +120,7 @@ def create_feature_images(label_image):
 
 
 def main(mask, intensity_image, min_area, max_area,
-        min_cut_area, max_form_factor, max_solidity, cutting_passes,
+        min_cut_area, max_circularity, max_convexity, cutting_passes,
         plot=False, selection_test_mode=False):
     '''Detects clumps in `mask` given criteria provided by the user
     and cuts them along the borders of watershed regions, which are determined
@@ -138,9 +140,9 @@ def main(mask, intensity_image, min_area, max_area,
     min_cut_area: int
         minimal area a cut object can have
         (useful to limit size of cut objects)
-    max_solidity: float
-        maximal solidity an object must have to be considerd a clump
-    max_form_factor: float
+    max_convexity: float
+        maximal convexity an object must have to be considerd a clump
+    max_circularity: float
         maximal form factor an object must have to be considerd a clump
     cutting_passes: int
         number of cutting cycles to separate clumps that consist of more than
@@ -150,7 +152,7 @@ def main(mask, intensity_image, min_area, max_area,
     selection_test_mode: bool, optional
         whether, instead the normal plot, heatmaps should be generated that
         display values of the selection criteria *area*, *form factor* and
-        *solidity* for each individual object in `mask` as well as
+        *convexity* for each individual object in `mask` as well as
         the final selection of "clumps" based on the selection
         criteria provided by the user
 
@@ -158,7 +160,6 @@ def main(mask, intensity_image, min_area, max_area,
     -------
     jtmodules.separate_clumps.Output
     '''
-
     separated_mask = mask.copy()
     cut_mask = np.zeros(separated_mask.shape, bool)
     clumps_mask = np.zeros(separated_mask.shape, bool)
@@ -177,16 +178,19 @@ def main(mask, intensity_image, min_area, max_area,
                 label_image, bboxes[oid], pad=PAD
             )
             obj_mask = obj_mask == oid
+            int_img = jtlib.utils.extract_bbox_image(
+                intensity_image, bboxes[oid], pad=PAD
+            )
 
-            area, form_factor, solidity = calc_features(obj_mask)
+            area, circularity, convexity = calc_features(obj_mask)
             if area < min_area or area > max_area:
                 logger.debug('not a clump - outside area range')
                 continue
-            if form_factor > max_form_factor:
+            if circularity > max_circularity:
                 logger.debug('not a clump - above form factor threshold')
                 continue
-            if solidity > max_solidity:
-                logger.debug('not a clump - above solidity threshold')
+            if convexity > max_convexity:
+                logger.debug('not a clump - above convexity threshold')
                 continue
 
             y, x = np.where(obj_mask)
@@ -197,6 +201,7 @@ def main(mask, intensity_image, min_area, max_area,
 
             # Rescale distance intensities to make them independent of clump size
             dist = mh.stretch(mh.distance(obj_mask))
+
             # Find peaks that can be used as seeds for the watershed transform
             thresh = mh.otsu(dist)
             peaks = dist > thresh
@@ -232,7 +237,7 @@ def main(mask, intensity_image, min_area, max_area,
             outer_lines = mh.labeled.borders(obj_mask)
             line[outer_lines] = 0
 
-            # Ensure that cut is reasonable give the user defined criteria
+            # Ensure that cut is reasonable given user-defined criteria
             test_cut_mask = obj_mask.copy()
             test_cut_mask[line] = False
             test_cut_mask = mh.morph.open(test_cut_mask)
@@ -240,13 +245,25 @@ def main(mask, intensity_image, min_area, max_area,
             sizes = mh.labeled.labeled_size(subobjects)
             smaller_id = np.where(sizes == np.min(sizes))[0][0]
             smaller_object = subobjects == smaller_id
-            area, form_factor, solidity = calc_features(smaller_object)
+            area, circularity, convexity = calc_features(smaller_object)
 
             # TODO: We may want to prevent cuts that go through areas with
             # high distance intensity values
             if area < min_cut_area:
                 logger.debug(
                     'object %d not cut - resulting object too small', oid
+                )
+                continue
+            # if circularity < max_circularity:
+            #     logger.debug(
+            #         'object %d not cut - resulting object not round enough',
+            #         oid
+            #     )
+            #     continue
+            if convexity < max_convexity:
+                logger.debug(
+                    'object %d not cut - resulting object not convex enough',
+                    oid
                 )
                 continue
 
@@ -267,16 +284,16 @@ def main(mask, intensity_image, min_area, max_area,
             labeled_separated_mask, n_objects = mh.label(
                 mask, np.ones((3, 3), bool)
             )
-            area_img, form_factor_img, solidity_img = create_feature_images(mask)
+            area_img, circularity_img, convexity_img = create_feature_images(mask)
             area_colorscale = plotting.create_colorscale(
                 'Greens', n_objects,
                 add_background=True, background_color='white'
             )
-            form_factor_colorscale = plotting.create_colorscale(
+            circularity_colorscale = plotting.create_colorscale(
                 'Blues', n_objects,
                 add_background=True, background_color='white'
             )
-            solidity_colorscale = plotting.create_colorscale(
+            convexity_colorscale = plotting.create_colorscale(
                 'Reds', n_objects,
                 add_background=True, background_color='white'
             )
@@ -285,10 +302,10 @@ def main(mask, intensity_image, min_area, max_area,
                     area_img, 'ul', colorscale=area_colorscale
                 ),
                 plotting.create_float_image_plot(
-                    solidity_img, 'ur', colorscale=solidity_colorscale
+                    convexity_img, 'ur', colorscale=convexity_colorscale
                 ),
                 plotting.create_float_image_plot(
-                    form_factor_img, 'll', colorscale=form_factor_colorscale
+                    circularity_img, 'll', colorscale=circularity_colorscale
                 ),
                 plotting.create_mask_image_plot(
                     clumps_mask, 'lr'
