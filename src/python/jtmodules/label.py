@@ -31,20 +31,19 @@ def main(mask, plot=False):
 
     Parameters
     ----------
-    mask: numpy.ndarray[bool]
+    mask: numpy.ndarray[numpy.bool or numpy.int32]
         binary image that should labeled
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    jtmodules.label.Output
+    jtmodules.label.Output[Union[numpy.ndarray, str]]
 
     Note
     ----
     If `mask` is not binary, it will be binarized, i.e. pixels will be set to
     ``True`` if values are greater than zero and ``False`` otherwise.
-
     '''
     mask = mask > 0
     label_image = utils.label_image(mask)

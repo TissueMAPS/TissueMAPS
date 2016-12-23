@@ -4,9 +4,9 @@ version: 0.0.1
 input:
 
     - name: mask
-      type: BinaryImage
+      type: MaskImage
       key:
-      help: Binary image that should be labeled.
+      help: Image that should be labeled.
 
     - name: plot
       type: Plot
