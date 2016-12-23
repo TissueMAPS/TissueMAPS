@@ -256,8 +256,8 @@ class MapobjectSegmentation(ExperimentModel):
     label = Column(Integer, index=True)
 
     #: str: name of the corresponding Jterator pipeline that created the
-    #: segmentation
-    pipeline = Column(String, index=True)
+    #: segmentation (maximal length: 50 characters)
+    pipeline = Column(String(50), index=True)
 
     #: int: zero-based index in time series
     tpoint = Column(Integer, index=True)
