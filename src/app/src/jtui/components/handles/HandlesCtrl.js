@@ -18,17 +18,28 @@ angular.module('jtui.handles')
     // Scope inherited from parent (project)
     var currentModuleName = $stateParams.moduleName;
 
-    // Get the current module
-    for (i in $scope.project.handles) {
-        if ($scope.project.handles[i].name == currentModuleName) {
-          // var currentModule = $scope.project.handles[i];
-          var currentModuleIndex = i;
+    for (i in $scope.project.pipe.description.pipeline) {
+        if ($scope.project.pipe.description.pipeline[i].name == currentModuleName) {
+            var currentModuleIndex = i;
         }
     }
+
     $scope.module = $scope.project.handles[currentModuleIndex];
     $scope.source = $scope.project.pipe.description.pipeline[currentModuleIndex].source.substring(
         0, $scope.project.pipe.description.pipeline[currentModuleIndex].source.lastIndexOf('.')
     );
+
+    $scope.$watch('project.pipe.description.pipeline', function(pipeline) {
+        // The order of modules in the pipeline is tracked for the pipeline
+        // description. When this changes, we need to update the order of the
+        // corresponding handles as well.
+        var moduleNames = pipeline.map(function(m) {
+            return m.name;
+        })
+        $scope.project.handles.sort(function(h) {
+            return moduleNames.indexOf(h.name);
+        });
+    });
 
     // Get list of upstream output values that are available as input
     // values in the current module
@@ -48,8 +59,16 @@ angular.module('jtui.handles')
                 var upstreamOutputHandle = handle.description.output[j];
                 if ('key' in upstreamOutputHandle) {
                     // Only handles with matching type
+                    // TODO: This doesn't take the class hierarchy into account.
+                    // For now, we hardcode it for the "Image" and "MaskImage"
+                    // classes, but this should be handled more generally.
+                    var maskTypes = ['Image', 'MaskImage', 'BinaryImage', 'LabelImage'];
+                    var upstreamType = upstreamOutputHandle.type;
+                    var isImageType = type == 'Image' && upstreamType.indexOf('Image') !== -1;
+                    var isMaskType = type == 'MaskImage' && maskTypes.indexOf(upstreamType) !== -1;
+                    var isSameType = type == upstreamOutputHandle.type;
                     if (upstreamOutputHandle.key != null &&
-                            upstreamOutputHandle.type == type) {
+                             (isImageType || isSameType || isMaskType)) {
                         availableArguments.push(
                             handle.description.output[j].key
                         );
@@ -92,11 +111,24 @@ angular.module('jtui.handles')
 
     }
 
-    // Determine if input argument is of class `pipeline`
-    $scope.isPipeline = function(input_arg_name) {
+    // Determine if input argument is a handle of type `pipe`
+    $scope.isPipelineInput = function(input_arg_name) {
         for (var i in $scope.module.description.input) {
             if ($scope.module.description.input[i].name == input_arg_name) {
                 if ('key' in $scope.module.description.input[i]){
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+    };
+
+    // Determine if output argument is a handle of type `pipe`
+    $scope.isPipelineOutput = function(output_arg_name) {
+        for (var i in $scope.module.description.output) {
+            if ($scope.module.description.output[i].name == output_arg_name) {
+                if ('key' in $scope.module.description.output[i]){
                     return true;
                 } else {
                     return false;

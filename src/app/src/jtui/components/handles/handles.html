@@ -14,8 +14,11 @@
 
         <span><b>{{inarg.name}}</b></span>
         <span class="help-block">{{inarg.help}}</span>
+        <span ng-show="isPipelineInput(inarg.name)" class="ng-hide">
+          <span class="help-block"><i>{{inarg.type}}</i></span>
+        </span>
 
-        <span ng-hide="isPipeline(inarg.name)">
+        <span ng-hide="isPipelineInput(inarg.name)">
 
           <!-- constant -->
           <span ng-show="hasOptions(inarg.name) && !(isBoolean(inarg.name))" class="ng-hide">
@@ -35,7 +38,7 @@
         </span>
 
         <!-- piped -->
-        <span ng-show="isPipeline(inarg.name)" class="ng-hide">
+        <span ng-show="isPipelineInput(inarg.name)" class="ng-hide">
 
           <select class="form-control" id="inputArg" ng-model="inarg.key" ng-options="a for a in getArgList(inarg.type)">
             <option key="">
@@ -63,6 +66,9 @@
 
         <span><b>{{outarg.name}}</b></span>
         <span class="help-block">{{outarg.help}}</span>
+        <span ng-show="isPipelineOutput(outarg.name)" class="ng-hide">
+          <span class="help-block"><i>{{outarg.type}}</i></span>
+        </span>
 
         <div ng-hide="!outarg.hasOwnProperty('key')">
           <input  class="form-control"
