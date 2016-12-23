@@ -55,7 +55,7 @@ PLOT_POSITION_MAPPING = {
 
 #: The factor by which the size of an image should be reduced for plotting.
 #: This helps reducing the amount of data that has to be send to the client.
-IMAGE_RESIZE_FACTOR = 10
+IMAGE_RESIZE_FACTOR = 4
 
 
 def _check_position_argument(position):
