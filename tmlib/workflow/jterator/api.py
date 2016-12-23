@@ -558,11 +558,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     )
 
         for obj_name, segm_objs in objects_to_save.iteritems():
-            logger.info('add objects of type "%s"', obj_name)
             with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                 # Get existing mapobjects for this site in case they were
                 # created by a previous pipeline or create new mapobjects in
                 # case they didn't exist (or got just deleted).
+                logger.info('add objects of type "%s"', obj_name)
                 mapobject_ids = dict()
                 for label in segm_objs.labels:
                     logger.debug('add object #%d', label)
@@ -579,7 +579,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 border_indices = segm_objs.is_border
                 if segm_objs.represent_as_polygons:
                     logger.debug('represent segmented objects as polygons')
-                    # TODO: don't calculate polygons for single-pixel objects
                     polygons = segm_objs.to_polygons(y_offset, x_offset)
                     for (t, z, label), polygon in polygons:
                         logger.debug(
@@ -976,8 +975,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         conn.execute('''
             SELECT nextval FROM nextval('mapobjects_id_seq');
         ''')
-        val = conn.fetchone()
-        mapobject_id = val.nextval
+        record = conn.fetchone()
+        mapobject_id = record.nextval
 
         conn.execute('''
             INSERT INTO mapobjects (id, mapobject_type_id)
