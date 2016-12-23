@@ -27,23 +27,27 @@ sep.set_extract_pixstack(10**6)
 Output = collections.namedtuple('Output', ['mask', 'label_image', 'figure'])
 
 
-def main(image, threshold_factor, plot=False):
+def main(image, threshold_factor=5, min_area=None, max_area=None, plot=False):
     '''Detects blobs in `image` using a Python implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
 
     Parameters
     ----------
     image: numpy.ndarray[numpy.uint8 or numpy.uint16]
-        image in which blobs should be detected
-    thresh: int
+        grayscale image in which blobs should be detected
+    threshold_factor: int, optional
         factor by which pixel values must be above background RMS noise
-        to be considered part of a blob
+        to be considered part of a blob (default: ``5``)
+    min_area: int, optional
+        minimal size blobs must have (default: ``None``)
+    max_area: int, optional
+        maximal size blobs can have (default: ``None``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    jtmodules.detect_blobs.Output
+    jtmodules.detect_blobs.Output[Union[numpy.ndarray, str]]
 
     References
     ----------
@@ -59,17 +63,28 @@ def main(image, threshold_factor, plot=False):
     img_sub = img - bkg
 
     logger.info('detect blobs')
-    out, label_img = sep.extract(
+    out, blobs_img = sep.extract(
         img_sub, threshold_factor, err=bkg.globalrms,
         segmentation_map=True
     )
-    mask = np.zeros(img.shape, dtype=bool)
-    mask[out['y'].astype(int), out['x'].astype(int)] = True
+
+    sizes = mh.labeled.labeled_size(blobs_img)
+    if min_area is None:
+        min_area = np.min(sizes[1:])
+    if max_area is None:
+        max_area = np.max(sizes[1:])
+    filter_criteria = np.logical_or(sizes < min_area, sizes > max_area)
+    blobs_img = mh.labeled.remove_regions(blobs_img, np.where(filter_criteria))
+
+    centroids_img = np.zeros(img.shape, dtype=bool)
+    y = out['y'][~filter_criteria[1:]].astype(int)
+    x = out['x'][~filter_criteria[1:]].astype(int)
+    centroids_img[y, x] = True
 
     if plot:
         logger.info('create plot')
         from jtlib import plotting
-        n_objects = len(np.unique(label_img[1:]))
+        n_objects = len(np.unique(blobs[1:]))
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
@@ -78,7 +93,7 @@ def main(image, threshold_factor, plot=False):
                 image, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
-                label_img, 'ur', colorscale=colorscale
+                blobs_img, 'ur', colorscale=colorscale
             )
         ]
         figure = plotting.create_figure(
@@ -87,4 +102,4 @@ def main(image, threshold_factor, plot=False):
     else:
         figure = str()
 
-    return Output(mask, label_img, figure)
+    return Output(centroids_img, blobs_img, figure)

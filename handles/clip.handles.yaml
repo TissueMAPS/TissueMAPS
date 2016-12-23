@@ -3,15 +3,15 @@ version: 0.0.1
 
 input:
 
-    - name: image_1
-      type: LabelImage
+    - name: image
+      type: Image
       key:
-      help: Labeled image that should be clipped.
+      help: Image that should be clipped.
 
-    - name: image_2
-      type: LabelImage
+    - name: clipping_mask
+      type: MaskImage
       key:
-      help: Labeled image that's used as clipping mask.
+      help: Image that should be used as clipping mask.
 
     - name: plot
       type: Plot
@@ -27,7 +27,7 @@ output:
 
     - name: figure
       type: Figure
-      help: Comparison of "input_image_1" and "clipped_image"
+      help: Comparison of "image", "clipping_mask" and "clipped_image"
 
 
 
