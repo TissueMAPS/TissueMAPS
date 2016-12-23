@@ -21,7 +21,7 @@ input:
 output:
 
     - name: clipped_image
-      type: LabelImage
+      type: Image
       key: clip.clipped_image
       help: Clipped mask.
 

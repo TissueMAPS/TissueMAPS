@@ -43,7 +43,7 @@ output:
 
     - name: filtered_mask
       type: BinaryImage
-      key: filter_objects.filtered_mask
+      key: filter.filtered_mask
       help: Filtered mask image.
 
     - name: figure

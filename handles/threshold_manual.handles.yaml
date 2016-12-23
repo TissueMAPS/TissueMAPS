@@ -11,7 +11,9 @@ input:
     - name: threshold
       type: Scalar
       value:
-      help: Threshold level.
+      help: >
+        Threshold level. Values above threshold will be assigned to foreground
+        and values below or equal to threshold to background.
 
     - name: fill
       type: Boolean
