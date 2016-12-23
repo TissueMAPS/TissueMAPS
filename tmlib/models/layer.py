@@ -681,12 +681,10 @@ class LabelLayer(ExperimentModel):
         session = Session.object_session(self)
         return dict(
             session.query(
-                LabelValue.mapobject_id, LabelValue.value
+                LabelValue.mapobject_id,
+                LabelValue.values[str(self.tool_result_id)]
             ).
-            filter(
-                LabelValue.mapobject_id.in_(mapobject_ids),
-                LabelValue.tool_result_id == self.tool_result_id
-            ).
+            filter(LabelValue.mapobject_id.in_(mapobject_ids)).
             all()
         )
 
@@ -829,14 +827,13 @@ class HeatmapLabelLayer(ContinuousLabelLayer):
             mapping of mapobject ID to feature value
         '''
         session = Session.object_session(self)
+        feature_id = self.attributes['feature_id']
         return dict(
             session.query(
-                FeatureValue.mapobject_id, FeatureValue.value
+                FeatureValue.mapobject_id,
+                FeatureValue.values[str(feature_id)]
             ).
-            filter(
-                FeatureValue.mapobject_id.in_(mapobject_ids),
-                FeatureValue.feature_id == self.attributes['feature_id']
-            ).
+            filter(FeatureValue.mapobject_id.in_(mapobject_ids)).
             all()
         )
 
