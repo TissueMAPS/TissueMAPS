@@ -74,7 +74,7 @@ def main(image, kernel_size, fill=True, plot=False):
 
     if fill:
         logger.info('fill holes')
-        thresh_image = mh.close_holes(thresh_image)
+        thresh_image = mh.close_holes(thresh_image, np.ones((3, 3), bool))
 
     if plot:
         logger.info('create plot')

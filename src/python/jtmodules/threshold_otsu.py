@@ -11,9 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-'''Jterator module for thresholding of an image using a global fixed threshold.
-The threshold level is determined with
-`Otsu's method <https://en.wikipedia.org/wiki/Otsu%27s_method>`_.
+'''Jterator module for thresholding of an image using an automatically
+determined global threshold level.
 '''
 import logging
 import collections
@@ -30,15 +29,18 @@ Output = collections.namedtuple('Output', ['mask', 'figure'])
 def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
         fill=True, plot=False):
     '''Thresholds an image by applying an automatically determined global
-    threshold level.
+    threshold level using
+    `Otsu's method <https://en.wikipedia.org/wiki/Otsu%27s_method>`_.
 
-    Additional parameters allow correction of the calculated fixed threshold
+    Additional parameters allow correction of the calculated threshold
     level or restricting it to a defined range. This may be useful to prevent
-    extreme levels in case the `image` contains artifacts.
+    extreme levels in case the `image` contains artifacts. Setting
+    `min_threshold` and `max_threshold` to the same value results in a
+    manual thresholding.
 
     Parameters
     ----------
-    image: numpy.ndarray
+    image: numpy.ndarray[numpy.uint8 or numpy.unit16]
         grayscale image that should be thresholded
     correction_factor: int, optional
         value by which the calculated threshold level will be multiplied
@@ -55,7 +57,7 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
 
     Returns
     -------
-    jtmodules.threshold_fixed.Output
+    jtmodules.threshold_otsu.Output[Union[numpy.ndarray, str]]
     '''
     if max_threshold is None:
         max_threshold = np.max(image)
@@ -66,40 +68,40 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
     logger.debug('set minimal threshold: %d', min_threshold)
     logger.debug('set threshold correction factor: %.2f', correction_factor)
 
-    thresh = mh.otsu(image)
-    logger.info('calculated threshold level: %d', thresh)
+    threshold = mh.otsu(image)
+    logger.info('calculated threshold level: %d', threshold)
 
-    corr_thresh = thresh * correction_factor
-    logger.info('corrected threshold level: %d', corr_thresh)
+    corr_threshold = threshold * correction_factor
+    logger.info('corrected threshold level: %d', corr_threshold)
 
-    if corr_thresh > max_threshold:
+    if corr_threshold > max_threshold:
         logger.info('set threshold level to maximum: %d', max_threshold)
-        corr_thresh = max_threshold
-    elif corr_thresh < min_threshold:
+        corr_threshold = max_threshold
+    elif corr_threshold < min_threshold:
         logger.info('set threshold level to minimum: %d', min_threshold)
-        corr_thresh = min_threshold
+        corr_threshold = min_threshold
 
-    logger.info('threshold image at %d', corr_thresh)
-    thresh_image = image > corr_thresh
+    logger.info('threshold image at %d', corr_threshold)
+    mask = image > corr_threshold
 
     if fill:
         logger.info('fill holes')
-        thresh_image = mh.close_holes(thresh_image)
+        mask = mh.close_holes(mask, np.ones((3, 3), bool))
 
     if plot:
         logger.info('create plot')
         from jtlib import plotting
-        outlines = mh.morph.dilate(mh.labeled.bwperim(thresh_image))
+        outlines = mh.morph.dilate(mh.labeled.bwperim(mask))
         plots = [
             plotting.create_intensity_overlay_image_plot(
                 image, outlines, 'ul'
             ),
-            plotting.create_mask_image_plot(thresh_image, 'ur')
+            plotting.create_mask_image_plot(mask, 'ur')
         ]
         figure = plotting.create_figure(
-            plots, title='thresholded at fixed level: %s' % thresh
+            plots, title='thresholded at %s' % threshold
         )
     else:
         figure = str()
 
-    return Output(thresh_image, figure)
+    return Output(mask, figure)
