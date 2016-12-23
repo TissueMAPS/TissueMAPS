@@ -160,19 +160,25 @@ class PipeHandle(Handle):
 
 class Image(PipeHandle):
 
-    '''Abstract base class for an image handle.'''
-
-    __metaclass__ = ABCMeta
+    '''Base class for an image handle.'''
 
     @same_docstring_as(PipeHandle.__init__)
     def __init__(self, name, key, help):
         super(Image, self).__init__(name, key, help)
 
-    @abstractproperty
+    @property
     def value(self):
-        '''numpy.ndarray: multi-dimensional pixels/voxels array
-        '''
-        pass
+        '''numpy.ndarray: pixels/voxels array'''
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Returned value for "%s" must have type numpy.ndarray.'
+                % self.name
+            )
+        self._value = value
 
     def iterplanes(self):
         '''Iterates over 2D pixel planes of the image for each combination of
@@ -241,16 +247,47 @@ class IntensityImage(Image):
         return '<IntensityImage(name=%r, key=%r)>' % (self.name, self.key)
 
 
-class LabelImage(Image):
+class MaskImage(Image):
 
-    '''Class for a label image handle, where image pixel values encode
-    connected components. Each component has a unique one-based identifier
+    '''Class for an image handle, where pixels of the image with zero values
+    represent background and pixels with values greater than zero represent
+    foreground.
+    '''
+
+    @same_docstring_as(Image.__init__)
+    def __init__(self, name, key, help=''):
+        super(MaskImage, self).__init__(name, key, help)
+
+    @property
+    def value(self):
+        '''numpy.ndarray: pixels/voxels array'''
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Returned value for "%s" must have type numpy.ndarray.'
+                % self.name
+            )
+        if not(value.dtype == np.int32 or value.dtype == np.bool):
+            raise TypeError(
+                'Returned value for "%s" must have data type int32 or bool.'
+                % self.name
+            )
+        self._value = value
+
+
+class LabelImage(MaskImage):
+
+    '''Class for an image handle, where connected pixel components of the image
+    are labeled such that each component has a unique positive integer
     label and background is zero.
     '''
 
-    @same_docstring_as(IntensityImage.__init__)
+    @same_docstring_as(Image.__init__)
     def __init__(self, name, key, help=''):
-        super(Image, self).__init__(name, key, help)
+        super(LabelImage, self).__init__(name, key, help)
 
     @property
     def value(self):
@@ -275,16 +312,15 @@ class LabelImage(Image):
         return '<LabelImage(name=%r, key=%r)>' % (self.name, self.key)
 
 
-class BinaryImage(Image):
+class BinaryImage(MaskImage):
 
-    '''Class for a binary image handle, where image pixel values encode
-    either background or foreground. Background is ``0`` or ``False`` and
-    foreground is ``1`` or ``True``.
+    '''Class for an image handle, where pixels of the image are
+    either background (``False``) or foreground (``True``).
     '''
 
-    @same_docstring_as(IntensityImage.__init__)
+    @same_docstring_as(Image.__init__)
     def __init__(self, name, key, help=''):
-        super(Image, self).__init__(name, key, help)
+        super(BinaryImage, self).__init__(name, key, help)
 
     @property
     def value(self):
@@ -295,13 +331,11 @@ class BinaryImage(Image):
     def value(self, value):
         if not isinstance(value, np.ndarray):
             raise TypeError(
-                'Value of key "%s" must have type numpy.ndarray.'
-                % self.name
+                'Value of key "%s" must have type numpy.ndarray.' % self.name
             )
         if value.dtype != np.bool:
             raise TypeError(
-                'Value of key "%s" must have data type bool.'
-                % self.name
+                'Value of key "%s" must have data type bool.' % self.name
             )
         self._value = value
 
@@ -363,14 +397,14 @@ class SegmentedObjects(LabelImage):
         logger.debug('calculate centroids for objects of type "%s"', self.key)
         points = dict()
         for (t, z), plane in self.iterplanes():
-            for label in np.unique(plane[plane > 0]):
+            for label in self.labels:
                 logger.debug('calculate centroid for object #%d', label)
                 y, x = np.where(plane == label)
                 point = shapely.geometry.Point(
                     int(np.mean(x)) + x_offset,
                     -1 * (int(np.mean(y)) + y_offset),
                 )
-                yield ((t, z, int(label)), point)
+                yield ((t, z, label), point)
 
     def to_polygons(self, y_offset, x_offset, tolerance=2):
         '''Creates a polygon representation for each segmented object.
@@ -573,8 +607,8 @@ class SegmentedObjects(LabelImage):
         '''
         mapping = dict()
         for (t, z), plane in self.iterplanes():
-            for index, is_border in enumerate(find_border_objects(plane)):
-                mapping[(t, z, index+1)] = bool(is_border)
+            for label, is_border in find_border_objects(plane).iteritems():
+                mapping[(t, z, label)] = bool(is_border)
         return mapping
 
     @property
