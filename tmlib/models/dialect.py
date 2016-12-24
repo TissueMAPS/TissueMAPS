@@ -40,7 +40,7 @@ def _update_table_constraints(table, distribution_column):
     return table
 
 
-@compiles(CreateTable, 'postgres')
+@compiles(CreateTable, 'postgresql')
 def _compile_create_table(element, compiler, **kwargs):
     table = element.element
     logger.debug('create table "%s"', table.name)
@@ -91,14 +91,14 @@ def _compile_create_table(element, compiler, **kwargs):
     return sql
 
 
-@compiles(DropTable, 'postgres')
+@compiles(DropTable, 'postgresql')
 def _compile_drop_table(element, compiler, **kwargs):
     table = element.element
     logger.debug('drop table "%s" with cascade', table.name)
     return compiler.visit_drop_table(element) + ' CASCADE'
 
 
-@compiles(array_agg, 'postgres')
+@compiles(array_agg, 'postgresql')
 def compile_array_agg(element, compiler, **kw):
     compiled = "%s(%s)" % (element.name, compiler.process(element.clauses))
     if element.default is None:
