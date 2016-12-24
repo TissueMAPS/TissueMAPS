@@ -72,7 +72,7 @@ def main(image, threshold_factor=5, plot=False):
     if plot:
         logger.info('create plot')
         from jtlib import plotting
-        n_objects = len(np.unique(blobs[1:]))
+        n_objects = len(np.unique(blobs_img[1:]))
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
