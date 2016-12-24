@@ -255,10 +255,6 @@ class MapobjectSegmentation(ExperimentModel):
     #: int: value assigned to the object in a label image
     label = Column(Integer, index=True)
 
-    #: str: name of the corresponding Jterator pipeline that created the
-    #: segmentation (maximal length: 50 characters)
-    pipeline = Column(String(50), index=True)
-
     #: int: zero-based index in time series
     tpoint = Column(Integer, index=True)
 
@@ -282,7 +278,7 @@ class MapobjectSegmentation(ExperimentModel):
     )
 
     def __init__(self, geom_poly, geom_centroid, mapobject_id, label=None,
-            is_border=None, tpoint=None, zplane=None, pipeline=None, site_id=None):
+            is_border=None, tpoint=None, zplane=None, site_id=None):
         '''
         Parameters
         ----------
@@ -301,9 +297,6 @@ class MapobjectSegmentation(ExperimentModel):
             time point index
         zplane: int, optional
             z-plane index
-        pipeline: str, optional
-            name of the corresponding Jterator pipeline that was used to
-            segment the mapobjects
         site_id: int, optional
             ID of the parent site
 
@@ -325,7 +318,6 @@ class MapobjectSegmentation(ExperimentModel):
         self.geom_poly = geom_poly
         self.geom_centroid = geom_centroid
         self.is_border = is_border
-        self.pipeline = pipeline
         self.site_id = site_id
 
     @staticmethod
@@ -372,7 +364,7 @@ class MapobjectSegmentation(ExperimentModel):
 
 
 def delete_mapobject_types_cascade(experiment_id, is_static=None,
-        site_id=None, pipeline=None):
+        site_id=None):
     '''Deletes all instances of
     :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` as well as
     as "children" instances of
@@ -393,9 +385,6 @@ def delete_mapobject_types_cascade(experiment_id, is_static=None,
     site_id: int, optional
         ID of the parent :class:`Site <tmlib.models.site.Site>`
         (not required for *static* mapobject types)
-    pipeline: str, optional
-        the pipeline in which mapobjects were genereated
-        (not required for *static* mapobject types)
 
     Note
     ----
@@ -404,7 +393,7 @@ def delete_mapobject_types_cascade(experiment_id, is_static=None,
     :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
     might be distributed over a cluster.
     '''
-    if is_static is None and site_id is None and pipeline is None:
+    if is_static is None and site_id is None:
         # NOTE: In case all mapobjects and corresponding feature values
         # should be deleted, we can simply drop the tables and subsequently
         # recreate them. We have to call DROP TABLE outside of a transaction
@@ -434,9 +423,7 @@ def delete_mapobject_types_cascade(experiment_id, is_static=None,
             all()
         mapobject_type_ids = [t.id for t in mapobject_types]
 
-    delete_mapobjects_cascade(
-        experiment_id, mapobject_type_ids, site_id, pipeline
-    )
+    delete_mapobjects_cascade(experiment_id, mapobject_type_ids, site_id)
 
     if mapobject_type_ids:
         with ExperimentSession(experiment_id) as session:
@@ -478,8 +465,7 @@ def _delete_mapobjects_cascade(connection, experiment_id, mapobject_ids):
             })
 
 
-def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
-        site_id=None, pipeline=None):
+def delete_mapobjects_cascade(experiment_id, mapobject_type_ids, site_id=None):
     '''Deletes all instances of
     :class:`Mapobject <tmlib.models.mapobject.Mapobject>` as well as all
     "children" instances of
@@ -495,9 +481,6 @@ def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
         IDs of parent :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
     site_id: int, optional
         ID of the parent :class:`Site <tmlib.models.site.Site>`
-    pipeline: str, optional
-        the pipeline in which mapobjects were genereated
-        (not required for non-*static* mapobject types)
 
     Note
     ----
@@ -515,15 +498,10 @@ def delete_mapobjects_cascade(experiment_id, mapobject_type_ids,
             '''
             if site_id is not None:
                 sql += '''
-                    AND s.site_id = %(site_id)s
-                '''
-            if pipeline is not None:
-                sql += '''
-                    AND s.pipeline = %(pipeline)s
+                AND s.site_id = %(site_id)s
                 '''
             connection.execute(sql, {
                 'site_id': site_id,
-                'pipeline': pipeline,
                 'mapobject_type_ids': mapobject_type_ids
             })
             mapobjects = connection.fetchall()

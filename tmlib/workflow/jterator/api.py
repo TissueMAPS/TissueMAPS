@@ -297,9 +297,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         children instances for the processed experiment.
         '''
         logger.info('delete existing mapobjects and mapobject types')
-        delete_mapobject_types_cascade(
-            self.experiment_id, pipeline=self.project.name
-        )
+        delete_mapobject_types_cascade(self.experiment_id)
 
     def _build_run_command(self, job_id):
         # Overwrite method to include "--pipeline" argument
@@ -368,9 +366,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
         channel_input = self.project.pipe['description']['input'].get(
             'channels', list()
         )
-        objects_input = self.project.pipe['description']['input'].get(
-            'objects', list()
-        )
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             for item in channel_input:
                 # NOTE: When "path" key is present, the image is loaded from
@@ -414,49 +409,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     images[f.tpoint].append(img.array)
 
                 store['pipe'][item['name']] = np.stack(images.values(), axis=-1)
-
-            # Load outlins of mapobjects of the specified types and reconstruct
-            # the label images required by modules.
-            for item in objects_input:
-                object_name = item['name']
-                mapobject_type = session.query(tm.MapobjectType.id).\
-                    filter_by(name=object_name).\
-                    one()
-                segmentations = session.query(
-                        tm.MapobjectSegmentation.tpoint,
-                        tm.MapobjectSegmentation.zplane,
-                        tm.MapobjectSegmentation.label,
-                        tm.MapobjectSegmentation.geom_poly
-                    ).\
-                    join(
-                        tm.Mapobject,
-                        tm.Mapobject.id == tm.MapojbectSegmentation.mapobject_id
-                    ).\
-                    filter(
-                        tm.Mapobject.mapobject_type_id == mapobject_type.id,
-                        tm.MapobjectSegmentation.site_id == site_id
-                    ).\
-                    all()
-                dims = store['pipe'].values()[0].shape
-                # Add the labeled image to the pipeline and create a handle
-                # object to later add measurements for the objects.
-                handle = SegmentedObjects(
-                    name=mapobject_type_name, key=mapobject_type_name
-                )
-                polygons = {
-                    (s.tpoint, s.zplane, s.label): s.geom_poly
-                    for s in segmentations
-                }
-                # The polygon coordinates are global, i.e. relative to the
-                # map overview. Therefore we have to provide the offsets
-                # for each axis.
-                site = session.query(tm.Site).get(site_id)
-                y_offset, x_offset = site.offset
-                y_offset += site.intersection.lower_overhang
-                x_offset += site.intersection.right_overhang
-                handle.from_polygons(polygons, y_offset, x_offset, dims)
-                store['pipe'][handle.key] = handle.value
-                store['objects'][handle.key] = handle
 
         # Remove single-dimensions from image arrays.
         # NOTE: It would be more consistent to preserve shape, but most people
@@ -595,8 +547,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             conn, mapobject_id=mapobject_ids[label],
                             polygon=polygon, t=t, z=z, label=label,
                             site_id=store['site_id'],
-                            is_border=border_indices[t, z, label],
-                            pipeline=self.project.name
+                            is_border=border_indices[t, z, label]
                         )
                 else:
                     logger.debug('represent segmented objects only as points')
@@ -610,8 +561,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             conn, mapobject_id=mapobject_ids[label],
                             centroid=centroid, t=t, z=z, label=label,
                             site_id=store['site_id'],
-                            is_border=border_indices[t, z, label],
-                            pipeline=self.project.name
+                            is_border=border_indices[t, z, label]
                         )
 
                 logger.info('add features for objects of type "%s"', obj_name)
@@ -851,9 +801,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
                             tpoints = np.unique(df.tpoint)
                             for t in tpoints:
-                                logger.debug(
-                                    'insert values at time point %d', t
-                                )
+                                logger.debug('add values at time point %d', t)
                                 vals = dict()
                                 for (stat, c_fid), p_fid in feature_map.iteritems():
                                     index = np.logical_and(
@@ -990,7 +938,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
     @staticmethod
     def _add_mapobject_segmentation(conn, mapobject_id, polygon=None,
             centroid=None, t=None, z=None, label=None, site_id=None,
-            is_border=None, pipeline=None):
+            is_border=None):
         if polygon is None and centroid is None:
             raise ValueError('Either "polygon" or "centroid" must be provided.')
         if centroid is None:
@@ -1004,17 +952,17 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 mapobject_id,
                 geom_poly, geom_centroid,
                 tpoint, zplane, label,
-                site_id, is_border, pipeline
+                site_id, is_border
             )
             VALUES (
                 %(mapobject_id)s,
                 %(geom_poly)s, %(geom_centroid)s,
                 %(tpoint)s, %(zplane)s, %(label)s,
-                %(site_id)s, %(is_border)s, %(pipeline)s
+                %(site_id)s, %(is_border)s
             );
         ''', {
             'mapobject_id': mapobject_id,
             'geom_poly': geom_poly, 'geom_centroid': geom_centroid,
             'tpoint': t, 'zplane': z, 'label': label,
-            'site_id': site_id, 'is_border': is_border, 'pipeline': pipeline
+            'site_id': site_id, 'is_border': is_border
         })
