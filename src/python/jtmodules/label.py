@@ -15,7 +15,7 @@
 import logging
 import numpy as np
 import collections
-from jtlib import utils
+import mahotas as mh
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +46,9 @@ def main(mask, plot=False):
     ``True`` if values are greater than zero and ``False`` otherwise.
     '''
     mask = mask > 0
-    label_image = utils.label_image(mask)
+    label_image, n = mh.label(mask, np.ones((3, 3), bool))
 
-    logger.info('identified %d objects', len(np.unique(label_image))-1)
+    logger.info('identified %d objects', n)
 
     if plot:
         from jtlib import plotting
