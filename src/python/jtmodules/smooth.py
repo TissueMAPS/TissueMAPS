@@ -74,7 +74,6 @@ def main(image, filter_name, filter_size, plot=False):
             '"average", "gaussian" or "median"'
         )
 
-    import ipdb; ipdb.set_trace()
     smoothed_image = smoothed_image.astype(image.dtype)
     if plot:
         logger.info('create plot')
