@@ -33,8 +33,7 @@ logger = logging.getLogger(__name__)
 Output = collections.namedtuple('Output', ['smoothed_image', 'figure'])
 
 
-def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
-                 sigma_space=0, plot=False):
+def main(image, filter_name, filter_size, plot=False):
     '''Smoothes (blurs) `image`.
 
     Parameters
@@ -43,63 +42,39 @@ def main(image, filter_name, filter_size, sigma=0, sigma_color=0,
         grayscale image that should be smoothed
     filter_name: str
         name of the filter kernel that should be applied
-        (options: ``{"avarage", "gaussian", "median", "median-bilateral", "gaussian-bilateral"}``)
+        (options: ``{"avarage", "gaussian", "median"}``)
     filter_size: int
         size (width/height) of the kernel (must be an odd, positive integer)
-    sigma_color: int, optional
-        Gaussian component (sigma) applied in the intensity domain
-        (color space) - only relevant for "bilateral" filter (default: ``0``)
-    sigma_space: int, optional
-        Gaussian component (sigma) applied in the spacial domain
-        (coordinate space) - only relevant for "bilateral" filter
-        (default: ``0``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    jtmodules.smooth.Output
+    jtmodules.smooth.Output[Union[numpy.ndarray, str]]
 
     Raises
     ------
     ValueError
         when `filter_name` is not
-        ``"avarage"``, ``"gaussian"``, ``"median"``, ``"gaussian-bilateral"``
-        or ``"gaussian-bilateral"``
+        ``"avarage"``, ``"gaussian"`` or ``"median"``
     '''
+    se = np.ones((filter_size, filter_size))
     if filter_name == 'average':
         logger.info('apply "average" filter')
-        smoothed_image = cv2.blur(
-            image, (filter_size, filter_size)
-        )
+        smoothed_image = mh.mean_filter(image, se).astype(image.dtype)
     elif filter_name == 'gaussian':
         logger.info('apply "gaussian" filter')
-        smoothed_image = mh.gaussian_filter(
-            image, sigma=filter_size
-        ).astype(image.dtype)
-    elif filter_name == 'gaussian-bilateral':
-        logger.info('apply "gaussian-bilateral" filter')
-        smoothed_image = cv2.bilateralFilter(
-            image, filter_size, sigma_color, sigma_space
-        )
+        smoothed_image = mh.gaussian_filter(image, filter_size).astype(image.dtype)
     elif filter_name == 'median':
         logger.info('apply "median" filter')
-        smoothed_image = mh.median_filter(
-            image, np.ones((filter_size, filter_size), dtype=image.dtype)
-        )
-    elif filter_name == 'median-bilateral':
-        logger.info('apply "median-bilateral" filter')
-        smoothed_image = skimage.filters.rank.mean_bilateral(
-            image, skimage.morphology.disk(filter_size),
-            s0=sigma_space, s1=sigma_space
-        )
+        smoothed_image = mh.median_filter(image, se).astype(image.dtype)
     else:
         raise ValueError(
             'Arugment "filter_name" can be one of the following:\n'
-            '"average", "gaussian", "median", and "gaussian-bilateral" and '
-            '"median-bilateral"'
+            '"average", "gaussian" or "median"'
         )
 
+    import ipdb; ipdb.set_trace()
     smoothed_image = smoothed_image.astype(image.dtype)
     if plot:
         logger.info('create plot')

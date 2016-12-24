@@ -27,27 +27,6 @@ input:
           Size (width and height) of the kernel.
           Provide a single positive and odd integer value.
 
-    - name: sigma
-      type: Scalar
-      value:
-      help: >
-        Standard deviation of the Gaussian kernel,
-        only relevant for "gaussian" filter
-
-    - name: sigma_color
-      type: Scalar
-      value:
-      help: >
-        Gaussian component applied in the intensity domain (color space),
-        only relevant for "bilateral" filter
-
-    - name: sigma_space
-      type: Scalar
-      value:
-      help: >
-        Gaussian component applied in the spatial domain (coordinate space),
-        only relevant for "bilateral" filter
-
     - name: plot
       type: Plot
       value: false
