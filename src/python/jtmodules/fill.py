@@ -1,4 +1,3 @@
-
 # Copyright 2016 Markus D. Herrmann, University of Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,54 +11,44 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-'''Jterator module for thresholding of an image using a given global threshold
-level.
-'''
+'''Jterator module for filling holes in connected pixel components.'''
 import logging
+import numpy as np
 import collections
 import mahotas as mh
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
 VERSION = '0.0.1'
 
-Output = collections.namedtuple('Output', ['mask', 'figure'])
+Output = collections.namedtuple('Output', ['filled_mask', 'figure'])
 
 
-def main(image, threshold, plot=False):
-    '''Thresholds an image by applying a given global threshold level.
+def main(mask, plot=False):
+    '''Fills holes in connected pixel components.
 
     Parameters
     ----------
-    image: numpy.ndarray
-        image of arbitrary data type that should be thresholded
-    threshold: int
-        threshold level
+    mask: numpy.ndarray[numpy.bool]
+        binary image that should filled
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
-    jtmodules.threshold_manual.Output[Union[numpy.ndarray, str]]
+    jtmodules.fill.Output[Union[numpy.ndarray, str]]
+
     '''
-    logger.info('threshold image at %d', threshold)
-    mask = image > threshold
+    filled_mask = mh.close_holes(mask, np.ones((3, 3), bool))
 
     if plot:
-        logger.info('create plot')
         from jtlib import plotting
-        outlines = mh.morph.dilate(mh.labeled.bwperim(mask))
         plots = [
-            plotting.create_intensity_overlay_image_plot(
-                image, outlines, 'ul'
-            ),
-            plotting.create_mask_image_plot(mask, 'ur')
+            plotting.create_mask_image_plot(mask, 'ul'),
+            plotting.create_mask_image_plot(filled_mask, 'ur')
         ]
-        figure = plotting.create_figure(
-            plots, title='thresholded at %s' % threshold
-        )
+        figure = plotting.create_figure(plots, title='Labeled image')
     else:
         figure = str()
 
-    return Output(mask, figure)
+    return Output(filled_mask, figure)

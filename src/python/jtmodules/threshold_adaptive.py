@@ -30,7 +30,7 @@ VERSION = '0.0.2'
 Output = collections.namedtuple('Output', ['mask', 'figure'])
 
 
-def main(image, kernel_size, fill=True, plot=False):
+def main(image, kernel_size, plot=False):
     '''Thresholds an image with a locally adaptive threshold, where locality
     is defined by `kernel_size`.
 
@@ -41,9 +41,6 @@ def main(image, kernel_size, fill=True, plot=False):
     kernel_size: int
         size of the neighbourhood region that's used to calculate the threshold
         value at each pixel position (must be an odd number)
-    fill: bool, optional
-        whether holes in connected components should be filled
-        (default: ``True``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -71,10 +68,6 @@ def main(image, kernel_size, fill=True, plot=False):
     )
     # OpenCV treats masks as unsigned integer and not as boolean
     thresh_image = thresh_image > 0
-
-    if fill:
-        logger.info('fill holes')
-        thresh_image = mh.close_holes(thresh_image, np.ones((3, 3), bool))
 
     if plot:
         logger.info('create plot')

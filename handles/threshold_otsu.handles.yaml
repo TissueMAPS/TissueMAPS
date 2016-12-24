@@ -25,14 +25,6 @@ input:
       value:
       help: Maximal threshold level.
 
-    - name: fill
-      type: Boolean
-      value: true
-      options:
-        - true
-        - false
-      help: Should holes in mask be filled?
-
     - name: plot
       type: Plot
       value: false
