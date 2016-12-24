@@ -68,7 +68,6 @@ class TmapsConfig(object):
         self.db_user = 'tissuemaps'
         self.db_host = 'localhost'
         self.db_port = 5432
-        self.db_driver = 'postgresql'
         self.db_nodes = 2
 
     def read(self):

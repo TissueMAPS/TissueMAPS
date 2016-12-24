@@ -47,8 +47,6 @@ def _compile_create_table(element, compiler, **kwargs):
     distribute_by_hash = 'distribute_by_hash' in table.info
     distribute_by_replication = 'distribute_by_replication' in table.info
     if distribute_by_hash or distribute_by_replication:
-        if table.foreign_keys:
-            # TODO: check if colocalized
         if distribute_by_hash:
             distribution_column = table.info['distribute_by_hash']
             table = _update_table_constraints(table, distribution_column)
@@ -58,7 +56,7 @@ def _compile_create_table(element, compiler, **kwargs):
             )
             # No replication of tables.
             sql = 'SET citus.shard_replication_factor = 1;\n'
-            sql = compiler.visit_create_table(element)
+            sql += compiler.visit_create_table(element)
             sql += ';\nSELECT create_distributed_table(\'%s.%s\', \'%s\');' % (
                 table.schema, table.name, distribution_column
             )
@@ -77,7 +75,7 @@ def _compile_create_table(element, compiler, **kwargs):
             table = _update_table_constraints(table, 'id')
             logger.debug('distribute table "%s" by replication', table.name)
             sql = 'SET citus.shard_replication_factor = %s;\n' % cfg.db_nodes
-            sql = compiler.visit_create_table(element)
+            sql += compiler.visit_create_table(element)
             sql += ';\nSELECT create_reference_table(\'%s.%s\');' % (
                 table.schema, table.name
             )

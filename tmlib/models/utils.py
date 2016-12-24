@@ -30,6 +30,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import NamedTupleCursor
 
 from tmlib.models.base import MainModel, ExperimentModel, FileSystemModel
+from tmlib.models.dialect import *
 from tmlib import cfg
 
 logger = logging.getLogger(__name__)

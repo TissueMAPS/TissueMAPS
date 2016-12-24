@@ -273,7 +273,7 @@ class MapobjectSegmentation(ExperimentModel):
     #: int: ID of parent mapobject
     mapobject_id = Column(
         Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        ForeignKey('mapobjects.id', ondelete='CASCADE'),
         index=True
     )
 
