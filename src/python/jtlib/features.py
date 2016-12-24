@@ -106,10 +106,9 @@ class Features(object):
         function that can be used to compute the statistic
         '''
         return {
-            'mean': np.nanmean,
-            'std': np.nanstd,
-            'sum': np.nansum,
-            'count': lambda x: len(x)
+            'Mean': np.nanmean,
+            'Std': np.nanstd,
+            'Sum': np.nansum,
         }
 
     def check_assignment(self, ref_label_image, aggregate):
@@ -167,9 +166,13 @@ class Features(object):
         ref_object_ids = np.unique(ref_label_image)[1:]
         for ref_label in ref_object_ids:
             labels = np.unique(self.label_image[ref_label_image == ref_label])
+            labels = labels[labels > 0]
+            if len(labels) == 0:
+                continue
             for name, vals in features.loc[labels, :].iteritems():
-                for stat, func in self._aggregate_statistics:
+                for stat, func in self._aggregate_statistics.iteritems():
                     values['%s_%s' % (stat, name)] = func(vals)
+            values['Count'] = len(labels)
         return pd.DataFrame(values, index=ref_object_ids)
 
     @abstractmethod
@@ -589,7 +592,9 @@ class PointPattern(Features):
 
         Note
         ----
-        Represents objects as points (centroids).
+        Objects are relabeled such that they have continous labels within the
+        bounding box in the range [1, *n*], where *n* is the number of objects
+        within the parent object. Objects outside the prarent object are ignored.
         '''
         bbox = self._parent_bboxes[parent_object_id]
         parent_img = self.get_parent_object_mask_image(parent_object_id)
