@@ -506,7 +506,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     delete_mapobjects_cascade(
                         self.experiment_id,
                         mapobject_type_ids=[mapobject_type_ids[obj_name]],
-                        site_id=store['site_id'], pipeline=self.project.name
+                        site_id=store['site_id']
                     )
 
         for obj_name, segm_objs in objects_to_save.iteritems():
