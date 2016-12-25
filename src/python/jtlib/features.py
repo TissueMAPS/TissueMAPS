@@ -167,12 +167,19 @@ class Features(object):
         for ref_label in ref_object_ids:
             labels = np.unique(self.label_image[ref_label_image == ref_label])
             labels = labels[labels > 0]
-            if len(labels) == 0:
-                continue
-            for name, vals in features.loc[labels, :].iteritems():
-                for stat, func in self._aggregate_statistics.iteritems():
-                    values['%s_%s' % (stat, name)] = func(vals)
             values['Count'] = len(labels)
+            if len(labels) == 0:
+                for name in features.columns:
+                    for stat in self._aggregate_statistics.keys():
+                        values['%s_%s' % (stat, name)] = np.nan
+            else:
+                for name, vals in features.loc[labels, :].iteritems():
+                    if vals.emtpy:
+                        for stat in self._aggregate_statistics.keys:
+                            values['%s_%s' % (stat, name)] = np.nan
+                    else:
+                        for stat, func in self._aggregate_statistics.iteritems():
+                            values['%s_%s' % (stat, name)] = float(func(vals))
         return pd.DataFrame(values, index=ref_object_ids)
 
     @abstractmethod
