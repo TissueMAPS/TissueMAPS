@@ -436,14 +436,11 @@ def delete_mapobject_types_cascade(experiment_id, is_static=None,
 def _compile_distributed_query(sql):
     # This is required for modification of distributed tables
     # TODO: alter queries in "citus" dialect
-    if cfg.db_driver == 'citus':
-        return '''
-            SELECT master_modify_multiple_shards('
-                {query}
-            ')
-        '''.format(query=sql)
-    else:
-        return sql
+    return '''
+        SELECT master_modify_multiple_shards('
+            {query}
+        ')
+    '''.format(query=sql)
 
 
 def _delete_mapobjects_cascade(connection, experiment_id, mapobject_ids):
