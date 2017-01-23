@@ -34,9 +34,6 @@ def _update_table_constraints(table, distribution_column):
                 isinstance(c, UniqueConstraint)):
             if distribution_column not in c.columns:
                 c.columns.add(table.columns[distribution_column])
-    # for i in table.indexes:
-    #     if distribution_column not in i.columns:
-    #         i.columns.add(table.columns[distribution_column])
     return table
 
 
@@ -97,7 +94,7 @@ def _compile_drop_table(element, compiler, **kwargs):
 
 
 @compiles(array_agg, 'postgresql')
-def compile_array_agg(element, compiler, **kw):
+def _compile_array_agg(element, compiler, **kw):
     compiled = "%s(%s)" % (element.name, compiler.process(element.clauses))
     if element.default is None:
         return compiled
@@ -107,33 +104,23 @@ def compile_array_agg(element, compiler, **kw):
     ).compile(compiler))
 
 
-# class PGXLDialect_psycopg2(PGDialect_psycopg2):
+def compile_distributed_query(sql):
+    '''Compiles a *SQL* query for modification of a hash distributed Citus table.
 
-#     '''SQLAlchemy dialect for `PostgresXL <http://www.postgres-xl.org/>`_
-#     database cluster.
-#     '''
-#     name = 'postgresxl'
+    Parameters
+    ----------
+    sql: str
+        query
 
-
-# @compiles(CreateTable, 'postgresxl')
-# def _compile_create_table(element, compiler, **kwargs):
-#     table = element.element
-#     logger.debug('create table "%s"', table.name)
-#     distribute_by_hash = 'distribute_by_hash' in table.info
-#     if distribute_by_hash:
-#         distribution_column = table.info['distribute_by_hash']
-#         table = _update_table_constraints(table, distribution_column)
-#         logger.debug(
-#             'distribute table "%s" by hash "%s"', table.name,
-#             distribution_column
-#         )
-#         sql = compiler.visit_create_table(element)
-#         sql += ' DISTRIBUTE BY HASH(' + distribution_column + ')'
-#     else:
-#         # NOTE: In PostrgresXL every table needs to be distributed.
-#         logger.debug(
-#             'distribute table "%s" by replication', table.name
-#         )
-#         sql = compiler.visit_create_table(element)
-#         sql += ' DISTRIBUTE BY REPLICATION'
-#     return sql
+    Returns
+    -------
+    str
+        compiled query
+    '''
+    # This is required for modification of distributed tables
+    # TODO: compile UPDATE and DELETE queries in dialect
+    return '''
+        SELECT master_modify_multiple_shards('
+            {query}
+        ')
+    '''.format(query=sql)

@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_partitions(li, n):
-    '''Creates a list of lists from a list, where each sublist has length n.
+    '''Creates a list of sublists from a list, where each sublist has length n.
 
     Parameters
     ----------

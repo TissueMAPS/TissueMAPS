@@ -630,32 +630,25 @@ class MetadataHandler(object):
         md = self.metadata
 
         logger.info('determine acquisition grid coordinates based on layout')
-
         # Determine the number of unique positions per well
         acquisitions_per_well = md.groupby([
             'well_name', 'channel_name', 'zplane', 'tpoint'
         ])
-
         n_acquisitions_per_well = acquisitions_per_well.count().name
-
         if len(np.unique(n_acquisitions_per_well)) > 1:
             raise MetadataError(
                 'Each well must have the same number of acquisition sites.'
             )
-
         n_sites = n_acquisitions_per_well[0]
+        sites = acquisitions_per_well.groups.values()
 
         logger.debug(
             'stitch layout: {0}; stitch dimensions: {1}'.format(
             stitch_layout, stitch_dimensions)
         )
-
         coordinates = stitch.calc_grid_coordinates_from_layout(
             stitch_dimensions, stitch_layout
         )
-
-        sites = acquisitions_per_well.groups.values()
-
         y_coordinates = [c[0] for c in coordinates]
         x_coordinates = [c[1] for c in coordinates]
         for indices in sites:

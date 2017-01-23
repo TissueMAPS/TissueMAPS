@@ -32,11 +32,13 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from tmlib.models.file import ChannelImageFile
 from tmlib.models.site import Site
 from tmlib.models.well import Well
-from tmlib.models.feature import FeatureValue, LabelValue
+from tmlib.models.feature import FeatureValues
+from tmlib.models.result import LabelValues
 from tmlib.models.tile import ChannelLayerTile
 from tmlib.models.plate import Plate
 from tmlib.models.base import ExperimentModel
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
+from tmlib.models.dialect import compile_distributed_query
 from tmlib.errors import RegexError
 from tmlib.image import PyramidTile
 
@@ -89,16 +91,16 @@ class ChannelLayer(ExperimentModel):
         backref=backref('layers', cascade='all, delete-orphan')
     )
 
-    def __init__(self, tpoint, zplane, channel_id):
+    def __init__(self, channel_id, tpoint, zplane):
         '''
         Parameters
         ----------
+        channel_id: int
+            ID of the parent channel
         tpoint: int
             zero-based time series index
         zplane: int
             zero-based z-resolution index
-        channel_id: int
-            ID of the parent channel
         '''
         self.tpoint = tpoint
         self.zplane = zplane
@@ -591,23 +593,47 @@ class ChannelLayer(ExperimentModel):
 
         return tile
 
-    def to_dict(self):
-        '''Returns attributes as key-value pairs.
+    @classmethod
+    def delete_cascade(cls, connection):
+        '''Deletes all instances for the given experiment as well as
+        "children" instances of
+        :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`.
 
-        Returns
-        -------
-        dict
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the parent experiment
+
+        Note
+        ----
+        This is not possible via the standard *SQLAlchemy* approach, because the
+        table of :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`
+        is distributed.
         '''
-        image_height, image_width = self.image_size[-1]
-        return {
-            'id': self.hash,
-            'tpoint': self.tpoint,
-            'zplane': self.zplane,
-            'image_size': {
-                'width': image_width,
-                'height': image_height
+        logger.debug('delete channel layer tiles')
+        connection.execute(
+            compile_distributed_query('DELETE FROM channel_layer_tiles')
+        )
+        logger.debug('delete channel layers')
+        connection.execute('DELETE FROM channel_layers;')
+
+        def to_dict(self):
+            '''Returns attributes as key-value pairs.
+
+            Returns
+            -------
+            dict
+            '''
+            image_height, image_width = self.image_size[-1]
+            return {
+                'id': self.hash,
+                'tpoint': self.tpoint,
+                'zplane': self.zplane,
+                'image_size': {
+                    'width': image_width,
+                    'height': image_height
+                }
             }
-        }
 
     def __repr__(self):
         return (
@@ -617,249 +643,227 @@ class ChannelLayer(ExperimentModel):
         )
 
 
-class LabelLayer(ExperimentModel):
+class SegmentationLayer(ExperimentModel):
 
-    '''A layer that associates each :class:`tmlib.models.mapobject.Mapobject`
-    with a :class:`tmlib.models.layer.LabelValue` for multi-resolution
-    visualization of tool results on the map.
-    The layer can be rendered client side as vector graphics and mapobjects
-    can be color-coded according their respective label.
+    __tablename__ = 'segmentation_layers'
 
-    '''
+    #: int: zero-based index in time series
+    tpoint = Column(Integer, index=True)
 
-    __tablename__ = 'label_layers'
+    #: int: zero-based index in z stack
+    zplane = Column(Integer, index=True)
 
-    #: str: label layer type
-    type = Column(String(50))
+    #: int: zoom level threshold below which polygons will not be visualized
+    polygon_thresh = Column(Integer)
 
-    #: dict: mapping of tool-specific attributes
-    attributes = Column(JSON)
+    #: int: zoom level threshold below which centroids will not be visualized
+    centroid_thresh = Column(Integer)
 
-    __mapper_args__ = {'polymorphic_on': type}
-
-    #: int: ID of parent tool result
-    tool_result_id = Column(
+    #: int: ID of parent channel
+    mapobject_type_id = Column(
         Integer,
-        ForeignKey('tool_results.id', onupdate='CASCADE', ondelete='CASCADE'),
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    #: tmlib.models.result.ToolResult: parent tool result
-    tool_result = relationship(
-        'ToolResult',
-        backref=backref('layer', cascade='all, delete-orphan', uselist=False)
+    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
+    mapobject_type = relationship(
+        'MapobjectType',
+        backref=backref('layers', cascade='all, delete-orphan'),
     )
 
-    def __init__(self, tool_result_id, **extra_attributes):
+    def __init__(self, mapobject_type_id, tpoint=None, zplane=None):
         '''
         Parameters
         ----------
-        tool_result_id: int
-            ID of the parent tool result
-        **extra_attributes: dict, optional
-            additional tool-specific attributes that be need to be saved
+        mapobject_type_id: int
+            ID of parent
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        tpoint: int, optional
+            zero-based time point index
+        zplane: int, optional
+            zero-based z-resolution index
         '''
-        self.tool_result_id = tool_result_id
-        if 'type' in extra_attributes:
-            self.type = extra_attributes.pop('type')
-        self.attributes = extra_attributes
+        self.tpoint = tpoint
+        self.zplane = zplane
+        self.mapobject_type_id = mapobject_type_id
 
-    def get_labels(self, mapobject_ids):
-        '''Queries the database to retrieve the generated label values for
-        the given `mapobjects`.
+    @classmethod
+    def get_tile_bounding_box(cls, x, y, z, maxzoom):
+        '''Calculates the bounding box of a layer tile.
 
         Parameters
         ----------
-        mapobject_ids: List[int]
-            IDs of mapobjects for which labels should be retrieved
+        x: int
+            horizontal tile coordinate
+        y: int
+            vertical tile coordinate
+        z: int
+            zoom level
+        maxzoom: int
+            maximal zoom level of layers belonging to the visualized experiment
 
         Returns
         -------
-        Dict[int, float or int]
-            mapping of mapobject ID to label value
+        Tuple[int]
+            bounding box coordinates (x_top, y_top, x_bottom, y_bottom)
         '''
-        session = Session.object_session(self)
-        return dict(
-            session.query(
-                LabelValue.mapobject_id,
-                LabelValue.values[str(self.tool_result_id)]
-            ).
-            filter(LabelValue.mapobject_id.in_(mapobject_ids)).
-            all()
-        )
+        # The extent of a tile of the current zoom level in mapobject
+        # coordinates (i.e. coordinates on the highest zoom level)
+        size = 256 * 2 ** (maxzoom - z)
+        # Coordinates of the top-left corner of the tile
+        x0 = x * size
+        y0 = y * size
+        # Coordinates with which to specify all corners of the tile
+        # NOTE: y-axis is inverted!
+        minx = x0
+        maxx = x0 + size
+        miny = -y0
+        maxy = -y0 - size
+        return (minx, miny, maxx, maxy)
 
-
-class ScalarLabelLayer(LabelLayer):
-
-    '''A label layer that assigns each mapobject a discrete value.'''
-
-    __mapper_args__ = {'polymorphic_identity': 'ScalarLabelLayer'}
-
-    def __init__(self, tool_result_id, unique_labels, **extra_attributes):
-        '''
-        Parameters
-        ----------
-        tool_result_id: int
-            ID of the parent tool result
-        unique_labels : List[int]
-            unique label values
-        **extra_attributes: dict, optional
-            additional tool-specific attributes that be need to be saved
-        '''
-        super(ScalarLabelLayer, self).__init__(
-            tool_result_id, unique_labels=unique_labels, **extra_attributes
-        )
-
-
-class SupervisedClassifierLabelLayer(ScalarLabelLayer):
-
-    '''A label layer for results of a supervised classifier.
-    Results of such classifiers have specific colors associated with class
-    labels.
-    '''
-
-    __mapper_args__ = {'polymorphic_identity': 'SupervisedClassifierLabelLayer'}
-
-    def __init__(self, tool_result_id, unique_labels, label_map,
-            **extra_attributes):
-        '''
-        Parameters
-        ----------
-        tool_result_id: int
-            ID of the parent tool result
-        unique_labels : List[int]
-            unique label values
-        label_map : dict[float, str]
-            mapping of label value to color strings of format ``"#ffffff"``
-        **extra_attributes: dict, optional
-            additional tool-specific attributes that be need to be saved
-        '''
-        super(SupervisedClassifierLabelLayer, self).__init__(
-            tool_result_id, label_map=label_map, unique_labels=unique_labels,
-            **extra_attributes
-        )
-
-    # def get_labels(self, mapobject_ids):
-    #     '''Queries the database to retrieve the generated label values for
-    #     the given `mapobjects`.
-
-    #     Parameters
-    #     ----------
-    #     mapobject_ids: List[int]
-    #         IDs of mapobjects for which labels should be retrieved
-
-    #     Returns
-    #     -------
-    #     Dict[int, str]
-    #         mapping of mapobject ID to color string of format ``"ffffff"``
-    #     '''
-    #     session = Session.object_session(self)
-    #     label_values = session.query(
-    #             LabelValue.mapobject_id, LabelValue.value
-    #         ).\
-    #         filter(
-    #             LabelValue.mapobject_id.in_(mapobject_ids),
-    #             LabelValue.tool_result_id == self.tool_result_id
-    #         ).\
-    #         all()
-    #     # NOTE: in contrast to Python dicts, keys of JSON objects must be
-    #     # stings.
-    #     return {
-    #         mapobject_id: self.attributes['label_map'][str(value)]['color']
-    #         for mapobject_id, value in label_values
-    #     }
-
-
-class ContinuousLabelLayer(LabelLayer):
-
-    '''A label layer where each mapobject gets assigned a continuous value.'''
-
-    __mapper_args__ = {'polymorphic_identity': 'ContinuousLabelLayer'}
-
-    def __init__(self, tool_result_id, **extra_attributes):
-        '''
-        Parameters
-        ----------
-        tool_result_id: int
-            ID of the parent tool result
-        **extra_attributes: dict, optional
-            additional tool-specific attributes that be need to be saved
-
-        '''
-        super(ContinuousLabelLayer, self).__init__(
-            tool_result_id, **extra_attributes
-        )
-
-
-class HeatmapLabelLayer(ContinuousLabelLayer):
-
-    '''A label layer for results of the Heatmap tool, where each mapobject
-    gets assigned an already available feature value.
-    '''
-
-    __mapper_args__ = {'polymorphic_identity': 'HeatmapLabelLayer'}
-
-    def __init__(self, tool_result_id, feature_id, min, max):
-        '''
-        Parameters
-        ----------
-        tool_result_id: int
-            ID of the parent tool result
-        feature_id: int
-            ID of the feature whose values should be used
-        '''
-        super(HeatmapLabelLayer, self).__init__(
-            tool_result_id, feature_id=feature_id, min=min, max=max
-        )
-
-    def get_labels(self, mapobject_ids):
-        '''Queries the database to retrieve the pre-computed feature values for
-        the given `mapobjects`.
+    def calculate_zoom_thresholds(self, maxzoom_level):
+        '''Calculates the zoom level above which mapobjects are
+        represented on the map as polygons instead of centroids and the
+        zoom level below which mapobjects are no longer visualized.
 
         Parameters
         ----------
-        mapobject_ids: List[int]
-            IDs of mapobjects for which feature values should be retrieved
+        maxzoom_level: int
+            maximum zoom level of the pyramid
 
         Returns
         -------
-        Dict[int, float or int]
-            mapping of mapobject ID to feature value
+        Tuple[int]
+            minimal and maximal zoom level
         '''
-        session = Session.object_session(self)
-        feature_id = self.attributes['feature_id']
-        return dict(
-            session.query(
-                FeatureValue.mapobject_id,
-                FeatureValue.values[str(feature_id)]
-            ).
-            filter(FeatureValue.mapobject_id.in_(mapobject_ids)).
-            all()
+        # TODO: This is too simplistic. Calculate optimal zoom level by
+        # sampling mapobjects at the highest resolution level and approximate
+        # number of points that would be sent to the client.
+        if self.mapobject.is_static:
+            polygon_thresh = 0
+            centroid_thresh = 0
+        else:
+            polygon_thresh = maxzoom_level - 4
+            polygon_thresh = 0 if polygon_thresh < 0 else polygon_thresh
+            centroid_thresh = polygon_thresh - 2
+            centroid_thresh = 0 if centroid_thresh < 0 else centroid_thresh
+        return (polygon_thresh, centroid_thresh)
+
+    def get_segmentations(self, x, y, z, tolerance=2):
+        '''Get outlines of each
+        :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
+        contained by a given pyramid tile.
+
+        Parameters
+        ----------
+        x: int
+            zero-based column map coordinate at the given `z` level
+        y: int
+            zero-based row map coordinate at the given `z` level
+            (negative integer values due to inverted *y*-axis)
+        z: int
+            zero-based zoom level index
+        tolerance: int, optional
+            maximum distance in pixels between points on the contour of
+            original polygons and simplified polygons;
+            the higher the `tolerance` the less coordinates will be used to
+            describe the polygon and the less accurate it will be
+            approximated and; if ``0`` the original polygon is used
+            (default: ``2``)
+
+        Returns
+        -------
+        List[Tuple[int, str]]
+            GeoJSON representation of each selected mapobject
+
+        Note
+        ----
+        If *z* > `polygon_thresh` mapobjects are represented by polygons, if
+        `polygon_thresh` < *z* < `centroid_thresh`,
+        mapobjects are represented by points and if *z* < `centroid_thresh`
+        they are not represented at all.
+        '''
+        logger.debug('get mapobject outlines falling into tile')
+        # session = Session.object_session(self)
+
+        # minx, miny, maxx, maxy = self.get_bounding_box(x, y, z, maxzoom)
+        # tile = 'POLYGON(({maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
+        #     minx=minx, maxx=maxx, miny=miny, maxy=maxy
+        # )
+        # spatial_filter = (MapobjectSegmentation.geom_poly.ST_Intersects(tile))
+
+        with ExperimentConnection(self.mapobject_type.experiment_id) as connection:
+            # NOTE: Column "depth" is implemented as a hybrid_property on the
+            # data model class. The property must have been accessed once for this
+            # query to work.
+            connection.execute('''
+                SELECT depth FROM channel_layers
+                LIMIT 1
+            ''')
+            layer = connection.fetchone()
+            maxzoom = layer.depth - 1
+
+            connection.execute('''
+                SELECT polygon_thresh, centroid_thresh FROM segmentation_layers
+                WHERE id = %(id)s;
+            ''', {
+                'id': segmentation_layer_id
+            })
+            polygon_thresh, centroid_thresh = connection.fetchone()
+            do_simplify = centroid_thresh <= z < polygon_thresh
+            do_nothing = z < centroid_thresh
+            min_x, min_y, max_x, max_y = self.get_tile_bounding_box(
+                x, y, z, maxzoom
+            )
+            if do_nothing:
+                logger.debug('dont\'t represent objects')
+                return list()
+            elif do_simplify:
+                logger.debug('represent objects as centroid')
+                sql = '''
+                    SELECT mapobject_id, ST_AsGeoJSON(geom_centroid)
+                '''
+            else:
+                logger.debug('represent objects as polygon')
+                sql = '''
+                    SELECT mapobject_id, ST_AsGeoJSON(
+                        ST_SimplifyPreserveTopology(geom_polygon, %(tolerance)s)
+                    )
+                '''
+
+            sql += '''
+                FROM mapobject_segmentations
+                WHERE segmenation_layer_id = %(segmentation_layer_id)s
+                AND ST_CoveredBy(
+                        geom_centroid,
+                        ST_GeomFromText(
+                            'POLYGON((
+                                %(max_x)s %(max_y)s, %(min_x)s %(max_y)s,
+                                %(min_x)s %(min_y)s, %(max_x)s %(min_y)s,
+                                %(max_x)s %(max_y)s
+                            ))'
+                        )
+                    )
+            '''
+            connection.execute(sql, {
+                'segmentation_layer_id': segmentation_layer_id,
+                'tolerance': tolerance,
+                'min_x': min_x, 'max_x': max_x, 'min_y': min_y, 'max_y': max_y,
+            })
+
+            outlines = connection.fetchall()
+            if len(outlines) == 0:
+                logger.warn(
+                    'no outlines found for objects of type "%s" within tile: '
+                    'x=%d, y=%d, z=%d', mapobject_type_name, x, y, z
+                )
+
+            return outlines
+
+    def __repr__(self):
+        return (
+            '<%s(id=%d, mapobject_type_id=%r)>'
+            % (self.__class__.__name__, self.id, self.mapobject_type_id)
         )
 
-
-def delete_channel_layers_cascade(experiment_id):
-    '''Deletes all instances of
-    :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>` as well as
-    as "children" instances of
-    :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the parent experiment
-
-
-    Note
-    ----
-    This is not possible via the standard *SQLAlchemy* approach, because the
-    table of :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`
-    might be distributed over a cluster.
-    '''
-    with ExperimentConnection(experiment_id) as connection:
-        logger.debug('drop table "channel_layer_tiles"')
-        connection.execute('DROP TABLE channel_layer_tiles;')
-
-    with ExperimentSession(experiment_id) as session:
-        session.drop_and_recreate(ChannelLayerTile)
-        session.drop_and_recreate(ChannelLayer)

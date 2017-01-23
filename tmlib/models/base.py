@@ -73,10 +73,12 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
                 self.is_distributed = False
 
 
+#: Abstract base class for models of the main database.
 _MainBase = declarative_base(
     name='MainBase', metaclass=_DeclarativeABCMeta
 )
 
+#: Abstract base class for models of an experiment-specific database.
 _ExperimentBase = declarative_base(
     name='ExperimentBase', metaclass=_DeclarativeABCMeta
 )
@@ -111,7 +113,7 @@ class IdMixIn(object):
     '''
 
     #: int: ID assigned to the object by the database
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     @property
     def hash(self):
@@ -188,15 +190,4 @@ class FileModel(FileSystemModel):
     def put(self, data):
         '''Puts `data` to the file.'''
         pass
-
-
-registry.register('postgresxl', 'tmlib.models.dialect', 'PGXLDialect_psycopg2')
-registry.register('citus', 'tmlib.models.dialect', 'CitusDialect_psycopg2')
-
-
-@compiles(DropTable, 'postgresql')
-def _compile_drop_table(element, compiler, **kwargs):
-    table = element.element
-    logger.debug('drop table "%s" with cascade', table.name)
-    return compiler.visit_drop_table(element) + ' CASCADE'
 
