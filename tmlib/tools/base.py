@@ -18,6 +18,7 @@ import re
 import logging
 import inspect
 import importlib
+import simplejson
 import numpy as np
 import pandas as pd
 import collections
@@ -121,186 +122,9 @@ class _ToolMeta(ABCMeta):
         return super(_ToolMeta, cls).__call__(*args, **kwargs)
 
 
-class ToolInterface(object):
+class Tool(object):
 
-    '''Abstract base class for tool library interfaces.'''
-
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def load_data(self):
-        pass
-
-    @abstractmethod
-    def load_feature_values(self, mapobject_type_name, feature_name):
-        pass
-
-    @abstractmethod
-    def save_label_values(self, result_id, data):
-        pass
-
-    @abstractmethod
-    def calculate_extrema(self, data, column):
-        pass
-
-    @abstractmethod
-    def calculate_unique(self, data, column):
-        pass
-
-
-class ToolSparkInterface(ToolInterface):
-
-    '''Tool interface for the `Spark <http://spark.apache.org/>`_ library.
-
-    The interface uses the
-    `Spark DataFrame <http://spark.apache.org/docs/latest/api/python/pyspark.sql.html#pyspark.sql.DataFrame>`_
-    data container together with the
-    `Spark MLlib <http://spark.apache.org/docs/latest/api/python/pyspark.ml.html>`
-    machine learning library.
-    '''
-
-    def _create_spark_session(self, tool_name):
-        '''Creates a Spark Session.'''
-        from pyspark.sql import SparkSession
-        session = SparkSession.builder.\
-            master(cfg.spark_master).\
-            appName(tool_name).\
-            getOrCreate()
-        session.sparkContext.setLogLevel('WARN')
-        return session
-
-    def _read_table(self, table, n_partitions, lower_bound, upper_bound):
-        '''Reads a SQL table for use with Apache Spark.
-
-        Parameters
-        ----------
-        table: str
-            name of the SQL table or aliased SQL query
-        n_partitions: int
-            number of partitions for parallel processing
-        lower_bound: int
-            value of lowest ID in `table`
-        upper_bound: int
-            value of highest ID in `table`
-
-        Returns
-        -------
-        pyspark.sql.DataFrame
-
-        Note
-        ----
-        Caches the :class:`DataFrame <pyspark.sql.DataFrame>` to speed up
-        computations.
-
-        '''
-        url = cfg.db_uri_spark.replace(
-            'tissuemaps', 'tissuemaps_experiment_%s' % self.experiment_id
-        )
-        df = self.spark.read.jdbc(
-            url=url, table=table, column='id',
-            lowerBound=lower_bound, upperBound=upper_bound,
-            numPartitions=n_partitions,
-        )
-        return df.cache()
-
-    def _build_feature_values_query(self, mapobject_type_name, feature_name):
-        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-            conn.execute('''
-                SELECT f.id FROM features f
-                JOIN mapobject_types t ON t.id = f.mapobject_type_id
-                WHERE f.name = %(feature_name)s
-                AND t.name = %(mapobject_type_name)s;
-            ''', {
-                'feature_name': feature_name,
-                'mapobject_type_name': mapobject_type_name
-            })
-            feature_id = conn.fetchone()
-        # NOTE: the alias is required for compatibility with DataFrameReader
-        return '''
-            (
-             SELECT (values->>'{feature_id}')::double precision AS value, mapobject_id, id
-             FROM feature_values
-            )
-            AS t
-        '''.format(feature_id=str(feature_id))
-
-    def load_feature_values(self, mapobject_type_name, feature_name):
-        '''Selects all values from table "feature_values" for mapobjects of
-        a given :class:`tmlib.models.MapobjectType` and
-        :class:`tmlib.models.Feature`.
-
-        Parameters
-        ----------
-        mapobject_type_name: str
-            name of the selected mapobject type
-        feature_name: str
-            name of a selected feature
-
-        Returns
-        -------
-        pyspark.sql.DataFrame
-            data frame with columns "id", "mapobject_id" and "value" and
-            a row for each mapobject
-        '''
-        query = self._build_feature_values_query(
-            mapobject_type_name, feature_name
-        )
-        lower, upper = self._determine_bounds(mapobject_type_name, feature_name)
-        return self._read_table(
-            table=query, n_partitions=100, lower_bound=lower, upper_bound=upper,
-        )
-
-    def save_label_values(self, result_id, data):
-        '''Saves the generated label values in the corresponding database table.
-
-        Parameters
-        ----------
-        result_id: int
-            ID of corresponding tool result
-        data: pyspark.sql.DataFrame
-            data frame with columns "label" and "mapobject_id"
-
-        See also
-        --------
-        :class:`tmlib.models.feature.LabelValue`
-        '''
-        import pyspark.sql.functions as sp
-        url = cfg.db_uri_spark
-        table = 'experiment_%d.%s' % (
-            self.experiment_id, tm.LabelValue.__table__.name
-        )
-        formatted_data = data.withColumnRenamed('label', 'value')
-        # TODO: JSONB column
-        formatted_data = formatted_data.withColumn(
-            'tool_result_id', sp.lit(result_id)
-        )
-        formatted_data.write.jdbc(url=url, table=table, mode='append')
-
-    def calculate_extrema(self, data, column):
-        '''Calculates the minimum and maximum of values in `column`.
-
-        Parameters
-        ----------
-        data: pyspark.sql.DataFrame
-            dataframe with `column`
-        column: str
-            name of column in `data`
-
-        Returns
-        -------
-        Tuple[float]
-            min and max
-        '''
-        import pyspark.sql.functions as sp
-        stats = data.select(sp.min(column), sp.max(column)).collect()
-        lower = stats[0][0]
-        upper = stats[0][1]
-        return (lower, upper)
-
-
-class ToolPandasInterface(ToolInterface):
-
-    '''Tool interface for the `Pandas <http://pandas.pydata.org/>`_ library.
+    '''Abstract base class for a data analysis tool.
 
     The interface uses the
     `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html>`_
@@ -309,65 +133,105 @@ class ToolPandasInterface(ToolInterface):
     It could in principle also be used with other machine learning libraries,
     such as `Caffe <http://caffe.berkeleyvision.org/>`_,
     `Keras <https://keras.io/>`_ or `TensorFlow <https://www.tensorflow.org/>`_.
+
     '''
 
-    def load_feature_values(self, mapobject_type_name, feature_name):
-        '''Selects all values from table "feature_values" for mapobjects of
-        a given :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-        and :class:`Feature <tmlib.models.feature.Feature>`.
+    __metaclass__ = _ToolMeta
+
+    __abstract__ = True
+
+    def __init__(self, experiment_id):
+        '''
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the experiment for which the tool request is made
+        '''
+        self.experiment_id = experiment_id
+
+    def load_feature_values(self, mapobject_type_name, feature_names):
+        '''Selects all values for each given
+        :class:`tmlib.models.Feature` and mapobjects with a given
+        :class:`tmlib.models.MapobjectType`.
 
         Parameters
         ----------
         mapobject_type_name: str
             name of the selected mapobject type
-        feature_name: str
-            name of a selected feature
+            (:class:`tmlib.models.mapobject.MapobjectType`)
+        feature_names: List[str]
+            names of selected features
+            (:class:`tmlib.models.feature.Feature`)
 
         Returns
         -------
         pandas.DataFrame
-            data frame with columns "mapobject_id" and "value" and
-            a row for each mapobject
+            dataframe where columns are features and rows are mapobjects
+            indexable by `mapobject_id`
         '''
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             conn.execute('''
-                SELECT f.id FROM features f
-                JOIN mapobject_types t ON t.id = f.mapobject_type_id
-                WHERE f.name = %(feature_name)s
+                SELECT t.id AS mapobject_type_id, f.id AS feature_id, f.name
+                FROM features AS f
+                JOIN mapobject_types AS t ON t.id = f.mapobject_type_id
+                WHERE f.name = ANY(%(feature_names)s)
                 AND t.name = %(mapobject_type_name)s;
             ''', {
-                'feature_name': feature_name,
+                'feature_names': feature_names,
                 'mapobject_type_name': mapobject_type_name
             })
-            feature_id = conn.fetchone()
-            conn.execute('''
-                SELECT mapobject_id, (values->>%(feature_id)s)::double precision AS value
-                FROM feature_values
-            ''', {
-                'feature_id': feature_id
-            })
+            records = conn.fetchall()
+            feature_map = {r.feature_id: r.name for r in records}
+            mapobject_type_id = records[0].mapobject_type_id
+            sql = '''
+                SELECT mapobject_id, tpoint'''
+            for i in feature_map:
+                sql += ', (values->%%(id_%d)s)::double precision AS value_%d' % (i, i)
+            sql += '''
+                FROM feature_values AS v
+                JOIN mapobjects AS m ON m.id = v.mapobject_id
+                WHERE m.mapobject_type_id = %(mapobject_type_id)s
+            '''
+            parameters = {'id_%d' % i: str(i) for i in feature_map}
+            parameters['mapobject_type_id'] = mapobject_type_id
+            conn.execute(sql, parameters)
             feature_values = conn.fetchall()
-        return pd.DataFrame(feature_values, columns=['mapobject_id', 'value'])
+        df = pd.DataFrame(feature_values)
+        df.set_index('mapobject_id', inplace=True)
+        # NOTE: We map the column names here and not in the SQL expression to
+        # avoid parsing feature names, which are provided by the user and
+        # thus pose a potential security risk in form of SQL injection.
+        column_map = {
+            'value_%d' % i: name for i, name in feature_map.iteritems()
+        }
+        df.rename(columns=column_map, inplace=True)
+        return df
 
-    def save_label_values(self, result_id, data):
-        '''Saves the generated label values in the corresponding database table.
+    def save_result_values(self, result_id, data):
+        '''Saves the computed label values.
 
         Parameters
         ----------
         result_id: int
-            ID of corresponding tool result
+            ID of a registered
+            :class:`ToolResult <tmlib.models.result.ToolResult>`
         data: pandas.DataFrame
-            data frame with columns "label" and "mapobject_id"
+            data frame with columns "label", "tpoint" and "mapobject_id"
 
         See also
         --------
-        :class:`tmlib.models.feature.LabelValue`
+        :class:`tmlib.models.result.LabelValues`
         '''
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+            # TODO: Use "mapobject_id" and "tpoint" as index
             for index, row in data.iterrows():
                 conn.execute('''
-                    INSERT INTO label_values AS v (mapobject_id, values)
-                    VALUES (%(mapobject_id)s, %(values)s)
+                    INSERT INTO label_values AS v (
+                        mapobject_id, values, tpoint
+                    )
+                    VALUES (
+                        %(mapobject_id)s, %(values)s, %(tpoint)s
+                    )
                     ON CONFLICT
                     ON CONSTRAINT label_values_tpoint_mapobject_id_key
                     DO UPDATE
@@ -375,9 +239,9 @@ class ToolPandasInterface(ToolInterface):
                     WHERE v.mapobject_id = %(mapobject_id)s
                     AND v.tpoint = %(tpoint)s;
                 ''', {
-                    'mapobject_id': row.mapobject_id,
                     'values': {str(result_id): row.label},
-                    'tpoint': 0  # TODO
+                    'mapobject_id': row.mapobject_id,
+                    'tpoint': row.tpoint
                 })
 
     def calculate_extrema(self, data, column):
@@ -399,137 +263,80 @@ class ToolPandasInterface(ToolInterface):
         upper = np.max(data[column])
         return (lower, upper)
 
-
-
-class Tool(object):
-
-    '''Abstract base class for a data analysis *tool*.
-
-    Derived classes delegate the actual processing to either the
-    :class:`PandasInterface <tmlib.tools.base.PandasInterface>` or
-    :class:`SparkInterface <tmlib.tools.base.SparkInterface>`.
-    Both libraries use a data container called "DataFrame" and have very similar
-    interfaces. Note, however, that spark code gets evaluated lazily.
-
-    Common methods required by both libraries should be implemented directly
-    in the derived class. Library-specific processing methods should
-    be implemented in separate mixin classes. These library-specific mixins
-    must be provided to the derived class via the ``__lib_bases__`` attribute
-    (in form of a mapping library name -> mixin class).
-    The appropriate library interface will be chosen automatically based on
-    configuration of :attr:`tool_library <tmlib.config.tool_library>` and
-    injected upon instantiation of the derived class. This provides tools with
-    a uniform interface independent of the specificities of different library
-    backends.
-
-    By default, the *pandas* library will be used and you don't need to
-    have `Spark <http://spark.apache.org/>`_ installed.
-    When setting :attr:`tool_library <tmlib.config.LibraryConfig.tool_library>`
-    to ``spark``, the *spark* library will be used instead. The required
-    `Spark Session <https://spark.apache.org/docs/latest/api/python/pyspark.sql.html#pyspark.sql.SparkSession>`_
-    (the main entry point for `Spark` functionality) gets automatically created
-    and made available to instances of derived classes as ``spark`` attribute.
-
-    On small datasets, *pyspark* is an overkill and running analysis in memory
-    using *pandas* will be faster in most cases. However, *pyspark* pays off on
-    large datasets, in particular in combination with a
-    `Spark cluster <http://spark.apache.org/docs/latest/cluster-overview.html>`_.
-    `TissueMAPS` supports running `spark` tool requests in a distributed manner
-    on `YARN <http://spark.apache.org/docs/latest/running-on-yarn.html>`_.
-    '''
-
-    __metaclass__ = _ToolMeta
-
-    __abstract__ = True
-
-    __lib_bases__ = {'spark': ToolSparkInterface, 'pandas': ToolPandasInterface}
-
-    def __init__(self, experiment_id):
-        '''
-        Parameters
-        ----------
-        experiment_id: int
-            ID of the experiment for which the tool request is made
-        '''
-        self.experiment_id = experiment_id
-        if cfg.tool_library == 'spark':
-            self.spark = self._create_spark_session(self.__class__.__name__)
-
-    def initialize_result(self, submission_id, mapobject_type_name,
-            layer_type, **layer_args):
-        '''Initializes a result for the given tool request.
+    def register_result(self, submission_id, mapobject_type_name,
+            result_type, **result_attributes):
+        '''Registers a result for the given tool request.
 
         Parameters
         ----------
         submission_id: int
             ID of the corresponding job submission
         mapobject_type_name: str
-            name of the selected mapobject type
-        layer_type: str
-            name of subclass of :class:`tmlib.models.layer.LabelLayer`
-        **layer_args: dict, optional
-            `layer_type`-specific attributes as key-value value pairs
-            that get parsed to the constructor of the corresponding subclass
-            of :class:`tmlib.models.layer.LabelLayer`
+            name of the selected
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        result_type: str
+            name of a class derived from
+            :class:`ToolResult <tmlib.models.result.ToolResult>`
+        **result_attributes: dict, optional
+            result-specific attributes as key-value value pairs
+            that get parsed to the constructor of the implemented `result_type`
 
         Returns
         -------
         int
             ID of the tool result
         '''
-        logger.info('initialize result')
+        logger.info('register result')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             mapobject_type = session.query(tm.MapobjectType.id).\
                 filter_by(name=mapobject_type_name).\
                 one()
-            result = tm.ToolResult(
-                submission_id, self.__class__.__name__, mapobject_type.id
-            )
-            session.add(result)
-            session.flush()
             try:
-                module_name = 'tmlib.models.layer'
+                module_name = 'tmlib.models.result'
                 module = importlib.import_module(module_name)
-                cls = getattr(module, layer_type)
+                cls = getattr(module, result_type)
             except ImportError:
                 raise ImportError(
                     'Ups this module should exist: %s' % module_name
                 )
             except AttributeError:
                 raise ValueError(
-                    '"%s" is not a valid LabelLayer type.' % label_type
+                    '"%s" is not a valid result type.' % result_type
                 )
             required_args = inspect.getargspec(cls.__init__).args[1:]
-            provided_args = {'tool_result_id', 'type'}
+            provided_args = {
+                'submission_id', 'tool_name', 'mapobject_type_id', 'type'
+            }
             for arg in required_args:
-                if arg not in layer_args and arg not in provided_args:
+                if arg not in result_attributes and arg not in provided_args:
                     raise ValueError(
-                        'Argument "%s" is required for LabelLayer of type "%s".'
-                        % (arg, layer_type)
+                        'Argument "%s" is required for result of type "%s".'
+                        % (arg, result_type)
                     )
-            layer = tm.LabelLayer(result.id, type=layer_type, **layer_args)
-            session.add(layer)
+            result = tm.ToolResult(
+                submission_id, self.__class__.__name__, mapobject_type.id,
+                type=result_type, **result_attributes
+            )
+            session.add(result)
+            session.flush()
             return result.id
 
-    def _determine_bounds(self, mapobject_type_name, feature_name):
-        with tm.utils.ExperimentConnnection(self.experiment_id) as conn:
-            conn.execute('''
-                SELECT id, mapobject_type_id FROM features
-                WHERE name = %(name)s;
-            ''', {
-                'name': feature_name
-            })
-            feature_id, mapobject_type_id = conn.fetchone()
-            # NOTE: This assumes that features have continous ids.
-            conn.execute('''
-                SELECT min(v.id), max(v.id) FROM feature_values AS v
-                JOIN mapobjects m ON m.id = v.mapobject_id
-                WHERE m.mapobject_type_id = %(mapobject_type_id)s
-            ''', {
-                'mapobject_type_id': mapobject_type_id
-            })
-            lower, upper = conn.fetchone()
-            return (lower, upper)
+    def unique(self, data, column):
+        '''Calculates the set of unique values for `column`.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            dataframe with `column`
+        column: str
+            name of column in `data`
+
+        Returns
+        -------
+        List[float]
+            unique values
+        '''
+        return np.unique(data[column]).tolist()
 
     @abstractmethod
     def process_request(self, submission_id, payload):
@@ -546,294 +353,17 @@ class Tool(object):
         pass
 
 
-class ClassifierInterface(object):
+class Classifier(Tool):
 
-    '''Abstract base class for classifier tool library interfaces.'''
+    '''Abstract base class for classification tools.'''
 
-    __metaclass__ = ABCMeta
+    __abstract__ = True
 
-    @abstractmethod
-    def load_feature_values(self, mapobject_type_name, feature_names):
-        pass
+    @same_docstring_as(Tool.__init__)
+    def __init__(self, experiment_id):
+        super(Classifier, self).__init__(experiment_id)
 
-    @abstractmethod
-    def label_feature_data(self, feature_data, labeled_mapobjects):
-        pass
-
-    @abstractmethod
-    def classify_supervised(self, unlabeled_feature_data, labeled_feature_data,
-            method, n_fold_cv):
-        pass
-
-    @abstractmethod
-    def classify_unsupervised(self, feature_data, k, method):
-        pass
-
-
-class ClassifierSparkInterface(ClassifierInterface):
-
-    def load_feature_values(self, mapobject_type_name, feature_names):
-        '''Loads feature values from the database and brings the dataset into
-        the format required by classifiers.
-
-        Parameters
-        ----------
-        mapobject_type_name: str
-            name of the selected mapobject type
-            (:class:`tmlib.models.mapobject.MapobjectType`)
-        feature_names: List[str]
-            names of selected features
-            (:class:`tmlib.models.feature.Feature`)
-
-        Returns
-        -------
-        pyspark.sql.DataFrame
-            dataframe with a "features" column in form of a
-            :class:`pyspark.mllib.linalg.DenseVector` as required by classifiers
-            of the :mod:`pyspark.ml` package and a "mapobject_id" column
-        '''
-        from pyspark.ml.feature import VectorAssembler
-        for i, name in enumerate(feature_names):
-            df = ToolSparkInterface.load_feature_values(self,
-                mapobject_type_name, name
-            )
-            if i == 0:
-                data = df.select(
-                    df.value.alias(name),
-                    df.mapobject_id
-                )
-            else:
-                df = df.select(
-                    df.value.alias(name),
-                    df.mapobject_id.alias('%s_mapobject_id' % name)
-                )
-                on = data['mapobject_id'] == df['%s_mapobject_id' % name]
-                data = data.join(df, on, 'inner').drop('%s_mapobject_id' % name)
-
-        assembler = VectorAssembler(
-            inputCols=feature_names, outputCol='features'
-        )
-        return assembler.transform(data).select('features', 'mapobject_id')
-
-    def calculate_unique(self, data, column):
-        '''Calculates the set of unique values of `column`.
-
-        Parameters
-        ----------
-        data: pyspark.sql.DataFrame
-            dataframe with `column`
-        column: str
-            name of column in `data`
-
-        Returns
-        -------
-        List[float]
-            unique values
-        '''
-        import pyspark.sql.functions as sp
-        stats = data.select(sp.collect_set(column)).collect()
-        return stats[0][0]
-
-    def label_feature_data(self, feature_data, labeled_mapobjects):
-        '''Adds labels to `feature_data` for supervised classification.
-
-        Parameters
-        ----------
-        feature_data: pyspark.sql.DataFrame
-            data frame where columns are features and rows are mapobjects
-        labeled_mapobjects: Tuple[int]
-            ID and assigned label for each selected
-            :class:`tmlib.models.mapobject.Mapobject`
-
-        Returns
-        -------
-        pyspark.sql.DataFrame
-            subset of `feature_data` for selected mapobjects with additional
-            "label" column
-        '''
-        labels = self.spark.createDataFrame(
-            labeled_mapobjects, schema=['mapobject_id', 'label']
-        )
-        labeled_data = feature_data.join(
-            labels, labels['mapobject_id'] == feature_data['mapobject_id']
-        ).cache()
-        return labeled_data
-
-    def classify_supervised(self, unlabeled_feature_data, labeled_feature_data,
-            method, n_fold_cv):
-        '''Trains a classifier for labeled mapobjects based on
-        `labeled_feature_data` and predicts labels for all mapobjects in
-        `unlabeled_feature_data`.
-
-        Parameters
-        ----------
-        unlabeled_feature_data: pyspark.sql.DataFrame
-            dataframe with columns "mapobject_id" and "features"
-            containing mapobjects that should be classified
-        labeled_feature_data: pyspark.sql.DataFrame
-            dataframe with columns "mapobject_id", "features" and "label"
-            containing mapobjects that should be used for training of the
-            classifier
-        method: str
-            method to use for classification
-        n_fold_cv: int
-            number of crossvalidation iterations (*n*-fold)
-
-        Returns
-        -------
-        pyspark.sql.DataFrame
-            data frame with additional column "label" (type float:
-            `DoubleType <http://spark.apache.org/docs/latest/api/python/pyspark.sql.html#pyspark.sql.types.DoubleType>`_)
-            with predicted label values for each mapobject
-        '''
-        from pyspark.ml import Pipeline
-        import pyspark.sql.functions as sp
-        from pyspark.ml.feature import (
-            VectorAssembler, VectorIndexer, StringIndexer, IndexToString
-        )
-        from pyspark.ml.tuning import CrossValidator, ParamGridBuilder
-        from pyspark.ml.classification import RandomForestClassifier
-        from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-
-        logger.info('perform classification via Spark with "%s" method', method)
-        logger.info('create feature and label indexer')
-        feature_indexer = VectorIndexer(
-                inputCol='features', outputCol='indexedFeatures',
-                maxCategories=2
-            ).\
-            fit(labeled_feature_data)
-
-        models = {
-            'randomforest': RandomForestClassifier
-        }
-        grid_search_space = {
-            'randomforest': {
-                'maxDepth': [3, 5, 7],
-                'numTrees': [10, 20, 30]
-            }
-        }
-
-        clf = models[method](labelCol='label', featuresCol='indexedFeatures')
-        grid = ParamGridBuilder()
-        for k, v in grid_search_space[method].iteritems():
-            grid = grid.addGrid(getattr(clf, k), v)
-        grid = grid.build()
-
-        pipeline = Pipeline(stages=[feature_indexer, clf])
-        evaluator = MulticlassClassificationEvaluator(
-            labelCol='label', predictionCol='prediction', metricName='f1'
-        )
-        crossval = CrossValidator(
-            estimator=pipeline, estimatorParamMaps=grid,
-            evaluator=evaluator, numFolds=n_fold_cv
-        )
-        logger.info('fit model')
-        model = crossval.fit(labeled_feature_data)
-        logger.info('predict labels')
-        predictions = model.transform(unlabeled_feature_data)
-        return predictions.select(
-            sp.col('prediction').alias('label'), 'mapobject_id'
-        )
-
-    def classify_unsupervised(self, feature_data, k, method):
-        '''Clusters mapobjects based on `feature_data` using the
-        machine learning library.
-
-        Parameters
-        ----------
-        feature_data: pyspark.sql.DataFrame
-            feature values
-        k: int
-            number of classes
-        method: str
-            model to use for clustering
-
-        Returns
-        -------
-        pyspark.sql.DataFrame
-            data frame with additional column "label" with predicted label
-            values for each mapobject
-        '''
-        from pyspark.ml.clustering import KMeans
-        import pyspark.sql.functions as sp
-        models = {
-            'kmeans': KMeans
-        }
-        logger.info('perform clustering via Spark with "%s" method', method)
-        clf = models[method](k=k, seed=1)
-        logger.info('fit model')
-        model = clf.fit(feature_data)
-        return model.transform(feature_data).\
-            select(sp.col('prediction').alias('label'), 'mapobject_id')
-
-
-class ClassifierPandasInterface(ClassifierInterface):
-
-    def load_feature_values(self, mapobject_type_name, feature_names):
-        '''Loads feature values from the database and brings the dataset into
-        the format required by classifiers.
-
-        Parameters
-        ----------
-        mapobject_type_name: str
-            name of the selected mapobject type
-            (:class:`tmlib.models.mapobject.MapobjectType`)
-        feature_names: List[str]
-            names of selected features
-            (:class:`tmlib.models.feature.Feature`)
-
-        Returns
-        -------
-        pandas.DataFrame
-            dataframe where columns are features and rows are mapobjects
-            indexable by `mapobject_id`
-        '''
-        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-            conn.execute('''
-                SELECT f.id, f.name FROM features f
-                JOIN mapobject_types t ON t.id = f.mapobject_type_id
-                WHERE f.name = ANY(%(feature_names)s)
-                AND t.name = %(mapobject_type_name)s;
-            ''', {
-                'feature_names': feature_names,
-                'mapobject_type_name': mapobject_type_name
-            })
-            features = conn.fetchall()
-            feature_map = {f.id: f.name for f in features}
-            # TODO
-            conn.execute('''
-                SELECT mapobject_id, (values->>%(feature_id)s)::double precision AS value
-                FROM feature_values
-            ''', {
-                'feature_ids': feature_map.keys(),
-            })
-            feature_values = conn.fetchall()
-        df_long = pd.DataFrame(feature_values)
-        df_long.columns = ['feature_id', 'mapobject_id', 'value']
-        df = pd.pivot_table(
-            df_long, values='value', index='mapobject_id', columns='feature_id'
-        )
-        df.columns = [feature_map[fid] for fid in df.columns]
-        return df
-
-    def calculate_unique(self, data, column):
-        '''Calculates the set of unique values for `column`.
-
-        Parameters
-        ----------
-        data: pandas.DataFrame
-            dataframe with `column`
-        column: str
-            name of column in `data`
-
-        Returns
-        -------
-        List[float]
-            unique values
-        '''
-        return np.unique(data[column]).astype(float).tolist()
-
-    def label_feature_data(self, feature_data, labeled_mapobjects):
+    def label(self, feature_data, labeled_mapobjects):
         '''Adds labels to `feature_data` for supervised classification.
 
         Parameters
@@ -841,7 +371,7 @@ class ClassifierPandasInterface(ClassifierInterface):
         feature_data: pandas.DataFrame
             data frame where columns are features and rows are mapobjects
             as generated by
-            :meth:`Classifier.load_feature_values <tmlib.tools.base.Classfier.load_feature_values>`
+            :meth:`Classifier.load <tmlib.tools.base.Classfier.load>`
         labeled_mapobjects: Tuple[int]
             ID and assigned label for each selected
             :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
@@ -882,40 +412,55 @@ class ClassifierPandasInterface(ClassifierInterface):
             dataframe with columns "label" and "mapobject_id"
         '''
         from sklearn.ensemble import RandomForestClassifier
+        from sklearn.svm import SVC
         from sklearn.grid_search import GridSearchCV
         from sklearn import cross_validation
 
-        logger.info(
-            'perform classification via Scikit-Learn with "%s" method', method
-        )
+        logger.info('perform classification using "%s" method', method)
         models = {
-            'randomforest': RandomForestClassifier
-        }
-        grid_search_space = {
             'randomforest': {
-                'max_depth': [3, 5, 7],
-                'min_samples_split': [1, 3, 10],
-                'min_samples_leaf': [1, 3, 10]
+                'cls': RandomForestClassifier(),
+                'scaler': None,
+                'search_space': {
+                    'max_depth': [3, 5, 7],
+                    'min_samples_split': [1, 3, 10],
+                    'min_samples_leaf': [1, 3, 10]
+                },
+            },
+            'svm': {
+                'cls': SVC(loss='l2', cache_size=500),
+                'scaler': StandardScaler(),
+                'search_space': {
+                    'kernel': ['linear', 'rbf'],
+                    'penalty': ['l1', 'l2'],
+                    'C': np.logspace(-2, 10, 13),
+                    'gamma': np.logspace(-9, 3, 13)
+                }
             }
         }
 
-        X = labeled_feature_data.drop('label', axis=1)
+        X_train = labeled_feature_data.drop('label', axis=1)
+        if models[method]['scaler']:
+            X_train = models[method]['scaler'].fit_transform(X_train)
         y = labeled_feature_data.label
-        clf = models[method]()
+        clf = models[method]['cls']
         folds = cross_validation.StratifiedKFold(y, n_folds=n_fold_cv)
-        gs = GridSearchCV(clf, grid_search_space[method], cv=folds)
+        gs = GridSearchCV(clf, models[method]['search_space'], cv=folds)
         logger.info('fit model')
-        gs.fit(X, y)
+        gs.fit(X_train, y)
         logger.info('predict labels')
-        predictions = pd.DataFrame(
-            gs.predict(unlabeled_feature_data).astype(float), columns=['label']
-        )
+        X_test = unlabeled_feature_data
+        if models[method]['scaler']:
+            X_test = models[method]['scaler'].fit_transform(X_predict)
+        labels = gs.predict(X_test)
+        # TODO: return labels directly?
+        predictions = pd.DataFrame(labels, columns=['label'])
+        predictions['tpoint'] = unlabeled_feature_data['tpoint']
         predictions['mapobject_id'] = unlabeled_feature_data.index.astype(int)
         return predictions
 
-    def classify_unsupervised(self, feature_data, k, method):
-        '''Clusters mapobjects based on `feature_data` using the
-        machine learning library.
+    def classify_unsupervised(self, data, k, method):
+        '''Groups mapobjects based on `data` into `k` classes.
 
         Parameters
         ----------
@@ -929,40 +474,21 @@ class ClassifierPandasInterface(ClassifierInterface):
         Returns
         -------
         pandas.DataFrame
-            data frame with additional column "predictions" with predicted label
-            values for each mapobject
+            data frame with additional columns "label" and "mapobject_id"
         '''
         from sklearn.cluster import KMeans
-
         models = {
             'kmeans': KMeans
         }
-        logger.info(
-            'perform clustering via Scikit-Learn with "%s" method', method
-        )
+        logger.info('perform clustering using "%s" method', method)
         clf = models[method](n_clusters=k)
         logger.info('fit model')
         clf.fit(feature_data)
         # Ensure that values are JSON serializable
         logger.info('predict labels')
-        predictions = pd.DataFrame(
-            clf.labels_.astype(float), columns=['label']
-        )
+        labels = clf.labels_
+        # TODO: return labels directly?
+        predictions = pd.DataFrame(labels, columns=['label'])
+        predictions['tpoint'] = unlabeled_feature_data['tpoint']
         predictions['mapobject_id'] = feature_data.index.astype(int)
         return predictions
-
-
-class Classifier(Tool):
-
-    '''Abstract base class for classification tools.'''
-
-    __abstract__ = True
-
-    __lib_bases__ = {
-        'spark': ClassifierSparkInterface, 'pandas': ClassifierPandasInterface
-    }
-
-    @same_docstring_as(Tool.__init__)
-    def __init__(self, experiment_id):
-        super(Classifier, self).__init__(experiment_id)
-

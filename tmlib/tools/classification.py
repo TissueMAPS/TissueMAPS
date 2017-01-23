@@ -29,12 +29,13 @@ class Classification(Classifier):
 
     __icon__ = 'SVC'
 
-    __description__ = '''
-        Classifies mapobjects based on the values of selected features and
-        labels provided by the user.
-    '''
+    __description__ = (
+        'Classifies mapobjects based on the values of selected features and '
+        'labels provided by the user.'
+    )
 
-    __options__ = {'method': ['randomforest'], 'n_fold_cv': 10}
+    # TODO: Ensure that all options are available for all libraries.
+    __options__ = {'method': ['randomforest', 'svm'], 'n_fold_cv': 10}
 
     @same_docstring_as(Tool.__init__)
     def __init__(self, experiment_id):
@@ -89,21 +90,21 @@ class Classification(Classifier):
                 'color': cls['color']
             }
 
-        unlabeled_feature_data = self.load_feature_values(
+        unlabeled_feature_data = self.load_features_values(
             mapobject_type_name, feature_names
         )
-        labeled_feature_data = self.label_feature_data(
+        labeled_feature_data = self.label(
             unlabeled_feature_data, labeled_mapobjects
         )
         predicted_labels = self.classify_supervised(
             unlabeled_feature_data, labeled_feature_data, method, n_fold_cv
         )
 
-        unique_labels = self.calculate_unique(predicted_labels, 'label')
-        result_id = self.initialize_result(
+        unique_labels = self.unique(predicted_labels, 'label')
+        result_id = self.register_result(
             submission_id, mapobject_type_name,
             layer_type='SupervisedClassifierLabelLayer',
             unique_labels=unique_labels, label_map=label_map
         )
 
-        self.save_label_values(result_id, predicted_labels)
+        self.save_result_values(result_id, predicted_labels)

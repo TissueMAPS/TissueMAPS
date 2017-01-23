@@ -27,87 +27,41 @@ interactive an responsive manner.
 Custom tools can be added by implementing :class:`Tool <tmlib.tools.base.Tool>`
 and import the derived class in :mod:`tmlib.tools`.
 
-Additional abstract bases classes are available for the *pandas* and *spark*
-libraries: :class:`PandasInterface <tmlib.tools.base.PandasInterface>` and
-:class:`SparkInterface <tmlib.models.base.SparkInterface>`). They serve as
-`Mixins <https://en.wikipedia.org/wiki/Mixin>`_ and provide library-specific
-methods for reading feature data from the database and writing tool results
-back to the database. Methods common to both libraries can be provided on
-the derived :class:`Tool <tmlib.tools.base.Tool>` class. However,
-new functionality specific to either the *pandas* or *spark* library should be
-implemented in a library-specific mixin class and provided to the tool class
-via the ``__lib_bases__`` attribute. The class for the currently active library,
-defined via the :attr:`tool_library <tmlib.config.LibraryConfig.tool_library>`
-configuration parameter, will get automatically addded to the bases of the tool
-class.
-
 Consider the following example for a new tool named ``Foo``.
-It requires an additional method to do the magic. The magic is library-specific
-and is thus implemented in two separate mixin classes, namely ``FooPandas`` and
-``FooSpark``. The implementation of the required ``do_magic`` method
-for both libraries can be enforced by using an abstract base class, here called
-``FooInterface``. The ``Foo`` class implements the abstract method
-:meth:`process_request <tmlib.tools.base.Tool.process_request>`:
+It implements the abstract method
+:meth:`process_request <tmlib.tools.base.Tool.process_request>` and an
+additional method ``bar`` (which does nothing):
 
 .. code-block:: python
 
-    from abc import ABCMeta
-    from abc import abstractmethod
     from tmlib.tools.base import Tool
-
-
-    class FooInterface(object):
-
-        __metaclass__ = ABCMeta
-
-        @abstractmethod
-        def do_magic(self, values):
-            pass
-
-
-    class FooPandas(FooInterface):
-
-        def do_magic(self, values):
-            # Do pandas magic here
-
-
-    class FooSpark(FooInterface):
-
-        def do_magic(self, values):
-            # Do spark magic here
 
 
     class Foo(Tool):
 
         __icon__ = 'FOO'
 
-        __description__ = 'Does some magic.'
-
-        __lib_bases__ = {'pandas': FooPandas, 'spark': FooSpark}
+        __description__ = 'Does nothing.'
 
         def __init__(self, experiment_id):
             super(Foo, self).__init__(experiment_id)
+
+        def bar(self, values):
+            return values
 
         def process_request(self, submission_id, payload):
             mapobject_type_name = payload['chosen_object_type']
             feature_name = payload['selected_feature']
 
-            feature_values = self.load_feature_values(
-                mapobject_type_name, feature_name
-            )
-            magic_labels = self.do_magic(feature_values)
+            values = self.load_feature_values(mapobject_type_name, [feature_name])
+            labels = self.bar(values)
 
-            result_id = self.initialize_result(
+            result_id = self.register_result(
                 submission_id, mapobject_type_name,
                 label_type='ContinuousLabelLayer'
             )
 
-            self.save_label_values(result_id, magic_labels)
-
-
-The actual magic is done by a meta class, acting behind the scenes to
-dynamically adding the lib-specific mixin to the bases of ``Foo`` and
-registering ``Foo`` to make available for use in the UI.
+            self.save_result_values(result_id, labels)
 
 
 Note
@@ -143,7 +97,7 @@ def get_tool_class(name):
 
 
 def get_available_tools():
-    '''Gets a list of available tools.
+    '''Lists available tools.
 
     Returns
     -------

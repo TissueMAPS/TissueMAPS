@@ -58,9 +58,7 @@ class Heatmap(Tool):
         selected_feature = payload['selected_feature']
 
         logger.info('calculate min/max for rescaling of intensities')
-        feature_values = self.load_feature_values(
-            mapobject_type_name, selected_feature
-        )
+        feature_values = self.load(mapobject_type_name, selected_feature)
         lower, upper = self.calculate_extrema(feature_values, 'value')
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
@@ -74,7 +72,8 @@ class Heatmap(Tool):
             feature_id = feature.id
 
         result_id = self.initialize_result(
-            submission_id, mapobject_type_name, layer_type='HeatmapLabelLayer',
+            submission_id, mapobject_type_name,
+            layer_type='HeatmapLabelLayer',
             feature_id=feature_id, min=lower, max=upper
         )
 
