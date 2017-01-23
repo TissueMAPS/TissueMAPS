@@ -23,16 +23,19 @@ import pandas as pd
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
 from sqlalchemy.orm import Session
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, not_
+from sqlalchemy import (
+    Column, String, Integer, Boolean, ForeignKey, not_, Index,
+    UniqueConstraint, PrimaryKeyConstraint
+)
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy import UniqueConstraint
 
 from tmlib import cfg
 from tmlib.models.base import ExperimentModel, DateMixIn
-from tmlib.models.result import ToolResult
+from tmlib.models.dialect import compile_distributed_query
+from tmlib.models.result import ToolResult, LabelValues
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
-from tmlib.models.feature import Feature, FeatureValue, LabelValue
+from tmlib.models.feature import Feature, FeatureValues
 from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
@@ -56,15 +59,13 @@ class MapobjectType(ExperimentModel):
 
     __table_args__ = (UniqueConstraint('name'), )
 
-    _max_poly_zoom = Column('max_poly_zoom', Integer)
-    _min_poly_zoom = Column('min_poly_zoom', Integer)
-
     #: str: name given by user
-    name = Column(String, index=True, nullable=False)
+    name = Column(String(50), index=True, nullable=False)
 
-    #: bool: whether object outlines are static, i.e. don't depend on
-    #: image analysis (examples are "plates" or "wells")
-    is_static = Column(Boolean, index=True)
+    #: str: name of another type that serves as a reference for "static"
+    #: mapobjects, i.e. objects that are pre-defined through the experiment
+    #: layout and independent of image segmentation (e.g. "Plate" or "Well")
+    ref_type = Column(String(50))
 
     #: int: ID of parent experiment
     experiment_id = Column(
@@ -79,116 +80,65 @@ class MapobjectType(ExperimentModel):
         backref=backref('mapobject_types', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, is_static=False, parent_id=None):
+    def __init__(self, name, ref_type=None):
         '''
         Parameters
         ----------
         name: str
             name of the map objects type, e.g. "cells"
-        static: bool, optional
-            whether map objects outlines are fixed across different time
-            points and z-planes (default: ``False``)
+        ref_type: str, optional
+            name of another reference type (default: ``None``)
         '''
         self.name = name
-        self.is_static = is_static
+        self.ref_type = ref_type
         self.experiment_id = 1
 
-    @hybrid_property
-    def min_poly_zoom(self):
-        '''int: zoom level at which visualization switches from drawing
-        polygons instead of centroids
-        '''
-        return self._min_poly_zoom
-
-    @min_poly_zoom.setter
-    def min_poly_zoom(self, value):
-        self._min_poly_zoom = value
-
-    @hybrid_property
-    def max_poly_zoom(self):
-        '''int: zoom level at which mapobjects are no longer visualized
-        '''
-        return self._max_poly_zoom
-
-    @max_poly_zoom.setter
-    def max_poly_zoom(self, value):
-        self._max_poly_zoom = value
-
-    def calculate_min_max_poly_zoom(self, maxzoom_level):
-        '''Calculates the minimum zoom level above which mapobjects are
-        represented on the map as polygons instead of centroids and the
-        maximum zoom level below which mapobjects are no longer visualized.
+    @classmethod
+    def delete_cascade(cls, connection, ref_type=None):
+        '''Deletes all instances as well as "children"
+        instances of :class:`Mapobject <tmlib.models.mapobject.Mapobject>`,
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        :class:`Feature <tmlib.models.feature.Feature>`,
+        :class:`FeatureValues <tmlib.models.feature.FeatureValues>` and
+        :class:`ToolResult <tmlib.models.result.ToolResult>`,
+        :class:`LabelLayer <tmlib.models.layer.LabelLayer>`,
+        :class:`LabelValues <tmlib.models.feature.LabelValues>`.
 
         Parameters
         ----------
-        maxzoom_level: int
-            maximum zoom level of the pyramid
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        ref_type: str
+            name of reference type
 
-        Returns
-        -------
-        Tuple[int]
-            minimal and maximal zoom level
         '''
-        # TODO: this is too simplistic
-        if self.is_static:
-            min_poly_zoom = 0
-            max_poly_zoom = 0
+        if ref_type:
+            logger.debug('delete mapobjects referencing "%s"', ref_type)
+            connection.execute('''
+                SELECT id, name FROM mapobject_types
+                WHERE ref_type = %(ref_type)s
+            ''', {
+                'ref_type': ref_type
+            })
+            mapobject_type = connection.fetchone()
+            if mapobject_type:
+                logger.debug(
+                    'delete mapobjects of type "%s"', mapobject_type.name
+                )
+                Mapobject.delete_cascade(connection, mapobject_type.id)
+                logger.debug('delete mapobject type %s', mapobject_type.name)
+                connection.execute('''
+                    DELETE FROM mapobject_types
+                    WHERE id = %(mapobject_type_id)s;
+                ''', {
+                    'mapobject_type_id': mapobject_type.id
+                })
         else:
-            min_poly_zoom = maxzoom_level - 4
-            min_poly_zoom = 0 if min_poly_zoom < 0 else min_poly_zoom
-            max_poly_zoom = min_poly_zoom - 2
-            max_poly_zoom = 0 if max_poly_zoom < 0 else max_poly_zoom
-        return (min_poly_zoom, max_poly_zoom)
-
-    # def get_feature_value_matrix(self, feature_names=[]):
-    #     '''Gets a feature matrix for all mapobjects of this type.
-
-    #     Parameters
-    #     ----------
-    #     feature_names: List[str], optional
-    #         names of features that should be included (default: ``[]``);
-    #         all features will be used by default
-
-    #     Returns
-    #     -------
-    #     pandas.DataFrame
-    #         *n*x*p* matrix, where *n* is the number of mapobjects and *p*
-    #         the number of features.
-    #         The index is set to the IDs of the mapobjects.
-
-    #     Warning
-    #     -------
-    #     This may not be a good idea in case of a large experiment, because
-    #     the data may not fit into memory.
-    #     '''
-    #     from tmlib.models import Feature, FeatureValue
-    #     session = Session.object_session(self)
-    #     if feature_names:
-    #         feature_values = session.query(
-    #                 Feature.name, FeatureValue.mapobject_id, FeatureValue.value
-    #             ).\
-    #             join(FeatureValue).\
-    #             filter(
-    #                 (Feature.name.in_(set(feature_names))) &
-    #                 (Feature.mapobject_type_id == self.id)
-    #             ).\
-    #             order_by(FeatureValue.mapobject_id).\
-    #             all()
-    #     else:
-    #         feature_values = session.query(
-    #             Feature.name, FeatureValue.mapobject_id, FeatureValue.value).\
-    #             join(FeatureValue).\
-    #             filter(Feature.mapobject_type_id == self.id).\
-    #             order_by(FeatureValue.mapobject_id).\
-    #             all()
-
-    #     feature_df_long = pd.DataFrame(feature_values)
-    #     feature_df_long.columns = ['feature', 'mapobject', 'value']
-    #     feature_df = pd.pivot_table(
-    #         feature_df_long, values='value',
-    #         index='mapobject', columns='feature'
-    #     )
-    #     return feature_df
+            logger.debug('delete all mapobjects')
+            Mapobject.delete_cascade(connection)
+            logger.debug('delete all mapobject types')
+            connection.execute('DELETE FROM mapobject_types;')
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
@@ -196,10 +146,10 @@ class MapobjectType(ExperimentModel):
 
 class Mapobject(ExperimentModel):
 
-    '''A *map object* represents a connected pixel component in an
-    image. It has outlines for drawing on the map and may also be associated
-    with measurements (*features*), which can be queried or used for analysis.
-
+    '''A *mapobject* represents a connected pixel component in an
+    image. It has one or more 2D segmentations that can be used to represent
+    the object on the map and may also be associated with measurements
+    (*features*), which can be queried or used for further analysis.
     '''
 
     #: str: name of the corresponding database table
@@ -207,475 +157,353 @@ class Mapobject(ExperimentModel):
 
     __distribute_by_hash__ = 'id'
 
-    #: int: ID of another mapobject from which the object is derived from
-    #: (relevent for tracking of proliferating cells for example)
-    parent_id = Column(Integer, index=True)
+    #: int: ID of another record to which the object is related.
+    #: This could refer to another mapobject in the same table, e.g. in order
+    #: to track proliferating cells, or a record in another reference table,
+    #: e.g. to identify the corresponding record of a "Well".
+    ref_id = Column(Integer, index=True)
 
     #: int: ID of parent mapobject type
     mapobject_type_id = Column(Integer, index=True, nullable=False)
 
-    def __init__(self, mapobject_type_id, parent_id=None):
+    def __init__(self, mapobject_type_id, ref_id=None):
         '''
         Parameters
         ----------
         mapobject_type_id: int
             ID of the parent mapobject type
-        parent_id: int, optional
-            ID of the parent mapobject
+        ref_id: int, optional
+            ID of the referenced record
+
+        See also
+        --------
+        :attr:`tmlib.models.mapobject.MapobjectType.ref_type`
         '''
         self.mapobject_type_id = mapobject_type_id
-        self.parent_id = parent_id
+        self.ref_id = ref_id
+
+    @classmethod
+    def _delete_cascade(cls, connection, mapobject_ids=None):
+        logger.debug('delete mapobjects')
+        if mapobject_ids:
+            # NOTE: Using ANY with an ARRAY is more performant than using IN.
+            # TODO: Ideally we would like to join with mapobject_types.
+            # However, at the moment there seems to be no way to DELETE entries
+            # from a distributed table with a complex WHERE clause.
+            # If the number of objects is too large this will lead to issues.
+            # Therefore, we delete rows in batches.
+            mapobject_id_partitions = create_partitions(mapobject_ids, 100000)
+            # This will DELETE all records of referenced tables as well.
+            sql = '''
+                DELETE FROM mapobjects
+                WHERE id = ANY(%(mapobject_ids)s);
+            '''
+            for mids in mapobject_id_partitions:
+                connection.execute(
+                    compile_distributed_query(sql), {
+                    'mapobject_ids': mids
+                })
+        else:
+            # Alternatively, we could also drop the tables and recreate them,
+            # which may be faster. However, table distribution also takes time..
+            connection.execute(
+                compile_distributed_query('DELETE FROM mapobjects')
+            )
+
+    @classmethod
+    def delete_invalid_cascade(cls, connection):
+        '''Deletes all instances with invalid geometries as well as all
+        "children" instances of
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
+        :class:`LabelValues <tmlib.models.feature.LabelValues>`.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+
+        '''
+        connection.execute('''
+            SELECT mapobject_id FROM mapobject_segmentations
+            WHERE NOT ST_IsValid(geom_polygon);
+        ''')
+        mapobject_segm = connection.fetchall()
+        mapobject_ids = [s.mapobject_id for s in mapobject_segm]
+        cls._delete_cascade(connection, mapobject_ids)
+
+    @classmethod
+    def delete_missing_cascade(cls, connection):
+        '''Deletes all instances with missing geometries as well as all
+        "children" instances of
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
+        :class:`LabelValues <tmlib.models.feature.LabelValues>`.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+
+        '''
+        connection.execute('''
+            SELECT m.id FROM mapobjects m
+            LEFT OUTER JOIN mapobject_segmentations s
+            ON m.id = s.mapobject_id
+            WHERE s.id IS NULL;
+        ''')
+        mapobjects = connection.fetchall()
+        mapobject_ids = [s.id for s in mapobjects]
+        cls._delete_cascade(connection, mapobject_ids)
+
+    @classmethod
+    def add(cls, connection, mapobject_type_id, ref_id=None):
+        '''Adds a new record.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        mapobject_type_id: int
+            ID of parent
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        ref_id: int, optional
+            ID of reference mapobject
+
+        Returns
+        -------
+        int
+            ID of added record
+        '''
+        connection.execute('''
+            SELECT nextval FROM nextval('mapobjects_id_seq');
+        ''')
+        record = connection.fetchone()
+        mapobject_id = record.nextval
+        connection.execute('''
+            INSERT INTO mapobjects (id, mapobject_type_id, ref_id)
+            VALUES (%(mapobject_id)s, %(mapobject_type_id)s, %(ref_id)s);
+        ''', {
+            'mapobject_id': mapobject_id,
+            'mapobject_type_id': mapobject_type_id,
+            'ref_id': ref_id
+        })
+        return mapobject_id
+
+    @classmethod
+    def delete_cascade(cls, connection, mapobject_type_id=None,
+            ref_type=None, ref_id=None):
+        '''Deletes all instances as well as all "children" instances of
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
+        :class:`LabelValues <tmlib.models.feature.LabelValues>`.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        mapobject_type_id: int, optional
+            ID of parent
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+            by which mapobjects should be filtered
+        ref_type: str, optional
+            name of a reference type, e.g. "Site" that should be used for
+            spatial filtering
+        ref_id: int, optional
+            ID of the reference object
+
+        '''
+        def get_ref_polygon(connection, ref_type, ref_id):
+            logger.debug(
+                'only delete mapobjects that intersect with the mapobject '
+                'with ref_type="%s" and ref_id=%d', ref_type, ref_id
+            )
+            connection.execute('''
+                SELECT id FROM mapobject_types
+                WHERE ref_type = %(ref_type)s
+            ''', {
+                'ref_type': ref_type
+            })
+            mapobject_type = connection.fetchone()
+            connection.execute('''
+                SELECT s.geom_polygon FROM mapobjects m
+                JOIN mapobject_segmentations s ON s.mapobject_id = m.id
+                WHERE m.mapobject_type_id = %(mapobject_type_id)s
+                AND m.ref_id = %(ref_id)s
+            ''', {
+                'mapobject_type_id': mapobject_type.id,
+                'ref_id': ref_id
+            })
+            segmentation = connection.fetchone()
+            return segmentation.geom_polygon
+
+        if mapobject_type_id is not None:
+            logger.debug(
+                'delete mapobjects with mapobject_type_id=%d',
+                mapobject_type_id
+            )
+            sql = '''
+                SELECT m.id FROM mapobjects m
+            '''
+            if ref_type is not None and ref_id is not None:
+                ref_polygon = get_ref_polygon(connection, ref_type, ref_id)
+                sql += '''
+                JOIN mapobject_segmentations s ON s.mapobject_id = m.id
+                WHERE m.mapobject_type_id = %(mapobject_type_id)s
+                AND ST_Intersects(s.geom_polygon, %(ref_polygon)s)
+                '''
+                connection.execute(sql, {
+                    'ref_polygon': ref_polygon,
+                    'mapobject_type_id': mapobject_type_id
+                })
+            else:
+                sql += '''
+                WHERE m.mapobject_type_id = %(mapobject_type_id)s
+                '''
+                connection.execute(sql, {
+                    'mapobject_type_id': mapobject_type_id
+                })
+            mapobjects = connection.fetchall()
+            mapobject_ids = [m.id for m in mapobjects]
+            if mapobject_ids:
+                cls._delete_cascade(connection, mapobject_ids)
+        else:
+            if ref_type is not None and ref_id is not None:
+                ref_polygon = get_site_polygon(connection, ref_type, ref_id)
+                connection.execute('''
+                    SELECT m.id FROM mapobjects m
+                    JOIN mapobject_segmentations s ON s.mapobject_id = m.id
+                    WHERE ST_Intersects(s.geom_polygon, %(ref_polygon)s)
+                ''', {
+                    'ref_polygon': ref_polygon
+                })
+                mapobjects = connection.fetchall()
+                mapobject_ids = [m.id for m in mapobjects]
+                if mapobject_ids:
+                    cls._delete_cascade(connection, mapobject_ids)
+            else:
+                # TODO: in this case we could drop all tables and recreate them
+                cls._delete_cascade(connection)
 
     def __repr__(self):
-        return '<Mapobject(id=%d, type=%s)>' % (
-            self.id, self.mapobject_type.name
+        return '<Mapobject(id=%d, mapobject_type_id=%s)>' % (
+            self.id, self.mapobject_type_id
         )
 
 
 class MapobjectSegmentation(ExperimentModel):
 
-    '''A *mapobject segmentation* provides the geographic representation
-    of a :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and associates
-    it with the corresponding :class:`Site <tmlib.models.site.Site>`
-    in which the object was identified.
-
+    '''A *segmentation* provides the geometric representation
+    of a :class:`Mapobject <tmlib.models.mapobject.Mapobject>`.
     '''
 
     __tablename__ = 'mapobject_segmentations'
 
     __table_args__ = (
-        UniqueConstraint('label', 'tpoint', 'zplane', 'site_id', 'mapobject_id'),
+        UniqueConstraint(
+            'mapobject_id', 'segmentation_layer_id'
+        ),
+        Index(
+            'ix_mapobject_segmentations_mapobject_id_segmentation_layer_id',
+            'mapobject_id', 'segmentation_layer_id'
+        )
     )
 
     __distribute_by_hash__ = 'mapobject_id'
 
-    #: bool: whether the object lies at the border of an image
-    is_border = Column(Boolean, index=True)
+    #: EWKT POLYGON geometry
+    geom_polygon = Column(Geometry('POLYGON'))
 
-    #: int: value assigned to the object in a label image
-    label = Column(Integer, index=True)
-
-    #: int: zero-based index in time series
-    tpoint = Column(Integer, index=True)
-
-    #: int: zero-based index in z stack
-    zplane = Column(Integer, index=True)
-
-    #: EWKT polygon geometry
-    geom_poly = Column(Geometry('POLYGON'))
-
-    #: EWKT entroid geometry
+    #: EWKT POINT geometry
     geom_centroid = Column(Geometry('POINT'), nullable=False)
-
-    #: int: ID of parent site
-    site_id = Column(Integer, index=True)
 
     #: int: ID of parent mapobject
     mapobject_id = Column(
-        Integer,
-        ForeignKey('mapobjects.id', ondelete='CASCADE'),
-        index=True
+        Integer, ForeignKey('mapobjects.id', ondelete='CASCADE')
     )
 
-    def __init__(self, geom_poly, geom_centroid, mapobject_id, label=None,
-            is_border=None, tpoint=None, zplane=None, site_id=None):
+    #: int: ID of parent segmentation layer
+    segmentation_layer_id = Column(Integer, nullable=False)
+
+    def __init__(self, geom_polygon, geom_centroid, mapobject_id,
+            segmentation_layer_id):
         '''
         Parameters
         ----------
-        geom_poly: str
-            EWKT polygon geometry representing the outline of the mapobject
+        geom_polygon: str
+            EWKT POLYGON geometry representing the outline of the mapobject
         geom_centroid: str
-            EWKT point geometry representing the centriod of the mapobject
+            EWKT POINT geometry representing the centriod of the mapobject
         mapobject_id: int
-            ID of parent mapobject
-        label: int, optional
-            one-based object identifier number which is unique per site
-        is_border: bool, optional
-            whether the object touches at the border of a *site* and is
-            therefore only partially represented on the corresponding image
-        tpoint: int, optional
-            time point index
-        zplane: int, optional
-            z-plane index
-        site_id: int, optional
-            ID of the parent site
+            ID of parent :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
+        segmentation_layer_id: int
+            ID of parent
+            :class:`SegmentationLayer <tmlib.models.layer.SegmentationLayer>`
+        '''
+        self.geom_polygon = geom_polygon
+        self.geom_centroid = geom_centroid
+        self.mapobject_id = mapobject_id
+        self.segmentation_layer_id = segmentation_layer_id
+
+    @classmethod
+    def add(cls, connection, mapobject_id, segmentation_layer_id,
+            polygon=None, centroid=None):
+        '''Adds a new record.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        mapobject_id: int
+            ID of parent
+            :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
+        segmentation_layer_id: int
+            ID of parent
+            :class:`SegmentationLayer <tmlib.models.layer.SegmentationLayer>`
+        polygon: shapely.geometry.polygon, optional
+            outline of the segmented object
+        centroid: shapely.geometry.point, optional
+            centroid of the segmented object
+
+        Raises
+        ------
+        ValueError
+            when neither `polygon` nor `centroid` is provided
 
         Note
         ----
-        Static mapobjects (e.g. "Wells") are neither associated with a particular
-        image acquisition site (they actually enclose several sites) nor with
-        a time point or z-resolution level.
-
-        Warning
-        -------
-        The segmentation may be used to reconstruct the original label image,
-        but there might be a bias, depending on the level of simplification
-        applied upon generation of the outlines.
+        The `centroid` is required, but it can be caluculate from the `polygon`.
         '''
-        self.tpoint = tpoint
-        self.zplane = zplane
-        self.mapobject_id = mapobject_id
-        self.geom_poly = geom_poly
-        self.geom_centroid = geom_centroid
-        self.is_border = is_border
-        self.site_id = site_id
-
-    @staticmethod
-    def bounding_box(x, y, z, maxzoom):
-        """Calculates the bounding box of a tile.
-
-        Parameters
-        ----------
-        x: int
-            horizontal tile coordinate
-        y: int
-            vertical tile coordinate
-        z: int
-            zoom level
-        maxzoom: int
-            maximal zoom level of layers belonging to the visualized experiment
-
-        Returns
-        -------
-        Tuple[int]
-            bounding box coordinates (x_top, y_top, x_bottom, y_bottom)
-        """
-        # The extent of a tile of the current zoom level in mapobject
-        # coordinates (i.e. coordinates on the highest zoom level)
-        size = 256 * 2 ** (maxzoom - z)
-        # Coordinates of the top-left corner of the tile
-        x0 = x * size
-        y0 = y * size
-        # Coordinates with which to specify all corners of the tile
-        minx = x0
-        maxx = x0 + size
-        miny = -y0 - size
-        maxy = -y0
-        return (minx, miny, maxx, maxy)
+        if polygon is None and centroid is None:
+            raise ValueError('A mapobject segmentation must have a "centroid".')
+        if centroid is None:
+            geom_centroid = polygon.centroid.wkt
+            geom_polygon = polygon.wkt
+        else:
+            geom_centroid = centroid.wkt
+            geom_polygon = None
+        connection.execute('''
+            INSERT INTO mapobject_segmentations (
+                mapobject_id, segmentation_layer_id,
+                geom_polygon, geom_centroid
+            )
+            VALUES (
+                %(mapobject_id)s, %(segmentation_layer_id)s,
+                %(geom_polygon)s, %(geom_centroid)s
+            );
+        ''', {
+            'mapobject_id': mapobject_id,
+            'segmentation_layer_id': segmentation_layer_id,
+            'geom_polygon': geom_polygon, 'geom_centroid': geom_centroid,
+        })
 
     def __repr__(self):
-        return (
-            '<%s('
-                'id=%d, label=%r, tpoint=%r, zplane=%r, site_id=%r, mapobject_id=%r'
-            ')>'
-            % (self.__class__.__name__, self.id, self.label, self.tpoint,
-                self.zplane, self.site_id, self.mapobject_id)
+        return '<%s(id=%d, mapobject_id=%r, segmentation_layer_id=%s)>' % (
+            self.__class__.__name__, self.id, self.mapobject_id,
+            self.segmentation_layer_id
         )
-
-
-def delete_mapobject_types_cascade(experiment_id, is_static=None,
-        site_id=None):
-    '''Deletes all instances of
-    :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` as well as
-    as "children" instances of
-    :class:`Mapobject <tmlib.models.mapobject.Mapobject>`,
-    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-    :class:`Feature <tmlib.models.feature.Feature>`,
-    :class:`ToolResult <tmlib.models.result.ToolResult>`,
-    :class:`LabelLayer <tmlib.models.layer.LabelLayer>`,
-    :class:`FeatureValue <tmlib.models.feature.FeatureValue>` and
-    :class:`LabelValue <tmlib.models.feature.LabelValue>`.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
-    is_static: bool, optional
-        whether mapobjects of *static* or *non-static* types should be deleted
-    site_id: int, optional
-        ID of the parent :class:`Site <tmlib.models.site.Site>`
-        (not required for *static* mapobject types)
-
-    Note
-    ----
-    This is not possible via the standard *SQLAlchemy* approach, because the
-    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
-    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-    might be distributed over a cluster.
-    '''
-    if is_static is None and site_id is None:
-        # NOTE: In case all mapobjects and corresponding feature values
-        # should be deleted, we can simply drop the tables and subsequently
-        # recreate them. We have to call DROP TABLE outside of a transaction
-        # block, which implies not using SQLAlchemy.
-        with ExperimentConnection(experiment_id) as connection:
-            logger.debug('drop table "feature_values"')
-            connection.execute('DROP TABLE IF EXISTS feature_values;')
-            logger.debug('drop table "label_values"')
-            connection.execute('DROP TABLE IF EXISTS label_values;')
-            logger.debug('drop table "mapobject_segmentations"')
-            connection.execute('DROP TABLE IF EXISTS mapobject_segmentations;')
-            logger.debug('drop table "mapobjects"')
-            connection.execute('DROP TABLE IF EXISTS mapobjects;')
-
-        with ExperimentSession(experiment_id) as session:
-            session.drop_and_recreate(MapobjectType)
-            session.drop_and_recreate(Feature)
-            session.drop_and_recreate(ToolResult)
-            session.drop_and_recreate(Mapobject)
-            session.drop_and_recreate(MapobjectSegmentation)
-            session.drop_and_recreate(LabelValue)
-            session.drop_and_recreate(FeatureValue)
-
-    with ExperimentSession(experiment_id) as session:
-        mapobject_types = session.query(MapobjectType).\
-            filter(MapobjectType.is_static == is_static).\
-            all()
-        mapobject_type_ids = [t.id for t in mapobject_types]
-
-    delete_mapobjects_cascade(experiment_id, mapobject_type_ids, site_id)
-
-    if mapobject_type_ids:
-        with ExperimentSession(experiment_id) as session:
-            logger.info('delete mapobject types')
-            session.query(MapobjectType).\
-                filter(MapobjectType.id.in_(mapobject_type_ids)).\
-                delete()
-
-
-def _compile_distributed_query(sql):
-    # This is required for modification of distributed tables
-    # TODO: alter queries in "citus" dialect
-    return '''
-        SELECT master_modify_multiple_shards('
-            {query}
-        ')
-    '''.format(query=sql)
-
-
-def _delete_mapobjects_cascade(connection, experiment_id, mapobject_ids):
-    # NOTE: Using ANY with an ARRAY is more performant than using IN.
-    # TODO: Figure out a way to DELETE entries from a hash-distributed table
-    # with a complex WHERE clause.
-    if mapobject_ids:
-        mapobject_id_partitions = create_partitions(mapobject_ids, 100000)
-        # NOTE: this will DELETE all records of referenced tables as well
-        logger.info('delete mapobjects')
-        sql = '''
-            DELETE FROM mapobjects
-            WHERE id = ANY(%(mapobject_ids)s);
-        '''
-        for mids in mapobject_id_partitions:
-            connection.execute(
-                _compile_distributed_query(sql), {
-                'mapobject_ids': mids
-            })
-
-
-def delete_mapobjects_cascade(experiment_id, mapobject_type_ids, site_id=None):
-    '''Deletes all instances of
-    :class:`Mapobject <tmlib.models.mapobject.Mapobject>` as well as all
-    "children" instances of
-    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-    :class:`FeatureValue <tmlib.models.feature.FeatureValue>`,
-    :class:`LabelValue <tmlib.models.feature.LabelValue>`.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
-    mapobject_type_ids: List[int]
-        IDs of parent :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-    site_id: int, optional
-        ID of the parent :class:`Site <tmlib.models.site.Site>`
-
-    Note
-    ----
-    This is not possible via the standard *SQLAlchemy* approach, because the
-    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
-    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-    might be distributed over a cluster.
-    '''
-    if mapobject_type_ids:
-        with ExperimentConnection(experiment_id) as connection:
-            sql = '''
-                SELECT m.id FROM mapobjects m
-                JOIN mapobject_segmentations s ON s.mapobject_id = m.id
-                WHERE m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
-            '''
-            if site_id is not None:
-                sql += '''
-                AND s.site_id = %(site_id)s
-                '''
-            connection.execute(sql, {
-                'site_id': site_id,
-                'mapobject_type_ids': mapobject_type_ids
-            })
-            mapobjects = connection.fetchall()
-            mapobject_ids = [m.id for m in mapobjects]
-
-            _delete_mapobjects_cascade(connection, experiment_id, mapobject_ids)
-
-
-def delete_invalid_mapobjects_cascade(experiment_id):
-    '''Deletes all instances of
-    :class:`Mapobject <tmlib.models.mapobject.Mapobject>` with invalid
-    geometries as well as all "children" instances of
-    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-    :class:`FeatureValue <tmlib.models.feature.FeatureValue>`,
-    :class:`LabelValue <tmlib.models.feature.LabelValue>`.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
-
-    Note
-    ----
-    This is not possible via the standard *SQLAlchemy* approach, because the
-    tables of :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
-    :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-    might be distributed over a cluster.
-    '''
-    with ExperimentConnection(experiment_id) as connection:
-        connection.execute('''
-            SELECT mapobject_id FROM mapobject_segmentations
-            WHERE NOT ST_IsValid(geom_poly);
-        ''')
-        mapobject_segm = connection.fetchall()
-        mapobject_ids = [s.mapobject_id for s in mapobject_segm]
-
-        _delete_mapobjects_cascade(connection, experiment_id, mapobject_ids)
-
-
-def get_mapobject_outlines_within_tile(experiment_id, mapobject_type_name,
-        x, y, z, tpoint, zplane):
-    '''Get outlines of all objects that fall within a given pyramid tile.
-
-    Parameters
-    ----------
-    experiment_id: int
-        ID of the parent :class:`Experiment <tmlib.models.experiment.Experiment>`
-    mapobject_type_name: str
-        name of the :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-    x: int
-        column map coordinate at the given `z` level
-    y: int
-        row map coordinate at the given `z` level
-    z: int
-        zoom level
-    tpoint: int
-        time point index
-    zplane: int
-        z-plane index
-
-    Returns
-    -------
-    List[Tuple[int, str]]
-        GeoJSON string for each selected map object
-
-    Note
-    ----
-    If `z` > `min_poly_zoom` mapobjects are represented by polygons.
-    If `min_poly_zoom` > `z` > `max_poly_zoom`, mapobjects are represented
-    by points and if `z` < `max_poly_zoom` they are not displayed at all.
-    '''
-    logger.debug('get mapobject outlines falling into tile')
-    with ExperimentConnection(experiment_id) as connection:
-        # NOTE: Column "depth" is implemented as a hybrid_property on the
-        # data model class. The property must have been accessed once for this
-        # query to work.
-        connection.execute('''
-            SELECT depth FROM channel_layers
-            LIMIT 1
-        ''')
-        layer = connection.fetchone()
-        maxzoom = layer.depth - 1
-
-        connection.execute('''
-            SELECT id, is_static, min_poly_zoom, max_poly_zoom
-            FROM mapobject_types
-            WHERE name = %(name)s;
-        ''', {
-            'name': mapobject_type_name
-        })
-        mapobject_type_id, is_static, min_poly_zoom, max_poly_zoom = \
-            connection.fetchone()
-        do_simplify = max_poly_zoom <= z < min_poly_zoom
-        do_nothing = z < max_poly_zoom
-        min_x, min_y, max_x, max_y = MapobjectSegmentation.bounding_box(
-            x, y, z, maxzoom
-        )
-        if do_nothing:
-            logger.debug('dont\'t represent objects')
-            return list()
-        elif do_simplify:
-            logger.debug('represent objects as centroid')
-            sql = '''
-                SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_centroid)
-            '''
-        else:
-            logger.debug('represent objects as polygon')
-            sql = '''
-                SELECT s.mapobject_id, ST_AsGeoJSON(s.geom_poly)
-            '''
-
-        # The outlines should not lie on the top or left border since
-        # this would otherwise lead to requests for neighboring tiles
-        # receiving the same objects.
-        # This in turn leads to overplotting and is noticeable
-        # when the objects have a fill color with an opacity != 0 or != 1.
-        sql += '''
-            FROM mapobject_segmentations s
-            JOIN mapobjects m ON m.id = s.mapobject_id
-            WHERE m.mapobject_type_id = %(mapobject_type_id)s
-            AND ST_Intersects(
-                    s.geom_poly,
-                    ST_GeomFromText(
-                        'POLYGON((
-                            %(max_x)s %(max_y)s, %(min_x)s %(max_y)s,
-                            %(min_x)s %(min_y)s, %(max_x)s %(min_y)s,
-                            %(max_x)s %(max_y)s
-                        ))'
-                    )
-                )
-        '''
-        if not is_static:
-            sql += '''
-                AND s.tpoint = %(tpoint)s
-                AND s.zplane = %(zplane)s
-                AND CASE
-                    WHEN %(not_left_border_tile)s THEN
-                        ST_Disjoint(
-                            ST_ExteriorRing(s.geom_poly),
-                            ST_GeomFromText(
-                                'LINESTRING(
-                                    %(min_x)s %(max_y)s, %(min_x)s %(min_y)s
-                                )'
-                            )
-                        )
-                    ELSE
-                        TRUE
-                    END
-                AND CASE
-                    WHEN %(not_top_border_tile)s THEN
-                        ST_Disjoint(
-                            ST_ExteriorRing(s.geom_poly),
-                            ST_GeomFromText(
-                                'LINESTRING(
-                                    %(min_x)s %(max_y)s, %(max_x)s %(max_y)s
-                                )'
-                            )
-                        )
-                    ELSE
-                        TRUE
-                    END
-            '''
-        connection.execute(sql, {
-            'is_static': is_static,
-            'mapobject_type_id': mapobject_type_id,
-            'tpoint': tpoint, 'zplane': zplane,
-            'not_top_border_tile': x != 0, 'not_left_border_tile': y != 0,
-            'min_x': min_x, 'max_x': max_x, 'min_y': min_y, 'max_y': max_y
-        })
-
-        outlines = connection.fetchall()
-        if len(outlines) == 0:
-            logger.warn(
-                'no outlines found for objects of type "%s" within tile: '
-                'x=%d, y=%d, z=%d, tpoint=%d, zplane=%d',
-                mapobject_type_name, x, y, z, tpoint, zplane
-            )
-
-        return outlines
-

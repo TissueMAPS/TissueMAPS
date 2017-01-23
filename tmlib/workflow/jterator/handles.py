@@ -379,7 +379,8 @@ class SegmentedObjects(LabelImage):
         Parameters
         ----------
         y_offset: int
-            global vertical offset that needs to be added to y-coordinates
+            global vertical offset that needs to be subtracted from
+            *y*-coordinates (*y*-axis is inverted)
         x_offset: int
             global horizontal offset that needs to be added to x-coordinates
 
@@ -389,10 +390,6 @@ class SegmentedObjects(LabelImage):
             point (centroid with global map *x*, *y* coordinates)
             for each identified object hashable
             by time point, z-plane and one-based, site-specific label
-
-        Note
-        ----
-        The *y*-axis of coordinates is inverted.
         '''
         logger.debug('calculate centroids for objects of type "%s"', self.key)
         points = dict()
@@ -406,7 +403,7 @@ class SegmentedObjects(LabelImage):
                 )
                 yield ((t, z, label), point)
 
-    def to_polygons(self, y_offset, x_offset, tolerance=2):
+    def to_polygons(self, y_offset, x_offset):
         '''Creates a polygon representation for each segmented object.
         The coordinates of the polygon contours are relative to the global map,
         i.e. an offset is added to the image site specific coordinates.
@@ -414,16 +411,10 @@ class SegmentedObjects(LabelImage):
         Parameters
         ----------
         y_offset: int
-            global vertical offset that needs to be added to y-coordinates
+            global vertical offset that needs to be subtracted from
+            *y*-coordinates (*y*-axis is inverted)
         x_offset: int
-            global horizontal offset that needs to be added to x-coordinates
-        tolerance: int
-            accuracy of polygon approximation; tolerance distance in pixels of
-            points on the contour of the appoximated polygon to the orginal
-            cooridinate points; the higher the value the less accurate the
-            polygon will be approximated, i.e. the less coordinate values will
-            be used to describe its contour; if ``0`` the original contour is
-            used (default: ``2``)
+            global horizontal offset that needs to be added to *x*-coordinates
 
         Returns
         -------
@@ -431,10 +422,6 @@ class SegmentedObjects(LabelImage):
             contour (simplified polygon with global map *x*, *y* coordinates)
             for each identified object hashable
             by time point, z-plane and one-based, site-specific label
-
-        Note
-        ----
-        The *y*-axis of coordinates is inverted.
         '''
         logger.debug('calculate polygons for objects type "%s"', self.key)
 
@@ -538,9 +525,7 @@ class SegmentedObjects(LabelImage):
                         holes[i][:, 0] = holes[i][:, 0] + add_x
                         holes[i][:, 1] = -1 * (holes[i][:, 1] + add_y)
                 poly = shapely.geometry.Polygon(shell, holes)
-                poly = poly.simplify(
-                    tolerance=tolerance, preserve_topology=True
-                )
+                # poly = poly.simplify(tolerance=0, preserve_topology=True)
                 if not poly.is_valid:
                     logger.warn(
                         'invalid polygon for object #%d - trying to fix it',

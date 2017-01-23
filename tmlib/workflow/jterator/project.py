@@ -32,49 +32,29 @@ from tmlib.errors import PipelineDescriptionError
 logger = logging.getLogger(__name__)
 
 HANDLES_SUFFIX = '.handles.yaml'
-PIPE_SUFFIX = '.pipe.yaml'
-
-
-def list_projects(directory):
-    '''Lists Jterator projects in a given directory.
-    A Jterator project is defined as a folder containing a `.pipe` file.
-
-    Parameters
-    ----------
-    directory: str
-        absolute path to a directory
-    '''
-    return [
-        os.path.join(directory, name)
-        for name in os.listdir(directory)
-        if os.path.isdir(os.path.join(directory, name)) and
-        glob.glob(os.path.join(directory, name, '*%s' % PIPE_SUFFIX))
-    ]
 
 
 class Project(object):
 
-    '''A Jterator project is defined as a folder containing a `.pipe` file.
-    The class holds information about the project, in particular on the content
-    of YAML pipeline and module descriptor files that can be edited in the
-    JtUI app.
+    '''A Jterator project is defined as a folder containing a `pipeline.yaml`
+    file. The class holds information about the project, in particular on
+    the content of the *pipeline* and *handles* module descriptor files.
     '''
-    def __init__(self, step_location, name, pipe=None, handles=None):
+
+    def __init__(self, step_location, pipe=None, handles=None):
         '''
         Parameters
         ----------
         step_location: str
             path to the project folder
-        name: str
-            name of the pipeline
         pipe: dict, optional
             pipeline description (default: ``None``)
         handles: List[dict], optional
             module descriptions (default: ``None``)
         '''
         self.step_location = step_location
-        # TODO: check validity of "name"
-        self.name = name
+        if not os.path.exists(self._get_pipe_file()):
+            self.create()
         self.pipe = pipe
         self.handles = handles
 
@@ -112,9 +92,7 @@ class Project(object):
 
     @property
     def _pipe_filename(self):
-        '''str: name of the YAML pipeline descriptor file
-        '''
-        return '%s%s' % (self.name, PIPE_SUFFIX)
+        return 'pipeline.yaml'
 
     def _get_pipe_file(self, directory=None):
         if not directory:
@@ -126,12 +104,10 @@ class Project(object):
             return pipe_files[0]
         elif len(pipe_files) > 1:
             raise PipelineOSError(
-                'More than more pipeline descriptor file found: %s' % directory
+                'More than one pipeline descriptor file found: %s' % directory
             )
         else:
-            raise PipelineOSError(
-                'No pipeline descriptor file found: %s' % directory
-            )
+            return self.pipe_file
 
     def _get_handles_files(self, directory=None):
         if not directory:
@@ -192,10 +168,7 @@ class Project(object):
 
     def _create_pipe(self):
         with YamlReader(self.pipe_file) as f:
-            pipe = {
-                'name': self._get_descriptor_name(self.pipe_file),
-                'description': f.read()
-            }
+            pipe = {'description': f.read()}
         # We need to do some basic checks here, because this code gets executed
         # before the actual checks in checker.py.
         if 'pipeline' not in pipe['description']:
@@ -299,27 +272,16 @@ class Project(object):
         if not os.path.exists(handles_dir):
             os.mkdir(handles_dir)
 
-    def _create_project_from_skeleton(self, skel_dir, repo_dir=None):
-        pipe_file = self._get_pipe_file(skel_dir)
-        if not repo_dir:
-            shutil.copy(pipe_file, self.step_location)
-        else:
-            with YamlReader(pipe_file) as f:
-                pipe_content = f.read()
-            new_pipe_file = os.path.join(
-                self.step_location, '%s%s' % (self.name, PIPE_SUFFIX)
-            )
-            with YamlWriter(new_pipe_file) as f:
-                f.write(pipe_content)
+    def _create_project_from_skeleton(self, skel_dir):
+        skel_pipe_file = self._get_pipe_file(skel_dir)
+        shutil.copy(skel_pipe_file, self.step_location)
         shutil.copytree(
             os.path.join(skel_dir, 'handles'),
             os.path.join(self.step_location, 'handles')
         )
 
     def _remove_pipe_file(self, name):
-        pipe_file = os.path.join(
-            self.step_location, '%s%s' % (name, PIPE_SUFFIX)
-        )
+        pipe_file = os.path.join(self.step_location, self._pipe_filename)
         os.remove(pipe_file)
 
     def _remove_handles_folder(self):
@@ -380,7 +342,6 @@ class Project(object):
         dict
         '''
         attrs = dict()
-        attrs['name'] = self.name
         attrs['pipe'] = yaml.safe_load(
             ruamel.yaml.dump(self.pipe, Dumper=ruamel.yaml.RoundTripDumper)
         )
@@ -394,7 +355,7 @@ class Project(object):
 
     def save(self):
         '''Saves a Jterator project:
-        Updates the content of *.pipe* and *.handles* files on disk
+        Updates the content of *pipeline* and *handles* files on disk
         according to modifications to the pipeline and module descriptions.
         '''
         if not os.path.exists(self.step_location):
@@ -406,11 +367,10 @@ class Project(object):
 
     def create(self, repo_dir=None, skel_dir=None):
         '''Creates a Jterator project:
-        Create the project folder and an empty "handles" subfolder as well as
-        a skeleton *.pipe* file, i.e. a pipeline descriptor file with all
-        required main keys but an empty module list.
-        When `skel_dir` is provided, the *.pipe* and *.handles* files are
-        copied.
+        Creates an empty "handles" subfolder as well as a skeleton pipeline
+        file, i.e. a pipeline descriptor file with all required main keys but
+        an empty module list. When `skel_dir` is provided, *pipeline* and
+        *handles* files are copied.
 
         Parameters
         ----------
@@ -418,7 +378,7 @@ class Project(object):
             path to repository directory where module files are located
         skel_dir: str, optional
             path to repository directory that represents a project skeleton,
-            i.e. contains a *.pipe* and one or more *.handles* files in a
+            i.e. contains a *pipeline* and one or more *handles* files in a
             *handles* directory.
         '''
         if repo_dir:
@@ -571,7 +531,7 @@ class AvailableModules(object):
     @property
     def pipe_registration(self):
         '''Build pipeline elements for registration in the UI
-        in the format excepted in the "pipeline" section in the `.pipe` file.
+        in the format excepted in the "pipeline" section in the *pipeline* file.
 
         Returns
         -------

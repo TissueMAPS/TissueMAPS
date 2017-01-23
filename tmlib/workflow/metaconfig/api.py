@@ -26,7 +26,6 @@ from tmlib.workflow.metaconfig import get_microscope_type_regex
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.errors import MetadataError
 from tmlib.workflow import register_step_api
-from tmlib.models.layer import delete_channel_layers_cascade
 
 logger = logging.getLogger(__name__)
 
@@ -118,8 +117,9 @@ class MetadataConfigurator(ClusterRoutines):
         well as all children for the processed experiment.
         '''
         # Distributed tables cannot be dropped within a transaction
-        logger.info('delete existing channel layers')
-        delete_channel_layers_cascade(self.experiment_id)
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+            logger.info('delete existing channel layers')
+            tm.ChannelLayer.delete_cascade(connection)
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             logger.info('delete existing channels')

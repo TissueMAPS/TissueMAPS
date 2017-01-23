@@ -33,10 +33,6 @@ from tmlib.image import Image
 from tmlib.errors import DataIntegrityError
 from tmlib.errors import WorkflowError
 from tmlib.models.utils import delete_location
-from tmlib.models.layer import delete_channel_layers_cascade
-from tmlib.models.mapobject import (
-    delete_mapobject_types_cascade, delete_mapobjects_cascade
-)
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
@@ -48,8 +44,8 @@ logger = logging.getLogger(__name__)
 
 
 _UPSERT_STATEMENT = '''
-    INSERT INTO channel_layer_tiles AS t (z, y, x, channel_layer_id, pixels)
-    VALUES (%(z)s, %(y)s, %(x)s, %(channel_layer_id)s, %(pixels)s)
+    INSERT INTO channel_layer_tiles AS t (id, channel_layer_id, z, y, x, pixels)
+    VALUES (%(id)s, %(channel_layer_id)s, %(z)s, %(y)s, %(x)s, %(pixels)s)
     ON CONFLICT
     ON CONSTRAINT channel_layer_tiles_z_y_x_channel_layer_id_key
     DO UPDATE
@@ -244,15 +240,21 @@ class PyramidBuilder(ClusterRoutines):
     def delete_previous_job_output(self):
         '''Deletes all instances of
         :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>` and
-        *static* instances of
-        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-        as well as all children instances for the processed experiment.
+        :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`.
         '''
-        logger.debug('delete existing channel layers')
-        delete_channel_layers_cascade(self.experiment_id)
-
-        logger.debug('delete existing static mapobject types')
-        delete_mapobject_types_cascade(self.experiment_id, is_static=True)
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+            logger.info('delete existing channel layers')
+            tm.ChannelLayer.delete_cascade(connection)
+            logger.info('delete existing static mapobject types')
+            tm.MapobjectType.delete_cascade(
+                connection, ref_type=tm.Plate.__name__
+            )
+            tm.MapobjectType.delete_cascade(
+                connection, ref_type=tm.Well.__name__
+            )
+            tm.MapobjectType.delete_cascade(
+                connection, ref_type=tm.Site.__name__
+            )
 
     def create_run_job_collection(self, submission_id):
         '''tmlib.workflow.job.MultiRunJobCollection: collection of "run" jobs
@@ -516,14 +518,12 @@ class PyramidBuilder(ClusterRoutines):
 
                     channel_layer_tiles.append({
                         'z': level, 'y': row, 'x': column,
-                        'channel_layer_id': layer.id,
-                        'pixels': psycopg2.Binary(tile.jpeg_encode().tostring())
+                        'channel_layer_id': layer.id, 'tile': tile
                     })
 
             with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-                # Upsert the tile entry, i.e. insert or update if exists
                 for t in channel_layer_tiles:
-                    conn.execute(_UPSERT_STATEMENT, t)
+                    tm.ChannelLayerTile.add(conn, **t)
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
@@ -601,11 +601,10 @@ class PyramidBuilder(ClusterRoutines):
             with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                 # Upsert the tile entry, i.e. insert or update if exists
                 tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
-                conn.execute(
-                    _UPSERT_STATEMENT, {
+                tm.ChannelLayerTile.add(
+                    conn, {
                         'z': level, 'y': row, 'x': column,
-                        'channel_layer_id': layer_id,
-                        'pixels': psycopg2.Binary(tile.jpeg_encode().tostring())
+                        'channel_layer_id': layer_id, 'tile': tile
                     }
                 )
 
@@ -622,6 +621,70 @@ class PyramidBuilder(ClusterRoutines):
         else:
             self._create_lower_zoom_level_tiles(batch)
 
-    @notimplemented
     def collect_job_output(self, batch):
-        pass
+        '''Creates :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        instances for :class:`Site <tmlib.models.site.Site>`,
+        :class:`Well <tmlib.models.well.Well>`,
+        and :class:`Plate <tmlib.models.plate.Plate>` types and creates for each
+        object of these classes an instance of
+        :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`.
+        This allows visualizing these objects on the map and using them
+        for efficient spatial queries.
+
+        Parameters
+        ----------
+        batch: dict
+            job description
+        '''
+        mapobject_mappings = {
+            'Plates': tm.Plate, 'Wells': tm.Well, 'Sites': tm.Site
+        }
+        for name, cls in mapobject_mappings.iteritems():
+            with tm.utils.ExperimentSession(self.experiment_id) as session:
+                logger.info(
+                    'create static mapobject type "%s" for reference type "%s"',
+                    name, cls.__name__
+                )
+                mapobject_type = session.get_or_create(
+                    tm.MapobjectType, name=name, ref_type=cls.__name__
+                )
+                mapobject_type_id = mapobject_type.id
+                segmentation_layer = session.get_or_create(
+                    tm.SegmentationLayer, mapobject_type_id=mapobject_type_id
+                )
+
+                logger.info('create individual mapobjects of type "%s"', name)
+                segmentations = dict()
+                for obj in session.query(cls):
+                    logger.debug(
+                        'create mapobject for reference object #%d', obj.id
+                    )
+                    # First element: x axis
+                    # Second element: inverted (!) y axis
+                    ul = (obj.offset[1], -1 * obj.offset[0])
+                    ll = (ul[0] + obj.image_size[1], ul[1])
+                    ur = (ul[0], ul[1] - obj.image_size[0])
+                    lr = (ll[0], ul[1] - obj.image_size[0])
+                    # Closed circle with coordinates sorted counter-clockwise
+                    contour = np.array([ur, ul, ll, lr, ur])
+                    polygon = shapely.geometry.Polygon(contour)
+                    segmentations[obj.id] = {
+                        'segmentation_layer_id': segmentation_layer.id,
+                        'polygon': polygon
+                    }
+
+            with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+                logger.debug('delete existing mapobjects of type "%s"', name)
+                tm.Mapobject.delete_cascade(conn, mapobject_type_id)
+                logger.debug('add new mapobjects of type "%s"', name)
+                for key, value in segmentations.iteritems():
+                    mapobject_id = tm.Mapobject.add(
+                        conn, mapobject_type_id, ref_id=key
+                    )
+                    logger.debug('add mapobject #%d', mapobject_id)
+                    tm.MapobjectSegmentation.add(
+                        conn, mapobject_id,
+                        segmentation_layer_id=value['segmentation_layer_id'],
+                        polygon=value['polygon']
+                    )

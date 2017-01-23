@@ -141,7 +141,7 @@ def _set_db_shard_replication_factor(engine, n):
             })
 
 
-def _create_schema_if_exists(engine, experiment_id):
+def _create_schema_if_not_exists(engine, experiment_id):
     db_url = make_url(engine.url)
     db_name = str(db_url.database)
     schema_name = _SCHEMA_NAME_FORMAT_STRING.format(experiment_id=experiment_id)
@@ -169,10 +169,11 @@ def _drop_schema(engine, experiment_id):
     db_url = make_url(engine.url)
     db_name = str(db_url.database)
     schema_name = _SCHEMA_NAME_FORMAT_STRING.format(experiment_id=experiment_id)
-    logger.debug('drop schema "%s" for database "%s"', schema_name, db_name)
+    logger.debug('drop all table in schema "%s"', schema_name)
     with Connection(db_url) as conn:
-        sql = 'DROP SCHEMA %s CASCADE;' % schema_name
-        conn.execute(sql)
+        # NOTE: The tables are dropped on the worker nodes, but the schemas
+        # persist. This is not a problem, however.
+        conn.execute('DROP SCHEMA %s CASCADE;' % schema_name)
 
 
 def _create_db_tables(engine, experiment_id=None):
@@ -684,10 +685,9 @@ class ExperimentSession(_Session):
             db_uri = cfg.db_uri_sqla
         self.experiment_id = experiment_id
         engine = create_db_engine(db_uri)
-        exists = _create_schema_if_exists(engine, experiment_id)
+        _set_db_shard_replication_factor(engine, 1)
+        exists = _create_schema_if_not_exists(engine, experiment_id)
         if not exists:
-            # No replication of shards!
-            _set_db_shard_replication_factor(engine, 1)
             _set_db_shard_count(engine, 20 * cfg.db_nodes)
             _create_db_tables(engine, experiment_id)
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
@@ -750,10 +750,10 @@ class Connection(object):
             # need to perform queries in parallel under the assumption that
             # order of records is not important (i.e. that they are commutative).
             # https://docs.citusdata.com/en/v6.0/performance/scaling_data_ingestion.html#real-time-updates-0-50k-s
-            if cfg.db_driver == 'citus':
-                self._cursor.execute('''
-                    SET citus.all_modifications_commutative TO on;
-                ''')
+            self._cursor.execute('''
+                SET citus.shard_replication_factor = 1;
+                SET citus.all_modifications_commutative TO on;
+            ''')
         return self._cursor
 
     def __exit__(self, except_type, except_value, except_trace):
