@@ -44,20 +44,20 @@ class ChannelLayerTile(ExperimentModel):
             'channel_layer_id', 'z', 'y', 'x'
         ),
         Index(
-            'ix_channel_layer_tiles_z_y_x_channel_layer_id',
+            'ix_channel_layer_tiles_channel_layer_id_z_y_x',
             'channel_layer_id', 'z', 'y', 'x'
         )
     )
 
-    # NOTE: Distributing by "id" would be most intuitive, but it leads to
-    # issues upon upserting, because the distribution key needs to be part of
-    # the UNIQUE and PRIMARY KEY constraints and the value for "id" cannot be
-    # auto-generated from the SEQUENCE. Distribution by "channel_layer_id"
-    # would balance data less equally over available shards, because
-    # there are typically only a few layers. In this case rows would
-    # accumulate in a small number of shards, which probably has a negative
-    # impact on query performance.
-    __distribute_by_hash__ = 'z'
+    # NOTE: Distributing by "id" would be ideal, but it leads to
+    # issues upon upserting: the distribution key needs to be part of
+    # UNIQUE and PRIMARY KEY constraints and the value for "id" cannot be
+    # auto-generated using SEQUENCE. Distribution by "channel_layer_id"
+    # would balance data unequally over available shards, because
+    # there are typically only a few layers. In this case, rows would
+    # accumulate in a small number of large shards
+    # which has a negative impact on query performance.
+    __distribute_by_hash__ = 'y'
 
     _pixels = Column('pixels', BYTEA)
 
@@ -160,8 +160,7 @@ class ChannelLayerTile(ExperimentModel):
             WHERE t.channel_layer_id = %(channel_layer_id)s
             AND t.z = %(z)s AND t.y = %(y)s AND t.x = %(x)s;
         ''', {
-            'id': tile_id, 'channel_layer_id': channel_layer_id,
-            'z': z, 'y': y, 'x': x,
+            'channel_layer_id': channel_layer_id, 'z': z, 'y': y, 'x': x,
             'pixels': psycopg2.Binary(tile.jpeg_encode().tostring())
         })
 

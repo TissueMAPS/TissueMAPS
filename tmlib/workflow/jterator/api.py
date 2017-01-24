@@ -253,7 +253,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         '''
         logger.info('delete existing mapobjects and mapobject types')
         with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            tm.MapobjectType.delete_cascade(connection)
+            tm.MapobjectType.delete_cascade(connection, ref_type='NULL')
 
     def _load_pipeline_inputs_debug(self):
         logger.info('load pipeline inputs from files for debugging')
@@ -590,7 +590,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             job description
         '''
         logger.info('clean-up mapobjects with invalid or missing segmentations')
-        with tm.utis.ExperimentConnection(self.experiment_id) as connection:
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
             tm.Mapobject.delete_invalid_cascade(connection)
             tm.Mapobject.delete_missing_cascade(connection)
 
@@ -599,9 +599,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
             maxzoom = layer.maxzoom_level_index
             segmentation_layers = session.query(tm.SegmentationLayer).all()
             for segm_layer in segmentation_layers:
-                p_thresh, c_thresh = seg_layer.calculate_thresholds(maxzoom)
-                mapobject_segmentation.polygon_threshold = p_thresh
-                mapobject_segmentation.centroid_threshold = c_thresh
+                pt, ct = segm_layer.calculate_zoom_thresholds(maxzoom)
+                segm_layer.polygon_threshold = pt
+                segm_layer.centroid_threshold = ct
 
                 # TODO: population context and aggregate features
                 # tm.types.ST_Expand()

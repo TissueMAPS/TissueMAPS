@@ -21,12 +21,12 @@ import lxml
 import itertools
 import collections
 from cached_property import cached_property
-from sqlalchemy import Column, Integer, ForeignKey, String
+from sqlalchemy import Column, Integer, ForeignKey, String, UniqueConstraint
+from sqlalchemy import or_
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import relationship, backref, Session
-from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.file import ChannelImageFile
@@ -35,10 +35,12 @@ from tmlib.models.well import Well
 from tmlib.models.feature import FeatureValues
 from tmlib.models.result import LabelValues
 from tmlib.models.tile import ChannelLayerTile
+from tmlib.models.mapobject import MapobjectSegmentation
 from tmlib.models.plate import Plate
 from tmlib.models.base import ExperimentModel
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
 from tmlib.models.dialect import compile_distributed_query
+from tmlib.models.types import ST_SimplifyPreserveTopology
 from tmlib.errors import RegexError
 from tmlib.image import PyramidTile
 
@@ -59,10 +61,6 @@ class ChannelLayer(ExperimentModel):
     __tablename__ = 'channel_layers'
 
     __table_args__ = (UniqueConstraint('zplane', 'tpoint', 'channel_id'), )
-
-    _height = Column('height', Integer)
-    _width = Column('width', Integer)
-    _depth = Column('depth', Integer)
 
     #: int: zero-based index in z stack
     zplane = Column(Integer, index=True)
@@ -106,31 +104,25 @@ class ChannelLayer(ExperimentModel):
         self.zplane = zplane
         self.channel_id = channel_id
 
-    @hybrid_property
+    @property
     def height(self):
         '''int: number of pixels along vertical axis at highest resolution level
         '''
-        if self._height is None:
-            self._height = self._maxzoom_image_size[0]
-        return self._height
+        return self._maxzoom_image_size[0]
 
-    @hybrid_property
+    @property
     def width(self):
         '''int: number of pixels along horizontal axis at highest resolution
         level
         '''
-        if self._width is None:
-            self._width = self._maxzoom_image_size[1]
-        return self._width
+        return self._maxzoom_image_size[1]
 
-    @hybrid_property
+    @property
     def depth(self):
         '''int: number of pixels along horizontal axis at highest resolution
         level
         '''
-        if self._depth is None:
-            self._depth = len(self.dimensions)
-        return self._depth
+        return len(self.dimensions)
 
     @property
     def tile_size(self):
@@ -723,9 +715,12 @@ class SegmentationLayer(ExperimentModel):
         return (minx, miny, maxx, maxy)
 
     def calculate_zoom_thresholds(self, maxzoom_level):
-        '''Calculates the zoom level above which mapobjects are
-        represented on the map as polygons instead of centroids and the
-        zoom level below which mapobjects are no longer visualized.
+        '''Calculates the zoom level below which mapobjects are
+        represented on the map as centroids rather than polygons and the
+        zoom level below which mapobjects are no longer visualized at all.
+        These thresholds are necessary, because it would result in too much
+        network traffic and the client would be overwhelmed by the large number
+        of objects.
 
         Parameters
         ----------
@@ -735,12 +730,18 @@ class SegmentationLayer(ExperimentModel):
         Returns
         -------
         Tuple[int]
-            minimal and maximal zoom level
+            threshold zoom levels for visualization of polygons and centroids
+
+        Note
+        ----
+        The optimal threshold levels depend on the number of points on the
+        contour of objects, but also the size of the browser window and the
+        resolution settings of the browser.
         '''
         # TODO: This is too simplistic. Calculate optimal zoom level by
         # sampling mapobjects at the highest resolution level and approximate
         # number of points that would be sent to the client.
-        if self.mapobject.is_static:
+        if self.mapobject_type.ref_type is None:
             polygon_thresh = 0
             centroid_thresh = 0
         else:
@@ -785,81 +786,51 @@ class SegmentationLayer(ExperimentModel):
         they are not represented at all.
         '''
         logger.debug('get mapobject outlines falling into tile')
-        # session = Session.object_session(self)
+        session = Session.object_session(self)
 
-        # minx, miny, maxx, maxy = self.get_bounding_box(x, y, z, maxzoom)
-        # tile = 'POLYGON(({maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, {maxx} {maxy}))'.format(
-        #     minx=minx, maxx=maxx, miny=miny, maxy=maxy
-        # )
-        # spatial_filter = (MapobjectSegmentation.geom_poly.ST_Intersects(tile))
-
-        with ExperimentConnection(self.mapobject_type.experiment_id) as connection:
-            # NOTE: Column "depth" is implemented as a hybrid_property on the
-            # data model class. The property must have been accessed once for this
-            # query to work.
-            connection.execute('''
-                SELECT depth FROM channel_layers
-                LIMIT 1
-            ''')
-            layer = connection.fetchone()
-            maxzoom = layer.depth - 1
-
-            connection.execute('''
-                SELECT polygon_thresh, centroid_thresh FROM segmentation_layers
-                WHERE id = %(id)s;
-            ''', {
-                'id': segmentation_layer_id
-            })
-            polygon_thresh, centroid_thresh = connection.fetchone()
-            do_simplify = centroid_thresh <= z < polygon_thresh
-            do_nothing = z < centroid_thresh
-            min_x, min_y, max_x, max_y = self.get_tile_bounding_box(
-                x, y, z, maxzoom
+        maxzoom = self.mapobject_type.experiment.pyramid_depth - 1
+        do_simplify = self.centroid_thresh <= z < self.polygon_thresh
+        do_nothing = z < self.centroid_thresh
+        if do_nothing:
+            logger.debug('dont\'t represent objects')
+            return list()
+        elif do_simplify:
+            logger.debug('represent objects by centroids')
+            query = session.query(
+                MapobjectSegmentation.mapobject_id,
+                MapobjectSegmentation.geom_centroid.ST_AsGeoJSON()
             )
-            if do_nothing:
-                logger.debug('dont\'t represent objects')
-                return list()
-            elif do_simplify:
-                logger.debug('represent objects as centroid')
-                sql = '''
-                    SELECT mapobject_id, ST_AsGeoJSON(geom_centroid)
-                '''
-            else:
-                logger.debug('represent objects as polygon')
-                sql = '''
-                    SELECT mapobject_id, ST_AsGeoJSON(
-                        ST_SimplifyPreserveTopology(geom_polygon, %(tolerance)s)
-                    )
-                '''
+        else:
+            logger.debug('represent objects by polygons')
+            tolerance = (maxzoom - z) ** 2 + 1
+            logger.debug('simplify polygons using tolerance %d', tolerance)
+            query = session.query(
+                MapobjectSegmentation.mapobject_id,
+                MapobjectSegmentation.geom_polygon.
+                ST_SimplifyPreserveTopology(tolerance).ST_AsGeoJSON()
+            )
 
-            sql += '''
-                FROM mapobject_segmentations
-                WHERE segmenation_layer_id = %(segmentation_layer_id)s
-                AND ST_CoveredBy(
-                        geom_centroid,
-                        ST_GeomFromText(
-                            'POLYGON((
-                                %(max_x)s %(max_y)s, %(min_x)s %(max_y)s,
-                                %(min_x)s %(min_y)s, %(max_x)s %(min_y)s,
-                                %(max_x)s %(max_y)s
-                            ))'
-                        )
-                    )
-            '''
-            connection.execute(sql, {
-                'segmentation_layer_id': segmentation_layer_id,
-                'tolerance': tolerance,
-                'min_x': min_x, 'max_x': max_x, 'min_y': min_y, 'max_y': max_y,
-            })
+        minx, miny, maxx, maxy = self.get_tile_bounding_box(x, y, z, maxzoom)
+        tile = (
+            'POLYGON(('
+                '{maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, '
+                '{maxx} {maxy}'
+            '))'.format(minx=minx, maxx=maxx, miny=miny, maxy=maxy)
+        )
 
-            outlines = connection.fetchall()
-            if len(outlines) == 0:
-                logger.warn(
-                    'no outlines found for objects of type "%s" within tile: '
-                    'x=%d, y=%d, z=%d', mapobject_type_name, x, y, z
-                )
+        outlines = query.filter(
+            MapobjectSegmentation.segmentation_layer_id == self.id,
+            MapobjectSegmentation.geom_polygon.ST_Intersects(tile)
+        ).\
+        all()
 
-            return outlines
+        if len(outlines) == 0:
+            logger.warn(
+                'no outlines found for objects of type "%s" within tile: '
+                'x=%d, y=%d, z=%d', self.mapobject_type.name, x, y, z
+            )
+
+        return outlines
 
     def __repr__(self):
         return (

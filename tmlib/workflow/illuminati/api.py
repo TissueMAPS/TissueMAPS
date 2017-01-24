@@ -142,7 +142,7 @@ class PyramidBuilder(ClusterRoutines):
         job_descriptions['run'] = list()
         job_count = 0
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-
+            experiment = session.query(tm.Experiment).one()
             for cid in session.query(tm.Channel.id).distinct():
 
                 n_zplanes = session.query(tm.ChannelImageFile.n_planes).\
@@ -163,8 +163,13 @@ class PyramidBuilder(ClusterRoutines):
                     layer = session.get_or_create(
                         tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
                     )
-
-                    for index, level in enumerate(reversed(range(layer.depth))):
+                    n_levels = layer.depth
+                    # Should be the same between layers, so we only need
+                    # to set these values once.
+                    experiment.pyramid_depth = layer.depth
+                    experiment.pyramid_height = layer.height
+                    experiment.pyramid_width = layer.width
+                    for index, level in enumerate(reversed(range(n_levels))):
                         logger.debug('pyramid level %d', level)
                         # The layer "level" increases from top to bottom.
                         # We build the layer bottom-up, therefore, the "index"
@@ -528,9 +533,7 @@ class PyramidBuilder(ClusterRoutines):
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
-            logger.info(
-                'processing layer: channel %d', layer.channel.index
-            )
+            logger.info('processing layer: channel %d', layer.channel.index)
             logger.info('creating tiles at zoom level %d', batch['level'])
 
         for current_coordinate in batch['coordinates']:
@@ -538,28 +541,24 @@ class PyramidBuilder(ClusterRoutines):
                 layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
                 level = batch['level']
                 row, column = tuple(current_coordinate)
-                coordinates = layer.calc_coordinates_of_next_higher_level(
+                pre_coordinates = layer.calc_coordinates_of_next_higher_level(
                     level, row, column
                 )
                 layer_id = layer.id
                 zoom_factor = layer.zoom_factor
 
-            logger.debug(
-                'creating tile: z=%d, y=%d, x=%d', level, row, column
-            )
-            rows = np.unique([c[0] for c in coordinates])
-            cols = np.unique([c[1] for c in coordinates])
+            logger.debug('creating tile: z=%d, y=%d, x=%d', level, row, column)
+            pre_rows = np.unique([c[0] for c in pre_coordinates])
+            pre_cols = np.unique([c[1] for c in pre_coordinates])
             # Build the mosaic by loading required higher level tiles
             # (created in a previous run) and stitching them together
             with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-                for i, r in enumerate(rows):
-                    for j, c in enumerate(cols):
+                for i, r in enumerate(pre_rows):
+                    for j, c in enumerate(pre_cols):
                         conn.execute('''
                             SELECT pixels FROM channel_layer_tiles
-                            WHERE z=%(z)s
-                            AND y=%(y)s
-                            AND x=%(x)s
-                            AND channel_layer_id=%(channel_layer_id)s;
+                            WHERE channel_layer_id=%(channel_layer_id)s
+                            AND z=%(z)s AND y=%(y)s AND x=%(x)s;
                         ''', {
                             'z': level+1, 'y': r, 'x': c,
                             'channel_layer_id': layer_id
@@ -598,14 +597,12 @@ class PyramidBuilder(ClusterRoutines):
             # Create the tile at the current level by downsampling the
             # mosaic image, which is composed of the 4 tiles of the next
             # higher zoom level
+            tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
             with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                 # Upsert the tile entry, i.e. insert or update if exists
-                tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
                 tm.ChannelLayerTile.add(
-                    conn, {
-                        'z': level, 'y': row, 'x': column,
-                        'channel_layer_id': layer_id, 'tile': tile
-                    }
+                    conn, channel_layer_id=layer_id,
+                    z=level, y=row, x=column, tile=tile
                 )
 
     def run_job(self, batch):

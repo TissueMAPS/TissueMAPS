@@ -109,18 +109,38 @@ class MapobjectType(ExperimentModel):
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        ref_type: str
-            name of reference type
+        ref_type: str, optional
+            name of reference type (if ``"NULL"`` all mapobject types without
+            a `ref_type` will be deleted)
 
         '''
-        if ref_type:
-            logger.debug('delete mapobjects referencing "%s"', ref_type)
+        if ref_type is not None:
+            logger.debug('delete static mapobjects referencing "%s"', ref_type)
             connection.execute('''
                 SELECT id, name FROM mapobject_types
                 WHERE ref_type = %(ref_type)s
             ''', {
                 'ref_type': ref_type
             })
+            mapobject_type = connection.fetchone()
+            if mapobject_type:
+                logger.debug(
+                    'delete mapobjects of type "%s"', mapobject_type.name
+                )
+                Mapobject.delete_cascade(connection, mapobject_type.id)
+                logger.debug('delete mapobject type %s', mapobject_type.name)
+                connection.execute('''
+                    DELETE FROM mapobject_types
+                    WHERE id = %(mapobject_type_id)s;
+                ''', {
+                    'mapobject_type_id': mapobject_type.id
+                })
+        elif ref_type is 'NULL':
+            logger.debug('delete non-static mapobjects')
+            connection.execute('''
+                SELECT id, name FROM mapobject_types
+                WHERE ref_type IS NULL;
+            ''')
             mapobject_type = connection.fetchone()
             if mapobject_type:
                 logger.debug(
@@ -185,7 +205,7 @@ class Mapobject(ExperimentModel):
     @classmethod
     def _delete_cascade(cls, connection, mapobject_ids=None):
         logger.debug('delete mapobjects')
-        if mapobject_ids:
+        if mapobject_ids is not None:
             # NOTE: Using ANY with an ARRAY is more performant than using IN.
             # TODO: Ideally we would like to join with mapobject_types.
             # However, at the moment there seems to be no way to DELETE entries
@@ -231,7 +251,8 @@ class Mapobject(ExperimentModel):
         ''')
         mapobject_segm = connection.fetchall()
         mapobject_ids = [s.mapobject_id for s in mapobject_segm]
-        cls._delete_cascade(connection, mapobject_ids)
+        if mapobject_ids:
+            cls._delete_cascade(connection, mapobject_ids)
 
     @classmethod
     def delete_missing_cascade(cls, connection):
@@ -256,7 +277,8 @@ class Mapobject(ExperimentModel):
         ''')
         mapobjects = connection.fetchall()
         mapobject_ids = [s.id for s in mapobjects]
-        cls._delete_cascade(connection, mapobject_ids)
+        if mapobject_ids:
+            cls._delete_cascade(connection, mapobject_ids)
 
     @classmethod
     def add(cls, connection, mapobject_type_id, ref_id=None):

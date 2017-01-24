@@ -315,27 +315,36 @@ class Experiment(DirectoryModel):
     __tablename__ = 'experiment'
 
     #: str: microscope that was used to acquire the images
-    microscope_type = Column(String, index=True)
+    microscope_type = Column(String, index=True, nullable=False)
 
     #: int: number of wells in the plate, e.g. 384
-    plate_format = Column(Integer)
+    plate_format = Column(Integer, nullable=False)
 
     #: str: the order in which plates were acquired via the microscope
     plate_acquisition_mode = Column(String)
 
+    #: int: number of pixels along *y*-axis of the pyramid at highest zoom level
+    pyramid_height = Column(Integer)
+
+    #: int: number of pixels along *x*-axis of the pyramid at highest zoom level
+    pyramid_width = Column(Integer)
+
+    #: int: number of zoom levels of the pyramid
+    pyramid_depth = Column(Integer)
+
     #: int: zoom factor between pyramid levels
-    zoom_factor = Column(Integer)
+    zoom_factor = Column(Integer, nullable=False)
 
     #: displacement of neighboring sites within a well along the
     #: vertical axis in pixels
-    vertical_site_displacement = Column(Integer)
+    vertical_site_displacement = Column(Integer, nullable=False)
 
     #: displacement of neighboring sites within a well along the
     #: horizontal axis in pixels
-    horizontal_site_displacement = Column(Integer)
+    horizontal_site_displacement = Column(Integer, nullable=False)
 
     #: int: gab introduced between neighbooring wells in pixels
-    well_spacer_size = Column(Integer)
+    well_spacer_size = Column(Integer, nullable=False)
 
     def __init__(self, microscope_type, plate_format, plate_acquisition_mode,
             location, zoom_factor=2, well_spacer_size=500,
