@@ -101,7 +101,6 @@ angular.module('jtui.runner')
                 figure: ['projectService', function(projectService){
                     return projectService.getModuleFigure(
                             $stateParams.experimentid,
-                            $stateParams.projectName,
                             $scope.module.name,
                             $scope.jobs[jobIndex].id
                         );

@@ -304,18 +304,14 @@ angular.module('tmaps.ui')
     })
     .state('project', {
         parent: 'jtui',
-        url: '/projects/:projectName',
+        url: '/project',
         resolve: {
             project: ['experiment', 'projectService', '$stateParams',
                         function(experiment, projectService, $stateParams) {
-
-                        return projectService.getProject(
-                            experiment.id, $stateParams.projectName
-                        );
+                        return projectService.getProject(experiment.id);
             }],
             channels: ['experiment', 'projectService', '$stateParams',
                         function(experiment, projectService, $stateParams) {
-
                         return projectService.getChannels(experiment.id);
             }]
         },

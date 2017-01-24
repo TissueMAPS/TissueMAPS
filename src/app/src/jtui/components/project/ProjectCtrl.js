@@ -15,7 +15,7 @@ angular.module('jtui.project')
 .controller('ProjectCtrl', ['$scope', '$state', '$stateParams', '$interval', 'project', 'channels', 'projectService', 'runnerService', '$uibModal', 'hotkeys',
             function ($scope, $state, $stateParams, $interval, project, channels, projectService, runnerService, $uibModal, hotkeys) {
 
-    // console.log('project: ', project)
+    console.log('project: ', project)
     $scope.project = project;
 
     // console.log('channels: ', channels)
@@ -413,7 +413,7 @@ angular.module('jtui.project')
         // console.log('old module name in pipe: ', oldModuleName)
         $scope.oldModuleName = oldModuleName;
         // console.log('new module name: ', newModuleName)
-        var ixPipe = $scope.project.pipe.description.pipeline.map(function(e) { 
+        var ixPipe = $scope.project.pipe.description.pipeline.map(function(e) {
                 return e.name;
             }).indexOf(newModuleName);
         // Module names must be unique!
@@ -433,10 +433,10 @@ angular.module('jtui.project')
         } else {
             var mod = module.name;
             // console.log(mod);
-            var ixHandles = $scope.project.handles.map(function(e) { 
+            var ixHandles = $scope.project.handles.map(function(e) {
                     return e.name;
                 }).indexOf(mod);
-            var ixPipe = $scope.project.pipe.description.pipeline.map(function(e) { 
+            var ixPipe = $scope.project.pipe.description.pipeline.map(function(e) {
                     return e.name;
                 }).indexOf(mod);
             var ixAdded = $scope.addedModuleNames.indexOf(mod);

@@ -38,15 +38,6 @@ angular.module('jtui.module')
     });
     this.modules = modulesDef.promise;
 
-    // Get all available pipelines
-    var pipelinesDef = $q.defer();
-    $http.get('/jtui/available_pipelines').success(function(data) {
-        var pipelines = data.jtpipelines;
-        pipelinesDef.resolve(pipelines);
-    });
-    this.pipelines = pipelinesDef.promise;
-
-
     this.getModuleSourceCode = function(moduleName) {
 
         // TODO: name of the source rather than name of the handle file

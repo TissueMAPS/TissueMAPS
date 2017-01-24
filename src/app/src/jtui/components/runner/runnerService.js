@@ -21,7 +21,7 @@ angular.module('jtui.runner')
         console.log('Run jobs: ', jobIds);
 
         var url = '/jtui/experiments/' + project.experiment_id +
-                  '/projects/' + project.name + '/jobs/run';
+                  '/jobs/run';
         var request = $http({
             method: 'post',
             url: url,
@@ -39,7 +39,7 @@ angular.module('jtui.runner')
         console.log('Get status of submitted jobs...')
 
         var url = '/jtui/experiments/' + project.experiment_id +
-                  '/projects/' + project.name + '/jobs/status';
+                  '/jobs/status';
         var request = $http({
             method: 'post',
             url: url,
@@ -54,7 +54,8 @@ angular.module('jtui.runner')
         console.log('Get output of submitted jobs...')
 
         var url = '/jtui/experiments/' + project.experiment_id +
-                  '/projects/' + project.name + '/jobs/output';
+                  '/jobs/output';
+        console.log(project)
         var request = $http({
             method: 'post',
             url: url,
@@ -71,7 +72,7 @@ angular.module('jtui.runner')
         console.log('kill submitted jobs')
 
         var url = '/jtui/experiments/' + project.experiment_id +
-                  '/projects/' + project.name + '/jobs/kill';
+                  '/jobs/kill';
         var request = $http({
             method: 'post',
             url: url,
@@ -80,66 +81,6 @@ angular.module('jtui.runner')
 
         return(request.then(handleSuccess, handleError));
     }
-
-
-    // var loc = 'ws://' + document.domain + ':' + location.port + '/socket';
-    // console.log('Create socket: ', loc);
-    // var socket = $websocket.$new({
-    //     url: loc,
-    //     lazy: false,
-    //     reconnect: true,
-    //     reconnectInterval: 1000
-    // });
-
-    // socket.$on('$close', function () {
-    //     console.log('Got damn it! Websocket connect closed.');
-    // });
-
-    // socket.$on('$open', function () {
-    //     console.log('Websocket connection opened and registered.');
-    //     socket.$emit('register', {});
-    // });
-    
-
-    // function run(jobIds, project, debug) {
-
-    //     console.log('Send run request to server for job #', jobIds)
-    //     var data = {
-    //         jobIds: jobIds,
-    //         jtproject: jsyaml.safeDump(projectService.values2yaml(project))
-    //     };
-    //     console.log('Request: ', data)
-    //     socket.$emit('run', data);
-    // }
-
-    // function listenToOutput() {
-
-    //     console.log('Listen on output of running job...')
-
-    //     var output = $q.defer();
-
-    //     socket.$on('output', function (d) {
-    //         console.log('Received: ', d);
-    //         output.resolve(d);
-    //     });
-
-    //     return(output.promise);
-    // }
-
-    // function listenToStatus() {
-
-    //     console.log('Listen on status of submitted jobs...')
-        
-    //     var status = $q.defer();
-
-    //     socket.$on('status', function (d) {
-    //         console.log('Received: ', d);
-    //         status.resolve(d);
-    //     });
-
-    //     return(status.promise);
-    // }
-
 
     function handleError(response) {
         // The API response from the server should be returned in a
@@ -168,15 +109,11 @@ angular.module('jtui.runner')
 
     }
 
-
     return({
         run: run,
         kill: kill,
         getStatus: getStatus,
         getOutput: getOutput
-        // listenToOutput: listenToOutput,
-        // listenToStatus: listenToStatus,
-        // socket: socket,
     });
 
 }]);

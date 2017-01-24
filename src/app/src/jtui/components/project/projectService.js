@@ -68,23 +68,22 @@ angular.module('jtui.project')
         return data;
     };
 
-    function getProject(experimentID, pipeName) {
+    function getProject(experimentID) {
 
-        // console.log('get project ', pipeName);
         var projectDef = $q.defer();
-        var url = '/jtui/experiments/' + experimentID + '/projects/' + pipeName;
+        var url = '/jtui/experiments/' + experimentID + '/project';
         $http.get(url).success(function (data) {
             var proj = jsyaml.safeLoad(data.jtproject);
-            // console.log('returned project: ', proj)
+            // console.log('received project description: ', proj)
             if (proj.pipe.description.pipeline == null) {
                 proj.pipe.description.pipeline = [];
             }
             var project = new Project(
                   experimentID,
-                  proj['name'],
                   proj['pipe'],
                   proj['handles']
             );
+            // console.log('created project: ', project)
 
             projectDef.resolve(project);
         });
@@ -104,11 +103,11 @@ angular.module('jtui.project')
         return(channelsDef.promise)
     }
 
-    function getModuleFigure(experimentID, pipelineName, moduleName, jobID) {
+    function getModuleFigure(experimentID, moduleName, jobID) {
 
         var figureDef = $q.defer();
         var url = '/jtui/experiments/' + experimentID +
-                  '/projects/' + pipelineName + '/figure' +
+                  '/figure' +
                   '?' + 'job_id=' + jobID + '&' + 'module_name=' + moduleName;
         $http.get(url).success(function (data) {
             figureDef.resolve(data)
@@ -122,7 +121,7 @@ angular.module('jtui.project')
         // console.log('changed project:', values2yaml(project))
 
         var url = '/jtui/experiments/' + project.experiment_id +
-                  '/projects/' + project.name + '/save';
+                  '/project/' + '/save';
         var request = $http({
             method: 'post',
             url: url,
@@ -139,7 +138,7 @@ angular.module('jtui.project')
         // console.log('changed project:', values2yaml(project))
 
         var url = '/jtui/experiments/' + project.experiment_id +
-                  '/projects/' + project.name + '/check';
+                  '/project/' + '/check';
         var request = $http({
             method: 'post',
             url: url,
@@ -153,8 +152,7 @@ angular.module('jtui.project')
 
     function createJoblist(project) {
 
-        var url = '/jtui/experiments/' + project.experiment_id +
-                  '/projects/' + project.name + '/joblist';
+        var url = '/jtui/experiments/' + project.experiment_id + '/joblist';
         var request = $http({
             method: 'post',
             url: url,
