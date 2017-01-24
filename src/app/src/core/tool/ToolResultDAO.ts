@@ -17,18 +17,11 @@ interface SerializedPlot {
     attributes: any;
 }
 
-interface SerializedLabelLayer {
+interface SerializedToolResult {
     id: string;
     name: string;
     type: string;
     attributes: any;
-    experiment_id: string;
-}
-
-interface SerializedToolResult {
-    id: string;
-    name: string;
-    layer: SerializedLabelLayer;
     submission_id: number;
     plots: SerializedPlot[];
     experiment_id: string;
@@ -48,21 +41,22 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
             id: data.id,
             submissionId: data.submission_id,
             name: data.name,
-            layer: this._createLabelLayer(data.layer),
+            layer: this._createLabelLayer(data),
             plots: data.plots.map((p) => {
                 return this._createPlot(p);
             })
         });
     }
 
-    private _createLabelLayer(layer: SerializedLabelLayer) {
-        var labelLayerType = layer.type;
+    private _createLabelLayer(result: SerializedToolResult) {
+        // TODO: tpoint and zplane
+        var labelLayerType = result.type;
         var LabelLayerClass = window[labelLayerType];
         if (LabelLayerClass !== undefined) {
             return new LabelLayerClass({
-                id: layer.id,
-                name: layer.name,
-                attributes: layer.attributes,
+                id: result.id,
+                name: result.name,
+                attributes: result.attributes,
                 tpoint: 0,
                 zplane: 0,
                 experimentId: this._experimentId
@@ -70,7 +64,7 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
         } else {
             throw new Error(
                 'No client-side LabelLayer class found that can handle' +
-                ' layers of class: ' + layer.type
+                ' layers of class: ' + result.type
             );
         }
     }

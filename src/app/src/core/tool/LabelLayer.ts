@@ -62,7 +62,7 @@ abstract class LabelLayer extends VectorTileLayer {
     /**
      * Construct an object of type LabelLayer.
      * @class LabelLayerArgs
-     * @classdesc A labellayer is a type of layer that will request its vector
+     * @classdesc A LabelLayer is a type of layer that will request its vector
      * features from the server. This layer type is similar to a SegmentationLayer.
      * However, in contrast to a standard SegmentationLayer, the features that
      * are sent by the server contain a 'label' attribute that is set to the
@@ -93,8 +93,8 @@ abstract class LabelLayer extends VectorTileLayer {
         };
         var url = '/api/experiments/' + args.experimentId +
             '/label_layers/' + args.id +
-            '/tiles?x={x}&y={y}&z={z}' + '&zplane=' + args.zplane +
-            '&tpoint=' + args.tpoint;
+            '/tiles?x={x}&y={y}&z={z}' +
+            '&zplane=' + args.zplane + '&tpoint=' + args.tpoint;
 
         var app = $injector.get<Application>('application');
         var size = app.activeViewer.viewport.mapSize;

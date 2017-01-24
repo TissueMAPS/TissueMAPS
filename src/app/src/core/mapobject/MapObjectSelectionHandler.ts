@@ -59,7 +59,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     }
 
     get hasActiveSelection() {
-        return this._activeSelection !== null; 
+        return this._activeSelection !== null;
     }
 
     get activeMapObjectType() {
@@ -145,14 +145,14 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._selectionsByType[type];
     }
 
-    addMapObjectType(t: string) {
+    addSegmentationLayer(t: string) {
         this._selectionsByType[t] = [];
         if (this.activeMapObjectType === null) {
             this.activeMapObjectType = t;
         }
         var segmLayer = new SegmentationLayer(t, {
-            tpoint: 0,
             experimentId: this.viewer.experiment.id,
+            tpoint: 0,
             zplane: 0,
             size: this.viewport.mapSize,
             visible: false

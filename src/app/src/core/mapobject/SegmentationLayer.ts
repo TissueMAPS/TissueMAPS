@@ -30,10 +30,11 @@ class SegmentationLayer extends VectorTileLayer {
      * @classdesc A layer showing outlines for a specific mapobject type.
      */
     constructor(objectTypeName: string, opt: SegmentationLayerOpts) {
-         
-        var url = '/api/experiments/' + opt.experimentId + '/mapobjects/' +
-                  objectTypeName + '/tile' +
-                  '?x={x}&y={y}&z={z}' + '&zplane=' + opt.zplane + '&tpoint=' + opt.tpoint;
+
+        var url = '/api/experiments/' + opt.experimentId +
+                  '/segmentation_layers/' + objectTypeName +
+                  '/tiles?x={x}&y={y}&z={z}' +
+                  '&zplane=' + opt.zplane + '&tpoint=' + opt.tpoint;
         super({
             visible: opt.visible,
             size: opt.size,
