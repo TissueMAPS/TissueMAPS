@@ -53,6 +53,7 @@ class Viewer {
         this.tools = this.getTools();
 
         console.log('instatiate viewer')
+        this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this);
         this.experiment.getChannels()
         .then((channels) => {
             if (channels) {
@@ -65,37 +66,39 @@ class Viewer {
                     this.channels.push(ch);
                     this.viewport.addLayer(ch);
                 });
-            }
-        })
-
-        this.mapObjectSelectionHandler = new MapObjectSelectionHandler(this);
-        this.experiment.getMapobjectTypes()
-        .then((mapobjectTypes) => {
-            // Subsequently add the selection handler and initialize the layers.
-            // TODO: The process of adding the layers could be made nicer.
-            // The view should be set independent of 'ChannelLayers' etc.
-            if (mapobjectTypes) {
-                mapobjectTypes.forEach((t) => {
-                    this.mapobjectTypes.push(t);
-                    this.mapObjectSelectionHandler.addMapObjectType(t.name);
-                    this.mapObjectSelectionHandler.addNewSelection(t.name);
-                });
+                // We need to ensure that segmentation layers are created after
+                // the channels, because otherwise the mapSize might be
+                // incorrect.
+                this.experiment.getMapobjectTypes()
+                .then((mapobjectTypes) => {
+                    // Subsequently add the selection handler and initialize the layers.
+                    // TODO: The process of adding the layers could be made nicer.
+                    // The view should be set independent of 'ChannelLayers' etc.
+                    if (mapobjectTypes) {
+                        mapobjectTypes.forEach((t) => {
+                            this.mapobjectTypes.push(t);
+                            // TODO: layers attribute on mapobjectTypes
+                            this.mapObjectSelectionHandler.addSegmentationLayer(t.name);
+                            this.mapObjectSelectionHandler.addNewSelection(t.name);
+                        });
+                    }
+                })
+                // // DEBUG
+                // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
+                //     tpoint: 0,
+                //     experimentId: this.experiment.id,
+                //     zplane: 0,
+                //     size: this.viewport.mapSize,
+                //     visible: false
+                // });
+                // segmLayer.strokeColor = Color.RED;
+                // segmLayer.fillColor = Color.WHITE.withAlpha(0);
+                // this.viewport.addLayer(segmLayer);
             }
         })
 
         this._getExistingToolResults();
 
-        //// DEBUG
-        // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
-        //     tpoint: 0,
-        //     experimentId: this.experiment.id,
-        //     zplane: 0,
-        //     size: this.viewport.mapSize,
-        //     visible: true
-        // });
-        // segmLayer.strokeColor = Color.RED;
-        // segmLayer.fillColor = Color.WHITE.withAlpha(0);
-        // this.viewport.addLayer(segmLayer);
     }
 
     getTools(): ng.IPromise<any> {
@@ -200,7 +203,7 @@ class Viewer {
 
     /**
      * Handle the result of a successful tool response.
-     * @param data The response that was received by the client.
+     * @param data The response that was received by the server.
      * This object also contains the tool-specific result object.
      */
     private _handleSuccessfulToolResult(res: SerializedToolResult) {
@@ -306,7 +309,7 @@ class Viewer {
                 }
             });
         };
-        subscription = this._$interval(monitor, 3000);
+        subscription = this._$interval(monitor, 5000);
     }
 
 

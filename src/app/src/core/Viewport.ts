@@ -135,11 +135,12 @@ class Viewport implements Serializable<Viewport> {
     initMap(mapSize: Size) {
         // Center the view in the iddle of the image
         // (Note the negative sign in front of half the height)
+        console.log(mapSize)
         var width = mapSize.width
         var height = mapSize.height;
         var center = [width / 2, - height / 2];
         var extent = [0, 0, width, height];
-        
+
         // Calculate the maximal resolution from the image size.
         // This corresponds to max number of squared tiles in either the height
         // or width of the image.
@@ -149,7 +150,7 @@ class Viewport implements Serializable<Viewport> {
             tileSizeIter *= 2;
             maxRes *= 2;
         }
-        
+
         var view = new ol.View({
             projection: new ol.proj.Projection({
                 code: 'tm',
