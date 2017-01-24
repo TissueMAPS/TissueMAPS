@@ -646,17 +646,47 @@ class SegmentedObjects(LabelImage):
                 'Argument "measurement" must have type '
                 'tmlib.workflow.jterator.handles.Measurement.'
             )
-        val = measurement.value
-        if any([any(v.index != np.array(self.labels)) for v in val]):
-            raise IndexError(
-                'Index of "measurement" must match object labels.'
-            )
-        if any([len(np.unique(v.columns)) != len(v.columns) for v in val]):
-            raise ValueError(
-                'Column names of "measurement" must be unique.'
-            )
-        for t, v in enumerate(measurement.value):
-            self._features[t].append(v)
+        for t, val in enumerate(measurement.value):
+            if len(val.index) < len(self.labels):
+                logger.warn(
+                    'missing values for "%s" at time point %d',
+                    measurement.name, t
+                )
+                for label in self.labels:
+                    if label not in val.index:
+                        logger.warn(
+                            'add NaN values for missing object #%d', label
+                        )
+                        val.loc[label, :] = np.NaN
+                val.sort_index(inplace=True)
+            elif len(val.index) > len(self.labels):
+                if len(np.unique(val.index)) < len(val.index):
+                    logger.warn(
+                        'duplicate values for "%s" at time point %d',
+                        measurement.name, t
+                    )
+                    logger.info('remove duplicates and keep first')
+                    val = val[~val.index.duplicated(keep='first')]
+                else:
+                    logger.warn(
+                        'too many values for "%s" at time point %d',
+                        measurement.name, t
+                    )
+                    for i in val.index:
+                        if i not in self.labels:
+                            logger.warn('remove values for object #%d', i)
+                            val.drop(i, inplace=True)
+            if np.any(val.index.values != np.array(self.labels)):
+                raise ValueError(
+                    'Labels of objects for "%s" at time point %d do not match!'
+                    % (measurement.name, t)
+                )
+            if len(np.unique(val.columns)) != len(val.columns):
+                raise ValueError(
+                    'Column names of "%s" at time point %d must be unique.'
+                    % (measurement.name, t)
+                )
+            self._features[t].append(val)
 
     def __str__(self):
         return '<SegmentedObjects(name=%r, key=%r)>' % (self.name, self.key)
