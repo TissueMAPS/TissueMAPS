@@ -243,52 +243,6 @@ class SetupCtrl {
         this._displayResult('Kill', result);
     }
 
-    deletePipeline(s: WorkflowStep) {
-        var projectName = '';
-        for (var arg in s.extra_args) {
-            if (s.extra_args[arg].name == 'pipeline') {
-                projectName = s.extra_args[arg].value;
-            }
-        }
-        var result;
-        if (projectName == '' || projectName == null) {
-            result = {
-                success: false,
-                message: 'No pipeline selected.'
-            };
-            this._displayResult('Delete pipeline', result);
-        } else {
-            // console.log('pipeline that should be deleted: ', projectName)
-            this._dialogService.warning(
-                'Do you really want to delete the pipeline?'
-            )
-            .then((deleteForReal) => {
-                if (deleteForReal) {
-                    // console.log('delete pipeline HAAAAARD')
-                    result = this._removeJteratorProject(projectName)
-                    .then((res) => {
-                        result = {
-                            success: res.status == 200,
-                            message: res.statusText
-                        };
-                        this._displayResult('Delete Pipeline', result);
-                        if (result.success) {
-                            // reload descrioption such that choices are
-                            // updated
-                            var desc = this.workflow.getDescription(
-                                this.workflow.stages.length - 1
-                            );
-                            this._workflowService.save(this.experiment)
-                            this._workflowService.update(
-                                this.experiment, this.plates
-                            );
-                        }
-                    });
-                }
-            });
-        }
-    }
-
     createPipeline() {
         // TODO: create template pipelines
         var pipelineNames = [];
@@ -311,7 +265,7 @@ class SetupCtrl {
             )
             .then((pipeName) => {
                 // console.log('create pipeline: ', pipeName)
-                this._createJteratorProject(pipeName, templateName)
+                this._createJteratorProject(templateName)
                 .then((res) => {
                     var result = {
                         success: res.status == 200,
@@ -319,8 +273,7 @@ class SetupCtrl {
                     };
                     if (result.success) {
                         this._$state.go('project', {
-                            experimentid: this.experiment.id,
-                            projectName: pipeName
+                            experimentid: this.experiment.id
                         });
                     } else {
                         this._displayResult('Create pipeline', result);
@@ -330,26 +283,9 @@ class SetupCtrl {
         });
     }
 
-    editPipeline(s: WorkflowStep) {
-        var project = '';
-        for (var arg in s.extra_args) {
-            if (s.extra_args[arg].name == 'pipeline') {
-                project = s.extra_args[arg].value;
-            }
-        }
-        // console.log(project)
-        if (project == '' || project == null) {
-            var result = {
-                success: false,
-                message: 'No pipeline selected.'
-            };
-            this._displayResult('Edit pipeline', result);
-        } else {
-            this._$state.go('project', {
-                experimentid: this.experiment.id,
-                projectName: project
-            });
-        }
+    editPipeline() {
+        // TODO: create pipeline if none exists yet
+        this._$state.go('project', {experimentid: this.experiment.id});
     }
 
     private _getInput(task: string, description: string, widgetType: string, choices: any) {
@@ -509,29 +445,11 @@ class SetupCtrl {
         this._monitoringPromise = null;
     }
 
-    private _createJteratorProject(projectName, templateName) {
+    private _createJteratorProject(templateName) {
         var $http = $injector.get<ng.IHttpService>('$http');
         var $q = $injector.get<ng.IQService>('$q');
-        var url = '/jtui/experiments/' + this.experiment.id +
-                  '/projects/' + projectName + '/create';
+        var url = '/jtui/experiments/' + this.experiment.id + '/project';
         return $http.post(url, {'template': templateName})
-        .then((resp) => {
-            // console.log(resp)
-            return resp;
-        })
-        .catch((resp) => {
-            // console.log(resp)
-            return resp;
-            // return $q.reject(resp.data.error);
-        });
-    }
-
-    private _removeJteratorProject(projectName) {
-        var $http = $injector.get<ng.IHttpService>('$http');
-        var $q = $injector.get<ng.IQService>('$q');
-        var url = '/jtui/experiments/' + this.experiment.id +
-                  '/projects/' + projectName + '/delete';
-        return $http.post(url, {})
         .then((resp) => {
             // console.log(resp)
             return resp;
