@@ -200,7 +200,8 @@ def encode_tool_result(obj, encoder):
         'id': encode_pk(obj.id),
         'name': obj.name,
         'submission_id': obj.submission_id,
-        'type': obj.tool_name,
+        'tool_name': obj.tool_name,
+        'type': obj.type,
         'attributes': obj.attributes,
         'layers': [encoder.default(layer) for layer in obj.mapobject_type.layers],
         'plots': map(encoder.default, obj.plots)
