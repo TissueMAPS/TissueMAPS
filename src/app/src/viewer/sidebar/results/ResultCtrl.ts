@@ -25,7 +25,9 @@ class ResultCtrl {
 
     set opacityInput(v: number) {
         this._opacityInput = v;
-        this.result.layer.opacity = v / 100;
+        this.result.layers.forEach((l) => {
+            l.opacity = v / 100;
+        })
     }
 
     toggleRenamingMode() {
@@ -34,10 +36,11 @@ class ResultCtrl {
 
     changeName() {
         var dao = new ToolResultDAO(this.result.viewer.experiment.id);
-        var newName = this.result.name;
+        var newName = this.result.name.replace(/[^-A-Z0-9]+/ig, "_");
         dao.update(this.result.id, {
-            name: this.result.name
+            name: newName
         }).then(() => {
+            // Replace all special characters by underscore
             this.result.name = newName;
         }, () => {
             this.result.name = this._origName;
@@ -48,7 +51,7 @@ class ResultCtrl {
 
     constructor($scope: any, private _$stateParams) {
         this.result = $scope.result;
-        this.opacityInput = this.result.layer.opacity * 100;
+        this.opacityInput = this.result.layers[0].opacity * 100;
         this._origName = this.result.name;
     }
 }

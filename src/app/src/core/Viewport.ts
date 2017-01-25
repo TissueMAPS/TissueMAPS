@@ -135,7 +135,6 @@ class Viewport implements Serializable<Viewport> {
     initMap(mapSize: Size) {
         // Center the view in the iddle of the image
         // (Note the negative sign in front of half the height)
-        console.log(mapSize)
         var width = mapSize.width
         var height = mapSize.height;
         var center = [width / 2, - height / 2];

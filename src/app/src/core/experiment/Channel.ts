@@ -40,6 +40,7 @@ class Channel implements Layer {
     private _currentTpoint = 0;
     private _currentZplane = 0;
     private _visible: boolean;
+    private _$stateParams: any;
 
     /**
      * Construct a new Channel.
@@ -57,6 +58,7 @@ class Channel implements Layer {
      * @param {boolean} args.visible - If the channel should be visible when it is added. Default is false.
      */
     constructor(args: ChannelArgs) {
+        this._$stateParams = $injector.get<any>('$stateParams');
         /**
          * @property {string} name - The name of this channel.
          * @default Color.WHITE
@@ -68,7 +70,7 @@ class Channel implements Layer {
          */
         this.id = args.id;
         this.bitDepth = args.bitDepth;
-        var isChannelVisible = args.visible !== undefined ? args.visible : true;
+        var isVisible = args.visible !== undefined ? args.visible : true;
         args.layers.forEach((l) => {
             var isBottomLayer = l.zplane === 0 && l.tpoint === 0;
             this._layers[l.zplane + '-' + l.tpoint] = new ChannelLayer({
@@ -79,10 +81,10 @@ class Channel implements Layer {
                 maxIntensity: l.max_intensity,
                 minIntensity: l.min_intensity,
                 imageSize: l.image_size,
-                visible: isChannelVisible && isBottomLayer
+                visible: isVisible && isBottomLayer
             });
         });
-        this._visible = isChannelVisible;
+        this._visible = isVisible;
         if (_.values(this._layers).length > 0) {
             this.maxIntensity = _.values(this._layers)[0].maxIntensity;
             this.minIntensity = _.values(this._layers)[0].minIntensity;
@@ -237,9 +239,9 @@ class Channel implements Layer {
     }
 
     set visible(val: boolean) {
-        var layer = this._layers[this._currentZplane + '-' + this._currentTpoint];
-        if (layer !== undefined) {
-            layer.visible = val;
+        var k = this._currentZplane + '-' + this._currentTpoint;
+        if (this._layers[k] !== undefined) {
+            this._layers[k].visible = val;
         }
         this._visible = val;
     }

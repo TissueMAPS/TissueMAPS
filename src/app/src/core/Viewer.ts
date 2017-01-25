@@ -66,36 +66,36 @@ class Viewer {
                     this.channels.push(ch);
                     this.viewport.addLayer(ch);
                 });
-                // We need to ensure that segmentation layers are created after
-                // the channels, because otherwise the mapSize might be
-                // incorrect.
-                this.experiment.getMapobjectTypes()
-                .then((mapobjectTypes) => {
-                    // Subsequently add the selection handler and initialize the layers.
-                    // TODO: The process of adding the layers could be made nicer.
-                    // The view should be set independent of 'ChannelLayers' etc.
-                    if (mapobjectTypes) {
-                        mapobjectTypes.forEach((t) => {
-                            this.mapobjectTypes.push(t);
-                            // TODO: layers attribute on mapobjectTypes
-                            this.mapObjectSelectionHandler.addSegmentationLayer(t.name);
-                            this.mapObjectSelectionHandler.addNewSelection(t.name);
-                        });
-                    }
-                })
-                // // DEBUG
-                // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
-                //     tpoint: 0,
-                //     experimentId: this.experiment.id,
-                //     zplane: 0,
-                //     size: this.viewport.mapSize,
-                //     visible: false
-                // });
-                // segmLayer.strokeColor = Color.RED;
-                // segmLayer.fillColor = Color.WHITE.withAlpha(0);
-                // this.viewport.addLayer(segmLayer);
             }
         })
+
+        // We need to ensure that segmentation layers are created after
+        // the channels, because otherwise the mapSize might be
+        // incorrect.
+        this.experiment.getMapobjectTypes()
+        .then((mapobjectTypes) => {
+            // Subsequently add the selection handler and initialize the layers.
+            // TODO: The process of adding the layers could be made nicer.
+            // The view should be set independent of 'ChannelLayers' etc.
+            if (mapobjectTypes) {
+                mapobjectTypes.forEach((t) => {
+                    this.mapobjectTypes.push(t);
+                    this.mapObjectSelectionHandler.addMapobjectType(t);
+                    this.mapObjectSelectionHandler.addNewSelection(t.name);
+                });
+            }
+        })
+        // // DEBUG
+        // var segmLayer = new SegmentationLayer('DEBUG_TILE', {
+        //     tpoint: 0,
+        //     experimentId: this.experiment.id,
+        //     zplane: 0,
+        //     size: this.viewport.mapSize,
+        //     visible: false
+        // });
+        // segmLayer.strokeColor = Color.RED;
+        // segmLayer.fillColor = Color.WHITE.withAlpha(0);
+        // this.viewport.addLayer(segmLayer);
 
         this._getExistingToolResults();
 
@@ -166,6 +166,9 @@ class Viewer {
         this.channels.forEach((ch) => {
             ch.setPlane(this._currentZplane, t);
         });
+        this.mapobjectTypes.forEach((mt) => {
+            mt.setPlane(this._currentZplane, t);
+        })
         this._currentTpoint = t;
     }
 
@@ -177,6 +180,9 @@ class Viewer {
         this.channels.forEach((ch) => {
             ch.setPlane(z, this._currentTpoint);
         });
+        this.mapobjectTypes.forEach((mt) => {
+            mt.setPlane(z, this._currentTpoint);
+        })
         this._currentZplane = z;
     }
 

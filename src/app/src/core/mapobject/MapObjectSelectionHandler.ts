@@ -36,7 +36,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
 
     private _activeMapObjectType: string = null;
     private _activeSelection: MapObjectSelection = null;
-    private _segmentationLayers: {[objectType: string]: SegmentationLayer;} = {};
+    private _mapobjectTypes: {[objectType: string]: MapobjectType;} = {};
 
     /**
      * @classdesc A manager class that handles mapobject selections and how
@@ -94,13 +94,13 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
     private _hideSegmentationLayersExceptForType(t: string) {
         // Hide all other segmentation layers (mapobject outlines)
         // form the map and only display the one for the active mapobject type.
-        for (var t2 in this._segmentationLayers) {
+        for (var t2 in this._mapobjectTypes) {
             if (t2 !== t) {
-                this._segmentationLayers[t2].visible = false;
+                this._mapobjectTypes[t2].visible = false;
             }
         }
-        if (this._segmentationLayers[t] !== undefined) {
-            this._segmentationLayers[t].visible = true;
+        if (this._mapobjectTypes[t] !== undefined) {
+            this._mapobjectTypes[t].visible = true;
         }
     }
 
@@ -145,20 +145,13 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         return this._selectionsByType[type];
     }
 
-    addSegmentationLayer(t: string) {
-        this._selectionsByType[t] = [];
+    addMapobjectType(objectType: MapobjectType) {
+        this._selectionsByType[objectType.name] = [];
         if (this.activeMapObjectType === null) {
-            this.activeMapObjectType = t;
+            this.activeMapObjectType = objectType.name;
         }
-        var segmLayer = new SegmentationLayer(t, {
-            experimentId: this.viewer.experiment.id,
-            tpoint: 0,
-            zplane: 0,
-            size: this.viewport.mapSize,
-            visible: false
-        });
-        this._segmentationLayers[t] = segmLayer;
-        this.viewport.addLayer(segmLayer);
+        this._mapobjectTypes[name] = objectType;
+        this.viewport.addLayer(objectType);
     }
 
     addSelection(sel: MapObjectSelection) {

@@ -17,12 +17,21 @@ interface SerializedPlot {
     attributes: any;
 }
 
+interface SerializedSegmentationLayer {
+    id: string;
+    experiment_id: string;
+    image_size: any;
+    tpoint: number;
+    zplane: number;
+}
+
 interface SerializedToolResult {
     id: string;
     name: string;
     type: string;
     attributes: any;
     submission_id: number;
+    layers: SerializedSegmentationLayer[];
     plots: SerializedPlot[];
     experiment_id: string;
 }
@@ -41,30 +50,33 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
             id: data.id,
             submissionId: data.submission_id,
             name: data.name,
-            layer: this._createLabelLayer(data),
+            layers: data.layers.map((layer) => {
+                return this._createLabelLayer(layer, data)
+            }),
             plots: data.plots.map((p) => {
                 return this._createPlot(p);
             })
         });
     }
 
-    private _createLabelLayer(result: SerializedToolResult) {
-        // TODO: tpoint and zplane
-        var labelLayerType = result.type;
+    private _createLabelLayer(layerArgs: SerializedSegmentationLayer, resultArgs: SerializedToolResult) {
+        var labelLayerType = resultArgs.type + 'LabelLayer';
         var LabelLayerClass = window[labelLayerType];
         if (LabelLayerClass !== undefined) {
-            return new LabelLayerClass({
-                id: result.id,
-                name: result.name,
-                attributes: result.attributes,
-                tpoint: 0,
-                zplane: 0,
-                experimentId: this._experimentId
+            var layer = new LabelLayerClass({
+                segmentationLayerId: layerArgs.id,
+                name: resultArgs.name,
+                attributes: resultArgs.attributes,
+                tpoint: layerArgs.tpoint,
+                zplane: layerArgs.zplane,
+                size: layerArgs.image_size,
+                experimentId: layerArgs.experiment_id
             });
+            return layer;
         } else {
             throw new Error(
-                'No client-side LabelLayer class found that can handle' +
-                ' layers of class: ' + result.type
+                'No client-side LabelLayer class found for tool: ' +
+                resultArgs.type
             );
         }
     }

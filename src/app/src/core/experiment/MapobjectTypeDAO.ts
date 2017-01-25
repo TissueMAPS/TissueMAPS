@@ -11,18 +11,24 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-class HeatmapLabelLayer extends LabelLayer {
-    getLabelColorMapper() {
-        return (label) => {
-            var normLabel = (label - this.attributes.min) / (this.attributes.max - this.attributes.min);
-            var rescaledLabel = 255 * normLabel;
-            return new Color(255, 255 - rescaledLabel, 255 - rescaledLabel);
-        };
+
+class MapobjectTypeDAO extends HTTPDataAccessObject<MapobjectType> {
+
+    /**
+     * @classdesc A DataAccessObject for the Acquisition class.
+     */
+    constructor(experimentId: string) {
+        super('/api/experiments/' + experimentId + '/mapobject_types')
     }
 
-    getLegend() {
-        return new ContinuousLabelLegend({
-            min: this.attributes.min, max: this.attributes.max
+    fromJSON(mt: SerializedMapobjectType) {
+        return new MapobjectType({
+            id: mt.id,
+            name: mt.name,
+            features: mt.features,
+            layers: mt.layers
         });
     }
 }
+
+

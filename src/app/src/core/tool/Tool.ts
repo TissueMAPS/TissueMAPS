@@ -31,8 +31,8 @@ interface ServerToolRequest {
 /**
  * An interface for the content of the AJAX response the server delivers
  * after processing a tool request.
- * The result_type will determine how the data contained in `payload` will
- * be processed client-side (e.g. visualized as a LabelResultLayer).
+ * The type of the result determines how the data contained in `payload` gets
+ * handled client-side (e.g. visualized as a LabelLayer).
  */
 interface ServerToolResponse {
     data: SerializedToolResult;

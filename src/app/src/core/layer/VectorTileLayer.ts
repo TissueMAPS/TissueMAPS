@@ -81,7 +81,7 @@ class VectorTileLayer extends BaseLayer<ol.layer.VectorTile> {
         super();
 
         var opt = opt === undefined ? <VectorTileLayerOpts> {} : opt;
-        
+
         // Same extent as zoomify
         var extent = [0, -opt.size.height, opt.size.width, 0];
 

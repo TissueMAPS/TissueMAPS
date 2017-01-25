@@ -13,9 +13,12 @@
 // limitations under the License.
 class ObjectLayerCtrl {
 
-    layer: SegmentationLayer;
+    mapobjectType: MapobjectType;
+    inRenamingMode: boolean;
 
     private _opacityInput: number;
+    private _origName: string;
+    private _$stateParams: any;
 
     get opacityInput() {
         return this._opacityInput;
@@ -23,7 +26,9 @@ class ObjectLayerCtrl {
 
     set opacityInput(v: number) {
         this._opacityInput = v;
-        this.layer.opacity = v / 100;
+        this.mapobjectType.layers.forEach((l) => {
+            l.opacity = v / 100;
+        })
     }
 
     selectableColors = [
@@ -42,25 +47,48 @@ class ObjectLayerCtrl {
 
     static $inject = ['$scope'];
 
+
+    changeName() {
+        var dao = new MapobjectTypeDAO(this._$stateParams.experimentid);
+        var newName = this.mapobjectType.name.replace(/[^-A-Z0-9]+/ig, "_");
+        dao.update(this.mapobjectType.id, {
+            name: newName
+        }).then(() => {
+            // Replace all special characters by underscore
+            this.mapobjectType.name = newName;
+        }, () => {
+            this.mapobjectType.name = this._origName;
+        });
+    }
+
+    toggleRenamingMode() {
+        this.inRenamingMode = !this.inRenamingMode;
+    }
+
     constructor($scope: any) {
-        this.layer = $scope.layer;
-        this.opacityInput = this.layer.opacity * 100;
+        this._$stateParams = $injector.get<any>('$stateParams');
+        this.inRenamingMode = false;
+        this.mapobjectType = $scope.mapobjectType;
+        this.opacityInput = this.mapobjectType.layers[0].opacity * 100;
+        this._origName = this.mapobjectType.name;
         $scope.$watch('layerCtrl.selectedColor.fillColor', (newVal, oldVal) => {
             if (newVal !== oldVal && newVal !== undefined) {
-                var fillColor = Color.fromHex(<string>newVal);
-                this.layer.fillColor = fillColor;
+                this.mapobjectType.layers.forEach((l) => {
+                    l.fillColor = Color.fromHex(<string>newVal);
+                });
             }
         });
         $scope.$watch('layerCtrl.selectedColor.strokeColor', (newVal, oldVal) => {
             if (newVal !== oldVal && newVal !== undefined) {
-                var strokeColor = Color.fromHex(<string>newVal);
-                this.layer.strokeColor = strokeColor;
+                this.mapobjectType.layers.forEach((l) => {
+                    l.strokeColor = Color.fromHex(<string>newVal);
+                });
             }
         });
         // Initialize the selected color of each property based on the color
         // that is already assigned to this property.
-        this.selectedColor.fillColor = this.layer.fillColor.toHex();
-        this.selectedColor.strokeColor = this.layer.strokeColor.toHex();
+        this.selectedColor.fillColor = this.mapobjectType.layers[0].fillColor.toHex();
+        this.selectedColor.strokeColor = this.mapobjectType.layers[0].strokeColor.toHex();
     }
 }
 

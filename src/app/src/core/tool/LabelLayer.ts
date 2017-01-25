@@ -18,18 +18,20 @@ interface LabelColorMapper {
     (label: any): Color;
 }
 
+// TODO: segmentation layer and tool result id
 interface LabelLayerArgs {
-    id: string;
+    segmentationLayerId: string;
+    name: string;
     attributes: any;
     tpoint: number;
     zplane: number;
     visible?: boolean;
-    experimentId: string;
+    size: Size;
 }
 
 abstract class LabelLayer extends VectorTileLayer {
 
-    id: string;
+    segmentationLayerId: string;
     attributes: any;
 
     private _colorMapper: LabelColorMapper;
@@ -47,6 +49,7 @@ abstract class LabelLayer extends VectorTileLayer {
      * interpreted.
      */
     abstract getLegend(): Legend;
+    private _$stateParams: any;
 
     /**
      * It's important that the getLabelColorMapper() method is only called
@@ -91,22 +94,20 @@ abstract class LabelLayer extends VectorTileLayer {
                 throw new Error('Unknown geometry type for feature');
             }
         };
-        var url = '/api/experiments/' + args.experimentId +
-            '/label_layers/' + args.id +
-            '/tiles?x={x}&y={y}&z={z}' +
-            '&zplane=' + args.zplane + '&tpoint=' + args.tpoint;
-
-        var app = $injector.get<Application>('application');
-        var size = app.activeViewer.viewport.mapSize;
+        var _$stateParams = $injector.get<any>('$stateParams');
+        var url = '/api/experiments/' + _$stateParams.experimentid +
+            '/segmentation_layers/' + args.segmentationLayerId +
+            '/labeled_tiles?x={x}&y={y}&z={z}' +
+            '&result_name=' + args.name
 
         super({
             style: styleFunc,
             url: url,
             visible: args.visible,
-            size: size
+            size: args.size
         });
 
-        this.id = args.id;
+        this.segmentationLayerId = args.segmentationLayerId;
         this.attributes = args.attributes;
     }
 }

@@ -64,7 +64,9 @@
         "app/src/core/experiment/Acquisition.ts",
         "app/src/core/experiment/AcquisitionDAO.ts",
         "app/src/core/experiment/MapobjectType.ts",
+        "app/src/core/experiment/MapobjectTypeDAO.ts",
         "app/src/core/experiment/Channel.ts",
+        "app/src/core/experiment/ChannelDAO.ts",
         "app/src/core/experiment/ChannelLayer.ts",
 
         "app/src/core/layer/Layer.ts",

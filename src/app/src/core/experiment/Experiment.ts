@@ -49,9 +49,9 @@ class Experiment implements Model {
     }
 
     getChannels(): ng.IPromise<any> {
+        // TODO: use ChannelDAO
         return this._$http.get('/api/experiments/' + this.id + '/channels')
         .then((resp: any) => {
-            // console.log(resp)
             return resp.data.data.map((ch, index) => {
                 return new Channel({
                     id: ch.id,
@@ -68,6 +68,7 @@ class Experiment implements Model {
     }
 
     getMapobjectTypes(): ng.IPromise<any> {
+        // TODO: use MapobjectTypeDAO
         return this._$http.get('/api/experiments/' + this.id + '/mapobject_types')
         .then((resp: any) => {
             // console.log(resp)

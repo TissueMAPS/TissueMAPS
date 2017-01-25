@@ -14,6 +14,24 @@
 angular.module('tmaps.ui')
 .controller('ChannelCtrl', ['$scope', function($scope) {
     var self = this;
+    this.inRenamingMode = false;
+
+    this.renameChannel = function(channel) {
+        var dao = new ChannelDAO(channel._$stateParams.experimentid);
+        var newName = channel.name.replace(/[^-A-Z0-9]+/ig, "_");
+        dao.update(channel.id, {
+            name: newName
+        }).then(() => {
+            // Replace all special characters by underscore
+            channel.name = newName;
+        }, () => {
+            channel.name = this._origName;
+        });
+    }
+
+    this.toggleRenamingMode = function() {
+        this.inRenamingMode = !this.inRenamingMode;
+    }
 
     // Call the exposed method of the boxCtrl
     function getSelectedChannels() {
@@ -61,6 +79,7 @@ angular.module('tmaps.ui')
     // multiplying times 100 so that 0.5 * 100 = 50).
 
     // Initialize the input models
+    this._origName = $scope.channel.name;
     this.maxInput = $scope.channel.max * 255;
     this.minInput = $scope.channel.min * 255;
     this.brightnessInput = $scope.channel.brightness * 100;

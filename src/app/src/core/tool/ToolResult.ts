@@ -15,7 +15,7 @@ interface ToolResultArgs {
     id: string;
     name: string;
     submissionId: number;
-    layer: LabelLayer;
+    layers: LabelLayer[];
     plots: Plot[];
     visible?: boolean;
 }
@@ -25,7 +25,7 @@ class ToolResult {
     id: string;
     submissionId: number;
     name: string;
-    layer: LabelLayer;
+    layers: LabelLayer[];
     legend: Legend;
     plots: Plot[];
 
@@ -41,8 +41,8 @@ class ToolResult {
     }
 
     set visible(doShow: boolean) {
-        if (this.layer) {
-            this.layer.visible = doShow;
+        if (this.layers[0]) {
+            this.layers[0].visible = doShow;
         }
         if (this.legend) {
             this.legend.visible = doShow;
@@ -54,8 +54,8 @@ class ToolResult {
     }
 
     delete() {
-        if (this.layer) {
-            this._viewer.viewport.removeLayer(this.layer);
+        if (this.layers[0]) {
+            this._viewer.viewport.removeLayer(this.layers[0]);
             // TODO: delete tool result
             // this._$http.delete()
         }
@@ -76,9 +76,9 @@ class ToolResult {
     constructor(args: ToolResultArgs) {
         this.id = args.id;
         this.name = args.name;
-        this.layer = args.layer !== undefined ? args.layer : null;
-        if (this.layer) {
-            this.legend = this.layer.getLegend();
+        this.layers = args.layers !== undefined ? args.layers : [];
+        if (this.layers) {
+            this.legend = this.layers[0].getLegend();
         } else {
             this.legend = null;
         }
@@ -89,8 +89,8 @@ class ToolResult {
 
     attachToViewer(viewer: Viewer) {
         this._viewer = viewer;
-        if (this.layer) {
-            this._viewer.viewport.addLayer(this.layer);
+        if (this.layers[0]) {
+            this._viewer.viewport.addLayer(this.layers[0]);
             this.legend.attachToViewer(viewer);
         }
     }

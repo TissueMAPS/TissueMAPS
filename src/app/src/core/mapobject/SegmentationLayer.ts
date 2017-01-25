@@ -13,37 +13,37 @@
 // limitations under the License.
 /// <reference path='../layer/VectorTileLayer.ts'/>
 
-interface SegmentationLayerOpts {
+interface SegmentationLayerArgs {
+    id: string;
     tpoint: number;
     zplane: number;
     size: Size;
-    experimentId: string;
     visible?: boolean;
 }
 
 class SegmentationLayer extends VectorTileLayer {
 
-    objectTypeName: string;
+    id: string;
 
     /**
      * Construct a SegmentationLayer.
      * @classdesc A layer showing outlines for a specific mapobject type.
      */
-    constructor(objectTypeName: string, opt: SegmentationLayerOpts) {
+    constructor(args: SegmentationLayerArgs) {
 
-        var url = '/api/experiments/' + opt.experimentId +
-                  '/segmentation_layers/' + objectTypeName +
-                  '/tiles?x={x}&y={y}&z={z}' +
-                  '&zplane=' + opt.zplane + '&tpoint=' + opt.tpoint;
+        var _$stateParams = $injector.get<any>('$stateParams');
+        var url = '/api/experiments/' + _$stateParams.experimentid +
+                  '/segmentation_layers/' + args.id +
+                  '/tiles?x={x}&y={y}&z={z}';
         super({
-            visible: opt.visible,
-            size: opt.size,
+            visible: args.visible,
+            size: args.size,
             url: url,
             strokeColor: Color.WHITE,
             fillColor: Color.WHITE.withAlpha(0),
         });
 
-        this.objectTypeName = objectTypeName;
+        this.id = args.id;
     }
 }
 

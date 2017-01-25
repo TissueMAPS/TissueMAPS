@@ -15,19 +15,19 @@ class ObjectSettingsCtrl {
 
     viewport: Viewport;
 
-    private _cachedLayers: SegmentationLayer[];
+    private _cachedMapobjectTypes: MapobjectType[];
 
     constructor() {}
 
-    get layers(): SegmentationLayer[] {
-        var layers = <SegmentationLayer[]> _(this.viewport.layers).filter((l) => {
-            return l instanceof SegmentationLayer;
+    get mapobjectTypes(): MapobjectType[] {
+        var types = <MapobjectType[]> _(this.viewport.layers).filter((l) => {
+            return l instanceof MapobjectType;
         });
-        if (!this._cachedLayers
-            || layers.length !== this._cachedLayers.length) {
-            this._cachedLayers = layers;
+        if (!this._cachedMapobjectTypes
+            || types.length !== this._cachedMapobjectTypes.length) {
+            this._cachedMapobjectTypes = types;
         }
-        return this._cachedLayers;
+        return this._cachedMapobjectTypes;
     }
 
     removeLayer = function(layer) {
