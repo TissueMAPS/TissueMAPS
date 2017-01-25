@@ -95,7 +95,6 @@ def encode_channel_layer(obj, encoder):
         'zplane': obj.zplane,
         'max_intensity': obj.max_intensity,
         'min_intensity': obj.min_intensity,
-        'experiment_id': encode_pk(obj.channel.experiment_id),
         'image_size': {
             'width': obj.channel.experiment.pyramid_width,
             'height': obj.channel.experiment.pyramid_height
@@ -172,7 +171,6 @@ def encode_segmentation_layer(obj, encoder):
         'id': encode_pk(obj.id),
         'tpoint': obj.tpoint,
         'zplane': obj.zplane,
-        'experiment_id': encode_pk(obj.mapobject_type.experiment_id),
         'image_size': {
             'width': obj.mapobject_type.experiment.pyramid_width,
             'height': obj.mapobject_type.experiment.pyramid_height
@@ -202,8 +200,9 @@ def encode_tool_result(obj, encoder):
         'id': encode_pk(obj.id),
         'name': obj.name,
         'submission_id': obj.submission_id,
-        'type': obj.type,
+        'type': obj.tool_name,
         'attributes': obj.attributes,
+        'layers': [encoder.default(layer) for layer in obj.mapobject_type.layers],
         'plots': map(encoder.default, obj.plots)
     }
 

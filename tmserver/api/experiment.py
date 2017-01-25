@@ -153,6 +153,53 @@ def get_channels(experiment_id):
         })
 
 
+@api.route(
+    '/experiments/<experiment_id>/channels/<channel_id>', methods=['PUT']
+)
+@jwt_required()
+@decode_query_ids('read')
+def rename_channel(experiment_id, channel_id):
+    """
+    .. http:put:: /api/experiments/(string:experiment_id)/channels/(string:channel_id)
+
+        Rename a channel.
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "name": "New Name"
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+
+    """
+    data = request.get_json()
+    name = data.get('name')
+    logger.info(
+        'rename channel %d of experiment %d', channel_id, experiment_id
+    )
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        channel = session.query(tm.Channel).get(channel_id)
+        channel.name = name
+    return jsonify(message='ok')
+
+
 @api.route('/experiments/<experiment_id>/mapobject_types', methods=['GET'])
 @jwt_required()
 @decode_query_ids('read')
@@ -195,6 +242,56 @@ def get_mapobject_types(experiment_id):
         return jsonify(data=mapobject_types)
 
 
+@api.route(
+    '/experiments/<experiment_id>/mapobject_types/<mapobject_type_id>',
+    methods=['PUT']
+)
+@jwt_required()
+@decode_query_ids('read')
+def rename_mapobject_type(experiment_id, mapobject_type_id):
+    """
+    .. http:put:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)
+
+        Rename a mapobject type.
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "name": "New Name"
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+
+    """
+    data = request.get_json()
+    name = data.get('name')
+    logger.info(
+        'rename mapobject type %d of experiment %d',
+        mapobject_type_id, experiment_id
+    )
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        mapobject_type = session.query(tm.MapobjectType).\
+            get(mapobject_type_id)
+        mapobject_type.name = name
+    return jsonify(message='ok')
+
+
 @api.route('/experiments/<experiment_id>/channel_layers', methods=['GET'])
 @jwt_required()
 @decode_query_ids('read')
@@ -202,7 +299,7 @@ def get_channel_layers(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/channel_layers
 
-        Get channel layers for the requested experiment.
+        Get channel layers.
 
         **Example response**:
 

@@ -84,19 +84,17 @@ def get_channel_layer_tile(experiment_id, channel_layer_id):
 
 
 @api.route(
-    '/experiments/<experiment_id>/segmentation_layers/<mapobject_type_name>/tiles',
+    '/experiments/<experiment_id>/segmentation_layers/<segmentation_layer_id>/tiles',
     methods=['GET']
 )
-@assert_query_params('x', 'y', 'z', 'zplane', 'tpoint')
+@assert_query_params('x', 'y', 'z')
 @decode_query_ids(None)
-def get_segmentation_layer_tile(experiment_id, mapobject_type_name):
+def get_segmentation_layer_tile(experiment_id, segmentation_layer_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/segmentation_layers/(string:mapobject_type_name)/tile
+    .. http:get:: /api/experiments/(string:experiment_id)/segmentation_layers/(string:segmentation_layer_id)/tile
 
         Sends all mapobject outlines as a GeoJSON feature collection
         that intersect with the tile at position x, y, z.
-        If ``mapobject_type_name`` is ``0`` the outline returned
-        will correspond to the tile boundaries.
 
         **Example response**:
 
@@ -126,8 +124,6 @@ def get_segmentation_layer_tile(experiment_id, mapobject_type_name):
         :query x: zero-based `x` coordinate
         :query y: zero-based `y` coordinate
         :query z: zero-based zoom level index
-        :query zplane: the zplane of the associated layer
-        :query tpoint: the time point of the associated layer
 
         :statuscode 200: no error
         :statuscode 400: malformed request
@@ -139,54 +135,41 @@ def get_segmentation_layer_tile(experiment_id, mapobject_type_name):
     # "z" is the pyramid zoom level and "zlevel" the z-resolution of the
     # acquired image
     z = request.args.get('z', type=int)
-    zplane = request.args.get('zplane', type=int)
-    tpoint = request.args.get('tpoint', type=int)
 
     logger.debug(
-        'get tile for segmentations of mapobject type "%s": '
-        'x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
-        mapobject_type_name, x, y, z, zplane, tpoint
+        'get tile for segmentation layer %d : x=%d, y=%d, z=%d',
+        segmentation_layer_id, x, y, z
     )
 
-    if mapobject_type_name == 'DEBUG_TILE':
-        with tm.utils.ExperimentSession(experiment_id) as session:
-            layer = session.query(tm.ChannelLayer).first()
-            # TODO: "maxzoom" should be stored in Experiment
-            maxzoom = layer.maxzoom_level_index
-        minx, miny, maxx, maxy = tm.SegmentationLayer.get_tile_bounding_box(
-            x, y, z, maxzoom
-        )
-        return jsonify({
-            'type': 'Feature',
-            'geometry': {
-                'type': 'Polygon',
-                'coordinates': [[
-                    [maxx, maxy], [minx, maxy], [minx, miny], [maxx, miny],
-                    [maxx, maxy]
-                ]]
-            },
-            'properties': {
-                'x': x, 'y': y, 'z': z,
-                'type': 'DEBUG_TILE'
-            }
-        })
+    # if mapobject_type_name == 'DEBUG_TILE':
+    #     with tm.utils.ExperimentSession(experiment_id) as session:
+    #         layer = session.query(tm.ChannelLayer).first()
+    #         # TODO: "maxzoom" should be stored in Experiment
+    #         maxzoom = layer.maxzoom_level_index
+    #     minx, miny, maxx, maxy = tm.SegmentationLayer.get_tile_bounding_box(
+    #         x, y, z, maxzoom
+    #     )
+    #     return jsonify({
+    #         'type': 'Feature',
+    #         'geometry': {
+    #             'type': 'Polygon',
+    #             'coordinates': [[
+    #                 [maxx, maxy], [minx, maxy], [minx, miny], [maxx, miny],
+    #                 [maxx, maxy]
+    #             ]]
+    #         },
+    #         'properties': {
+    #             'x': x, 'y': y, 'z': z,
+    #             'type': 'DEBUG_TILE'
+    #         }
+    #     })
 
-    # TODO: work with segmentation_layer_id directly
     with tm.utils.ExperimentSession(experiment_id) as session:
-        segmentation_layer = session.query(tm.SegmentationLayer).\
-            join(tm.MapobjectType).\
-            filter(
-                tm.MapobjectType.name == mapobject_type_name,
-                case(
-                    [(tm.MapobjectType.ref_type != None, True)],
-                    else_=(
-                        tm.SegmentationLayer.tpoint == tpoint and
-                        tm.SegmentationLayer.zplane == zplane
-                    )
-                )
-            ).\
-            one()
+        segmentation_layer = session.query(tm.SegmentationLayer).get(
+            segmentation_layer_id
+        )
         outlines = segmentation_layer.get_segmentations(x, y, z)
+        mapobject_type_name = segmentation_layer.mapobject_type.name
 
     # Try to estimate how many points there are in total within
     # the polygons of this tile.
@@ -214,14 +197,14 @@ def get_segmentation_layer_tile(experiment_id, mapobject_type_name):
 
 
 @api.route(
-    '/experiments/<experiment_id>/label_layers/<tool_result_id>/tiles',
+    '/experiments/<experiment_id>/segmentation_layers/<segmentation_layer_id>/labeled_tiles',
     methods=['GET']
 )
 @decode_query_ids(None)
-@assert_query_params('x', 'y', 'z', 'zplane', 'tpoint')
-def get_label_layer_tile(experiment_id, label_layer_id):
+@assert_query_params('x', 'y', 'z', 'result_name')
+def get_segmentation_layer_label_tile(experiment_id, segmentation_layer_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/label_layers/(string:tool_result_id)/tiles
+    .. http:get:: /api/experiments/(string:experiment_id)/segmentation_layers/(string:segmentation_layer_id)/labeled_tiles
 
         Get all mapobjects together with the labels that were assigned to them
         for a given tool result and tile coordinate.
@@ -254,8 +237,6 @@ def get_label_layer_tile(experiment_id, label_layer_id):
         :query x: zero-based `x` coordinate
         :query y: zero-based `y` coordinate
         :query z: zero-based zoom level index
-        :query zplane: the zplane of the associated layer
-        :query tpoint: the time point of the associated layer
 
         :statuscode 400: malformed request
         :statuscode 200: no error
@@ -265,40 +246,33 @@ def get_label_layer_tile(experiment_id, label_layer_id):
     x = request.args.get('x', type=int)
     y = request.args.get('y', type=int)
     z = request.args.get('z', type=int)
-    zplane = request.args.get('zplane', type=int)
-    tpoint = request.args.get('tpoint', type=int)
+    result_name = request.args.get('result_name')
 
+    logger.debug(
+        'get labeled tile for segmentation layer of tool result "%s": '
+        'x=%d, y=%d, z=%d', result_name, x, y, z
+    )
     with tm.utils.ExperimentSession(experiment_id) as session:
-        result = session.query(tm.ToolResult).get(tool_result_id)
-        logger.debug(
-            'get tile for label layer of result type "%s": '
-            'x=%d, y=%d, z=%d, tpoint=%d, zplane%d',
-            result.type, x, y, z, tpoint, zplane
-        )
+        segmentation_layer = session.query(tm.SegmentationLayer).\
+            get(segmentation_layer_id)
+        outlines = segmentation_layer.get_segmentations(x, y, z)
+        mapobject_type = segmentation_layer.mapobject_type
+        mapobject_type_name = mapobject_type.name
 
-        with tm.utils.ExperimentSession(experiment_id) as session:
-            segmentation_layer = session.query(tm.SegmentionLayer).\
-                join(tm.MapobjectType).\
-                filter(
-                    tm.MapobjectType.name == result.mapobject_type.name,
-                    tm.SegmentationLayer.tpoint == tpoint,
-                    tm.SegmentationLayer.zplane == zplane
-                ).\
-                one()
-            outlines = segmentation_layer.get_segmentations(x, y, z)
+        result = session.query(tm.ToolResult).\
+            filter_by(name=result_name, mapobject_type_id=mapobject_type.id).\
+            one()
 
         if len(outlines) > 0:
             mapobject_ids = [c.mapobject_id for c in outlines]
             mapobject_id_to_label = result.get_labels(mapobject_ids)
-
             features = [
                 {
                     'type': 'Feature',
                     'id': mapobject_id,
                     'geometry': json.loads(geom_geojson_str),
                     'properties': {
-                        'label': str(mapobject_id_to_label[mapobject_id]),
-                        # 'id': mapobject_id
+                        'label': str(mapobject_id_to_label[mapobject_id])
                      }
                 }
                 for mapobject_id, geom_geojson_str in outlines
