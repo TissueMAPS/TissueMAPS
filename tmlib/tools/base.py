@@ -344,15 +344,12 @@ class Classifier(Tool):
                     # Number of leafs in the tree.
                     'max_depth': [3, 6, 12, None],
                     'min_samples_split': [2, 4, 8],
-                    # 'min_samples_leaf': [1, 3, 10],
                     # TODO: this should rather be a user defined parameter
                     'class_weight': ['balanced', None]
                 },
             },
             'svm': {
-                'cls': SVC(
-                    kernel='rbf', cache_size=500, decision_function_shape='ovr'
-                ),
+                'cls': SVC(cache_size=500, decision_function_shape='ovr'),
                 # Scale to zero mean and unit variance
                 'scaler': RobustScaler(quantile_range=(1.0, 99.0), copy=False),
                 # Search optimal regularization parameters to control
@@ -379,7 +376,7 @@ class Classifier(Tool):
             }
         }
 
-        # TODO: time point
+        # TODO: We may want to include tpoint into labels mapping.
         train_index = feature_data.index.get_level_values('mapobject_id').isin(
             labels.keys()
         )
