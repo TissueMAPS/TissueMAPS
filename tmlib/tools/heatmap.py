@@ -37,6 +37,32 @@ class Heatmap(Tool):
     def __init__(self, experiment_id):
         super(Heatmap, self).__init__(experiment_id)
 
+    def _get_feature_id(self, mapobject_type_name, feature_name):
+        '''Gets the ID of a feature.
+
+        Parameters
+        ----------
+        mapobject_type_name: str
+            name of the corresponding
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        feature_name: str
+            name of the :class:`Feature <tmlib.models.feature.Feature>`
+
+        Returns
+        -------
+        int
+            feature ID
+        '''
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            feature = session.query(tm.Feature.id).\
+                join(tm.MapobjectType).\
+                filter(
+                    tm.Feature.name == feature_name,
+                    tm.MapobjectType.name == mapobject_type_name
+                ).\
+                one()
+            return feature.id
+
     def process_request(self, submission_id, payload):
         '''Processes a client tool request, where the `payload` is expected to
         have the following form::
@@ -58,22 +84,16 @@ class Heatmap(Tool):
         selected_feature = payload['selected_feature']
 
         logger.info('calculate min/max for rescaling of intensities')
-        feature_values = self.load(mapobject_type_name, selected_feature)
-        lower, upper = self.calculate_extrema(feature_values, 'value')
+        feature_values = self.load_feature_values(
+            mapobject_type_name, [selected_feature]
+        )
+        lower = np.min(feature_values[selected_feature])
+        upper = np.max(feature_values[selected_feature])
 
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            feature = session.query(tm.Feature.id).\
-                join(tm.MapobjectType).\
-                filter(
-                    tm.Feature.name == selected_feature,
-                    tm.MapobjectType.name == mapobject_type_name
-                ).\
-                one()
-            feature_id = feature.id
-
-        result_id = self.initialize_result(
+        feature_id = self._get_feature_id(mapobject_type_name, selected_feature)
+        result_id = self.register_result(
             submission_id, mapobject_type_name,
-            layer_type='HeatmapLabelLayer',
+            result_type='HeatmapToolResult',
             feature_id=feature_id, min=lower, max=upper
         )
 

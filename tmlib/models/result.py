@@ -15,11 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 import numpy as np
+import pandas as pd
 from sqlalchemy import Integer, Column, String, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import HSTORE, JSON
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, Session
 
-from tmlib.models import ExperimentModel
+from tmlib.models.base import ExperimentModel
+from tmlib.models.feature import FeatureValues
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +40,8 @@ class ToolResult(ExperimentModel):
 
     __tablename__ = 'tool_results'
 
+    __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
+
     #: str: name of the result given by the user
     name = Column(String(50), index=True)
 
@@ -45,7 +49,7 @@ class ToolResult(ExperimentModel):
     tool_name = Column(String(30), index=True)
 
     #: int: ID of the corresponding job submission
-    submission_id = Column(Integer, index=True)
+    submission_id = Column(Integer, index=True, unique=True)
 
     #: str: label layer type
     type = Column(String(50))
@@ -93,10 +97,15 @@ class ToolResult(ExperimentModel):
         if 'name' in extra_attributes:
             self.name = extra_attributes.pop('name')
         else:
-            self.name = '%s-%d result' % (tool_name, submission_id)
+            # TODO: use setter to check whether name is valid
+            self.name = '%s-%d' % (tool_name, submission_id)
         if 'type' in extra_attributes:
             self.type = extra_attributes.pop('type')
         self.attributes = extra_attributes
+        for attr, value in extra_attributes.iteritems():
+            # Numpy arrays are not JSON serializable
+            if isinstance(value, np.ndarray) or isinstance(value, pd.Series):
+                self.attributes[attr] = value.tolist()
 
     def get_labels(self, mapobject_ids):
         '''Queries the database to retrieve the generated label values for
@@ -116,7 +125,7 @@ class ToolResult(ExperimentModel):
         return dict(
             session.query(
                 LabelValues.mapobject_id,
-                LabelValues.values[str(self.tool_result_id)]
+                LabelValues.values[str(self.id)]
             ).
             filter(LabelValues.mapobject_id.in_(mapobject_ids)).
             all()

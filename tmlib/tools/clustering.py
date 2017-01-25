@@ -66,15 +66,14 @@ class Clustering(Classifier):
         if method not in self.__options__['method']:
             raise ValueError('Unknown method "%s".' % method)
 
-        feature_data = self.load_features_values(
+        feature_data = self.load_feature_values(
             mapobject_type_name, feature_names
         )
         predicted_labels = self.classify_unsupervised(feature_data, k, method)
+        unique_labels = np.unique(predicted_labels)
 
-        unique_labels = self.unique(predicted_labels, 'label')
         result_id = self.register_result(
             submission_id, mapobject_type_name,
-            layer_type='ScalarLabelLayer', unique_labels=unique_labels
+            result_type='ScalarToolResult', unique_labels=unique_labels
         )
-
         self.save_result_values(result_id, predicted_labels)

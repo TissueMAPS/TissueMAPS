@@ -25,7 +25,6 @@ from sqlalchemy import Column, Integer, ForeignKey, String, UniqueConstraint
 from sqlalchemy import or_
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declared_attr
-from sqlalchemy.orm import Session
 from sqlalchemy.orm import relationship, backref, Session
 from sqlalchemy.ext.hybrid import hybrid_property
 

@@ -346,7 +346,7 @@ class Experiment(DirectoryModel):
     #: int: gab introduced between neighbooring wells in pixels
     well_spacer_size = Column(Integer, nullable=False)
 
-    def __init__(self, microscope_type, plate_format, plate_acquisition_mode,
+    def __init__(self, id, microscope_type, plate_format, plate_acquisition_mode,
             location, zoom_factor=2, well_spacer_size=500,
             vertical_site_displacement=0, horizontal_site_displacement=0):
         '''

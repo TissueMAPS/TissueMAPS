@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import numpy as np
 import logging
 
 import tmlib.models as tm
@@ -80,31 +81,26 @@ class Classification(Classifier):
         if method not in self.__options__['method']:
             raise ValueError('Unknown method "%s".' % method)
 
-        labeled_mapobjects = list()
+        labels = dict()
         label_map = dict()
         for i, cls in enumerate(payload['training_classes']):
-            labels = [(j, float(i)) for j in cls['object_ids']]
-            labeled_mapobjects.extend(labels)
+            labels.update({j: float(i) for j in cls['object_ids']})
             label_map[float(i)] = {
                 'name': cls['name'],
                 'color': cls['color']
             }
 
-        unlabeled_feature_data = self.load_features_values(
+        feature_data = self.load_feature_values(
             mapobject_type_name, feature_names
         )
-        labeled_feature_data = self.label(
-            unlabeled_feature_data, labeled_mapobjects
-        )
         predicted_labels = self.classify_supervised(
-            unlabeled_feature_data, labeled_feature_data, method, n_fold_cv
+            feature_data, labels, method, n_fold_cv
         )
+        unique_labels = np.unique(predicted_labels)
 
-        unique_labels = self.unique(predicted_labels, 'label')
         result_id = self.register_result(
             submission_id, mapobject_type_name,
-            layer_type='SupervisedClassifierLabelLayer',
+            result_type='SupervisedClassifierToolResult',
             unique_labels=unique_labels, label_map=label_map
         )
-
         self.save_result_values(result_id, predicted_labels)

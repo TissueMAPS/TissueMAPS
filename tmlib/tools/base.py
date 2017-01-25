@@ -43,25 +43,6 @@ class _ToolMeta(ABCMeta):
     '''Meta class for :class:`Tool <tmlib.tools.base.Tool>`.'''
 
     def __init__(cls, cls_name, cls_bases, cls_args):
-        if hasattr(cls, '__lib_bases__'):
-            if not isinstance(cls.__lib_bases__, dict):
-                raise TypeError(
-                    'Attibute "__lib_bases__" of class "%s" must have type dict.'
-                    % cls_name
-                )
-            if DEFAULT_LIB not in cls.__lib_bases__:
-                raise KeyError(
-                    'Attibute "__lib_bases__" of class "%s" must have key "%s"'
-                    % (cls_name, DEFAULT_LIB)
-                )
-            for lib in cls.__lib_bases__:
-                if lib not in IMPLEMENTED_LIBS:
-                    raise KeyError(
-                        'Key "%s" in "__lib_bases__" of class "%s" is not an '
-                        'implemented library! Implemented are: "%s"' % (
-                            lib, cls_name, '", "'.join(IMPLEMENTED_LIBS)
-                        )
-                    )
 
         def is_abstract(cls):
             is_abstract = False
@@ -81,59 +62,22 @@ class _ToolMeta(ABCMeta):
                     )
             logger.debug('registering tool %s', cls.__name__)
             _register[cls_name] = cls
-
         return super(_ToolMeta, cls).__init__(cls_name, cls_bases, cls_args)
 
     def __call__(cls, *args, **kwargs):
-        lib = None
-        mixin_mapping = list()
-        classes = [cls]
-        classes += inspect.getmro(cls)
-        # Process in reversed order, such that derived classes are considered
-        # first for determining availability of libraries.
-        for c in reversed(classes):
-            if hasattr(c, '__lib_bases__'):
-                # In case the configured library is not available for the tool,
-                # we use the default library (it's implementation is enforced,
-                # see _ToolMeta.__init__). In case of Spark this is no problem,
-                # since the environment can also execute "normal" Python code.
-                if lib is None:
-                    if cfg.tool_library not in c.__lib_bases__:
-                        logger.warn(
-                            'defaulting to library "%s" for tool "%s"',
-                            DEFAULT_LIB, cls.__name__
-                        )
-                        lib = DEFAULT_LIB
-                    else:
-                        logger.debug(
-                            'using library "%s" for tool "%s"',
-                            cfg.tool_library, cls.__name__
-                        )
-                        lib = cfg.tool_library
-        # Process bases first, such that susequent implementation override
-        # correclty.
-        for c in classes:
-            if hasattr(c, '__lib_bases__'):
-                mixin_mapping.append(c.__lib_bases__[lib])
-        for mixin_cls in mixin_mapping:
-            if mixin_cls not in cls.__bases__:
-                logger.debug('adding mixin %r to bases of %r', mixin_cls, cls)
-                cls.__bases__ += (mixin_cls,)
         return super(_ToolMeta, cls).__call__(*args, **kwargs)
 
 
 class Tool(object):
 
-    '''Abstract base class for a data analysis tool.
+    '''Abstract base class for data analysis tools.
 
-    The interface uses the
-    `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html>`_
-    data container together with the
-    `Scikit-Learn <http://scikit-learn.org/stable/>`_ machine learning library.
-    It could in principle also be used with other machine learning libraries,
-    such as `Caffe <http://caffe.berkeleyvision.org/>`_,
+    Tools use the
+    `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html>`_ data container.
+    This is compatible with standard machine learning libries,
+    such as `Scikit-Learn <http://scikit-learn.org/stable/>`_
+    `Caffe <http://caffe.berkeleyvision.org/>`_,
     `Keras <https://keras.io/>`_ or `TensorFlow <https://www.tensorflow.org/>`_.
-
     '''
 
     __metaclass__ = _ToolMeta
@@ -151,7 +95,7 @@ class Tool(object):
 
     def load_feature_values(self, mapobject_type_name, feature_names):
         '''Selects all values for each given
-        :class:`tmlib.models.Feature` and mapobjects with a given
+        :class:`tmlib.models.Feature` and the mapobjects with the given
         :class:`tmlib.models.MapobjectType`.
 
         Parameters
@@ -181,29 +125,27 @@ class Tool(object):
                 'mapobject_type_name': mapobject_type_name
             })
             records = conn.fetchall()
-            feature_map = {r.feature_id: r.name for r in records}
             mapobject_type_id = records[0].mapobject_type_id
+            feature_map = {r.feature_id: r.name for r in records}
             sql = '''
                 SELECT mapobject_id, tpoint'''
-            for i in feature_map:
-                sql += ', (values->%%(id_%d)s)::double precision AS value_%d' % (i, i)
+            for i in feature_map.keys():
+                sql += ', (values->%%(id%d)s)::float8 AS v%d' % (i, i)
             sql += '''
                 FROM feature_values AS v
                 JOIN mapobjects AS m ON m.id = v.mapobject_id
                 WHERE m.mapobject_type_id = %(mapobject_type_id)s
             '''
-            parameters = {'id_%d' % i: str(i) for i in feature_map}
+            parameters = {'id%d' % i: str(i) for i in feature_map.keys()}
             parameters['mapobject_type_id'] = mapobject_type_id
             conn.execute(sql, parameters)
             feature_values = conn.fetchall()
         df = pd.DataFrame(feature_values)
-        df.set_index('mapobject_id', inplace=True)
+        df.set_index(['mapobject_id', 'tpoint'], inplace=True)
         # NOTE: We map the column names here and not in the SQL expression to
         # avoid parsing feature names, which are provided by the user and
         # thus pose a potential security risk in form of SQL injection.
-        column_map = {
-            'value_%d' % i: name for i, name in feature_map.iteritems()
-        }
+        column_map = {'v%d' % i: name for i, name in feature_map.iteritems()}
         df.rename(columns=column_map, inplace=True)
         return df
 
@@ -213,10 +155,10 @@ class Tool(object):
         Parameters
         ----------
         result_id: int
-            ID of a registered
+            ID of a registerd
             :class:`ToolResult <tmlib.models.result.ToolResult>`
-        data: pandas.DataFrame
-            data frame with columns "label", "tpoint" and "mapobject_id"
+        data: pandas.Series
+            series with compound index for "mapobject_id" and "tpoint"
 
         See also
         --------
@@ -224,7 +166,7 @@ class Tool(object):
         '''
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             # TODO: Use "mapobject_id" and "tpoint" as index
-            for index, row in data.iterrows():
+            for (mapobject_id, tpoint), value in data.iteritems():
                 conn.execute('''
                     INSERT INTO label_values AS v (
                         mapobject_id, values, tpoint
@@ -233,35 +175,16 @@ class Tool(object):
                         %(mapobject_id)s, %(values)s, %(tpoint)s
                     )
                     ON CONFLICT
-                    ON CONSTRAINT label_values_tpoint_mapobject_id_key
+                    ON CONSTRAINT label_values_mapobject_id_tpoint_key
                     DO UPDATE
                     SET values = v.values || %(values)s
                     WHERE v.mapobject_id = %(mapobject_id)s
                     AND v.tpoint = %(tpoint)s;
                 ''', {
-                    'values': {str(result_id): row.label},
-                    'mapobject_id': row.mapobject_id,
-                    'tpoint': row.tpoint
+                    'values': {str(result_id): str(value)},
+                    'mapobject_id': mapobject_id,
+                    'tpoint': tpoint
                 })
-
-    def calculate_extrema(self, data, column):
-        '''Calculates the minimum and maximum of values in `column`.
-
-        Parameters
-        ----------
-        data: pandas.DataFrame
-            dataframe with `column`
-        column: str
-            name of column in `data`
-
-        Returns
-        -------
-        Tuple[float]
-            min and max
-        '''
-        lower = np.min(data[column])
-        upper = np.max(data[column])
-        return (lower, upper)
 
     def register_result(self, submission_id, mapobject_type_name,
             result_type, **result_attributes):
@@ -313,30 +236,20 @@ class Tool(object):
                         'Argument "%s" is required for result of type "%s".'
                         % (arg, result_type)
                     )
-            result = tm.ToolResult(
-                submission_id, self.__class__.__name__, mapobject_type.id,
-                type=result_type, **result_attributes
-            )
-            session.add(result)
-            session.flush()
+
+            # A result might already exist, for example when debugging
+            # or when the job got canceled.
+            result = session.query(tm.ToolResult).\
+                filter_by(submission_id=submission_id).\
+                one_or_none()
+            if result is None:
+                result = tm.ToolResult(
+                    submission_id, self.__class__.__name__, mapobject_type.id,
+                    type=result_type, **result_attributes
+                )
+                session.add(result)
+                session.flush()
             return result.id
-
-    def unique(self, data, column):
-        '''Calculates the set of unique values for `column`.
-
-        Parameters
-        ----------
-        data: pandas.DataFrame
-            dataframe with `column`
-        column: str
-            name of column in `data`
-
-        Returns
-        -------
-        List[float]
-            unique values
-        '''
-        return np.unique(data[column]).tolist()
 
     @abstractmethod
     def process_request(self, submission_id, payload):
@@ -382,6 +295,7 @@ class Classifier(Tool):
             subset of `feature_data` for selected mapobjects with additional
             "label" column
         '''
+        import ipdb; ipdb.set_trace()
         labeled_mapobjects = dict(labeled_mapobjects)
         ids = labeled_mapobjects.keys()
         labels = labeled_mapobjects.values()
@@ -389,18 +303,18 @@ class Classifier(Tool):
         labeled_feature_data['label'] = labels
         return labeled_feature_data
 
-    def classify_supervised(self, unlabeled_feature_data, labeled_feature_data,
-            method, n_fold_cv):
+    def classify_supervised(self, feature_data, labels, method, n_fold_cv):
         '''Trains a classifier for labeled mapobjects based on
         `labeled_feature_data` and predicts labels for all mapobjects in
         `unlabeled_feature_data`.
 
         Parameters
         ----------
-        unlabeled_feature_data: pandas.DataFrame
-            mapobjects that should be classified
-        labeled_feature_data: pandas.DataFrame
-            data that should be used for training of the classifier
+        feature_data: pandas.DataFrame
+            feature values that should be used for classification
+        labels: Dict[int, int]
+            mapping of :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
+            ID to assigned label
         method: str
             method to use for classification
         n_fold_cv: int
@@ -408,58 +322,89 @@ class Classifier(Tool):
 
         Returns
         -------
-        pandas.DataFrame
-            dataframe with columns "label" and "mapobject_id"
+        pandas.Series
+            predicted labels for each entry in `feature_data`
         '''
         from sklearn.ensemble import RandomForestClassifier
+        from sklearn.linear_model import SGDClassifier
         from sklearn.svm import SVC
-        from sklearn.grid_search import GridSearchCV
-        from sklearn import cross_validation
+        from sklearn.preprocessing import RobustScaler
+        from sklearn.model_selection import GridSearchCV, KFold
 
         logger.info('perform classification using "%s" method', method)
         models = {
             'randomforest': {
-                'cls': RandomForestClassifier(),
+                # NOTE: RF could be parallelized.
+                'cls': RandomForestClassifier(n_jobs=1),
+                # No scaling required for decision trees.
                 'scaler': None,
                 'search_space': {
-                    'max_depth': [3, 5, 7],
-                    'min_samples_split': [1, 3, 10],
-                    'min_samples_leaf': [1, 3, 10]
+                    # Number of trees.
+                    'n_estimators': [3, 6, 12, 24],
+                    # Number of leafs in the tree.
+                    'max_depth': [3, 6, 12, None],
+                    'min_samples_split': [2, 4, 8],
+                    # 'min_samples_leaf': [1, 3, 10],
+                    # TODO: this should rather be a user defined parameter
+                    'class_weight': ['balanced', None]
                 },
             },
             'svm': {
-                'cls': SVC(loss='l2', cache_size=500),
-                'scaler': StandardScaler(),
+                'cls': SVC(
+                    kernel='rbf', cache_size=500, decision_function_shape='ovr'
+                ),
+                # Scale to zero mean and unit variance
+                'scaler': RobustScaler(quantile_range=(1.0, 99.0), copy=False),
+                # Search optimal regularization parameters to control
+                # model complexity.
                 'search_space': {
                     'kernel': ['linear', 'rbf'],
-                    'penalty': ['l1', 'l2'],
-                    'C': np.logspace(-2, 10, 13),
-                    'gamma': np.logspace(-9, 3, 13)
+                    'C': np.logspace(-5, 15, 10, base=2),
+                    'gamma': np.logspace(-15, -3, 10, base=2)
+                }
+            },
+            'logisticregression': {
+                'cls': SGDClassifier(
+                    loss='log', fit_intercept=False,
+                    n_jobs=1, penalty='elasticnet'
+                ),
+                # Scale to zero mean and unit variance
+                'scaler': RobustScaler(quantile_range=(1.0, 99.0), copy=False),
+                # Search optimal regularization parameters to control
+                # model complexity.
+                'search_space': {
+                    'alpha': np.logspace(-6, -1, 10),
+                    'l1_ratio': np.linspace(0, 1, 10)
                 }
             }
         }
 
-        X_train = labeled_feature_data.drop('label', axis=1)
-        if models[method]['scaler']:
-            X_train = models[method]['scaler'].fit_transform(X_train)
-        y = labeled_feature_data.label
+        # TODO: time point
+        train_index = feature_data.index.get_level_values('mapobject_id').isin(
+            labels.keys()
+        )
+        X_train = feature_data.iloc[train_index]
+        y = list()
+        for i in X_train.index.get_level_values('mapobject_id'):
+            y.append(labels[i])
+        X_test = feature_data
+        scaler = models[method]['scaler']
+        if scaler:
+            # Fit scaler on the entire dataset.
+            scaler.fit(feature_data)
+            X_train = scaler.transform(X_train)
+            X_test = scaler.transform(X_test)
         clf = models[method]['cls']
-        folds = cross_validation.StratifiedKFold(y, n_folds=n_fold_cv)
+        folds = KFold(n_splits=n_fold_cv)
+        # TODO: Second, finer grid search
         gs = GridSearchCV(clf, models[method]['search_space'], cv=folds)
         logger.info('fit model')
         gs.fit(X_train, y)
         logger.info('predict labels')
-        X_test = unlabeled_feature_data
-        if models[method]['scaler']:
-            X_test = models[method]['scaler'].fit_transform(X_predict)
-        labels = gs.predict(X_test)
-        # TODO: return labels directly?
-        predictions = pd.DataFrame(labels, columns=['label'])
-        predictions['tpoint'] = unlabeled_feature_data['tpoint']
-        predictions['mapobject_id'] = unlabeled_feature_data.index.astype(int)
-        return predictions
+        predictions = gs.predict(X_test)
+        return pd.Series(predictions, index=feature_data.index)
 
-    def classify_unsupervised(self, data, k, method):
+    def classify_unsupervised(self, feature_data, k, method):
         '''Groups mapobjects based on `data` into `k` classes.
 
         Parameters
@@ -473,8 +418,8 @@ class Classifier(Tool):
 
         Returns
         -------
-        pandas.DataFrame
-            data frame with additional columns "label" and "mapobject_id"
+        pandas.Series
+            label (class membership) for each entry in `feature_data`
         '''
         from sklearn.cluster import KMeans
         models = {
@@ -484,11 +429,6 @@ class Classifier(Tool):
         clf = models[method](n_clusters=k)
         logger.info('fit model')
         clf.fit(feature_data)
-        # Ensure that values are JSON serializable
         logger.info('predict labels')
         labels = clf.labels_
-        # TODO: return labels directly?
-        predictions = pd.DataFrame(labels, columns=['label'])
-        predictions['tpoint'] = unlabeled_feature_data['tpoint']
-        predictions['mapobject_id'] = feature_data.index.astype(int)
-        return predictions
+        return pd.Series(labels, index=feature_data.index)
