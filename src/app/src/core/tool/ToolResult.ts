@@ -16,6 +16,7 @@ interface ToolResultArgs {
     name: string;
     submissionId: number;
     layers: LabelLayer[];
+    tool: string;
     plots: Plot[];
     visible?: boolean;
 }
@@ -25,6 +26,7 @@ class ToolResult {
     id: string;
     submissionId: number;
     name: string;
+    tool: string;
     layers: LabelLayer[];
     legend: Legend;
     plots: Plot[];

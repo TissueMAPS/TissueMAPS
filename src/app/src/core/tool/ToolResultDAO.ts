@@ -29,6 +29,7 @@ interface SerializedToolResult {
     id: string;
     name: string;
     type: string;
+    tool_name: string;
     attributes: any;
     submission_id: number;
     layers: SerializedSegmentationLayer[];
@@ -50,6 +51,7 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
             id: data.id,
             submissionId: data.submission_id,
             name: data.name,
+            tool: data.tool_name,
             layers: data.layers.map((layer) => {
                 return this._createLabelLayer(layer, data)
             }),
@@ -60,7 +62,7 @@ class ToolResultDAO extends HTTPDataAccessObject<ToolResult> {
     }
 
     private _createLabelLayer(layerArgs: SerializedSegmentationLayer, resultArgs: SerializedToolResult) {
-        var labelLayerType = resultArgs.type + 'LabelLayer';
+        var labelLayerType = resultArgs.type.replace('ToolResult', 'LabelLayer');
         var LabelLayerClass = window[labelLayerType];
         if (LabelLayerClass !== undefined) {
             var layer = new LabelLayerClass({

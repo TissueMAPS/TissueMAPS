@@ -99,7 +99,7 @@ class ClassSelectionWidgetCtrl {
     }
 
     get selections() {
-        var selectedType = this._selectedMapobjectType;;
+        var selectedType = this._selectedMapobjectType;
         var selHandler = this._viewer.mapObjectSelectionHandler;
         return selHandler.getSelectionsForType(selectedType);
     }

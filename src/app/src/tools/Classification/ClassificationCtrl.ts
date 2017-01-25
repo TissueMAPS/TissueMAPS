@@ -22,7 +22,7 @@ class ClassificationCtrl extends ToolCtrl {
     static $inject = ['$scope', 'viewer'];
 
     method: string = 'randomforest';
-    nCrossvalidations: number = 10;
+    nCrossvalidations: number = 5;
 
     constructor(public $scope: ClassificationScope,
                 public viewer: Viewer) {

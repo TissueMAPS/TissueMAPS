@@ -63,9 +63,20 @@
           </div>
 
           <!-- <input type="text" ng-model="channel.name" tm-stop-click></input> -->
-          <span contenteditable strip-br="true" ng-model="channel.name"
-               select-non-editable="true">
+          <!-- <span contenteditable strip-br="true" ng-model="channel.name" -->
+          <!--      select-non-editable="true"> -->
+          <!-- </span> -->
+          <span class="inline-layer-control"
+            ng-click="ctrl.toggleRenamingMode()"
+            ng-class="{'active': ctrl.inRenamingMode}"
+            tm-stop-click>
+            <i class="fa fa-pencil-square" aria-hidden="true"></i>
           </span>
+
+          <input type="text" ng-model="channel.name"
+            ng-change="ctrl.renameChannel(channel)"
+            ng-model-options="{ updateOn: 'blur' }"
+            ng-disabled="!ctrl.inRenamingMode" tm-stop-click>
 
         </tm-selectable-tab-content>
 

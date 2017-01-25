@@ -32,8 +32,11 @@ class ScalarLabelLayer extends LabelLayer {
     getLabelColorMapper() {
         return (label) => {
             var idx = this.attributes.unique_labels.find((v, index) => {
-                // Goddamn it! All of this because of a lack of float type!
-                var vStr = v.toFixed(label.length-2);
+                var precision = label.length - 2;
+                if (precision < 0) {
+                    precision = 0;
+                }
+                var vStr = v.toFixed(precision);
                 return vStr == label;
             });
             if (idx % 2 == 0) {

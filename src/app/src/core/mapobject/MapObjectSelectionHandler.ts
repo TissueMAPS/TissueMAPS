@@ -81,8 +81,9 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
             }
         });
 
-        // Show only the selections for the just activated type 
+        // Show only the selections for the just activated type
         this.getSelectionsForType(t).forEach((s) => {
+            console.log(s)
             s.selectionLayer.visible = true;
         });
 
@@ -150,7 +151,7 @@ class MapObjectSelectionHandler implements Serializable<MapObjectSelectionHandle
         if (this.activeMapObjectType === null) {
             this.activeMapObjectType = objectType.name;
         }
-        this._mapobjectTypes[name] = objectType;
+        this._mapobjectTypes[objectType.name] = objectType;
         this.viewport.addLayer(objectType);
     }
 
