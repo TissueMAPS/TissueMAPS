@@ -398,11 +398,10 @@ class PyramidBuilder(ClusterRoutines):
             if batch['align']:
                 logger.info('align images between cycles')
 
-        for fid in batch['image_file_ids']:
-            channel_layer_tiles = list()
-            with tm.utils.ExperimentSession(self.experiment_id) as session:
-                layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
-
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
+            for fid in batch['image_file_ids']:
+                channel_layer_tiles = list()
                 file = session.query(tm.ChannelImageFile).get(fid)
                 logger.info('process image %d', file.id)
                 tiles = layer.map_image_to_base_tiles(file)
