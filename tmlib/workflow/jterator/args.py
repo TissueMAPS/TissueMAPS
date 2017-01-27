@@ -19,7 +19,6 @@ from tmlib.workflow.args import SubmissionArguments
 from tmlib.workflow.args import ExtraArguments
 from tmlib.workflow import register_step_batch_args
 from tmlib.workflow import register_step_submission_args
-from tmlib.workflow import register_step_extra_args
 
 
 @register_step_batch_args('jterator')

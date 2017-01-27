@@ -200,9 +200,7 @@ class WorkflowStageDescription(object):
         self.steps = list()
         if steps is not None:
             for step in steps:
-                BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(
-                    step['name']
-                )
+                BatchArgs, SubmissionArgs = get_step_args(step['name'])
                 batch_arg_values = {
                     a['name']: a['value'] for a in step['batch_args']
                 }
@@ -212,17 +210,10 @@ class WorkflowStageDescription(object):
                 }
                 submission_args = SubmissionArgs(**submission_arg_values)
                 # NOTE: not every step has extra arguments
-                if ExtraArgs is not None:
-                    extra_arg_values = {
-                        a['name']: a['value'] for a in step['extra_args']
-                    }
-                    extra_args = ExtraArgs(**extra_arg_values)
-                else:
-                    extra_args = None
                 self.add_step(
                     WorkflowStepDescription(
                         step['name'], step['active'],
-                        batch_args, submission_args, extra_args
+                        batch_args, submission_args
                     )
                 )
         else:
@@ -301,8 +292,7 @@ class WorkflowStepDescription(object):
 
     '''Description of a workflow step.'''
 
-    def __init__(self, name, active, batch_args=None, submission_args=None,
-            extra_args=None):
+    def __init__(self, name, active, batch_args=None, submission_args=None):
         '''
         Parameters
         ----------
@@ -314,8 +304,6 @@ class WorkflowStepDescription(object):
             batch arguments
         submission_args: tmlib.workflow.args.SubmissionArguments, optional
             submission arguments
-        extra_args: tmlib.workflow.args.ExtraArguments, optional
-            extra arguments (only some steps have such arguments)
 
         Raises
         ------
@@ -334,27 +322,6 @@ class WorkflowStepDescription(object):
             self.submission_args = SubmissionArgs()
         else:
             self.submission_args = submission_args
-        if extra_args is None:
-            if ExtraArgs is not None:
-                self.extra_args = ExtraArgs()
-            else:
-                self._extra_args = None
-        else:
-            self.extra_args = extra_args
-
-    @property
-    def extra_args(self):
-        '''tmlib.workflow.args.ExtraArguments: extra arguments'''
-        return self._extra_args
-
-    @extra_args.setter
-    def extra_args(self, value):
-        if not isinstance(value, ExtraArguments):
-            raise TypeError(
-                'Attribute "extra_args" must have type '
-                'tmlib.workflow.args.ExtraArguments'
-            )
-        self._extra_args = value
 
     @property
     def batch_args(self):
@@ -398,10 +365,6 @@ class WorkflowStepDescription(object):
         description['active'] = self.active
         description['batch_args'] = self.batch_args.as_list()
         description['submission_args'] = self.submission_args.as_list()
-        if self.extra_args is not None:
-            description['extra_args'] = self.extra_args.as_list()
-        else:
-            description['extra_args'] = None
         return description
 
     def jsonify(self):

@@ -308,38 +308,6 @@ def register_step_submission_args(name):
     return decorator
 
 
-def register_step_extra_args(name):
-    '''Class decorator to register a derived class of
-    :class:`ExtraArguments <tmlib.workflow.args.ExtraArguments>` for a worklow
-    step to use it via the command line or within a worklow.
-
-    Parameters
-    ----------
-    name: str
-        name of the corresponding workflow step
-
-    Returns
-    -------
-    tmlib.workflow.args.ExtraArguments
-
-    Raises
-    ------
-    TypeError
-        when decorated class is not derived from
-        :class:`tmlib.workflow.args.ExtraArguments`
-    '''
-    from tmlib.workflow.args import ExtraArguments
-    def decorator(cls):
-        if ExtraArguments not in inspect.getmro(cls):
-            raise TypeError(
-                'Registered class must be derived from '
-                'tmlib.workflow.args.ExtraArguments'
-            )
-        _step_register[name]['extra_args'] = cls
-        return cls
-    return decorator
-
-
 def get_step_args(name):
     '''Gets the step-specific implementations of the
     :class:`ArgumentCollection <tmlib.workflow.args.ArgumentCollection>`
@@ -352,9 +320,8 @@ def get_step_args(name):
 
     Returns
     -------
-    Tuple[tmlib.workflow.args.BatchArguments and tmlib.workflow.args.SubmissionArguments and tmlib.workflow.args.ExtraArguments or None]
-        batch and submission arguments as well as extra arguments
-        (in case the step implements any)
+    Tuple[Union[tmlib.workflow.args.BatchArguments, tmlib.workflow.args.SubmissionArguments]]
+        class for batch and submission arguments, respectively
     '''
     module_name = '%s.%s.args' % (__name__, name)
     try:
@@ -368,8 +335,7 @@ def get_step_args(name):
     try:
         batch_args = _step_register[name]['batch_args']
         submission_args = _step_register[name]['submission_args']
-        extra_args = _step_register[name].get('extra_args', None)
-        return (batch_args, submission_args, extra_args)
+        return (batch_args, submission_args)
     except KeyError:
         raise RegistryError(
             'Arguments are not registered for step "%s".' % name

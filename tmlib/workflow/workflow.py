@@ -198,23 +198,13 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
     def _api_instance(self):
         logger.debug('load step interface "%s"', self.name)
         API = get_step_api(self.name)
-        if getattr(self.description, 'extra_args', None):
-            kwargs = dict()
-            for name, value in self.description.extra_args.iterargitems():
-                kwargs[name] = value
-            api_instance = API(self.experiment_id, self.verbosity, **kwargs)
-        else:
-            api_instance = API(self.experiment_id, self.verbosity)
-        return api_instance
+        return API(self.experiment_id, self.verbosity)
 
     def create_init_job(self):
         '''Creates the job for "init" phase.'''
-        logger.info(
-            'create job for "init" phase of step "%s"', self.name
-        )
+        logger.info('create job for "init" phase of step "%s"', self.name)
         self.init_job = self._api_instance.create_init_job(
-            self.submission_id, self.user_name,
-            self.description.batch_args, self.description.extra_args
+            self.submission_id, self.user_name, self.description.batch_args
         )
 
     def create_run_job_collection(self):
@@ -227,20 +217,8 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         '''Creates the individual jobs for the "run" phase based on descriptions
         created during the "init" phase.
         '''
-        logger.info(
-            'create jobs for "run" phase of step "%s"', self.name
-        )
+        logger.info('create jobs for "run" phase of step "%s"', self.name)
         batches = self._api_instance.get_batches_from_files()
-
-        # TODO: check for required inputs in init phase
-        # required_inputs = self._api_instance.list_input_files(batches)
-        # # TODO: also check for existance of database entries
-        # if not all([os.path.exists(i) for i in required_inputs]):
-        #     logger.error('required inputs were not generated')
-        #     raise WorkflowTransitionError(
-        #         'Inputs for step "%s" do not exist.' % self.name
-        #     )
-
         logger.info(
             'allocated time for "run" jobs: %s',
             self.description.submission_args.duration
@@ -751,7 +729,7 @@ class Workflow(SequentialTaskCollection, State):
                 tb_string = str()
                 for tb in traceback.format_tb(exc_traceback):
                     tb_string += '\n'
-                    tb_string += tb  # TODO
+                    tb_string += tb
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
                 logger.info('stopping workflow "%s"', self.jobname)

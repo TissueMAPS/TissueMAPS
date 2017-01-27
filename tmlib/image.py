@@ -311,8 +311,9 @@ class Image(object):
         '''
         # Numpy's nomenclature is different, it would stack the "z" dimension
         # along the first axis. This would make indexing harder in case the
-        # image has only two dimensions. There could result in worse
+        # image has only two dimensions. This approach could result in worse
         # performance, though.
+        # TODO: consider use of __slots__ on the Image class
         if axis == 'y':
             arr = np.vstack([self._array, image._array])
         elif axis == 'x':

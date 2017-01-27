@@ -183,8 +183,6 @@ class ExperimentReference(MainModel, DateMixIn):
             for step in stage.steps:
                 update_choices(step.batch_args)
                 update_choices(step.submission_args)
-                if step.extra_args is not None:
-                    update_choices(step.extra_args)
         return workflow_description
 
     def persist_workflow_description(self, description):

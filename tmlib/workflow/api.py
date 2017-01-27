@@ -577,21 +577,11 @@ class ClusterRoutines(BasicClusterRoutines):
             with JsonWriter(batch_file) as f:
                 f.write(batch)
 
-    def _build_init_command(self, batch_args, extra_args):
+    def _build_init_command(self, batch_args):
         logger.debug('build "init" command')
         command = [self.step_name]
         command.extend(['-v' for x in range(self.verbosity)])
         command.append(self.experiment_id)
-        if extra_args is not None:
-            for arg in extra_args.iterargs():
-                value = getattr(extra_args, arg.name)
-                if arg.type == bool:
-                    if ((value and not arg.default) or
-                        (not value and arg.default)):
-                        command.append('--%s' % arg.name)
-                else:
-                    if value is not None:
-                        command.extend(['--%s' % arg.name, str(value)])
         command.append('init')
         for arg in batch_args.iterargs():
             value = getattr(batch_args, arg.name)
@@ -809,7 +799,7 @@ class ClusterRoutines(BasicClusterRoutines):
         return job_collection
 
     def create_init_job(self, submission_id, user_name, batch_args,
-            extra_args=None, duration='12:00:00', memory=3800, cores=1):
+            duration='12:00:00', memory=3800, cores=1):
         '''Creates job for the "init" phase of the step.
 
         Parameters
@@ -821,9 +811,6 @@ class ClusterRoutines(BasicClusterRoutines):
         batch_args: tmlib.workflow.args.BatchArguments
             step-specific implementation of
             :class:`BatchArguments <tmlib.workflow.args.BatchArguments>`
-        extra_args: tmlib.workflow.args.ExtraArguments, optional
-            step-specific implementation of
-            :class:`ExtraArguments <tmlib.workflow.args.ExtraArguments>`
         duration: str, optional
             computational time that should be allocated for the job
             in HH:MM:SS format (default: ``"12:00:00"``)
@@ -846,7 +833,7 @@ class ClusterRoutines(BasicClusterRoutines):
         logger.debug('allocated cores for "init" job: %d', cores)
         job = InitJob(
             step_name=self.step_name,
-            arguments=self._build_init_command(batch_args, extra_args),
+            arguments=self._build_init_command(batch_args),
             output_dir=self.log_location,
             submission_id=submission_id,
             user_name=user_name

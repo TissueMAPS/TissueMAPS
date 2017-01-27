@@ -88,10 +88,7 @@ class _CliMeta(ABCMeta):
         # Extra arguments are added to the main parser as well because they
         # also need to be parssed to the constructor of the API class.
         step_name = cls.__name__.lower()
-        BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(step_name)
-        if ExtraArgs is not None:
-            for arg in ExtraArgs.iterargs():
-                arg.add_to_argparser(parser)
+        BatchArgs, SubmissionArgs = get_step_args(step_name)
         subparsers = parser.add_subparsers(dest='method', help='methods')
         subparsers.required = True
         flags = collections.defaultdict(list)

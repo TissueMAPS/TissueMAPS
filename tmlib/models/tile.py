@@ -146,6 +146,8 @@ class ChannelLayerTile(ExperimentModel):
             ID of the added record
         '''
         # Upsert the tile entry, i.e. insert or update if exists
+        # NOTE: The UPSERT has some overhead and it may be more performant to
+        # DELETE tiles first and then INSERT new ones without UPDATE.
         connection.execute('''
             INSERT INTO channel_layer_tiles AS t (
                 channel_layer_id, z, y, x, pixels

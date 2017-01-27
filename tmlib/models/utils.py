@@ -735,6 +735,8 @@ class Connection(object):
         self._engine = create_db_engine(self._db_uri)
 
     def __enter__(self):
+        # NOTE: We need to run queries outside of a transaction in Postgres
+        # autocommit mode.
         self._connection = self._engine.raw_connection()
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
@@ -757,6 +759,8 @@ class Connection(object):
         return self._cursor
 
     def __exit__(self, except_type, except_value, except_trace):
+        # NOTE: The connection is not actually closed, but rather returned to
+        # the pool.
         self._cursor.close()
         self._connection.close()
 
