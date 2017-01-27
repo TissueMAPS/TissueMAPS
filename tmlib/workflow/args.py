@@ -528,18 +528,6 @@ class SubmissionArguments(ArgumentCollection):
     )
 
 
-class ExtraArguments(ArgumentCollection):
-
-    '''Collection of arguments that can be passed to the constructor of
-    a step-specific implementation of the
-    :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>` *API* class.
-
-    Note
-    ----
-    A step may only implement this class when required.
-    '''
-
-
 class CliMethodArguments(ArgumentCollection):
 
     '''Collection of arguments that can be passed to a method of

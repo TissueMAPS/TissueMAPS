@@ -129,6 +129,7 @@ class PyramidBuilder(ClusterRoutines):
         job_count = 0
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             experiment = session.query(tm.Experiment).one()
+            count = 0
             for cid in session.query(tm.Channel.id).distinct():
 
                 n_zplanes = session.query(tm.ChannelImageFile.n_planes).\
@@ -149,18 +150,20 @@ class PyramidBuilder(ClusterRoutines):
                     layer = session.get_or_create(
                         tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
                     )
-                    n_levels = layer.depth
-                    # Should be the same between layers, so we only need
-                    # to set these values once.
-                    experiment.pyramid_depth = layer.depth
-                    experiment.pyramid_height = layer.height
-                    experiment.pyramid_width = layer.width
+                    if count == 0:
+                        h, w, d = layer.calculate_pyramid_dimensions()
+                        experiment.pyramid_depth = d
+                        experiment.pyramid_height = h
+                        experiment.pyramid_width = w
+                    count += 1
+                    n_levels = experiment.pyramid_depth
+                    max_zoomlevel_index = n_levels - 1
                     for index, level in enumerate(reversed(range(n_levels))):
                         logger.debug('pyramid level %d', level)
                         # The layer "level" increases from top to bottom.
                         # We build the layer bottom-up, therefore, the "index"
                         # decreases from top to bottom.
-                        if level == layer.maxzoom_level_index:
+                        if level == max_zoomlevel_index:
                             # For the base level, batches are composed of
                             # image files, which will get chopped into tiles.
                             batch_size = args.batch_size
@@ -186,7 +189,7 @@ class PyramidBuilder(ClusterRoutines):
                             # are channel image files. For all other levels,
                             # the inputs are the tiles of the next higher
                             # resolution level.
-                            if level == layer.maxzoom_level_index:
+                            if level == max_zoomlevel_index:
                                 image_file_subset = np.array(image_files)[batch]
                                 input_files = list()
                                 image_file_ids = list()
@@ -398,8 +401,6 @@ class PyramidBuilder(ClusterRoutines):
             if batch['align']:
                 logger.info('align images between cycles')
 
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             for fid in batch['image_file_ids']:
                 channel_layer_tiles = list()
                 file = session.query(tm.ChannelImageFile).get(fid)
@@ -511,9 +512,9 @@ class PyramidBuilder(ClusterRoutines):
                         'channel_layer_id': layer.id, 'tile': tile
                     })
 
-            with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-                for t in channel_layer_tiles:
-                    tm.ChannelLayerTile.add(conn, **t)
+                with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+                    for t in channel_layer_tiles:
+                        tm.ChannelLayerTile.add(conn, **t)
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:

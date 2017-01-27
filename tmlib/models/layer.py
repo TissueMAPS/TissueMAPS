@@ -107,28 +107,37 @@ class ChannelLayer(ExperimentModel):
     def height(self):
         '''int: number of pixels along vertical axis at highest resolution level
         '''
-        return self._maxzoom_image_size[0]
+        height = self.channel.experiment.pyramid_height
+        if height is None:
+            raise ValueError('Pyramid height has not yet been calculated.')
+        return height
 
     @cached_property
     def width(self):
         '''int: number of pixels along horizontal axis at highest resolution
         level
         '''
-        return self._maxzoom_image_size[1]
+        width = self.channel.experiment.pyramid_width
+        if width is None:
+            raise ValueError('Pyramid width has not yet been calculated.')
+        return width
 
     @cached_property
     def depth(self):
         '''int: number of pixels along horizontal axis at highest resolution
         level
         '''
-        return len(self.dimensions)
+        depth = self.channel.experiment.pyramid_depth
+        if depth is None:
+            raise ValueError('Pyramid depth has not yet been calculated.')
+        return depth
 
     @property
     def tile_size(self):
-        '''int: maximal number of pixels along an axis of a tile'''
+        '''int: maximal number of pixels along each axis of a tile'''
         return 256
 
-    @property
+    @cached_property
     def zoom_factor(self):
         '''int: factor by which resolution increases per pyramid level'''
         return self.channel.experiment.zoom_factor
@@ -143,7 +152,7 @@ class ChannelLayer(ExperimentModel):
         '''int: index of the highest resolution level, i.e. the base of the
         pyramid
         '''
-        return len(self.dimensions) - 1
+        return self.depth - 1
 
     @cached_property
     def dimensions(self):
@@ -162,10 +171,16 @@ class ChannelLayer(ExperimentModel):
             levels.append((n_rows, n_cols))
         return levels
 
-    @cached_property
-    def _maxzoom_image_size(self):
-        '''Determines the size of the image at the highest resolution level,
-        i.e. at the base of the pyramid.
+    def calculate_pyramid_dimensions(self):
+        '''Determines dimensions of the pyramid, i.e. height, width and depth
+        of the image at the highest resolution level and the number of
+        zoom levels.
+
+        Returns
+        -------
+        Tuple[int]
+            number of pixels along the *y*, *x* axis of the image and the
+            number of zoom levels
         '''
         logger.debug('calculate size of image at highest resolution level')
         experiment = self.channel.experiment
@@ -187,10 +202,11 @@ class ChannelLayer(ExperimentModel):
             (experiment.plate_grid.shape[1] - 1) *
             experiment.plate_spacer_size
         )
-        return tuple(
+        image_size = tuple(
             np.array(plate_size) * experiment.plate_grid.shape +
             np.array([row_spacer_height, column_spacer_width])
         )
+        return image_size + (len(self.dimensions), )
 
     @cached_property
     def image_size(self):

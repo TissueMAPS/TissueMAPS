@@ -25,7 +25,6 @@ from tmlib.workflow import get_step_information
 from tmlib.workflow import get_workflow_dependencies
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
-from tmlib.workflow.args import ExtraArguments
 
 
 class WorkflowDescription(object):
@@ -313,7 +312,7 @@ class WorkflowStepDescription(object):
         self.name = str(name)
         self.fullname, self.help = get_step_information(name)
         self.active = active
-        BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(name)
+        BatchArgs, SubmissionArgs = get_step_args(name)
         if batch_args is None:
             self.batch_args = BatchArgs()
         else:
