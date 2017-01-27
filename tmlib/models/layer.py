@@ -103,20 +103,20 @@ class ChannelLayer(ExperimentModel):
         self.zplane = zplane
         self.channel_id = channel_id
 
-    @property
+    @cached_property
     def height(self):
         '''int: number of pixels along vertical axis at highest resolution level
         '''
         return self._maxzoom_image_size[0]
 
-    @property
+    @cached_property
     def width(self):
         '''int: number of pixels along horizontal axis at highest resolution
         level
         '''
         return self._maxzoom_image_size[1]
 
-    @property
+    @cached_property
     def depth(self):
         '''int: number of pixels along horizontal axis at highest resolution
         level
