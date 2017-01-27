@@ -16,7 +16,6 @@
 from tmlib.workflow.args import Argument
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
-from tmlib.workflow.args import ExtraArguments
 from tmlib.workflow import register_step_batch_args
 from tmlib.workflow import register_step_submission_args
 
