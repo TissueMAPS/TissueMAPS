@@ -3,3 +3,4 @@ sphinxcontrib-autoprogram==0.1.3
 sphinxcontrib-httpdomain==1.5.0
 sphinxcontrib-matlabdomain==0.2.7
 sphinxcontrib-sqlalchemyviz==0.2
+numpydoc==0.6.0
