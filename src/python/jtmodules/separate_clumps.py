@@ -248,7 +248,7 @@ def main(mask, intensity_image, min_area, max_area,
             area, circularity, convexity = calc_features(smaller_object)
 
             # TODO: We may want to prevent cuts that go through areas with
-            # high distance intensity values
+            # high distance intensity values.
             if area < min_cut_area:
                 logger.debug(
                     'object %d not cut - resulting object too small', oid
@@ -260,12 +260,12 @@ def main(mask, intensity_image, min_area, max_area,
             #         oid
             #     )
             #     continue
-            if convexity < max_convexity:
-                logger.debug(
-                    'object %d not cut - resulting object not convex enough',
-                    oid
-                )
-                continue
+            # if convexity < max_convexity:
+            #     logger.debug(
+            #         'object %d not cut - resulting object not convex enough',
+            #         oid
+            #     )
+            #     continue
 
             # Update cut mask
             logger.debug('cut object %d', oid)
