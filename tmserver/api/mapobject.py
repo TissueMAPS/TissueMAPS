@@ -218,7 +218,7 @@ def get_mapobject_feature_values(experiment_id, mapobject_type_name):
         Get all feature values
         (:class:`FeatureValue.values <tmlib.models.feature.FeatureValue.values>`)
         for objects of the given
-        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType`
+        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
         as a *n*x*p* *CSV* table, where *n* is the number of
         mapobjects (:class:`Mapobject <tmlib.models.mapobject.Mapobject>`) and
         *p* is the number of features
@@ -304,10 +304,10 @@ def get_mapobject_metadata(experiment_id, mapobject_type_name):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type_name)/metadata
 
-        Get :class:`FeatureValue <tmlib.models.feature.FeatureValue` for
-        the given :class:`MapobjectType <tmlib.models.mapobject.MapobjectType`
+        Get :class:`FeatureValue <tmlib.models.feature.FeatureValue>` for
+        the given :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
         as a *n*x*p* feature table, where *n* is the number of
-        mapobjects (:class:`Mapobject <tmlib.models.mapobject.Mapobject`) and
+        mapobjects (:class:`Mapobject <tmlib.models.mapobject.Mapobject>`) and
         *p* is the number of features
         (:class:`Feature <tmlib.models.feature.Feature>`).
         The table is send in form of a *CSV* file with the first representing
