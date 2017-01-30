@@ -71,32 +71,18 @@ class ToolRequestManager(SubmissionManager):
         return os.path.join(self.batches_location, filename)
 
     def _build_command(self, submission_id):
-        if cfg.tool_library == 'spark':
-            command = [
-                'spark-submit',
-                '--driver-class-path', cfg.spark_jdbc_driver,
-                '--master', cfg.spark_master,
-            ]
-            if cfg.spark_master == 'yarn':
-                command.extend(['--deploy-mode', 'client'])
-            # args.extend([
-            #     '--py-files', os.path.expanduser('~/tmlibrary/tmlibrary-egg.info')
-            # ])
-        else:
-            command = []
-
-        command.extend([
-            which('tm_tool.py'),
+        command = [
+            'tm_tool',
             str(self.experiment_id),
             '--name', self.tool_name,
             '--submission_id', str(submission_id)
-        ])
+        ]
         command.extend(['-v' for x in range(self.verbosity)])
         logger.debug('submit tool request: %s', ' '.join(command))
         return command
 
-    def create_job(self, submission_id, user_name, duration='00:30:00',
-            memory=3800, cores=1):
+    def create_job(self, submission_id, user_name, duration='06:00:00',
+            memory=3000, cores=1):
         '''Creates a job for asynchroneous processing of a client tool request.
 
         Parameters
@@ -107,10 +93,10 @@ class ToolRequestManager(SubmissionManager):
             name of the submitting user
         duration: str, optional
             computational time that should be allocated for the job
-            in HH:MM:SS format (default: ``"00:30:00"``)
+            in HH:MM:SS format (default: ``"06:00:00"``)
         memory: int, optional
             amount of memory in Megabyte that should be allocated for the job
-            (default: ``3800``)
+            (default: ``3000``)
         cores: int, optional
             number of CPU cores that should be allocated for the job
             (default: ``1``)

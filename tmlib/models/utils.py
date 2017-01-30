@@ -18,121 +18,223 @@ import shutil
 import random
 import logging
 import inspect
+from copy import copy
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.pool
 import sqlalchemy.exc
-from sqlalchemy_utils.functions import create_database
-from sqlalchemy_utils.functions import drop_database
+from sqlalchemy.engine.url import make_url
+from sqlalchemy_utils.functions import quote
 from sqlalchemy.event import listens_for
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from psycopg2.extras import NamedTupleCursor
 
-from tmlib.models.base import ExperimentModel, FileSystemModel
-from tmlib.config import LibraryConfig
+from tmlib.models.base import MainModel, ExperimentModel, FileSystemModel
+from tmlib.models.dialect import *
+from tmlib import cfg
 
 logger = logging.getLogger(__name__)
-
-_DATABASE_URI = None
 
 #: Dict[str, sqlalchemy.engine.base.Engine]: mapping of chached database
 #: engine objects for reuse within the current Python process hashable by URL
 DATABASE_ENGINES = {}
 
+#: int: number of pooled database connections
+POOL_SIZE = 5
 
-def get_db_uri():
-    '''Gets the URI for database connections from the configuration.
+_SCHEMA_NAME_FORMAT_STRING = 'experiment_{experiment_id}'
 
-    Returns
-    -------
-    str
-        database URI
+
+def set_pool_size(n):
+    '''Sets the pool size for database connections of the current Python
+    process.
     '''
-    # TODO: could be done more elegantly
-    # http://docs.sqlalchemy.org/en/latest/core/pooling.html#using-a-custom-connection-function
-    global _DATABASE_URI
-    if _DATABASE_URI is None:
-        cfg = LibraryConfig()
-        _DATABASE_URI = cfg.db_uri_sqla
-    return _DATABASE_URI
+    logger.debug('set size of database pool to %d', n)
+    global POOL_SIZE
+    POOL_SIZE = n
 
 
-def set_db_uri(db_uri):
-    '''Sets the database URI for the current Python process and all child
-    processes.
-
-    Parameters
-    ----------
-    db_uri: str
-        database URI
-
-    Returns
-    -------
-    str
-        database URI
-    '''
-    global _DATABASE_URI
-    _DATABASE_URI = db_uri
-    return _DATABASE_URI
-
-
-def create_db_engine(db_uri):
-    '''Creates a database engine with only one connection.
+def create_db_engine(db_uri, cache=True):
+    '''Creates a database engine with a given pool size.
 
     Parameters
     ----------
     db_uri: str
         database uri
+    cache: bool, optional
+        whether engine should be cached for reuse (default: ``True``)
 
     Returns
     -------
     sqlalchemy.engine.base.Engine
         created database engine
 
-    Warning
-    -------
-    The engine gets cached in :attr:`tmlib.models.utils.DATABASE_ENGINES`
-    and reused within the same Python process.
     '''
     if db_uri not in DATABASE_ENGINES:
-        logger.debug('create database engine for process %d', os.getpid())
-        DATABASE_ENGINES[db_uri] = sqlalchemy.create_engine(
-            db_uri, poolclass=sqlalchemy.pool.QueuePool,
-            pool_size=5, max_overflow=10,
-            # PostgreSQL uses autocommit by default. SQLAlchemy
-            # (or actually psycopg2) makes use of multi-statement transactions
-            # using BEGIN and COMMIT/ROLLBACK. This may cause problems when sharding
-            # tables with Citusdata, for example. We may want to  turn it off to
-            # use the Postgres default mode:
-            # https://gist.github.com/carljm/57bfb8616f11bceaf865
+        logger.debug(
+            'create database engine for process %d with pool size %d',
+            os.getpid(), POOL_SIZE
         )
+        if POOL_SIZE > 1:
+            overflow_size = POOL_SIZE * 2
+        elif POOL_SIZE == 1:
+            # For parallel processes running on the cluster, we want as few
+            # database connections as possible. In principle one connection
+            # should be enough.
+            # However, we may want to have a "Session" and a "Connection"
+            # each having a connection open, simulatenously. Therefore, we
+            # allow an overflow of one additional connection.
+            overflow_size = 1
+        else:
+            raise ValueError('Pool size must be a positive integer.')
+        engine = sqlalchemy.create_engine(
+            db_uri, poolclass=sqlalchemy.pool.QueuePool,
+            pool_size=POOL_SIZE, max_overflow=overflow_size,
+        )
+        if cache:
+            logger.debug('cache database engine for reuse')
+            DATABASE_ENGINES[db_uri] = engine
     else:
         logger.debug('reuse cached database engine for process %d', os.getpid())
-    return DATABASE_ENGINES[db_uri]
+        engine = DATABASE_ENGINES[db_uri]
+    return engine
 
 
-# @listens_for(sqlalchemy.pool.Pool, 'connect')
-# def _on_pool_connect(dbapi_con, connection_record):
-#     logger.debug('create database connection: %d', dbapi_con.get_backend_pid())
+def _assert_db_exists(engine):
+    db_url = make_url(engine.url)
+    db_name = db_url.database
+    try:
+        logger.debug('try to connect to database "%s": %s', db_name, db_url)
+        connection = engine.connect()
+        connection.close()
+    except sqlalchemy.exc.OperationalError as err:
+        db_url = make_url(engine.url)
+        db_name = db_url.database
+        logger.error('could not connect to database "%s": %s', db_name, str(err))
+        raise ValueError('Cannot connect to database "%s".' % db_name)
 
 
-# @listens_for(sqlalchemy.pool.Pool, 'checkin')
-# def _on_pool_checkin(dbapi_con, connection_record):
-#     logger.debug(
-#         'database connection returned to pool: %d',
-#         dbapi_con.get_backend_pid()
-#     )
+def _set_db_shard_count(engine, n):
+    if n > 0:
+        db_url = make_url(engine.url)
+        db_name = db_url.database
+        logger.debug('set shard_count for database %s to %d', db_name, n)
+        with Connection(db_url) as conn:
+            conn.execute('''
+                SET citus.shard_count = %(n)s;
+            ''', {
+                'n': n
+            })
 
 
-# @listens_for(sqlalchemy.pool.Pool, 'checkout')
-# def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
-#     logger.debug(
-#         'database connection retrieved from pool: %d',
-#         dbapi_con.get_backend_pid()
-#     )
+def _set_db_shard_replication_factor(engine, n):
+    if n > 0:
+        db_url = make_url(engine.url)
+        db_name = db_url.database
+        logger.debug(
+            'set shard_replication_factor for database %s to %d', db_name, n
+        )
+        with Connection(db_url) as conn:
+            conn.execute('''
+                SET citus.shard_replication_factor = %(n)s;
+            ''', {
+                'n': n
+            })
+
+
+def _create_schema_if_not_exists(engine, experiment_id):
+    db_url = make_url(engine.url)
+    db_name = str(db_url.database)
+    schema_name = _SCHEMA_NAME_FORMAT_STRING.format(experiment_id=experiment_id)
+    with Connection(db_url) as conn:
+        conn.execute('''
+            SELECT EXISTS(
+                SELECT 1 FROM pg_namespace WHERE nspname = %(schema)s
+            );
+        ''', {
+            'schema': schema_name
+        })
+        schema = conn.fetchone()
+        if schema.exists:
+            return True
+        else:
+            logger.debug(
+                'create schema "%s" for database "%s"', schema_name, db_name
+            )
+            sql = 'CREATE SCHEMA IF NOT EXISTS %s;' % schema_name
+            conn.execute(sql)
+            return False
+
+
+def _drop_schema(engine, experiment_id):
+    db_url = make_url(engine.url)
+    db_name = str(db_url.database)
+    schema_name = _SCHEMA_NAME_FORMAT_STRING.format(experiment_id=experiment_id)
+    logger.debug('drop all table in schema "%s"', schema_name)
+    with Connection(db_url) as conn:
+        # NOTE: The tables are dropped on the worker nodes, but the schemas
+        # persist. This is not a problem, however.
+        conn.execute('DROP SCHEMA %s CASCADE;' % schema_name)
+
+
+def _create_db_tables(engine, experiment_id=None):
+    db_url = make_url(engine.url)
+    db_name = str(db_url.database)
+    if experiment_id is None:
+        logger.debug(
+            'create tables of models derived from %s for "public" schema of '
+            'database "%s"', MainModel.__name__, db_name
+        )
+        for name, table in MainModel.metadata.tables.iteritems():
+            table.schema = 'public'
+        MainModel.metadata.create_all(engine)
+    else:
+        schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
+            experiment_id=experiment_id
+        )
+        logger.debug(
+            'create tables of models derived from %s for schema "%s" of '
+            'database "%s"', ExperimentModel.__name__, schema_name, db_name
+        )
+        for name, table in ExperimentModel.metadata.tables.iteritems():
+            table.schema = schema_name
+        ExperimentModel.metadata.create_all(engine)
+        # logger.debug(
+        #     'change storage of "pixels" column of "channel_layer_tiles" table'
+        # )
+        # with Connection(db_url) as conn:
+        #     conn.execute(
+        #         'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
+        #     )
+
+
+@listens_for(sqlalchemy.pool.Pool, 'connect')
+def _on_pool_connect(dbapi_con, connection_record):
+    logger.debug(
+        'database connection created for pool: %d',
+        dbapi_con.get_backend_pid()
+    )
+
+
+@listens_for(sqlalchemy.pool.Pool, 'checkin')
+def _on_pool_checkin(dbapi_con, connection_record):
+    logger.debug(
+        'database connection returned to pool: %d',
+        dbapi_con.get_backend_pid()
+    )
+
+
+@listens_for(sqlalchemy.pool.Pool, 'checkout')
+def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
+    logger.debug(
+        'database connection retrieved from pool: %d',
+        dbapi_con.get_backend_pid()
+    )
 
 
 def create_db_session_factory(engine):
     '''Creates a factory for creating a scoped database session that will use
-    :class:`tmlib.models.utils.Query` to query the database.
+    :class:`Query <tmlib.models.utils.Query>` to query the database.
 
     Parameters
     ----------
@@ -182,10 +284,6 @@ def remove_location_upon_delete(cls):
     def after_delete_callback(mapper, connection, target):
         delete_location(target.location)
 
-    if not hasattr(cls, 'location'):
-        raise AttributeError(
-            'Decorated class must have a "location" attribute'
-        )
     sqlalchemy.event.listen(cls, 'after_delete', after_delete_callback)
     return cls
 
@@ -235,6 +333,11 @@ class Query(sqlalchemy.orm.query.Query):
         classes = [d['type'] for d in self.column_descriptions]
         locations = list()
         for cls in classes:
+            if cls.is_distributed:
+                raise ValueError(
+                    'Records of distributed model "%s" cannot be deleted '
+                    'within a transaction.' % cls.__name__
+                )
             if hasattr(cls, '_location'):
                 locations.extend(self.from_self(cls._location).all())
             elif hasattr(cls, 'location'):
@@ -247,10 +350,10 @@ class Query(sqlalchemy.orm.query.Query):
                 )
             elif cls.__name__ == 'ExperimentReference':
                 experiments = self.from_self(cls.id).all()
+                engine = create_db_engine(cfg.db_uri_sqla)
                 for exp in experiments:
-                    logger.debug('drop database of experiment %d', exp.id)
-                    db_uri = get_db_uri()
-                    drop_database('%s_experiment_%d' % (db_uri, exp.id))
+                    logger.info('drop schema of experiment %d', exp.id)
+                    _drop_schema(engine, exp.id)
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
         logger.debug(
@@ -267,19 +370,34 @@ class Query(sqlalchemy.orm.query.Query):
 
 class SQLAlchemy_Session(object):
 
-    '''A wrapper around an instance of
-    :class:`sqlalchemy.orm.session.Session` that manages persistence of
-    database model objects.
+    '''A wrapper around an instance of an *SQLAlchemy* session
+    that manages persistence of database model objects.
+
+    An instance of this class will be exposed via
+    :class:`MainSession <tmlib.models.utils.MainSession>` and
+    :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
+
+    Examples
+    --------
+    >>> import tmlib.models as tm
+
+    >>> with tm.utils.MainSession() as session:
+    >>>     # session has type SQLAlchemy_Session
+    >>>     session.drop_and_recreate(tm.Submission)
+
     '''
 
-    def __init__(self, session):
+    def __init__(self, session, schema=None):
         '''
         Parameters
         ----------
         session: sqlalchemy.orm.session.Session
-            `SQLAlchemy` database session
+            *SQLAlchemy* database session
+        schema: str, optional
+            name of a database schema
         '''
         self._session = session
+        self._schema = schema
 
     def __getattr__(self, attr):
         if hasattr(self._session, attr):
@@ -288,7 +406,7 @@ class SQLAlchemy_Session(object):
             return getattr(self, attr)
         else:
             raise AttributeError(
-                'Object "%s" doens\'t have an attribute "%s".'
+                'Object "%s" doens\'t have attribute "%s".'
                 % (self.__class__.__name__, attr)
             )
 
@@ -326,7 +444,9 @@ class SQLAlchemy_Session(object):
         to decide whether a new entry would be considred a duplication.
         '''
         try:
-            instance = self.query(model).filter_by(**kwargs).one()
+            instance = self._session.query(model).\
+                filter_by(**kwargs).\
+                one()
             logger.debug('found existing instance: %r', instance)
         except sqlalchemy.orm.exc.NoResultFound:
             # We have to protect against situations when several worker
@@ -343,7 +463,9 @@ class SQLAlchemy_Session(object):
                 )
                 self._session.rollback()
                 try:
-                    instance = self.query(model).filter_by(**kwargs).one()
+                    instance = self._session.query(model).\
+                        filter_by(**kwargs).\
+                        one()
                     logger.debug('found existing instance: %r', instance)
                 except:
                     raise
@@ -376,6 +498,12 @@ class SQLAlchemy_Session(object):
         table = model.__table__
         engine = self._session.get_bind()
         locations_to_remove = []
+        # We need to update the schema on each data model, such that tables
+        # will be created for the correct experiment-specific schema and not
+        # created for the "public" schema.
+        logger.debug('update schema on data model classes')
+        for t in ExperimentModel.metadata.tables.values():
+            t.schema = self._schema
         if table.exists(engine):
             if issubclass(model, FileSystemModel):
                 model_instances = self._session.query(model).all()
@@ -389,48 +517,6 @@ class SQLAlchemy_Session(object):
         for loc in locations_to_remove:
             logger.debug('remove "%s"', loc)
             delete_location(loc)
-
-    def get_or_create_all(self, model, args):
-        '''Gets a collection of instances of a model class if they already
-        exist or create them otherwise.
-
-        Parameters
-        ----------
-        model: type
-            an implementation of the :class:`tmlib.models.ExperimentModel`
-            or :class:`tmlib.models.base.MainModel` abstract base class
-        args: List[dict]
-            keyword arguments for each instance that can be passed to the
-            constructor of `model` or to
-            ::meth:`sqlalchemy.orm.query.Query.filter_by`
-
-        Returns
-        -------
-        List[tmlib.models.Model]
-            instances of `model`
-        '''
-        instances = list()
-        for kwargs in args:
-            instances.extend(
-                self.query(model).filter_by(**kwargs).all()
-            )
-        if not instances:
-            try:
-                instances = list()
-                for kwargs in args:
-                    instances.append(model(**kwargs))
-                self._session.add_all(instances)
-                self._session.commit()
-            except sqlalchemy.exc.IntegrityError:
-                self._session.rollback()
-                instances = list()
-                for kwargs in args:
-                    instances.extend(
-                        self.query(model).filter_by(**kwargs).all()
-                    )
-            except:
-                raise
-        return instances
 
 
 class _Session(object):
@@ -451,34 +537,74 @@ class _Session(object):
     '''
     _session_factories = dict()
 
-    def __init__(self, db_uri):
+    def __init__(self, db_uri, schema=None):
         self._db_uri = db_uri
+        self._schema = schema
         if self._db_uri not in self.__class__._session_factories:
-            engine = create_db_engine(self._db_uri)
             self.__class__._session_factories[self._db_uri] = \
-                create_db_session_factory(engine)
+                create_db_session_factory(self.engine)
 
     @property
     def engine(self):
         '''sqlalchemy.engine: engine object for the currently used database'''
-        return DATABASE_ENGINES[self._db_uri]
+        return create_db_engine(self._db_uri)
 
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
-        self._session = SQLAlchemy_Session(session_factory())
+        self._session = SQLAlchemy_Session(session_factory(), self._schema)
+        self._set_search_path()
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_begin', self._after_begin
+        )
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_commit', self._after_commit
+        )
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_rollback', self._after_rollback
+        )
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_flush', self._after_flush
+        )
+
         return self._session
 
     def __exit__(self, except_type, except_value, except_trace):
         if except_value:
             self._session.rollback()
         else:
-            # TODO: if experiment is deleted, also delete its database
-            self._session.commit()
-            sqlalchemy.event.listen(
-                self._session_factories[self._db_uri],
-                'after_bulk_delete', self._after_bulk_delete_callback
-            )
+            try:
+                self._session.commit()
+                sqlalchemy.event.listen(
+                    self._session_factories[self._db_uri],
+                    'after_bulk_delete', self._after_bulk_delete_callback
+                )
+            except RuntimeError:
+                logger.error('commit failed due to RuntimeError???')
         self._session.close()
+
+    def _set_search_path(self):
+        if self._schema is not None:
+            self._session.execute('''
+                SET search_path TO 'public', :schema;
+            ''', {
+                'schema': self._schema
+            })
+
+    def _after_begin(self, session, transaction, connection):
+        self._set_search_path()
+
+    def _after_commit(self, session):
+        self._set_search_path()
+
+    def _after_flush(self, session, flush_context):
+        self._set_search_path()
+
+    def _after_rollback(self, session):
+        self._set_search_path()
 
     def _after_bulk_delete_callback(self, delete_context):
         '''Deletes locations defined by instances of :class`tmlib.Model`
@@ -492,21 +618,21 @@ class _Session(object):
             'deleted %d rows from table "%s"',
             delete_context.rowcount, delete_context.primary_table.name
         )
+        self._set_search_path()
 
 
 class MainSession(_Session):
 
-    '''Session scopes for interaction with the main `TissueMAPS` database.
+    '''Session scopes for interaction with the main ``tissuemaps`` database.
     All changes get automatically committed at the end of the interaction.
     In case of an error, a rollback is issued.
 
     Examples
     --------
-    from tmlib.models.utils import MainSession
-    from tmlib.models import ExperimentReference
+    >>> import tmlib.models as tm
 
-    with MainSession() as session:
-        print session.query(ExperimentReference).all()
+    >>> with tm.utils.MainSession() as session:
+    >>>    print session.query(tm.ExperimentReference).all()
 
     See also
     --------
@@ -518,20 +644,14 @@ class MainSession(_Session):
         Parameters
         ----------
         db_uri: str, optional
-            URI of the main `TissueMAPS` database; defaults to the value of
-            the environment variable ``TMPAS_DB_URI`` (default: ``None``)
+            URI of the ``tissuemaps`` database; defaults to the value of
+            :attr:`db_uri_sqla <tmlib.config.DefaultConfig.db_uri_sqla>`
         '''
         if db_uri is None:
-            db_uri = get_db_uri()
+            db_uri = cfg.db_uri_sqla
         super(MainSession, self).__init__(db_uri)
-        try:
-            engine = create_db_engine(self._db_uri)
-            connection = engine.connect()
-            connection.close()
-        except sqlalchemy.exc.OperationalError:
-            raise ValueError(
-                'Cannot connect to database: %s' % self._db_uri
-            )
+        engine = create_db_engine(db_uri)
+        _assert_db_exists(engine)
 
 
 class ExperimentSession(_Session):
@@ -542,11 +662,10 @@ class ExperimentSession(_Session):
 
     Examples
     --------
-    from tmlib.models.utils import ExperimentSession
-    from tmlib.models import Plate
+    >>> import tmlib.models as tm
 
-    with ExperimentSession(experiment_id=1) as session:
-        print session.query(Plate).all()
+    >>> with tm.utils.ExperimentSession(experiment_id=1) as session:
+    >>>     print session.query(tm.Plate).all()
 
     See also
     --------
@@ -558,47 +677,170 @@ class ExperimentSession(_Session):
         Parameters
         ----------
         experiment_id: int
-            ID of the experiment that should be accessed
+            ID of the experiment that should be queried
         db_uri: str, optional
-            URI of the main `TissueMAPS` database; defaults to the value of
-            the environment variable ``TMPAS_DB_URI`` (default: ``None``)
+            URI of the ``tissuemaps`` database; defaults to the value of
+            :attr:`db_uri_sqla <tmlib.config.LibraryConfig.db_uri_sqla>`
         '''
         if db_uri is None:
-            db_uri = get_db_uri()
+            db_uri = cfg.db_uri_sqla
         self.experiment_id = experiment_id
-        if self.experiment_id is not None:
-            if not isinstance(self.experiment_id, int):
-                raise TypeError('Argument "experiment_id" must have type int.')
-            db_uri = '{main}_experiment_{id}'.format(
-                main=db_uri, id=self.experiment_id
-            )
-        super(ExperimentSession, self).__init__(db_uri)
-        try:
-            connection = DATABASE_ENGINES[self._db_uri].connect()
-            connection.close()
-        except sqlalchemy.exc.OperationalError:
-            logger.debug(
-                'create database for experiment %d', self.experiment_id
-            )
-            create_database(self._db_uri)
-            engine = DATABASE_ENGINES[self._db_uri]
-            # TODO: create template with postgis extension already created
-            logger.debug(
-                'create postgis extension in database for experiment %d',
-                self.experiment_id
-            )
-            engine.execute('CREATE EXTENSION postgis;')
-            logger.debug(
-                'create tables in database for experiment %d',
-                self.experiment_id
-            )
-            ExperimentModel.metadata.create_all(engine)
-            engine.execute(
-                'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
-            )
+        engine = create_db_engine(db_uri)
+        _set_db_shard_replication_factor(engine, 1)
+        exists = _create_schema_if_not_exists(engine, experiment_id)
+        if not exists:
+            _set_db_shard_count(engine, 20 * cfg.db_nodes)
+            _create_db_tables(engine, experiment_id)
+        self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
+            experiment_id=self.experiment_id
+        )
+        super(ExperimentSession, self).__init__(db_uri, self._schema)
 
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
-        self._session = SQLAlchemy_Session(session_factory())
+        self._session = SQLAlchemy_Session(session_factory(), self._schema)
+        self._session.execute('''
+            SET search_path TO 'public', :schema;
+        ''', {
+            'schema': self._schema
+        })
         return self._session
 
+
+class Connection(object):
+
+    '''A "raw" database connection which uses autocommit mode and is not
+    part of a transaction.
+
+    Such connections are required to issues statements such as
+    ``CREATE DATABASE``, for example.
+
+    Warning
+    -------
+    Only use a raw connection when absolutely required and when you know what
+    you are doing.
+    '''
+
+    def __init__(self, db_uri, schema=None):
+        '''
+        Parameters
+        ----------
+        db_uri: str
+            URI of the database to connect to in the format required by
+            *SQLAlchemy*
+        schema: str, optional
+            a database schema that should be added to the search path
+        '''
+        self._db_uri = db_uri
+        self._schema = schema
+        self._engine = create_db_engine(self._db_uri)
+
+    def __enter__(self):
+        # NOTE: We need to run queries outside of a transaction in Postgres
+        # autocommit mode.
+        self._connection = self._engine.raw_connection()
+        self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
+        if self._schema:
+            logger.debug('set search path for schema "%s"', self._schema)
+            logger.debug('make modifications commutative')
+            self._cursor.execute('''
+                SET search_path TO 'public', %(schema)s;
+            ''', {
+                'schema': self._schema
+            })
+            # NOTE: To achieve high throughput on UPDATE or DELETE, we
+            # need to perform queries in parallel under the assumption that
+            # order of records is not important (i.e. that they are commutative).
+            # https://docs.citusdata.com/en/v6.0/performance/scaling_data_ingestion.html#real-time-updates-0-50k-s
+            self._cursor.execute('''
+                SET citus.shard_replication_factor = 1;
+                SET citus.all_modifications_commutative TO on;
+            ''')
+        return self._cursor
+
+    def __exit__(self, except_type, except_value, except_trace):
+        # NOTE: The connection is not actually closed, but rather returned to
+        # the pool.
+        self._cursor.close()
+        self._connection.close()
+
+
+class ExperimentConnection(Connection):
+
+    '''Database connection for executing raw SQL statements for an
+    experiment-specific database outside of a transaction context.
+
+    Examples
+    --------
+    >>> import tmlib.models as tm
+
+    >>> with tm.utils.ExperimentConnection(experiment_id=1) as connection:
+    >>>     connection.execute('SELECT mapobject_id, value FROM feature_values;')
+    >>>     print connection.fetchall()
+
+    Warning
+    -------
+    Use raw connections only if absolutely necessary, such as for inserting
+    into or updating distributed tables. Otherwise use
+    :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
+
+    See also
+    --------
+    :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
+    '''
+
+    def __init__(self, experiment_id, db_uri=None):
+        '''
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the experiment that should be queried
+        db_uri: str, optional
+            database URI; defaults to the value of
+            :attr:`db_uri_sqla <tmlib.config.DefaultConfig.db_uri_sqla>`
+        '''
+        if db_uri is None:
+            db_uri = cfg.db_uri_sqla
+        schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
+            experiment_id=experiment_id
+        )
+        super(ExperimentConnection, self).__init__(db_uri, schema_name)
+        self.experiment_id = experiment_id
+
+
+class MainConnection(Connection):
+
+    '''Database connection for executing raw SQL statements for the
+    main ``tissuemaps`` database outside of a transaction context.
+
+    Examples
+    --------
+    >>> import tmlib.models as tm
+
+    >>> with tm.utils.MainConnection() as connection:
+    >>>     connection.execute('SELECT name FROM plates;')
+    >>>     connection.fetchall()
+
+    Warning
+    -------
+    Use raw connnections only if absolutely necessary, such as when inserting
+    into or updating distributed tables. Otherwise use
+    :class:`MainSession <tmlib.models.utils.MainSession>`.
+
+    See also
+    --------
+    :class:`MainModel <tmlib.models.base.MainModel>`
+    '''
+
+    def __init__(self, db_uri=None):
+        '''
+        Parameters
+        ----------
+        db_uri: str, optional
+            database URI; defaults to the value returned by
+            :attr:`db_uri_sqla <tmlib.config.DefaultConfig.db_uri_sqla>`
+        '''
+        if db_uri is None:
+            db_uri = cfg.db_uri_sqla
+        super(MainConnection, self).__init__(db_uri)

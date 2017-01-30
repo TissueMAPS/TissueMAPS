@@ -183,8 +183,6 @@ class ExperimentReference(MainModel, DateMixIn):
             for step in stage.steps:
                 update_choices(step.batch_args)
                 update_choices(step.submission_args)
-                if step.extra_args is not None:
-                    update_choices(step.extra_args)
         return workflow_description
 
     def persist_workflow_description(self, description):
@@ -315,29 +313,38 @@ class Experiment(DirectoryModel):
     __tablename__ = 'experiment'
 
     #: str: microscope that was used to acquire the images
-    microscope_type = Column(String, index=True)
+    microscope_type = Column(String, index=True, nullable=False)
 
     #: int: number of wells in the plate, e.g. 384
-    plate_format = Column(Integer)
+    plate_format = Column(Integer, nullable=False)
 
     #: str: the order in which plates were acquired via the microscope
     plate_acquisition_mode = Column(String)
 
+    #: int: number of pixels along *y*-axis of the pyramid at highest zoom level
+    pyramid_height = Column(Integer)
+
+    #: int: number of pixels along *x*-axis of the pyramid at highest zoom level
+    pyramid_width = Column(Integer)
+
+    #: int: number of zoom levels of the pyramid
+    pyramid_depth = Column(Integer)
+
     #: int: zoom factor between pyramid levels
-    zoom_factor = Column(Integer)
+    zoom_factor = Column(Integer, nullable=False)
 
     #: displacement of neighboring sites within a well along the
     #: vertical axis in pixels
-    vertical_site_displacement = Column(Integer)
+    vertical_site_displacement = Column(Integer, nullable=False)
 
     #: displacement of neighboring sites within a well along the
     #: horizontal axis in pixels
-    horizontal_site_displacement = Column(Integer)
+    horizontal_site_displacement = Column(Integer, nullable=False)
 
     #: int: gab introduced between neighbooring wells in pixels
-    well_spacer_size = Column(Integer)
+    well_spacer_size = Column(Integer, nullable=False)
 
-    def __init__(self, microscope_type, plate_format, plate_acquisition_mode,
+    def __init__(self, id, microscope_type, plate_format, plate_acquisition_mode,
             location, zoom_factor=2, well_spacer_size=500,
             vertical_site_displacement=0, horizontal_site_displacement=0):
         '''
@@ -419,16 +426,17 @@ class Experiment(DirectoryModel):
     def plate_grid(self):
         '''numpy.ndarray[int]: IDs of plates arranged according to
         their relative position of the plate within the experiment overview
-        image
+        image (sorted row-wise by plate names)
         '''
         n = len(self.plates)
         dimensions = guess_stitch_dimensions(n)
         cooridinates = itertools.product(
-            range(dimensions[0]), range(dimensions[1])
+            range(dimensions[1]), range(dimensions[0])
         )
         grid = np.zeros(dimensions, dtype=int)
-        for i, (y, x) in enumerate(cooridinates):
-            grid[y, x] = self.plates[i].id
+        plates = sorted(self.plates, key=lambda p: p.name)
+        for i, (x, y) in enumerate(cooridinates):
+            grid[y, x] = plates[i].id
         return grid
 
     def get_mapobject_type(self, name):

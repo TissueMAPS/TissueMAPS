@@ -14,11 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, Boolean
+from sqlalchemy import (
+    Column, String, Integer, ForeignKey, Boolean, Index,
+    PrimaryKeyConstraint, UniqueConstraint
+)
+from sqlalchemy.dialects.postgresql import HSTORE
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy import UniqueConstraint
 
-from tmlib.models import ExperimentModel
+from tmlib.models.base import ExperimentModel
+from tmlib.models.utils import ExperimentConnection
+from tmlib.models.dialect import compile_distributed_query
+from tmlib import cfg
 
 logger = logging.getLogger(__name__)
 
@@ -26,27 +32,24 @@ logger = logging.getLogger(__name__)
 class Feature(ExperimentModel):
 
     '''A *feature* is a measurement that is associated with a particular
-    *map object type*. For example a *feature* named "Morphology_Area"
-    would correspond to a vector where each value would reflect the area of an
-    individual *map object* of a given *map object type*.
+    :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`.
+    For example a *feature* named "Morphology_Area"
+    would correspond to values reflecting the area of each
+    individual :class:`Mapobject <tmlib.models.mapobject.Mapobject>`.
 
-    Attributes
-    ----------
-    values: List[tmlib.models.FeatureValues]
-        values belonging to the feature
     '''
 
     __tablename__ = 'features'
 
     __table_args__ = (UniqueConstraint('name', 'mapobject_type_id'), )
 
-    #: str: name given to the feature (e.g. by jterator)
+    #: str: name given to the feature
     name = Column(String, index=True)
 
     #: bool: whether the feature is an aggregate of child object features
     is_aggregate = Column(Boolean, index=True)
 
-    #: int: ID of parent mapobject type
+    #: int: id of the parent mapobject type
     mapobject_type_id = Column(
         Integer,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
@@ -75,145 +78,125 @@ class Feature(ExperimentModel):
         self.mapobject_type_id = mapobject_type_id
         self.is_aggregate = is_aggregate
 
+    @classmethod
+    def delete_cascade(cls, connection, mapobject_type_ids=[]):
+        '''Deletes all instances for the given experiment as well as all
+        referencing fields in
+        :attr:`FeatureValues.values <tmlib.models.feature.FeatureValues.values>`.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        mapobject_type_ids: List[int], optional
+            IDs of parent
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        '''
+        logger.info('delete feature values')
+        if mapobject_type_ids:
+            sql = '''
+                UPDATE feature_values AS v SET values = hstore()
+                FROM mapobjects AS m
+                WHERE m.id = v.mapobject_id
+                AND m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
+            '''
+            connection.execute(
+                compile_distributed_query(sql),
+                {'mapobject_type_ids': mapobject_type_ids}
+            )
+            connection.execute(
+                '''
+                DELETE FROM features
+                WHERE mapobject_type_id = ANY(%(mapobject_type_ids)s)
+            ''', {
+                'mapobject_type_ids': mapobject_type_ids
+            })
+        else:
+            sql = 'UPDATE feature_values SET values = hstore();'
+            connection.execute(compile_distributed_query(sql))
+            connection.execute('DELETE FROM features;')
+
     def __repr__(self):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
 
 
-class FeatureValue(ExperimentModel):
+class FeatureValues(ExperimentModel):
 
-    '''An individual value of a :class:`tmlib.models.feature.Feature`
-    that was extracted for a given :class:`tmlib.models.mapobject.Mapbobject`
-    as part of a :mod:`tmlib.workflow.jterator` pipeline.
+    '''An individual value of a :class:`Feature <tmlib.models.feature.Feature>`
+    that was extracted for a given
+    :class:`Mapobject <tmlib.models.mapobject.Mapobject>`.
     '''
 
     __tablename__ = 'feature_values'
 
-    __table_args__ = (
-        UniqueConstraint('tpoint', 'feature_id', 'mapobject_id'),
-    )
+    # TODO: We may want this to be a PRIMARY KEY CONTRAINT instead
+    __table_args__ = (UniqueConstraint('mapobject_id', 'tpoint'), )
 
     __distribute_by_hash__ = 'mapobject_id'
 
-    #: float: the actual extracted feature value
-    value = Column(Float(precision=15))
+    #: Dict[str, str]: mapping of feature ID to value encoded as text
+    # NOTE: HSTORE is more performant than JSONB upon SELECT and upon INSERT.
+    # However, it only supports TEXT, such that values would need to be casted
+    # when loaded into Python. One could define a custom type for this purpose.
+    values = Column(HSTORE)
 
     #: int: zero-based time point index
-    tpoint = Column(Integer, index=True)
+    tpoint = Column(Integer, index=True, nullable=False)
 
-    #: int: ID of the parent feature
-    feature_id = Column(
-        Integer,
-        ForeignKey('features.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: int: ID of the parent mapobject
+    #: int: ID of the parent mapobject (FOREIGN KEY)
     mapobject_id = Column(
         Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
+        ForeignKey('mapobjects.id', ondelete='CASCADE'),
         index=True
     )
 
-    #: tmlib.models.feature.Feature: parent feature
-    feature = relationship(
-        'Feature',
-        backref=backref('values', cascade='all, delete-orphan')
-    )
-
-    #: tmlib.models.mapobject.Mapobject: parent mapobject
-    #: for which the feature was extracted
-    mapobject = relationship(
-        'Mapobject',
-        backref=backref('feature_values', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, feature_id, mapobject_id, value=None, tpoint=None):
+    def __init__(self, mapobject_id, feature_id, value, tpoint):
         '''
         Parameters
         ----------
-        feature_id: int
-            ID of parent feature
         mapobject_id: int
-            ID of parent mapobject
-        value: float, optional
-            actual measurement (default: ``None``)
-        tpoint: int, optional
-            zero-based time point index (default: ``None``)
+            ID of the mapobject to which values should be assigned
+        values: Dict[str, float]
+            mapping of feature ID to value
+        tpoint: int
+            zero-based time point index
         '''
         self.tpoint = tpoint
-        self.feature_id = feature_id
+        self.values = values
         self.mapobject_id = mapobject_id
-        self.value = value
 
-    def __repr__(self):
-        return (
-            '<FeatureValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
-            % (self.id, self.tpoint, self.mapobject_id, self.feature_id)
-        )
+    @classmethod
+    def add(cls, connection, values, mapobject_id, tpoint=None):
+        '''Adds a new record.
 
-
-class LabelValue(ExperimentModel):
-
-    '''An individual value of a :class:`tmlib.models.feature.Feature`
-    that was assigned to a given :class:`tmlib.models.mapobject.Mapbobject`
-    as part of a :class:`tmlib.models.result.ToolResult` generated for a client
-    tool request.
-    '''
-
-    __tablename__ = 'label_values'
-
-    #: float: the actual label value
-    value = Column(Float(precision=15))
-
-    #: int: zero-based time point index
-    tpoint = Column(Integer, index=True)
-
-    #: int: ID of the parent mapobject
-    mapobject_id = Column(
-        Integer,
-        ForeignKey('mapobjects.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: int: ID of the parent label layer
-    tool_result_id = Column(
-        Integer,
-        ForeignKey('tool_results.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: tmlib.models.mapobject.Mapobject: parent mapobject
-    mapobject = relationship(
-        'Mapobject',
-        backref=backref('label_values', cascade='all, delete-orphan')
-    )
-
-    #: tmlib.models.result.ToolResult: parent tool result
-    tool_result = relationship(
-        'ToolResult',
-        backref=backref('label_values', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, tool_result_id, mapobject_id, value=None, tpoint=None):
-        '''
         Parameters
         ----------
-        tool_result_id: int
-            ID of the parent tool result
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        values: Dict[str, str]
+            actual values
         mapobject_id: int
-            ID of the mapobject to which the value is assigned
-        value:
-            label value (default: ``None``)
+            ID of parent :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
         tpoint: int, optional
-            zero-based time point index (default: ``None``)
+            zero-based time point index
         '''
-        self.tpoint = tpoint
-        self.value = value
-        self.label_id = label_id
-        self.mapobject_id = mapobject_id
+        connection.execute('''
+            INSERT INTO feature_values AS v (values, mapobject_id, tpoint)
+            VALUES (%(values)s, %(mapobject_id)s, %(tpoint)s)
+            ON CONFLICT
+            ON CONSTRAINT feature_values_mapobject_id_tpoint_key
+            DO UPDATE
+            SET values = v.values || %(values)s
+            WHERE v.mapobject_id = %(mapobject_id)s
+            AND v.tpoint = %(tpoint)s
+        ''', {
+            'values': values, 'mapobject_id': mapobject_id, 'tpoint': tpoint
+        })
 
     def __repr__(self):
         return (
-            '<LabelValue(id=%d, tpoint=%d, mapobject=%r, feature=%r)>'
-            % (self.id, self.tpoint, self.mapobject_id, self.feature_id)
+            '<FeatureValues(tpoint=%d, mapobject_id=%r)>'
+            % (self.tpoint, self.mapobject_id)
         )

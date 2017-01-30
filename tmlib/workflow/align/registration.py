@@ -36,6 +36,7 @@ def calculate_shift(target_image, reference_image):
     Tuple[int]
         shift in y and x direction
     '''
+    logger.debug('calculate shift between target and reference image')
     x, y, a, b = image_registration.chi2_shift(target_image, reference_image)
     x = int(x)
     y = int(y)

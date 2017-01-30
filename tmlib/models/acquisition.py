@@ -20,6 +20,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.base import DirectoryModel, ExperimentModel, DateMixIn
 from tmlib.models.status import FileUploadStatus as fus
@@ -92,18 +93,26 @@ class Acquisition(DirectoryModel, DateMixIn):
         self.description = description
         self.plate_id = plate_id
 
-    @autocreate_directory_property
+    @hybrid_property
     def location(self):
         '''str: location were the acquisition content is stored'''
-        if self.id is None:
-            raise AttributeError(
-                'Acquisition "%s" doesn\'t have an entry in the database yet. '
-                'Therefore, its location cannot be determined.' % self.name
+        if self._location is None:
+            if self.id is None:
+                raise AttributeError(
+                    'Acquisition "%s" doesn\'t have an entry in the database yet. '
+                    'Therefore, its location cannot be determined.' % self.name
+                )
+            self._location = os.path.join(
+                self.plate.acquisitions_location,
+                ACQUISITION_LOCATION_FORMAT.format(id=self.id)
             )
-        return os.path.join(
-            self.plate.acquisitions_location,
-            ACQUISITION_LOCATION_FORMAT.format(id=self.id)
-        )
+            if not os.path.exists(self._location):
+                logger.debug(
+                    'create location for acquisition "%s": %s',
+                    self.name, self._location
+                )
+                os.mkdir(self._location)
+        return self._location
 
     @autocreate_directory_property
     def microscope_images_location(self):
@@ -177,8 +186,6 @@ class ImageFileMapping(ExperimentModel):
     '''
 
     __tablename__ = 'image_file_mappings'
-
-    __distribute_by_hash__ = 'id'
 
     #: int: zero-based time point index in the time series
     tpoint = Column(Integer, index=True)

@@ -51,8 +51,6 @@ class MicroscopeImageFile(FileModel, DateMixIn):
 
     __table_args__ = (UniqueConstraint('name', 'acquisition_id'), )
 
-    __distribute_by_hash__ = 'id'
-
     #: str: name given by the microscope
     name = Column(String(100), index=True)
 
@@ -88,7 +86,7 @@ class MicroscopeImageFile(FileModel, DateMixIn):
         self.acquisition_id = acquisition_id
         self.status = FileUploadStatus.WAITING
 
-    @property
+    @hybrid_property
     def location(self):
         '''str: location of the file'''
         if self._location is None:
@@ -133,8 +131,6 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
 
     __table_args__ = (UniqueConstraint('name', 'acquisition_id'), )
 
-    __distribute_by_hash__ = 'id'
-
     #: str: name given by the microscope
     name = Column(String(100), index=True)
 
@@ -169,7 +165,7 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
         self.acquisition_id = acquisition_id
         self.status = FileUploadStatus.WAITING
 
-    @property
+    @hybrid_property
     def location(self):
         '''str: location of the file'''
         if self._location is None:
@@ -218,8 +214,6 @@ class ChannelImageFile(FileModel, DateMixIn):
     __table_args__ = (
         UniqueConstraint('tpoint', 'site_id', 'cycle_id', 'channel_id'),
     )
-
-    __distribute_by_hash__ = 'id'
 
     _n_planes = Column('n_planes', Integer, index=True)
 
@@ -369,7 +363,7 @@ class ChannelImageFile(FileModel, DateMixIn):
     def n_planes(self, value):
         self._n_planes = value
 
-    @property
+    @hybrid_property
     def location(self):
         '''str: location of the file'''
         if self._location is None:
@@ -483,7 +477,7 @@ class IllumstatsFile(FileModel, DateMixIn):
             f.write('/percentiles/keys', data.percentiles.keys())
             f.write('/percentiles/values', data.percentiles.values())
 
-    @property
+    @hybrid_property
     def location(self):
         '''str: location of the file'''
         if self._location is None:

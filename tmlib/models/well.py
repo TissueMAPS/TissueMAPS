@@ -17,9 +17,11 @@ import re
 import numpy as np
 import logging
 from cached_property import cached_property
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import (
+    Column, String, Integer, ForeignKey, Index, UniqueConstraint
+)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy import UniqueConstraint
 
 from tmlib import utils
 from tmlib.models.base import ExperimentModel, DateMixIn
@@ -30,19 +32,30 @@ logger = logging.getLogger(__name__)
 
 class Well(ExperimentModel, DateMixIn):
 
-    '''A *well* is a reservoir for biological samples and multiple *wells* are
-    typically arranged as a grid on a *plate*.
-    From an imaging point of view, a *well* represents a continuous area of
-    image acquisition when projected onto an y,x plane on the *plate* bottom.
+    '''A *well* is a reservoir for a biological sample and multiple *wells* are
+    typically arranged as a grid on a :class:`Plate <tmlib.models.plate.Plate>`.
+
+    Note
+    ----
+    From an imaging point of view, a *well* is assumed to be a continuous area
+    of image acquisition when projected onto an *y*/*x* plane. Even if images
+    were not acquired in a continous way, they will be stitched together.
 
     '''
 
     __tablename__ = 'wells'
 
-    __table_args__ = (UniqueConstraint('name', 'plate_id'), )
+    __table_args__ = (
+        UniqueConstraint('name', 'plate_id'),
+        Index('ix_wells_description', 'description', postgres_using='gin')
+    )
 
     #: str: name assinged by the application, e.g. ``"A01"``
     name = Column(String, index=True)
+
+    #: dict: description of the well content in form of a mapping to store
+    #: for example the name or ID of a stain, compound or gene
+    description = Column(JSONB)
 
     #: int: ID of parent plate
     plate_id = Column(
@@ -57,7 +70,7 @@ class Well(ExperimentModel, DateMixIn):
         backref=backref('wells', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, plate_id):
+    def __init__(self, name, plate_id, description={}):
         '''
         Parameters
         ----------
@@ -65,9 +78,12 @@ class Well(ExperimentModel, DateMixIn):
             name of the well
         plate_id: int
             ID of the parent plate
+        description: Dict[str, Union[str, int, float, bool, List, Dict]], optional
+            description of the well content
         '''
         self.name = name
         self.plate_id = plate_id
+        self.description = description
 
     @property
     def coordinate(self):

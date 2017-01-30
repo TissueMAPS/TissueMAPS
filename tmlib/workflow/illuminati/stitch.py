@@ -181,16 +181,15 @@ def calc_grid_coordinates_from_layout(stitch_dims, stitch_layout):
         when `stitch_layout` is not in the set of the possible options
     '''
     layout_options = {
-        'horizontal',
-        'zigzag_horizontal',
-        'vertical',
-        'zigzag_vertical'
+        'horizontal', 'zigzag_horizontal', 'vertical', 'zigzag_vertical'
     }
     if not isinstance(stitch_layout, basestring):
         raise TypeError('Layout must have type string.')
     if stitch_layout not in layout_options:
-        raise ValueError('Layout must be one of the following options:\n"%s"'
-                         % '", "'.join(layout_options))
+        raise ValueError(
+            'Layout must be one of the following options:\n"%s"'
+            % '", "'.join(layout_options)
+        )
 
     cols = []
     rows = []

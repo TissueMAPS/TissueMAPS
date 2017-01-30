@@ -95,7 +95,7 @@ def build_console_scripts():
     # be interpreted as scala files.
     cli_tools.extend([
         'tm_workflow = tmlib.workflow.manager:WorkflowManager.__main__',
-        'tm_tool.py = tmlib.tools.manager:ToolRequestManager.__main__',
+        'tm_tool = tmlib.tools.manager:ToolRequestManager.__main__',
     ])
     return cli_tools
 

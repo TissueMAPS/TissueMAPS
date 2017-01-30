@@ -141,6 +141,11 @@ class ImageAnalysisModule(object):
             '", "'.join(kwargs.keys())
         )
         output_names = [handle.name for handle in self.handles['output']]
+        version = engine.get('jtmodules.{0}.version'.format(module_name))
+        if version != self.description['version']:
+            raise PipelineRunError(
+                'Version of module and handles is not the same.'
+            )
         func_call_string = function_call_format_string.format(
             outputs=', '.join(output_names),
             name=module_name,
@@ -180,6 +185,10 @@ class ImageAnalysisModule(object):
         except ImportError as err:
             raise ImportError(
                 'Import of module "%s" failed:\n%s' % (module_name, str(err))
+            )
+        if module.VERSION != self.description['version']:
+            raise PipelineRunError(
+                'Version of module and handles is not the same.'
             )
         func = getattr(module, 'main', None)
         if func is None:
@@ -226,10 +235,14 @@ class ImageAnalysisModule(object):
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
         rpackage = importr('jtmodules')
         module = getattr(rpackage, module_name)
+        if module.get('version') != self.description['version']:
+            raise PipelineRunError(
+                'Version of module and handles is not the same.'
+            )
         func = module.get('main')
+        # func = rpy2.robjects.globalenv['main']
         numpy2ri.activate()   # enables use of numpy arrays
         pandas2ri.activate()  # enable use of pandas data frames
-        # func = rpy2.robjects.globalenv['main']
         kwargs = self.keyword_arguments
         logger.debug(
             'evaluating R function with INPUTS: "%s"',
@@ -302,6 +315,33 @@ class ImageAnalysisModule(object):
                 handle.value = False
         return self.handles['input']
 
+    def _get_objects_name(self, handle):
+        '''Determines the name of the segmented objects that are referenced by
+        a `Features` handle.
+
+        Parameters
+        ----------
+        handle: tmlib.workflow.jterator.handle.Features
+            output handle with a `objects` attribute, which provides a
+            reference to an input handle
+
+        Returns
+        -------
+        str
+            name of the referenced segmented objects
+        '''
+        objects_names = [
+            h.key for h in self.handles['input'] + self.handles['output']
+            if h.name == handle.objects and
+            isinstance(h, hdls.SegmentedObjects)
+        ]
+        if len(objects_names) == 0:
+            raise PipelineRunError(
+                'Invalid object for "%s" in module "%s": %s'
+                % (handle.name, self.name, handle.objects)
+            )
+        return objects_names[0]
+
     def _get_reference_objects_name(self, handle):
         '''Determines the name of the segmented objects that are referenced by
         a `Features` handle.
@@ -325,7 +365,7 @@ class ImageAnalysisModule(object):
         if len(objects_names) == 0:
             raise PipelineRunError(
                 'Invalid object reference for "%s" in module "%s": %s'
-                % (handle.name, self.name, handle.objects_ref)
+                % (handle.name, self.name, handle.objects)
             )
         return objects_names[0]
 
@@ -381,23 +421,25 @@ class ImageAnalysisModule(object):
             if isinstance(handle, hdls.Figure):
                 store['current_figure'] = handle.value
             elif isinstance(handle, hdls.SegmentedObjects):
-                store['segmented_objects'][handle.key] = handle
+                store['objects'][handle.key] = handle
                 store['pipe'][handle.key] = handle.value
             elif isinstance(handle, hdls.Measurement):
-                object_name = self._get_reference_objects_name(handle)
-                channel_name = self._get_reference_channel_name(handle)
-                if channel_name is not None:
-                    new_names = list()
-                    for name in handle.value[0].columns:
-                        new_names.append('%s_%s' % (name, channel_name))
-                    for t in range(len(handle.value)):
-                        handle.value[t].columns = new_names
-                obj_handle = store['segmented_objects'][object_name]
+                ref_objects_name = self._get_reference_objects_name(handle)
+                objects_name = self._get_objects_name(handle)
+                ref_channel_name = self._get_reference_channel_name(handle)
+                new_names = list()
+                for name in handle.value[0].columns:
+                    if ref_objects_name != objects_name:
+                        new_name = '%s_%s' % (ref_objects_name, name)
+                    else:
+                        new_name = str(name)  # copy
+                    if ref_channel_name is not None:
+                        new_name += '_%s' % ref_channel_name
+                    new_names.append(new_name)
+                for t in range(len(handle.value)):
+                    handle.value[t].columns = new_names
+                obj_handle = store['objects'][objects_name]
                 obj_handle.add_measurement(handle)
-            elif isinstance(handle, hdls.Attribute):
-                object_name = self._get_reference_objects_name(handle)
-                obj_handle = store['segmented_objects'][object_name]
-                obj_handle.add_attribute(handle)
             else:
                 store['pipe'][handle.key] = handle.value
         return store

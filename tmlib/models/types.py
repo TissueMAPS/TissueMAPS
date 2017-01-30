@@ -69,3 +69,12 @@ class ST_ExteriorRing(GenericFunction):
     name = 'ST_ExteriorRing'
     type = Geometry
 
+
+class ST_SimplifyPreserveTopology(GenericFunction):
+
+    '''Implementation of the Postgis function
+    `ST_SimplifyPreserveTopology <http://postgis.net/docs/ST_SimplifyPreserveTopology.html>`_.
+    '''
+
+    name = 'ST_SimplifyPreserveTopology'
+    type = Geometry

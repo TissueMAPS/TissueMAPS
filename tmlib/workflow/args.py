@@ -208,7 +208,7 @@ class Argument(object):
         if self.type == str:
             if not isinstance(value, basestring) and value is not None:
                 raise TypeError(
-                    'Argument "%s" must have type basestring.'
+                    'Argument "%s" must have type basestring.' % self.name
                 )
         elif self.type == float:
             # Workaround decimal Javascript issue
@@ -500,18 +500,22 @@ class SubmissionArguments(ArgumentCollection):
     '''
 
     duration = Argument(
-            type=str, default='02:00:00', meta='HH:MM:SS',
+        type=str, default='06:00:00', meta='HH:MM:SS',
         help='''
             walltime that should be allocated to a each "run" job
             in the format "HH:MM:SS"
+            (may need to be adapted depending on the batch size of jobs)
         '''
     )
 
+    # NOTE: This reflects the job's real memory, which is typically lower than
+    # the total memory of each CPU. Here it's assumed that CPUs have 4GB memory.
     memory = Argument(
-        type=int, default=3800, meta='MB',
+        type=int, default=3500, meta='MB',
         help='''
             amount of memory that should be allocated to each "run" job
-            in megabytes (MB)
+            in megabytes
+            (try to keep below real memory of cores for maximal parallelization)
         '''
     )
 
@@ -519,20 +523,9 @@ class SubmissionArguments(ArgumentCollection):
         type=int, default=1, meta='NUMBER',
         help='''
             number of cores that should be allocated to each "run" job
+            (may be increased in case jobs can parallelize over cores)
         '''
     )
-
-
-class ExtraArguments(ArgumentCollection):
-
-    '''Collection of arguments that can be passed to the constructor of
-    a step-specific implementation of the
-    :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>` *API* class.
-
-    Note
-    ----
-    A step may only implement this class when required.
-    '''
 
 
 class CliMethodArguments(ArgumentCollection):

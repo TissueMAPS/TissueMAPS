@@ -13,10 +13,20 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''Abstract base and mixin classes for database models.'''
+'''Abstract base and mixin classes for database models.
+
+Note
+----
+Mixin classes must implement additional table columns using the
+`declared_attr <http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/api.html#sqlalchemy.ext.declarative.declared_attr>`_
+decorator.
+
+'''
 import os
 import logging
-from sqlalchemy.ext.declarative import declarative_base, DeclarativeMeta
+from sqlalchemy.ext.declarative import (
+    declarative_base, DeclarativeMeta, declared_attr
+)
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy import func
 from sqlalchemy.schema import DropTable, CreateTable
@@ -32,36 +42,45 @@ from tmlib import utils
 logger = logging.getLogger(__name__)
 
 
-class DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
+class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
 
     '''Metaclass for declarative base classes.'''
 
     def __init__(self, name, bases, d):
-        distribute_by = (
+        distribution_column = (
             d.pop('__distribute_by_hash__', None) or
             getattr(self, '__bind_key__', None)
         )
+        distribute_by_replication = (
+            d.pop('__distribute_by_replication__', False)
+        )
         DeclarativeMeta.__init__(self, name, bases, d)
         if hasattr(self, '__table__'):
-            if distribute_by is not None:
+            if distribution_column is not None:
                 column_names = [c.name for c in self.__table__.columns]
-                if distribute_by not in column_names:
+                if distribution_column not in column_names:
                     raise ValueError(
-                        'Hash for PostgresXL distribution "%s" '
+                        'Hash for distribution "%s" '
                         'is not a column of table "%s"'
-                        % (distribute_by, self.__table__.name)
+                        % (distribution_column, self.__table__.name)
                     )
-                self.__table__.info['distribute_by_hash'] = distribute_by
-            else:
+                self.__table__.info['distribute_by_hash'] = distribution_column
+                self.is_distributed = True
+            elif distribute_by_replication:
                 self.__table__.info['distribute_by_replication'] = True
+                self.is_distributed = True
+            else:
+                self.is_distributed = False
 
 
+#: Abstract base class for models of the main database.
 _MainBase = declarative_base(
-    name='MainBase', metaclass=DeclarativeABCMeta
+    name='MainBase', metaclass=_DeclarativeABCMeta
 )
 
+#: Abstract base class for models of an experiment-specific database.
 _ExperimentBase = declarative_base(
-    name='ExperimentBase', metaclass=DeclarativeABCMeta
+    name='ExperimentBase', metaclass=_DeclarativeABCMeta
 )
 
 
@@ -71,15 +90,20 @@ class DateMixIn(object):
     database table.
     '''
 
-    #: datetime: date and time when the row was inserted into the column
-    created_at = Column(
-        DateTime, default=func.now()
-    )
+    # NOTE: We use the "declared_attr" property for the mixin to ensure that
+    # the columns are added to the end of the columns list. This simplifies
+    # table distribution.
 
-    #: datetime: date and time when the row was last updated
-    updated_at = Column(
-        DateTime, default=func.now(), onupdate=func.now()
-    )
+    @declared_attr
+    def created_at(cls):
+        '''datetime: date and time when the row was inserted into the column'''
+        return Column(DateTime, default=func.now())
+
+    @declared_attr
+    def updated_at(cls):
+        '''datetime: date and time when the row was last updated'''
+        # TODO: CREATE TRIGGER to update independent of ORM
+        return Column(DateTime, default=func.now(), onupdate=func.now())
 
 
 class IdMixIn(object):
@@ -89,7 +113,7 @@ class IdMixIn(object):
     '''
 
     #: int: ID assigned to the object by the database
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     @property
     def hash(self):
@@ -125,7 +149,7 @@ class FileSystemModel(ExperimentModel):
     def location(self):
         '''str: location on disk
 
-        Devired classes must implement `location` as
+        Devired classes must implement `location` and decorate it with
         :func:`sqlalchemy.ext.hybrid.hyprid_property`.
         '''
         pass
@@ -166,14 +190,4 @@ class FileModel(FileSystemModel):
     def put(self, data):
         '''Puts `data` to the file.'''
         pass
-
-
-registry.register('postgresql.xl', 'tmlib.models.dialect', 'PGXLDialect_psycopg2')
-
-
-@compiles(DropTable, 'postgresql')
-def _compile_drop_table(element, compiler, **kwargs):
-    table = element.element
-    logger.debug('drop table "%s" with cascade', table.name)
-    return compiler.visit_drop_table(element) + ' CASCADE'
 

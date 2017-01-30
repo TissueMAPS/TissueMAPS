@@ -311,8 +311,9 @@ class Image(object):
         '''
         # Numpy's nomenclature is different, it would stack the "z" dimension
         # along the first axis. This would make indexing harder in case the
-        # image has only two dimensions. There could result in worse
+        # image has only two dimensions. This approach could result in worse
         # performance, though.
+        # TODO: consider use of __slots__ on the Image class
         if axis == 'y':
             arr = np.vstack([self._array, image._array])
         elif axis == 'x':
@@ -756,6 +757,25 @@ class PyramidTile(Image):
         return cls(arr, metadata)
 
     @classmethod
+    def create_from_buffer(cls, buf, metadata=None):
+        '''Creates an image from a buffer object.
+
+        Parameters
+        ----------
+        buf:
+            buffer
+        metadata: tmlib.metadata.ImageMetadata, optional
+            image metadata (default: ``None``)
+
+        Returns
+        -------
+        tmlib.image.PyramidTile
+        '''
+        arr = np.frombuffer(buf, np.uint8)
+        arr = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
+        return cls(arr, metadata)
+
+    @classmethod
     def create_as_background(cls, add_noise=False, mu=None, sigma=None,
             metadata=None):
         '''Creates an image with background voxels. By default background will
@@ -803,10 +823,10 @@ class PyramidTile(Image):
 
         Examples
         --------
-        >>>img = PyramidTile.create_as_background()
-        >>>buf = img.jpeg_encode()
-        >>>with open('myfile.jpeg', 'w') as f:
-        >>>    f.write(buf)
+        >>> img = PyramidTile.create_as_background()
+        >>> buf = img.jpeg_encode()
+        >>> with open('myfile.jpeg', 'w') as f:
+        >>>     f.write(buf)
         '''
         return cv2.imencode(
             '.jpeg', self.array, [cv2.IMWRITE_JPEG_QUALITY, quality]

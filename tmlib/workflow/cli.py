@@ -88,10 +88,7 @@ class _CliMeta(ABCMeta):
         # Extra arguments are added to the main parser as well because they
         # also need to be parssed to the constructor of the API class.
         step_name = cls.__name__.lower()
-        BatchArgs, SubmissionArgs, ExtraArgs = get_step_args(step_name)
-        if ExtraArgs is not None:
-            for arg in ExtraArgs.iterargs():
-                arg.add_to_argparser(parser)
+        BatchArgs, SubmissionArgs = get_step_args(step_name)
         subparsers = parser.add_subparsers(dest='method', help='methods')
         subparsers.required = True
         flags = collections.defaultdict(list)
@@ -237,20 +234,33 @@ class CommandLineInterface(WorkflowSubmissionManager):
         import sys
         reload(sys)
         sys.setdefaultencoding('utf-8')
+
         arguments = cls._parser.parse_args()
 
         configure_logging()
         logger = logging.getLogger('tmlib')
         level = map_logging_verbosity(arguments.verbosity)
         logger.setLevel(level)
+        # Adapt level of GC3Pie logger, which is very chatty.
+        gc3libs_logger = logging.getLogger('gc3.gc3libs')
+        if arguments.verbosity > 4:
+            gc3libs_logger.setLevel(logging.DEBUG)
+        elif arguments.verbosity == 4:
+            gc3libs_logger.setLevel(logging.INFO)
+        else:
+            gc3libs_logger.setLevel(logging.ERROR)
+
         logger.debug('processing on node: %s', socket.gethostname())
         logger.debug('running program: %s' % cls.__name__.lower())
 
-        # Silence some chatty loggers
-        gc3libs_logger = logging.getLogger('gc3.gc3libs')
-        gc3libs_logger.setLevel(logging.CRITICAL)
-        apscheduler_logger = logging.getLogger('apscheduler')
-        apscheduler_logger.setLevel(logging.CRITICAL)
+        # Use only a single database connection for the job.
+        # This is necessary on a large cluster to prevent too many concurrent
+        # connections by parallel running jobs, which would overload the
+        # database server.
+        # Using more than one connection also wouldn't be of any help, since
+        # the job runs in a single process, such that the same connection can
+        # be reused.
+        tm.utils.set_pool_size(1)
 
         try:
             logger.debug('instantiate API class "%s"', cls._api_class.__name__)
@@ -265,11 +275,11 @@ class CommandLineInterface(WorkflowSubmissionManager):
             logger.debug('instantiate CLI class "%s"', cls.__name__)
             cli_instance = cls(api_instance)
             cli_instance(arguments)
-            logger.info('COMPLETED')
+            logger.info('JOB COMPLETED')
             sys.exit(0)
             return 0
         except Exception as error:
-            sys.stderr.write('\nFAILED:\n%s\n' % str(error))
+            sys.stderr.write('\nJOB FAILED:\n%s\n' % str(error))
             exc_type, exc_value, exc_traceback = sys.exc_info()
             for tb in traceback.format_tb(exc_traceback):
                 sys.stderr.write(tb)
@@ -312,8 +322,8 @@ class CommandLineInterface(WorkflowSubmissionManager):
                 try:
                     value = arg_defaults[-index+1]
                     logger.debug(
-                        'set value for argument "%s" for method "%s" '
-                        'of class "%s" according to default value',
+                        'use default value for argument "%s" for method "%s" '
+                        'of class "%s"',
                         name, cli_args.method, self.__class__.__name__
                     )
                 except:

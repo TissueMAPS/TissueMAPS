@@ -160,19 +160,42 @@ class PipeHandle(Handle):
 
 class Image(PipeHandle):
 
-    '''Abstract base class for an image handle.'''
-
-    __metaclass__ = ABCMeta
+    '''Base class for an image handle.'''
 
     @same_docstring_as(PipeHandle.__init__)
     def __init__(self, name, key, help):
         super(Image, self).__init__(name, key, help)
 
-    @abstractproperty
+    @property
     def value(self):
-        '''numpy.ndarray: 2D/3D pixels/voxels array
+        '''numpy.ndarray: pixels/voxels array'''
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Returned value for "%s" must have type numpy.ndarray.'
+                % self.name
+            )
+        self._value = value
+
+    def iterplanes(self):
+        '''Iterates over 2D pixel planes of the image for each combination of
+        time point and z-level.
+
+        Returns
+        -------
+        Tuple[Tuple[int], numpy.ndarray]
         '''
-        pass
+        array = self.value
+        if array.ndim == 2:
+            array = array[..., np.newaxis, np.newaxis]
+        elif array.shape == 3:
+            array = array[..., np.newaxis]
+        for t in xrange(array.shape[-1]):
+            for z in xrange(array[..., t].shape[-1]):
+                yield ((t, z), array[:, :, z, t])
 
 
 class IntensityImage(Image):
@@ -202,7 +225,7 @@ class IntensityImage(Image):
         '''
         Returns
         -------
-        numpy.ndarray[numpy.uint8 or numpy.uint16]: 2D/3D pixels/voxels array
+        numpy.ndarray[Union[numpy.uint8, numpy.uint16]]: pixels/voxels array
         '''
         return self._value
 
@@ -224,20 +247,51 @@ class IntensityImage(Image):
         return '<IntensityImage(name=%r, key=%r)>' % (self.name, self.key)
 
 
-class LabelImage(Image):
+class MaskImage(Image):
 
-    '''Class for a label image handle, where image pixel values encode
-    connected components. Each component has a unique one-based identifier
-    label and background is zero.
+    '''Class for an image handle, where pixels of the image with zero values
+    represent background and pixels with values greater than zero represent
+    foreground.
     '''
 
-    @same_docstring_as(IntensityImage.__init__)
+    @same_docstring_as(Image.__init__)
     def __init__(self, name, key, help=''):
-        super(Image, self).__init__(name, key, help)
+        super(MaskImage, self).__init__(name, key, help)
 
     @property
     def value(self):
-        '''numpy.ndarray[numpy.int32]: 2D/3D pixels/voxels array'''
+        '''numpy.ndarray: pixels/voxels array'''
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Returned value for "%s" must have type numpy.ndarray.'
+                % self.name
+            )
+        if not(value.dtype == np.int32 or value.dtype == np.bool):
+            raise TypeError(
+                'Returned value for "%s" must have data type int32 or bool.'
+                % self.name
+            )
+        self._value = value
+
+
+class LabelImage(MaskImage):
+
+    '''Class for an image handle, where connected pixel components of the image
+    are labeled such that each component has a unique positive integer
+    label and background is zero.
+    '''
+
+    @same_docstring_as(Image.__init__)
+    def __init__(self, name, key, help=''):
+        super(LabelImage, self).__init__(name, key, help)
+
+    @property
+    def value(self):
+        '''numpy.ndarray[numpy.int32]: pixels/voxels array'''
         return self._value
 
     @value.setter
@@ -258,33 +312,30 @@ class LabelImage(Image):
         return '<LabelImage(name=%r, key=%r)>' % (self.name, self.key)
 
 
-class BinaryImage(Image):
+class BinaryImage(MaskImage):
 
-    '''Class for a binary image handle, where image pixel values encode
-    either background or foreground. Background is ``0`` or ``False`` and
-    foreground is ``1`` or ``True``. 
+    '''Class for an image handle, where pixels of the image are
+    either background (``False``) or foreground (``True``).
     '''
 
-    @same_docstring_as(IntensityImage.__init__)
+    @same_docstring_as(Image.__init__)
     def __init__(self, name, key, help=''):
-        super(Image, self).__init__(name, key, help)
+        super(BinaryImage, self).__init__(name, key, help)
 
     @property
     def value(self):
-        '''numpy.ndarray[numpy.bool]: 2D/3D pixels/voxels array'''
+        '''numpy.ndarray[numpy.bool]: pixels/voxels array'''
         return self._value
 
     @value.setter
     def value(self, value):
         if not isinstance(value, np.ndarray):
             raise TypeError(
-                'Value of key "%s" must have type numpy.ndarray.'
-                % self.name
+                'Value of key "%s" must have type numpy.ndarray.' % self.name
             )
         if value.dtype != np.bool:
             raise TypeError(
-                'Value of key "%s" must have data type bool.'
-                % self.name
+                'Value of key "%s" must have data type bool.' % self.name
             )
         self._value = value
 
@@ -312,14 +363,47 @@ class SegmentedObjects(LabelImage):
         '''
         super(SegmentedObjects, self).__init__(name, key, help)
         self._features = collections.defaultdict(list)
-        self._attributes = collections.defaultdict(list)
+        self._save = False
+        self._represent_as_polygons = True
 
     @property
     def labels(self):
         '''List[int]: unique object identifier labels'''
         return np.unique(self.value[self.value > 0]).astype(int).tolist()
 
-    def to_polygons(self, y_offset, x_offset, tolerance=2):
+    def to_points(self, y_offset, x_offset):
+        '''Creates a point representation of each segmented object.
+        The coordinates of the points contours are relative to the global map,
+        i.e. an offset is added to the image site specific coordinates.
+
+        Parameters
+        ----------
+        y_offset: int
+            global vertical offset that needs to be subtracted from
+            *y*-coordinates (*y*-axis is inverted)
+        x_offset: int
+            global horizontal offset that needs to be added to x-coordinates
+
+        Returns
+        -------
+        Generator[Tuple[int], shapely.geometry.polygon.Point]]
+            point (centroid with global map *x*, *y* coordinates)
+            for each identified object hashable
+            by time point, z-plane and one-based, site-specific label
+        '''
+        logger.debug('calculate centroids for objects of type "%s"', self.key)
+        points = dict()
+        for (t, z), plane in self.iterplanes():
+            for label in self.labels:
+                logger.debug('calculate centroid for object #%d', label)
+                y, x = np.where(plane == label)
+                point = shapely.geometry.Point(
+                    int(np.mean(x)) + x_offset,
+                    -1 * (int(np.mean(y)) + y_offset),
+                )
+                yield ((t, z, label), point)
+
+    def to_polygons(self, y_offset, x_offset):
         '''Creates a polygon representation for each segmented object.
         The coordinates of the polygon contours are relative to the global map,
         i.e. an offset is added to the image site specific coordinates.
@@ -327,165 +411,144 @@ class SegmentedObjects(LabelImage):
         Parameters
         ----------
         y_offset: int
-            global vertical offset that needs to be added to y-coordinates
+            global vertical offset that needs to be subtracted from
+            *y*-coordinates (*y*-axis is inverted)
         x_offset: int
-            global horizontal offset that needs to be added to x-coordinates
-        tolerance: int
-            accuracy of polygon approximation; tolerance distance in pixels of
-            points on the contour of the appoximated polygon to the orginal
-            cooridinate points; the higher the value the less accurate the
-            polygon will be approximated, i.e. the less coordinate values will
-            be used to describe its contour; if ``0`` the original contour is
-            used (default: ``2``)
+            global horizontal offset that needs to be added to *x*-coordinates
 
         Returns
         -------
-        Dict[Tuple[int], shapely.geometry.polygon.Polygon]]
-            mapobject outline (simplified polygon with global map *x*, *y*
-            coordinates) for each identified object hashable
+        Generator[Tuple[int], shapely.geometry.polygon.Polygon]]
+            contour (simplified polygon with global map *x*, *y* coordinates)
+            for each identified object hashable
             by time point, z-plane and one-based, site-specific label
-
-        Note
-        ----
-        The *y*-axis of mapobject coordinates is inverted.
         '''
-        logger.debug('calculate outlines for mapobject type "%s"', self.key)
+        logger.debug('calculate polygons for objects type "%s"', self.key)
 
         # Set border pixels to background to find complete contours of
         # objects at the border of the image
-        array = self.value.copy()
-        if array.ndim == 2:
-            array = array[..., np.newaxis, np.newaxis]
-        elif array.shape == 3:
-            array = array[..., np.newaxis]
         polygons = dict()
-        for t in range(array.shape[-1]):
-            for z in range(array[..., t].shape[-1]):
-                plane = array[:, :, z, t]
-                bboxes = mh.labeled.bbox(plane)
-                # We set border pixels to zero to get closed contours for
-                # border objects. This may cause problems for very small objects
-                # at the border, because they may get lost.
-                # We recreate them later on (see below).
-                plane[0, :] = 0
-                plane[-1, :] = 0
-                plane[:, 0] = 0
-                plane[:, -1] = 0
+        for (t, z), plane in self.iterplanes():
+            bboxes = mh.labeled.bbox(plane)
+            # We set border pixels to zero to get closed contours for
+            # border objects. This may cause problems for very small objects
+            # at the border, because they may get lost.
+            # We recreate them later on (see below).
+            plane[0, :] = 0
+            plane[-1, :] = 0
+            plane[:, 0] = 0
+            plane[:, -1] = 0
 
-                for label in self.labels:
-                    bbox = bboxes[label]
-                    obj_im = jtlib.utils.extract_bbox_image(plane, bbox, pad=1)
-                    logger.debug('find contour for object #%d', label)
-                    # We could do this for all objects at once, but doing it
-                    # for each object individually ensures that we get the
-                    # correct number of objects and that coordinates are in the
-                    # correct order, i.e. sorted according to their label.
-                    mask = obj_im == label
-                    # NOTE: OpenCV return x, y coordinates. That means that
-                    # for numpy indexing one would need to flip the axes.
-                    _, contours, hierarchy = cv2.findContours(
-                        (mask).astype(np.uint8) * 255,
-                        cv2.RETR_CCOMP,  # two-level  hierarchy (holes)
-                        cv2.CHAIN_APPROX_SIMPLE  # TODO: how to add offset?
+            for label in self.labels:
+                bbox = bboxes[label]
+                obj_im = jtlib.utils.extract_bbox_image(plane, bbox, pad=1)
+                logger.debug('find contour for object #%d', label)
+                # We could do this for all objects at once, but doing it
+                # for each object individually ensures that we get the
+                # correct number of objects and that coordinates are in the
+                # correct order, i.e. sorted according to their label.
+                mask = obj_im == label
+                # NOTE: OpenCV return x, y coordinates. That means that
+                # for numpy indexing one would need to flip the axes.
+                _, contours, hierarchy = cv2.findContours(
+                    (mask).astype(np.uint8) * 255,
+                    cv2.RETR_CCOMP,  # two-level  hierarchy (holes)
+                    cv2.CHAIN_APPROX_SIMPLE  # TODO: how to add offset?
+                )
+                if len(contours) == 0:
+                    logger.warn(
+                        'no contours identified for object #%d', label
                     )
-                    if len(contours) == 0:
-                        logger.warn(
-                            'no contours identified for object #%d', label
-                        )
-                        # This is most likely an object that does not extend
-                        # beyond the line of border pixels.
-                        # To ensure a correct number of objects we represent
-                        # it by a small polygon.
-                        coords = np.array(np.where(self.value == label)).T
-                        y, x = np.mean(coords, axis=0).astype(int)
-                        shell = np.array([
-                            [x-1, x+1, x+1, x-1, x-1],
-                            [y-1, y-1, y+1, y+1, y-1]
-                        ]).T
-                        holes = None
-                    elif len(contours) > 1:
-                        # It may happens that more than one contour is
-                        # identified per object, for example if the object
-                        # has holes, i.e. enclosed background pixels.
-                        logger.debug(
-                            '%d contours identified for object #%d',
-                            len(contours), label
-                        )
-                        holes = list()
-                        for i in range(len(contours)):
-                            child_idx = hierarchy[0][i][2]
-                            parent_idx = hierarchy[0][i][3]
-                            # There should only be two levels with one
-                            # contour each.
-                            # TODO: prevent creation of holes for objects
-                            # that are not supposed to have holes.
-                            if parent_idx >= 0:
-                                shell = np.squeeze(contours[parent_idx])
-                            elif child_idx >= 0:
-                                holes.append(np.squeeze(contours[child_idx]))
-                            else:
-                                # Same hierarchy level. This shouldn't happen.
-                                # Take only the largest one.
-                                lengths = [len(c) for c in contours]
-                                idx = lengths.index(np.max(lengths))
-                                shell = np.squeeze(contours[idx])
-                                break
-                    else:
-                        shell = np.squeeze(contours[0])
-                        holes = None
-
-                    if shell.ndim < 2 or shell.shape[0] < 3:
-                        logger.warn('polygon doesn\'t have enough coordinates')
-                        # In case the contour cannot be represented as a
-                        # valid polygon we create a little square to not loose
-                        # the object.
-                        y, x = np.array(mask.shape) / 2
-                        # Create a closed ring with coordinates sorted
-                        # counter-clockwise
-                        shell = np.array([
-                            [x-1, x+1, x+1, x-1, x-1],
-                            [y-1, y-1, y+1, y+1, y-1]
-                        ]).T
-
-                    # Add offset required due to alignment and cropping and
-                    # invert the y-axis as required by Openlayers.
-                    add_y = y_offset + bbox[0] - 1
-                    add_x = x_offset + bbox[2] - 1
-                    shell[:, 0] = shell[:, 0] + add_x
-                    shell[:, 1] = -1 * (shell[:, 1] + add_y)
-                    if holes is not None:
-                        for i in range(len(holes)):
-                            holes[i][:, 0] = holes[i][:, 0] + add_x
-                            holes[i][:, 1] = -1 * (holes[i][:, 1] + add_y)
-                    poly = shapely.geometry.Polygon(shell, holes)
-                    poly = poly.simplify(
-                        tolerance=tolerance, preserve_topology=True
+                    # This is most likely an object that does not extend
+                    # beyond the line of border pixels.
+                    # To ensure a correct number of objects we represent
+                    # it by a small polygon.
+                    coords = np.array(np.where(self.value == label)).T
+                    y, x = np.mean(coords, axis=0).astype(int)
+                    shell = np.array([
+                        [x-1, x+1, x+1, x-1, x-1],
+                        [y-1, y-1, y+1, y+1, y-1]
+                    ]).T
+                    holes = None
+                elif len(contours) > 1:
+                    # It may happens that more than one contour is
+                    # identified per object, for example if the object
+                    # has holes, i.e. enclosed background pixels.
+                    logger.debug(
+                        '%d contours identified for object #%d',
+                        len(contours), label
                     )
+                    holes = list()
+                    for i in range(len(contours)):
+                        child_idx = hierarchy[0][i][2]
+                        parent_idx = hierarchy[0][i][3]
+                        # There should only be two levels with one
+                        # contour each.
+                        # TODO: prevent creation of holes for objects
+                        # that are not supposed to have holes.
+                        if parent_idx >= 0:
+                            shell = np.squeeze(contours[parent_idx])
+                        elif child_idx >= 0:
+                            holes.append(np.squeeze(contours[child_idx]))
+                        else:
+                            # Same hierarchy level. This shouldn't happen.
+                            # Take only the largest one.
+                            lengths = [len(c) for c in contours]
+                            idx = lengths.index(np.max(lengths))
+                            shell = np.squeeze(contours[idx])
+                            break
+                else:
+                    shell = np.squeeze(contours[0])
+                    holes = None
+
+                if shell.ndim < 2 or shell.shape[0] < 3:
+                    logger.warn('polygon doesn\'t have enough coordinates')
+                    # In case the contour cannot be represented as a
+                    # valid polygon we create a little square to not loose
+                    # the object.
+                    y, x = np.array(mask.shape) / 2
+                    # Create a closed ring with coordinates sorted
+                    # counter-clockwise
+                    shell = np.array([
+                        [x-1, x+1, x+1, x-1, x-1],
+                        [y-1, y-1, y+1, y+1, y-1]
+                    ]).T
+
+                # Add offset required due to alignment and cropping and
+                # invert the y-axis as required by Openlayers.
+                add_y = y_offset + bbox[0] - 1
+                add_x = x_offset + bbox[2] - 1
+                shell[:, 0] = shell[:, 0] + add_x
+                shell[:, 1] = -1 * (shell[:, 1] + add_y)
+                if holes is not None:
+                    for i in range(len(holes)):
+                        holes[i][:, 0] = holes[i][:, 0] + add_x
+                        holes[i][:, 1] = -1 * (holes[i][:, 1] + add_y)
+                poly = shapely.geometry.Polygon(shell, holes)
+                # poly = poly.simplify(tolerance=0, preserve_topology=True)
+                if not poly.is_valid:
+                    logger.warn(
+                        'invalid polygon for object #%d - trying to fix it',
+                        label
+                    )
+                    # In some cases there may be invalid intersections
+                    # that can be fixed with the buffer trick.
+                    poly = poly.buffer(0)
                     if not poly.is_valid:
-                        logger.warn(
-                            'invalid polygon for object #%d - trying to fix it',
-                            label
+                        raise ValueError(
+                            'Polygon of object #%d is invalid.' % label
                         )
-                        # In some cases there may be invalid intersections
-                        # that can be fixed with the buffer trick.
-                        poly = poly.buffer(0)
-                        if not poly.is_valid:
-                            raise ValueError(
-                                'Polygon of object #%d is invalid.' % label
-                            )
-                        if isinstance(poly, shapely.geometry.MultiPolygon):
-                            logger.warn(
-                                'object #%d has multiple polygons - '
-                                'take largest', label
-                            )
-                            # Repair may create multiple polygons.
-                            # We take the largest and discard the smaller ones.
-                            areas = [g.area for g in poly.geoms]
-                            index = areas.index(np.max(areas))
-                            poly = poly.geoms[index]
-                    polygons[(t, z, label)] = poly
-        return polygons
-
+                    if isinstance(poly, shapely.geometry.MultiPolygon):
+                        logger.warn(
+                            'object #%d has multiple polygons - '
+                            'take largest', label
+                        )
+                        # Repair may create multiple polygons.
+                        # We take the largest and discard the smaller ones.
+                        areas = [g.area for g in poly.geoms]
+                        index = areas.index(np.max(areas))
+                        poly = poly.geoms[index]
+                yield ((t, z, int(label)), poly)
 
     def from_polygons(self, polygons, y_offset, x_offset, dimensions):
         '''Creates a label image representation of segmented objects based
@@ -503,7 +566,7 @@ class SegmentedObjects(LabelImage):
             global horizontal offset that needs to be subtracted from
             x-coordinates
         dimensions: Tuple[int]
-            dimensions of the label image that should be created
+            *y*, *x* dimensions of the label image that should be created
 
         Returns
         -------
@@ -524,50 +587,42 @@ class SegmentedObjects(LabelImage):
 
     @property
     def is_border(self):
-        '''List[pandas.Series[bool]]: ``True`` if object lies at the border of
-        the image and ``False`` otherwise
+        '''Dict[Tuple[int], pandas.Series[bool]]: ``True`` if object lies
+        at the border of the image and ``False`` otherwise
         '''
-        # TODO: 3D and time series
-        return [
-            pd.Series(
-                map(bool, find_border_objects(self.value)),
-                name='is_border', index=self.labels
-            )
-        ]
+        mapping = dict()
+        for (t, z), plane in self.iterplanes():
+            for label, is_border in find_border_objects(plane).iteritems():
+                mapping[(t, z, label)] = bool(is_border)
+        return mapping
 
     @property
-    def attributes(self):
-        '''List[pandas.DataFrame]: attributes for segmented objects at each
-        time point
-        '''
-        if self._attributes:
-            attribute_values = list()
-            for t in sorted(attribute_values.keys()):
-                attribute_values.append(self._attributes[t])
-            return [pd.concat(v, axis=1) for v in attribute_values]
-        else:
-            return [pd.DataFrame()]
+    def save(self):
+        '''bool: whether objects should be saved'''
+        return self._save
 
-    def add_attribute(self, attribute):
-        '''Adds an additional attribute.
+    @save.setter
+    def save(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "save" must have type bool.')
+        self._save = value
 
-        Parameters
-        ----------
-        attribute: tmlib.workflow.jterator.handles.Attribute
-            attribute for each segmented object at each time point
+    @property
+    def represent_as_polygons(self):
+        '''bool: whether objects should be represented as polygons'''
+        return self._represent_as_polygons
 
-        '''
-        if not isinstance(attribute, Attribute):
+    @represent_as_polygons.setter
+    def represent_as_polygons(self, value):
+        if not isinstance(value, bool):
             raise TypeError(
-                'Argument "attribute" must have type '
-                'tmlib.workflow.jterator.handles.Attribute.'
+                'Attribute "represent_as_polygons" must have type bool.'
             )
-        for t, v in enumerate(attribute.value):
-            self._attributes[t].append(v)
+        self._represent_as_polygons = value
 
     @property
     def measurements(self):
-        '''List[pandas.DataFrame[numpy.float]]: features extracted for
+        '''List[pandas.DataFrame]: features extracted for
         segmented objects at each time point
         '''
         if self._features:
@@ -591,17 +646,47 @@ class SegmentedObjects(LabelImage):
                 'Argument "measurement" must have type '
                 'tmlib.workflow.jterator.handles.Measurement.'
             )
-        val = measurement.value
-        if any([any(v.index != np.array(self.labels)) for v in val]):
-            raise IndexError(
-                'Index of "measurement" must match object labels.'
-            )
-        if any([len(np.unique(v.columns)) != len(v.columns) for v in val]):
-            raise ValueError(
-                'Column names of "measurement" must be unique.'
-            )
-        for t, v in enumerate(measurement.value):
-            self._features[t].append(v)
+        for t, val in enumerate(measurement.value):
+            if len(val.index) < len(self.labels):
+                logger.warn(
+                    'missing values for "%s" at time point %d',
+                    measurement.name, t
+                )
+                for label in self.labels:
+                    if label not in val.index:
+                        logger.warn(
+                            'add NaN values for missing object #%d', label
+                        )
+                        val.loc[label, :] = np.NaN
+                val.sort_index(inplace=True)
+            elif len(val.index) > len(self.labels):
+                if len(np.unique(val.index)) < len(val.index):
+                    logger.warn(
+                        'duplicate values for "%s" at time point %d',
+                        measurement.name, t
+                    )
+                    logger.info('remove duplicates and keep first')
+                    val = val[~val.index.duplicated(keep='first')]
+                else:
+                    logger.warn(
+                        'too many values for "%s" at time point %d',
+                        measurement.name, t
+                    )
+                    for i in val.index:
+                        if i not in self.labels:
+                            logger.warn('remove values for object #%d', i)
+                            val.drop(i, inplace=True)
+            if np.any(val.index.values != np.array(self.labels)):
+                raise ValueError(
+                    'Labels of objects for "%s" at time point %d do not match!'
+                    % (measurement.name, t)
+                )
+            if len(np.unique(val.columns)) != len(val.columns):
+                raise ValueError(
+                    'Column names of "%s" at time point %d must be unique.'
+                    % (measurement.name, t)
+                )
+            self._features[t].append(val)
 
     def __str__(self):
         return '<SegmentedObjects(name=%r, key=%r)>' % (self.name, self.key)
@@ -785,41 +870,45 @@ class Plot(InputHandle):
 
 class Measurement(OutputHandle):
 
-    '''Handle for a measurement whose value is a two-dimensional labeled
-    array with *n* rows and *p* columns of type ``float``, where *n* is the
-    number of segmented objects and *p* the number of features that were
-    measured for the referenced segmented objects.
+    '''Handle for a measurement whose value is a list of two-dimensional labeled
+    arrays with *n* rows and *p* columns, where *n* is the number of segmented
+    objects and *p* the number of features that were measured for the
+    referenced segmented objects.
     '''
 
     _NAME_PATTERN = re.compile(r'^[A-Za-z0-9_-]+$')
 
     @assert_type(
+        objects='basestring',
         objects_ref='basestring', channel_ref=['basestring', 'types.NoneType']
     )
-    def __init__(self, name, objects_ref, channel_ref=None, help=''):
+    def __init__(self, name, objects, objects_ref, channel_ref=None, help=''):
         '''
         Parameters
         ----------
         name: str
             name of the item, which must match a parameter of the module
             function
+        objects: str
+            object type to which features should are assigned
         objects_ref: str
-            reference to the objects for which features were extracted
+            reference to object type for which features were extracted
+            (may be the same as `objects`)
         channel_ref: str, optional
-            reference to the channel from which features were extracted
+            reference to channel from which features were extracted
             (default: ``None``)
         help: str, optional
             help message (default: ``""``)
         '''
         super(Measurement, self).__init__(name, help)
-        # TODO: should be a list of data frames, one for each time point
+        self.objects = objects
         self.objects_ref = objects_ref
         self.channel_ref = channel_ref
 
     @property
     def value(self):
-        '''List[pandas.DataFrame[numpy.float]]: features extracted for each
-        segmented object
+        '''List[pandas.DataFrame]: features extracted for
+        segmented objects at each time point
         '''
         return self._value
 
@@ -835,83 +924,18 @@ class Measurement(OutputHandle):
                 'Elements of returned value of "%s" must have type '
                 'pandas.DataFrame.' % self.name
             )
-        if any([v.values.dtype != float for v in value]):
-            raise TypeError(
-                'Measurement values of "%s" must have data type float.'
-                % self.name
-            )
         for v in value:
             for name in v.columns:
                 if not self._NAME_PATTERN.search(name):
                     raise ValueError(
                         'Feature name "%s" must only contain '
-                        'alphanumerical characters including underscores '
-                        'and hyphens.' % name
+                        'alphanumerical characters or underscores or hyphens'
+                        % name
                     )
         self._value = value
 
     def __str__(self):
-        if self.channel_ref is None:
-            return (
-                '<Measurement(name=%r, objects_ref=%r)>'
-                % (self.name, self.objects_ref)
-            )
-        else:
-            return (
-                '<Measurement(name=%r, objects_ref=%r, channel_ref=%r)>'
-                % (self.name, self.objects_ref, self.channel_ref)
-            )
-
-
-class Attribute(OutputHandle):
-
-    '''Handle for an attribute whose value is a one-dimensional labeled
-    array with arbitrary type that describes a characteristic of
-    the referenced segmented objects.
-    '''
-
-    @assert_type(objects_ref='basestring')
-    def __init__(self, name, objects_ref, help=''):
-        '''
-        Parameters
-        ----------
-        name: str
-            name of the item, which must match a parameter of the module
-            function
-        objects_ref: str
-            reference to the objects that the attribute characterizes
-        help: str, optional
-            help message (default: ``""``)
-        '''
-        super(Attribute, self).__init__(name, help)
-        self.objects_ref = objects_ref
-
-    @property
-    def value(self):
-        '''pandas.Series: characteristic of segmented objects'''
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        if not isinstance(value, pd.Series):
-            raise TypeError(
-                'Value of key "%s" must have type pandas.Series.'
-                % self.name
-            )
-        if isinstance(value.name, basestring):
-            raise ValueError(
-                'The attribute "name" of the returned value of "%s" '
-                'must have type basestring.' % self.name
-            )
-        if not value.name:
-            raise ValueError('')
-        self._value = value
-
-    def __str__(self):
-        return (
-            '<Attribute(name=%r, objects_ref=%r)>'
-            % (self.name, self.objects_ref)
-        )
+        return '<Measurement(name=%r, objects=%r)>' % (self.name, self.objects)
 
 
 class Figure(OutputHandle):

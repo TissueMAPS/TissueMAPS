@@ -116,10 +116,13 @@ class MetadataConfigurator(ClusterRoutines):
         :class:`tm.Well`, and :class:`tm.Channel` as
         well as all children for the processed experiment.
         '''
+        # Distributed tables cannot be dropped within a transaction
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+            logger.info('delete existing channel layers')
+            tm.ChannelLayer.delete_cascade(connection)
+
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             logger.info('delete existing channels')
-            session.drop_and_recreate(tm.ChannelLayerTile)
-            session.drop_and_recreate(tm.ChannelLayer)
             session.drop_and_recreate(tm.Channel)
             logger.info('delete existing cycles')
             # NOTE: the delete also triggers the removal of the files from disk
@@ -190,6 +193,8 @@ class MetadataConfigurator(ClusterRoutines):
                 'try to retrieve missing metadata from filenames '
                 'using regular expression'
             )
+            if regexp is None:
+                logger.warn('no regular expression provided')
             mdhandler.configure_metadata_from_filenames(
                 plate_dimensions=plate_dimensions, regex=regexp
             )
@@ -309,7 +314,7 @@ class MetadataConfigurator(ClusterRoutines):
                 t_index = 0
                 w_index = 0
                 c_index = 0
-                for acquisition in plate.acquisitions:
+                for acquisition in reversed(plate.acquisitions):
                     logger.info('configure acquisition "%s"', acquisition.name)
                     df = pd.DataFrame(
                         session.query(

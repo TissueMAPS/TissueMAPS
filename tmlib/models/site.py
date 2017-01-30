@@ -19,13 +19,13 @@ from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models.base import ExperimentModel, DateMixIn
+from tmlib.models.base import ExperimentModel
 
 
 logger = logging.getLogger(__name__)
 
 
-class Site(ExperimentModel, DateMixIn):
+class Site(ExperimentModel):
 
     '''A *site* is a unique `y`, `x` position projected onto the
     *plate* bottom plane that was scanned by the microscope.
@@ -38,8 +38,6 @@ class Site(ExperimentModel, DateMixIn):
         intersection belongings to the site
     channel_image_files: List[tmlib.models.file.ChannelImageFile]
         channel image files belonging to the site
-    mapobject_segmentations: List[tmlib.models.mapobject.MapobjectSegmentation]
-        segmentations belonging to the site
     '''
 
     __tablename__ = 'sites'

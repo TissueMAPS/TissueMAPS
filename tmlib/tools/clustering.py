@@ -29,9 +29,7 @@ class Clustering(Classifier):
 
     __icon__ = 'CLU'
 
-    __description__ = '''
-        Clusters mapobjects based on a set of selected features.
-    '''
+    __description__ = 'Clusters mapobjects based on a set of selected features.'
 
     __options__ = {'method': ['kmeans'] }
 
@@ -72,11 +70,10 @@ class Clustering(Classifier):
             mapobject_type_name, feature_names
         )
         predicted_labels = self.classify_unsupervised(feature_data, k, method)
+        unique_labels = np.unique(predicted_labels)
 
-        unique_labels = self.calculate_unique(predicted_labels, 'label')
-        result_id = self.initialize_result(
+        result_id = self.register_result(
             submission_id, mapobject_type_name,
-            layer_type='ScalarLabelLayer', unique_labels=unique_labels
+            result_type='ScalarToolResult', unique_labels=unique_labels
         )
-
-        self.save_label_values(result_id, predicted_labels)
+        self.save_result_values(result_id, predicted_labels)

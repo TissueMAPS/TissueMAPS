@@ -28,6 +28,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def create_partitions(li, n):
+    '''Creates a list of sublists from a list, where each sublist has length n.
+
+    Parameters
+    ----------
+    li: list
+        list that should be partitioned
+    n: int
+        number of items per sublist
+
+    Returns
+    -------
+    List[list]
+    '''
+    n = max(1, n)
+    return [li[i:i + n] for i in range(0, len(li), n)]
+
+
 def create_datetimestamp():
     '''Creates a datetimestamp in the form "year-month-day_hour-minute-second".
 
@@ -50,6 +68,22 @@ def create_timestamp():
     '''
     t = time.time()
     return datetime.datetime.fromtimestamp(t).strftime('%H-%M-%S')
+
+
+def create_directory(location):
+    '''Creates a directory on disk in a safe way.
+
+    Parameters
+    ----------
+    location: str
+        absolute path to the directory that should be created
+    '''
+    try:
+        os.mkdir(location)
+    except OSError as err:
+        if err.errno != 17:
+            raise
+        pass
 
 
 def regex_from_format_string(format_string):
@@ -479,12 +513,7 @@ class autocreate_directory_property(object):
             )
         if not os.path.exists(value):
             logger.debug('create directory: %s', value)
-            try:
-                os.mkdir(value)
-            except OSError as err:
-                if err.errno != 17:
-                    raise
-                pass
+            create_directory(value)
         return value
 
 

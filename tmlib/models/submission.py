@@ -154,7 +154,7 @@ class Submission(MainModel, DateMixIn):
 #         )
 
 
-class Task(MainModel):
+class Task(MainModel, DateMixIn):
 
     '''A *task* represents a computational job that can be submitted to a
     cluster for processing. Its state will be monitored while being processed.
@@ -162,8 +162,6 @@ class Task(MainModel):
     '''
 
     __tablename__ = 'tasks'
-
-    __distribute_by_hash__ = 'id'
 
     #: str: procssing state, e.g. ``"RUNNING"`` or ``"TERMINATED"``
     state = Column(String, index=True)

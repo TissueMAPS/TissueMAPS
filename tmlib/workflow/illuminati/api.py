@@ -19,6 +19,7 @@ import numpy as np
 import collections
 import itertools
 import shapely.geometry
+import psycopg2
 import sqlalchemy.orm
 from sqlalchemy import func
 from sqlalchemy.orm.exc import NoResultFound
@@ -26,7 +27,7 @@ from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
 import tmlib.models as tm
-from tmlib import utils
+from tmlib.utils import flatten, notimplemented
 from tmlib.image import PyramidTile
 from tmlib.image import Image
 from tmlib.errors import DataIntegrityError
@@ -66,21 +67,23 @@ class PyramidBuilder(ClusterRoutines):
         '''
         files = list()
         if batches['run']:
-            run_files = utils.flatten([
+            run_files = flatten([
                 self._make_paths_absolute(j)['inputs'].values()
                 for j in batches['run']
                 if j['index'] == 0  # only base tile inputs
             ])
             if all([isinstance(f, list) for f in run_files]):
-                run_files = utils.flatten(run_files)
+                run_files = flatten(run_files)
                 if all([isinstance(f, list) for f in run_files]):
-                    run_files = utils.flatten(run_files)
+                    run_files = flatten(run_files)
                 files.extend(run_files)
             elif any([isinstance(f, dict) for f in run_files]):
-                files.extend(utils.flatten([
-                    utils.flatten(f.values())
-                    for f in run_files if isinstance(f, dict)
-                ]))
+                files.extend(
+                    flatten([
+                        flatten(f.values())
+                        for f in run_files if isinstance(f, dict)
+                    ])
+                )
             else:
                 files.extend(run_files)
         return files
@@ -100,7 +103,9 @@ class PyramidBuilder(ClusterRoutines):
         '''
         logger.info('performing data integrity tests')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            n_images_per_site = session.query(func.count(tm.ChannelImageFile.id)).\
+            n_images_per_site = session.query(
+                    func.count(tm.ChannelImageFile.id)
+                ).\
                 group_by(tm.ChannelImageFile.site_id).\
                 all()
             if len(set(n_images_per_site)) > 1:
@@ -123,7 +128,8 @@ class PyramidBuilder(ClusterRoutines):
         job_descriptions['run'] = list()
         job_count = 0
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-
+            experiment = session.query(tm.Experiment).one()
+            count = 0
             for cid in session.query(tm.Channel.id).distinct():
 
                 n_zplanes = session.query(tm.ChannelImageFile.n_planes).\
@@ -144,13 +150,20 @@ class PyramidBuilder(ClusterRoutines):
                     layer = session.get_or_create(
                         tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
                     )
-
-                    for index, level in enumerate(reversed(range(layer.n_levels))):
+                    if count == 0:
+                        h, w, d = layer.calculate_pyramid_dimensions()
+                        experiment.pyramid_depth = d
+                        experiment.pyramid_height = h
+                        experiment.pyramid_width = w
+                    count += 1
+                    n_levels = experiment.pyramid_depth
+                    max_zoomlevel_index = n_levels - 1
+                    for index, level in enumerate(reversed(range(n_levels))):
                         logger.debug('pyramid level %d', level)
                         # The layer "level" increases from top to bottom.
                         # We build the layer bottom-up, therefore, the "index"
                         # decreases from top to bottom.
-                        if level == layer.maxzoom_level_index:
+                        if level == max_zoomlevel_index:
                             # For the base level, batches are composed of
                             # image files, which will get chopped into tiles.
                             batch_size = args.batch_size
@@ -176,7 +189,7 @@ class PyramidBuilder(ClusterRoutines):
                             # are channel image files. For all other levels,
                             # the inputs are the tiles of the next higher
                             # resolution level.
-                            if level == layer.maxzoom_level_index:
+                            if level == max_zoomlevel_index:
                                 image_file_subset = np.array(image_files)[batch]
                                 input_files = list()
                                 image_file_ids = list()
@@ -219,21 +232,23 @@ class PyramidBuilder(ClusterRoutines):
         return job_descriptions
 
     def delete_previous_job_output(self):
-        '''Deletes all instances of class
-        :class:`tm.ChannelLayer` and instances of class
-        :class:`tm.MapobjectType` where ``is_static == True``
-        as well as all children instances for the processed experiment.
+        '''Deletes all instances of
+        :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>` and
+        :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`.
         '''
-        logger.debug('delete existing channel layers and pyramid tile files')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.drop_and_recreate(tm.ChannelLayer)
-            session.drop_and_recreate(tm.ChannelLayerTile)
-
-        logger.debug('delete existing static mapobject types')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            mapobject_types = session.query(tm.MapobjectType).\
-                filter_by(is_static=True).\
-                delete()
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+            logger.info('delete existing channel layers')
+            tm.ChannelLayer.delete_cascade(connection)
+            logger.info('delete existing static mapobject types')
+            tm.MapobjectType.delete_cascade(
+                connection, ref_type=tm.Plate.__name__
+            )
+            tm.MapobjectType.delete_cascade(
+                connection, ref_type=tm.Well.__name__
+            )
+            tm.MapobjectType.delete_cascade(
+                connection, ref_type=tm.Site.__name__
+            )
 
     def create_run_job_collection(self, submission_id):
         '''tmlib.workflow.job.MultiRunJobCollection: collection of "run" jobs
@@ -386,10 +401,7 @@ class PyramidBuilder(ClusterRoutines):
             if batch['align']:
                 logger.info('align images between cycles')
 
-        for fid in batch['image_file_ids']:
-            with tm.utils.ExperimentSession(self.experiment_id) as session:
-                layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
-
+            for fid in batch['image_file_ids']:
                 file = session.query(tm.ChannelImageFile).get(fid)
                 logger.info('process image %d', file.id)
                 tiles = layer.map_image_to_base_tiles(file)
@@ -407,14 +419,12 @@ class PyramidBuilder(ClusterRoutines):
                 image_store[file.id] = image
 
                 extra_file_map = layer.map_base_tile_to_images(file.site)
-                channel_layer_tiles = list()
                 for t in tiles:
                     level = batch['level']
-                    row = t['row']
-                    column = t['column']
+                    row = t['y']
+                    column = t['x']
                     logger.debug(
-                        'create tile: level=%d, row=%d, column=%d',
-                        level, row, column
+                        'create tile: z=%d, y=%d, x=%d', level, row, column
                     )
                     tile = layer.extract_tile_from_image(
                         image_store[file.id], t['y_offset'], t['x_offset']
@@ -496,99 +506,83 @@ class PyramidBuilder(ClusterRoutines):
                                 'Tile shouldn\'t be in this batch!'
                             )
 
-                    clt = session.get_or_create(
-                        tm.ChannelLayerTile,
-                        level=level, row=row, column=column,
-                        channel_layer_id=layer.id,
-                    )
-                    # clt.pixels = tile
-                    channel_layer_tiles.append({
-                        'id': clt.id, '_pixels': tile.jpeg_encode()
-                    })
-
-                # session.bulk_save_objects(channel_layer_tiles)
-                session.bulk_update_mappings(
-                    tm.ChannelLayerTile, channel_layer_tiles
-                )
+                    with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+                        tm.ChannelLayerTile.add(
+                            conn, channel_layer_id=layer.id,
+                            z=level, y=row, x=column, tile=tile
+                        )
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
-            logger.info(
-                'processing layer: channel %d', layer.channel.index
-            )
+            logger.info('processing layer: channel %d', layer.channel.index)
+            level = batch['level']
             logger.info('creating tiles at zoom level %d', batch['level'])
+            layer_id = layer.id
+            zoom_factor = layer.zoom_factor
 
-        for current_coordinate in batch['coordinates']:
-            with tm.utils.ExperimentSession(self.experiment_id) as session:
-                layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
-                level = batch['level']
+            for current_coordinate in batch['coordinates']:
                 row, column = tuple(current_coordinate)
-                coordinates = layer.calc_coordinates_of_next_higher_level(
+                pre_coordinates = layer.calc_coordinates_of_next_higher_level(
                     level, row, column
                 )
-                try:
-                    clt = session.query(tm.ChannelLayerTile).\
-                        filter_by(
-                            row=row, column=column, level=level,
-                            channel_layer_id=layer.id
-                        ).\
-                        one()
-                except NoResultFound:
-                    clt = tm.ChannelLayerTile(
-                        row=row, column=column, level=level,
-                        channel_layer_id=layer.id
-                    )
-                    session.add(clt)
                 logger.debug(
-                    'creating tile: level=%d, row=%d, column=%d',
-                    level, row, column
+                    'creating tile: z=%d, y=%d, x=%d', level, row, column
                 )
-                rows = np.unique([c[0] for c in coordinates])
-                cols = np.unique([c[1] for c in coordinates])
                 # Build the mosaic by loading required higher level tiles
                 # (created in a previous run) and stitching them together
-                for i, r in enumerate(rows):
-                    for j, c in enumerate(cols):
-                        try:
-                            pre_clt = session.query(tm.ChannelLayerTile).\
-                                filter_by(
-                                    row=r, column=c, level=batch['level']+1,
-                                    channel_layer_id=layer.id
-                                ).\
-                                one()
-                            pre_tile = pre_clt.pixels
-                        except sqlalchemy.orm.exc.NoResultFound:
-                            # Tiles at maxzoom level might not exist in case
-                            # they are empty. They must exist at the lower
-                            # levels however.
-                            if batch['index'] > 1:
-                                raise ValueError(
-                                    'Tile "%d-%d-%d" was not created.'
-                                    % (batch['level']+1, r, c)
+                pre_rows = np.unique([c[0] for c in pre_coordinates])
+                pre_cols = np.unique([c[1] for c in pre_coordinates])
+                with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+                    for i, r in enumerate(pre_rows):
+                        for j, c in enumerate(pre_cols):
+                            conn.execute('''
+                                SELECT pixels FROM channel_layer_tiles
+                                WHERE channel_layer_id=%(channel_layer_id)s
+                                AND z=%(z)s AND y=%(y)s AND x=%(x)s;
+                            ''', {
+                                'z': level+1, 'y': r, 'x': c,
+                                'channel_layer_id': layer_id
+                            })
+                            pre_tile = conn.fetchone()
+                            if pre_tile:
+                                pre_tile = PyramidTile.create_from_buffer(
+                                    pre_tile.pixels
                                 )
-                            logger.warning(
-                                'tile "%d-%d-%d" was not created - might be empty',
-                                 batch['level']+1, r, c
-                            )
-                            pre_tile = PyramidTile.create_as_background()
-                        # We have to temporally treat it as an "image",
-                        # since a tile can per definition not be larger
-                        # than 256x256 pixels.
-                        img = Image(pre_tile.array)
-                        if j == 0:
-                            row_img = img
+                            else:
+                                # Tiles at maxzoom level might not exist in case
+                                # they are empty. They must exist at the lower
+                                # levels however.
+                                if batch['index'] > 1:
+                                    raise ValueError(
+                                        'Tile "%d-%d-%d" was not created.'
+                                        % (level+1, r, c)
+                                    )
+                                logger.debug(
+                                    'tile "%d-%d-%d" missing - might be empty',
+                                     batch['level']+1, r, c
+                                )
+                                pre_tile = PyramidTile.create_as_background()
+                            # We have to temporally treat it as an "image",
+                            # since a tile can per definition not be larger
+                            # than 256x256 pixels.
+                            img = Image(pre_tile.array)
+                            if j == 0:
+                                row_img = img
+                            else:
+                                row_img = row_img.join(img, 'x')
+                        if i == 0:
+                            mosaic_img = row_img
                         else:
-                            row_img = row_img.join(img, 'x')
-                    if i == 0:
-                        mosaic_img = row_img
-                    else:
-                        mosaic_img = mosaic_img.join(row_img, 'y')
-                # Create the tile at the current level by downsampling the
-                # mosaic image, which is composed of the 4 tiles of the next
-                # higher zoom level
-                tile = PyramidTile(mosaic_img.shrink(layer.zoom_factor).array)
-                clt.pixels = tile
+                            mosaic_img = mosaic_img.join(row_img, 'y')
+                    # Create the tile at the current level by downsampling the
+                    # mosaic image, which is composed of the 4 tiles of the next
+                    # higher zoom level
+                    tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
+                    tm.ChannelLayerTile.add(
+                        conn, channel_layer_id=layer_id,
+                        z=level, y=row, x=column, tile=tile
+                    )
 
     def run_job(self, batch):
         '''Creates 8-bit grayscale JPEG layer tiles.
@@ -604,53 +598,46 @@ class PyramidBuilder(ClusterRoutines):
             self._create_lower_zoom_level_tiles(batch)
 
     def collect_job_output(self, batch):
-        '''Creates default instances of :class:`tm.MapobjectType`
-        for :class:`tm.Site`, :class:`tm.Well`,
-        and :class:`tm.Plate` and creates for each instance an
-        instance of :class:`tm.Mapobject` and the corresponding
-        :class:`tm.MapobjectSegmentation`.
+        '''Creates :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        instances for :class:`Site <tmlib.models.site.Site>`,
+        :class:`Well <tmlib.models.well.Well>`,
+        and :class:`Plate <tmlib.models.plate.Plate>` types and creates for each
+        object of these classes an instance of
+        :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`.
+        This allows visualizing these objects on the map and using them
+        for efficient spatial queries.
 
+        Parameters
+        ----------
         batch: dict
             job description
         '''
-        logger.debug('delete existing mapobjects of static type')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-            mapobject_ids = session.query(tm.Mapobject.id).\
-                join(tm.MapobjectType).\
-                filter(tm.MapobjectType.is_static).\
-                all()
-            mapobject_ids = [m.id for m in mapobject_ids]
-            if mapobject_ids:
-                session.query(tm.Mapobject).\
-                    filter(tm.Mapobject.id.in_(mapobject_ids)).\
-                    delete()
-
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
-
-            layer = session.query(tm.ChannelLayer).first()
-            mapobjects = {
-                'Plate': session.query(tm.Plate),
-                'Wells': session.query(tm.Well),
-                'Sites': session.query(tm.Site)
-            }
-
-            for name, query in mapobjects.iteritems():
-
-                logger.info('create mapobject type "%s"', name)
+        mapobject_mappings = {
+            'Plates': tm.Plate, 'Wells': tm.Well, 'Sites': tm.Site
+        }
+        for name, cls in mapobject_mappings.iteritems():
+            with tm.utils.ExperimentSession(self.experiment_id) as session:
+                logger.info(
+                    'create static mapobject type "%s" for reference type "%s"',
+                    name, cls.__name__
+                )
                 mapobject_type = session.get_or_create(
-                    tm.MapobjectType, name=name, is_static=True
+                    tm.MapobjectType, name=name, ref_type=cls.__name__
+                )
+                mapobject_type_id = mapobject_type.id
+                segmentation_layer = session.get_or_create(
+                    tm.SegmentationLayer, mapobject_type_id=mapobject_type_id
                 )
 
-                logger.info('create mapobjects of type "%s"', name)
-                mapobject_outlines = list()
-                for obj in query:
-
-                    mapobject = tm.Mapobject(mapobject_type.id)
-                    session.add(mapobject)
-                    session.flush()
-
+                logger.info('create individual mapobjects of type "%s"', name)
+                segmentations = dict()
+                for obj in session.query(cls):
+                    logger.debug(
+                        'create mapobject for reference object #%d', obj.id
+                    )
                     # First element: x axis
-                    # Second element: inverted y axis
+                    # Second element: inverted (!) y axis
                     ul = (obj.offset[1], -1 * obj.offset[0])
                     ll = (ul[0] + obj.image_size[1], ul[1])
                     ur = (ul[0], ul[1] - obj.image_size[0])
@@ -658,20 +645,22 @@ class PyramidBuilder(ClusterRoutines):
                     # Closed circle with coordinates sorted counter-clockwise
                     contour = np.array([ur, ul, ll, lr, ur])
                     polygon = shapely.geometry.Polygon(contour)
-                    mapobject_outlines.append(
-                        tm.MapobjectSegmentation(
-                            mapobject_id=mapobject.id,
-                            geom_poly=polygon.wkt,
-                            geom_centroid=polygon.centroid.wkt
-                        )
+                    segmentations[obj.id] = {
+                        'segmentation_layer_id': segmentation_layer.id,
+                        'polygon': polygon
+                    }
+
+            with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+                logger.debug('delete existing mapobjects of type "%s"', name)
+                tm.Mapobject.delete_cascade(conn, mapobject_type_id)
+                logger.debug('add new mapobjects of type "%s"', name)
+                for key, value in segmentations.iteritems():
+                    mapobject_id = tm.Mapobject.add(
+                        conn, mapobject_type_id, ref_id=key
                     )
-                session.add_all(mapobject_outlines)
-                session.commit()
-
-                min_zoom, max_zoom = mapobject_type.calculate_min_max_poly_zoom(
-                    layer.maxzoom_level_index,
-                    segmentation_ids=[o.id for o in mapobject_outlines]
-                )
-                mapobject_type.min_poly_zoom = min_zoom
-                mapobject_type.max_poly_zoom = max_zoom
-
+                    logger.debug('add mapobject #%d', mapobject_id)
+                    tm.MapobjectSegmentation.add(
+                        conn, mapobject_id,
+                        segmentation_layer_id=value['segmentation_layer_id'],
+                        polygon=value['polygon']
+                    )
