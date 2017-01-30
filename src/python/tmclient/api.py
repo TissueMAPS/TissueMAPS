@@ -370,6 +370,10 @@ class TmClient(HttpClient):
                 'More than one experiment found with name "%s"' %
                 experiment_name
             )
+        if len(data) == 0:
+            raise QueryError(
+                'Experiment "%s" does not exist.' % experiment_name
+            )
         return data[0]['id']
 
     def create_experiment(self, microscope_type, plate_format,
@@ -432,6 +436,10 @@ class TmClient(HttpClient):
             raise QueryError(
                 'More than one plate found with name "%s"' % name
             )
+        elif len(data) == 0:
+            raise QueryError(
+                'No plate found with name "%s"' % name
+            )
         return data[0]['id']
 
     def create_plate(self, plate_name):
@@ -489,7 +497,12 @@ class TmClient(HttpClient):
         if len(data) > 1:
             raise QueryError(
                 'More than one acquisition found with name "%s" and '
-                'plate name "%s"' % (acquisition_name, plate_name)
+                'plate name "%s".' % (acquisition_name, plate_name)
+            )
+        elif len(data) == 0:
+            raise QueryError(
+                'No acquisition found with name "%s" and '
+                'plate name "%s".' % (acquisition_name, plate_name)
             )
         return data[0]['id']
 
@@ -555,7 +568,12 @@ class TmClient(HttpClient):
         if len(data) > 1:
             raise QueryError(
                 'More than one cycle found with index %d and '
-                'plate name "%s"' % (cycle_index, plate_name)
+                'plate name "%s".' % (cycle_index, plate_name)
+            )
+        elif len(data) == 0:
+            raise QueryError(
+                'No cycle found with index %d and '
+                'plate name "%s".' % (cycle_index, plate_name)
             )
         return data[0]['id']
 
@@ -585,7 +603,11 @@ class TmClient(HttpClient):
         data = res.json()['data']
         if len(data) > 1:
             raise QueryError(
-                'More than one channel found with name "%s"' % channel_name
+                'More than one channel found with name "%s".' % channel_name
+            )
+        elif len(data) == 0:
+            raise QueryError(
+                'No channel found with name "%s".' % channel_name
             )
         return data[0]['id']
 
@@ -627,7 +649,12 @@ class TmClient(HttpClient):
         if len(data) > 1:
             raise QueryError(
                 'More than one channel layer found with channel name "%s" '
-                'tpoint %d and zplane %d' % (channel_name, tpoint, zplane)
+                'tpoint %d and zplane %d.' % (channel_name, tpoint, zplane)
+            )
+        elif len(data) == 0:
+            raise QueryError(
+                'No channel layer found with channel name "%s" '
+                'tpoint %d and zplane %d.' % (channel_name, tpoint, zplane)
             )
         return data[0]['id']
 
