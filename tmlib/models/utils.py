@@ -78,12 +78,13 @@ def create_db_engine(db_uri, cache=True):
         if POOL_SIZE > 1:
             overflow_size = POOL_SIZE * 2
         elif POOL_SIZE == 1:
-            # NOTE: We assume that exactly one connection should be used.
-            # We use QueuePool instead of StaticPool because according to the
-            # docs the latter doesn't support all pool features. However, by
-            # setting max_overflow to -1 we ensure that only one connection
-            # gets checked out.
-            overflow_size = -1
+            # For parallel processes running on the cluster, we want as few
+            # database connections as possible. In principle one connection
+            # should be enough.
+            # However, we may want to have a "Session" and a "Connection"
+            # each having a connection open, simulatenously. Therefore, we
+            # allow an overflow of one additional connection.
+            overflow_size = 1
         else:
             raise ValueError('Pool size must be a positive integer.')
         engine = sqlalchemy.create_engine(
