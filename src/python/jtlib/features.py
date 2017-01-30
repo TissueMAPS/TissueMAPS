@@ -174,7 +174,7 @@ class Features(object):
                         values['%s_%s' % (stat, name)] = np.nan
             else:
                 for name, vals in features.loc[labels, :].iteritems():
-                    if vals.emtpy:
+                    if vals.empty:
                         for stat in self._aggregate_statistics.keys:
                             values['%s_%s' % (stat, name)] = np.nan
                     else:
