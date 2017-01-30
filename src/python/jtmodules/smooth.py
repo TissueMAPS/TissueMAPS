@@ -44,7 +44,7 @@ def main(image, filter_name, filter_size, plot=False):
         name of the filter kernel that should be applied
         (options: ``{"avarage", "gaussian", "median"}``)
     filter_size: int
-        size (width/height) of the kernel (must be an odd, positive integer)
+        size of the kernel
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -61,20 +61,20 @@ def main(image, filter_name, filter_size, plot=False):
     se = np.ones((filter_size, filter_size))
     if filter_name == 'average':
         logger.info('apply "average" filter')
-        smoothed_image = mh.mean_filter(image, se).astype(image.dtype)
+        smoothed_image = mh.mean_filter(image, se)
     elif filter_name == 'gaussian':
         logger.info('apply "gaussian" filter')
-        smoothed_image = mh.gaussian_filter(image, filter_size).astype(image.dtype)
+        smoothed_image = mh.gaussian_filter(image, filter_size)
     elif filter_name == 'median':
         logger.info('apply "median" filter')
-        smoothed_image = mh.median_filter(image, se).astype(image.dtype)
+        smoothed_image = mh.median_filter(image, se)
     else:
         raise ValueError(
             'Arugment "filter_name" can be one of the following:\n'
             '"average", "gaussian" or "median"'
         )
-
     smoothed_image = smoothed_image.astype(image.dtype)
+
     if plot:
         logger.info('create plot')
         from jtlib import plotting
