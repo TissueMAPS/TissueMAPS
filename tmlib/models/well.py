@@ -158,7 +158,7 @@ class Well(ExperimentModel, DateMixIn):
         >>>Well.map_name_to_coordinate("A02")
         (0, 1)
         '''
-        row_name, col_name = re.match(r'([A-Z])(\d)', name).group(1, 2)
+        row_name, col_name = re.match(r'([A-Z])(\d+)', name).group(1, 2)
         row_index = utils.map_letter_to_number(row_name) - 1
         col_index = int(col_name) - 1
         return (row_index, col_index)
