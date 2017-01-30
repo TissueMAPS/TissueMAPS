@@ -2,10 +2,8 @@
 TissueMAPS
 **********
 
-Online documentation
---------------------
+Online documentation is available at `tissuemaps.org <http://tissuemaps.org/>`_.
 
-Documentation is available at `tissuemaps.org <http://tissuemaps.org/>`_.
 
 Installation of *TissueMAPS* Python packages during pre-release phase
 ---------------------------------------------------------------------
