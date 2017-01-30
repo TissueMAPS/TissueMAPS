@@ -95,10 +95,9 @@ def encode_channel_layer(obj, encoder):
         'zplane': obj.zplane,
         'max_intensity': obj.max_intensity,
         'min_intensity': obj.min_intensity,
-        'experiment_id': encode_pk(obj.channel.experiment_id),
         'image_size': {
-            'width': obj.width,
-            'height': obj.height
+            'width': obj.channel.experiment.pyramid_width,
+            'height': obj.channel.experiment.pyramid_height
         }
     }
 
@@ -162,6 +161,20 @@ def encode_mapobject_type(obj, encoder):
         'id': encode_pk(obj.id),
         'name': obj.name,
         'features': map(encoder.default, obj.features),
+        'layers': [encoder.default(layer) for layer in obj.layers]
+    }
+
+
+@json_encoder(tm.SegmentationLayer)
+def encode_segmentation_layer(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'tpoint': obj.tpoint,
+        'zplane': obj.zplane,
+        'image_size': {
+            'width': obj.mapobject_type.experiment.pyramid_width,
+            'height': obj.mapobject_type.experiment.pyramid_height
+        }
     }
 
 
@@ -187,17 +200,11 @@ def encode_tool_result(obj, encoder):
         'id': encode_pk(obj.id),
         'name': obj.name,
         'submission_id': obj.submission_id,
-        'layer': obj.layer,
-        'plots': map(encoder.default, obj.plots)
-    }
-
-
-@json_encoder(tm.LabelLayer)
-def encode_label_layer(obj, encoder):
-    return {
-        'id': encode_pk(obj.id),
+        'tool_name': obj.tool_name,
         'type': obj.type,
-        'attributes': obj.attributes
+        'attributes': obj.attributes,
+        'layers': [encoder.default(layer) for layer in obj.mapobject_type.layers],
+        'plots': map(encoder.default, obj.plots)
     }
 
 

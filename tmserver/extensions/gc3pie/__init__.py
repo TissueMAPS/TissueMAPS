@@ -181,7 +181,10 @@ class GC3Pie(object):
             with tm.utils.MainSession() as session:
                 submission = session.query(tm.Submission).get(submission_id)
                 job_id = submission.top_task_id
-            return self._store.load(job_id)
+            if job_id is not None:
+                return self._store.load(job_id)
+            else:
+                return None
         else:
             return None
 

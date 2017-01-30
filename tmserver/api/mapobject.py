@@ -33,6 +33,7 @@ from werkzeug import secure_filename
 
 import tmlib.models as tm
 from tmlib.image import SegmentationImage
+from tmlib.utils import create_partitions
 
 from tmserver.api import api
 from tmserver.util import decode_query_ids, assert_query_params
@@ -88,15 +89,15 @@ def get_features(experiment_id):
 
 
 @api.route(
-    '/experiments/<experiment_id>/mapobjects/<object_type>/segmentations',
+    '/experiments/<experiment_id>/mapobjects/<mapobject_type_name>/segmentations',
     methods=['GET']
 )
 @jwt_required()
 @assert_query_params('plate_name', 'well_name', 'x', 'y', 'zplane', 'tpoint')
 @decode_query_ids('read')
-def get_segmentation_image(experiment_id, object_type):
+def get_segmentation_image(experiment_id, mapobject_type_name):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/segmentations
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type_name)/segmentations
 
         Get the segmentation image at a specified coordinate.
 
@@ -134,28 +135,37 @@ def get_segmentation_image(experiment_id, object_type):
                 tm.Site.x == x, tm.Site.y == y
             ).\
             one()
-        mapobject_type = session.query(tm.MapobjectType).\
-            filter_by(name=object_type).\
-            one()
-        segmentations = session.query(
-                tm.MapobjectSegmentation.label,
-                tm.MapobjectSegmentation.geom_poly
-            ).\
+        site_segmentation = session.query(tm.MapobjectSegmentation.geom_poly).\
             join(tm.Mapobject).\
+            filter(tm.Mapobject.ref_id == site_id).\
+            one()
+        segmentation_layer = session.query(tm.SegmentationLayer.id).\
             join(tm.MapobjectType).\
             filter(
-                tm.MapobjectType.name == object_type,
-                tm.MapobjectSegmentation.site_id == site.id,
-                tm.MapobjectSegmentation.zplane == zplane,
-                tm.MapobjectSegmentation.tpoint == tpoint
+                tm.MapobjectType.name == mapobject_type_name,
+                tm.SegmentationLayer.tpoint == tpoint,
+                tm.SegmentationLayer.zplane == zplane,
             ).\
+            one()
+
+        # Retrieve all mapobjects of the given type that fall within the given
+        # site and label them according to the ID that was assigned to them,
+        # assuming that IDs were assigned in the order of original labels.
+        segmentations = session.query(tm.MapobjectSegmentation.geom_poly).\
+            filter_by(segmentation_layer_id=segmentation_layer.id).\
+            filter(
+                tm.MapobjectSegmentation.geom_poly.ST_Intersects(
+                    site_segmentation.geom_poly
+                )
+            ).\
+            order_by(tm.MapobjectSegmentation.id).\
             all()
 
         if len(segmentations) == 0:
             raise ResourceNotFoundError(tm.MapobjectSegmentation, request.args)
         polygons = dict()
-        for seg in segmentations:
-            polygons[(tpoint, zplane, seg.label)] = seg.geom_poly
+        for i, seg in enumerate(segmentations):
+            polygons[(tpoint, zplane, i+1)] = seg.geom_poly
 
         y_offset, x_offset = site.offset
         height = site.height
@@ -174,7 +184,7 @@ def get_segmentation_image(experiment_id, object_type):
 
         filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
             experiment_name, site.well.name, site.x, site.y, zplane, tpoint,
-            object_type
+            mapobject_type_name
         )
 
     img = SegmentationImage.create_from_polygons(
@@ -192,21 +202,21 @@ def get_segmentation_image(experiment_id, object_type):
 
 
 @api.route(
-    '/experiments/<experiment_id>/mapobjects/<object_type>/feature-values',
+    '/experiments/<experiment_id>/mapobjects/<mapobject_type_name>/feature-values',
     methods=['GET']
 )
 @jwt_required()
 @decode_query_ids('read')
-def get_mapobject_feature_values(experiment_id, object_type):
+def get_mapobject_feature_values(experiment_id, mapobject_type_name):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/feature-values
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type_name)/feature-values
 
         Get all feature values
-        (:class:`FeatureValue.value <tmlib.models.feature.FeatureValue`)
-        for object of the given
+        (:class:`FeatureValue.values <tmlib.models.feature.FeatureValue.values>`)
+        for objects of the given
         :class:`MapobjectType <tmlib.models.mapobject.MapobjectType`
         as a *n*x*p* *CSV* table, where *n* is the number of
-        mapobjects (:class:`Mapobject <tmlib.models.mapobject.Mapobject`) and
+        mapobjects (:class:`Mapobject <tmlib.models.mapobject.Mapobject>`) and
         *p* is the number of features
         (:class:`Feature <tmlib.models.feature.Feature>`).
 
@@ -225,37 +235,46 @@ def get_mapobject_feature_values(experiment_id, object_type):
     with tm.utils.ExperimentSession(experiment_id) as session:
         try:
             mapobject_type = session.query(tm.MapobjectType).\
-                filter_by(name=object_type).\
+                filter_by(name=mapobject_type_name).\
                 one()
         except NoResultFound:
             raise ResourceNotFoundError(
-                tm.MapobjectType, {'object_type': object_type}
+                tm.MapobjectType, {'mapobject_type_name': mapobject_type_name}
             )
 
         def generate_feature_matrix(mapobject_type_id):
-            mapobjects = session.query(tm.Mapobject.id).\
+            n_mapobjects = session.query(tm.Mapobject.id).\
                 filter_by(mapobject_type_id=mapobject_type_id).\
-                order_by(tm.Mapobject.id).\
-                all()
-            features = session.query(tm.Feature.id, tm.Feature.name).\
+                count()
+
+            features = session.query(tm.Feature.name).\
                 filter_by(mapobject_type_id=mapobject_type_id).\
                 order_by(tm.Feature.id).\
                 all()
-            feature_ids = [f.id for f in features]
             feature_names = [f.name for f in features]
+
             # First line of CSV are column names
-            for i in range(-1, len(mapobjects)):
-                if i < 0:
-                    yield ','.join(feature_names) + '\n'
-                else:
-                    feature_values = session.query(tm.FeatureValue.value).\
-                        filter(
-                            tm.FeatureValue.mapobject_id == mapobjects[i].id,
-                            tm.FeatureValue.feature_id.in_(feature_ids)
-                        ).\
-                        order_by(tm.FeatureValue.feature_id).\
-                        all()
-                    values = [str(f.value) for f in feature_values]
+            yield ','.join(feature_names) + '\n'
+            # Loading all feature values into memory may cause problems for
+            # really large datasets. Therefore, we perform several queries
+            # each returning only a few thousand objects at once.
+            # Performing a query for each object would create too much overhead.
+            batch_size = 10000
+            for n in xrange(np.ceil(n_mapobjects / float(batch_size))):
+                # One could nicely filter values using slice()
+                feature_values = session.query(tm.FeatureValue.values).\
+                    join(tm.Mapobject).\
+                    filter(tm.FeatureValue.mapobject_type_id == mapobject_type_id).\
+                    order_by(tm.Mapobject.id).\
+                    limit(batch_size).\
+                    offset(n).\
+                    all()
+                for v in feature_values:
+                    # The keys in a dictionary don't have any order.
+                    # Values must be sorted based on feature_id, such that they
+                    # end up in the correct column of the CSV table matching
+                    # the corresponding column names.
+                    values = [v.values[k] for k in sorted(v.values)]
                     yield ','.join(values) + '\n'
 
         return Response(
@@ -263,21 +282,23 @@ def get_mapobject_feature_values(experiment_id, object_type):
             mimetype='text/csv',
             headers={
                 'Content-Disposition': 'attachment; filename=%s' % (
-                    '%s_%s_feature-values.csv' % (experiment_name, object_type)
+                    '%s_%s_feature-values.csv' % (
+                        experiment_name, mapobject_type_name
+                    )
                 )
             }
         )
 
 
 @api.route(
-    '/experiments/<experiment_id>/mapobjects/<object_type>/metadata',
+    '/experiments/<experiment_id>/mapobjects/<mapobject_type_name>/metadata',
     methods=['GET']
 )
 @jwt_required()
 @decode_query_ids('read')
-def get_mapobject_metadata(experiment_id, object_type):
+def get_mapobject_metadata(experiment_id, mapobject_type_name):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type)/metadata
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type_name)/metadata
 
         Get :class:`FeatureValue <tmlib.models.feature.FeatureValue` for
         the given :class:`MapobjectType <tmlib.models.mapobject.MapobjectType`
@@ -302,50 +323,51 @@ def get_mapobject_metadata(experiment_id, object_type):
     with tm.utils.ExperimentSession(experiment_id) as session:
         try:
             mapobject_type = session.query(tm.MapobjectType).\
-                filter_by(name=object_type).\
+                filter_by(name=mapobject_type_name).\
                 one()
         except NoResultFound:
             raise ResourceNotFoundError(
-                tm.MapobjectType, {'object_type': object_type}
+                tm.MapobjectType, {'mapobject_type_name': mapobject_type_name}
             )
 
         def generate_feature_matrix(mapobject_type_id):
-            mapobjects = session.query(tm.Mapobject.id).\
+            n_mapobjects = session.query(tm.Mapobject.id).\
                 filter_by(mapobject_type_id=mapobject_type_id).\
-                order_by(tm.Mapobject.id).\
+                count()
+
+            locations = pd.DataFrame(
+                session.query(
+                    tm.Site.id, tm.Site.y, tm.Site.x,
+                    tm.Well.name, tm.Plate.name,
+                ).\
+                join(tm.Well).\
+                join(tm.Plate).\
                 all()
-            features = session.query(tm.Feature.id, tm.Feature.name).\
-                filter_by(mapobject_type_id=mapobject_type_id).\
-                order_by(tm.Feature.id).\
-                all()
-            feature_ids = [f.id for f in features]
-            feature_names = [f.name for f in features]
+            )
+            locations.set_index('site_id', inplace=True)
             # First line of CSV are column names
-            for i in range(-1, len(mapobjects)):
-                if i < 0:
-                    names = [
-                        'label', 'tpoint', 'zplane',
-                        'plate_name', 'well_name',
-                        'site_y', 'site_x',
-                    ]
-                    yield ','.join(names) + '\n'
-                else:
-                    values = session.query(
-                            tm.MapobjectSegmentation.label,
-                            tm.MapobjectSegmentation.tpoint,
-                            tm.MapobjectSegmentation.zplane,
-                            tm.Plate.name,
-                            tm.Well.name,
-                            tm.Site.y,
-                            tm.Site.x,
-                        ).\
-                        join(tm.Mapobject).\
-                        join(tm.Site).\
-                        join(tm.Well).\
-                        join(tm.Plate).\
-                        filter(tm.Mapobject.id == mapobjects[i].id).\
-                        one()
-                    values = [str(f) for f in values]
+            names = [
+                'id', 'label', 'tpoint', 'zplane',
+                'site_y', 'site_x', 'well_name', 'plate_name'
+            ]
+            yield ','.join(names) + '\n'
+            batch_size = 10000
+            for n in xrange(np.ceil(n_mapobjects / float(batch_size))):
+                segmentations = session.query(
+                        tm.MapobjectSegmentation.mapobject_id,
+                        tm.MapobjectSegmentation.label,
+                        tm.MapobjectSegmentation.tpoint,
+                        tm.MapobjectSegmentation.zplane,
+                    ).\
+                    join(tm.Mapobject).\
+                    filter(tm.Mapobject.mapobject_type_id == mapobject_type_id).\
+                    order_by(tm.MapobjectSegmentation.site_id).\
+                    limit(batch_size).\
+                    offset(n).\
+                    all()
+                for segm in segmentations:
+                    values = [str(v) for v in segm]
+                    values += [str(v) for v in locations.loc[segm.site_id, :]]
                     yield ','.join(values) + '\n'
 
         return Response(
@@ -353,7 +375,9 @@ def get_mapobject_metadata(experiment_id, object_type):
             mimetype='text/csv',
             headers={
                 'Content-Disposition': 'attachment; filename=%s' % (
-                    '%s_%s_metadata.csv' % (experiment_name, object_type)
+                    '%s_%s_metadata.csv' % (
+                        experiment_name, mapobject_type_name
+                    )
                 )
             }
         )
