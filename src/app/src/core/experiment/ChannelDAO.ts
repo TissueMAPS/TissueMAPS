@@ -15,7 +15,7 @@
 class ChannelDAO extends HTTPDataAccessObject<Channel> {
 
     /**
-     * @classdesc A DataAccessObject for the Acquisition class.
+     * @classdesc A DataAccessObject for the Channel class.
      */
     constructor(experimentId: string) {
         super('/api/experiments/' + experimentId + '/channels')
