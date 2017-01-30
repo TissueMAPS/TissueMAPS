@@ -508,8 +508,8 @@ def run_jobs(experiment_id):
         session.add(submission)
         session.flush()
 
-        _, submit_args_cls, _ = get_step_args('jterator')
-        submit_args = submit_args_cls()
+        SubmitArgs = get_step_args('jterator')[1]
+        submit_args = SubmitArgs()
         job_collection = jt.create_run_job_collection(submission.id)
         jobs = jt.create_run_jobs(
             submission_id=submission.id,
