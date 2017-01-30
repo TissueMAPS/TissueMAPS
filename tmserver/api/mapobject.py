@@ -120,7 +120,7 @@ def get_segmentation_image(experiment_id, mapobject_type_name):
     y = request.args.get('y', type=int)
     zplane = request.args.get('zplane', type=int)
     tpoint = request.args.get('tpoint', type=int)
-    label = request.args.get('label', None)
+
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         experiment_name = experiment.name
@@ -135,9 +135,13 @@ def get_segmentation_image(experiment_id, mapobject_type_name):
                 tm.Site.x == x, tm.Site.y == y
             ).\
             one()
-        site_segmentation = session.query(tm.MapobjectSegmentation.geom_poly).\
+        site_mapobject_type = session.query(tm.MapobjectType.id).\
+            filter_by(ref_type=tm.Site.__name__).\
+            one()
+        site_segmentation = session.query(tm.MapobjectSegmentation.geom_polygon).\
             join(tm.Mapobject).\
-            filter(tm.Mapobject.ref_id == site_id).\
+            filter(tm.Mapobject.ref_id == site.id).\
+            filter(tm.Mapobject.mapobject_type_id == site_mapobject_type.id).\
             one()
         segmentation_layer = session.query(tm.SegmentationLayer.id).\
             join(tm.MapobjectType).\
@@ -151,11 +155,11 @@ def get_segmentation_image(experiment_id, mapobject_type_name):
         # Retrieve all mapobjects of the given type that fall within the given
         # site and label them according to the ID that was assigned to them,
         # assuming that IDs were assigned in the order of original labels.
-        segmentations = session.query(tm.MapobjectSegmentation.geom_poly).\
+        segmentations = session.query(tm.MapobjectSegmentation.geom_polygon).\
             filter_by(segmentation_layer_id=segmentation_layer.id).\
             filter(
-                tm.MapobjectSegmentation.geom_poly.ST_Intersects(
-                    site_segmentation.geom_poly
+                tm.MapobjectSegmentation.geom_polygon.ST_Intersects(
+                    site_segmentation.geom_polygon
                 )
             ).\
             order_by(tm.MapobjectSegmentation.id).\
@@ -165,7 +169,7 @@ def get_segmentation_image(experiment_id, mapobject_type_name):
             raise ResourceNotFoundError(tm.MapobjectSegmentation, request.args)
         polygons = dict()
         for i, seg in enumerate(segmentations):
-            polygons[(tpoint, zplane, i+1)] = seg.geom_poly
+            polygons[(tpoint, zplane, i+1)] = seg.geom_polygon
 
         y_offset, x_offset = site.offset
         height = site.height
