@@ -402,7 +402,6 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('align images between cycles')
 
             for fid in batch['image_file_ids']:
-                channel_layer_tiles = list()
                 file = session.query(tm.ChannelImageFile).get(fid)
                 logger.info('process image %d', file.id)
                 tiles = layer.map_image_to_base_tiles(file)
@@ -507,14 +506,11 @@ class PyramidBuilder(ClusterRoutines):
                                 'Tile shouldn\'t be in this batch!'
                             )
 
-                    channel_layer_tiles.append({
-                        'z': level, 'y': row, 'x': column,
-                        'channel_layer_id': layer.id, 'tile': tile
-                    })
-
-                with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-                    for t in channel_layer_tiles:
-                        tm.ChannelLayerTile.add(conn, **t)
+                    with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+                        tm.ChannelLayerTile.add(
+                            conn, channel_layer_id=layer.id,
+                            z=level, y=row, x=column, tile=tile
+                        )
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
