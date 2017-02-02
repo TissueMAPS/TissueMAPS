@@ -503,7 +503,7 @@ Install the *tmserver* application via `pip`::
     cd tmserver
     git clone https://github.com/TissueMAPS/TmServer.git .
     
-    install Cython: 
+    %install Cython: 
     pip install Cython
 
     and then run the script:
