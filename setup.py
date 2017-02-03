@@ -148,6 +148,7 @@ setuptools.setup(
        'image-registration>=0.2.1',
        'mahotas>=1.4.1',
        'matlab-wrapper>=0.9.6',
+       'matplotlib>=2.0.0',
        'mock>=1.0.1',
        'natsort>=4.0.3',
        'nose>=1.3.7',
