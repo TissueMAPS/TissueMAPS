@@ -24,6 +24,7 @@ import os
 import re
 import logging
 import bioformats
+from natsort import natsorted
 from collections import defaultdict
 
 from tmlib import utils
@@ -34,7 +35,7 @@ from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
 logger = logging.getLogger(__name__)
 
 #: Regular expression pattern to identify image files
-IMAGE_FILE_REGEX_PATTERN = '.+_?(?P<w>[A-Z]\d{2})?_(?P<c>\w+)_s(?P<s>\d+)_?t?(?P<t>\d+)?\.'
+IMAGE_FILE_REGEX_PATTERN = '.+_?(?P<w>[A-Z]\d{2})?_w\d+(?P<c>\w+)_s(?P<s>\d+)_?t?(?P<t>\d+)?\.'
 
 #: Supported extensions for metadata files
 METADATA_FILE_REGEX_PATTERN = '\.nd$'
@@ -203,6 +204,7 @@ class VisiviewMetadataReader(MetadataReader):
         ValueError
             when `microscope_metadata_files` doesn't have length one
         '''
+        microscope_image_files = natsorted(microscope_image_files)
         if len(microscope_metadata_files) != 1:
             raise ValueError('Expected one microscope metadata file.')
         nd_filename = microscope_metadata_files[0]
@@ -221,6 +223,7 @@ class VisiviewMetadataReader(MetadataReader):
 
         for i in xrange(metadata.image_count):
             img = metadata.image(0)
+            img.Name = ''
             # Images files may contain a variable number of z-stacks
             # (SizeZ >= 1), but only one time point (SizeT == 1)
             # and one channel (SizeC == 1)
@@ -256,33 +259,31 @@ class VisiviewMetadataReader(MetadataReader):
             for i in xrange(len(sites))
         ]
         lookup = defaultdict(list)
-        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
+        count = 0
         for f in microscope_image_files:
-            matches = r.search(f)
+            fields = MetadataHandler.extract_fields_from_filename(
+                IMAGE_FILE_REGEX_PATTERN, f, defaults=False
+            )
             # NOTE: We assume that the "site" id is global per plate
-            captures = matches.groupdict()
-            field_index = sites.index(int(captures['s']))
-            # NOTE: dict() creates a copy for each sample
-            samples = [dict(captures) for z in xrange(nd['NZSteps'])]
+            field_index = sites.index(int(fields.s))
+            # Create a separate fields objects for each z-plane
             for z in xrange(nd['NZSteps']):
-                samples[z]['z'] = z
-            for s in samples:
-                index = sorted(s.keys())
-                reference = tuple([s[ix] for ix in index])
-                lookup[wells[field_index]].append(reference)
-
-        # TODO: Sort samples according to "site"
+                # NOTE: _replace() is a documented "public" method!
+                # ref = fields._replace(z=str(z))
+                lookup[wells[field_index]].append(count)
+                count += 1
 
         for w in set(wells):
             # Create a "Well" instance for each imaged well in the plate
             row_index = utils.map_letter_to_number(w[0]) - 1
             col_index = int(w[1:]) - 1
-            well = metadata.WellsDucktype(plate).new(row=row_index,
-                                                     column=col_index)
+            well = metadata.WellsDucktype(plate).new(
+                row=row_index, column=col_index
+            )
             well_samples = metadata.WellSampleDucktype(well.node)
-            for i, reference in enumerate(lookup[w]):
+            for i, ref in enumerate(lookup[w]):
                 # Create a *WellSample* element for each acquisition site
                 well_samples.new(index=i)
-                well_samples[i].ImageRef = '::'.join(reference)
+                well_samples[i].ImageRef = ref
 
         return metadata

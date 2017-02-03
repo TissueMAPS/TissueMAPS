@@ -253,8 +253,9 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     # Caluculate the centroids for each grid position.
     model = KMeans(n_clusters=n)
     model.fit(coordinates)
-    sort_index = np.lexsort(np.fliplr(model.cluster_centers_).T)
-    centroids = model.cluster_centers_[sort_index]
+    centroids = np.round(model.cluster_centers_)
+    sort_index = np.lexsort(np.fliplr(centroids).T)
+    centroids = centroids[sort_index]
     rows = len(np.unique(centroids[:, 0]))
     cols = len(np.unique(centroids[:, 1]))
     positions = np.array([

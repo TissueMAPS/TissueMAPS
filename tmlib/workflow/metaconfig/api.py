@@ -348,7 +348,7 @@ class MetadataConfigurator(ClusterRoutines):
                             else:
                                 name = 'wavelength-%s' % w
                             channel = session.get_or_create(
-                                tm.Channel,
+                                tm.Channel, experiment_id=self.experiment_id,
                                 name=name, index=w_index, wavelength=w,
                                 bit_depth=bit_depth
                             )

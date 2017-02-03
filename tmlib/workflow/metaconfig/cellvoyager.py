@@ -21,6 +21,7 @@ microscope.
 import re
 import logging
 import bioformats
+from natsort import natsorted
 from collections import defaultdict
 from lxml import etree
 
@@ -102,6 +103,7 @@ class CellvoyagerMetadataReader(MetadataReader):
         ValueError
             when `microscope_metadata_files` doesn't have length two
         '''
+        microscope_image_files = natsorted(microscope_image_files)
         metadata = bioformats.OMEXML(XML_DECLARATION)
         if len(microscope_metadata_files) == 0:
             logger.warn('no microscope metadata files found')
@@ -128,7 +130,6 @@ class CellvoyagerMetadataReader(MetadataReader):
             if e.attrib['{%s}Type' % mlf_ns] != 'ERR'
         ])
         lookup = defaultdict(list)
-        r = re.compile(IMAGE_FILE_REGEX_PATTERN)
 
         count = 0
         for e in mlf_elements:
@@ -159,16 +160,9 @@ class CellvoyagerMetadataReader(MetadataReader):
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
             img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
-            matches = r.search(img.Name)
-            # NOTE: We use a dictionary as reference, which is not serializable
-            # into XML. The problem is that the reference ID is not globally
-            # unique when metadata for each image file is extracted separately.
-            # TODO: Fuck the whole OMEXML approach and simply put everything
-            # into a pandas data frame.
-            captures = matches.groupdict()
-            index = sorted(captures.keys())
-            key = tuple([captures[ix] for ix in index])
-            lookup[well_id].append(key)
+
+            idx = microscope_image_files.index(img.Name)
+            lookup[well_id].append(idx)
             count += 1
 
         # Obtain the general experiment information and well plate format
@@ -190,9 +184,9 @@ class CellvoyagerMetadataReader(MetadataReader):
             col = int(w[1:]) - 1
             well = metadata.WellsDucktype(plate).new(row=row, column=col)
             well_samples = metadata.WellSampleDucktype(well.node)
-            for index, reference in enumerate(lookup[w]):
+            for i, ref in enumerate(lookup[w]):
                 # Create a *WellSample* element for each acquisition site
-                well_samples.new(index=index)
-                well_samples[index].ImageRef = '::'.join(reference)
+                well_samples.new(index=i)
+                well_samples[i].ImageRef = ref
 
         return metadata

@@ -85,7 +85,7 @@ class WorkflowError(Exception):
 
 
 class DataError(Exception):
-    '''Error class that is raised when data is not available in the HDF5 file.
+    '''Error class that is raised when data is not available.
     '''
 
 
@@ -105,10 +105,12 @@ class DataIntegrityError(Exception):
     requirements.
     '''
 
+
 class RegistryError(Exception):
     '''Error class that is raised when a class is not registered.'''
 
+
 class DataModelError(Exception):
-    '''Error class that is raise when a model class has attributes that are
+    '''Error class that is raised when a model class has attributes that are
     not supported.
     '''

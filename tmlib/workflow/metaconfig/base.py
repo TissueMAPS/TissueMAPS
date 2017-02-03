@@ -22,8 +22,7 @@ import sys
 import traceback
 import bioformats
 from natsort import natsorted
-from collections import defaultdict
-from collections import OrderedDict
+import collections
 from abc import ABCMeta
 from abc import abstractmethod
 
@@ -34,6 +33,17 @@ from tmlib.errors import RegexError
 from tmlib.errors import NotSupportedError
 
 logger = logging.getLogger(__name__)
+
+
+SUPPORTED_FIELDS = {'w', 'c', 'z', 't', 's'}
+
+
+FIELD_DEFAULTS = {'w': 'A01', 'z': 0, 't': 0, 's': 0}
+
+
+MetadataFields = collections.namedtuple(
+    'MetadataFields', list(SUPPORTED_FIELDS)
+)
 
 
 class MetadataHandler(object):
@@ -57,6 +67,47 @@ class MetadataHandler(object):
     '''
 
     __metaclass__ = ABCMeta
+
+    @classmethod
+    def check_regular_expression(cls, regex):
+        if not regex:
+            raise RegexError('No regular expression provided.')
+        provided_fields = re.findall(r'\(\?P\<(\w+)\>', regex)
+        for name in provided_fields:
+            if name not in SUPPORTED_FIELDS:
+                raise RegexError(
+                    '"%s" is not a supported regular expression field.\n'
+                    'Supported are "%s"'
+                    % (name, '", "'.join(SUPPORTED_FIELDS))
+                )
+
+        for name in possible_fields:
+            if name not in provided_fields and name in FIELD_DEFAULTS:
+                logger.warning(
+                    'regular expression field "%s" not provided, defaults to %s',
+                    name, str(FIELD_DEFAULTS[name])
+                )
+
+    @classmethod
+    def extract_fields_from_filename(cls, regex, filename, defaults=True):
+        r = re.compile(regex)
+        match = r.search(str(filename))
+        if match is None:
+            raise RegexError(
+                'Metadata attributes could not be retrieved from '
+                'filename "%s" using regular expression "%s"' % (
+                    filename, regex
+                )
+            )
+        captures = match.groupdict()
+        for k in SUPPORTED_FIELDS:
+            v = captures.get(k, None)
+            if v is None:
+                if defaults:
+                    captures[k] = str(FIELD_DEFAULTS[k])
+                else:
+                    captures[k] = v
+        return MetadataFields(**captures)
 
     def __init__(self, omexml_images, omexml_metadata):
         '''
@@ -82,7 +133,7 @@ class MetadataHandler(object):
         self.omexml_metadata = omexml_metadata
         self.metadata = pd.DataFrame()
         self._file_mapper_list = list()
-        self._file_mapper_lookup = defaultdict(list)
+        self._file_mapper_lookup = collections.defaultdict(list)
         self._wells = dict()
 
     @staticmethod
@@ -172,7 +223,7 @@ class MetadataHandler(object):
                 )
             return int(m.group(1))
 
-        metadata = OrderedDict()
+        metadata = collections.OrderedDict()
         metadata['name'] = list()
         metadata['channel_name'] = list()
         metadata['tpoint'] = list()
@@ -283,10 +334,8 @@ class MetadataHandler(object):
         The value of the *image_count* attribute must equal
         *number of channels* x *number of focal planes* x
         *number of time series* x *number of acquisition sites*.
-        The *Name* attribute of each *Image* element can be set with the
-        image filename, in which the corresponding *Plane* element is stored.
-        The values of the *SizeT*, *SizeC* and *SizeZ* attributes still have
-        to match the actual pattern in the image files, however.
+        The values of the *SizeT*, *SizeC* and *SizeZ* attributes should
+        match the actual pattern in the image files.
         For example, if the image file contains
         planes for one time point, one acquisition site and 10 focal planes,
         then *SizeT* == 1, *SizeC* == 1 and *SizeZ* == 10. Thereby we can keep
@@ -296,15 +345,8 @@ class MetadataHandler(object):
         SPW *Plate* element. For consistency a slide should be represented
         as a plate with a single *Well* element.
         The *ImageRef* attribute of *WellSample* elements must be provided in
-        form of a unique, hashable string or integer that can be used to map
-        the well sample to its corresponding image file.
-        When represented by a string, the reference can either be the filename
-        (if it's possible to map the sample directly to the file) or it can
-        encode the group names of the regular expression that's provided
-        for the microscope type.
-        When represented by an integer, the number has to match an ID of an
-        *Image* element within the corrsponding OMEXML file. In this case,
-        the *Name* attribute of *Image* elements must be set to ``None``.
+        form of a unique integer that can be used to map the well sample to
+        its corresponding image (2D pixel plane).
 
         Warning
         -------
@@ -342,72 +384,15 @@ class MetadataHandler(object):
             )
 
         md = self.metadata
-
-        lookup = dict()
-        r = re.compile(regex)
-        matches = {
-            tuple(r.search(name).groupdict().values()): name
-            for name in md.name
-        }
-        match_by_pattern = True
-        if len(matches) == 1:
-            match_by_pattern = False
+        index = md.index.tolist()
         for i in xrange(n_images):
             # Only consider image elements for which the value of the *Name*
             # attribute matches.
             image = self.omexml_metadata.image(i)
             pixels = image.Pixels
-            name = image.Name
-            if match_by_pattern:
-                try:
-                    key = tuple(r.search(name).groupdict().values())
-                    matched_name = matches[key]
-                    idx = md[md.name == matched_name].index[0]
-                except KeyError:
-                    logger.warning('image #%d "%s" is missing', i, name)
-                    continue
-            else:
-                if name is None:
-                    # When no image name is provided the index number (*Series*)
-                    # must be provided as reference.
-                    idx = i
-                else:
-                    matched_name = name
-                    idx = md[md.name == matched_name].index[0]
-            # Individual image elements need to be mapped to well sample
-            # elements in the well plate. The custom handlers provide a
-            # regular expression, which is supposed to match a pattern in the
-            # image filename and is able to extract the required information.
-            # Here we create a lookup table with a mapping of captured matches
-            # to the index of the corresponding image element.
-            if len(self._file_mapper_list[idx].files) > 1:
-                raise MetadataError(
-                    'There should only be a single matching reference file.'
-                )
-            filename = os.path.basename(self._file_mapper_list[idx].files[0])
-            match = r.search(filename)
-            if not match:
-                raise RegexError(
-                    'Incorrect reference to image files in plate element.'
-                )
-            if match_by_pattern:
-                captures = match.groupdict()
-                if 'z' not in captures.keys():
-                    captures['z'] = md.at[idx, 'zplane']
-                else:
-                    # NOTE: quick and dirty hack for CellVoyager microscope,
-                    # which may not write the z index into the image file
-                    # (depending on the software version)
-                    md.at[idx, 'zplane'] = captures['z']
-                index = sorted(captures.keys())
-                reference = tuple([captures[ix] for ix in index])
-                key = '::'.join(reference)
-            else:
-                if name is None:
-                    key = idx
-                else:
-                    key = filename
-            lookup[key] = idx
+            if i not in index:
+                logger.warning('image #%d "%s" is missing', i, image.Name)
+                continue
 
             if pixels.channel_count > 1:
                 raise NotSupportedError(
@@ -417,20 +402,20 @@ class MetadataHandler(object):
             # Only update the attribute in case they haven't been set set yet
             # to prevent them from getting overwritten by some random bullshit.
             if (hasattr(image, 'AcquisitionDate') and
-                    md.loc[idx, 'date'] is None):
-                md.at[idx, 'date'] = image.AcquisitionDate
+                    md.loc[i, 'date'] is None):
+                md.at[i, 'date'] = image.AcquisitionDate
 
             if (hasattr(pixels, 'Channel') and
-                    md.loc[idx, 'channel_name'] is None):
+                    md.loc[i, 'channel_name'] is None):
                 if hasattr(pixels.Channel(0), 'Name'):
-                    md.at[idx, 'channel_name'] = pixels.Channel(0).Name
+                    md.at[i, 'channel_name'] = pixels.Channel(0).Name
 
             if (hasattr(pixels, 'Plane') and
-                    md.loc[idx, 'stage_position_y'] is None):
+                    md.loc[i, 'stage_position_y'] is None):
                 if (hasattr(pixels.Plane(0), 'PositionX') and
                         hasattr(pixels.Plane(0), 'PositionY')):
-                    md.at[idx, 'stage_position_x'] = pixels.Plane(0).PositionX
-                    md.at[idx, 'stage_position_y'] = pixels.Plane(0).PositionY
+                    md.at[i, 'stage_position_x'] = pixels.Plane(0).PositionX
+                    md.at[i, 'stage_position_y'] = pixels.Plane(0).PositionY
 
         # NOTE: Plate information is usually not readily available from images
         # or additional metadata files and thus requires custom readers/handlers
@@ -438,14 +423,9 @@ class MetadataHandler(object):
         for w in plate.Well:
             well = plate.Well[w]
             n_samples = len(well.Sample)
-            for i in xrange(n_samples):
-                # Find the reference *Image* elements for the current
-                # well sample using the above created lookup table
-                reference = well.Sample[i].ImageRef
-                # index = sorted(reference.keys())
-                # key = tuple([reference[ix] for ix in index])
-                image_id = lookup[reference]
-                md.at[image_id, 'well_name'] = w
+            for s in xrange(n_samples):
+                i = well.Sample[s].ImageRef
+                md.at[i, 'well_name'] = w
 
         return self.metadata
 
@@ -509,6 +489,7 @@ class MetadataHandler(object):
         pandas.DataFrame
             metadata for each 2D *Plane* element
         '''
+        logger.info('update image metadata with filename information')
         md = self.metadata
         filenames = natsorted(list(set([
             f for fm in self._file_mapper_list for f in fm.files
@@ -519,47 +500,16 @@ class MetadataHandler(object):
                 'works only when each image file contains a single plane.'
             )
 
-        if not regex:
-            raise RegexError('No regular expression provided.')
-
-        provided_fields = re.findall(r'\(\?P\<(\w+)\>', regex)
-        possible_fields = {'w', 'c', 'z', 't', 's'}
-        defaults = {'w': 'A01', 'z': 0, 't': 0, 's': 0}
-        for name in provided_fields:
-            if name not in possible_fields:
-                raise RegexError(
-                    '"%s" is not a supported regular expression field.\n'
-                    'Supported are "%s"'
-                    % (name, '", "'.join(required_fields))
-                )
-
-        for name in possible_fields:
-            if name not in provided_fields and name in defaults:
-                logger.warning(
-                    'regular expression field "%s" not provided, defaults to %s',
-                    name, str(defaults[name])
-                )
-
         logger.info('retrieve metadata from filenames via regular expression')
-        logger.debug('expression: %s', regex)
-
-        logger.info('update image metadata with filename information')
-
-        r = re.compile(regex)
+        check_regular_expression(regex)
         for i, f in enumerate(filenames):
-            match = r.search(f)
-            if not match:
-                raise RegexError(
-                    'Metadata could not be retrieved from filename "%s" '
-                    'using regular expression "%s"' % (f, regex)
-                )
             # Not every microscope provides all the information in the filename.
-            capture = match.groupdict()
-            md.at[i, 'channel_name'] = str(capture['c'])
-            md.at[i, 'site'] = int(capture.get('s', defaults['s']))
-            md.at[i, 'zplane'] = int(capture.get('z', defaults['z']))
-            md.at[i, 'tpoint'] = int(capture.get('t', defaults['t']))
-            md.at[i, 'well_name'] = str(capture.get('w', defaults['w']))
+            fields = self.extract_fields_from_filename(regex, f)
+            md.at[i, 'channel_name'] = fields.c
+            md.at[i, 'site'] = int(fields.s)
+            md.at[i, 'zplane'] = int(fields.z)
+            md.at[i, 'tpoint'] = int(fields.t)
+            md.at[i, 'well_name'] = fields.w
 
         return self.metadata
 
@@ -703,7 +653,7 @@ class MetadataHandler(object):
         # Map the locations of each plane with the original image files
         # in order to be able to perform the intensity projection later on
         grouped_file_mapper_list = list()
-        grouped_file_mapper_lookup = defaultdict(list)
+        grouped_file_mapper_lookup = collections.defaultdict(list)
         sorted_indices = sorted(zstacks.groups.values(), key=lambda k: k[0])
         for i, indices in enumerate(sorted_indices):
             fm = ImageFileMapping()
