@@ -90,6 +90,7 @@ def get_tool_class(name):
     type
         tool class
     '''
+    logger.debug('get tool class "%s"', name)
     try:
         return _register[name]
     except KeyError:
@@ -104,4 +105,5 @@ def get_available_tools():
     List[str]
         names of available tools
     '''
+    logger.debug('get available tools')
     return _register.keys()

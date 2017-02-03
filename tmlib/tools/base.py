@@ -80,6 +80,8 @@ class Tool(object):
     `Keras <https://keras.io/>`_ or `TensorFlow <https://www.tensorflow.org/>`_.
     '''
 
+    __metaclass__ = _ToolMeta
+
     __abstract__ = True
 
     def __init__(self, experiment_id):
