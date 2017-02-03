@@ -80,18 +80,21 @@ class MapobjectType(ExperimentModel):
         backref=backref('mapobject_types', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, ref_type=None):
+    def __init__(self, name, experiment_id, ref_type=None):
         '''
         Parameters
         ----------
         name: str
             name of the map objects type, e.g. "cells"
+        experiment_id: int
+            ID of the parent
+            :class:`Experiment <tmlib.models.experiment.Experiment>`
         ref_type: str, optional
             name of another reference type (default: ``None``)
         '''
         self.name = name
         self.ref_type = ref_type
-        self.experiment_id = 1
+        self.experiment_id = experiment_id
 
     @classmethod
     def delete_cascade(cls, connection, ref_type=None):

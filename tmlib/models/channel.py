@@ -68,7 +68,7 @@ class Channel(ExperimentModel, DateMixIn):
         backref=backref('channels', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, index, wavelength, bit_depth):
+    def __init__(self, name, index, wavelength, bit_depth, experiment_id):
         '''
         Parameters
         ----------
@@ -80,12 +80,15 @@ class Channel(ExperimentModel, DateMixIn):
             name of the corresponding wavelength
         bit_depth: int
             number of bits used to indicate intensity of pixels
+        experiment_id: int
+            ID of the parent
+            :class:`Experiment <tmlib.models.experiment.Experiment>`
         '''
         self.name = name
         self.index = index
         self.wavelength = wavelength
         self.bit_depth = bit_depth
-        self.experiment_id = 1
+        self.experiment_id = experiment_id
 
     def __repr__(self):
         return '<Channel(id=%r, name=%r)>' % (self.id, self.name)

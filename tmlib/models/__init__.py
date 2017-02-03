@@ -122,6 +122,16 @@ tables. Please refer to the *Citus* documentation for more information on how to
 and `modify <https://docs.citusdata.com/en/latest/dist_tables/dml.html>` them.
 '''
 
+# NOTE: At the moment we use a separate schema for each experiment and then
+# distribute a few selected tables within each schema according to the
+# "real-time analytics" model.
+# We may want instead a "multi-tenant" model and distribute all tables by hash
+# "experiment_id". This would ensure that tables for an experiment would be
+# co-localized, which would enable full SQL support:
+# https://docs.citusdata.com/en/latest/sharding/data_modeling.html#determining-the-data-model
+# https://docs.citusdata.com/en/latest/migration/transitioning.html#transitioning-mt
+# https://docs.citusdata.com/en/latest/sharding/colocation.html#table-co-location
+
 from tmlib.models.base import MainModel, ExperimentModel
 from tmlib.models.utils import MainSession, ExperimentSession
 from tmlib.models.user import User

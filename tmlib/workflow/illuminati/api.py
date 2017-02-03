@@ -151,7 +151,8 @@ class PyramidBuilder(ClusterRoutines):
                         tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
                     )
                     if count == 0:
-                        h, w, d = layer.calculate_pyramid_dimensions()
+                        h, w = layer.calculate_max_image_size()
+                        d = layer.calculate_zoom_levels(h, w)
                         experiment.pyramid_depth = d
                         experiment.pyramid_height = h
                         experiment.pyramid_width = w
@@ -623,7 +624,8 @@ class PyramidBuilder(ClusterRoutines):
                     name, cls.__name__
                 )
                 mapobject_type = session.get_or_create(
-                    tm.MapobjectType, name=name, ref_type=cls.__name__
+                    tm.MapobjectType, name=name,
+                    experiment_id=self.experiment_id, ref_type=cls.__name__
                 )
                 mapobject_type_id = mapobject_type.id
                 segmentation_layer = session.get_or_create(

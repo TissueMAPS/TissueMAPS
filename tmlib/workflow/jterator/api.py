@@ -407,7 +407,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     continue
                 logger.debug('add object type "%s"', obj_name)
                 mapobject_type = session.get_or_create(
-                    tm.MapobjectType, name=obj_name
+                    tm.MapobjectType, experiment_id=self.experiment_id,
+                    name=obj_name
                 )
                 mapobject_type_ids[obj_name] = mapobject_type.id
                 for (t, z), plane in segm_objs.iterplanes():

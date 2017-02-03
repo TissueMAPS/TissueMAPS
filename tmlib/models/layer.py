@@ -40,7 +40,7 @@ from tmlib.models.base import ExperimentModel
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
 from tmlib.models.dialect import compile_distributed_query
 from tmlib.models.types import ST_SimplifyPreserveTopology
-from tmlib.errors import RegexError
+from tmlib.errors import RegexError, DataError
 from tmlib.image import PyramidTile
 
 logger = logging.getLogger(__name__)
@@ -107,9 +107,10 @@ class ChannelLayer(ExperimentModel):
     def height(self):
         '''int: number of pixels along vertical axis at highest resolution level
         '''
+        logger.debug('retrieve layer "height" from parent experiment')
         height = self.channel.experiment.pyramid_height
         if height is None:
-            raise ValueError('Pyramid height has not yet been calculated.')
+            raise DataError('Pyramid height has not yet been calculated.')
         return height
 
     @cached_property
@@ -117,9 +118,10 @@ class ChannelLayer(ExperimentModel):
         '''int: number of pixels along horizontal axis at highest resolution
         level
         '''
+        logger.debug('retrieve layer "depth" from parent experiment')
         width = self.channel.experiment.pyramid_width
         if width is None:
-            raise ValueError('Pyramid width has not yet been calculated.')
+            raise DataError('Pyramid width has not yet been calculated.')
         return width
 
     @cached_property
@@ -127,9 +129,10 @@ class ChannelLayer(ExperimentModel):
         '''int: number of pixels along horizontal axis at highest resolution
         level
         '''
+        logger.debug('retrieve layer "depth" from parent experiment')
         depth = self.channel.experiment.pyramid_depth
         if depth is None:
-            raise ValueError('Pyramid depth has not yet been calculated.')
+            raise DataError('Pyramid depth has not yet been calculated.')
         return depth
 
     @property
@@ -164,23 +167,23 @@ class ChannelLayer(ExperimentModel):
         '''
         # NOTE: This could also be calculated based on maxzoom_level only
         logger.debug('calculate layer dimensions')
+        sizes = self._get_image_sizes(self.height, self.width)
         levels = list()
-        for i, (height, width) in enumerate(self.image_size):
+        for i, (height, width) in enumerate(sizes):
             n_rows = int(np.ceil(np.float(height) / np.float(self.tile_size)))
             n_cols = int(np.ceil(np.float(width) / np.float(self.tile_size)))
             levels.append((n_rows, n_cols))
         return levels
 
-    def calculate_pyramid_dimensions(self):
-        '''Determines dimensions of the pyramid, i.e. height, width and depth
-        of the image at the highest resolution level and the number of
-        zoom levels.
+    def calculate_max_image_size(self):
+        '''Determines dimensions of the pyramid, i.e. height, width
+        of the image at the highest resolution level.
 
         Returns
         -------
         Tuple[int]
-            number of pixels along the *y*, *x* axis of the image and the
-            number of zoom levels
+            number of pixels along the *y*, *x* axis of the image at the
+            maximum zoom level
         '''
         logger.debug('calculate size of image at highest resolution level')
         experiment = self.channel.experiment
@@ -202,14 +205,29 @@ class ChannelLayer(ExperimentModel):
             (experiment.plate_grid.shape[1] - 1) *
             experiment.plate_spacer_size
         )
-        image_size = tuple(
+        return tuple(
             np.array(plate_size) * experiment.plate_grid.shape +
             np.array([row_spacer_height, column_spacer_width])
         )
-        return image_size + (len(self.dimensions), )
 
-    @cached_property
-    def image_size(self):
+    def calculate_zoom_levels(self, height, width):
+        '''Calculates number of zoom levels.
+
+        Parameters
+        ----------
+        height: int
+            number of pixels along vertical axis at highest resolution
+        width: int
+            number of pixels along horizontal axis at highest resolution
+
+        Returns
+        -------
+        int
+            number of zoom levels
+        '''
+        return len(self._get_image_sizes(height, width))
+
+    def _get_image_sizes(self, height, width):
         '''List[Tuple[int]]: number of pixels along the vertical and horizontal
         axis of the layer at each zoom level; levels are sorted such that the
         first element represents the lowest resolution (maximally zoomed out)
@@ -219,7 +237,6 @@ class ChannelLayer(ExperimentModel):
         logger.debug('calculate image size at each resolution level')
         experiment = self.channel.experiment
         levels = list()
-        height, width = self.height, self.width
         levels.append((height, width))
         # Determine the size of the images at lower resolution levels up to the
         # top of the pyramid
@@ -366,10 +383,8 @@ class ChannelLayer(ExperimentModel):
                             is_not_right_well_border):
                         continue
                 mappings.append({
-                    'y': y,
-                    'x': x,
-                    'y_offset': y_offset,
-                    'x_offset': x_offset
+                    'y': y, 'x': x,
+                    'y_offset': y_offset, 'x_offset': x_offset
                 })
         return mappings
 
@@ -623,24 +638,6 @@ class ChannelLayer(ExperimentModel):
         )
         logger.debug('delete channel layers')
         connection.execute('DELETE FROM channel_layers;')
-
-        def to_dict(self):
-            '''Returns attributes as key-value pairs.
-
-            Returns
-            -------
-            dict
-            '''
-            image_height, image_width = self.image_size[-1]
-            return {
-                'id': self.hash,
-                'tpoint': self.tpoint,
-                'zplane': self.zplane,
-                'image_size': {
-                    'width': image_width,
-                    'height': image_height
-                }
-            }
 
     def __repr__(self):
         return (

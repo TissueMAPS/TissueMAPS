@@ -157,7 +157,7 @@ class ExperimentReference(MainModel, DateMixIn):
             # TODO: we might want to move the workflow description to the
             # actual experiment class or handle it separately.
             with ExperimentSession(self.id) as session:
-                exp = session.query(Experiment).get(1)
+                exp = session.query(Experiment).get(self.id)
                 if exp.plate_acquisition_mode == 'multiplexing':
                     workflow_type = 'multiplexing'
                 else:
@@ -350,6 +350,8 @@ class Experiment(DirectoryModel):
         '''
         Parameters
         ----------
+        id: int
+            ID that should be assigned to the experiment
         microscope_type: str
             microscope that was used to acquire the images
         plate_format: int
@@ -375,6 +377,7 @@ class Experiment(DirectoryModel):
         :attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
         :attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
         '''
+        self.id = id
         self._location = location
         self.zoom_factor = zoom_factor
         self.well_spacer_size = well_spacer_size

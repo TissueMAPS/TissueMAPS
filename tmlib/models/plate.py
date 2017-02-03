@@ -114,18 +114,21 @@ class Plate(DirectoryModel, DateMixIn):
         backref=backref('plates', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, description=''):
+    def __init__(self, name, experiment_id, description=''):
         '''
         Parameters
         ----------
         name: str
             name of the plate
+        experiment_id: int
+            ID of the parent
+            :class:`Experiment <tmlib.models.experiment.Experiment>`
         description: str, optional
             description of the plate
         '''
         self.name = name
         self.description = description
-        self.experiment_id = 1
+        self.experiment_id = experiment_id
 
     @hybrid_property
     def location(self):
