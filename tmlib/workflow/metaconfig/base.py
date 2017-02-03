@@ -757,22 +757,32 @@ class MetadataHandler(object):
 
 class MetadataReader(object):
 
-    '''Abstract base class for reading metadata from additional (non-image) files.
+    '''Abstract base class for reading metadata from additional, non-image files.
 
-    They return metadata as OMEXML objects, according to the OME data model,
-    see `python-bioformats <http://pythonhosted.org/python-bioformats/#metadata>`_.
+    The ``read()`` method of derived classes must return metadata as a single
+    *OMEXML* object, according to the OME data model,
+    see `python-bioformats <http://pythonhosted.org/python-bioformats/#metadata>`.
 
-    Unfortunately, the documentation is very sparse.
-    If you need additional information, refer to the relevant
-    `source code <https://github.com/CellProfiler/python-bioformats/blob/master/bioformats/omexml.py>`_.
+    Warning
+    -------
+    The number of *Image* elements within the *OMEXML* object must match
+    the total number of 2D pixel planes, which may be different from the number
+    of image files!
 
     Note
     ----
     In case custom readers provide a *Plate* element, they also have to specify
-    an *ImageRef* elements for each *WellSample* element, which serve as
-    references to OME *Image* elements. Each *ImageRef* attribute must be either
-    a unique, hashable string or integer, that can be used to map each
-    *Image* element to its corresponding *WellSample*.
+    an *ImageRef* element for each *WellSample* element, which serves as
+    reference to the respective *Image* element. Each *ImageRef* attribute
+    must be a unique integer that maps the *WellSample* to its corresponding
+    *Image* element (2D *Pixels* plane) and can be used to index
+    :attr:`tmlib.workflow.metaconfig.base.MetadataHandler.metadata` in order
+    to retrieve the metadata for this element.
+
+    See also
+    --------
+    :meth:`tmlib.workflow.metaconfig.base.MetadataHandler.configure_omexml_from_image_files`
+    :meth:`tmlib.workflow.metaconfig.base.MetadataHandler.configure_omexml_from_metadata_files`
     '''
 
     __metaclass__ = ABCMeta
