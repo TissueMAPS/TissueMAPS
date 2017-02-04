@@ -54,6 +54,9 @@ def _compile_create_table(element, compiler, **kwargs):
             # No replication of tables.
             sql = 'SET citus.shard_replication_factor = 1;\n'
             sql += compiler.visit_create_table(element)
+            # More aggressive autovacuum for large tables
+            sql += ';\nALTER TABLE %s SET autovacuum_vacuum_scale_factor = 0.01;'
+            sql += ';\nALTER TABLE %s SET autovacuum_analyze_scale_factor = 0.005;'
             sql += ';\nSELECT create_distributed_table(\'%s.%s\', \'%s\');' % (
                 table.schema, table.name, distribution_column
             )
