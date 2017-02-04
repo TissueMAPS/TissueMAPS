@@ -161,9 +161,8 @@ setuptools.setup(
        'pyparsing>=2.0.3',
        'pypng>=0.0.17',
        # Python-bioformats installs javabridge, which requires Java
-       # Ubuntu:
-       # sudo apt-get -y install openjdk-7-jdk
-       # export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
+       # Ubuntu: sudo apt-get -y install openjdk-7-jdk
+       #         export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
        'python-bioformats>=1.0.9',
        'python-dateutil>=2.4.2',
        'pytest>=2.9.1',
@@ -181,11 +180,12 @@ setuptools.setup(
        'APScheduler>=3.0.5',
        # Ubuntu: sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
-       # 'rpy2>=2.7.4'
        'whichcraft>=0.4.0',
-       'jtmodules>=0.1.0',
        'gc3pie==2.5.dev',
     ],
+    extras_require = {
+       'jterator': ['jtmodules>=0.1.0', 'rpy2>=2.7.4']
+    },
     dependency_links=[
         # The dependency_links functionality has been deprecated, but it can
         # be activaeted via --process-dependency-links

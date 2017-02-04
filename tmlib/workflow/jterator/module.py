@@ -228,7 +228,7 @@ class ImageAnalysisModule(object):
         except ImportError:
             raise ImportError(
                 'Jtertor R modules cannot be run, because '
-                'rpy2 package is not available.'
+                '"rpy2" package is not installed.'
             )
         logger.debug('sourcing module: "%s"' % self.source_file)
         # rpy2.robjects.r('source("{0}")'.format(self.source_file))
