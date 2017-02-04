@@ -41,7 +41,6 @@ from tmlib.log import configure_logging
 from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.project import AvailableModules
 
-from tmserver.extensions import websocket
 from tmserver.util import decode_query_ids
 from tmserver.util import assert_form_params, assert_query_params
 from tmserver.extensions import gc3pie

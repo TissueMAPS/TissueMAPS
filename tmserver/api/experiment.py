@@ -678,6 +678,7 @@ def create_experiment():
 
     with tm.utils.ExperimentSession(experiment_id) as session:
         experiment = tm.Experiment(
+            id=experiment_id,
             location=experiment_location,
             microscope_type=microscope_type,
             plate_format=plate_format,
@@ -902,7 +903,9 @@ def create_plate(experiment_id):
 
     logger.info('create plate "%s" for experiment %d', name, experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        plate = tm.Plate(name=name, description=desc)
+        plate = tm.Plate(
+            name=name, experiment_id=experiment_id, description=desc
+        )
         session.add(plate)
         session.commit()
 

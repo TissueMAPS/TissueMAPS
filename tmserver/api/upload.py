@@ -30,7 +30,6 @@ import tmlib.models as tm
 from tmlib.models.status import FileUploadStatus
 from tmlib.workflow.metaconfig import get_microscope_type_regex
 
-from tmserver.extensions import redis_store
 from tmserver.api import api
 from tmserver.util import decode_query_ids, decode_form_ids
 from tmserver.util import assert_query_params, assert_form_params

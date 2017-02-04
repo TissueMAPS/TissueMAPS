@@ -26,7 +26,6 @@ from tmlib.log import map_logging_verbosity
 from tmlib.models.utils import create_db_engine, create_db_session_factory
 
 from tmserver.extensions import jwt
-from tmserver.extensions import redis_store
 from tmserver.serialize import TmJSONEncoder
 from tmserver import cfg
 from tmlib import cfg as libcfg
@@ -156,7 +155,6 @@ def create_app(config_overrides={}, verbosity=None):
 
     ## Initialize Plugins
     jwt.init_app(app)
-    redis_store.init_app(app)
 
     # Create a session scope for interacting with the main database
     engine = create_db_engine(cfg.db_uri_sqla)
