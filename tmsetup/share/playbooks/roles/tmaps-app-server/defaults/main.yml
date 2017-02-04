@@ -15,17 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# Cooks images used to launch VMs of frontend and compute nodes.
+tm_github_url: https://github.com/TissueMAPS
+tm_checkout: master
+# TODO: containers -> volume ???
+tm_storage_home: /data/experiments
 
-# - name: Ensure required variables are defined
-#   fail:
-#     msg: Variable {{ item }} is not defined!
-#   with_items:
+tm_admins: []  # Github user names of TissueMAPS system administrators
+tm_users: []   # Github user names of TissueMAPS users
 
-- name: Install TissueMAPS python packages
-  hosts: tissuemaps_compute
-  roles:
-    - tmaps-compute
-  tags:
-    - tissuemaps
-    - compute
+db_user: postgres
+db_port: 5432
+db_name: tissuemaps
+db_host: localhost

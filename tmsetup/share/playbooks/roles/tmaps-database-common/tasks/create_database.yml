@@ -16,7 +16,11 @@
 ---
 - name: Ensure the PostgreSQL service is running
   become: yes
-  service: name=postgresql state=started enabled=yes
+  # TODO: container???
+  service:
+    name=postgresql
+    state=started
+    enabled=yes
   tags:
     - database
 
@@ -24,19 +28,44 @@
   become: yes
   become_user: postgres
   vars:
-      ansible_ssh_pipelining: true
-  postgresql_db: name={{ db_name }}
+    ansible_ssh_pipelining=true
+  postgresql_db:
+    name={{ db_name }}
   tags:
     - database
 
-- name: Init postgis extension
+- name: Create Citus extension
   become: yes
   become_user: postgres
   vars:
-      ansible_ssh_pipelining: true
-  shell: "echo 'CREATE EXTENSION postgis;' | psql tissuemaps "
-  args:
-    executable: /bin/bash
+    ansible_ssh_pipelining=true
+  postgresql_ext:
+    name=citus
+    db={{ db_name }}
+    port={{ db_port }}
   tags:
     - database
 
+- name: Create Postgis extensions
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining=true
+  postgresql_ext:
+    name=postgis
+    db={{ db_name }}
+    port={{ db_port }}
+  tags:
+    - database
+
+- name: Create Hstore extensions
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining=true
+  postgresql_ext:
+    name=hstore
+    db={{ db_name }}
+    port={{ db_port }}
+  tags:
+    - database

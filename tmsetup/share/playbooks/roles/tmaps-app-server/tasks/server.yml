@@ -14,14 +14,32 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Ensure the PostgreSQL service is running
+- name: Install uWSGI package
   become: yes
-  service: name=postgresql state=started enabled=yes
+  pip: name=uwsgi editable=false
   tags:
-    - database
+    - app-server
+    - uwsgi
 
-- name: Set password for postgres user
-  shell: echo "ALTER USER {{ db_user }} WITH PASSWORD '{{ db_password }}'" | sudo -u {{ db_user }} psql
+- name: Place uwsgi.ini
+  template: src=uwsgi.ini.j2 dest="{{ ansible_env.HOME }}/.tmaps/uwsgi.ini"
   tags:
-    - database
+    - app-server
+    - uwsgi
+
+- name: Place uwsgi.sh startup script
+  template: src=uwsgi.sh.j2 dest="{{ ansible_env.HOME }}/.tmaps/uwsgi.sh"
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Place uwsgi config file
+  become: yes
+  template: src=uwsgi.conf.j2 dest="/etc/init/uwsgi.conf"
+  notify:
+    - restart uwsgi
+  tags:
+    - app-server
+    - uwsgi
+
 

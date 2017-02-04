@@ -15,38 +15,35 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Setup of the "tissuemaps" database
+- name: Create database tables
   hosts: tissuemaps_web
   tasks:
     - name: Create database tables defined in tmlib package
       command: "{{ tmaps_install_location }}/tm_create_tables"
       tags:
-        - db
+        - web
+        - database
         - tissuemaps
-  vars:
-    tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"
+  vars: tmaps_install_location={{ ansible_env.HOME }}/.local/bin
 
-- name: Populate "tissuemaps" database
+- name: Populate database
   hosts: tissuemaps_web
   tasks:
     - name: Create default user "testuser"
       command: "{{ tmaps_install_location }}/tm_add user --name testuser --password {{ tm_testuser_password }} --email testuser@tissuemaps.org"
       tags:
-        - db
+        - web
+        - database
         - tissuemaps
       when: tm_testuser_password is defined
-  vars:
-    tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"
+  vars: tmaps_install_location={{ ansible_env.HOME }}/.local/bin
 
-- name: Configuration of YARN clients
-  hosts: tissuemaps_compute
-  tasks:
-    - name: Download Hadoop configuration files from existing YARN cluster
-      synchronize:
-        mode: pull
-        src: "rsync://{{ yarn_master_host }}/etc/hadoop/conf"
-        dest: /etc/hadoop/conf
-      tags:
-        - spark
-        - tissuemaps
-      when: yarn_master_host is defined
+- name: Place convenience scripts
+  template:
+    src={{ playbook_dir }}/templates//{{ item }}.j2
+    dest={{ ansible_env.HOME }}/{{ item }}
+    mode="u+x"
+  with_items:
+    - create_slurm_account.sh
+    - start_server.sh
+    - stop_server.sh

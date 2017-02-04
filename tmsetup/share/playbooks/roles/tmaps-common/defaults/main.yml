@@ -25,4 +25,4 @@ python_version: 2.7.12
 
 tm_github_url: https://github.com/TissueMAPS
 
-tm_release_tag: v0.1.0
+tm_checkout: master

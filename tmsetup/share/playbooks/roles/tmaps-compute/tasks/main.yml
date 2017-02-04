@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# - include: spark.yml
+- include: tissuemaps.yml
 
 - include: bioformats_cli_tools.yml
 

@@ -13,34 +13,38 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
-- include: ssl_cert.yml
-
-- include: web_servers.yml
-
-- name: Stop NGINX web server
-  become: yes
-  service: name=nginx state=stopped
-  ignore_errors: True
+- name: Clone JtLibrary repository
+  git:
+    repo={{ tm_github_url }}/jtlibrary
+    dest={{ ansible_env.HOME }}/jtlibrary
+    version={{ tm_version }}
+    force=yes
   tags:
-    - web
+    - tissuemaps
 
-- name: Stop uWSGI web server
-  become: yes
-  service: name=uwsgi state=stopped
-  ignore_errors: True
+- name: Install jtlibrary package
+  shell: pip install -e {{ ansible_env.HOME }}/jtlibrary --user
+  args:
+    chdir={{ ansible_env.HOME }}/jtlibrary/
+    executable=/bin/bash
   tags:
-    - web
+    - tissuemaps
 
-- include: tissuemaps_server.yml
+- name: Clone JtModules repository
+  git:
+    repo={{ tm_github_url }}/jtmodules
+    dest={{ ansible_env.HOME }}/jtmodules
+    version={{ tm_version }}
+    force=yes
+  tags:
+    - tissuemaps
 
-- include: tissuemaps_client.yml
+- name: Install jtmodules package
+  shell: pip install -e {{ ansible_env.HOME }}/jtmodules --user
+  args:
+    chdir={{ ansible_env.HOME }}/jtmodules/
+    executable=/bin/bash
+  tags:
+    - tissuemaps
 
-- include: gc3pie.yml
-
-- include: config.yml
-
-- include: utils.yml
-
-- include: postgresql_client.yml

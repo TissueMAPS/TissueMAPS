@@ -13,61 +13,20 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
 - name: Update all packages to the latest version
   become: yes
   apt: upgrade=safe update_cache=yes cache_valid_time=3600
   tags:
     - nginx
-    - web
+    - web-server
 
 - name: Install NGINX
   become: yes
   apt: name=nginx state=installed
   tags:
-    - web
+    - web-server
     - nginx
-
-# - name: Install uWSGI
-#   become: yes
-#   apt:
-#     name: "{{ item }}"
-#     state: installed
-#   with_items:
-#     - uwsgi
-#     - uwsgi-plugin-python
-#   tags:
-#     - web
-#     - uwsgi
-
-- name: Install latest uWSGI packages
-  become: yes
-  pip: name=uwsgi editable=false
-  tags:
-    - uwsgi
-    - web
-
-- name: Place uwsgi.ini
-  template: src=uwsgi.ini.j2 dest="{{ ansible_env.HOME }}/.tmaps/uwsgi.ini"
-  tags:
-    - web
-    - uwsgi
-
-- name: Place flask uwsgi wrapper
-  template: src=uwsgi.sh.j2 dest="{{ ansible_env.HOME }}/.tmaps/uwsgi.sh"
-  tags:
-    - web
-    - uwsgi
-
-- name: Create an upstart scripts
-  become: yes
-  template: src=uwsgi.conf.j2 dest="/etc/init/uwsgi.conf"
-  notify:
-    - restart uwsgi
-  tags:
-    - web
-    - uwsgi
 
 - name: Create nginx site
   become: yes
@@ -76,7 +35,7 @@
     - restart nginx
   tags:
     - nginx
-    - web
+    - web-server
 
 - name: Put nginx conf.d
   become: yes
@@ -85,7 +44,7 @@
     - restart nginx
   tags:
     - nginx
-    - web
+    - web-server
 
 # Check syntax of the nginx file:
 # $ become nginx -t
@@ -104,25 +63,4 @@
     - restart uwsgi
   tags:
     - nginx
-    - web
-
-- name: Add redis repo
-  become: yes
-  apt_repository: repo='ppa:chris-lea/redis-server' validate_certs=no
-  tags:
-    - redis
-    - web
-
-- name: Update all packages to the latest version
-  become: yes
-  apt: upgrade=safe update_cache=yes cache_valid_time=3600
-  tags:
-    - redis
-    - web
-
-- name: Install redis server
-  become: true
-  apt: name=redis-server state=installed
-  tags:
-    - redis
-    - web
+    - web-server

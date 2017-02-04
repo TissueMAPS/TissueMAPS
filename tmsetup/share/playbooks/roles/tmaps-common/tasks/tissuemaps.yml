@@ -13,7 +13,6 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
 - name: Install apt packages required by TissueMAPS Python packages
   become: yes
@@ -46,40 +45,6 @@
   tags:
     - tissuemaps
 
-- name: Clone JtLibrary repository
-  git:
-    repo={{ tm_github_url }}/jtlibrary
-    dest={{ ansible_env.HOME }}/jtlibrary
-    version={{ tm_release_tag }}
-    force=yes
-  tags:
-    - tissuemaps
-
-- name: Install jtlibrary package
-  shell: pip install -e {{ ansible_env.HOME }}/jtlibrary --user
-  args:
-    chdir={{ ansible_env.HOME }}/jtlibrary/
-    executable=/bin/bash
-  tags:
-    - tissuemaps
-
-- name: Clone JtModules repository
-  git:
-    repo={{ tm_github_url }}/jtmodules
-    dest={{ ansible_env.HOME }}/jtmodules
-    version={{ tm_release_tag }}
-    force=yes
-  tags:
-    - tissuemaps
-
-- name: Install jtmodules package
-  shell: pip install -e {{ ansible_env.HOME }}/jtmodules --user
-  args:
-    chdir={{ ansible_env.HOME }}/jtmodules/
-    executable=/bin/bash
-  tags:
-    - tissuemaps
-
 # NOTE: When including the GC3Pie dependency via --process-dependency-links
 # upon installation of tmlibrary, I get HTTP erros when installing on multiple
 # hosts simulatneously???
@@ -94,7 +59,7 @@
   git:
     repo={{ tm_github_url }}/tmlibrary
     dest={{ ansible_env.HOME }}/tmlibrary
-    version={{ tm_release_tag }}
+    version={{ tm_version }}
     force=yes
   tags:
     - tissuemaps
@@ -111,4 +76,3 @@
   file: path={{ ansible_env.HOME }}/.tmaps state=directory
   tags:
     - tissuemaps
-    - config

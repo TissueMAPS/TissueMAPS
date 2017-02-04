@@ -14,37 +14,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Deploy storage
-#
 ---
-- name: Collecting facts
-  hosts: all
-  gather_facts: yes
-
-- name: Update Python
-  hosts: all
-  tasks:
-    - include: roles/tmaps-common/tasks/python.yml
-
-- name: Configure PostgreSQL master
-  hosts:
-    - tissuemaps_database_master
-  remote_user: "{{ ansible_user }}"
-  vars:
-    create_db_with_ansible: yes
-  roles:
-    - tmaps-database-master
+- name: Create directory for GC3Pie data
+  file:
+    path="{{ ansible_env.HOME }}/.gc3"
+    state=directory
   tags:
-    - database
+    - gc3pie
 
-- name: Configure PostgreSQL workers
-  hosts:
-    - tissuemaps_database_worker
-  remote_user: "{{ ansible_user }}"
-  vars:
-    create_db_with_ansible: yes
-  roles:
-    - tmaps-database-worker
+- name: Drop GC3Pie configuration file
+  template:
+    src={{ playbook_dir }}/roles/tmaps-web-server/templates/gc3pie.conf.j2
+    dest={{ ansible_env.HOME }}/.gc3/gc3pie.conf
   tags:
-    - database
+    - gc3pie
 

@@ -30,16 +30,3 @@
   notify:
     - update timezone
 
-# Sometimes the cache does not work so it is good to force update for
-# this playbook
-- apt: update_cache=yes
-  become: yes
-
-- name: Install locale language packages (Ubuntu)
-  become: yes
-  apt:
-    name: "{{ item }}"
-    state: installed
-  with_items:
-    - language-pack-en-base
-    - language-pack-de

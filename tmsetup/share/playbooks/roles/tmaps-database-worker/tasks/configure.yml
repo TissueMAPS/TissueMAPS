@@ -14,26 +14,51 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Configure PostgreSQL shared_buffers
+- name: Configure shared_buffers
   become: yes
-  command: pg_conftool {{ postgresql_version }} main set shared_buffers {{ pg_shared_buffers }}
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set shared_buffers {{ pg_shared_buffers }}
   tags:
     - database
 
-- name: Configure PostgreSQL effective_cache_size
+- name: Configure effective_cache_size
   become: yes
-  command: pg_conftool {{ postgresql_version }} main set effective_cache_size {{ pg_effective_cache_size }}
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set effective_cache_size {{ pg_effective_cache_size }}
   tags:
     - database
 
-- name: Configure PostgreSQL max_worker_processes
+- name: Configure max_worker_processes
   become: yes
-  command: pg_conftool {{ postgresql_version }} main set max_worker_processes {{ pg_max_worker_processes }}
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_worker_processes {{ pg_max_worker_processes }}
   tags:
     - database
 
-- name: Configure PostgreSQL max_parallel_worker_per_gather
+- name: Configure max_parallel_worker_per_gather
   become: yes
-  command: pg_conftool {{ postgresql_version }} main set max_parallel_worker_per_gather {{ pg_max_worker_processes }}
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_parallel_worker_per_gather {{ pg_max_worker_processes }}
+  tags:
+    - database
+
+- name: Configure checkpoint_timeout
+  become: yes
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set checkpoint_timeout {{ pg_checkpoint_timeout }}
+  tags:
+    - database
+
+- name: Configure max_wal_size
+  become: yes
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_wal_size {{ pg_max_wal_size }}
+  tags:
+    - database
+
+# NOTE: Aggressive, performance orientated settings on the workers.
+- name: Turn fsync off
+  become: yes
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set fsync off
+  tags:
+    - database
+
+- name: Turn synchronous_commit off
+  become: yes
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set synchronous_commit off
   tags:
     - database

@@ -26,14 +26,14 @@
   tags:
     - tissuemaps
     - client
-    - web
+    - web-server
 
 - name: Corrections for nodejs
   become: yes
   file: src=/usr/bin/nodejs dest=/usr/bin/node state=link
   tags:
     - tmserver
-    - web
+    - web-server
 
 - name: Install npm packages
   become: yes
@@ -44,46 +44,38 @@
   tags:
     - tissuemaps
     - client
-    - web
+    - web-server
 
 - name: Get the latest tmui code
   git:
     repo={{ tm_github_url }}/tmui
-    version={{ tm_release_tag }}
+    version={{ tm_version }}
     recursive=yes
     dest={{ ansible_env.HOME }}/tmui
   tags:
     - tissuemaps
     - client
-    - web
+    - web-server
 
 - name: Update npm
   become: yes
   command: npm install npm -g
   tags:
-    - web
+    - web-server
     - tissuemaps
     - client
 
 - name: Install npm dependencies
   npm: path={{ ansible_env.HOME }}/tmui/src/app state=present
   tags:
-    - web
+    - web-server
     - tissuemaps
     - client
-
-# Patch private git url in bower.json
-# - name: Patch bower files
-#   lineinfile:
-#     dest: "{{ ansible_env.HOME }}/tmclient/src/bower.json"
-#     state: present
-#     regexp: '^.*/TmAuth.git\"'
-#     line: '    "tmauth": \"{{ tmaps_git_url }}/TmAuth.git"'
 
 - name: Install bower dependencies
   bower: path={{ ansible_env.HOME }}/tmui/src state=present
   tags:
-    - web
+    - web-server
     - tissuemaps
     - client
 
@@ -93,6 +85,6 @@
     executable: /bin/bash
     chdir: "{{ ansible_env.HOME }}/tmui/src"
   tags:
-    - web
+    - web-server
     - tissuemaps
     - client

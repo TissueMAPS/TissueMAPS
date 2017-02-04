@@ -13,19 +13,26 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
-# Cooks images used to launch VMs of frontend and compute nodes.
+- include: ssl_cert.yml
 
-# - name: Ensure required variables are defined
-#   fail:
-#     msg: Variable {{ item }} is not defined!
-#   with_items:
+- include: ssh_keys.yml
 
-- name: Install TissueMAPS python packages
-  hosts: tissuemaps_compute
-  roles:
-    - tmaps-compute
+- include: server.yml
+
+- name: Stop uWSGI web server
+  become: yes
+  service: name=uwsgi state=stopped
+  ignore_errors: True
   tags:
-    - tissuemaps
-    - compute
+    - web
+
+- include: tissuemaps.yml
+
+- include: gc3pie.yml
+
+- include: config.yml
+
+- include: utils.yml
+
+- include: postgresql.yml

@@ -16,29 +16,41 @@
 ---
 - name: Preload Citus extension
   become: yes
-  command: pg_conftool {{ postgresql_version }} main set shared_preload_libraries citus
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set shared_preload_libraries citus
   tags:
     - database
 
-- name: Configure PostgreSQL connection
+- name: Configure connection
   become: yes
-  command: pg_conftool {{ postgresql_version }} main set listen_addresses '*'
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set listen_addresses '*'
   tags:
     - database
 
-- name: Configure PostgreSQL max_connections
+- name: Configure max_connections
   become: yes
-  command: pg_conftool {{ postgresql_version }} main set max_connections {{ pg_max_connections }}
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_connections {{ pg_max_connections }}
   tags:
     - database
 
-- name: Configure PostgreSQL authentication
+- name: Configure max_files_per_process
+  become: yes
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_files_per_process {{ pg_max_files_per_process }}
+  tags:
+    - database
+
+- name: Configure autovacuum_max_workers
+  become: yes
+  command: pg_conftool {{ postgresql_version }} {{ db_node }} set autovacuum_max_workers {{ pg_autovacuum_max_workers }}
+  tags:
+    - database
+
+- name: Configure authentication
   become: yes
   lineinfile:
-    dest=/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf
+    dest=/etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
     state=present
-    regexp="^host\s+all\s+all\s+md5"
-    line="host    all             all             {{ ip_range }}               md5"
+    regexp="^host\s+all\s+all\s+[./0-9]*\s+trust"
+    line="host    all             all             {{ ip_range }}               trust"
   notify:
     - restart postgresql
   tags:
@@ -53,7 +65,7 @@
 - name: Increaese limit for number of open files
   become: yes
   lineinfile:
-    dest="/etc/security/limits.conf"
-    line="postgres soft nofile 10000"
+    dest=/etc/security/limits.conf
+    line=postgres soft nofile {{ pg_max_files_per_process }}
   tags:
     - database

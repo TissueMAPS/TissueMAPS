@@ -13,19 +13,40 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
-# Cooks images used to launch VMs of frontend and compute nodes.
-
-# - name: Ensure required variables are defined
-#   fail:
-#     msg: Variable {{ item }} is not defined!
-#   with_items:
-
-- name: Install TissueMAPS python packages
-  hosts: tissuemaps_compute
-  roles:
-    - tmaps-compute
+- name: Ensure the PostgreSQL service is running
+  become: yes
+  # TODO: container???
+  service:
+    name=postgresql
+    state=started
+    enabled=yes
   tags:
-    - tissuemaps
-    - compute
+    - database
+
+- name: Create database user
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining=true
+  postgresql_user:
+    db={{ db_name }}
+    port={{ db_port }}
+    user={{ db_user }}
+    password={{ db_password }}
+    role_attr_flags=LOGIN
+  tags:
+    - database
+
+- name: Grant database user all permissions
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining=true
+  postgresql_privs:
+    db={{ db_name }}
+    port={{ db_port }}
+    roles={{ db_user }}
+    privs=ALL
+  tags:
+    - database

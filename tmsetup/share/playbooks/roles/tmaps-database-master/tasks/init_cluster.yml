@@ -13,14 +13,22 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
-- name: Place conventience scripts
-  template:
-    src={{ playbook_dir }}/roles/tmaps-web/templates/{{ item }}.j2
-    dest={{ ansible_env.HOME }}/{{ item }}
-    mode="u+x"
-  with_items:
-    - create_slurm_account.sh
-    - start_server.sh
-    - stop_server.sh
+- name: Ensure the PostgreSQL service is running
+  become: yes
+  # TODO: containers???
+  service:
+    name=postgresql
+    state=started
+    enabled=yes
+  tags:
+    - database
+
+- name: Add worker nodes
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining=true
+  command: psql -c tissuemaps "SELECT master_add_node('{{ item['ansible_default_ipv4']['address'] }}', {{ db_port }});"
+  with_items: "{{ group['tissuemaps_database_worker'] }}"
+

@@ -15,17 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# Cooks images used to launch VMs of frontend and compute nodes.
+- name: restart postgresql
+  become: yes
+  service:
+    name: postgresql
+    state: restarted
+    enabled: yes
 
-# - name: Ensure required variables are defined
-#   fail:
-#     msg: Variable {{ item }} is not defined!
-#   with_items:
-
-- name: Install TissueMAPS python packages
-  hosts: tissuemaps_compute
-  roles:
-    - tmaps-compute
-  tags:
-    - tissuemaps
-    - compute
+- name: restart nginx
+  become: yes
+  service:
+    name: nginx
+    state: restarted
+    enabled: yes

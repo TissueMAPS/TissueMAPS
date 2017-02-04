@@ -19,5 +19,13 @@ postgis_version: 2.3
 
 volume_mountpoint: /data
 
-db_user: postgres
 db_port: 5432
+db_user: tissuemaps
+db_name: tissuemaps
+db_data_directory: /var/lib/postgresql
+db_log_directory: /var/log/postgresql
+
+pg_max_files_per_process: 10000
+pg_max_connections: 1000
+pg_autovacuum_max_workers: 6
+pg_maintenance_work_mem: 1GB

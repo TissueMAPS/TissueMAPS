@@ -15,9 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Clone TmServer and TmUI repositories and install packages
+- name: Install web and application servers
   hosts: tissuemaps_web
   roles:
-    - tmaps-web
+    - tmaps-web-server
+    - tmaps-app-server
   tags:
     - web

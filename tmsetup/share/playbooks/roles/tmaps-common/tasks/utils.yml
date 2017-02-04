@@ -15,9 +15,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+- name: Install language packages
+  become: yes
+  apt:
+    name={{ item }}
+    state=installed
+  with_items:
+    - language-pack-en-base
+    - language-pack-de
+
 - name: Install generally required Apt packages
   become: yes
-  apt: name={{ item }} state=installed
+  apt:
+    name={{ item }}
+    state=installed
   with_items:
     - vim
     - git
@@ -28,9 +39,14 @@
     - libopenblas-dev
 
 - name: Add apt repository for Vim8
-  apt_repository: repo="ppa:jonathonf/vim" state=present
+  apt_repository:
+    repo="ppa:jonathonf/vim"
+    state=present
   become: yes
 
 - name: Install Vim8
-  apt: name=vim state=installed update_cache=yes
+  apt:
+    name=vim
+    state=installed
+    update_cache=yes
   become: yes

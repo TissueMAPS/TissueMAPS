@@ -16,7 +16,7 @@ server {
     }
 
     # all other request (e.g. with /api or /auth prefix) to uwsgi
-    # listening on the unix socket nginx-comm.sock
+    # listening on the unix socket
     location @proxy {
         include uwsgi_params;
         uwsgi_pass unix:{{ ansible_env.HOME }}/.tmaps/uwsgi.sock;

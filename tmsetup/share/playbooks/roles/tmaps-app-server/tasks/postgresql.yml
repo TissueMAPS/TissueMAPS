@@ -21,13 +21,7 @@
     dest={{ ansible_env.HOME }}/.pgpass
     group={{ ansible_ssh_user }}
     owner={{ ansible_ssh_user }}
-    mode=600
-    # mode="u=rw"
-  tags:
-    - database
-
-- name: Place script for recreating the database
-  template: src=resetdb.sql.j2 dest={{ ansible_env.HOME }}/resetdb.sql
+    mode=600  # "u=rw"
   tags:
     - database
 
@@ -50,17 +44,6 @@
     state=present
     option=db_host
     value={{ hostvars[groups['tissuemaps_database_master'][0]]['ansible_default_ipv4']['address'] }}
-  tags:
-    - database
-    - tissuemaps
-
-- name: Change db_worker_hosts in TissueMAPS configuration
-  ini_file:
-    dest={{ tmaps_config_file }}
-    section=DEFAULT
-    state=present
-    option=db_worker_hosts
-    value={{ groups['tissuemaps_database_worker'] | map('extract', hostvars, ['ansible_default_ipv4', 'address']) | join(',') }}
   tags:
     - database
     - tissuemaps
