@@ -223,7 +223,9 @@ class GC3Pie(object):
             individual computational task or collection of tasks
         """
         logger.info('kill jobs')
-        self._engine.kill(jobs)
+        original_task = self._engine.find_task_by_id(jobs.persistent_id)
+        logger.debug('kill task %d', original_task.persistent_id)
+        self._engine.kill(original_task)
         self._engine.progress()
 
     def continue_jobs(self, jobs):

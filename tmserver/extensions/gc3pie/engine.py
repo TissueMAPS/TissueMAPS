@@ -313,7 +313,6 @@ class BgEngine(object):
             self._q.append((self._engine.get_backend, (name,), {}))
 
     def kill(self, task, **extra_args):
-        logger.debug('kill task: %s', task.persistent_id)
         with self._q_locked:
             self._q.append((self._engine.kill, (task,), extra_args))
 
@@ -353,6 +352,9 @@ class BgEngine(object):
     def submit(self, task, resubmit=False, targets=None, **extra_args):
         with self._q_locked:
             self._q.append((self._engine.submit, (task, resubmit, targets), extra_args))
+
+    def find_task_by_id(self, task_id):
+        return self._engine.find_task_by_id(task_id)
 
     def update_job_state(self, *tasks, **extra_args):
         with self._q_locked:
