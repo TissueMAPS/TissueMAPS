@@ -6,10 +6,6 @@
 	path = src/tmserver
 	url = https://github.com/TissueMAPS/tmserver
 	branch = master
-[submodule "src/tmtoolbox"]
-	path = src/tmtoolbox
-	url = https://github.com/TissueMAPS/tmtoolbox
-	branch = master
 [submodule "src/tmclient"]
 	path = src/tmclient
 	url = https://github.com/TissueMAPS/tmclient
