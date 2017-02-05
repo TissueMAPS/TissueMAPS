@@ -68,12 +68,15 @@ Note
 ----
 Each tool also requires a client-side representation.
 '''
+import logging
+
 from tmlib.version import __version__
 from tmlib.tools.classification import Classification
 from tmlib.tools.clustering import Clustering
 from tmlib.tools.heatmap import Heatmap
-
 from tmlib.tools.base import _register
+
+logger = logging.getLogger(__name__)
 
 
 def get_tool_class(name):
