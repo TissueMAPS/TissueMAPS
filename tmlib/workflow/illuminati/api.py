@@ -150,6 +150,53 @@ class PyramidBuilder(ClusterRoutines):
                     layer = session.get_or_create(
                         tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
                     )
+
+
+                    if args.clip:
+                        logger.info('clip intensities')
+                        # Illumination statistics may not have been calculated
+                        # and are not required in case a clip value is provided.
+                        if args.clip_value is None:
+                            logger.info('calculate clip value')
+                            try:
+                                illumstats_file = session.query(tm.IllumstatsFile).\
+                                    filter_by(
+                                        channel_id=layer.channel_id,
+                                        cycle_id=layer.channel.image_files[0].cycle_id
+                                    ).\
+                                    one()
+                            except NoResultFound:
+                                raise WorkflowError(
+                                    'No illumination statistics file found '
+                                    'for channel %d' % layer.channel_id
+                                )
+                            stats = illumstats_file.get()
+                            clip_max = stats.get_closest_percentile(
+                                args.clip_percent
+                            )
+                            # If pixel values are too low for the channel,
+                            # the channel is probably "empty"
+                            # (for example because the staining didn't work).
+                            # In this case we want to prevent that too extreme
+                            # rescaling is applied, which would look shitty.
+                            # The choice of the threshold level is arbitrary.
+                            if clip_max < 200:
+                                clip_max = 1000
+                            logger.info('clip value: %d', clip_max)
+                            clip_min = stats.get_closest_percentile(0.001)
+                        else:
+                            logger.info('use provided clip value')
+                            clip_max = args.clip_value
+                            logger.info('clip value: %d', clip_max)
+                            clip_min = 0
+                    else:
+                        logger.debug('don\'t clip intensities')
+                        clip_max = 2**layer.channel.bit_depth - 1
+                        clip_min = 0
+
+                    layer.max_intensity = clip_max
+                    layer.min_intensity = clip_min
+
                     if count == 0:
                         h, w = layer.calculate_max_image_size()
                         d = layer.calculate_zoom_levels(h, w)
@@ -345,62 +392,32 @@ class PyramidBuilder(ClusterRoutines):
                 batch['level']
             )
 
-            if batch['clip'] or batch['illumcorr']:
-                logger.info('load illumination statistics')
+            if batch['illumcorr']:
+                logger.info('correct images for illumination artifacts')
                 # Illumination statistics may not have been calculated
                 # are are not required in case fixed clip value is provided.
-                if batch['clip_value'] is None or batch['illumcorr']:
-                    try:
-                        illumstats_file = session.query(tm.IllumstatsFile).\
-                            filter_by(
-                                channel_id=layer.channel_id,
-                                cycle_id=layer.channel.image_files[0].cycle_id
-                            ).\
-                            one()
-                    except NoResultFound:
-                        raise WorkflowError(
-                            'No illumination statistics file found for channel %d'
-                            % layer.channel_id
-                        )
-                    stats = illumstats_file.get()
-                else:
-                    stats = None
+                try:
+                    logger.debug('load illumination statistics')
+                    illumstats_file = session.query(tm.IllumstatsFile).\
+                        filter_by(
+                            channel_id=layer.channel_id,
+                            cycle_id=layer.channel.image_files[0].cycle_id
+                        ).\
+                        one()
+                except NoResultFound:
+                    raise WorkflowError(
+                        'No illumination statistics file found for channel %d'
+                        % layer.channel_id
+                    )
+                stats = illumstats_file.get()
             else:
                 stats = None
 
-            if batch['clip']:
-                logger.info('clip intensity values')
-                if batch['clip_value'] is None:
-                    clip_above = stats.get_closest_percentile(
-                        batch['clip_percent']
-                    )
-                    # If pixel values are too low for the channel,
-                    # the channel is probably "empty"
-                    # (for example because the staining didn't work).
-                    # In this case we want to prevent that too extreme
-                    # rescaling is applied, which would look shitty.
-                    # The choice of the threshold level is totally arbitrary.
-                    if clip_above < 200:
-                        clip_above = 1000
-                    logger.info('use default clip value: %d', clip_above)
-                else:
-                    clip_above = batch['clip_value']
-                    logger.info('use provided clip value: %d', clip_above)
-                if stats is not None:
-                    clip_below = stats.get_closest_percentile(0.001)
-                else:
-                    clip_below = 0
-            else:
-                clip_above = 2**layer.channel.bit_depth - 1
-                clip_below = 0
-
-            layer.max_intensity = clip_above
-            layer.min_intensity = clip_below
-
-            if batch['illumcorr']:
-                logger.info('correct images for illumination artifacts')
             if batch['align']:
                 logger.info('align images between cycles')
+
+            clip_min = layer.min_intensity
+            clip_max = layer.max_intensity
 
             for fid in batch['image_file_ids']:
                 file = session.query(tm.ChannelImageFile).get(fid)
@@ -415,8 +432,8 @@ class PyramidBuilder(ClusterRoutines):
                     logger.debug('align image')
                     image = image.align(crop=False)
                 if not image.is_uint8:
-                    image = image.clip(clip_below, clip_above)
-                    image = image.scale(clip_below, clip_above)
+                    image = image.clip(clip_min, clip_max)
+                    image = image.scale(clip_min, clip_max)
                 image_store[file.id] = image
 
                 extra_file_map = layer.map_base_tile_to_images(file.site)
@@ -450,8 +467,8 @@ class PyramidBuilder(ClusterRoutines):
                                 logger.debug('align image')
                                 image = image.align(crop=False)
                             if not image.is_uint8:
-                                image = image.clip(clip_below, clip_above)
-                                image = image.scale(clip_below, clip_above)
+                                image = image.clip(clip_min, clip_max)
+                                image = image.scale(clip_min, clip_max)
                             image_store[extra_file.id] = image
 
                         extra_file_coordinate = np.array((
