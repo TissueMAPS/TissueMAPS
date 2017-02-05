@@ -2,18 +2,13 @@
 TissueMAPS
 **********
 
-Online documentation
---------------------
-
-For the moment, documentation is available at `tissuemaps.org <http://tissuemaps.org/>`_ and requires authentication. Use can login with your *Github* username.
-
-Once repositories will be public, documentation will be hosted on `Read the Docs <https://readthedocs.org/>`_.
+Online documentation is available at `tissuemaps.org <http://tissuemaps.org/>`_.
 
 
 Installation of *TissueMAPS* Python packages during pre-release phase
 ---------------------------------------------------------------------
 
-The installation guide of the documentation already assumes that packages are available on `PiPy <https://pypi.python.org/pypi>`_. For now, they still need to be installed from *Github*. This can get a bit tricky, because cloning private repositories require authentication. Best practice is to use *SSH* key-based authentication or `deploy keys <https://developer.github.com/guides/managing-deploy-keys/#deploy-keys>`_. In addition, the ``setup.py`` files also already declare the packages as requirements that can be installed from *PiPy*.
+The installation guide of the documentation already assumes that packages are available on `PiPy <https://pypi.python.org/pypi>`_. For now, they still need to be installed from *Github*. Best practice is to use *SSH* key-based authentication. Please note that the ``setup.py`` files also already declare the packages as *PiPy* requirements. Therefore, the order of installing the modules is important.
 
 You may find the following steps helpful:
 
@@ -67,6 +62,6 @@ You may find the following steps helpful:
         cd $HOME/$p && git checkout $RELEASE && pip install -e . && cd
     done
 
-* Packages can be either optained individually (as in the above script) or via the main *TissueMAPS* repository. Individual repositories will by default get checked out at the latest commit. If you want the current release version you need to `checkout <https://git-scm.com/docs/git-checkout>`_ tag ``v0.1.0``. The main *TissueMAPS* repository contains the other repositories as submodules, which will automatically get checked out at the current release tag::
+* Packages can be either optained individually (as exemplified in the above script) or via the main *TissueMAPS* repository. Individual repositories will by default point to the ``master`` branch. If you want the current release version you need to `checkout <https://git-scm.com/docs/git-checkout>`_ the latest release tag, e.g. ``v0.1.1``. The main *TissueMAPS* repository contains the other repositories as submodules, which will automatically get checked out at the current release tag::
 
     git clone --recursive https://github.com/TissueMAPS/TissueMAPS.git ~/tissuemaps
