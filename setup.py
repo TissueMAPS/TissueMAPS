@@ -88,14 +88,15 @@ setuptools.setup(
     package_dir={'': 'src/python'},
     include_package_data=True,
     install_requires=[
-        'numpy>=1.10.1',
+        'numpy>=1.12.0',
+        'pandas>=0.19.2',
         'scipy>=0.16.0',
         'cython>=0.24',
         'scikit-image>=0.11.3',
         'mahotas>=1.4.0',
         'centrosome>=1.0.5',
         'colorlover>=0.2.1',
-        'plotly>=1.9.5',
+        'plotly>=2.0.0',
         'pyasn1>=0.1.9',
         'ndg-httpsclient>=0.4.0',
     ]
