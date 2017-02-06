@@ -151,7 +151,6 @@ class PyramidBuilder(ClusterRoutines):
                         tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
                     )
 
-
                     if args.clip:
                         logger.info('clip intensities')
                         # Illumination statistics may not have been calculated
@@ -253,10 +252,7 @@ class PyramidBuilder(ClusterRoutines):
                                     'index': index,
                                     'image_file_ids': image_file_ids,
                                     'align': args.align,
-                                    'illumcorr': args.illumcorr,
-                                    'clip': args.clip,
-                                    'clip_value': args.clip_value,
-                                    'clip_percent': args.clip_percent
+                                    'illumcorr': args.illumcorr
                                 }
                             else:
                                 rows = np.arange(layer.dimensions[level][0])
@@ -341,7 +337,6 @@ class PyramidBuilder(ClusterRoutines):
 
         multi_run_jobs = collections.defaultdict(list)
         for b in batches:
-
             job = RunJob(
                 step_name=self.step_name,
                 arguments=self._build_run_command(b['id']),
@@ -365,7 +360,6 @@ class PyramidBuilder(ClusterRoutines):
                         'The value of "cores" must be positive.'
                     )
                 job.requested_cores = cores
-
             multi_run_jobs[b['index']].append(job)
 
         for index, jobs in multi_run_jobs.iteritems():
@@ -394,8 +388,6 @@ class PyramidBuilder(ClusterRoutines):
 
             if batch['illumcorr']:
                 logger.info('correct images for illumination artifacts')
-                # Illumination statistics may not have been calculated
-                # are are not required in case fixed clip value is provided.
                 try:
                     logger.debug('load illumination statistics')
                     illumstats_file = session.query(tm.IllumstatsFile).\
