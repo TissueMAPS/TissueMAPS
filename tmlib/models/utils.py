@@ -453,13 +453,12 @@ class SQLAlchemy_Session(object):
             # nodes are trying to insert the same row simultaneously.
             try:
                 instance = model(**kwargs)
-                logger.debug('created new instance: %r', instance)
                 self._session.add(instance)
                 self._session.commit()
-                logger.debug('added and committed new instance: %r', instance)
+                logger.debug('created new instance: %r', instance)
             except sqlalchemy.exc.IntegrityError as err:
                 logger.error(
-                    'creation of instance %r failed:\n%s', instance, str(err)
+                    'creation of %s instance failed:\n%s', model, str(err)
                 )
                 self._session.rollback()
                 try:
