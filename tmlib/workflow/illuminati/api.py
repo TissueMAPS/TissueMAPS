@@ -156,13 +156,13 @@ class PyramidBuilder(ClusterRoutines):
                         # Illumination statistics may not have been calculated
                         # and are not required in case a clip value is provided.
                         if args.clip_value is None:
-                            logger.info('calculate clip value')
+                            logger.info(
+                                'calculate clip value at percentile %d',
+                                args.clip_percent
+                            )
                             try:
                                 illumstats_file = session.query(tm.IllumstatsFile).\
-                                    filter_by(
-                                        channel_id=layer.channel_id,
-                                        cycle_id=layer.channel.image_files[0].cycle_id
-                                    ).\
+                                    filter_by(channel_id=layer.channel_id).\
                                     one()
                             except NoResultFound:
                                 raise WorkflowError(
@@ -179,8 +179,8 @@ class PyramidBuilder(ClusterRoutines):
                             # In this case we want to prevent that too extreme
                             # rescaling is applied, which would look shitty.
                             # The choice of the threshold level is arbitrary.
-                            if clip_max < 200:
-                                clip_max = 1000
+                            if clip_max < 500:
+                                clip_max = 500
                             logger.info('clip value: %d', clip_max)
                             clip_min = stats.get_closest_percentile(0.001)
                         else:
