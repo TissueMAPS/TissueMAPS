@@ -148,6 +148,7 @@ class ImageRegistrator(ClusterRoutines):
                     job_descriptions['run'].append({
                         'id': job_count,
                         'input_ids': input_ids,
+                        'illumcorr': args.illumcorr,
                         'inputs': dict(),
                         'outputs': dict(),
                     })
@@ -174,24 +175,78 @@ class ImageRegistrator(ClusterRoutines):
         If sites contain multiple z-planes, z-stacks are projected to 2D and
         the resulting projections are registered.
         '''
-        reference_file_ids = batch['input_ids']['reference_file_ids']
-        target_file_ids = batch['input_ids']['target_file_ids']
-        for i, rid in enumerate(reference_file_ids):
-            with tm.utils.ExperimentSession(self.experiment_id) as session:
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            reference_file_ids = batch['input_ids']['reference_file_ids']
+            target_file_ids = batch['input_ids']['target_file_ids']
+            if batch['illumcorr']:
+                logger.info('correct images for illumination artifacts')
+
+                rid = reference_file_ids[0]
                 reference_file = session.query(tm.ChannelImageFile).get(rid)
-                reference_img = reference_file.get().project().array
-                logger.info(
-                    'register images at site %d', reference_file.site_id
-                )
+                try:
+                    logger.debug(
+                        'load illumination statistics for channel %d of '
+                        'reference cycle %d', reference_file.channel_id,
+                        reference_file.cycle_id
+                    )
+                    illumstats_file = session.query(tm.IllumstatsFile).\
+                        filter_by(
+                            channel_id=reference_file.channel_id,
+                            cycle_id=reference_file.cycle_id
+                        ).\
+                        one()
+                except NoResultFound:
+                    raise WorkflowError(
+                        'No illumination statistics file found for channel %d'
+                        % reference_file.channel_id
+                    )
+                reference_stats = illumstats_file.get()
+
+                target_stats = dict()
+                for cycle_id, tids in target_file_ids.iteritems():
+                    target_file = session.query(tm.ChannelImageFile).get(tids[0])
+                    try:
+                        logger.debug(
+                            'load illumination statistics for channel %d of'
+                            'target cycle %d', target_file.channel_id,
+                            target_file.cycle_id
+                        )
+                        illumstats_file = session.query(tm.IllumstatsFile).\
+                            filter_by(
+                                channel_id=target_file.channel_id,
+                                cycle_id=target_file.cycle_id
+                            ).\
+                            one()
+                    except NoResultFound:
+                        raise WorkflowError(
+                            'No illumination statistics file found for '
+                            'channel %d'
+                            % target_file.channel_id
+                        )
+                    target_stats[cycle_id] = illumstats_file.get()
+
+            for i, rid in enumerate(reference_file_ids):
+                logger.info('register images at site %d', reference_file.site_id)
+                logger.debug('load reference image %d', rid)
+                reference_file = session.query(tm.ChannelImageFile).get(rid)
+                reference_img = reference_file.get()
+                if batch['illumcorr']:
+                    logger.debug('correct reference image')
+                    reference_img = reference_img.correct(reference_stats)
                 y_shifts = list()
                 x_shifts = list()
-                for tids in target_file_ids.values():
+                for cycle_id, tids in target_file_ids.iteritems():
+                    logger.info('calculate shifts for cycle %s', cycle_id)
+                    logger.debug('load target image %d', tids[i])
                     target_file = session.query(tm.ChannelImageFile).get(tids[i])
-                    logger.info(
-                        'calculate shifts for cycle %d', target_file.cycle_id
+                    target_img = target_file.get()
+                    if batch['illumcorr']:
+                        logger.debug('correct target image')
+                        target_img = target_img.correct(target_stats[cycle_id])
+
+                    y, x = reg.calculate_shift(
+                        target_img.array, reference_img.array
                     )
-                    target_img = target_file.get().project().array
-                    y, x = reg.calculate_shift(target_img, reference_img)
 
                     session.get_or_create(
                         tm.SiteShift,

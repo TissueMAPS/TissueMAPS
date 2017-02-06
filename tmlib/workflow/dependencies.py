@@ -60,6 +60,7 @@ class _WorkflowDependenciesMeta(ABCMeta):
             # TODO: check intra_stage_dependencies inter_stage_dependencies
             # based on __dependencies__
 
+
 class WorkflowDependencies(object):
 
     '''Abstract base class for declartion of workflow dependencies.

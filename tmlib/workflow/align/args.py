@@ -40,6 +40,11 @@ class AlignBatchArguments(BatchArguments):
         help='number of acquisition sites that should be processed per job'
     )
 
+    illumcorr = Argument(
+        type=bool, default=False, flag='i',
+        help='wether images should be corrected for illumination artifacts'
+    )
+
 
 @register_step_submission_args('align')
 class AlignSubmissionArguments(SubmissionArguments):
