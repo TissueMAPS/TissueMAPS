@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 class GC3Pie(object):
 
     def __init__(self, app=None):
-        """An extension that creates a `GC3Pie` engine to submit computational
+        """An extension that exposes a `GC3Pie` engine to submit computational
         jobs to a batch cluster.
 
         Parameters
@@ -54,7 +54,7 @@ class GC3Pie(object):
         gc3pie.init_app(app)
         gc3pie.engine.add(jobs)
         """
-        self.interval = 1
+        self.interval = 10
         gc3libs_logger = logging.getLogger('gc3.gc3libs')
         gc3libs_logger.setLevel(logging.CRITICAL)
         apscheduler_logger = logging.getLogger('apscheduler')
