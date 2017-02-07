@@ -81,7 +81,7 @@ class MetadataHandler(object):
                     % (name, '", "'.join(SUPPORTED_FIELDS))
                 )
 
-        for name in possible_fields:
+        for name in SUPPORTED_FIELDS:
             if name not in provided_fields and name in FIELD_DEFAULTS:
                 logger.warning(
                     'regular expression field "%s" not provided, defaults to %s',
@@ -501,7 +501,7 @@ class MetadataHandler(object):
             )
 
         logger.info('retrieve metadata from filenames via regular expression')
-        check_regular_expression(regex)
+        self.check_regular_expression(regex)
         for i, f in enumerate(filenames):
             # Not every microscope provides all the information in the filename.
             fields = self.extract_fields_from_filename(regex, f)
