@@ -437,8 +437,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 x_offset += site.intersection.right_overhang
 
         mapobject_ids = dict()
-        for obj_name, segm_objs in objects_to_save.iteritems():
-            with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+            for obj_name, segm_objs in objects_to_save.iteritems():
                 # Delete existing mapobjects for this site when they were
                 # generated in a previous run of the same pipeline. In case
                 # they were passed to the pipeline as inputs don't delete them
@@ -456,8 +456,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         ref_type=tm.Site.__name__, ref_id=store['site_id']
                     )
 
-        for obj_name, segm_objs in objects_to_save.iteritems():
-            with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                 # Get existing mapobjects for this site in case they were
                 # created by a previous pipeline or create new mapobjects in
                 # case they didn't exist (or got just deleted).
@@ -505,9 +503,9 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             'add segmentation for object #%d at '
                             'tpoint %d and zplane %d', label, t, z
                         )
-                        tm.MapobjectSegmenation.add(
+                        tm.MapobjectSegmentation.add(
                             conn, mapobject_ids[label],
-                            segmentation_layer_id[(obj_name, t, z)],
+                            segmentation_layer_ids[(obj_name, t, z)],
                             centroid=centroid
                         )
 
