@@ -83,8 +83,6 @@ class Plate(DirectoryModel, DateMixIn):
 
     Attributes
     ----------
-    cycles: List[tmlib.model.Cycle]
-        cycles belonging to the plate
     acquisitions: List[tmlib.model.Acqusition]
         acquisitions belonging to the plate
     wells: List[tmlib.model.Well]
@@ -155,11 +153,6 @@ class Plate(DirectoryModel, DateMixIn):
     def acquisitions_location(self):
         '''str: location where acquisitions are stored'''
         return os.path.join(self.location, 'acquisitions')
-
-    @autocreate_directory_property
-    def cycles_location(self):
-        '''str: location where cycles are stored'''
-        return os.path.join(self.location, 'cycles')
 
     @property
     def status(self):

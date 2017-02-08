@@ -368,7 +368,7 @@ class ChannelImageFile(FileModel, DateMixIn):
         '''str: location of the file'''
         if self._location is None:
             self._location = os.path.join(
-                self.cycle.channel_images_location,
+                self.channel.images_location,
                 self.FILENAME_FORMAT.format(id=self.id)
             )
         return self._location
@@ -482,7 +482,7 @@ class IllumstatsFile(FileModel, DateMixIn):
         '''str: location of the file'''
         if self._location is None:
             self._location = os.path.join(
-                self.cycle.illumstats_location,
+                self.channel.illumstats_location,
                 self.FILENAME_FORMAT.format(id=self.id)
             )
         return self._location

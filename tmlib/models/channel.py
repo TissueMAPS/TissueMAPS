@@ -15,11 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy import UniqueConstraint
+from sqlalchemy.ext.hybrid import hybrid_property
 
-from tmlib.models.base import ExperimentModel, DateMixIn
+from tmlib.models.base import DirectoryModel, DateMixIn
+from tmlib.utils import autocreate_directory_property, create_directory
+from tmlib.models.utils import remove_location_upon_delete
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,8 @@ logger = logging.getLogger(__name__)
 CHANNEL_LOCATION_FORMAT = 'channel_{id}'
 
 
-class Channel(ExperimentModel, DateMixIn):
+@remove_location_upon_delete
+class Channel(DirectoryModel, DateMixIn):
 
     '''A *channel* represents all *images* across different time points and
     spatial positions that were acquired with the same illumination and
@@ -35,6 +38,8 @@ class Channel(ExperimentModel, DateMixIn):
 
     Attributes
     ----------
+    image_files: List[tmlib.models.file.ChannelImageFile]
+        images belonging to the channel
     layers: List[tmlib.models.layer.ChannelLayer]
         layers belonging to the channel
     '''
@@ -90,19 +95,36 @@ class Channel(ExperimentModel, DateMixIn):
         self.bit_depth = bit_depth
         self.experiment_id = experiment_id
 
+    @hybrid_property
+    def location(self):
+        '''str: location were cycle content is stored'''
+        if self._location is None:
+            if self.id is None:
+                raise AttributeError(
+                    'Channel "%s" doesn\'t have an entry in the database yet. '
+                    'Therefore, its location cannot be determined.' % self.name
+                )
+            self._location = os.path.join(
+                self.experiment.channels_location,
+                CHANNEL_LOCATION_FORMAT.format(id=self.id)
+            )
+            if not os.path.exists(self._location):
+                logger.debug(
+                    'create location for channel "%s": %s',
+                    self.name, self._location
+                )
+                create_directory(self._location)
+        return self._location
+
+    @autocreate_directory_property
+    def images_location(self):
+        '''str: location where image files are stored'''
+        return os.path.join(self.location, 'images')
+
+    @autocreate_directory_property
+    def illumstats_location(self):
+        '''str: location where illumination statistics files are stored'''
+        return os.path.join(self.location, 'illumstats')
+
     def __repr__(self):
         return '<Channel(id=%r, name=%r)>' % (self.id, self.name)
-
-    def to_dict(self):
-        '''
-        Return attributes as key-value pairs.
-
-        Returns
-        -------
-        dict
-        '''
-        return {
-            'id': self.id,
-            'name': self.name,
-            'layers': [l.to_dict() for l in self.layers]
-        }

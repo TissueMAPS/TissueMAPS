@@ -122,11 +122,11 @@ class MetadataConfigurator(ClusterRoutines):
             tm.ChannelLayer.delete_cascade(connection)
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
+            logger.info('delete existing channel image files')
+            session.drop_and_recreate(tm.ChannelImageFile)
             logger.info('delete existing channels')
             session.drop_and_recreate(tm.Channel)
             logger.info('delete existing cycles')
-            # NOTE: the delete also triggers the removal of the files from disk
-            session.drop_and_recreate(tm.ChannelImageFile)
             session.drop_and_recreate(tm.Cycle)
             logger.info('delete existing wells')
             session.drop_and_recreate(tm.Site)
@@ -299,7 +299,6 @@ class MetadataConfigurator(ClusterRoutines):
             # TODO: check plates have similar channels, etc
             experiment = session.query(tm.Experiment).one()
             acquisition_mode = experiment.plate_acquisition_mode
-            channels_location = experiment.channels_location
             logger.info('plates were acquired in mode "%s"', acquisition_mode)
             is_time_series = acquisition_mode == 'basic'
             if is_time_series:
@@ -309,76 +308,62 @@ class MetadataConfigurator(ClusterRoutines):
                 logger.info('time points are interpreted as multiplexing cycles')
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            for plate in session.query(tm.Plate):
-                logger.info('configure plate "%s"', plate.name)
-                t_index = 0
-                w_index = 0
-                c_index = 0
-                for acquisition in reversed(plate.acquisitions):
-                    logger.info('configure acquisition "%s"', acquisition.name)
-                    df = pd.DataFrame(
-                        session.query(
-                            tm.ImageFileMapping.tpoint,
-                            tm.ImageFileMapping.wavelength,
-                            tm.ImageFileMapping.bit_depth
-                        ).
-                        filter_by(acquisition_id=acquisition.id).
-                        all()
-                    )
-                    tpoints = np.unique(df.tpoint)
-                    wavelengths = np.unique(df.wavelength)
-                    bit_depth = np.unique(df.bit_depth)
-                    if len(bit_depth) == 1:
-                        bit_depth = bit_depth[0]
+            tpoints = session.query(tm.ImageFileMapping.tpoint).\
+                distinct().\
+                all()
+            tpoints = [t[0] for t in tpoints]
+            wavelengths = session.query(tm.ImageFileMapping.wavelength).\
+                distinct().\
+                all()
+            wavelengths = [w[0] for w in wavelengths]
+            bit_depth = session.query(tm.ImageFileMapping.bit_depth).\
+                distinct().\
+                one()
+            bit_depth = bit_depth[0]
+            t_index = 0
+            w_index = 0
+            c_index = 0
+            for t in tpoints:
+                logger.debug('time point #%d', t)
+                cycle = session.get_or_create(
+                    tm.Cycle,
+                    index=c_index, tpoint=t_index,
+                    experiment_id=self.experiment_id
+                )
+
+                for w in wavelengths:
+                    logger.debug('configure wavelength "%s"', w)
+                    if is_multiplexing:
+                        name = 'cycle-%d_wavelength-%s' % (c_index, w)
                     else:
-                        raise MetadataError(
-                            'Bit depth must be the same for all images.'
-                        )
-                    for t in tpoints:
-                        logger.debug('time point #%d', t)
-                        cycle = session.get_or_create(
-                            tm.Cycle,
-                            index=c_index, tpoint=t_index, plate_id=plate.id
-                        )
+                        name = 'wavelength-%s' % w
+                    channel = session.get_or_create(
+                        tm.Channel, experiment_id=self.experiment_id,
+                        name=name, index=w_index, wavelength=w,
+                        bit_depth=bit_depth
+                    )
 
-                        for w in wavelengths:
-                            logger.debug('configure wavelength "%s"', w)
-                            if is_multiplexing:
-                                name = 'cycle-%d_wavelength-%s' % (c_index, w)
-                            else:
-                                name = 'wavelength-%s' % w
-                            channel = session.get_or_create(
-                                tm.Channel, experiment_id=self.experiment_id,
-                                name=name, index=w_index, wavelength=w,
-                                bit_depth=bit_depth
-                            )
+                    file_mapping_ids = session.query(tm.ImageFileMapping.id).\
+                        filter_by(tpoint=t, wavelength=w)
+                    logger.info(
+                        'update time point and channel metadata '
+                        'of file mappings: tpoint=%d, channel=%d',
+                        t_index, channel.index
+                    )
+                    session.bulk_update_mappings(
+                        tm.ImageFileMapping, [
+                          {
+                            'id': i.id,
+                            'tpoint': t_index,
+                            'cycle_id': cycle.id,
+                            'channel_id': channel.id
+                          } for i in file_mapping_ids
+                        ]
+                    )
 
-                            file_mapping_ids = session.query(
-                                    tm.ImageFileMapping.id
-                                ).\
-                                filter_by(
-                                    tpoint=t, wavelength=w,
-                                    acquisition_id=acquisition.id
-                                )
-                            logger.info(
-                                'update time point and channel metadata '
-                                'of file mappings: tpoint=%d, channel=%d',
-                                t_index, channel.index
-                            )
-                            session.bulk_update_mappings(
-                                tm.ImageFileMapping, [
-                                  {
-                                    'id': i.id,
-                                    'tpoint': t_index,
-                                    'cycle_id': cycle.id,
-                                    'channel_id': channel.id
-                                  } for i in file_mapping_ids
-                                ]
-                            )
+                    w_index += 1
 
-                            w_index += 1
+                if is_time_series:
+                    t_index += 1
 
-                        if is_time_series:
-                            t_index += 1
-
-                        c_index += 1
+                c_index += 1

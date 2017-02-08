@@ -308,6 +308,8 @@ class Experiment(DirectoryModel):
         channels belonging to the experiment
     mapobject_types: List[tmlib.models.mapobject.MapobjectType]
         mapobject types belonging to the experiment
+    cycles: List[tmlib.model.Cycle]
+        cycles belonging to the plate
     '''
 
     __tablename__ = 'experiment'
@@ -417,7 +419,7 @@ class Experiment(DirectoryModel):
 
     @autocreate_directory_property
     def channels_location(self):
-        '''str: location where channels data are stored'''
+        '''str: location where channel data are stored'''
         return os.path.join(self.location, 'channels')
 
     @cached_property

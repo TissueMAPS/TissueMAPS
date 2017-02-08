@@ -179,8 +179,12 @@ class PyramidBuilder(ClusterRoutines):
                             # In this case we want to prevent that too extreme
                             # rescaling is applied, which would look shitty.
                             # The choice of the threshold level is arbitrary.
-                            if clip_max < 500:
-                                clip_max = 500
+                            if layer.channel.bit_depth == 8:
+                                if clip_max < 255:
+                                    clip_max = 255
+                            else:
+                                if clip_max < 1000:
+                                    clip_max = 1000
                             logger.info('clip value: %d', clip_max)
                             clip_min = stats.get_closest_percentile(0.001)
                         else:
@@ -390,10 +394,13 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('correct images for illumination artifacts')
                 try:
                     logger.debug('load illumination statistics')
+                    image_file = session.query(tm.ChannelImageFile).get(
+                        batch['image_file_ids'][0]
+                    )
                     illumstats_file = session.query(tm.IllumstatsFile).\
                         filter_by(
                             channel_id=layer.channel_id,
-                            cycle_id=layer.channel.image_files[0].cycle_id
+                            cycle_id=image_file.cycle_id
                         ).\
                         one()
                 except NoResultFound:
@@ -416,7 +423,7 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('process image %d', file.id)
                 tiles = layer.map_image_to_base_tiles(file)
                 image_store = dict()
-                image = file.get(z=layer.zplane)
+                image = image_file.get(z=layer.zplane)
                 if batch['illumcorr']:
                     logger.debug('correct image')
                     image = image.correct(stats)

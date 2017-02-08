@@ -18,37 +18,28 @@ import logging
 from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
-from sqlalchemy.ext.hybrid import hybrid_property
 
-from tmlib.models.base import DirectoryModel, DateMixIn
-from tmlib.models.utils import remove_location_upon_delete
-from tmlib.utils import autocreate_directory_property, create_directory
+from tmlib.models.base import ExperimentModel, DateMixIn
 
 logger = logging.getLogger(__name__)
 
-#: Format string for acquisition locations
-CYCLE_LOCATION_FORMAT = 'cycle_{id}'
 
-
-@remove_location_upon_delete
-class Cycle(DirectoryModel, DateMixIn):
+class Cycle(ExperimentModel, DateMixIn):
 
     '''A *cycle* represents an individual image acquisition time point.
-    In case of a time series experiment, *cycles* have different time point,
-    but the same channel indices, while in case of a "multiplexing"
+    In case of a time series experiment, *cycles* have different time points,
+    but the same channel index, while in case of a "multiplexing"
     experiment, they have the same time point, but different channel indices.
 
     Attributes
     ----------
-    channel_image_files: List[tmlib.models.file.ChannelImageFile]
-        channel image files belonging to the cycle
     site_shifts: List[tmlib.models.site.SiteShift]
         shifts belonging to the cycle
     '''
 
     __tablename__ = 'cycles'
 
-    __table_args__ = (UniqueConstraint('tpoint', 'index', 'plate_id'), )
+    __table_args__ = (UniqueConstraint('tpoint', 'index'), )
 
     #: int: zero-based index in the time series
     tpoint = Column(Integer, index=True)
@@ -56,20 +47,20 @@ class Cycle(DirectoryModel, DateMixIn):
     #: int: zero-based index in the acquisition sequence
     index = Column(Integer, index=True)
 
-    #: int: ID of parent plate
-    plate_id = Column(
+    #: int: ID of parent experiment
+    experiment_id = Column(
         Integer,
-        ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE'),
+        ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
-    #: tmlib.models.plate.Plate: parent plate
-    plate = relationship(
-        'Plate',
+    #: tmlib.models.experiment.Experiment: parent experiment
+    experiment = relationship(
+        'Experiment',
         backref=backref('cycles', cascade='all, delete-orphan')
     )
 
-    def __init__(self, index, tpoint, plate_id):
+    def __init__(self, index, tpoint, experiment_id):
         '''
         Parameters
         ----------
@@ -77,43 +68,13 @@ class Cycle(DirectoryModel, DateMixIn):
             index of the cycle (based on the order of acquisition)
         tpoint: int
             time point index
-        plate_id: int
-            ID of the parent plate
+        experiment_id: int
+            ID of the parent
+            :class:`Experiment <tmlib.models.experiment.Experiment>`
         '''
         self.index = index
         self.tpoint = tpoint
-        self.plate_id = plate_id
-
-    @hybrid_property
-    def location(self):
-        '''str: location were cycle content is stored'''
-        if self._location is None:
-            if self.id is None:
-                raise AttributeError(
-                    'Cycle "%s" doesn\'t have an entry in the database yet. '
-                    'Therefore, its location cannot be determined.' % self.name
-                )
-            self._location = os.path.join(
-                self.plate.cycles_location,
-                CYCLE_LOCATION_FORMAT.format(id=self.id)
-            )
-            if not os.path.exists(self._location):
-                logger.debug(
-                    'create location for cycle #%d: %s',
-                    self.index, self._location
-                )
-                create_directory(self._location)
-        return self._location
-
-    @autocreate_directory_property
-    def channel_images_location(self):
-        '''str: location where channel image files are stored'''
-        return os.path.join(self.location, 'channel_images')
-
-    @autocreate_directory_property
-    def illumstats_location(self):
-        '''str: location where illumination statistics files are stored'''
-        return os.path.join(self.location, 'illumstats')
+        self.experiment_id = experiment_id
 
     def __repr__(self):
         return '<Cycle(id=%r, tpoint=%r)>' % (self.id, self.tpoint)

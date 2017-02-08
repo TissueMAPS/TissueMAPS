@@ -199,7 +199,7 @@ class ImageExtractor(ClusterRoutines):
         '''
         logger.info('delete existing channel image files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.query(tm.ChannelImageFile).delete()
+            session.drop_and_recreate(tm.ChannelImageFile)
 
     def collect_job_output(self, batch):
         '''Omits channel image files that do not exist across all cycles
