@@ -89,8 +89,7 @@
 
 - name: Install OpenCV (system wide)
   become: yes
-  # shell: "make install && ldconfig"
-  shell: make install
+  shell: "make install && ldconfig"
   args:
     chdir: "{{ ansible_env.HOME }}/opencv/build"
   when: opencv_was_built.stat.exists == False
