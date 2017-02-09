@@ -28,7 +28,7 @@
   become: yes
   become_user: postgres
   vars:
-    ansible_ssh_pipelining=true
+    ansible_ssh_pipelining: true
   postgresql_db:
     name={{ db_name }}
   tags:
@@ -38,7 +38,7 @@
   become: yes
   become_user: postgres
   vars:
-    ansible_ssh_pipelining=true
+    ansible_ssh_pipelining: true
   postgresql_ext:
     name=citus
     db={{ db_name }}
@@ -50,7 +50,7 @@
   become: yes
   become_user: postgres
   vars:
-    ansible_ssh_pipelining=true
+    ansible_ssh_pipelining: true
   postgresql_ext:
     name=postgis
     db={{ db_name }}
@@ -62,7 +62,7 @@
   become: yes
   become_user: postgres
   vars:
-    ansible_ssh_pipelining=true
+    ansible_ssh_pipelining: true
   postgresql_ext:
     name=hstore
     db={{ db_name }}

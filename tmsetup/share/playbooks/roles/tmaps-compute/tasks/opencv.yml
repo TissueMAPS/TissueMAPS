@@ -32,6 +32,7 @@
   with_items:
     - libboost-python-dev
     - libopencv-dev
+    - liblapacke-dev
   tags:
     - opencv
 
@@ -50,7 +51,6 @@
     editable=no
   with_items:
     - numpy
-  when: opencv_was_built.stat.exists == False
   tags:
     - opencv
 
@@ -64,7 +64,7 @@
        version={{ opencv_version }}
   when: opencv_was_built.stat.exists == False
   vars:
-    opencv_version: 3.2.0
+    opencv_version: 3.1.0
   tags:
     - opencv
 

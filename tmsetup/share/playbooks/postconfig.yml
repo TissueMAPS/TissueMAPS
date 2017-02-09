@@ -15,35 +15,33 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Create database tables
+- name: Perform post-configuration
   hosts: tissuemaps_web
+  vars:
+    tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"
   tasks:
-    - name: Create database tables defined in tmlib package
+    - name: Create database tables
       command: "{{ tmaps_install_location }}/tm_create_tables"
       tags:
         - web
         - database
         - tissuemaps
-  vars: tmaps_install_location={{ ansible_env.HOME }}/.local/bin
 
-- name: Populate database
-  hosts: tissuemaps_web
-  tasks:
-    - name: Create default user "testuser"
+    - name: Create default user
       command: "{{ tmaps_install_location }}/tm_add user --name testuser --password {{ tm_testuser_password }} --email testuser@tissuemaps.org"
       tags:
         - web
         - database
         - tissuemaps
       when: tm_testuser_password is defined
-  vars: tmaps_install_location={{ ansible_env.HOME }}/.local/bin
 
-- name: Place convenience scripts
-  template:
-    src={{ playbook_dir }}/templates//{{ item }}.j2
-    dest={{ ansible_env.HOME }}/{{ item }}
-    mode="u+x"
-  with_items:
-    - create_slurm_account.sh
-    - start_server.sh
-    - stop_server.sh
+    - name: Place convenience scripts
+      template:
+        src={{ playbook_dir }}/templates//{{ item }}.j2
+        dest={{ ansible_env.HOME }}/{{ item }}
+        mode="u+x"
+      with_items:
+        - create_slurm_account.sh
+        - start_server.sh
+        - stop_server.sh
+
