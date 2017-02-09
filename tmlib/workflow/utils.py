@@ -18,6 +18,7 @@ import datetime
 import numpy as np
 from prettytable import PrettyTable
 from datetime import datetime
+from datetime import timedelta
 
 import gc3libs
 from gc3libs.quantity import Memory
@@ -44,19 +45,31 @@ def create_gc3pie_sql_store():
     -------
     The "tasks" table must already exist.
     '''
-    def get_time(task, time_attr):
+    def get_time(task, attr):
         def get_recursive(_task, duration):
             if hasattr(_task, 'tasks'):
-                d = np.sum([
-                    get_recursive(t, duration) for t in _task.tasks
-                ])
-                if d == 0.0:
-                    return None
-                else:
-                    return d
+                if len(_task.tasks) > 0:
+                    duration += np.sum([
+                        get_recursive(t, duration) for t in _task.tasks
+                    ])
             else:
-                return getattr(_task.execution, time_attr).to_timedelta()
-        return get_recursive(task, datetime.timedelta(seconds=0))
+                if hasattr(_task.execution, attr):
+                    duration += getattr(_task.execution, attr).to_timedelta()
+            return duration
+        return get_recursive(task, timedelta())
+
+    def get_memory(task, attr):
+        def get_recursive(_task, memory):
+            if hasattr(_task, 'tasks'):
+                if len(_task.tasks) > 0:
+                    memory += np.sum([
+                        get_recursive(t, memory) for t in _task.tasks
+                    ])
+            else:
+                if hasattr(_task.execution, attr):
+                    memory += getattr(_task.execution, attr).amount(Memory.MB)
+            return memory
+        return get_recursive(task, 0)
 
     logger.info('create GC3Pie store using "tasks" table')
     store_url = Url(cfg.db_uri_sqla)
@@ -73,7 +86,7 @@ def create_gc3pie_sql_store():
             table_columns['time']:
                 lambda task: get_time(task, 'duration'),
             table_columns['memory']:
-                lambda task: task.execution.max_used_memory.amount(Memory.MB),
+                lambda task: get_memory(task, 'max_used_memory'),
             table_columns['cpu_time']:
                 lambda task: get_time(task, 'used_cpu_time'),
             table_columns['submission_id']:
