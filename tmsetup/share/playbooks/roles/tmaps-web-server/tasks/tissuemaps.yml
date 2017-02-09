@@ -18,8 +18,8 @@
 - name: Install apt packages
   become: yes
   apt:
-    name: "{{ item }}"
-    state: installed
+    name={{ item }}
+    state=installed
   with_items:
     - nodejs
     - npm
@@ -30,14 +30,20 @@
 
 - name: Corrections for nodejs
   become: yes
-  file: src=/usr/bin/nodejs dest=/usr/bin/node state=link
+  file:
+    src=/usr/bin/nodejs
+    dest=/usr/bin/node
+    state=link
   tags:
     - tmserver
     - web-server
 
 - name: Install npm packages
   become: yes
-  npm: name={{ item }} state=present global=yes
+  npm:
+    name={{ item }}
+    state=present
+    global=yes
   with_items:
     - bower
     - gulp
@@ -66,14 +72,18 @@
     - client
 
 - name: Install npm dependencies
-  npm: path={{ ansible_env.HOME }}/tmui/src/app state=present
+  npm:
+    path={{ ansible_env.HOME }}/tmui/src/app
+    state=present
   tags:
     - web-server
     - tissuemaps
     - client
 
 - name: Install bower dependencies
-  bower: path={{ ansible_env.HOME }}/tmui/src state=present
+  bower:
+    path={{ ansible_env.HOME }}/tmui/src
+    state=present
   tags:
     - web-server
     - tissuemaps

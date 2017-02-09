@@ -16,11 +16,13 @@
 ---
 - include: server.yml
 
-- name: Stop NGINX web server
+- name: Stop nginx web server
   become: yes
-  service: name=nginx state=stopped
+  service:
+    name=nginx
+    state=stopped
   ignore_errors: True
   tags:
-    - web
+    - web-server
 
 - include: tissuemaps.yml

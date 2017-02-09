@@ -17,7 +17,7 @@
 ---
 # We need to update the apt repository based on the latest Postgres version
 # such that the correct version of postgresql-client package will be installed.
-- name: Add postgresql apt repo (url)
+- name: Add PostgreSQL apt repo (url)
   become: yes
   lineinfile:
     dest=/etc/apt/sources.list.d/pgdg.list state=present
@@ -28,7 +28,7 @@
   tags:
     - database
 
-- name: Add postgresql apt repo (key)
+- name: Add PostgreSQL apt repo (key)
   become: yes
   apt_key:
     url=https://www.postgresql.org/media/keys/ACCC4CF8.asc
@@ -38,15 +38,15 @@
   tags:
     - database
 
-- name: Update apt packages to add postgresql
+- name: Update apt packages to add PostgreSQL
   become: yes
   tags:
     - update
     - database
-  shell: "aptitude update"
+  shell: aptitude update
   when: pgs_aptkey.changed or pgs_aptrepo.changed
 
-- name: Install apt packages
+- name: Install apt packages for PostgreSQL
   become: yes
   apt:
     name={{ item }}

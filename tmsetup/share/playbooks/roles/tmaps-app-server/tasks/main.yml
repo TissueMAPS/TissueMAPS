@@ -33,6 +33,4 @@
 
 - include: config.yml
 
-- include: utils.yml
-
 - include: postgresql.yml

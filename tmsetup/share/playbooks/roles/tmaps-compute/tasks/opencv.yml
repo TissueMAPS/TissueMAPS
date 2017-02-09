@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Update all packages to the latest version (Ubuntu)
+- name: Update all packages to the latest version
   become: yes
   apt:
     upgrade=safe
@@ -30,7 +30,6 @@
     name={{ item }}
     state=installed
   with_items:
-    - cmake
     - libboost-python-dev
     - libopencv-dev
   tags:
@@ -38,15 +37,17 @@
 
 - name: Check if OpenCV was built
   stat:
-    path="{{ ansible_env.HOME }}/opencv/lib/python2.7/dist-packages/cv2.so"
+    path=/usr/local/lib/python2.7/dist-packages/cv2.so
   register: opencv_was_built
   tags:
     - opencv
 
 - name: Install numpy Python package
+  become: yes
   pip:
     name={{ item }}
     extra_args='--user'
+    editable=no
   with_items:
     - numpy
   when: opencv_was_built.stat.exists == False
@@ -62,35 +63,41 @@
        force=yes
        version={{ opencv_version }}
   when: opencv_was_built.stat.exists == False
-  vars: opencv_version=3.1.0
+  vars:
+    opencv_version: 3.2.0
   tags:
     - opencv
 
-- file: path="{{ ansible_env.HOME }}/opencv/build" state=directory
+- name: Create build directory for OpenCV
+  file:
+    path="{{ ansible_env.HOME }}/opencv/build"
+    state=directory
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
 
 - name: Configure and compile OpenCV
   shell: |
-    cmake -D CMAKE_BUILD_TYPE=RELEASE \
-      -D CMAKE_INSTALL_PREFIX=/usr/local ../
-    make -j4
-  args: chdir={{ ansible_env.HOME }}/opencv/build
+    cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
+    make
+  args:
+    chdir: "{{ ansible_env.HOME }}/opencv/build"
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
 
 - name: Install OpenCV (system wide)
   become: yes
-  shell: "make install && ldconfig"
-  args: chdir={{ ansible_env.HOME }}/opencv/build
+  # shell: "make install && ldconfig"
+  shell: make install
+  args:
+    chdir: "{{ ansible_env.HOME }}/opencv/build"
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
 
-- name: "Sanity check if cv2_so was installed into opencv folders"
-  stat: path="/usr/local/lib/python2.7/dist-packages/cv2.so"
+- name: Sanity check if cv2_so was installed into opencv folders
+  stat: path=/usr/local/lib/python2.7/dist-packages/cv2.so
   register: cv2_so_installed
 
 - fail: msg="Whoops! missing cv2.so module. Remove opencv folder and rerun playbooks."
@@ -104,5 +111,13 @@
     src=/dev/null
     dest=/dev/raw1394
     state=hard
+  tags:
+    - opencv
+
+- name: Remove build directory for OpenCV
+  file:
+    path="{{ ansible_env.HOME }}/opencv/build"
+    state=directory
+    state=absent
   tags:
     - opencv

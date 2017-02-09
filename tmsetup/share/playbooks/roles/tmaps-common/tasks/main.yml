@@ -15,12 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# Sometimes the cache does not work so it is good to force update for
-# this playbook
-- apt: update_cache=yes
-  become: yes
+- include: utils.yml
 
-- name: Place env for tissuemaps (include this in bash_profile)
+- name: Create .bash_profile file
   template:
     src=bash_profile.j2
     dest="{{ ansible_env.HOME }}/.bash_profile"
@@ -37,21 +34,17 @@
     regexp='source {{ ansible_env.HOME }}/.bash_profile'
     line='source {{ ansible_env.HOME }}/.bash_profile'
 
+# Sometimes the cache does not work so it is good to force update for
+# this playbook
 - name: Update apt packages
   become: yes
   tags:
     - update
-  apt: upgrade=safe update_cache=yes cache_valid_time=3600
-
-- include: utils.yml
+  apt:
+    upgrade=safe
+    update_cache=yes
+    cache_valid_time=3600
 
 - include: ssh.yml
 
 - include: python.yml
-
-- include: opencv.yml
-
-- include: postgresql_client.yml
-
-- include: tissuemaps.yml
-

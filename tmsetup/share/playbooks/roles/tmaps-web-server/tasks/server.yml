@@ -16,21 +16,28 @@
 ---
 - name: Update all packages to the latest version
   become: yes
-  apt: upgrade=safe update_cache=yes cache_valid_time=3600
+  apt:
+    upgrade=safe
+    update_cache=yes
+    cache_valid_time=3600
   tags:
     - nginx
     - web-server
 
-- name: Install NGINX
+- name: Install nginx
   become: yes
-  apt: name=nginx state=installed
+  apt:
+    name=nginx
+    state=installed
   tags:
     - web-server
     - nginx
 
 - name: Create nginx site
   become: yes
-  template: src=nginx_site.j2 dest="/etc/nginx/sites-available/tissuemaps"
+  template:
+    src=nginx_site.j2
+    dest="/etc/nginx/sites-available/tissuemaps"
   notify:
     - restart nginx
   tags:
@@ -39,7 +46,9 @@
 
 - name: Put nginx conf.d
   become: yes
-  template: src=nginx_conf.j2 dest="/etc/nginx/conf.d/tmaps.conf"
+  template:
+    src=nginx_conf.j2
+    dest="/etc/nginx/conf.d/tmaps.conf"
   notify:
     - restart nginx
   tags:
@@ -60,7 +69,6 @@
     fi
   notify:
     - restart nginx
-    - restart uwsgi
   tags:
     - nginx
     - web-server

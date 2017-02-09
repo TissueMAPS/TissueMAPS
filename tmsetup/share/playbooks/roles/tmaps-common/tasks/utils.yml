@@ -30,6 +30,7 @@
     name={{ item }}
     state=installed
   with_items:
+    - cmake
     - vim
     - git
     - csh
@@ -38,15 +39,15 @@
     - cifs-utils
     - libopenblas-dev
 
-- name: Add apt repository for Vim8
-  apt_repository:
-    repo="ppa:jonathonf/vim"
-    state=present
-  become: yes
+# - name: Add apt repository for Vim8
+#   apt_repository:
+#     repo="ppa:jonathonf/vim"
+#     state=present
+#   become: yes
 
-- name: Install Vim8
-  apt:
-    name=vim
-    state=installed
-    update_cache=yes
-  become: yes
+# - name: Install Vim8
+#   apt:
+#     name=vim
+#     state=installed
+#     update_cache=yes
+#   become: yes

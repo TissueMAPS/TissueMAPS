@@ -20,9 +20,10 @@ cluster_mode: no
 opencv_version: 3.1.0
 
 matlab_version: R2016a
-
 python_version: 2.7.12
 
 tm_github_url: https://github.com/TissueMAPS
+tm_version: master
 
-tm_checkout: master
+# TODO: containers -> volume ???
+tm_storage_home: /data/experiments

@@ -15,8 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+- include: opencv.yml
+
 - include: tissuemaps.yml
 
-- include: bioformats_cli_tools.yml
+- include: bioformats.yml
+
+- include: postgresql.yml
 
 - include: r.yml

@@ -16,17 +16,21 @@
 
 ---
 - name: Turn off UTC
-  lineinfile: dest=/etc/default/rcS regexp=^UTC= line=UTC=yes
+  lineinfile:
+    dest=/etc/default/rcS
+    regexp='^UTC='
+    line='UTC=yes'
   become: yes
 
 - name: Fix timezone
   become: yes
-  copy: dest=/etc/timezone
-        owner=root
-        group=root
-        mode=0644
-        backup=yes
-        content="Europe/Zurich"
+  copy:
+    dest=/etc/timezone
+    owner=root
+    group=root
+    mode=0644
+    backup=yes
+    content="Europe/Zurich"
   notify:
     - update timezone
 

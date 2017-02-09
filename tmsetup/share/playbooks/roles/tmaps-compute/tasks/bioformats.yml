@@ -15,28 +15,29 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Clone TmServer repository
-  git:
-    repo={{ tm_github_url }}/tmserver
-    dest={{ ansible_env.HOME }}/tmserver
-    version={{ tm_release_tag }}
+- stat: path="{{ ansible_env.HOME }}/bftools.zip"
+  register: bftools_zip
   tags:
-    - tissuemaps
+    - bioformats
 
-- name: Install tmserver package
-  shell: pip install -e {{ ansible_env.HOME }}/tmserver --user --process-dependency-links
-  args:
-    chdir={{ ansible_env.HOME }}/tmserver
-    executable=/bin/bash
-  tags:
-    - tissuemaps
-
-- name: Create storage directory
+- name: Install apt packages for Bioformts commond line tools
   become: yes
-  file:
-    state=directory
-    path={{ tm_storage_home }}
-    owner={{ ansible_user }}
-    group={{ ansible_user }}
+  apt: name=unzip state=installed
   tags:
-    - tissuemaps
+    - bioformats
+
+- name: Get bftools
+  get_url:
+    url: "https://downloads.openmicroscopy.org/bio-formats/{{ bf_version }}/artifacts/bftools.zip"
+    dest: "{{ ansible_env.HOME }}"
+  when: bftools_zip.stat.exists == False
+  tags:
+    - bioformats
+
+- name: Unpack bftools
+  unarchive:
+    src={{ ansible_env.HOME }}/bftools.zip
+    dest={{ ansible_env.HOME }}
+    copy=no
+  tags:
+    - bioformats
