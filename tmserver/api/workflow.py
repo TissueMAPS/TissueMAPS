@@ -27,7 +27,6 @@ import tmlib.models as tm
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.workflow import Workflow
-from tmlib.log import LEVELS_TO_VERBOSITY
 from tmlib import cfg as lib_cfg
 
 from tmserver.util import decode_query_ids, decode_form_ids
@@ -97,10 +96,9 @@ def submit_workflow(experiment_id):
         experiment.persist_workflow_description(workflow_description)
     submission_manager = SubmissionManager(experiment_id, 'workflow')
     submission_id, user_name = submission_manager.register_submission()
-    verbosity = LEVELS_TO_VERBOSITY[server_cfg.log_level]
     workflow = Workflow(
         experiment_id=experiment_id,
-        verbosity=verbosity,
+        verbosity=server_cfg.logging_verbosity,
         submission_id=submission_id,
         user_name=user_name,
         description=workflow_description
