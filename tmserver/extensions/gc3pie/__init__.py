@@ -55,10 +55,6 @@ class GC3Pie(object):
         gc3pie.engine.add(jobs)
         """
         self.interval = 10
-        gc3libs_logger = logging.getLogger('gc3.gc3libs')
-        gc3libs_logger.setLevel(logging.CRITICAL)
-        apscheduler_logger = logging.getLogger('apscheduler')
-        apscheduler_logger.setLevel(logging.CRITICAL)
         if app is not None:
             self.init_app(app)
 

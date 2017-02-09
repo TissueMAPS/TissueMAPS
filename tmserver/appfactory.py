@@ -17,8 +17,9 @@ import sys
 import os
 from os.path import join, dirname, abspath
 import logging
-from flask import Flask
+
 from flask_sqlalchemy_session import flask_scoped_session
+from flask import Flask
 import gc3libs
 
 import tmlib.models as tm
@@ -95,25 +96,31 @@ def create_app(verbosity=None):
     flask_jwt_logger.addHandler(log_handler)
 
     # The following loggers are very chatty, so we handle them differently.
+    gevent_logger = logging.getLogger('gevent')
+    gc3pie_logger = logging.getLogger('gc3.gc3libs')
     werkzeug_logger = logging.getLogger('werkzeug')
     wsgi_logger = logging.getLogger('wsgi')
-    gc3pie_logger = logging.getLogger('gc3.gc3libs')
     apscheduler_logger = logging.getLogger('apscheduler')
     if verbosity > 4:
+        gevent_logger.setLevel(logging.DEBUG)
         gc3pie_logger.setLevel(logging.DEBUG)
         wsgi_logger.setLevel(logging.DEBUG)
         werkzeug_logger.setLevel(logging.DEBUG)
         apscheduler_logger.setLevel(logging.DEBUG)
     elif verbosity > 3:
+        gevent_logger.setLevel(logging.INFO)
         gc3pie_logger.setLevel(logging.INFO)
         wsgi_logger.setLevel(logging.INFO)
         werkzeug_logger.setLevel(logging.INFO)
         apscheduler_logger.setLevel(logging.INFO)
     else:
+        gevent_logger.setLevel(logging.ERROR)
         gc3pie_logger.setLevel(logging.ERROR)
         wsgi_logger.setLevel(logging.ERROR)
         werkzeug_logger.setLevel(logging.ERROR)
         apscheduler_logger.setLevel(logging.ERROR)
+
+    gevent_logger.addHandler(log_handler)
     gc3pie_logger.addHandler(log_handler)
     wsgi_logger.addHandler(log_handler)
     werkzeug_logger.addHandler(log_handler)
