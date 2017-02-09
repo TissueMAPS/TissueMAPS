@@ -26,7 +26,7 @@ GROUP_VARS_DIR = os.path.join(CONFIG_DIR, 'group_vars')
 HOST_VARS_DIR = os.path.join(CONFIG_DIR, 'host_vars')
 HOSTS_FILE = os.path.join(CONFIG_DIR, 'hosts')
 
-HOSTNAME_FORMAT = '{grid}-{cluster}-{node_type}-{index:03d}'
+HOSTNAME_FORMAT = '{name}-{cluster}-{node_type}-{index:03d}'
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +80,11 @@ def build_inventory_information(setup):
             'Argument "setup" must have type %s.' %
             '.'.join([Setup.__module__, Setup.__name__])
         )
-    for cluster in setup.grid.clusters:
+    for cluster in setup.architecture.clusters:
         for node_type in cluster.node_types:
             for i in range(node_type.count):
                 host_name = HOSTNAME_FORMAT.format(
-                    grid=setup.grid.name, cluster=cluster.name,
+                    name=setup.architecture.name, cluster=cluster.name,
                     node_type=node_type.name, index=i+1
                 )
                 host_vars = dict()

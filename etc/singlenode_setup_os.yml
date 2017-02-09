@@ -4,7 +4,7 @@
 cloud:
   provider: os
   region: RegionOne
-grid:
+architecture:
   name: tissuemaps
   clusters:
     - name: singlenode

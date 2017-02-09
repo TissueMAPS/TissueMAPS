@@ -5,7 +5,7 @@
 cloud:
   provider: gce
   region: us-west1-b
-grid:
+architecture:
   name: tissuemaps
   clusters:
     - name: postgresql

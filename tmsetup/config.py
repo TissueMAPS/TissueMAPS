@@ -133,6 +133,7 @@ class SetupSection(object):
             self._section_name, to_json(self.to_dict())
         )
 
+
 class CloudSection(SetupSection):
 
     '''Class for the section of the `TissueMAPS` setup description that provides
@@ -298,15 +299,15 @@ class CloudSection(SetupSection):
         self._region = value
 
 
-class GridSection(SetupSection):
+class ArchitectureSection(SetupSection):
 
     '''Class for the section of the `TissueMAPS` setup description that provides
-    information about the grid architecture, i.e. the layout of computational
+    information about the cluster architecture, i.e. the layout of computational
     resources.
     '''
 
     def __init__(self, description):
-        super(GridSection, self).__init__(description)
+        super(ArchitectureSection, self).__init__(description)
 
     @property
     def _section_name(self):
@@ -612,7 +613,7 @@ class AnsibleHostVariableSection(SetupSection):
 
 class Setup(object):
 
-    '''`TissueMAPS` setup.'''
+    '''Description of the `TissueMAPS` setup.'''
 
     def __init__(self, description_file=SETUP_FILE):
         if not os.path.exists(description_file):
@@ -627,7 +628,7 @@ class Setup(object):
                     'Key "%s" is not supported for setup description.' % k
                 )
             setattr(self, k, v)
-        for k in {'cloud', 'grid'}:
+        for k in {'cloud', 'architecture'}:
             if k not in description:
                 raise SetupDescriptionError(
                     'Setup description requires key "%s"' % k
@@ -651,10 +652,10 @@ class Setup(object):
         self._cloud = CloudSection(value)
 
     @property
-    def grid(self):
-        '''tmsetup.config.GridSection: TissueMAPS grid setup'''
-        return self._grid
+    def architecture(self):
+        '''tmsetup.config.ArchitectureSection: cluster architecture'''
+        return self._architecture
 
-    @grid.setter
-    def grid(self, value):
-        self._grid = GridSection(value)
+    @architecture.setter
+    def architecture(self, value):
+        self._architecture = ArchitectureSection(value)

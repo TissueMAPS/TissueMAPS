@@ -43,7 +43,7 @@ def get_deployment_groups(selected_cluster, selected_nodetype, selected_groups):
     logger.info('build Ansible commands')
     setup = Setup()
     groups_to_deploy = collections.defaultdict(list)
-    for cluster in setup.grid.clusters:
+    for cluster in setup.architecture.clusters:
         if selected_cluster is not None:
             if cluster.name != selected_cluster:
                 continue
