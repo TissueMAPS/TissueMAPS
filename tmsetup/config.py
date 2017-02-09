@@ -244,7 +244,7 @@ class CloudSection(SetupSection):
         directory)
         '''
         if not hasattr(self, '_key_file_private'):
-            self.key_file_private = '~/%s' % self.key_name
+            self.key_file_private = '~/.ssh/%s' % self.key_name
         return self._key_file_private
 
     @key_file_private.setter
@@ -270,7 +270,7 @@ class CloudSection(SetupSection):
         directory)
         '''
         if not hasattr(self, '_key_file_public'):
-            self.key_file_public = '~/%s.pub' % self.key_name
+            self.key_file_public = '~/.ssh/%s.pub' % self.key_name
         return self._key_file_public
 
     @key_file_public.setter
