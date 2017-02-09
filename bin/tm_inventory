@@ -319,10 +319,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.DEBUG)
-    # configure_logging()
-    # log_level = map_logging_verbosity(logging.INFO)
-    # logger.setLevel(log_level)
-    # tmsetup_logger = logging.getLogger('tmsetup')
-    # tmsetup_logger.setLevel(log_level)
+    configure_logging()
+    log_level = map_logging_verbosity(logging.INFO)
+    logger.setLevel(log_level)
+    tmsetup_logger = logging.getLogger('tmsetup')
+    tmsetup_logger.setLevel(log_level)
+
     main(args)
