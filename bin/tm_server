@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 import argparse
-import logging
-from werkzeug.contrib.profiler import ProfilerMiddleware
+from gevent.wsgi import WSGIServer
+from werkzeug.serving import run_with_reloader
+from werkzeug.debug import DebuggedApplication
 
 from tmserver.appfactory import create_app
 
 
-logo = """
+LOGO = """
   _____ _                    __  __    _    ____  ____
  |_   _(_)___ ___ _   _  ___|  \/  |  / \  |  _ \/ ___|
    | | | / __/ __| | | |/ _ \ |\/| | / _ \ | |_) \___ \\
@@ -22,34 +23,21 @@ if __name__ == '__main__':
         help='the port on which the server should listen (default: 5002)'
     )
     parser.add_argument(
-        '--gevent', action='store_true', default=False,
-        help='if the dev server should run in gevent mode'
-    )
-    parser.add_argument(
         '--verbosity', '-v', action='count', default=0,
         help='logging verbosity '
     )
-    parser.add_argument(
-        '--config_file', type=str,
-        help='path to configuration file'
-    )
-    parser.add_argument(
-        '--profile', action='store_true', default=False,
-        help='if application should be profiled'
-    )
 
-    print logo
     args = parser.parse_args()
 
-    app = create_app(
-        config_overrides={'SCHEDULER': 'threading'}, verbosity=args.verbosity
-    )
-    if args.profile:
-        app.config['PROFILE'] = True
-        app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[30])
+    print LOGO
 
-    if args.gevent:
-        app.run(port=args.port, debug=True)
-    else:
-        # Flask's DEBUG mode doesn't support greenlets
-        app.run(port=args.port, debug=True, threaded=True)
+    app = create_app(verbosity=args.verbosity)
+
+    @run_with_reloader
+    def run_server():
+        http_server = WSGIServer(
+            ('127.0.0.1', args.port), DebuggedApplication(app)
+        )
+        http_server.serve_forever()
+
+    run_server()

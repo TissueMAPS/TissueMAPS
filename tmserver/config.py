@@ -27,88 +27,28 @@ class ServerConfig(TmapsConfig):
 
     def __init__(self):
         super(ServerConfig, self).__init__()
-        self.log_file = '~/.tmaps/tmserver.log'
-        self.log_level = logging.INFO
-        self.log_max_bytes = 2048000
-        self.log_n_backups = 10
+        self.logging_verbosity = 2
         self.secret_key = 'default_secret_key'
         self.jwt_expiration_delta = datetime.timedelta(hours=6)
         self.read()
 
     @property
-    def log_file(self):
-        '''str: absolute path to file for the TissueMAPS server application log
-        (default: ``"~/.tmaps/tmserver.log"``)
+    def logging_verbosity(self):
+        '''int: verbosity level for loggers (default: ``2``)
+
+        See also
+        --------
+        :func:`tmlib.log.map_logging_verbosity`
         '''
-        return os.path.expanduser(os.path.expandvars(
-            self._config.get(self._section, 'log_file')
-        ))
+        return self._config.getint(self._section, 'logging_verbosity')
 
-    @log_file.setter
-    def log_file(self, value):
-        if not isinstance(value, str):
-            raise TypeError(
-                'Configuration parameter "log_file" must have type str.'
-            )
-        self._config.set(
-            self._section, 'log_file',
-            os.path.expanduser(os.path.expandvars(str(value)))
-        )
-
-    @property
-    def log_level(self):
-        '''int: verbosity level for `TissueMAPS` loggers
-        (default: ``logging.INFO``)
-        '''
-        level = self._config.get(self._section, 'log_level')
-        return getattr(logging, level)
-
-    @log_level.setter
-    def log_level(self, value):
+    @logging_verbosity.setter
+    def logging_verbosity(self, value):
         if not isinstance(value, int):
             raise TypeError(
-                'Configuration parameter "log_level" must have type int.'
+                'Configuration parameter "logging_verbosity" must have type int.'
             )
-        level_mapper = {
-            logging.NOTSET: 'NOTSET',
-            logging.DEBUG: 'DEBUG',
-            logging.INFO: 'INFO',
-            logging.WARNING: 'WARNING',
-            logging.ERROR: 'ERROR',
-            logging.CRITICAL: 'CRITICAL'
-        }
-        if value not in level_mapper:
-            raise ValueError('Unkown logging level.')
-        self._config.set(self._section, 'log_level', level_mapper[value])
-
-    @property
-    def log_max_bytes(self):
-        '''int: maximum number of bytes that should be logged
-        (default: ``2048000``)
-        '''
-        return self._config.getint(self._section, 'log_max_bytes')
-
-    @log_max_bytes.setter
-    def log_max_bytes(self, value):
-        if not isinstance(value, int):
-            raise TypeError(
-                'Configuration parameter "log_max_bytes" must have type int.'
-            )
-        self._config.set(self._section, 'log_max_bytes', str(value))
-
-    @property
-    def log_n_backups(self):
-        '''int: maximum number of log backups (default: ``10``)
-        '''
-        return self._config.getint(self._section, 'log_n_backups')
-
-    @log_n_backups.setter
-    def log_n_backups(self, value):
-        if not isinstance(value, int):
-            raise TypeError(
-                'Configuration parameter "log_n_backups" must have type int.'
-            )
-        self._config.set(self._section, 'log_n_backups', str(value))
+        self._config.set(self._section, 'logging_verbosity', str(value))
 
     @property
     def secret_key(self):

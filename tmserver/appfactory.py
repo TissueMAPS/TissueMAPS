@@ -55,16 +55,16 @@ def get_interrupted_tasks():
         return [t.id for t in tasks]
 
 
-def create_app(config_overrides={}, verbosity=None):
+def create_app(verbosity=None):
     """Creates a Flask application object that registers all the blueprints on
     which the actual routes are defined.
 
     Parameters
     ----------
-    config_overrides : dict
-        Config options to programatically override the user config.
-    log_level : str
-        Log level to override the one specified by the config.
+    verbosity: int, optional
+        logging verbosity to override the
+        :attr:`logging_verbosity <tmserver.config.ServerConfig.logging_verbosity>`
+        setting in the configuration file (default: ``None``)
 
     Returns
     -------
@@ -72,61 +72,33 @@ def create_app(config_overrides={}, verbosity=None):
         Flask application
 
     """
-    app = Flask('wsgi')
-
-    if verbosity is not None:
-        log_level = map_logging_verbosity(verbosity)
-        cfg.log_level = log_level
-
-    app.config.update(config_overrides)
-    app.config['JWT_EXPIRATION_DELTA'] = cfg.jwt_expiration_delta
-
-    ## Configure logging
-    app.logger.setLevel(cfg.log_level)
-
-    # Remove standard handlers
-    app.logger.handlers = []
-
-    formatter = logging.Formatter(
+    log_formatter = logging.Formatter(
         fmt='%(asctime)s | %(levelname)-8s | %(name)-40s | %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+    log_handler = logging.StreamHandler(stream=sys.stdout)
+    log_handler.setFormatter(log_formatter)
+    if verbosity is None:
+        verbosity = cfg.logging_verbosity
+    log_level = map_logging_verbosity(verbosity)
 
-    # If production mode is activated, set a file logger
-    file_handler = logging.handlers.RotatingFileHandler(
-        cfg.log_file,
-        maxBytes=cfg.log_max_bytes,
-        backupCount=cfg.log_n_backups
-    )
-    file_handler.setFormatter(formatter)
-    stdout_handler = logging.StreamHandler(stream=sys.stdout)
-    stdout_handler.setFormatter(formatter)
-    app.logger.addHandler(file_handler)
-    app.logger.addHandler(stdout_handler)
-    flask_jwt_logger = logging.getLogger('flask_jwt')
-    flask_jwt_logger.setLevel(cfg.log_level)
-    flask_jwt_logger.addHandler(file_handler)
-    flask_jwt_logger.addHandler(stdout_handler)
     tmserver_logger = logging.getLogger('tmserver')
-    tmserver_logger.setLevel(cfg.log_level)
-    tmserver_logger.addHandler(file_handler)
-    tmserver_logger.addHandler(stdout_handler)
+    tmserver_logger.setLevel(log_level)
+    tmserver_logger.addHandler(log_handler)
+
     tmlib_logger = logging.getLogger('tmlib')
-    tmlib_logger.setLevel(cfg.log_level)
-    tmlib_logger.addHandler(file_handler)
-    tmlib_logger.addHandler(stdout_handler)
-    apscheduler_logger = logging.getLogger('apscheduler')
-    apscheduler_logger.addHandler(file_handler)
-    apscheduler_logger.addHandler(stdout_handler)
-    wsgi_logger = logging.getLogger('wsgi')
-    wsgi_logger.addHandler(file_handler)
-    wsgi_logger.addHandler(stdout_handler)
-    gc3pie_logger = logging.getLogger('gc3.gc3libs')
-    gc3pie_logger.addHandler(file_handler)
-    gc3pie_logger.addHandler(stdout_handler)
+    tmlib_logger.setLevel(log_level)
+    tmlib_logger.addHandler(log_handler)
+
+    flask_jwt_logger = logging.getLogger('flask_jwt')
+    flask_jwt_logger.setLevel(log_level)
+    flask_jwt_logger.addHandler(log_handler)
+
+    # The following loggers are very chatty, so we handle them differently.
     werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.addHandler(file_handler)
-    werkzeug_logger.addHandler(stdout_handler)
+    wsgi_logger = logging.getLogger('wsgi')
+    gc3pie_logger = logging.getLogger('gc3.gc3libs')
+    apscheduler_logger = logging.getLogger('apscheduler')
     if verbosity > 4:
         gc3pie_logger.setLevel(logging.DEBUG)
         wsgi_logger.setLevel(logging.DEBUG)
@@ -142,16 +114,26 @@ def create_app(config_overrides={}, verbosity=None):
         wsgi_logger.setLevel(logging.ERROR)
         werkzeug_logger.setLevel(logging.ERROR)
         apscheduler_logger.setLevel(logging.ERROR)
+    gc3pie_logger.addHandler(log_handler)
+    wsgi_logger.addHandler(log_handler)
+    werkzeug_logger.addHandler(log_handler)
+    apscheduler_logger.addHandler(log_handler)
 
-    ## Set the JSON encoder
+    app = Flask('wsgi')
+    app.logger.handlers = []  # remove standard handlers
+    app.logger.setLevel(log_level)
+    app.logger.addHandler(log_handler)
+
     app.json_encoder = TmJSONEncoder
 
-    if not cfg.secret_key:
-        app.logger.critical('Specify a secret key for this application!')
-        sys.exit(1)
     if cfg.secret_key == 'default_secret_key':
         app.logger.warn('The application will run with the default secret key!')
+    elif not cfg.secret_key:
+        app.logger.critical('Specify a secret key for this application!')
+        sys.exit(1)
     app.config['SECRET_KEY'] = cfg.secret_key
+
+    app.config['JWT_EXPIRATION_DELTA'] = cfg.jwt_expiration_delta
 
     ## Initialize Plugins
     jwt.init_app(app)
