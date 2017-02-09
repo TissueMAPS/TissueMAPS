@@ -27,7 +27,8 @@ def _get_host_ip_os(region, network, host_name, host_vars):
     password = os.getenv('OS_PASSWORD')
     project = os.getenv('OS_PROJECT_NAME')
     cloud_client = novaclient.client.Client(
-        '2', username, password, project, auth_url, region_name=region
+        '2', username=username, password=password, project_name=project,
+        auth_url=auth_url, region_name=region
     )
     search_options = {'name': host_name}
     instances = cloud_client.servers.list(
@@ -218,17 +219,20 @@ def update_static_inventory(inventory_info, setup):
                     logger.error(
                         'getting host address from cloud failed: %s', str(err)
                     )
+                    sys.exit(1)
             else:
                 try:
                     pre_host_vars = read_yaml_file(host_vars_file)
                     host_vars['ansible_host'] = pre_host_vars['ansible_host']
                 except OSError:
                     logger.warn('no variable file found for host "%s"', host)
+                    host_vars['ansible_host'] = None
                 except KeyError:
                     logger.warn(
                         'variable "ansible_host" is not defined for host "%s"',
                         host
                     )
+                    host_vars['ansible_host'] = None
             if 'web' in host_vars['tags']:
                 # NOTE: We use an architecture where hosts are part of a private
                 # network and have security group settings that prevent access
@@ -315,9 +319,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    configure_logging()
-    log_level = map_logging_verbosity(logging.INFO)
-    logger.setLevel(log_level)
-    tmsetup_logger = logging.getLogger('tmsetup')
-    tmsetup_logger.setLevel(log_level)
+    logging.basicConfig(level=logging.DEBUG)
+    # configure_logging()
+    # log_level = map_logging_verbosity(logging.INFO)
+    # logger.setLevel(log_level)
+    # tmsetup_logger = logging.getLogger('tmsetup')
+    # tmsetup_logger.setLevel(log_level)
     main(args)
