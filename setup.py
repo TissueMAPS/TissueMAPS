@@ -137,7 +137,7 @@ setuptools.setup(
     install_requires=[
        'Cython>=0.22.1',
        # Some packages try to import Numpy in the setup.py.
-       # It may have to be installed first: pip install numpy
+       # It may need to be installed beforehand.
        'numpy>=1.12.0',
        'scipy>=0.16.0',
        'cached-property>=1.3.0',
@@ -152,6 +152,7 @@ setuptools.setup(
        'mock>=1.0.1',
        'natsort>=4.0.3',
        'nose>=1.3.7',
+       'opencv-python>=3.2',
        'openslide-python>=1.1.0',
        'pandas>=0.19.2',
        'passlib>=1.6.5',
