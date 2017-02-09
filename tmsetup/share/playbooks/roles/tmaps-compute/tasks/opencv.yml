@@ -48,6 +48,7 @@
     name={{ item }}
     extra_args='--user'
     editable=no
+    executable=pip2.7
   with_items:
     - numpy
   when: opencv_was_built.stat.exists == False

@@ -18,6 +18,7 @@
   become: yes
   pip:
     name=uwsgi
+    executable=pip2.7
     editable=false
   tags:
     - app-server

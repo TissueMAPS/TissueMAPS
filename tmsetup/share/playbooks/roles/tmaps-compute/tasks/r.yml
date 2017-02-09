@@ -58,6 +58,7 @@
   pip:
     name=rpy2
     editable=false
+    executable=pip2.7
   tags:
     - r
     - python

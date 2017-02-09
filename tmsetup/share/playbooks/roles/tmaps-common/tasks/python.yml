@@ -108,12 +108,14 @@
     name=setuptools
     extra_args='--upgrade'
     editable=false
+    executable=pip2.7
 
 - name: Install iPython
   become: yes
   pip:
     name={{ item }}
     editable=false
+    executable=pip2.7
   with_items:
     - ipython
     - ipdb
