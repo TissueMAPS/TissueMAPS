@@ -90,12 +90,13 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         'numpy>=1.10.1',
-        'scipy>=0.16.0',
+        'centrosome>=1.0.5',
         'cython>=0.24',
         'scikit-image>=0.11.3',
         'mahotas>=1.4.0',
-        'centrosome>=1.0.5',
+        'opencv-python>=3.2',
         'pytest>=2.8.2',
+        'scipy>=0.16.0',
         'tox>=2.3.1',
         'jtlibrary>=0.1.0'
     ]
