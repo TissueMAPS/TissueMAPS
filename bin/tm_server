@@ -29,19 +29,20 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--verbosity', '-v', action='count', default=0,
-        help='logging verbosity '
+        help='increase logging verbosity'
     )
 
     args = parser.parse_args()
 
     print LOGO
 
-    app = create_app(verbosity=args.verbosity)
-
+    # NOTE: This configuration does not allow setting breakpoints!
     @run_with_reloader
     def run_server():
+        app = create_app(verbosity=args.verbosity)
+        app.debug = True
         http_server = WSGIServer(
-            ('127.0.0.1', args.port), DebuggedApplication(app)
+            ('127.0.0.1', args.port), DebuggedApplication(app, evalex=True)
         )
         http_server.serve_forever()
 
