@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include_vars: dir={{ playbook_dir }}/vars/database.yml
+- include_vars: file={{ playbook_dir }}/vars/database.yml
 
 - include: install.yml
 
