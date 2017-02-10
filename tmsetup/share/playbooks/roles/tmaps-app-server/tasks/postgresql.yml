@@ -21,7 +21,7 @@
     dest={{ ansible_env.HOME }}/.pgpass
     group={{ ansible_ssh_user }}
     owner={{ ansible_ssh_user }}
-    mode=600  # "u=rw"
+    mode=600
   tags:
     - database
 

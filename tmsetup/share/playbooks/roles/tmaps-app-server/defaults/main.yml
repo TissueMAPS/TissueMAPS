@@ -17,5 +17,3 @@
 ---
 tm_admins: []  # Github user names of TissueMAPS system administrators
 tm_users: []   # Github user names of TissueMAPS users
-
-db_host_master: localhost

@@ -17,3 +17,4 @@
 db_port: 5432
 db_port_worker: 9700
 db_node: master
+db_host_master: "{{ hostvars[groups['tissuemaps_database_master'][0]].ansible_default_ipv4.address }}"

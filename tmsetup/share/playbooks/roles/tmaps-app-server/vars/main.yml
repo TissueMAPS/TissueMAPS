@@ -17,3 +17,4 @@
 db_user: tissuemaps
 db_name: tissuemaps
 db_port_master: 9432
+db_host_master: "{{ hostvars[groups['tissuemaps_database_master'][0]].ansible_default_ipv4.address }}"
