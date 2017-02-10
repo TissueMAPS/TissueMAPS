@@ -288,7 +288,7 @@ class WorkflowManager(WorkflowSubmissionManager):
 
         # Silence some chatty loggers
         gc3libs_logger = logging.getLogger('gc3.gc3libs')
-        gc3libs_logger.setLevel(logging.DEBUG)
+        gc3libs_logger.setLevel(logging.ERROR)
 
         cli_instance = cls(args.experiment_id, args.verbosity)
         cli_instance(args)
