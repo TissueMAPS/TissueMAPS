@@ -396,19 +396,12 @@ class IllumstatsFile(FileModel, DateMixIn):
 
     __tablename__ = 'illumstats_files'
 
-    __table_args__ = (UniqueConstraint('channel_id', 'cycle_id'), )
+    __table_args__ = (UniqueConstraint('channel_id'), )
 
     #: int: ID of parent channel
     channel_id = Column(
         Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: int: ID of parent cycle
-    cycle_id = Column(
-        Integer,
-        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
@@ -418,23 +411,14 @@ class IllumstatsFile(FileModel, DateMixIn):
         backref=backref('illumstats_files', cascade='all, delete-orphan')
     )
 
-    #: tmlib.models.cycle.Cycle: parent cycle
-    cycle = relationship(
-        'Cycle',
-        backref=backref('illumstats_files', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, channel_id, cycle_id):
+    def __init__(self, channel_id):
         '''
         Parameters
         ----------
         channel_id: int
             ID of the parent channel
-        cycle_id: int
-            ID of the parent cycle
         '''
         self.channel_id = channel_id
-        self.cycle_id = cycle_id
 
     def get(self):
         '''Get illumination statistics images from store.
@@ -447,10 +431,7 @@ class IllumstatsFile(FileModel, DateMixIn):
         logger.debug(
             'get data from illumination statistics file: %s', self.location
         )
-        metadata = IllumstatsImageMetadata(
-            channel_id=self.channel.id,
-            cycle_id=self.cycle.id
-        )
+        metadata = IllumstatsImageMetadata(channel_id=self.channel.id)
         with DatasetReader(self.location) as f:
             mean = IllumstatsImage(f.read('mean'), metadata)
             std = IllumstatsImage(f.read('std'), metadata)

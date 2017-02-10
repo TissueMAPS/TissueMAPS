@@ -61,41 +61,28 @@ class IllumstatsCalculator(ClusterRoutines):
         count = 0
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
+            # NOTE: Illumination statistics are calculated for each channel
+            # over all plates and time pionts, assuming that imaging conditions
+            # are consistent within an experiment.
+            for channel in session.query(tm.Channel):
+                # TODO: Consider using only a subset of images in case there
+                # are tens or hundreds of thousands. A few thousand should be
+                # enough for robust statistics.
+                file_ids = [f.id for f in channel.image_files]
+                if not file_ids:
+                    logger.warning(
+                        'no image files found for channel "%s"', channel.name
+                    )
+                    continue
 
-            # NOTE: Illumination statistics are calculated for each cycle
-            # separately. This should be safer, since imaging condition might
-            # differ between cycles. 
-
-            # TODO: Enable pooling image files across cycles, which may be
-            # necessary to get enough images for robust statistics in case
-            # each cycle has only a few images.
-            for cycle in session.query(tm.Cycle):
-
-                for channel in session.query(tm.Channel):
-
-                    files = [
-                        f for f in cycle.channel_image_files
-                        if f.channel_id == channel.id
-                    ]
-
-                    if not files:
-                        continue
-
-                    count += 1
-                    job_descriptions['run'].append({
-                        'id': count,
-                        'inputs': {
-                            'channel_image_files': [
-                                f.location for f in files
-                            ]
-                        },
-                        'outputs': {},
-                        'channel_image_files_ids': [
-                            f.id for f in files
-                        ],
-                        'channel_id': channel.id,
-                        'cycle_id': cycle.id
-                    })
+                count += 1
+                job_descriptions['run'].append({
+                    'id': count,
+                    'inputs': {},
+                    'outputs': {},
+                    'channel_image_files_ids': file_ids,
+                    'channel_id': channel.id,
+                })
         return job_descriptions
 
     def delete_previous_job_output(self):
@@ -130,8 +117,7 @@ class IllumstatsCalculator(ClusterRoutines):
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             stats_file = session.get_or_create(
-                tm.IllumstatsFile,
-                channel_id=batch['channel_id'], cycle_id=batch['cycle_id']
+                tm.IllumstatsFile, channel_id=batch['channel_id']
             )
             logger.info('write calculated statistics to file')
             illumstats = IllumstatsContainer(

@@ -161,7 +161,7 @@ class PyramidBuilder(ClusterRoutines):
                                 args.clip_percent
                             )
                             try:
-                                illumstats_file = session.query(tm.IllumstatsFile).\
+                                stats_file = session.query(tm.IllumstatsFile).\
                                     filter_by(channel_id=layer.channel_id).\
                                     one()
                             except NoResultFound:
@@ -169,7 +169,7 @@ class PyramidBuilder(ClusterRoutines):
                                     'No illumination statistics file found '
                                     'for channel %d' % layer.channel_id
                                 )
-                            stats = illumstats_file.get()
+                            stats = stats_file.get()
                             clip_max = stats.get_closest_percentile(
                                 args.clip_percent
                             )
@@ -397,18 +397,15 @@ class PyramidBuilder(ClusterRoutines):
                     image_file = session.query(tm.ChannelImageFile).get(
                         batch['image_file_ids'][0]
                     )
-                    illumstats_file = session.query(tm.IllumstatsFile).\
-                        filter_by(
-                            channel_id=layer.channel_id,
-                            cycle_id=image_file.cycle_id
-                        ).\
+                    stats_file = session.query(tm.IllumstatsFile).\
+                        filter_by(channel_id=layer.channel_id).\
                         one()
                 except NoResultFound:
                     raise WorkflowError(
                         'No illumination statistics file found for channel %d'
                         % layer.channel_id
                     )
-                stats = illumstats_file.get()
+                stats = stats_file.get()
             else:
                 stats = None
 
@@ -423,7 +420,7 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('process image %d', file.id)
                 tiles = layer.map_image_to_base_tiles(file)
                 image_store = dict()
-                image = image_file.get(z=layer.zplane)
+                image = file.get(z=layer.zplane)
                 if batch['illumcorr']:
                     logger.debug('correct image')
                     image = image.correct(stats)

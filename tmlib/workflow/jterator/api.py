@@ -311,13 +311,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 images = collections.defaultdict(list)
                 site = session.query(tm.Site).get(site_id)
                 if item['correct']:
-                    logger.info('load illumination statistics')
+                    logger.info(
+                        'load illumination statistics for channel "%s"',
+                        item['name']
+                    )
                     try:
                         stats_file = session.query(tm.IllumstatsFile).\
                             join(tm.Channel).\
-                            join(tm.Cycle).\
                             filter(tm.Channel.name == item['name']).\
-                            filter(tm.Cycle.plate_id == site.well.plate_id).\
                             one()
                     except NoResultFound:
                         raise PipelineDescriptionError(
@@ -325,6 +326,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                             'channel "%s"' % item['name']
                         )
                     stats = stats_file.get()
+                else:
+                    stats = None
 
                 logger.info('load images for channel "%s"', item['name'])
                 image_files = session.query(tm.ChannelImageFile).\

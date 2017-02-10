@@ -30,11 +30,11 @@ class ChannelImageMetadata(object):
         Parameters
         ----------
         channel_id: int
-            channel ID
+            ID of the parent :class:`Channel <tmlib.models.channel.Channel>`
         site_id: int
-            site ID
+            ID of the parent :class:`Site <tmlib.models.site.Site>`
         cycle_id: int
-            cycle ID
+            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
         tpoint: int
             zero-based time point index
         **kwargs: dict, optional
@@ -304,28 +304,6 @@ class ImageFileMapping(object):
         return '%s(ref_index=%r)' % (self.__class__.__name__, self.ref_index)
 
 
-class SegmentationImageMetadata(object):
-
-    '''Class for metadata to describe a segmentation image.'''
-
-    def __init__(self, mapobject_type_id, site_id):
-        '''
-        Parameters
-        ----------
-        mapobject_type_id: int
-            mapobject type ID
-        site_id: int
-            site ID
-        '''
-        self.mapobject_type_id = mapobject_type_id
-        self.site_id = site_id
-
-    def __repr__(self):
-        return '%s(mapobject_type_id=%r, site_id=%r)' % (
-            self.__class__.__name__, self.mapobject_type_id, self.site_id
-        )
-
-
 class PyramidTileMetadata(object):
 
     '''Class for metadata to describe a pyramid tile.'''
@@ -341,7 +319,8 @@ class PyramidTileMetadata(object):
         x: int
             zero-based column index
         channel_layer_id: int
-            channel layer ID
+            ID of the parent
+            :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>`
         '''
         self.z = z
         self.y = y
@@ -359,17 +338,14 @@ class IllumstatsImageMetadata(object):
 
     '''Class for metadata to describe an illumination statistics image.'''
 
-    @assert_type(cycle_id='int', channel_id='int')
-    def __init__(self, cycle_id, channel_id):
+    @assert_type(channel_id='int')
+    def __init__(self, channel_id):
         '''
         Parameters
         ----------
-        cycle_id: int
-            cycle ID
         channel_id: int
-            channel ID
+            ID of the parent :class:`Channel <tmlib.models.channel.Channel>`
         '''
-        self.cycle_id = cycle_id
         self.channel_id = channel_id
         self.is_smoothed = False
 
@@ -385,6 +361,6 @@ class IllumstatsImageMetadata(object):
         self._is_smoothed = value
 
     def __repr__(self):
-        return '%s(cycle_id=%r, channel_id=%r)' % (
-            self.__class__.__name__, self.cycle_id, self.channel_id
+        return '%s(channel_id=%r)' % (
+            self.__class__.__name__, self.channel_id
         )
