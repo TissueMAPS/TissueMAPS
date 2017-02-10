@@ -48,7 +48,7 @@
     type=database
     obj={{ db_name }}
     port={{ db_port }}
-    roles={{ db_user }}
+    role={{ db_user }}
     privs=ALL
   tags:
     - database

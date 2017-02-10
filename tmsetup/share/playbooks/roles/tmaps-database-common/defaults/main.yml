@@ -20,8 +20,6 @@ citus_version: 6.0
 
 volume_mountpoint: /data
 
-db_user: tissuemaps
-db_name: tissuemaps
 db_data_directory: /var/lib/postgresql
 db_log_directory: /var/log/postgresql
 

@@ -13,9 +13,7 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
-tm_admins: []  # Github user names of TissueMAPS system administrators
-tm_users: []   # Github user names of TissueMAPS users
-
-db_host_master: localhost
+db_user: tissuemaps
+db_name: tissuemaps
+db_port_master: 9432
