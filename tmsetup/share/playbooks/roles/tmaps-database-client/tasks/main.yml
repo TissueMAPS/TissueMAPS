@@ -14,12 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include: install.yml
+- include_vars: file={{ playbook_dir }}/vars/database.yml
 
-- include: create_cluster.yml
+- include_vars: file={{ playbook_dir }}/vars/tissuemaps.yml
 
-- include: configure.yml
+- include: auth.yml
 
-- include: create_database.yml
-
-- include: create_users.yml
+- include: populate_database.yml

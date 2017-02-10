@@ -15,36 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Perform post-configuration
+- name: Configure web host as database client
   hosts: tissuemaps_web
   remote_user: "{{ ansible_user }}"
   vars:
-    tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"
-  tasks:
-    - name: Create database tables
-      command: "{{ tmaps_install_location }}/tm_create_tables"
-      tags:
-        - web
-        - database
-        - tissuemaps
-
-    - name: Create default user
-      command: "{{ tmaps_install_location }}/tm_add user --name testuser --password {{ tm_testuser_password }} --email testuser@tissuemaps.org"
-      tags:
-        - web
-        - database
-        - tissuemaps
-      when: tm_testuser_password is defined
-
-    - name: Place convenience scripts
-      template:
-        src={{ playbook_dir }}/templates//{{ item }}.j2
-        dest={{ ansible_env.HOME }}/{{ item }}
-        mode="u+x"
-      with_items:
-        - create_slurm_account.sh
-        - start_server.sh
-        - stop_server.sh
-      tags:
-        - web
-
+    db_host_master: "{{ hostvars[groups['tissuemaps_database_master'][0]].ansible_default_ipv4.address }}"
+  roles:
+    - tmaps-database-client

@@ -23,7 +23,7 @@
   hosts: tissuemaps_database_worker
   remote_user: "{{ ansible_user }}"
   roles:
-    - tmaps-database-worker
+    - tmaps-database-server-worker
   tags:
     - database
 
@@ -31,7 +31,7 @@
   hosts: tissuemaps_database_master
   remote_user: "{{ ansible_user }}"
   roles:
-    - tmaps-database-master
+    - tmaps-database-server-master
   tags:
     - database
 

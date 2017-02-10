@@ -14,23 +14,35 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include: ssl_cert.yml
-
-- include: ssh_keys.yml
-
-- include: server.yml
-
-- name: Stop uWSGI web server
-  become: yes
-  service: name=uwsgi state=stopped
-  ignore_errors: True
+- name: Create pgpass file
+  template:
+    src=pgpass.j2
+    dest={{ ansible_env.HOME }}/.pgpass
+    group={{ ansible_ssh_user }}
+    owner={{ ansible_ssh_user }}
+    mode=600
   tags:
-    - web
+    - database
 
-- include: tissuemaps.yml
+- name: Update db_password in TissueMAPS configuration
+  ini_file:
+    dest={{ tmaps_config_file }}
+    create=yes
+    section=DEFAULT
+    state=present
+    option=db_password
+    value={{ db_password }}
+  tags:
+    - database
+    - tissuemaps
 
-- include: gc3pie.yml
-
-- include: config.yml
-
-- include: scripts.yml
+- name: Update db_host in TissueMAPS configuration
+  ini_file:
+    dest={{ tmaps_config_file }}
+    section=DEFAULT
+    state=present
+    option=db_host
+    value={{ db_host_master if db_host_master != client_host else 'localhost' }}
+  tags:
+    - database
+    - tissuemaps

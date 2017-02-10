@@ -13,37 +13,7 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
-- name: Create pgpass file
-  template:
-    src=pgpass.j2
-    dest={{ ansible_env.HOME }}/.pgpass
-    group={{ ansible_ssh_user }}
-    owner={{ ansible_ssh_user }}
-    mode=600
-  tags:
-    - database
-
-- name: Update db_password in TissueMAPS configuration
-  ini_file:
-    dest={{ tmaps_config_file }}
-    create=yes
-    section=DEFAULT
-    state=present
-    option=db_password
-    value={{ db_password }}
-  tags:
-    - database
-    - tissuemaps
-
-- name: Update db_host in TissueMAPS configuration
-  ini_file:
-    dest={{ tmaps_config_file }}
-    section=DEFAULT
-    state=present
-    option=db_host
-    value={{ hostvars[groups['tissuemaps_database_master'][0]]['ansible_default_ipv4']['address'] }}
-  tags:
-    - database
-    - tissuemaps
+db_port: 5432
+db_node: master
+db_host_master: "{{ hostvars[inventory_hostname].ansible_default_ipv4.address }}"

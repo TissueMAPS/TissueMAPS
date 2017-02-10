@@ -14,7 +14,5 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-db_port: 5432
-db_port_worker: 9700
-db_node: master
-db_host_master: "{{ hostvars[groups['tissuemaps_database_master'][0]].ansible_default_ipv4.address }}"
+
+

@@ -14,23 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include: ssl_cert.yml
+- include_vars: dir={{ playbook_dir }}/vars/database.yml
 
-- include: ssh_keys.yml
+- include: install.yml
 
-- include: server.yml
+- include: create_cluster.yml
 
-- name: Stop uWSGI web server
-  become: yes
-  service: name=uwsgi state=stopped
-  ignore_errors: True
-  tags:
-    - web
+- include: configure.yml
 
-- include: tissuemaps.yml
+- include: create_database.yml
 
-- include: gc3pie.yml
-
-- include: config.yml
-
-- include: scripts.yml
+- include: create_users.yml

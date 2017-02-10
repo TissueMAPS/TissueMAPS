@@ -14,23 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include: ssl_cert.yml
-
-- include: ssh_keys.yml
-
-- include: server.yml
-
-- name: Stop uWSGI web server
-  become: yes
-  service: name=uwsgi state=stopped
-  ignore_errors: True
-  tags:
-    - web
-
-- include: tissuemaps.yml
-
-- include: gc3pie.yml
-
-- include: config.yml
-
-- include: scripts.yml
+# We use a different port and cluster name for worker nodes to prevent
+# conflicts when master and worker end up on the same machine (localhost).
+db_port: 9700
+db_node: worker

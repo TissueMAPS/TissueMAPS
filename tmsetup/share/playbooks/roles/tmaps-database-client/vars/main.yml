@@ -14,5 +14,4 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-db_port: 9700
-db_node: worker
+client_host: "{{ hostvars[inventory_hostname].ansible_default_ipv4.address ]}}"

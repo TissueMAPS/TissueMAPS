@@ -14,23 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include: ssl_cert.yml
-
-- include: ssh_keys.yml
-
-- include: server.yml
-
-- name: Stop uWSGI web server
-  become: yes
-  service: name=uwsgi state=stopped
-  ignore_errors: True
+- name: Create database tables
+  command: tm_create_tables
   tags:
-    - web
+    - database
+    - tissuemaps
 
-- include: tissuemaps.yml
-
-- include: gc3pie.yml
-
-- include: config.yml
-
-- include: scripts.yml
+- name: Create default user
+  command: tm_add user --name testuser --password {{ tm_testuser_password }} --email testuser@tissuemaps.org
+  tags:
+    - database
+    - tissuemaps
+  when: tm_testuser_password is defined
