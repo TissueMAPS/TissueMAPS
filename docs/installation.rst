@@ -32,7 +32,6 @@ Requirements
 * `Python <https://www.python.org/>`_ (version 2.7): Many platforms are shipped with Python already pre-installed. If not, it can downloaded from `python.org <https://www.python.org/downloads/>`_. We recommend using version 2.7.9 or higher.
 * `Pip <https://pip.pypa.io/en/stable/>`_: The Python package manager is automatically installed with Python distributions downloaded from python.org. Otherwise, it can be installed with the `get-pip.py <https://bootstrap.pypa.io/get-pip.py>`_ script.
 * `Git <https://git-scm.com/>`_: Available on Linux and MaxOSX via various package managers. On Windows, we recommend using `Git Bash <https://git-for-windows.github.io/>`_.
-* `OpenCV <http://opencv.org/>`_ (version 3.1): Prebuild binaries for different platforms are available for download on `opencv.org <http://opencv.org/downloads.html>`_. Detailed instructions for building the latest version from source can be found in the `online documentation <http://docs.opencv.org/3.1.0/df/d65/tutorial_table_of_content_introduction.html>`_. Packages are also available via `homebrew <https://github.com/Homebrew/homebrew-science/blob/master/opencv3.rb>`_ on `MacOSX` or cross-platform via `anaconda <https://anaconda.org/menpo/opencv3>`_. Note that when using a virtual environment, the Python bindings need to be  manually copied or linkied, since the package gets installed globally.
 
 
 Installation
@@ -357,61 +356,28 @@ Requirements
 
     .. code-block:: none
 
-        sudo sh -c "echo 'deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+        curl https://install.citusdata.com/community/deb.sh | sudo bash
+        sudo apt-get -y install postgresql-9.6-citus
 
-        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-        sudo apt-get update
-
-        sudo apt-get -y install postgresql-9.6
         sudo apt-get -y install postgresql-9.6-postgis-2.2 postgresql-9.6-postgis-scripts postgresql-contrib-9.6 postgresql-server-dev-all postgresql-client
 
         sudo apt-get -y install python-psycopg2
+
+        echo 'export "PATH=$PATH:/usr/lib/postgresql/9.6/bin"' >> ~/.bash_profile
+        source ~/.bash_profile
+
 
     On MacOSX:
 
     .. code-block:: none
 
-        brew tap petere/postgresql
-        brew install postgresql-9.6 && brew link -f postgresql-9.6
+        brew install citus
 
         # Postgis extension
         brew install pex
         brew install gettext && brew link -f gettext
         pex init
-        pex -g /usr/local/opt/postgresql-9.6 install postgis
-
-* `OpenCV <`http://opencv.org/>`_ (version 3.1):
-
-    On Ubuntu the `apt-get` package manager currently only provides version 2.4. Version 3.1 needs to be `build from source <http://docs.opencv.org/3.1.0/d7/d9f/tutorial_linux_install.html>`_::
-
-        git clone https://github.com/Itseez/opencv.git ~/opencv
-        cd ~/opencv
-        mkdir build && cd build
-
-        sudo pip install numpy
-
-        sudo apt-get -y install cmake
-        cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ../
-        make -j4
-        sudo make install && sudo ldconfig
-
-    On MacOSX::
-
-        brew tab homebrew/science
-        brew install opencv3
-        echo /usr/local/opt/opencv3/lib/python2.7/site-packages >> /usr/local/lib/python2.7/site-packages/opencv3.pth
-
-    This will build `OpenCV` globally. If you work with a virtual enviroment, create a softlink for the Python bindings (exemplified for ``tissuemaps`` project):
-
-        On Ubuntu::
-
-            cd $VIRTUALENVWRAPPER_HOOK_DIR/tissuemaps/lib/python2.7/site-packages
-            ln -s /usr/local/lib/python2.7/dist-packages/cv2.so cv2.so
-
-        On MacOSX::
-
-            cd $VIRTUALENVWRAPPER_HOOK_DIR/tissuemaps/lib/python2.7/site-packages/
-            ln -s /usr/local/lib/python2.7/site-packages/opencv3.pth opencv3.pth
+        pex -g /usr/local/opt/postgresql install postgis
 
 * `HDF5 <https://www.hdfgroup.org/HDF5/>`_:
 
@@ -439,33 +405,6 @@ Requirements
         brew tab ome/alt
         brew install bioformats51
 
-* `Spark <http://spark.apache.org/>`_ (version 2.0.1 or higher):
-
-    On Ubuntu:
-
-    .. code-block:: none
-
-        sudo apt-get -y install openjdk-7-jdk
-        export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
-
-        sudo apt-get -y install maven
-        export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
-
-        sudo wget http://d3kbcqa49mib13.cloudfront.net/spark-2.0.1.tgz
-        tar -xvzf spark-2.0.1.tgz && mv spark-2.0.1 spark
-        sudo apt-get update
-
-        cd spark
-        ./build/mvn -Pyarn -Phadoop-2.7 -Dhadoop.version=2.7.1 -Phive -Phive-thriftserver -DskipTests clean package
-
-        echo 'export PATH=$PATH:$HOME/spark/bin' >> ~/.bash_profile
-
-    On MacOSX::
-
-        brew install apache-spark
-
-    .. note:: Requires installation with support for `YARN <http://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html>`_ for running Spark on a cluster as well as `Hive <https://hive.apache.org/>`_ and `JDBC <http://docs.oracle.com/javase/tutorial/jdbc/overview/index.html>`_ for `Spark SQL <http://spark.apache.org/docs/latest/sql-programming-guide.html#overview>`_ integration. It is important to `build <http://spark.apache.org/docs/latest/building-spark.html#specifying-the-hadoop-version>`_ Spark againgst the `HDFS <http://hadoop.apache.org/docs/r1.2.1/hdfs_design.html>`_ version available in your cluster environment, since `HDFS` is not compatible across versions. Pyspark further requires the same minor version of Python in both drivers and workers.
-
 * `R <https://www.r-project.org/>`_ (version 3.3.2 or higher): optional - only required for support of R Jterator modules
 
     On Ubuntu (examplified here for 14.04 "Trusty"):
@@ -488,8 +427,7 @@ Requirements
 
     On Ubuntu::
 
-        sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev libssl-dev libffi-dev
-        sudo apt-get -y install libgeos-dev
+        sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev libssl-dev libffi-dev libgeos-dev
 
 .. _application-installation:
 
@@ -510,82 +448,155 @@ Configuration
 PostgreSQL
 ++++++++++
 
-Create a `database cluster <https://www.postgresql.org/docs/current/static/creating-cluster.html>`_ using the default ``data_directory`` and start the server (here demonstrated for `PostgreSQL` version 9.6). These steps might have already been performed automatically upon installation:
+Define the data location (here demonstrated for `PostgreSQL` version 9.6): 
 
     On Ubuntu (as ``postgres`` user):
 
         .. code-block:: none
 
             sudo su - postgres
-            /usr/lib/postgresql/9.6/bin/initdb -D /var/lib/postgresql/9.6/main
-            /usr/lib/postgresql/9.6/bin/pg_ctl -D /var/lib/postgresql/9.6/main -l logfile restart
-            exit
+
+            export DATA_DIRECTORY=/var/lib/postgresql/9.6
+            export LOG_DIRECTORY=/var/log/postgresql
 
     On MacOsX (as current user):
 
         .. code-block:: none
 
-            /usr/local/opt/postgresql-9.6/bin/initdb -D /usr/local/var/lib/postgresql/9.6/main
-            /usr/local/opt/postgresql-9.6/bin/pg_ctrl -D /usr/local/var/lib/postgresql/9.6/main -l logfile restart
+            export DATA_DIRECTORY=/usr/local/var/lib/postgresql/9.6
+            export LOG_DIRECTORY=/usr/local/var/log/postgresql
 
-        You may want to add the `PostgreSQL` executables to the ``$PATH`` in your ``~/.bash_profile`` file:
 
-        .. code-block:: bash
+Initialize a ``citus`` `database cluster <https://www.postgresql.org/docs/current/static/creating-cluster.html>`_ and start the servers for *master* and *workers*:
 
-                export PATH=$PATH:/usr/local/opt/postgresql-9.6/bin
-                export MANPATH=$MANPATH:/usr/local/opt/postgresql-9.6/share/man
+    .. code-block:: none
 
-.. On Ubuntu ``service`` can also be used to start and stop the database server::
+        mkdir -p $LOG_DIRECTORY
 
-..         sudo service postgresql restart
+        mkdir -p $DATA_DIRECTORY/citus/master
+        mkdir -p $DATA_DIRECTORY/citus/worker1
+        mkdir -p $DATA_DIRECTORY/citus/worker2
 
-Enter `psql` console:
+        initdb -D $DATA_DIRECTORY/citus/master
+        initdb -D $DATA_DIRECTORY/citus/worker1
+        initdb -D $DATA_DIRECTORY/citus/worker2
 
-    On Ubuntu (as ``postgres`` user)::
 
-        sudo -u postgres psql postgres
+Activate the ``citus`` extension:
 
-    On MacOSX (as current user)::
+    .. code-block:: none
 
-        psql postgres
+        echo "shared_preload_libraries = 'citus'" >> $DATA_DIRECTORY/citus/master/postgresql.conf
+        echo "shared_preload_libraries = 'citus'" >> $DATA_DIRECTORY/citus/worker1/postgresql.conf
+        echo "shared_preload_libraries = 'citus'" >> $DATA_DIRECTORY/citus/worker2/postgresql.conf
 
-and change permissions for the postgres user (it may already exist) and set a new password:
 
-.. code-block:: sql
+Start the database cluster and create the default database:
 
-    CREATE USER postgres;
-    ALTER USER postgres WITH SUPERUSER;
-    ALTER USER postgres WITH PASSWORD 'XXX';
+    .. code-block:: none
 
-Then create the ``tissuemaps`` database:
+        pg_ctl -D $DATA_DIRECTORY/citus/master -o "-p 5432" -l $LOG_DIRECTORY/citus-master.log start
+        pg_ctl -D $DATA_DIRECTORY/citus/worker1 -o "-p 9701" -l $LOG_DIRECTORY/citus-worker1.log start
+        pg_ctl -D $DATA_DIRECTORY/citus/worker2 -o "-p 9702" -l $LOG_DIRECTORY/citus-worker1.log start
 
-.. code-block:: sql
+        # On Ubuntu the "postgres" database may already exist
+        createdb -p 5432 $(whoami)
+        createdb -p 9701 $(whoami)
+        createdb -p 9702 $(whoami)
 
-    CREATE DATABASE tissuemaps;
+Create ``tissuemaps`` user and set a password (replace ``XXX`` with the actual password):
 
-and the `postgis <http://www.postgis.net/>`_ extension:
+    .. code-block:: sql
 
-.. code-block:: sql
+        psql -p 5432 tissuemaps -c "CREATE ROLE tissuemaps;"
+        psql -p 9701 tissuemaps -c "CREATE ROLE tissuemaps;"
+        psql -p 9702 tissuemaps -c "CREATE ROLE tissuemaps;"
 
-    CREATE EXTENSION postgis;
+        psql -p 5432 -c "ALTER ROLE tissuemaps WITH LOGIN;"
+        psql -p 5432 -c "ALTER ROLE tissuemaps WITH PASSWORD 'XXX';"
 
-Now, you should be able to connect to the database as ``postgres`` user with your new password::
 
-    psql -h localhost tissuemaps postgres
+Then create the ``tissuemaps`` database and grant privilages to ``tissuemaps`` user:
+
+    .. code-block:: sql
+
+        psql -p 5432 -c "CREATE DATABASE tissuemaps;"
+        psql -p 9701 -c "CREATE DATABASE tissuemaps;"
+        psql -p 9702 -c "CREATE DATABASE tissuemaps;"
+
+        psql -p 5432 -c "GRANT ALL PRIVILEGES ON DATABASE tissuemaps TO tissuemaps;"
+        psql -p 9701 -c "GRANT ALL PRIVILEGES ON DATABASE tissuemaps TO tissuemaps;"
+        psql -p 9702 -c "GRANT ALL PRIVILEGES ON DATABASE tissuemaps TO tissuemaps;"
+
+
+Add ``citus`` and ``postgis`` extensions:
+
+    .. code-block:: sql
+
+        psql -p 5432 -c tissuemaps "CREATE EXTENSION citus;"
+        psql -p 9701 -c tissuemaps "CREATE EXTENSION citus;"
+        psql -p 9702 -c tissuemaps "CREATE EXTENSION citus;"
+
+        psql -p 5432 -c tissuemaps "CREATE EXTENSION postgis;"
+        psql -p 9701 -c tissuemaps "CREATE EXTENSION postgis;"
+        psql -p 9702 -c tissuemaps "CREATE EXTENSION postgis;"
+
+        psql -p 5432 -c tissuemaps "CREATE EXTENSION hstore;"
+        psql -p 9701 -c tissuemaps "CREATE EXTENSION hstore;"
+        psql -p 9702 -c tissuemaps "CREATE EXTENSION hstore;"
+
+Connect to the *master* database and add *worker* nodes:
+
+    .. code-blocK:: none
+
+        psql -p 5432 tissuemaps -c "SELECT * from master_add_node('localhost', 9701);"
+        psql -p 5432 tissuemaps -c "SELECT * from master_add_node('localhost', 9702);"
+
+        psql -p 5432 tissuemaps -c "select * from master_get_active_worker_nodes();"
+
+
+Now, the database cluster is ready to use. You can connect to the ``tissuemaps`` database running on the *master* node (``localhost`` on port ``5432``) as ``tissuemaps`` user::
+
+    psql -h localhost -p 5432 tissuemaps tissuemaps
 
 .. tip:: It is convenient to use a `pgpass file <https://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_ to be able to connect to the database without having to type the password every time:
 
     .. code-block:: none
 
-        echo 'localhost:5432:tissuemaps:postgres:XXX' > ~/.pgpass
+        echo 'localhost:5432:tissuemaps:tissuemaps:XXX' > ~/.pgpass
         chmod 0600 ~/.pgpass
 
 .. tip:: You may also want to add an alias to ``~/.bash_profile`` to simplify connecting to the database via the ``psql`` console:
 
     .. code-block:: bash
 
-        echo 'alias db="psql -h localhost tissuemaps postgres"' >> ~/.bash_profile
+        echo 'alias db="psql -h localhost -p 5432 tissuemaps tissuemaps"' >> ~/.bash_profile
         . ~/.bash_profile
+
+.. tip:: Restarting the database servers can get a bit tricky, since you need to restart *master* and *worker* servers, which may be physically located on different machines. You can write a little script:
+
+    .. code-block:: bash
+
+        #!/bin/bash
+
+        DATA_DIRECTORY=/usr/local/var/lib/postgresql/9.6
+        LOG_DIRECTORY=/usr/local/var/log/postgresql
+
+        MASTER_HOST=localhost
+        MASTER_PORT=5432
+        WORKER1_HOST=localhost
+        WORKER1_PORT=9701
+        WORKER1_HOST=localhost
+        WORKER1_PORT=9702
+
+        echo "=>restart master database server on host $MASTER_HOST port $MASTER_PORT"
+        pg_ctl restart -D $DATA_DIRECTORY/citus/master -o "-h $MASTER_HOST -p $MASTER_PORT" -l $LOG_DIRECTORY/citus-master.log
+
+        echo "=>restart worker database server 1 on host $WORKER1_HOST port $WORKER1_PORT"
+        pg_ctl restart -D $DATA_DIRECTORY/citus/worker1 -o "-h $WORKER1_HOST -p $WORKER1_PORT" -l $LOG_DIRECTORY/citus-worker1.log
+
+        echo "=>restart worker database server 2 on host $WORKER2_HOST port $WORKER2_PORT"
+        pg_ctl restart -D $DATA_DIRECTORY/citus/worker2 -o "-h $WORKER2_HOST -p $WORKER2_PORT" -l $LOG_DIRECTORY/citus-worker1.log
 
 When using a mounted filesystem for data storage, you can create a symlink to ``data_dirctory`` or use an alternative directory. Make sure, however, to set the correct permissions for the parent directory of the desired data directory. For more information please refer to the PostgreSQL online documentation on `file locations <https://www.postgresql.org/docs/current/static/runtime-config-file-locations.html>`_ and `creation of a new database cluster <https://www.postgresql.org/docs/9.6/static/app-initdb.html>`_.
 
