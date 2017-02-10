@@ -46,3 +46,9 @@
   tags:
     - database
     - tissuemaps
+
+- name: Append (extend) existing bash_profile
+  template:
+    src=extend_bash_profile.j2
+    dest="{{ ansible_env.HOME }}/.bash_profile"
+

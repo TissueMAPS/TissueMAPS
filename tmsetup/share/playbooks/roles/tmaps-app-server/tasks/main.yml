@@ -20,7 +20,7 @@
 
 - include: server.yml
 
-- name: Stop uWSGI web server
+- name: Stop uWSGI application server
   become: yes
   service: name=uwsgi state=stopped
   ignore_errors: True
@@ -30,7 +30,5 @@
 - include: tissuemaps.yml
 
 - include: gc3pie.yml
-
-- include: config.yml
 
 - include: scripts.yml
