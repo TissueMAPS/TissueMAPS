@@ -17,6 +17,7 @@
 ---
 - name: Perform post-configuration
   hosts: tissuemaps_web
+  remote_user: "{{ ansible_user }}"
   vars:
     tmaps_install_location: "{{ ansible_env.HOME }}/.local/bin"
   tasks:
@@ -44,4 +45,6 @@
         - create_slurm_account.sh
         - start_server.sh
         - stop_server.sh
+      tags:
+        - web
 

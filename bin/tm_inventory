@@ -264,6 +264,9 @@ def update_static_inventory(inventory_info, setup):
             if host not in inventory_info['_meta']['hostvars']:
                 host_vars_file = os.path.join(HOST_VARS_DIR, host)
                 os.remove(host_vars_file)
+        for group in persistent_inventory.sections():
+            if group not in inventory_info:
+                persistent_inventory.remove_section(group)
 
     # Create (or update) the main ansible inventory file in INI format
     save_inventory(persistent_inventory)

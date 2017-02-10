@@ -24,7 +24,7 @@
 
 - name: Drop GC3Pie configuration file
   template:
-    src={{ playbook_dir }}/roles/tmaps-web-server/templates/gc3pie.conf.j2
+    src=gc3pie.conf.j2
     dest={{ ansible_env.HOME }}/.gc3/gc3pie.conf
   tags:
     - gc3pie
