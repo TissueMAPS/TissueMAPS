@@ -36,16 +36,17 @@ LEVELS_TO_VERBOSITY = {
 
 
 def map_logging_verbosity(verbosity):
-    '''
+    '''Maps logging verbosity to a level as expected by the `logging` module.
+
     Parameters
     ----------
     verbosity: int
-        logging verbosity level (0-3)
+        logging verbosity
 
     Returns
     -------
-    A logging level as exported by `logging` module.
-    By default returns logging.NOTSET
+    int
+        logging level
 
     Raises
     ------
@@ -53,6 +54,10 @@ def map_logging_verbosity(verbosity):
         when `verbosity` doesn't have type int
     ValueError
         when `verbosity` is negative
+
+    See also
+    --------
+    :attr:`tmlib.log.VERBOSITY_TO_LEVELS`
     '''
     if not isinstance(verbosity, int):
         raise TypeError('Argument "verbosity" must have type int.')
