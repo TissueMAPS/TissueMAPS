@@ -29,7 +29,7 @@
   become_user: postgres
   vars:
     ansible_ssh_pipelining: true
-  command: psql -c tissuemaps "SELECT master_add_node('{{ hostvars[item].ansible_default_ipv4.address }}', {{ db_port_worker }});"
+  command: psql tissuemaps -c "SELECT master_add_node('{{ hostvars[item].ansible_default_ipv4.address }}', {{ db_port_worker }});"
   with_items: "{{ groups['tissuemaps_database_worker'] }}"
   when: "{{ hostvars[groups['tissuemaps_database_master'][0]].ansible_default_ipv4.address != hostvars[groups['tissuemaps_database_worker'][0]].ansible_default_ipv4.address }}"
 
@@ -38,5 +38,5 @@
   become_user: postgres
   vars:
     ansible_ssh_pipelining: true
-  command: psql -c tissuemaps "SELECT master_add_node('localhost', {{ db_port_worker }});"
+  command: psql tissuemaps -c "SELECT master_add_node('localhost', {{ db_port_worker }});"
   when: "{{ hostvars[groups['tissuemaps_database_master'][0]].ansible_default_ipv4.address == hostvars[groups['tissuemaps_database_worker'][0]].ansible_default_ipv4.address }}"
