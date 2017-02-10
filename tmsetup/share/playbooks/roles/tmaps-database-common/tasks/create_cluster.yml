@@ -14,9 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-- name: stop postgresql
+- name: Stop PostgreSQL service
   become: yes
-  service: name=postgresql state=stopped
+  service:
+    name=postgresql
+    state=stopped
   tags:
     - database
 
@@ -54,18 +56,8 @@
 - name: Create version-specific data subdirectory
   become: yes
   file:
-    path={{ db_data_directory }}/{{postgresql_version}}/citus/{{ inventory_hostname }}
+    path={{ db_data_directory }}/{{postgresql_version}}/{{ db_node }}
     state=directory
-    owner=postgres
-    group=postgres
-  tags:
-    - database
-
-- name: Change ownership for data directory (give permissions to postgres user)
-  become: yes
-  file:
-    path={{ db_data_directory }}
-    recurse=yes
     owner=postgres
     group=postgres
   tags:
@@ -109,11 +101,14 @@
   tags:
     - database
 
+- debug:
+    msg: "db_port: {{ db_port }}"
+
 - name: Initialize database cluster at created data directory
   become: yes
-  become_user: postgres
-  shell: "/usr/lib/postgresql/{{ postgresql_version }}/bin/initdb -D {{ db_data_directory }}/{{ postgresql_version }}/citus/{{ inventory_hostname }}"
+  # become_user: postgres
+  command: pg_createcluster {{ postgresql_version }} {{ db_node }} -p {{ db_port }} -d {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
   args:
-    creates: "{{ db_data_directory }}/{{ postgresql_version }}/citus/{{ inventory_hostname }}/base"
+    creates: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/base"
   tags:
     - database

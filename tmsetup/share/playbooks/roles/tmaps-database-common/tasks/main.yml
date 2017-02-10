@@ -16,7 +16,7 @@
 ---
 - include: install.yml
 
-- include: create_data_directory.yml
+- include: create_cluster.yml
 
 - include: configure.yml
 

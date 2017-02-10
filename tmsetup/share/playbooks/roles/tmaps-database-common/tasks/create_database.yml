@@ -31,6 +31,7 @@
     ansible_ssh_pipelining: true
   postgresql_db:
     name={{ db_name }}
+    port={{ db_port }}
   tags:
     - database
 

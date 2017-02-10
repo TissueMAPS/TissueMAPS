@@ -16,10 +16,10 @@
 ---
 postgresql_version: 9.6
 postgis_version: 2.3
+citus_version: 6.0
 
 volume_mountpoint: /data
 
-db_port: 5432
 db_user: tissuemaps
 db_name: tissuemaps
 db_data_directory: /var/lib/postgresql

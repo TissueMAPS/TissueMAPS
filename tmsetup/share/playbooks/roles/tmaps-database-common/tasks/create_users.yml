@@ -44,7 +44,9 @@
   vars:
     ansible_ssh_pipelining: true
   postgresql_privs:
-    db={{ db_name }}
+    db=postgres
+    type=database
+    obj={{ db_name }}
     port={{ db_port }}
     roles={{ db_user }}
     privs=ALL
