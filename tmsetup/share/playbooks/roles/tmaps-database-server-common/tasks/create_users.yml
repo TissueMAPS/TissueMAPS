@@ -14,6 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
+- name: Change password of database superuser
+  become: yes
+  become_user: postgres
+  vars:
+    ansible_ssh_pipelining: true
+  postgresql_user:
+    db=postgres
+    port={{ db_port }}
+    user=postgres
+    password={{ db_password }}
+  tags:
+    - database
+
 - name: Create database user
   become: yes
   become_user: postgres
