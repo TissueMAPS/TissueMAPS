@@ -23,12 +23,12 @@
   hosts: all
   vars:
     instance_state: present
-  connection: local
+  # connection: local
   roles:
     - cloud-instance
 
-# NOTE: This should be included in the above play. However, the "delegate_to"
-# Ansible module is broken, which prevents a combination of local and remote
-# tasks in the play at the moment.
-- include: volume.yml
-  when: instance_state == 'present'
+# # NOTE: This should be included in the above play. However, the "delegate_to"
+# # Ansible module is broken, which prevents a combination of local and remote
+# # tasks in the play at the moment.
+# - include: volume.yml
+#   when: instance_state == 'present'

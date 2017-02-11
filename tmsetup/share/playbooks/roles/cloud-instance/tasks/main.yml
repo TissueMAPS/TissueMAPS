@@ -35,15 +35,15 @@
     state: started
   when: instance_state == "present"
 
-# TODO: this does not trigger --refresh
+# TODO: According to the docs, this should trigger: tm_inventory --refresh
 - meta: refresh_inventory
 
-# - include: roles/cloud-instance/tasks/format.yml
-#   delegate_to: "{{ instance_ip }}"
-#   delegate_facts: yes
-#   when: (volume_size is defined) and (instance_state == "present")
+- include: format.yml
+  delegate_to: "{{ ansible_host }}"
+  delegate_facts: yes
+  when: (volume_size is defined) and (instance_state == "present")
 
-# - include: roles/cloud-instance/tasks/mount.yml
-#   delegate_to: "{{ instance_ip }}"
-#   delegate_facts: yes
-#   when: (volume_size is defined) and (instance_state == "present")
+- include: mount.yml
+  delegate_to: "{{ ansible_host }}"
+  delegate_facts: yes
+  when: (volume_size is defined) and (instance_state == "present")
