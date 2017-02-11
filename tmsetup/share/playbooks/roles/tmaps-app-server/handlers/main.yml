@@ -20,11 +20,3 @@
     name: uwsgi
     state: restarted
     enabled: yes
-
-# - name: restart postgresql
-#   become: yes
-#   service:
-#     name: postgresql
-#     state: restarted
-#     enabled: yes
-
