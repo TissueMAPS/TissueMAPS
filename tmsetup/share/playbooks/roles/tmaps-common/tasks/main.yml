@@ -17,27 +17,6 @@
 ---
 - include_vars: file={{ playbook_dir }}/vars/tissuemaps.yml
 
-- include: utils.yml
-
-- name: Create .bash_profile file
-  template:
-    src=bash_profile.j2
-    dest="{{ ansible_env.HOME }}/.bash_profile"
-
-- name: Create .bash_login file
-  file:
-    path="{{ ansible_env.HOME }}/.bash_login"
-    state=touch
-
-- name: Source .bash_profile in .bash_login
-  lineinfile:
-    dest="{{ ansible_env.HOME }}/.bash_login"
-    state=present
-    regexp='source {{ ansible_env.HOME }}/.bash_profile'
-    line='source {{ ansible_env.HOME }}/.bash_profile'
-
-# Sometimes the cache does not work so it is good to force update for
-# this playbook
 - name: Update apt packages
   become: yes
   tags:
@@ -46,6 +25,10 @@
     upgrade=safe
     update_cache=yes
     cache_valid_time=3600
+
+- include: utils.yml
+
+- include: env.yml
 
 - include: ssh.yml
 

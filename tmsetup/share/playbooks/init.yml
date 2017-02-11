@@ -30,9 +30,9 @@
         state=restarted
         enabled=yes
 
-- name: Restart web server
+- name: Restart web and application servers
   hosts:
-    - tissuemaps_web_server
+    - tissuemaps_web
   tasks:
     - name: Restart and enable nginx service
       become: yes
@@ -40,11 +40,6 @@
         name=nginx
         state=restarted
         enabled=yes
-
-- name: Restart application server
-  hosts:
-    - tissuemaps_app_server
-  tasks:
     - name: Restart and enable uwsgi service
       become: yes
       service:
