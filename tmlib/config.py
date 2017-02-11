@@ -210,9 +210,7 @@ class LibraryConfig(TmapsConfig):
     def __init__(self):
         super(LibraryConfig, self).__init__()
         self.modules_home = '~/jtmodules'
-        self.storage_home = '/data/experiments'
-        self.tool_library = DEFAULT_LIB
-        self.spark_master = 'local'
+        self.storage_home = '/storage/experiments'
         self.read()
 
     @property
@@ -250,68 +248,3 @@ class LibraryConfig(TmapsConfig):
                 'Configuration parameter "storage_home" must have type str.'
             )
         self._config.set(self._section, 'storage_home', str(value))
-
-    @property
-    def spark_master(self):
-        '''str: name of the `Apache Spark` master
-        (choices: ``{"local", "yarn"}``, default: ``"local"``)
-        '''
-        return self._config.get(self._section, 'spark_master')
-
-    @spark_master.setter
-    def spark_master(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError(
-                'Configuration parameter "spark_master" must have type str.'
-            )
-        vals = {'local', 'yarn'}
-        if value not in vals:
-            raise ValueError(
-                'Configuration parameter "spark_master" must be one of the '
-                'following: "%s"' % '", "'.join(vals)
-            )
-        self._config.set(self._section, 'spark_master', str(value))
-
-    @property
-    def spark_jdbc_driver(self):
-        '''str: path to the `PostgreSQL` JDBC driver jar file
-
-        The driver can be downloaded from the
-        `PostgreSQL website <https://jdbc.postgresql.org/download.html>`_.
-        '''
-        return os.path.expanduser(os.path.expandvars(
-            self._config.get(self._section, 'spark_jdbc_driver')
-        ))
-
-    @spark_jdbc_driver.setter
-    def spark_jdbc_driver(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError(
-                'Configuration parameter "spark_jdbc_driver" must have type str.'
-            )
-        value = os.path.expanduser(os.path.expandvars(value))
-        if not os.path.exists(value):
-            raise OSError(
-                'JDBC driver does not exist: %s', value
-            )
-        self._config.set(self._section, 'spark_jdbc_driver', str(value))
-
-    @property
-    def tool_library(self):
-        '''str: library that should be used for processing tool requests
-        requests (default: ``"pandas"``, options: ``{"pandas", "spark"}``)
-        '''
-        return self._config.get(self._section, 'tool_library')
-
-    @tool_library.setter
-    def tool_library(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError(
-                'Configuration parameter "tool_library" must have type str.'
-            )
-        if value not in IMPLEMENTED_LIBS:
-            raise ValueError(
-                'Configuration parameter "tool_library" can be one of the '
-                'following: "%s"' % '", "'.join(IMPLEMENTED_LIBS)
-            )
-        self._config.set(self._section, 'tool_library', str(value))
