@@ -147,7 +147,6 @@ setuptools.setup(
        'h5py>=2.5.0',
        'image-registration>=0.2.1',
        'mahotas>=1.4.1',
-       'matlab-wrapper>=0.9.6',
        'matplotlib>=2.0.0',
        'mock>=1.0.1',
        'natsort>=4.0.3',
@@ -162,8 +161,9 @@ setuptools.setup(
        'pyparsing>=2.0.3',
        'pypng>=0.0.17',
        # Python-bioformats installs javabridge, which requires Java
-       # Ubuntu: sudo apt-get -y install openjdk-7-jdk
-       #         export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
+       # Ubuntu:
+       #    sudo apt-get -y install openjdk-7-jdk
+       #    export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
        'python-bioformats>=1.0.9',
        'python-dateutil>=2.4.2',
        'pytest>=2.9.1',
@@ -171,21 +171,24 @@ setuptools.setup(
        'PyYAML>=3.11',
        'scikit-image>=0.12.0',
        'scikit-learn>=0.18',
-       # Ubuntu: sudo apt-get -y install libgeos-dev
+       # Ubuntu:
+       #    sudo apt-get -y install libgeos-dev
        'shapely>=1.5.15',
-       'sqlalchemy>=0.9',
+       'simplejson>=3.10',
+       'sqlalchemy>=1.1.5',
        'sqlalchemy-utils>=0.32.9',
        'tables>=3.2.2',
        'ruamel.yaml>=0.10.11'
        'pyfakefs',
        'APScheduler>=3.0.5',
-       # Ubuntu: sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
+       # Ubuntu:
+       #    sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        'whichcraft>=0.4.0',
        'gc3pie==2.5.dev',
     ],
     extras_require = {
-       'jterator': ['jtmodules>=0.1.0', 'rpy2>=2.7.4']
+       'jterator': ['jtmodules>=0.1.0', 'rpy2>=2.7.4', 'matlab-wrapper>=0.9.6']
     },
     dependency_links=[
         # The dependency_links functionality has been deprecated, but it can
