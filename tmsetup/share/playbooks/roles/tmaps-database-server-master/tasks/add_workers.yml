@@ -14,16 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Ensure the PostgreSQL service is running
-  become: yes
-  # TODO: containers???
-  service:
-    name=postgresql
-    state=started
-    enabled=yes
-  tags:
-    - database
-
 - name: Add remote worker nodes
   become: yes
   become_user: postgres
@@ -38,5 +28,5 @@
   become_user: postgres
   vars:
     ansible_ssh_pipelining: true
-  command: psql -c tissuemaps "SELECT master_add_node('localhost', {{ db_port_worker }});"
+  command: psql tissuemaps -c "SELECT master_add_node('localhost', {{ db_port_worker }});"
   when: "{{ db_host_master == hostvars[groups['tissuemaps_database_worker'][0]].ansible_default_ipv4.address }}"

@@ -1,9 +1,0 @@
-{% include 'roles/tmaps-common/templates/bash_profile.j2' %}
-
-## Added by ansible playbook tmaps-web-server
-
-# Postgres database
-export PGPASSFILE=~/.pgpass
-export TMAPS_DB_HOST={{ db_host_master }}
-alias db="psql -h $TMAPS_DB_HOST tissuemaps tissuemaps"
-alias sudb="psql -h $TMAPS_DB_HOST postgres postgres"

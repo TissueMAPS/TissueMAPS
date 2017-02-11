@@ -1,27 +1,25 @@
-# Added by ansible playbook tmaps-common
-
 # Make vim default editor
 export EDITOR=vim;
 
-# GC3Pie
+# Slurm
 export SQUEUE_FORMAT="%.18a %.18i %.40j %.8T %.10M %.9l %.6D %R"
 export SACCT_FORMAT="Account,JobId,JobName%40,State,Exitcode,DerivedExitCode,Elapsed,CPUTime,AveCPU,AveDiskRead,AveDiskWrite"
-
-# OpenCV
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/opencv/lib
 
 # Bioformats CLI Tools
 export PATH=$HOME/bftools:$PATH
 
 # Python
-export PATH="$HOME/.local/bin:$PATH"
+export PATH=$HOME/.local/bin:$PATH
 export PYTHONPATH=/usr/local/lib/python2.7/dist-packages:$PYTHONPATH
 
 # Matlab
 export MATLABHOME=/usr/local/MATLAB/{{ matlab_version }}
 export MATLABROOT=${MATLABHOME}
-export MATLABPATH=$HOME/jtlibrary/matlab:$MATLABPATH
-export MATLABPATH=$HOME/jtmodules/matlab:$MATLABPATH
+export MATLABPATH=$HOME/jtlibrary/src/matlab:$MATLABPATH
+export MATLABPATH=$HOME/jtmodules/src/matlab:$MATLABPATH
 
-# Spark
-export PATH=$PATH:$HOME/spark/bin
+# Postgres database
+export PGPASSFILE=~/.pgpass
+export TMAPS_DB_HOST=localhost
+alias db="psql -h $TMAPS_DB_HOST tissuemaps tissuemaps"
+alias sudb="psql -h $TMAPS_DB_HOST postgres postgres"

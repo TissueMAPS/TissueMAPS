@@ -47,8 +47,19 @@
     - database
     - tissuemaps
 
-- name: Append (extend) existing bash_profile
-  template:
-    src=extend_bash_profile.j2
-    dest="{{ ansible_env.HOME }}/.bash_profile"
+- name: Update bash_profile
+  lineinfile:
+    dest: "{{ ansible_env.HOME }}/.bash_profile"
+    line: "export TMAPS_DB_HOST={{ db_host_master }}"
+    regexp: "^export.TMAPS_DB_HOST.*"
+  tags:
+    - database
+    - tissuemaps
 
+- name: Source bash_profile
+  shell: . {{ ansible_env.HOME }}/.bash_profile
+  args:
+    executable: /bin/bash
+  tags:
+    - database
+    - tissuemaps

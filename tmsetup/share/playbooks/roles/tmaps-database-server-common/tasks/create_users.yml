@@ -14,16 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Ensure the PostgreSQL service is running
-  become: yes
-  # TODO: container???
-  service:
-    name=postgresql
-    state=started
-    enabled=yes
-  tags:
-    - database
-
 - name: Create database user
   become: yes
   become_user: postgres

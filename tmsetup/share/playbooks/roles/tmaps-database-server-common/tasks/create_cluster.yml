@@ -101,12 +101,15 @@
   tags:
     - database
 
-- debug:
-    msg: "db_port: {{ db_port }}"
-
-- name: Initialize database cluster at created data directory
+- name: Remove empty default database cluster
   become: yes
-  # become_user: postgres
+  command: pg_dropcluster {{ postgresql_version }} main --stop
+  ignore_errors: yes
+  tags:
+    - database
+
+- name: Initialize database cluster
+  become: yes
   command: pg_createcluster {{ postgresql_version }} {{ db_node }} -p {{ db_port }} -d {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
   args:
     creates: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/base"
