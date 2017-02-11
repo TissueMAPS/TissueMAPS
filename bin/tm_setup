@@ -59,7 +59,8 @@ def get_deployment_groups(selected_cluster, selected_nodetype, selected_groups):
                 groups_to_deploy[group.name].append(group.playbook)
 
     required_groups = {
-        'tissuemaps_web', 'tissuemaps_compute', 'tissuemaps_database'
+        'tissuemaps_web', 'tissuemaps_compute',
+        'tissuemaps_database_master', 'tissuemaps_database_worker'
     }
     for group in required_groups:
         if group not in groups_to_deploy.keys():
