@@ -1,0 +1,54 @@
+# TmSetup - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+# (Re)start services and enable them such that they will be automatically
+# started upon system startup.
+# We don't do this within the respective roles for compatibility with
+# Docker compose.
+- name: Restart database servers
+  hosts:
+    - tissuemaps_database_worker
+    - tissuemaps_database_master
+  tasks:
+    - name: Restart and enable postgresql service
+      become: yes
+      service:
+        name=postgresql
+        state=restarted
+        enabled=yes
+
+- name: Restart web server
+  hosts:
+    - tissuemaps_web_server
+  tasks:
+    - name: Restart and enable nginx service
+      become: yes
+      service:
+        name=nginx
+        state=restarted
+        enabled=yes
+
+- name: Restart application server
+  hosts:
+    - tissuemaps_app_server
+  tasks:
+    - name: Restart and enable uwsgi service
+      become: yes
+      service:
+        name=uwsgi
+        state=restarted
+        enabled=yes
+

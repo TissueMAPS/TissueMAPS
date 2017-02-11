@@ -38,8 +38,6 @@
   template:
     src=nginx_site.j2
     dest="/etc/nginx/sites-available/tissuemaps"
-  notify:
-    - restart nginx
   tags:
     - nginx
     - web-server
@@ -49,8 +47,6 @@
   template:
     src=nginx_conf.j2
     dest="/etc/nginx/conf.d/tmaps.conf"
-  notify:
-    - restart nginx
   tags:
     - nginx
     - web-server
@@ -67,8 +63,6 @@
     if [ -s /etc/nginx/sites-enabled/default ]; then
       rm /etc/nginx/sites-enabled/default
     fi
-  notify:
-    - restart nginx
   tags:
     - nginx
     - web-server

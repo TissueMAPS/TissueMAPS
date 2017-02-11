@@ -45,8 +45,6 @@
   template:
     src=uwsgi.conf.j2
     dest=/etc/init/uwsgi.conf
-  notify:
-    - restart uwsgi
   tags:
     - app-server
     - uwsgi

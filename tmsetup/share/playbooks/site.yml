@@ -21,3 +21,4 @@
 - include: web.yml
 - include: database.yml
 - include: postconfig.yml
+- include: init.yml
