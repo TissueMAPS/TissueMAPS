@@ -86,6 +86,7 @@
   pip:
     name=git+{{ tm_github_url }}/gc3pie@master#egg=gc3pie
     extra_args="--user"
+    executable=pip2.7
   tags:
     - tissuemaps
 

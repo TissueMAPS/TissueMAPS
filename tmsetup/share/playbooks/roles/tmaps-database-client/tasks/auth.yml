@@ -26,7 +26,7 @@
 
 - name: Update db_password in TissueMAPS configuration
   ini_file:
-    dest={{ tmaps_config_file }}
+    dest={{ tm_config_file }}
     create=yes
     section=DEFAULT
     state=present
@@ -38,7 +38,7 @@
 
 - name: Update db_host in TissueMAPS configuration
   ini_file:
-    dest={{ tmaps_config_file }}
+    dest={{ tm_config_file }}
     section=DEFAULT
     state=present
     option=db_host
