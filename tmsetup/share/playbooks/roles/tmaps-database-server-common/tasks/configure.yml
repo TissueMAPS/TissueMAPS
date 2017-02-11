@@ -44,15 +44,33 @@
   tags:
     - database
 
-- name: Configure authentication
+- name: Allow unrestricted access from private IP range
   become: yes
   lineinfile:
     dest=/etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
     state=present
     regexp="^host\s+all\s+all\s+[./0-9]*\s+trust"
-    line="host    all             all             {{ ip_range }}               trust"
-  notify:
-    - restart postgresql
+    line="host    all             all             {{ ip_range }}          trust"
+  tags:
+    - database
+
+- name: Allow host unrestricted access to connect to itself I
+  become: yes
+  lineinfile:
+    dest=/etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    state=present
+    regexp="^host\s+all\s+all\s+127\.0\.0\.1/32\s+md5"
+    line="host    all             all             127.0.0.1/32            trust"
+  tags:
+    - database
+
+- name: Allow host unrestricted access to connect to itself II
+  become: yes
+  lineinfile:
+    dest=/etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    state=present
+    regexp="^host\s+all\s+all\s+::1/128\s+md5"
+    line="host    all             all             ::1/128                 trust"
   tags:
     - database
 
