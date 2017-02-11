@@ -147,6 +147,7 @@ setuptools.setup(
        'h5py>=2.5.0',
        'image-registration>=0.2.1',
        'mahotas>=1.4.1',
+       'matlab-wrapper>=0.9.6',
        'matplotlib>=2.0.0',
        'mock>=1.0.1',
        'natsort>=4.0.3',
@@ -158,6 +159,7 @@ setuptools.setup(
        'paramiko>=1.15.3',
        'parsedatetime>=1.5',
        'prettytable>=0.7.2',
+       'psycopg2>=2.6.1',
        'pyparsing>=2.0.3',
        'pypng>=0.0.17',
        # Python-bioformats installs javabridge, which requires Java
@@ -179,6 +181,7 @@ setuptools.setup(
        'sqlalchemy-utils>=0.32.9',
        'tables>=3.2.2',
        'ruamel.yaml>=0.10.11'
+       'rpy2>=2.7.4',
        'pyfakefs',
        'APScheduler>=3.0.5',
        # Ubuntu:
@@ -188,7 +191,7 @@ setuptools.setup(
        'gc3pie==2.5.dev',
     ],
     extras_require = {
-       'jterator': ['jtmodules>=0.1.0', 'rpy2>=2.7.4', 'matlab-wrapper>=0.9.6']
+       'jterator': ['jtmodules>=0.1.0']
     },
     dependency_links=[
         # The dependency_links functionality has been deprecated, but it can

@@ -23,7 +23,6 @@ import pandas as pd
 import collections
 import shapely.geometry
 import shapely.ops
-import matlab_wrapper as matlab
 from cached_property import cached_property
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
@@ -157,6 +156,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # TODO: JVM for java code
         languages = [m.language for m in self.pipeline]
         if 'Matlab' in languages:
+            import matlab_wrapper as matlab
             logger.info('start Matlab engine')
             # NOTE: It is absolutely necessary to specify these startup options
             # for use parallel processing on the cluster. Otherwise some jobs
