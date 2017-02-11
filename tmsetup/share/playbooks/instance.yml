@@ -15,20 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# Ansible playbook for creating, terminating, starting and stopping virtual
-# machine instsances in the cloud. The state of instances is controlled via the
-# "instance_state" variable. Note that not all states are provided for all
-# implemented providers.
+# Ansible playbook for launching and terminating virtual machine instances
+# in the cloud. The action is controlled via the "instance_state" variable:
+#  - "present" => launch VM (default)
+#  - "absent"  => terminate VM
 - name: Provision virtual machine instances
   hosts: all
   vars:
     instance_state: present
-  # connection: local
+  connection: local
   roles:
     - cloud-instance
-
-# # NOTE: This should be included in the above play. However, the "delegate_to"
-# # Ansible module is broken, which prevents a combination of local and remote
-# # tasks in the play at the moment.
-# - include: volume.yml
-#   when: instance_state == 'present'
