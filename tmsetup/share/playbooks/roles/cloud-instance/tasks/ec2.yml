@@ -184,14 +184,22 @@
 - debug:
     msg: "{{ (instance.instances|length) == 0 }}"
 
-- name: Register host IP address of existing instance
-  set_fact:
+- name: Add new host to inventory
+  add_host:
+    groups: tmp
+    hostname: "{{ instance_name }}"
     ansible_host: "{{ instance.tagged_instances[0].public_ip if assign_public_ip else instance.tagged_instances[0].private_ip }}"
+    ansible_user: "{{ ansible_user }}"
+    ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
   when: instance_state == 'present' and (instance.instances|length) == 0
 
-- name: Register host IP address of created instance
-  set_fact:
+- name: Add new host to inventory
+  add_host:
+    groups: tmp
+    hostname: "{{ instance_name }}"
     ansible_host: "{{ instance.instances[0].public_ip if assign_public_ip else instance.instances[0].private_ip }}"
+    ansible_user: "{{ ansible_user }}"
+    ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
   when: instance_state == 'present' and (instance.instances|length) != 0 and not assign_public_ip
 
 - name: Get ID of existing instance
@@ -217,8 +225,3 @@
     volume_size: "{{ volume_size }}"
   register: volume
   when: instance_state == 'present' and volume_size is defined
-
-- name: Unregister host
-  set_fact:
-    ansible_host: null
-  when: instance_state == 'absent'

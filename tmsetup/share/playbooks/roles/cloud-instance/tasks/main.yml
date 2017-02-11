@@ -21,29 +21,22 @@
 # gce: gce_net
 - include: "{{provider}}.yml"
 
-- debug:
-    msg: Created instance {{ ansible_host }}
-  when: instance_state == "present"
-
 - name: Wait for instance
   local_action: wait_for
   args:
-    host: "{{ ansible_host }}"
+    host: "{{ hostvars[instance_name].ansible_default_ipv4.address }}"
     port: 22
     delay: 30
     timeout: 300
     state: started
   when: instance_state == "present"
 
-# TODO: According to the docs, this should trigger: tm_inventory --refresh
-- meta: refresh_inventory
-
 - include: format.yml
-  delegate_to: "{{ ansible_host }}"
+  delegate_to: "{{ instance_name }}"
   delegate_facts: yes
   when: (volume_size is defined) and (instance_state == "present")
 
 - include: mount.yml
-  delegate_to: "{{ ansible_host }}"
+  delegate_to: "{{ instance_name }}"
   delegate_facts: yes
   when: (volume_size is defined) and (instance_state == "present")

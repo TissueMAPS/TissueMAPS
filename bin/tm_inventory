@@ -204,7 +204,7 @@ def update_static_inventory(inventory_info, setup):
             })
             # NOTE: --refresh is supposed to be triggered by ansible via
             # (meta: refresh_inventory), but it's not!
-            if args.refresh:
+            if args.refresh or args.refresh_cache:
                 try:
                     host_vars['ansible_host'] = get_host_ip(
                         setup.cloud.provider, setup.cloud.region,
@@ -213,7 +213,7 @@ def update_static_inventory(inventory_info, setup):
                     )
                 except NoInstanceFoundError:
                     logger.warn('no instance found for host "%s"', host)
-                    host_vars['ansible_host'] = None
+                    # host_vars['ansible_host'] = None
                     logger.debug('remove "ansible_host" variable')
                 except CloudError as err:
                     logger.error(
@@ -226,13 +226,13 @@ def update_static_inventory(inventory_info, setup):
                     host_vars['ansible_host'] = pre_host_vars['ansible_host']
                 except OSError:
                     logger.warn('no variable file found for host "%s"', host)
-                    host_vars['ansible_host'] = None
+                    # host_vars['ansible_host'] = None
                 except KeyError:
                     logger.warn(
                         'variable "ansible_host" is not defined for host "%s"',
                         host
                     )
-                    host_vars['ansible_host'] = None
+                    # host_vars['ansible_host'] = None
             if 'web' in host_vars['tags']:
                 # NOTE: We use an architecture where hosts are part of a private
                 # network and have security group settings that prevent access
@@ -242,12 +242,15 @@ def update_static_inventory(inventory_info, setup):
                 # network, Ansible can only connect to the "web" host directly.
                 # We therefore use the "web" host as a bastion host through
                 # which we can connect to other hosts.
-                inventory_info['all']['vars']['ansible_ssh_common_args'] = \
-                    '-o ProxyCommand="ssh -i {file} -W %h:%p -q {user}@{host}"'.format(
-                        file=host_vars['ansible_ssh_private_key_file'],
-                        user=host_vars['ansible_user'],
-                        host=host_vars['ansible_host']
-                    )
+                if 'ansible_host' in host_vars:
+                    inventory_info['all']['vars']['ansible_ssh_common_args'] = \
+                        '-o ProxyCommand="ssh -i {file} -W %h:%p -q {user}@{host}"'.format(
+                            file=host_vars['ansible_ssh_private_key_file'],
+                            user=host_vars['ansible_user'],
+                            host=host_vars['ansible_host']
+                        )
+                else:
+                    logger.warn('variable "ansible_host" is not defined')
             # Update inventory with host and group variables
             inventory_info['_meta']['hostvars'][host].update(host_vars)
             write_yaml_file(host_vars_file, host_vars)
@@ -305,6 +308,10 @@ if __name__ == "__main__":
     # )
     parser.add_argument(
         '--refresh', action='store_true',
+        help='refresh cached information'
+    )
+    parser.add_argument(
+        '--refresh-cache', dest='refresh_cache', action='store_true',
         help='refresh cached information'
     )
     parser.add_argument(
