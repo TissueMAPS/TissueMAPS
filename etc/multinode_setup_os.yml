@@ -11,10 +11,10 @@ architecture:
   clusters:
     - name: postgresql
       node_types:
-        - name: server
+        - name: master
           count: 1
           groups:
-            - name: tissuemaps_database
+            - name: tissuemaps_database_master
               vars:
                 db_password: XXX
             - name: ganglia_client
@@ -22,6 +22,19 @@ architecture:
             volume_size: 1000
             image: Ubuntu Server 14.04.04 LTS (2016-05-19)
             flavor: 16cpu-64ram-hpc
+            tags:
+              - storage
+        - name: worker
+          count: 2
+          groups:
+            - name: tissuemaps_database_worker
+              vars:
+                db_password: XXX
+            - name: ganglia_client
+          instance:
+            volume_size: 1000
+            image: Ubuntu Server 14.04.04 LTS (2016-05-19)
+            flavor: 4cpu-16ram-hpc
             tags:
               - storage
     - name: glusterfs
@@ -55,7 +68,7 @@ architecture:
               - web
               - compute
         - name: worker
-          count: 4
+          count: 10
           groups:
             - name: tissuemaps_compute
             - name: slurm_workers

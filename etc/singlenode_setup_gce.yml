@@ -16,7 +16,10 @@ architecture:
             - name: tissuemaps_web
               vars:
                 db_password: XXX
-            - name: tissuemaps_database
+            - name: tissuemaps_database_master
+              vars:
+                db_password: XXX
+            - name: tissuemaps_database_worker
               vars:
                 db_password: XXX
           instance:

@@ -7,7 +7,7 @@ cloud:
 architecture:
   name: tissuemaps
   clusters:
-    - name: singlenode
+    - name: standalone
       node_types:
         - name: server
           count: 1
@@ -16,13 +16,16 @@ architecture:
             - name: tissuemaps_web
               vars:
                 db_password: XXX
-            - name: tissuemaps_database
+            - name: tissuemaps_database_master
+              vars:
+                db_password: XXX
+            - name: tissuemaps_database_worker
               vars:
                 db_password: XXX
           instance:
             volume_size: 500
             image: Matlab-R2016a - ubuntu 14.04.4 x86-64 - (2016-03-17)
-            flavor: 16cpu-64ram-hpc
+            flavor: 4cpu-16ram-hpc
             tags:
               - web
               - compute
