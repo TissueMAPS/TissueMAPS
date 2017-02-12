@@ -5,16 +5,16 @@ Installation
 
 `TissueMAPS` uses a client-server model:
 
-* **Client** code runs on local machines and interacts with the server over `HTTP <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_ protocol. No local installation is required for the user interface, since the `Javascript` code is served to users via the browser. Other client implementations (active programming and command line interfaces) need to be installed locally. They have very few dependencies and are easy to install on various platforms (Linux, MacOSX, Windows).
+* **Client** code runs on the user's local machine and interacts with the server over `HTTP <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_ protocol. No local installation is required for the web user interface, since the `Javascript` code is served to the user via the browser. Other client implementations (active programming and command line interfaces) need to be installed locally. They have very few dependencies and are easy to install on various platforms (Linux, MacOSX, Windows).
 
-* **Server** code can also run on a local machine, but is typically deployed on a remote machine (or multiple machines). It has many dependencies, is more complicated to setup and is designed for `UNIX <http://www.unix.org/what_is_unix.html>`_ plaforms (we have never tested it, but the server probably won't run on Windows). This section provides instructions for manual setup on MacOSX and Linux Ubuntu. `TissuMAPS` further provides automated configuration management and deployment routines for `Ubuntu 14.04 <http://releases.ubuntu.com/14.04/>`_ in form of `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_. For more information, please refer to the :doc:`cloud setup and deployment <setup_and_deployment>`
+* **Server** code can also run on the local machine, but is typically deployed on a remote machine (or multiple machines). It has many dependencies and is designed for `UNIX <http://www.unix.org/what_is_unix.html>`_ plaforms. This section provides instructions for manual deployment on MacOSX and Linux Ubuntu. For production deployment, please refer to the :doc:`cloud setup and deployment <setup_and_deployment>` section.
 
 .. _clients:
 
 Clients
 =======
 
-Users can interact with the program via a standard web browser (tested with `Chrome <https://www.google.com/chrome/>`_, `Firefox <https://www.mozilla.org/en-US/firefox/new/>`_ and `Safari <http://www.apple.com/safari/>`_) without the need to install any additional software locally.
+Users can interact with the *TissueMAPS* via a standard web browser (tested with `Chrome <https://www.google.com/chrome/>`_, `Firefox <https://www.mozilla.org/en-US/firefox/new/>`_ and `Safari <http://www.apple.com/safari/>`_) without the need to install any additional software locally.
 
 Other client implementations are available in various languages through the `TmClient <https://github.com/TissueMAPS/TmClient>`_ repository.
 
@@ -29,10 +29,9 @@ The `tmclient` Python package provides an active programming and command line in
 Requirements
 ^^^^^^^^^^^^
 
-* `Python <https://www.python.org/>`_ (version 2.7): Many platforms are shipped with Python already pre-installed. If not, it can downloaded from `python.org <https://www.python.org/downloads/>`_. We recommend using version 2.7.9 or higher.
+* `Python <https://www.python.org/>`_ (version 2.7): Many platforms are shipped with Python already pre-installed. If not, it can be downloaded from `python.org <https://www.python.org/downloads/>`_. We recommend using version 2.7.9 or higher.
 * `Pip <https://pip.pypa.io/en/stable/>`_: The Python package manager is automatically installed with Python distributions downloaded from python.org. Otherwise, it can be installed with the `get-pip.py <https://bootstrap.pypa.io/get-pip.py>`_ script.
 * `Git <https://git-scm.com/>`_: Available on Linux and MaxOSX via various package managers. On Windows, we recommend using `Git Bash <https://git-for-windows.github.io/>`_.
-* `OpenCV <http://opencv.org/>`_ (version 3.1): Prebuild binaries for different platforms are available for download on `opencv.org <http://opencv.org/downloads.html>`_. Detailed instructions for building the latest version from source can be found in the `online documentation <http://docs.opencv.org/3.1.0/df/d65/tutorial_table_of_content_introduction.html>`_. Packages are also available via `homebrew <https://github.com/Homebrew/homebrew-science/blob/master/opencv3.rb>`_ on `MacOSX` or cross-platform via `anaconda <https://anaconda.org/menpo/opencv3>`_. Note that when using a virtual environment, the Python bindings need to be  manually copied or linkied, since the package gets installed globally.
 
 
 Installation
@@ -60,9 +59,9 @@ Installation
 To be able to import the `tmclient` Matlab package, the source code needs to be downloaded from Github.
 To this end, clone the `TmClient <https://github.com/TissueMAPS/TmClient>`_ repository using the `git` command line interface on Linux/MacOSX or `Git Bash <https://git-for-windows.github.io/>`_ on Windows::
 
-    git clone https://github.com/TissueMAPS/TmClient.git $HOME/tmclient
+    git clone https://github.com/tissuemaps/tmclient
 
-The path to the local copy of the Matlab code needs to be added to the Matlab search path, by either using a ``startup.m`` file or setting the ``MATLABPATH`` environment variable. For further information please refer to the `Matlab online documentation <https://mathworks.com/help/matlab/matlab_env/add-folders-to-matlab-search-path-at-startup.html>`_.
+The path to the local copy of the Matlab code needs to be added to the Matlab search path, by either using a ``startup.m`` file or setting the ``MATLABPATH`` environment variable. For further information, please refer to the `Matlab documentation <https://mathworks.com/help/matlab/matlab_env/add-folders-to-matlab-search-path-at-startup.html>`_.
 
 
 .. _r-client:
@@ -73,8 +72,8 @@ R client
 Requirements
 ^^^^^^^^^^^^
 
-* `R <https://www.r-project.org/>`_ (version 3.0.2 or higher): R is available for `download <https://cran.r-project.org/mirrors.html>`_.
-* `devtools <https://cran.r-project.org/web/packages/devtools/README.html>`_: The package can be installed via `CRAN <https://cran.r-project.org/>`_: ``install.packages("devtools")``.
+* `R <https://www.r-project.org/>`_ (version 3.0.2 or higher): R is available for download form `CRAN <https://cran.r-project.org/mirrors.html>`_.
+* `devtools <https://cran.r-project.org/web/packages/devtools/README.html>`_: The package can also be installed via *CRAN*: ``install.packages("devtools")``.
 
 
 Installation
@@ -92,11 +91,11 @@ The `tmclient` R package can be installed from the R console using the `devtools
 Server
 ======
 
-The server backend is designed for `UNIX`-based operating systems. It has been successfully deployed in production on `Ubuntu 14.04 Trusty <http://releases.ubuntu.com/14.04/>`_ and development on `MacOSX 10.10.5 Yosemite <https://support.apple.com/kb/DL1833?locale=en_US>`_.
+The server backend is designed for `UNIX`-based operating systems. It has been tested on `Ubuntu 14.04 Trusty <http://releases.ubuntu.com/14.04/>`_ and `MacOSX 10.10.5 Yosemite <https://support.apple.com/kb/DL1833?locale=en_US>`_.
 
 For MacOSX we highly recommend using the `Homebrew <http://brew.sh/>`_ package manager.
 
-The `TissueMAPS` server is comprised of different components: web, storage, and compute units. These components might be all installed on the same machine or distributed accross multiple machines, depending on available resources and expected workloads.
+The `TissueMAPS` server is comprised of different components: web, storage, and compute units. These components can all installed on the same machine or distributed accross multiple machines, depending on available resources and expected workloads.
 
 Below, the individual server components are desribed and instructions for manual installation and configuration instructions are provided for setup on a single machine. The manual installation guide gives an overview of the different components and their requirements and can be helpful for setting up a `TissueMAPS` server for local development. Note that you don't need to install web and application servers for local debugging and testing, since development servers are provided through the `TmUI <https://github.com/TissueMAPS/TmUI>`_ and `TmServer <https://github.com/TissueMAPS/TmServer>`_ repositories, respectively. For production deployment, please refer to the `cloud setup and deployment <setup_and_deployment>`_ section, where you'll find instructions on how to setup `TissueMAPS` in the cloud in a fully automated and reproducible way.
 
@@ -106,7 +105,8 @@ Web server
 ----------
 
 The `TmUI <https://github.com/TissueMAPS/TmUI>`_ repository hosts the code for the `AngularJS <https://angularjs.org/>`_ web app. It is written to large extends in `TypeScript <https://www.typescriptlang.org/>`_ and managed by `Gulp <http://gulpjs.com/>`_.
-The `HTTP` server serves the app (`HTML <http://www.w3schools.com/html/html_intro.asp>`_ templates and built `Javascript <http://www.w3schools.com/js/js_intro.asp>`_ code) to clients.
+
+The *HTTP* web server serves the `HTML <http://www.w3schools.com/html/html_intro.asp>`_ templates and built `Javascript <http://www.w3schools.com/js/js_intro.asp>`_ code to clients.
 
 .. _web-server-requirements:
 
@@ -200,10 +200,10 @@ When using `NGINX`, create an application-specific site and set the path to the 
         }
     }
 
-Enable the ``tissuemaps`` site by creating the following softlink and remove the ``default`` site::
+Remove the ``default`` site and enable the ``tissuemaps`` site by creating the following softlink::
 
-    sudo ln -s /etc/nginx/sites-available/tissuemaps /etc/nginx/sites-enabled/tissuemaps
     sudo rm /etc/nginx/sites-enabled/default
+    sudo ln -s /etc/nginx/sites-available/tissuemaps /etc/nginx/sites-enabled/tissuemaps
 
 Set the following application-specific parameters in ``/etc/nginx/conf.d/tissuemaps.conf`` (the values may need to be adapated for your use case):
 
@@ -213,6 +213,8 @@ Set the following application-specific parameters in ``/etc/nginx/conf.d/tissuem
     uwsgi_buffering off;
     client_max_body_size 10000M;
 
+.. note:: You can of course use an alternative web server, such as `Apache <https://httpd.apache.org/>`_.
+
 
 .. _application-server:
 
@@ -220,30 +222,38 @@ Application server
 ------------------
 
 The application server communicates between the web server and the Python web application, using the `Web Server Gateway Interface (WSGI) specification <https://wsgi.readthedocs.io/en/latest/>`_.
-Since we will run web and application servers on the same machine, we use a Unix socket, which communicates with the web proxy server via the `WSGI` protocol instead of a network port. This would need to be changed when the different server components operate on separate machines.
+
+Since web and application servers will run on the same machine, we use a Unix socket to communicates with the web proxy server via the *WSGI* protocol instead of a network port. This would need to be changed when the different server components operate on separate machines or in separate containers.
 
 .. _application-server-requirements:
 
 Requirements
 ^^^^^^^^^^^^
 
-* `Python <https://www.python.org/>`_ (version 2.7): Ubuntu (up to version 14.04) and MacOSX come with Python included. However, installing a newer version (2.7.9 or higher) is recommended. On MacOSX make sure you use the version installed via `Homebrew`!
+* `Python <https://www.python.org/>`_ (version 2.7): Ubuntu (up to version 14.04) and MacOSX come with Python included. However, installing a newer version (2.7.9 or higher) and running the server in a virtual environment is recommended. On MacOSX make sure you use the version installed via `Homebrew`!
 * `Pip <https://pip.pypa.io/en/stable/>`_: The Python package manager is typically already installed with the Python distributions, but we need to update it to make sure we use the most recent version.
 
     On Ubuntu:
 
     .. code-block:: none
 
-        sudo add-apt-repository ppa:fkrull/deadsnakes-python2.7
         sudo apt-get update
-        sudo apt-get -y install python2.7
+        sudo apt-get -y install python-pip python-setuptools python-dev build-essential
+        sudo apt-get -y install libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
 
-        sudo apt-get -y install python-pip python-dev build-essential
+        wget https://www.python.org/ftp/python/2.7.13/Python-2.7.13.tgz
+        tar -xvf Python-2.7.13.tgz
+        cd Python-2.7.13
+        ./configure
+        make
+        sudo make install  # sudo make altinstall
+
         sudo pip install --upgrade pip
         sudo pip install --upgrade setuptools
 
     On MacOSX::
 
+        brew update
         brew install python
         sudo pip install --upgrade pip
         sudo pip install --upgrade setuptools
@@ -263,7 +273,7 @@ If you don't install the application on a dedicated machine, we recommend using 
 
 To this end, install `virtualenv <https://virtualenv.readthedocs.org/en/latest/>`_ and `virtualenvwrapper <https://virtualenvwrapper.readthedocs.org/en/latest/>`_::
 
-    sudo pip install virtualenv virtualenvwrapper
+    sudo pip install virtualenvwrapper
 
 Add the following lines to your ``~/.bash_profile`` file:
 
@@ -292,7 +302,7 @@ Create a direcotory for `TissueMAPS`-specific configurations::
 
     mkdir ~/.tmaps
 
-and configure `uWSGI` in ``~/.tmaps/uwsgi.ini``:
+and configure *uWSGI* in ``~/.tmaps/uwsgi.ini``:
 
 .. code-block:: ini
 
@@ -309,8 +319,7 @@ and configure `uWSGI` in ``~/.tmaps/uwsgi.ini``:
     gevent = 100
     lazy-apps = true
 
-Ensure that the server runs in `gevent <http://www.gevent.org/>`_ mode and
-adapt configurations according to available computational resources.
+Ensure that the server runs in `gevent <http://www.gevent.org/>`_ mode and adapt configurations according to available computational resources.
 
 When working with a virtual environment (as described above), include the path to the project in the configuration file:
 
@@ -339,79 +348,48 @@ and set the path to the script in the service definition file ``/etc/init/uwsgi.
     chdir /home/ubuntu/.tmaps
     exec env HOME=/home/ubuntu bash uwsgi.sh
 
+
+.. note:: This approach assumes that defined your environement in ``~/.bash_profile``.
+
+
 .. _application:
 
 Application
 -----------
 
-The actual `TissueMAPS` Python web application is implemented in the `Flask <http://flask.pocoo.org/>`_ micro-framework.
+The actual `TissueMAPS` Python web application (available via the ``tmserver`` package) is implemented in the `Flask <http://flask.pocoo.org/>`_ micro-framework.
 
 .. _application-requirements:
 
 Requirements
 ^^^^^^^^^^^^
 
-* `PostgreSQL <http://postgresxl.org/>`_ (version 9.6): `PostgreSQL` is available on Ubuntu by default, but we want a more recent version with improved performanced. On MacOSX `PostgreSQL` is avaible via `homebrew`, but the `PostgresApp <http://postgresapp.com/>`_ is a convenient alternative.
+* `PostgreSQL <http://postgresxl.org/>`_ (version 9.6 or higher) with `Citus <https://www.citusdata.com/>` (version 6.0 or higher) and `Postgis <http://postgis.net/>` (version 2.2 or higher) extensions:
 
     On Ubuntu:
 
     .. code-block:: none
 
-        sudo sh -c "echo 'deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main' > /etc/apt/sources.list.d/pgdg.list"
+        curl https://install.citusdata.com/community/deb.sh | sudo bash
+        sudo apt-get -y install postgresql-9.6-citus
 
-        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-        sudo apt-get update
-
-        sudo apt-get -y install postgresql-9.6
         sudo apt-get -y install postgresql-9.6-postgis-2.2 postgresql-9.6-postgis-scripts postgresql-contrib-9.6 postgresql-server-dev-all postgresql-client
 
-        sudo apt-get -y install python-psycopg2
+        echo 'export "PATH=$PATH:/usr/lib/postgresql/9.6/bin"' >> ~/.bash_profile
+        source ~/.bash_profile
+
 
     On MacOSX:
 
     .. code-block:: none
 
-        brew tap petere/postgresql
-        brew install postgresql-9.6 && brew link -f postgresql-9.6
+        brew install citus
 
         # Postgis extension
         brew install pex
         brew install gettext && brew link -f gettext
         pex init
-        pex -g /usr/local/opt/postgresql-9.6 install postgis
-
-* `OpenCV <`http://opencv.org/>`_ (version 3.1):
-
-    On Ubuntu the `apt-get` package manager currently only provides version 2.4. Version 3.1 needs to be `build from source <http://docs.opencv.org/3.1.0/d7/d9f/tutorial_linux_install.html>`_::
-
-        git clone https://github.com/Itseez/opencv.git ~/opencv
-        cd ~/opencv
-        mkdir build && cd build
-
-        sudo pip install numpy
-
-        sudo apt-get -y install cmake
-        cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ../
-        make -j4
-        sudo make install && sudo ldconfig
-
-    On MacOSX::
-
-        brew tab homebrew/science
-        brew install opencv3
-        echo /usr/local/opt/opencv3/lib/python2.7/site-packages >> /usr/local/lib/python2.7/site-packages/opencv3.pth
-
-    This will build `OpenCV` globally. If you work with a virtual enviroment, create a softlink for the Python bindings (exemplified for ``tissuemaps`` project):
-
-        On Ubuntu::
-
-            cd $VIRTUALENVWRAPPER_HOOK_DIR/tissuemaps/lib/python2.7/site-packages
-            ln -s /usr/local/lib/python2.7/dist-packages/cv2.so cv2.so
-
-        On MacOSX::
-
-            cd $VIRTUALENVWRAPPER_HOOK_DIR/tissuemaps/lib/python2.7/site-packages/
-            ln -s /usr/local/lib/python2.7/site-packages/opencv3.pth opencv3.pth
+        pex -g /usr/local/opt/postgresql install postgis
 
 * `HDF5 <https://www.hdfgroup.org/HDF5/>`_:
 
@@ -439,33 +417,6 @@ Requirements
         brew tab ome/alt
         brew install bioformats51
 
-* `Spark <http://spark.apache.org/>`_ (version 2.0.1 or higher):
-
-    On Ubuntu:
-
-    .. code-block:: none
-
-        sudo apt-get -y install openjdk-7-jdk
-        export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
-
-        sudo apt-get -y install maven
-        export MAVEN_OPTS="-Xmx2g -XX:MaxPermSize=512M -XX:ReservedCodeCacheSize=512m"
-
-        sudo wget http://d3kbcqa49mib13.cloudfront.net/spark-2.0.1.tgz
-        tar -xvzf spark-2.0.1.tgz && mv spark-2.0.1 spark
-        sudo apt-get update
-
-        cd spark
-        ./build/mvn -Pyarn -Phadoop-2.7 -Dhadoop.version=2.7.1 -Phive -Phive-thriftserver -DskipTests clean package
-
-        echo 'export PATH=$PATH:$HOME/spark/bin' >> ~/.bash_profile
-
-    On MacOSX::
-
-        brew install apache-spark
-
-    .. note:: Requires installation with support for `YARN <http://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html>`_ for running Spark on a cluster as well as `Hive <https://hive.apache.org/>`_ and `JDBC <http://docs.oracle.com/javase/tutorial/jdbc/overview/index.html>`_ for `Spark SQL <http://spark.apache.org/docs/latest/sql-programming-guide.html#overview>`_ integration. It is important to `build <http://spark.apache.org/docs/latest/building-spark.html#specifying-the-hadoop-version>`_ Spark againgst the `HDFS <http://hadoop.apache.org/docs/r1.2.1/hdfs_design.html>`_ version available in your cluster environment, since `HDFS` is not compatible across versions. Pyspark further requires the same minor version of Python in both drivers and workers.
-
 * `R <https://www.r-project.org/>`_ (version 3.3.2 or higher): optional - only required for support of R Jterator modules
 
     On Ubuntu (examplified here for 14.04 "Trusty"):
@@ -488,8 +439,7 @@ Requirements
 
     On Ubuntu::
 
-        sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev libssl-dev libffi-dev
-        sudo apt-get -y install libgeos-dev
+        sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev libssl-dev libffi-dev libgeos-dev
 
 .. _application-installation:
 
@@ -520,7 +470,7 @@ Configuration
 PostgreSQL
 ++++++++++
 
-Create a `database cluster <https://www.postgresql.org/docs/current/static/creating-cluster.html>`_ using the default ``data_directory`` and start the server (here demonstrated for `PostgreSQL` version 9.6). These steps might have already been performed automatically upon installation:
+Define the data location (here demonstrated for `PostgreSQL` version 9.6):
 
     On Ubuntu (as ``postgres`` user):
 
@@ -535,75 +485,141 @@ Create a `database cluster <https://www.postgresql.org/docs/current/static/creat
             To access the postgres user:
             
             sudo su - postgres
-            /usr/lib/postgresql/9.6/bin/initdb -D /var/lib/postgresql/9.6/main
-            /usr/lib/postgresql/9.6/bin/pg_ctl -D /var/lib/postgresql/9.6/main -l logfile restart
-            exit
+
+            export DATA_DIRECTORY=/var/lib/postgresql/9.6
+            export LOG_DIRECTORY=/var/log/postgresql
 
     On MacOsX (as current user):
 
         .. code-block:: none
 
-            /usr/local/opt/postgresql-9.6/bin/initdb -D /usr/local/var/lib/postgresql/9.6/main
-            /usr/local/opt/postgresql-9.6/bin/pg_ctrl -D /usr/local/var/lib/postgresql/9.6/main -l logfile restart
+            export DATA_DIRECTORY=/usr/local/var/lib/postgresql/9.6
+            export LOG_DIRECTORY=/usr/local/var/log/postgresql
 
-        You may want to add the `PostgreSQL` executables to the ``$PATH`` in your ``~/.bash_profile`` file:
 
-        .. code-block:: bash
+Initialize a ``citus`` `database cluster <https://www.postgresql.org/docs/current/static/creating-cluster.html>`_ and start the servers for *master* and *workers*:
 
-                export PATH=$PATH:/usr/local/opt/postgresql-9.6/bin
-                export MANPATH=$MANPATH:/usr/local/opt/postgresql-9.6/share/man
+    .. code-block:: none
 
-.. On Ubuntu ``service`` can also be used to start and stop the database server::
+        mkdir -p $LOG_DIRECTORY
 
-..         sudo service postgresql restart
+        mkdir -p $DATA_DIRECTORY/master
+        initdb -D $DATA_DIRECTORY/master
 
-Enter `psql` console:
+        mkdir -p $DATA_DIRECTORY/worker
+        initdb -D $DATA_DIRECTORY/worker
 
-    On Ubuntu (as ``postgres`` user)::
 
-        sudo -u postgres psql postgres
+Activate the ``citus`` extension:
 
-    On MacOSX (as current user)::
+    .. code-block:: none
 
-        psql postgres
+        echo "shared_preload_libraries = 'citus'" >> $DATA_DIRECTORY/master/postgresql.conf
+        echo "shared_preload_libraries = 'citus'" >> $DATA_DIRECTORY/worker/postgresql.conf
 
-and change permissions for the postgres user (it may already exist) and set a new password:
 
-.. code-block:: sql
+Start the database cluster and create the default database:
 
-    CREATE USER postgres;
-    ALTER USER postgres WITH SUPERUSER;
-    ALTER USER postgres WITH PASSWORD 'XXX';
+    .. code-block:: none
 
-Then create the ``tissuemaps`` database:
+        pg_ctl -D $DATA_DIRECTORY/master -o "-p 5432" -l $LOG_DIRECTORY/postgresql-9.6-master.log start
+        pg_ctl -D $DATA_DIRECTORY/master -o "-p 9700" -l $LOG_DIRECTORY/postgresql-9.6-worker.log start
 
-.. code-block:: sql
+        # On Ubuntu the "postgres" database typically already exists
+        createdb -p 5432 $(whoami)
+        createdb -p 9700 $(whoami)
 
-    CREATE DATABASE tissuemaps;
 
-and the `postgis <http://www.postgis.net/>`_ extension:
+Create ``tissuemaps`` user with login permissions on the master and set a password when prompted:
 
-.. code-block:: sql
+    .. code-block:: none
 
-    CREATE EXTENSION postgis;
+        createuser -p 5432 -l -P tissuemaps
+        createuser -p 9700 -l -P tissuemaps
 
-Now, you should be able to connect to the database as ``postgres`` user with your new password::
 
-    psql -h localhost tissuemaps postgres
+Then create the ``tissuemaps`` database that's owned by the ``tissuemaps`` user:
+
+    .. code-block:: none
+
+        createdb -p 5432 -o tissuemaps tissuemaps
+        createdb -p 9700 -o tissuemaps tissuemaps
+
+
+Add ``citus``, ``postgis`` and ``hstore`` extensions:
+
+    .. code-block:: none
+
+        psql -p 5432 tissuemaps -c "CREATE EXTENSION citus;"
+        psql -p 9700 tissuemaps -c "CREATE EXTENSION citus;"
+
+        psql -p 5432 tissuemaps -c "CREATE EXTENSION postgis;"
+        psql -p 9700 tissuemaps -c "CREATE EXTENSION postgis;"
+
+        psql -p 5432 tissuemaps -c "CREATE EXTENSION hstore;"
+        psql -p 9700 tissuemaps -c "CREATE EXTENSION hstore;"
+
+Connect to the *master* database and add *worker* node:
+
+    .. code-block:: none
+
+        psql -p 5432 tissuemaps -c "SELECT * from master_add_node('localhost', 9700);"
+
+        psql -p 5432 tissuemaps -c "select * from master_get_active_worker_nodes();"
+
+
+Now, the distributed database is ready to use and you can connect to the ``tissuemaps`` database running on the *master* node (``localhost`` on port ``5432``) as ``tissuemaps`` user:
+
+    .. code-block:: none
+
+        psql -p 5432 tissuemaps tissuemaps
+
 
 .. tip:: It is convenient to use a `pgpass file <https://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_ to be able to connect to the database without having to type the password every time:
 
     .. code-block:: none
 
-        echo 'localhost:5432:tissuemaps:postgres:XXX' > ~/.pgpass
+        echo 'localhost:5432:tissuemaps:tissuemaps:XXX' > ~/.pgpass
         chmod 0600 ~/.pgpass
+
 
 .. tip:: You may also want to add an alias to ``~/.bash_profile`` to simplify connecting to the database via the ``psql`` console:
 
     .. code-block:: bash
 
-        echo 'alias db="psql -h localhost tissuemaps postgres"' >> ~/.bash_profile
+        echo 'alias db="psql -h localhost -p 5432 tissuemaps tissuemaps"' >> ~/.bash_profile
         . ~/.bash_profile
+
+Restarting database servers:
+
+    On Ubuntu (via ``service``):
+
+    .. code-block:: none
+
+        # Starts database clusters automatically upon startup
+        sudo update-rc.d postgresql enable
+
+        # Restart database clusters
+        sudo service postgresql restart
+
+    On MacOSX (via shell script):
+
+    .. code-block:: bash
+
+        #!/bin/bash
+
+        DATA_DIRECTORY=/usr/local/var/lib/postgresql/9.6
+        LOG_DIRECTORY=/usr/local/var/log/postgresql
+
+        MASTER_PORT=5432
+        WORKER_PORT=9700
+
+        echo "=>restart master database server on port $MASTER_PORT"
+        pg_ctl restart -D $DATA_DIRECTORY/master -o "-p $MASTER_PORT" -l $LOG_DIRECTORY/postgresql-9.6-master.log
+
+        echo "=>restart worker database server on port $WORKER1_PORT"
+        pg_ctl restart -D $DATA_DIRECTORY/worker -o "-p $WORKER1_PORT" -l $LOG_DIRECTORY/postgresql-9.6-worker.log
+
 
 When using a mounted filesystem for data storage, you can create a symlink to ``data_dirctory`` or use an alternative directory. Make sure, however, to set the correct permissions for the parent directory of the desired data directory. For more information please refer to the PostgreSQL online documentation on `file locations <https://www.postgresql.org/docs/current/static/runtime-config-file-locations.html>`_ and `creation of a new database cluster <https://www.postgresql.org/docs/9.6/static/app-initdb.html>`_.
 
@@ -619,13 +635,19 @@ Create a `TissueMAPS` configuration file ``~/.tmaps/tissuemaps.cfg`` and set the
 .. code-block:: ini
 
     [DEFAULT]
+    db_user = tissuemaps
+    db_port = 5432
     db_password = XXX
+
+    [tmlib]
+    storage_home = /storage/experiments
+
 
 Additional parameters may need to be set. Please refer to :class:`LibraryConfig <tmlib.config.LibraryConfig>` and :class:`ServerConfig <tmserver.config.ServerConfig>`.
 The default configuration assumes, for example, sets :attr:`storage_home <tmlib.config.LibraryConfig.storage_home>` to ``/data/experiments`` (because that's were an additional volume would be mounted upon automated deployment). You may either configure an alternative directory or create the default directory (exemplified here for ``ubuntu`` user)::
 
-     sudo mkdir -p /data/experiments
-     sudo chown -R ubuntu:ubuntu /data/experiments
+     sudo mkdir -p /storage/experiments
+     sudo chown -R $(whoami) /storage/experiments
 
 Finally, populate the ``tissuemaps`` database with the tables defined in the :doc:`tmlib.models` package::
 
@@ -635,13 +657,15 @@ and create a *TissueMAPS* user account for yourself::
 
     tm_add user --name XXX --password XXX --email XXX
 
+.. note:: Depending on where the ``tmlibrary`` package got installed, you may need to add the location of the executables to the ``PATH``: e.g. ``export PATH=$PATH:~/.local/bin``.
+
 
 .. _application-configuration-gc3pie:
 
 GC3Pie
 ++++++
 
-Under the hood, `TissueMAPS` uses `GC3Pie <http://gc3pie.readthedocs.io/en/latest/programmers/index.html>`_ for computational job management. The program provides a high-level API around different cluster backends (and localhost).
+Under the hood, `TissueMAPS` uses `GC3Pie <http://gc3pie.readthedocs.io/en/latest/programmers/index.html>`_ for computational job management. The program provides a high-level API around different cluster backends, but can also submit jobs to localhost.
 
 Create a configuration file ``~/.gc3/gc3pie.conf`` and modify it according to your computational infrastructure. For more information please refer to the `GC3Pie online documentation <http://gc3pie.readthedocs.org/en/latest/users/configuration.html>`_:
 
@@ -679,10 +703,11 @@ Production mode
 
 For production web server (`NGINX`) and application server (`uWSGI`) need to be started:
 
-On Ubuntu::
+    On Ubuntu::
 
-    sudo service nginx start
-    sudo service uwsgi start
+        sudo service nginx start
+        sudo service uwsgi start
+
 
 .. _development-production:
 
@@ -693,13 +718,13 @@ For local developement and testing `NGINX` and `uWSGI` are not required.
 
 The `tmserver` package provides a command line tool that starts a `development application server <http://flask.pocoo.org/docs/0.11/server/#server>`_::
 
-    tm_server
+    tm_server -vv
 
 The client installation also provides a `development web server <https://www.npmjs.com/package/gulp-webserver>`_ to dynamically build client code with live reload functionality::
 
     cd ~/tmui/src
     gulp
 
-This will automatically start the server on localhost (port 8002). To access the website, point your browser to ``http://localhost:8002/``.
+This will automatically start the application server on port 5002 and the web server on port 8002. To access the website, point your browser to ``http://localhost:8002/``.
 
 Both dev servers provide live reload functionality. They will auto-watch files and rebuild code upon changes, which is useful for local development and testing.

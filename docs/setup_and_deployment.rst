@@ -65,9 +65,13 @@ First, install non-Python dependencies::
 
 and then the `tmsetup` Python package::
 
+    git clone https://github.com/TissueMAPS/elasticluster
+    cd ~/elasticluster && sudo pip install -e .
+
     git clone https://github.com/TissueMAPS/TmSetup.git ~/tmsetup
     cd ~/tmsetup && sudo pip install -e .
 
+.. warning:: With older Python versions (such as the 2.6.7 default on Ubuntu 14.04) you may run into SSL problems.
 
 .. _configuration:
 
@@ -109,11 +113,12 @@ Single-node setup
 To setup a standalone instance, we need to launch only one VM, but then configure it such that it hosts all required `TissueMAPS` components.
 
 
-The following three `Ansible` ``groups`` (defined in the `tmsetup` package) must be assigned to the node:
+The following `Ansible` ``groups`` (defined in the `tmsetup` package) must be assigned to the node:
 
     - ``tissuemaps_web``
     - ``tissuemaps_compute``
-    - ``tissuemaps_database``
+    - ``tissuemaps_database_master``
+    - ``tissuemaps_database_worker``
 
 The `TmSetup` repository provides `templates <https://github.com/TissueMAPS/TmSetup/tree/master/etc>`_ for the different cloud providers. Copy the template for your provider to ``~/.tmaps/setup/setup.yml`` on your deploying machine and modify it according to your needs (here exemplified for the `Google Compute Engine (GCE) <https://cloud.google.com/compute/>`_ provider)::
 
