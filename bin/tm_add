@@ -115,7 +115,9 @@ def add_plate(experiment_name, plate_name):
             )
 
     with tm.utils.ExperimentSession(experiment_id) as session:
-        plate = session.get_or_create(tm.Plate, name=plate_name)
+        plate = session.get_or_create(
+            tm.Plate, name=plate_name, experiment_id=experiment_id
+        )
         return plate.id
 
 
