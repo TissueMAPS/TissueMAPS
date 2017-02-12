@@ -37,7 +37,7 @@
   tags:
     - tissuemaps
 
-- name: Install numpy and cython Python packages
+- name: Install cython Python package
   become: yes
   command: /usr/local/bin/pip install cython --upgrade
   # TODO: Using the pip module doesn't work???
