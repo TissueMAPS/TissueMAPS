@@ -50,7 +50,7 @@
 - name: Update bash_profile
   lineinfile:
     dest: "{{ ansible_env.HOME }}/.bash_profile"
-    line: "export TMAPS_DB_HOST={{ db_host_master }}"
+    line: "export TMAPS_DB_HOST={{ db_host_master if db_host_master != client_host else 'localhost' }}"
     regexp: "^export.TMAPS_DB_HOST.*"
   tags:
     - database
