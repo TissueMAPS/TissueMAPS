@@ -20,7 +20,7 @@
   tags:
     - bioformats
 
-- name: Install apt packages for Bioformts commond line tools
+- name: Install apt packages for Bioformats commond line tools
   become: yes
   apt: name=unzip state=installed
   tags:
