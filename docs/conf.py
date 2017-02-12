@@ -151,8 +151,8 @@ html_theme = 'alabaster'
 html_theme_options = {
     # 'page_width': '100%',
     'show_powered_by': False,
-    'fixed_sidebar': True,
-    'description': 'Interactive visualization and analysis of large microscopy images',
+    'fixed_sidebar': False,
+    'description': 'Interactive visualization and analysis of large microscopy image datasets.',
     'github_user': 'TissueMAPS',
     'github_repo': 'TissueMAPS',
     'github_button': True,
@@ -379,6 +379,7 @@ texinfo_documents = [
 #     return skip
 
 # Example configuration for intersphinx: refer to the Python standard library.
+# TODO
 intersphinx_mapping = {'https://docs.python.org/': None}
 
 numpydoc_show_class_members = False

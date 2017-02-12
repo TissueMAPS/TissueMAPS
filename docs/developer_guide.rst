@@ -1,4 +1,4 @@
-***************
+
 Developer guide
 ***************
 
@@ -15,18 +15,14 @@ Architecture
 The web frontend of *TissueMAPS* is largely based on the framework `AngularJS <https://angularjs.org/>`_.
 
 Classes and functions encapsulating core application logic, which are therefore not UI-specific, are separated from the UI-specifc code.
-Code comprising core application logic is located in the subdirectory ``core`` and the other directories are reserved for code handling views, user input, as well as AngularJS-related things.
-Several server-side resources like the :class:`Experiment <tmlib.models.experiment.Experiment>` also have a client-side representation.
-However, it is important to note that these concepts are not exactly the same.
-A client-side experiment is *constructed* from a serialized server-side experiment, but can also have other properties that are only of interest to code dealing with the user interface.
+Code comprising core application logic is located in the subdirectory ``core`` and the other directories are reserved for code handling views, user input, as well as AngularJS-related things. Several server-side resources like the :class:`Experiment <tmlib.models.experiment.Experiment>` also have a client-side representation. However, it is important to note that these concepts are not exactly the same. A client-side object is *constructed* from a serialized server-side object, but it may have other properties that are only of interest to code dealing with the user interface.
 
 .. _data-access-objects:
 
 Data access objects (DAO)
 -------------------------
 
-Whenever a class in *TissueMAPS* wants to access a resource from the server, the call has to go through a model-specific *data access object (DAO)*.
-These objects issue HTTP-requests and handle the deserialization process when contructing actual model class instances from JSON objects.
+Whenever a class in *TissueMAPS* wants to access a resource from the server, the call has to go through a model-specific *data access object (DAO)*. These objects issue HTTP-requests and handle the deserialization process when contructing actual model class instances from JSON objects.
 
 
 .. _dialogs:
@@ -69,8 +65,7 @@ This mechanism ensures that each implemented :class:`Tool <tmlib.tools.base.Tool
 To make use of this plugin mechanism, tool-specific code must be located under ``src/tools/<ToolName>`` and provide an *AngularJS* controller named ``<ToolName>Ctrl.ts`` and a *HTML* template named ``<ToolName>Template.html``.
 When clicking on a tool button in the toolbar, *TissueMAPS* will create an instance of this controller and link it to a tool window-specific ``$scope``. This tool window will then further be populated with the template content.
 
-Templates can make use of several pre-defined widgets.
-For example, the following tag will insert a widget with which the desired :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` can be selected:
+Templates can make use of several pre-defined widgets. For example, the following tag will insert a widget with which the desired :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` can be selected:
 
 .. code-block:: html
 
@@ -111,7 +106,7 @@ The code is distributed accross different repositories, each of them hosting a P
 
   * :mod:`tmlib.models`: `SQLAlchemy <http://www.sqlalchemy.org/>`_-based data models (see `developing data models <developing-data-models>`_)
   * :mod:`tmlib.workflow`: `GC3Pie <http://gc3pie.readthedocs.io/en/latest/index.html>`_-based distributed image processing workflows (see `developing workflows <developing-workflows>`_)
-  * :mod:`tmlib.tools`: `pandas <http://pandas.pydata.org/>`_- and `pySpark <http://spark.apache.org/docs/0.9.0/python-programming-guide.html>`_-based distributed data analysis and machine learning tools (see `developing tools <developing-data-analysis-tools-backend>`_)
+  * :mod:`tmlib.tools`: `pandas <http://pandas.pydata.org/>`_- -based data analysis and machine learning tools (see `developing tools <developing-data-analysis-tools-backend>`_)
 
 - `JtModules <https://github.com/TissueMAPS/JtModules>`_ (:mod:`jtmodules` package in different languages): *Jterator* modules - modules for the :mod:`jterator <tmlib.workflow.jterator>` pipeline engine (see `developing jterator modules <developing jterator modules>`_)
 
@@ -128,7 +123,7 @@ There are several reasons for splitting code across different repositories:
 Documentation
 -------------
 
-*TissueMAPS* uses `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <https://github.com/numpy/numpydoc/>`_ extension to auto-generate documentation. Please make yourself familiar with the `NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_ and `reStructuredText <http://www.sphinx-doc.org/en/stable/rest.html>`_ and follow the `PEP 0257 <https://www.python.org/dev/peps/pep-0257/>`_ docstring conventions to ensure that your documentation will be build correctly. Since Python is a dynamically typed language, we put emphasis on rigorously documentating the type of parameters and return values.
+*TissueMAPS* uses `numpydoc <https://github.com/numpy/numpydoc/>`_ for code documentation. Please make yourself familiar with the `NumPy style <https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt>`_ and `reStructuredText <http://www.sphinx-doc.org/en/stable/rest.html>`_ and follow the `PEP 257 <https://www.python.org/dev/peps/pep-0257/>`_ docstring conventions to ensure that your documentation will be build correctly. Since Python is a dynamically typed language, we put emphasis on rigorously documentating the type of parameters and return values. To this end, we use type hints as specified by `PEP 484 <https://www.python.org/dev/peps/pep-0484/>`_ (see `typing <https://docs.python.org/3/library/typing.html>`_ module).
 
 .. _coding-style:
 
@@ -218,17 +213,15 @@ For more information on how to develop new steps and combine them into workflows
 Data analysis tools
 ^^^^^^^^^^^^^^^^^^^
 
-Data anlysis tools allow users to interactively analyse image data in a visually asisted way in the :ref:`viewer <viewer>`. They are implemented in the :mod:`tmlib.tools` package and available for the `Pandas <http://pandas.pydata.org/>`_ or `pySpark <http://spark.apache.org/docs/0.9.0/python-programming-guide.html>`_ libraries. The server submits client tool requests to the available computational resources for asynchronous processing. This is done on the one hand to remove load from the web server and on the other hand because *spark* jobs require a driving process.
+Data anlysis tools allow users to interactively analyse image data in a visually asisted way in the :ref:`viewer <viewer>`. They are implemented in the :mod:`tmlib.tools` package and make use of the `Pandas <http://pandas.pydata.org/>`_ library. The server submits client tool requests to the available computational resources for asynchronous processing. This is done on the one hand to remove load from the web server.
 
-The main entry point for tool functionliaty is ``__main__()`` method of :class:`ToolRequestManger <tmlib.tools.manager.ToolRequestManager>`. It is accessed by a :class:`ToolJob <tmlib.tools.jobs.ToolJob>` via the command line using the ``tm_tool.py`` script, which gets autogenerated from the parser provided by :class:`ToolRequestManager <tmlib.tools.manger.ToolRequestManager>`.
+The main entry point for tool functionliaty is ``__main__()`` method of :class:`ToolRequestManger <tmlib.tools.manager.ToolRequestManager>`. It is accessed by a :class:`ToolJob <tmlib.tools.jobs.ToolJob>` via the command line using the ``tm_tool`` script, which gets autogenerated from the parser provided by :class:`ToolRequestManager <tmlib.tools.manger.ToolRequestManager>`.
 
 For more information on how to develop new tools and make them available to the UI, please refer to the documentation of the :mod:`tmlib.tools` package. Already implemented tools, such as :class:`Clustering <tmlib.tools.clustering.Clustering>` or :class:`Heatmap <tmlib.tools.heatmap.Heatmap>` should also serve as an example and a good starting point for developing a new tool.
 
-.. note:: In contrast to a *workflow step*, a *tool* also requires some frontend developement. This design decision was made to give developers as much flexiblity as possible when it comes to the design of new tools. The potential uses cases are consequently too broad to be handled entirely client-side. Please refer to `data analysis tools <data-analysis-tools-frontend>`_ in the frontend section for more details on how to develop a tool client-side.
+.. note:: In contrast to a *workflow step*, a *tool* also requires some frontend developement. This design decision was made to give developers as much flexiblity as possible when it comes to the design of new tools. The potential uses cases are consequently too broad to be handled entirely server-side. Please refer to `data analysis tools <data-analysis-tools-frontend>`_ in the frontend section for more details on how to develop a tool client-side.
 
-A :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>` and a :class:`Tool <tmlib.tools.base.Tool>` both represent a distributed computational task, but from a conceptual point of view, they are two different things. The former is used in the `workflow manager <user-interface-workflow-manager>`_ for general image processing tasks, while the latter is used in the :ref:`viewer <user-interface-viewer>` for machine learning tasks. This doesn't mean that image processing and machine learning should be handled separately per-se. For example, pixel-based image segmentation would be an execellant use case for a tool. From a technical perspective, a *workflow step* represents a collection of batch jobs that can be *run* in parallel (plus an optional subsequent *collect* job), whereas a tool request is handled as a `MapReduce <https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html>`_ job in form of a `Spark application <http://spark.apache.org/docs/latest/submitting-applications.html>`_. These two types of jobs are generally also processed on different types of clusters, e.g. `Slurm <http://slurm.schedmd.com/>`_ (a workflow manager typically deployed on classical high-performance computing clusters) and `YARN <https://hadoop.apache.org/docs/r2.7.2/hadoop-yarn/hadoop-yarn-site/YARN.html>`_ (a resource manager for "big data" clusters), respectively. *TissueMAPS* combines both types of clusters to process tool requests: tool jobs get submitted via *Slurm* using the ``spark-submit`` command with ``--master yarn --deploy-mode client``. The driver program is thereby launched directly on the "local" compute node within the spark-submit process. The resources for that job are managed by *Slurm* (or more generelly speaking by *GC3Pie*), while the remote, distributed *Spark* application is managed by *YARN*. The advantages of this combined approach are two fold: First, we run the driver process as a batch job and can thereby handle and monitor it via *GC3Pie* the same way as any other job, e.g. a *workflow step*. Second, we can execute any non-*Spark* code in the "local" Python environment, without having to distribute the code to the *YARN* cluster. This becomes particularly useful for tool requests that might be processed via the *pandas* library, although the job has been executed via ``spark-submit``. This gives developers to freedom to not implement a *spark* library interface for their tool. The same of course applies when processing tool request on *localhost*, i.e. with ``--master local``.
-
-.. note:: At the moment *spark* tool jobs only interact with the database and don't have access to the shared filesystem. This is because the *YARN* cluster uses by default the `Hadoop Distributed File System (HDFS) <https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html>`_. However, it would be possible to replace it with `GlusterFS <https://github.com/gluster/glusterfs-hadoop>`_, which is used by *TissueMAPS* on nodes of the *Slurm* cluster, and therby allow the exchange data between the two clusters without the need to import image data into *HDFS*.
+A :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>` and a :class:`Tool <tmlib.tools.base.Tool>` both represent a distributed computational task, but from a conceptual point of view, they are two different things. The former is used in the `workflow manager <user-interface-workflow-manager>`_ for general image processing tasks, while the latter is used in the :ref:`viewer <user-interface-viewer>` for machine learning tasks. This doesn't mean that image processing and machine learning should be handled separately per-se. For example, pixel-based image segmentation would be an execellant use case for a tool.
 
 .. _jterator-module-development:
 
@@ -315,7 +308,7 @@ All ``channels`` specified in the **input** section will be loaded by the progra
 Modules
 ^^^^^^^
 
-Modules are the actual executable code in the pipeline. A module is file that defines a ``main()`` function, which serves as the main entry point for the program. Modules must be free of side effects, in particular they don't write to disk. This will be enforced by `jtertor` by calling the module function in a `sandbox <http://stackoverflow.com/questions/2126174/what-is-sandboxing>`_.
+Modules are the actual executable code in the pipeline. A module is file that defines a ``main()`` function, which serves as the main entry point for the program. Modules must be free of side effects, in particular they don't read from or write to disk. This will be enforced by `jtertor` by calling the module function in a `sandbox <http://stackoverflow.com/questions/2126174/what-is-sandboxing>`_.
 Special modules are available for storing data generated within a pipeline, such as segmentation results and features extracted for the segmented objects.
 
 Python `modules <https://docs.python.org/2/tutorial/modules.html>`_ encapsulate code and provide a separate scope and namespace. Conceptually they are classes with attributes (constants) and static methods (functions). For compatibility we use a similar implementation for non-Python languages to provide the user a similar interface across different languages (Matlab, R, ...).
@@ -517,20 +510,20 @@ The *handle* ``type`` descriped in the YAML file is mirrored by a Python class, 
 The following *handle* types are implemented:
 
 * **Constant** input *handle* types: parameters that specify the actual argument value (derived from :class:`InputHandle <tmlib.workflow.jterator.handles.InputHandle>`)
-    - :class:`Numeric <tmlib.workflow.jterator.handles.Numeric>`: number (``int`` or ``float``)
+    - :class:`Numeric <tmlib.workflow.jterator.handles.Numeric>`: number (``Union[int, float]``)
     - :class:`Character <tmlib.workflow.jterator.handles.Character>`: string (``basestring``)
     - :class:`Boolean <tmlib.workflow.jterator.handles.Boolean>`: boolean (``bool``)
-    - :class:`Sequence <tmlib.workflow.jterator.handles.Sequence>`: atomic array (``list`` of ``int`` or ``float`` or ``basestring`` or ``bool``)
+    - :class:`Sequence <tmlib.workflow.jterator.handles.Sequence>`: atomic array (``List[Union[int, float, basestring, bool]]``)
     - :class:`Plot <tmlib.workflow.jterator.handles.Plot>`: boolean (``bool``)
 
 * **Pipe** input and output *handle* types: parameters that specify a "key" to retrieve the actual argument value (derived from :class:`PipeHandle <tmlib.workflow.jterator.handles.PipeHandle>`)
-    - :class:`IntensityImage <tmlib.workflow.jterator.handles.IntensityImage>`: grayscale image  with 8-bit or 16-bit unsigned integer data type (``numpy.uint8`` or ``numpy.uint16``)
+    - :class:`IntensityImage <tmlib.workflow.jterator.handles.IntensityImage>`: grayscale image  with 8-bit or 16-bit unsigned integer data type (``Union[numpy.uint8, numpy.uint16]``)
     - :class:`LabelImage <tmlib.workflow.jterator.handles.LabelImage>`: labeled image with 32-bit integer data type (``numpy.int32``)
     - :class:`BinaryImage <tmlib.workflow.jterator.handles.BinaryImage>`: binary image with boolean data type (``numpy.bool``)
     - :class:`SegmentedObjects <tmlib.workflow.jterator.handles.SegmentedObjects>`: subtype of :class:`LabelImage <tmlib.workflow.jterator.handles.LabelImage>`, with additional methods for registering connected components in the image as objects, which can subsequently be used by measurement modules to extract features for the objects
 
-* **Measurement** output *handle* type: parameters that specify ``object_ref`` to reference the provided value to an instance of :class:`SegmentedObjects <tmlib.workflow.jterator.handles.SegmentedObjects>` and optionally ``channel_ref`` to also reference the value to an instance of :class:`IntensityImage <tmlib.workflow.jterator.handles.IntensityImage>` (derived from :class:`OutputHandle <tmlib.workflow.jterator.handles.OutputHandle>`)
-    - :class:`Measurement <tmlib.workflow.jterator.handles.Measurement>`: array of multidimensional matrices (one per time point), where columns are features and rows are segmented objects (``list`` of ``pandas.DataFrame`` with data type ``numpy.float``)
+* **Measurement** output *handle* type: parameters that specify ``object`` and ``object_ref`` to reference instances of :class:`SegmentedObjects <tmlib.workflow.jterator.handles.SegmentedObjects>` and optionally ``channel_ref`` to reference an instance of :class:`IntensityImage <tmlib.workflow.jterator.handles.IntensityImage>` (derived from :class:`OutputHandle <tmlib.workflow.jterator.handles.OutputHandle>`)
+    - :class:`Measurement <tmlib.workflow.jterator.handles.Measurement>`: array of multidimensional matrices (one per time point), where columns are features and rows are segmented objects (``List[pandas.DataFrame]``)
 
 * **Figure** output *handle* type: parameters that register the provided value as a figure (derived from :class:`OutputHandle <tmlib.workflow.jterator.handles.OutputHandle>`)
     - :class:`Figure <tmlib.workflow.jterator.handles.Figure>`: JSON serialized figure (``basestring``, see `plotly JSON schema <http://help.plot.ly/json-chart-schema/>`_)

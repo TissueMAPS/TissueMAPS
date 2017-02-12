@@ -28,6 +28,45 @@ When creating an issue
     - refer to other issues via ``#<issue_id>``
 
 
+.. _troubleshooting:
+
+Troubleshooting
+===============
+
+.. _troubleshooting-login:
+
+Login
+-----
+
+Login via the browser is not possible.
+
+Are servers (web, application and database server) running?
+
+.. code-block::
+
+    # NGINX
+    sudo service nginx status
+
+    # uWSGI
+    sudo service uwsgi status
+
+    # PostgreSQL (NOTE: The server may run on another machine!)
+    sudo service postgresql status
+
+What do log messages say?
+
+.. code-block::
+
+    # NGINX
+    tail /var/log/nginx/tissuemaps-access.log
+    tail /var/log/nginx/tissuemaps-error.log
+
+    # uWSGI
+    tail .tmaps/uwsgi.log
+
+    # PostgreSQL (NOTE: The server may run on another machine!)
+    tail /var/log/postgresql/postgresql-9.6-master.log
+
 .. _debugging:
 
 Debugging
