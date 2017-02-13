@@ -357,22 +357,22 @@ class Viewer {
         });
     }
 
-    /**
-     * The highest zoom level for any layer of this experiment.
-     * It is assumed that all layers of an experiment have the same max
-     * zoom level.
-     * @type number
-     */
-    get maxZoom(): number {
-        return this.channels[0].layers[0].maxZoom;
-    }
+    // /**
+    //  * The highest zoom level for any layer of this experiment.
+    //  * It is assumed that all layers of an experiment have the same max
+    //  * zoom level.
+    //  * @type number
+    //  */
+    // get maxZoom(): number {
+    //     return this.channels[0].layers[0].maxZoom;
+    // }
 
     /**
      * The highest time point supported by this experiment.
      * @type number
      */
     get maxT(): number {
-        if (this.channels) {
+        if (this.channels.length > 0) {
             var ts = this.channels.map((ch) => {
                 return ch.maxT;
             });
@@ -387,7 +387,7 @@ class Viewer {
      * @type number
      */
     get minT(): number {
-        if (this.channels) {
+        if (this.channels.length > 0) {
             var ts = this.channels.map((ch) => {
                 return ch.minT;
             });
@@ -402,7 +402,7 @@ class Viewer {
      * @type number
      */
     get maxZ(): number {
-        if (this.channels) {
+        if (this.channels.length > 0) {
             var zs = this.channels.map((ch) => {
                 return ch.maxZ;
             });
@@ -417,7 +417,7 @@ class Viewer {
      * @type number
      */
     get minZ(): number {
-        if (this.channels) {
+        if (this.channels.length > 0) {
             var zs = this.channels.map((ch) => {
                 return ch.minZ;
             });

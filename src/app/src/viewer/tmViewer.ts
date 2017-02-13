@@ -19,12 +19,25 @@ interface ViewerScope extends ViewerWindowScope {
 class ViewerCtrl {
     static $inject = ['$scope'];
 
-    maxT: number;
     minT: number;
-    tStep: number;
-    maxZ: number;
     minZ: number;
+    tStep: number;
     zStep: number;
+
+    constructor(public $scope: ViewerScope) {
+        $scope.viewer = $scope.viewer;  // ???
+        this.zStep = 10;
+        this.tStep = 10;
+        // The slider won't be able to set currentZplane/currentTpoint to 0 if
+        // the knob is all the way to the left. Therefore
+        // we set 0 to be zStep/tStep and substract this value before
+        // settings the current zplane/tpoint on the viewer.
+        this.minT = this.tStep;
+        this.minZ = this.zStep;
+        // We need to evaluate maxT and maxZ outside of the constructor, because
+        // by the time it gets called, the channel information may not have
+        // available to the viewer and would result in wrong values.
+    }
 
     get currentTpoint() {
         return this.$scope.viewer.currentTpoint;
@@ -40,19 +53,14 @@ class ViewerCtrl {
         this.$scope.viewer.currentZplane = Math.floor((z - this.zStep) / this.zStep);
     }
 
-    constructor(public $scope: ViewerScope) {
-        $scope.viewer = $scope.viewer;
-        this.zStep = 10;
-        this.tStep = 10;
-        // The slider won't be able to set currentZplane/currentTpoint to 0 if
-        // the knob is all the way to the left. Therefore
-        // we set 0 to be zStep/tStep and substract this value before
-        // settings the current zplane/tpoint on the viewer.
-        this.maxT = $scope.viewer.maxT * this.tStep + this.tStep;
-        this.minT = this.tStep;
-        this.maxZ = $scope.viewer.maxZ * this.zStep + this.zStep;
-        this.minZ = this.zStep;
+    get maxT(): number {
+        return this.$scope.viewer.maxT * this.tStep + this.tStep;
     }
+
+    get maxZ(): number {
+        return this.$scope.viewer.maxZ * this.zStep + this.zStep;
+    }
+
 }
 
 angular.module('tmaps.ui').directive('tmViewer', [function() {
