@@ -399,21 +399,20 @@ class MetadataHandler(object):
                     'Only image elements with one channel are supported.'
                 )
 
-            # Only update the attribute in case they haven't been set set yet
-            # to prevent them from getting overwritten by some random bullshit.
-            if (hasattr(image, 'AcquisitionDate') and
-                    md.loc[i, 'date'] is None):
+            if getattr(image, 'AcquisitionDate', None) is not None:
                 md.at[i, 'date'] = image.AcquisitionDate
 
-            if (hasattr(pixels, 'Channel') and
-                    md.loc[i, 'channel_name'] is None):
-                if hasattr(pixels.Channel(0), 'Name'):
+            if hasattr(pixels, 'Channel'):
+                if getattr(pixels.Channel(0), 'Name', None) is not None:
                     md.at[i, 'channel_name'] = pixels.Channel(0).Name
 
-            if (hasattr(pixels, 'Plane') and
-                    md.loc[i, 'stage_position_y'] is None):
-                if (hasattr(pixels.Plane(0), 'PositionX') and
-                        hasattr(pixels.Plane(0), 'PositionY')):
+            if hasattr(pixels, 'Plane'):
+                if getattr(pixels.Plane(0), 'TheZ', None) is not None:
+                    md.at[i, 'zplane'] = pixels.Plane(0).TheZ
+                if getattr(pixels.Plane(0), 'TheT', None) is not None:
+                    md.at[i, 'tpoint'] = pixels.Plane(0).TheT
+                if (getattr(pixels.Plane(0), 'PositionX', None) is not None and
+                        getattr(pixels.Plane(0), 'PositionY', None) is not None):
                     md.at[i, 'stage_position_x'] = pixels.Plane(0).PositionX
                     md.at[i, 'stage_position_y'] = pixels.Plane(0).PositionY
 

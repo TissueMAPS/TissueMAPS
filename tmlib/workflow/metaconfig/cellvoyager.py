@@ -160,6 +160,8 @@ class CellvoyagerMetadataReader(MetadataReader):
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
             img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
+            img.Pixels.Plane(0).TheZ = int(e.attrib['{%s}ZIndex' % mlf_ns])
+            img.Pixels.Plane(0).TheT = int(e.attrib['{%s}TimelineIndex' % mlf_ns])
 
             idx = microscope_image_files.index(img.Name)
             lookup[well_id].append(idx)
