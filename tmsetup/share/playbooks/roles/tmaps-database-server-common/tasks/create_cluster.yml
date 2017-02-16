@@ -22,7 +22,7 @@
   tags:
     - database
 
-# Symlink /var/lib/postgresql -> /data/storage/postgresql/
+# Symlink /var/lib/postgresql -> /data/postgresql/
 - name: Create data directory (source for symlink)
   become: yes
   file:
@@ -34,7 +34,7 @@
 - name: Create data directory (target for symlink) on mounted filesystem
   become: yes
   file:
-    path={{ volume_mountpoint }}/storage/postgresql/data
+    path={{ volume_mountpoint }}/postgresql/data
     state=directory
     owner=postgres
     group=postgres
@@ -44,7 +44,7 @@
 - name: Symlink data directory to mounted filesystem
   become: yes
   file:
-    src={{ volume_mountpoint }}/storage/postgresql/data
+    src={{ volume_mountpoint }}/postgresql/data
     dest={{ db_data_directory }}
     state=link
     force=yes
@@ -74,7 +74,7 @@
 - name: Create log directory (target for symlink) on mounted filesystem
   become: yes
   file:
-    path={{ volume_mountpoint }}/storage/postgresql/logs
+    path={{ volume_mountpoint }}/postgresql/logs
     state=directory
     owner=postgres
     group=postgres
@@ -84,7 +84,7 @@
 - name: Symlink log directory to mounted filesystem
   become: yes
   file:
-    src={{ volume_mountpoint }}/storage/postgresql/logs
+    src={{ volume_mountpoint }}/postgresql/logs
     dest={{ db_log_directory }}
     state=link
     force=yes

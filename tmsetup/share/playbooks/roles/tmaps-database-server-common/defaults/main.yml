@@ -18,7 +18,7 @@ postgresql_version: 9.6
 postgis_version: 2.3
 citus_version: 6.0
 
-volume_mountpoint: /data
+volume_mountpoint: /storage
 
 db_data_directory: /var/lib/postgresql
 db_log_directory: /var/log/postgresql
