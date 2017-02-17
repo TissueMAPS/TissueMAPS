@@ -249,6 +249,7 @@ def update_static_inventory(inventory_info, setup):
                             user=host_vars['ansible_user'],
                             host=host_vars['ansible_host']
                         )
+                    inventory_info['all']['vars']['timeout'] = 60
                 else:
                     logger.warn('variable "ansible_host" is not defined')
             # Update inventory with host and group variables
