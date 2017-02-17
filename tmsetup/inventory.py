@@ -123,6 +123,7 @@ def build_inventory_information(setup):
                             )
                         ),
                         'network': setup.cloud.network,
+                        'subnetwork': setup.cloud.subnetwork,
                         'ip_range': setup.cloud.ip_range,
                         # Ansible sproadically fails to connect to hosts.
                         # Attempt to work around this issue by trying to
