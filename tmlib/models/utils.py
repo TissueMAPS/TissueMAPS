@@ -551,7 +551,7 @@ class _Session(object):
             self._session.rollback()
         else:
             try:
-                logger.error('commit session')
+                logger.debug('commit session')
                 self._session.commit()
             except RuntimeError:
                 logger.error('commit failed due to RuntimeError???')
