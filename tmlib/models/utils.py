@@ -632,8 +632,6 @@ class ExperimentSession(_Session):
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=self.experiment_id
         )
-        print 'Session - EXPERIMENT: %d' % self.experiment_id
-        print 'Session - SCHEMA: %s' % self._schema
         super(ExperimentSession, self).__init__(db_uri, self._schema)
 
     def __enter__(self):
@@ -784,8 +782,6 @@ class ExperimentConnection(Connection):
         schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=experiment_id
         )
-        print 'Connection - EXPERIMENT: %d' % experiment_id
-        print 'Connection - SCHEMA: %s' % self._schema
         super(ExperimentConnection, self).__init__(db_uri, schema_name)
         self.experiment_id = experiment_id
 
