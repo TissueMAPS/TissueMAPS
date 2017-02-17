@@ -142,12 +142,14 @@ class CloudSection(SetupSection):
     '''
 
     _OPTIONAL_ATTRS = {
-        'ip_range', 'network', 'key_name', 'key_file_public', 'key_file_private'
+        'ip_range', 'network', 'subnetwork',
+        'key_name', 'key_file_public', 'key_file_private'
     }
 
     def __init__(self, description):
         self.ip_range = '10.65.4.0/24'
         self.network = 'tmaps'
+        self.subnetwork = '%s-subnet' % self.network
         self.key_name = 'tmaps'
         super(CloudSection, self).__init__(description)
 
@@ -206,6 +208,18 @@ class CloudSection(SetupSection):
     def network(self, value):
         self._check_value_type(value, 'network', str)
         self._network = value
+
+    @property
+    def subnetwork(self):
+        '''str: name or the subnetwork that should be used
+        (default: ``"tmaps-subnet"``)
+        '''
+        return self._subnetwork
+
+    @subnetwork.setter
+    def subnetwork(self, value):
+        self._check_value_type(value, 'subnetwork', str)
+        self._subnetwork = value
 
     @property
     def ip_range(self):

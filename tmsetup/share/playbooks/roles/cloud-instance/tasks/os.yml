@@ -51,13 +51,13 @@
   args:
     state: present
     region_name: "{{ region }}"
-    name: "{{ network }}"
+    name: "{{ router }}"
     network: public
     interfaces:
       - "{{ subnetwork }}"
     wait: yes
   run_once: yes
-  when: instance_state == "present"
+  when: instance_state == "present" and network != "uzh-only"
 
 - name: Upload public SSH key
   local_action: os_keypair
