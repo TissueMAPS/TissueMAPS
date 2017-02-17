@@ -637,15 +637,14 @@ class ExperimentSession(_Session):
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory(), self._schema)
-        self._set_search_path()
         sqlalchemy.event.listen(
             self._session_factories[self._db_uri],
             'after_begin', self._after_begin
         )
-        sqlalchemy.event.listen(
-            self._session_factories[self._db_uri],
-            'after_commit', self._after_commit
-        )
+        # sqlalchemy.event.listen(
+        #     self._session_factories[self._db_uri],
+        #     'after_commit', self._after_commit
+        # )
         sqlalchemy.event.listen(
             self._session_factories[self._db_uri],
             'after_rollback', self._after_rollback
@@ -659,7 +658,7 @@ class ExperimentSession(_Session):
     def _set_search_path(self):
         if self._schema is not None:
             logger.debug('set search path to schema "%s"', self._schema)
-            self.engine.execute(sqlalchemy.text('''
+            self._session.execute(sqlalchemy.text('''
                 SET search_path TO 'public', :schema
             '''), {
                 'schema': self._schema
@@ -670,8 +669,8 @@ class ExperimentSession(_Session):
     def _after_begin(self, session, transaction, connection):
         self._set_search_path()
 
-    def _after_commit(self, session):
-        self._set_search_path()
+    # def _after_commit(self, session):
+    #     self._set_search_path()
 
     def _after_flush(self, session, flush_context):
         self._set_search_path()
@@ -730,7 +729,7 @@ class Connection(object):
     def _set_search_path(self):
         if self._schema is not None:
             logger.debug('set search path to schema "%s"', self._schema)
-            self._session.execute('''
+            self._cursor.execute('''
                 SET search_path TO 'public', :schema;
             ''', {
                 'schema': self._schema
