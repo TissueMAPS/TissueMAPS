@@ -102,15 +102,12 @@ setuptools.setup(
         'Topic :: System :: Clustering',
         'Topic :: Scientific/Engineering',
         'Topic :: System :: Distributed Computing',
-
     ],
     scripts=find_scripts(),
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
        'ansible>=2.2.0',
-       'docker-py>=1.7.0',
-       'docker-compose>=1.7.0',
        'elasticluster>=1.3.dev',
        'apache-libcloud>=1.3.0',
        'PyYAML>=3.11',
