@@ -521,7 +521,7 @@ class AnsibleHostVariableSection(SetupSection):
     }
 
     def __init__(self, description):
-        self.volume_mountpoint = '/data'
+        self.volume_mountpoint = '/storage'
         super(AnsibleHostVariableSection, self).__init__(description)
 
     @property
@@ -551,7 +551,9 @@ class AnsibleHostVariableSection(SetupSection):
 
     @property
     def volume_mountpoint(self):
-        '''str: mountpoint of an additional storage volume (optional)'''
+        '''str: mountpoint of an additional storage volume
+        (default: ``"storage"``)
+        '''
         return self._volume_mountpoint
 
     @volume_mountpoint.setter
