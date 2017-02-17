@@ -93,6 +93,7 @@
     - build-essential
     # Required for the cryptography package
     - libssl-dev
+    - libpq-dev
     - libffi-dev
 
 - name: Upgrade pip
