@@ -162,8 +162,9 @@ def process_tool_request(experiment_id):
     tool_name = data.get('tool_name')
     logger.info('process request of tool "%s"', tool_name)
 
-    verbosity = LEVELS_TO_VERBOSITY[server_cfg.log_level]
-    manager = ToolRequestManager(experiment_id, tool_name, verbosity)
+    manager = ToolRequestManager(
+        experiment_id, tool_name, server_cfg.logging_verbosity
+    )
     submission_id, user_name = manager.register_submission(current_identity.id)
     manager.write_batch_file(payload, submission_id)
     job = manager.create_job(submission_id, user_name)

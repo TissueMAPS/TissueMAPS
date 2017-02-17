@@ -83,6 +83,11 @@ def create_app(verbosity=None):
         verbosity = cfg.logging_verbosity
     log_level = map_logging_verbosity(verbosity)
 
+    app = Flask('wsgi')
+    app.logger.handlers = []  # remove standard handlers
+    app.logger.setLevel(log_level)
+    app.logger.addHandler(log_handler)
+
     tmserver_logger = logging.getLogger('tmserver')
     tmserver_logger.setLevel(log_level)
     tmserver_logger.addHandler(log_handler)
@@ -95,12 +100,16 @@ def create_app(verbosity=None):
     flask_jwt_logger.setLevel(log_level)
     flask_jwt_logger.addHandler(log_handler)
 
-    # The following loggers are very chatty, so we handle them differently.
     gevent_logger = logging.getLogger('gevent')
+    gevent_logger.addHandler(log_handler)
     gc3pie_logger = logging.getLogger('gc3.gc3libs')
+    gc3pie_logger.addHandler(log_handler)
     werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.addHandler(log_handler)
     wsgi_logger = logging.getLogger('wsgi')
+    wsgi_logger.addHandler(log_handler)
     apscheduler_logger = logging.getLogger('apscheduler')
+    apscheduler_logger.addHandler(log_handler)
     if verbosity > 4:
         gevent_logger.setLevel(logging.DEBUG)
         gc3pie_logger.setLevel(logging.DEBUG)
@@ -118,18 +127,8 @@ def create_app(verbosity=None):
         gc3pie_logger.setLevel(logging.ERROR)
         wsgi_logger.setLevel(logging.ERROR)
         werkzeug_logger.setLevel(logging.ERROR)
+        werkzeug_logger.disabled = True
         apscheduler_logger.setLevel(logging.ERROR)
-
-    gevent_logger.addHandler(log_handler)
-    gc3pie_logger.addHandler(log_handler)
-    wsgi_logger.addHandler(log_handler)
-    werkzeug_logger.addHandler(log_handler)
-    apscheduler_logger.addHandler(log_handler)
-
-    app = Flask('wsgi')
-    app.logger.handlers = []  # remove standard handlers
-    app.logger.setLevel(log_level)
-    app.logger.addHandler(log_handler)
 
     app.json_encoder = TmJSONEncoder
 
