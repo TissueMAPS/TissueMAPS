@@ -49,7 +49,7 @@
     cidr: "{{ ip_range }}"
     region: "{{ region }}"
     resource_tags:
-      Name: "{{ network }}-subnet"
+      Name: "{{ subnetwork }}"
   register: subnet_facts
   run_once: yes
 

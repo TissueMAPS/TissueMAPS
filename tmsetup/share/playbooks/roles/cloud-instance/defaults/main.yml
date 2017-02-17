@@ -17,5 +17,6 @@
 ---
 security_groups: default
 network: default
+subnetwork: "{{ network }}-subnet"
 assign_public_ip: yes
-volume_mountpoint: /data
+volume_mountpoint: /storage

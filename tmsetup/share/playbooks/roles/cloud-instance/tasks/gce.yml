@@ -28,7 +28,7 @@
     state: present
     name: "{{ network }}"
     mode: custom
-    subnet_name: "{{ network }}-subnet"
+    subnet_name: "{{ subnetwork }}"
     # see https://cloud.google.com/compute/docs/regions-zones/regions-zones
     subnet_region: "{{ region | regex_replace('^(.*)-[a-z]$', '\\1') }}"
     ipv4_range: "{{ ip_range }}"
@@ -112,7 +112,7 @@
     external_ip: "{{ public_ip_type }}"
     network: "{{ network }}"
     zone: "{{ region }}"
-    subnetwork: "{{ network }}-subnet"
+    subnetwork: "{{ subnetwork }}"
     disks: "{{ instance_disks }}"
     metadata:
       ssh-keys: "{{ ansible_user }}:{{ ssh_key }}"

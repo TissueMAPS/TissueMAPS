@@ -36,7 +36,7 @@
   local_action: os_subnet
   args:
     state: present
-    name: "{{ network }}-subnet"
+    name: "{{ subnetwork }}"
     network_name: "{{ network }}"
     ip_version: 4
     enable_dhcp: yes
@@ -54,7 +54,7 @@
     name: "{{ network }}"
     network: public
     interfaces:
-      - "{{ network }}-subnet"
+      - "{{ subnetwork }}"
     wait: yes
   run_once: yes
   when: instance_state == "present"
