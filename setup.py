@@ -159,7 +159,6 @@ setuptools.setup(
        'paramiko>=1.15.3',
        'parsedatetime>=1.5',
        'prettytable>=0.7.2',
-       'psycopg2>=2.6.1',
        'pyparsing>=2.0.3',
        'pypng>=0.0.17',
        # Python-bioformats installs javabridge, which requires Java
@@ -179,6 +178,9 @@ setuptools.setup(
        'simplejson>=3.10',
        'sqlalchemy>=1.1.5',
        'sqlalchemy-utils>=0.32.9',
+       # Ubuntu:
+       #    sudo apt-get -y install libpq-dev
+       'psycopg2>=2.6.1',
        'tables>=3.2.2',
        'ruamel.yaml>=0.10.11'
        'rpy2>=2.7.4',
