@@ -120,11 +120,7 @@ def _set_db_shard_count(engine, n):
         db_name = db_url.database
         logger.debug('set shard_count for database %s to %d', db_name, n)
         with Connection(db_url) as conn:
-            conn.execute('''
-                SET citus.shard_count = %(n)s;
-            ''', {
-                'n': n
-            })
+            conn.execute('SET citus.shard_count = %(n)s;', {'n': n})
 
 
 def _set_db_shard_replication_factor(engine, n):
@@ -135,11 +131,7 @@ def _set_db_shard_replication_factor(engine, n):
             'set shard_replication_factor for database %s to %d', db_name, n
         )
         with Connection(db_url) as conn:
-            conn.execute('''
-                SET citus.shard_replication_factor = %(n)s;
-            ''', {
-                'n': n
-            })
+            conn.execute('SET citus.shard_replication_factor = %(n)s;', {'n': n})
 
 
 def _create_schema_if_not_exists(engine, experiment_id):
@@ -211,7 +203,7 @@ def _create_db_tables(engine, experiment_id=None):
 @listens_for(sqlalchemy.pool.Pool, 'connect')
 def _on_pool_connect(dbapi_con, connection_record):
     logger.debug(
-        'database connection created for pool: %d',
+        'database connection created for pool upon connect: %d',
         dbapi_con.get_backend_pid()
     )
 
@@ -219,7 +211,7 @@ def _on_pool_connect(dbapi_con, connection_record):
 @listens_for(sqlalchemy.pool.Pool, 'checkin')
 def _on_pool_checkin(dbapi_con, connection_record):
     logger.debug(
-        'database connection returned to pool: %d',
+        'database connection returned to pool upon checkin: %d',
         dbapi_con.get_backend_pid()
     )
 
@@ -227,7 +219,7 @@ def _on_pool_checkin(dbapi_con, connection_record):
 @listens_for(sqlalchemy.pool.Pool, 'checkout')
 def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
     logger.debug(
-        'database connection retrieved from pool: %d',
+        'database connection retrieved from pool upon checkout: %d',
         dbapi_con.get_backend_pid()
     )
 
@@ -551,73 +543,20 @@ class _Session(object):
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory(), self._schema)
-        self._set_search_path()
-        sqlalchemy.event.listen(
-            self._session_factories[self._db_uri],
-            'after_begin', self._after_begin
-        )
-        sqlalchemy.event.listen(
-            self._session_factories[self._db_uri],
-            'after_commit', self._after_commit
-        )
-        sqlalchemy.event.listen(
-            self._session_factories[self._db_uri],
-            'after_rollback', self._after_rollback
-        )
-        sqlalchemy.event.listen(
-            self._session_factories[self._db_uri],
-            'after_flush', self._after_flush
-        )
-
         return self._session
 
     def __exit__(self, except_type, except_value, except_trace):
         if except_value:
+            logger.debug('rollback session due to error')
             self._session.rollback()
         else:
             try:
+                logger.error('commit session')
                 self._session.commit()
-                sqlalchemy.event.listen(
-                    self._session_factories[self._db_uri],
-                    'after_bulk_delete', self._after_bulk_delete_callback
-                )
             except RuntimeError:
                 logger.error('commit failed due to RuntimeError???')
+                self._session.close()
         self._session.close()
-
-    def _set_search_path(self):
-        if self._schema is not None:
-            self._session.execute('''
-                SET search_path TO 'public', :schema;
-            ''', {
-                'schema': self._schema
-            })
-
-    def _after_begin(self, session, transaction, connection):
-        self._set_search_path()
-
-    def _after_commit(self, session):
-        self._set_search_path()
-
-    def _after_flush(self, session, flush_context):
-        self._set_search_path()
-
-    def _after_rollback(self, session):
-        self._set_search_path()
-
-    def _after_bulk_delete_callback(self, delete_context):
-        '''Deletes locations defined by instances of :class`tmlib.Model`
-        after they have been deleted en bulk.
-
-        Parameters
-        ----------
-        delete_context: sqlalchemy.orm.persistence.BulkDelete
-        '''
-        logger.debug(
-            'deleted %d rows from table "%s"',
-            delete_context.rowcount, delete_context.primary_table.name
-        )
-        self._set_search_path()
 
 
 class MainSession(_Session):
@@ -685,25 +624,62 @@ class ExperimentSession(_Session):
             db_uri = cfg.db_uri_sqla
         self.experiment_id = experiment_id
         engine = create_db_engine(db_uri)
-        _set_db_shard_replication_factor(engine, 1)
         exists = _create_schema_if_not_exists(engine, experiment_id)
         if not exists:
+            _set_db_shard_replication_factor(engine, 1)
             _set_db_shard_count(engine, 20 * cfg.db_nodes)
             _create_db_tables(engine, experiment_id)
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=self.experiment_id
         )
+        print 'Session - EXPERIMENT: %d' % self.experiment_id
+        print 'Session - SCHEMA: %s' % self._schema
         super(ExperimentSession, self).__init__(db_uri, self._schema)
 
     def __enter__(self):
         session_factory = self.__class__._session_factories[self._db_uri]
         self._session = SQLAlchemy_Session(session_factory(), self._schema)
-        self._session.execute('''
-            SET search_path TO 'public', :schema;
-        ''', {
-            'schema': self._schema
-        })
+        self._set_search_path()
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_begin', self._after_begin
+        )
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_commit', self._after_commit
+        )
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_rollback', self._after_rollback
+        )
+        sqlalchemy.event.listen(
+            self._session_factories[self._db_uri],
+            'after_flush', self._after_flush
+        )
         return self._session
+
+    def _set_search_path(self):
+        if self._schema is not None:
+            logger.debug('set search path to schema "%s"', self._schema)
+            self.engine.execute(sqlalchemy.text('''
+                SET search_path TO 'public', :schema
+            '''), {
+                'schema': self._schema
+            })
+        else:
+            logger.warn('schema is not set')
+
+    def _after_begin(self, session, transaction, connection):
+        self._set_search_path()
+
+    def _after_commit(self, session):
+        self._set_search_path()
+
+    def _after_flush(self, session, flush_context):
+        self._set_search_path()
+
+    def _after_rollback(self, session):
+        self._set_search_path()
 
 
 class Connection(object):
@@ -740,14 +716,9 @@ class Connection(object):
         self._connection = self._engine.raw_connection()
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
-        if self._schema:
-            logger.debug('set search path for schema "%s"', self._schema)
+        if self._schema is not None:
             logger.debug('make modifications commutative')
-            self._cursor.execute('''
-                SET search_path TO 'public', %(schema)s;
-            ''', {
-                'schema': self._schema
-            })
+            self._set_search_path()
             # NOTE: To achieve high throughput on UPDATE or DELETE, we
             # need to perform queries in parallel under the assumption that
             # order of records is not important (i.e. that they are commutative).
@@ -757,6 +728,15 @@ class Connection(object):
                 SET citus.all_modifications_commutative TO on;
             ''')
         return self._cursor
+
+    def _set_search_path(self):
+        if self._schema is not None:
+            logger.debug('set search path to schema "%s"', self._schema)
+            self._session.execute('''
+                SET search_path TO 'public', :schema;
+            ''', {
+                'schema': self._schema
+            })
 
     def __exit__(self, except_type, except_value, except_trace):
         # NOTE: The connection is not actually closed, but rather returned to
@@ -804,6 +784,8 @@ class ExperimentConnection(Connection):
         schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=experiment_id
         )
+        print 'Connection - EXPERIMENT: %d' % experiment_id
+        print 'Connection - SCHEMA: %s' % self._schema
         super(ExperimentConnection, self).__init__(db_uri, schema_name)
         self.experiment_id = experiment_id
 
