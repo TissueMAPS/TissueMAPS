@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- include_vars: file={{ playbook_dir }}/vars/tissuemaps.yml
+# - include_vars: file={{ playbook_dir }}/vars/tissuemaps.yml
 
 - name: Update apt packages
   become: yes
