@@ -28,6 +28,7 @@ from sqlalchemy_utils.functions import quote
 from sqlalchemy.event import listens_for
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import NamedTupleCursor
+from cached_property import cached_property
 
 from tmlib.models.base import MainModel, ExperimentModel, FileSystemModel
 from tmlib.models.dialect import *
@@ -203,7 +204,7 @@ def _create_db_tables(engine, experiment_id=None):
 @listens_for(sqlalchemy.pool.Pool, 'connect')
 def _on_pool_connect(dbapi_con, connection_record):
     logger.debug(
-        'database connection created for pool upon connect: %d',
+        'database connection created for pool: %d',
         dbapi_con.get_backend_pid()
     )
 
@@ -211,7 +212,7 @@ def _on_pool_connect(dbapi_con, connection_record):
 @listens_for(sqlalchemy.pool.Pool, 'checkin')
 def _on_pool_checkin(dbapi_con, connection_record):
     logger.debug(
-        'database connection returned to pool upon checkin: %d',
+        'database connection returned to pool: %d',
         dbapi_con.get_backend_pid()
     )
 
@@ -219,25 +220,21 @@ def _on_pool_checkin(dbapi_con, connection_record):
 @listens_for(sqlalchemy.pool.Pool, 'checkout')
 def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
     logger.debug(
-        'database connection retrieved from pool upon checkout: %d',
+        'database connection retrieved from pool: %d',
         dbapi_con.get_backend_pid()
     )
 
 
-def create_db_session_factory(engine):
+def create_db_session_factory():
     '''Creates a factory for creating a scoped database session that will use
     :class:`Query <tmlib.models.utils.Query>` to query the database.
-
-    Parameters
-    ----------
-    engine: sqlalchemy.engine.base.Engine
 
     Returns
     -------
     sqlalchemy.orm.session.Session
     '''
     return sqlalchemy.orm.scoped_session(
-        sqlalchemy.orm.sessionmaker(bind=engine, query_cls=Query)
+        sqlalchemy.orm.sessionmaker(query_cls=Query)
     )
 
 
@@ -526,24 +523,16 @@ class _Session(object):
     -------
     This is *not* thread-safe!
     '''
-    _session_factories = dict()
 
     def __init__(self, db_uri, schema=None):
         self._db_uri = db_uri
         self._schema = schema
-        if self._db_uri not in self.__class__._session_factories:
-            self.__class__._session_factories[self._db_uri] = \
-                create_db_session_factory(self.engine)
+        self._session_factory = create_db_session_factory()
 
-    @property
+    @cached_property
     def engine(self):
         '''sqlalchemy.engine: engine object for the currently used database'''
         return create_db_engine(self._db_uri)
-
-    def __enter__(self):
-        session_factory = self.__class__._session_factories[self._db_uri]
-        self._session = SQLAlchemy_Session(session_factory(), self._schema)
-        return self._session
 
     def __exit__(self, except_type, except_value, except_trace):
         if except_value:
@@ -555,7 +544,8 @@ class _Session(object):
                 self._session.commit()
             except RuntimeError:
                 logger.error('commit failed due to RuntimeError???')
-                self._session.close()
+        connection = self._session.get_bind()
+        connection.close()
         self._session.close()
 
 
@@ -588,8 +578,17 @@ class MainSession(_Session):
         if db_uri is None:
             db_uri = cfg.db_uri_sqla
         super(MainSession, self).__init__(db_uri)
-        engine = create_db_engine(db_uri)
-        _assert_db_exists(engine)
+        self._schema = None
+        self._engine = create_db_engine(db_uri)
+        _assert_db_exists(self._engine)
+
+    def __enter__(self):
+        connection = self._engine.connect()
+        self._session_factory.configure(bind=connection)
+        self._session = SQLAlchemy_Session(
+            self._session_factory(), self._schema
+        )
+        return self._session
 
 
 class ExperimentSession(_Session):
@@ -623,60 +622,36 @@ class ExperimentSession(_Session):
         if db_uri is None:
             db_uri = cfg.db_uri_sqla
         self.experiment_id = experiment_id
-        engine = create_db_engine(db_uri)
-        exists = _create_schema_if_not_exists(engine, experiment_id)
+        self._engine = create_db_engine(db_uri)
+        exists = _create_schema_if_not_exists(self._engine, experiment_id)
         if not exists:
-            _set_db_shard_replication_factor(engine, 1)
-            _set_db_shard_count(engine, 20 * cfg.db_nodes)
-            _create_db_tables(engine, experiment_id)
+            _set_db_shard_replication_factor(self._engine, 1)
+            _set_db_shard_count(self._engine, 20 * cfg.db_nodes)
+            _create_db_tables(self._engine, experiment_id)
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=self.experiment_id
         )
         super(ExperimentSession, self).__init__(db_uri, self._schema)
 
     def __enter__(self):
-        session_factory = self.__class__._session_factories[self._db_uri]
-        self._session = SQLAlchemy_Session(session_factory(), self._schema)
-        sqlalchemy.event.listen(
-            self._session_factories[self._db_uri],
-            'after_begin', self._after_begin
-        )
-        # sqlalchemy.event.listen(
-        #     self._session_factories[self._db_uri],
-        #     'after_commit', self._after_commit
-        # )
-        sqlalchemy.event.listen(
-            self._session_factories[self._db_uri],
-            'after_rollback', self._after_rollback
-        )
-        sqlalchemy.event.listen(
-            self._session_factories[self._db_uri],
-            'after_flush', self._after_flush
+        connection = self._engine.connect()
+        self._set_search_path(connection)
+        self._session_factory.configure(bind=connection)
+        self._session = SQLAlchemy_Session(
+            self._session_factory(), self._schema
         )
         return self._session
 
-    def _set_search_path(self):
+    def _set_search_path(self, connection):
         if self._schema is not None:
             logger.debug('set search path to schema "%s"', self._schema)
-            self._session.execute(sqlalchemy.text('''
-                SET search_path TO 'public', :schema
-            '''), {
+            cursor = connection.connection.cursor()
+            cursor.execute('''
+                SET search_path TO 'public', %(schema)s;
+            ''', {
                 'schema': self._schema
             })
-        else:
-            logger.warn('schema is not set')
-
-    def _after_begin(self, session, transaction, connection):
-        self._set_search_path()
-
-    # def _after_commit(self, session):
-    #     self._set_search_path()
-
-    def _after_flush(self, session, flush_context):
-        self._set_search_path()
-
-    def _after_rollback(self, session):
-        self._set_search_path()
+            cursor.close()
 
 
 class Connection(object):
@@ -693,18 +668,15 @@ class Connection(object):
     you are doing.
     '''
 
-    def __init__(self, db_uri, schema=None):
+    def __init__(self, db_uri):
         '''
         Parameters
         ----------
         db_uri: str
             URI of the database to connect to in the format required by
             *SQLAlchemy*
-        schema: str, optional
-            a database schema that should be added to the search path
         '''
         self._db_uri = db_uri
-        self._schema = schema
         self._engine = create_db_engine(self._db_uri)
 
     def __enter__(self):
@@ -713,27 +685,15 @@ class Connection(object):
         self._connection = self._engine.raw_connection()
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
-        if self._schema is not None:
-            logger.debug('make modifications commutative')
-            self._set_search_path()
-            # NOTE: To achieve high throughput on UPDATE or DELETE, we
-            # need to perform queries in parallel under the assumption that
-            # order of records is not important (i.e. that they are commutative).
-            # https://docs.citusdata.com/en/v6.0/performance/scaling_data_ingestion.html#real-time-updates-0-50k-s
-            self._cursor.execute('''
-                SET citus.shard_replication_factor = 1;
-                SET citus.all_modifications_commutative TO on;
-            ''')
+        # NOTE: To achieve high throughput on UPDATE or DELETE, we
+        # need to perform queries in parallel under the assumption that
+        # order of records is not important (i.e. that they are commutative).
+        # https://docs.citusdata.com/en/v6.0/performance/scaling_data_ingestion.html#real-time-updates-0-50k-s
+        self._cursor.execute('''
+            SET citus.shard_replication_factor = 1;
+            SET citus.all_modifications_commutative TO on;
+        ''')
         return self._cursor
-
-    def _set_search_path(self):
-        if self._schema is not None:
-            logger.debug('set search path to schema "%s"', self._schema)
-            self._cursor.execute('''
-                SET search_path TO 'public', :schema;
-            ''', {
-                'schema': self._schema
-            })
 
     def __exit__(self, except_type, except_value, except_trace):
         # NOTE: The connection is not actually closed, but rather returned to
@@ -778,12 +738,37 @@ class ExperimentConnection(Connection):
         '''
         if db_uri is None:
             db_uri = cfg.db_uri_sqla
-        schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
+        super(ExperimentConnection, self).__init__(db_uri)
+        self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=experiment_id
         )
-        super(ExperimentConnection, self).__init__(db_uri, schema_name)
         self.experiment_id = experiment_id
 
+    def __enter__(self):
+        # NOTE: We need to run queries outside of a transaction in Postgres
+        # autocommit mode.
+        self._connection = self._engine.raw_connection()
+        self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
+        self._set_search_path()
+        # NOTE: To achieve high throughput on UPDATE or DELETE, we
+        # need to perform queries in parallel under the assumption that
+        # order of records is not important (i.e. that they are commutative).
+        # https://docs.citusdata.com/en/v6.0/performance/scaling_data_ingestion.html#real-time-updates-0-50k-s
+        logger.debug('make modifications commutative')
+        self._cursor.execute('''
+            SET citus.shard_replication_factor = 1;
+            SET citus.all_modifications_commutative TO on;
+        ''')
+        return self._cursor
+
+    def _set_search_path(self):
+        logger.debug('set search path to schema "%s"', self._schema)
+        self._cursor.execute('''
+            SET search_path TO 'public', %(schema)s;
+        ''', {
+            'schema': self._schema
+        })
 
 class MainConnection(Connection):
 
