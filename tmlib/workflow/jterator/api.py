@@ -219,7 +219,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         job_descriptions = dict()
         job_descriptions['run'] = list()
-        job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
+        job_descriptions['collect'] = {}
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             sites = session.query(tm.Site.id).order_by(tm.Site.id).all()
             site_ids = [s.id for s in sites]
@@ -234,10 +234,6 @@ class ImageAnalysisPipeline(ClusterRoutines):
                     all()
                 job_descriptions['run'].append({
                     'id': j + 1,  # job IDs are one-based!
-                    'inputs': {
-                        'image_files': [f[0] for f in image_file_locations]
-                    },
-                    'outputs': {},
                     'site_ids': batch,
                     'plot': args.plot,
                     'debug': False
@@ -359,7 +355,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
         return store
 
-    def _run_pipeline(self, store, job_id, plot=False):
+    def _run_pipeline(self, store, site_id, plot=False):
         logger.info('run pipeline')
         for i, module in enumerate(self.pipeline):
             logger.info('run module "%s"', module.name)
@@ -379,7 +375,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 plotting_active = False
             if plot and plotting_active:
                 figure_file = module.build_figure_filename(
-                    self.figures_location, job_id
+                    self.figures_location, site_id
                 )
                 with TextWriter(figure_file) as f:
                     f.write(store['current_figure'])
@@ -578,7 +574,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             for site_id in batch['site_ids']:
                 logger.info('process site %d', site_id)
                 store = self._load_pipeline_inputs(site_id)
-                store = self._run_pipeline(store, batch['id'], batch['plot'])
+                store = self._run_pipeline(store, site_id, batch['plot'])
                 self._save_pipeline_outputs(store)
 
     def collect_job_output(self, batch):

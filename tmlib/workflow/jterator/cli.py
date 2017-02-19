@@ -67,10 +67,9 @@ class Jterator(CommandLineInterface):
             logger.warn('debug mode')
             batch = {'debug': True, 'plot': False}
         else:
-            logger.info('read job description from batch file')
-            batch_file = api.build_batch_filename_for_run_job(job_id)
-            batch = api.read_batch_file(batch_file)
-            logger.info('run job #%d' % batch['id'])
+            logger.info('get batch for job #%d', job_id)
+            batch = api.get_run_batch(job_id)
+            logger.info('run job #%d' % job_id)
         api.run_job(batch)
 
     @climethod(help='removes an existing project')

@@ -15,6 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
+from sqlalchemy import tablesample
+from sqlalchemy.orm import aliased
 
 import tmlib.models as tm
 from tmlib.utils import notimplemented
@@ -64,24 +66,43 @@ class IllumstatsCalculator(ClusterRoutines):
             # NOTE: Illumination statistics are calculated for each channel
             # over all plates and time pionts, assuming that imaging conditions
             # are consistent within an experiment.
-            for channel in session.query(tm.Channel):
-                # TODO: Consider using only a subset of images in case there
-                # are tens or hundreds of thousands. A few thousand should be
-                # enough for robust statistics.
-                file_ids = [f.id for f in channel.image_files]
+            channels = session.query(tm.Channel.id, tm.Channel.name).all()
+            for ch in channels:
+                # We only a subset of images in case there are tens or
+                # hundreds of thousands of them. Ten thousand should be
+                # enough for robust illumination statistics.
+                limit = 10000
+                n = session.query(tm.ChannelImageFile.id).\
+                    filter_by(channel_id=ch.id).\
+                    count()
+                if n > limit:
+                    percent = limit / float(n) * 100
+                    logger.info(
+                        'using a subset of image files (n=%d) to calculate '
+                        'illumination statistics', n
+                    )
+                    model = tablesample(tm.ChannelImageFile, percent)
+                else:
+                    if n < 100:
+                        logger.warn(
+                            'illumination statistics calculated on only %d '
+                            'image files may introduce artifacts', n
+                        )
+                    model = tm.ChannelImageFile
+                file_ids = session.query(model.id).\
+                    filter_by(channel_id=ch.id).\
+                    all()
                 if not file_ids:
                     logger.warning(
-                        'no image files found for channel "%s"', channel.name
+                        'no image files found for channel "%s"', ch.name
                     )
                     continue
 
                 count += 1
                 job_descriptions['run'].append({
                     'id': count,
-                    'inputs': {},
-                    'outputs': {},
                     'channel_image_files_ids': file_ids,
-                    'channel_id': channel.id,
+                    'channel_id': ch.id,
                 })
         return job_descriptions
 

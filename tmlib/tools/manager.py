@@ -43,7 +43,7 @@ class ToolRequestManager(SubmissionManager):
         with tm.utils.MainSession() as session:
             experiment = session.query(tm.ExperimentReference).\
                 get(self.experiment_id)
-            self.tools_location = experiment.tools_location
+            self._tools_location = experiment.tools_location
 
     @staticmethod
     def _print_logo():
@@ -59,16 +59,16 @@ class ToolRequestManager(SubmissionManager):
         ''' % __version__
 
     @autocreate_directory_property
-    def batches_location(self):
-        return os.path.join(self.tools_location, 'batches')
+    def _batches_location(self):
+        return os.path.join(self._tools_location, 'batches')
 
     @autocreate_directory_property
-    def log_location(self):
-        return os.path.join(self.tools_location, 'logs')
+    def _log_location(self):
+        return os.path.join(self._tools_location, 'logs')
 
     def _build_batch_filename_for_job(self, submission_id):
         filename = '%s_%d.json' % (self.__class__.__name__, submission_id)
-        return os.path.join(self.batches_location, filename)
+        return os.path.join(self._batches_location, filename)
 
     def _build_command(self, submission_id):
         command = [
@@ -114,7 +114,7 @@ class ToolRequestManager(SubmissionManager):
             tool_name=self.tool_name,
             # TODO: tool_name
             arguments=self._build_command(submission_id),
-            output_dir=self.log_location,
+            output_dir=self._log_location,
             submission_id=submission_id,
             user_name=user_name
         )
@@ -132,23 +132,19 @@ class ToolRequestManager(SubmissionManager):
         job.requested_cores = cores
         return job
 
-    def read_batch_file(self, submission_id):
-        '''Reads job description from JSON file.
+    def get_payload(self, submission_id):
+        '''Get payload for tool request.
 
         Parameters
         ----------
         submission_id: int
-            ID of the respective submission
+            ID of the respective
+            :class:`Submission <tmlib.models.submission.Submission>`
 
         Returns
         -------
         dict
-            batch
-
-        Raises
-        ------
-        OSError
-            when `filename` does not exist
+            payload
         '''
         filename = self._build_batch_filename_for_job(submission_id)
         if not os.path.exists(filename):
@@ -156,38 +152,26 @@ class ToolRequestManager(SubmissionManager):
                 'Job description file does not exist: %s.' % filename
             )
         with JsonReader(filename) as f:
-            batch = f.read()
-        return batch
+            return f.read()
 
-    @autocreate_directory_property
-    def log_location(self):
-        '''str: location where log files are stored'''
-        return os.path.join(self.tools_location, 'log')
-
-    @autocreate_directory_property
-    def batches_location(self):
-        '''str: location where job description files are stored'''
-        return os.path.join(self.tools_location, 'batches')
-
-    def write_batch_file(self, batch, submission_id):
-        '''Writes job description to file in JSON format.
+    def store_payload(self, payload, submission_id):
+        '''Persists payload for tool request on disk.
 
         Parameters
         ----------
-        batch: dict
-            job description as a mapping of key-value pairs
+        payload: dict
+            tool job description in form of a mapping of key-value pairs
         submission_id: int
-            ID of the corresponding submission
+            ID of the corresponding
+            :class:`Submission <tmlib.models.submission.Submission>`
 
         Raises
         ------
         TypeError
-            when `batch` is not a mapping
+            when `payload` is not a mapping
         '''
         if not isinstance(batch, dict):
-            raise TypeError(
-                'Job description must have type dict.'
-            )
+            raise TypeError('Playload must have type dict.')
         batch_file = self._build_batch_filename_for_job(submission_id)
         with JsonWriter(batch_file) as f:
             f.write(batch)
@@ -196,8 +180,8 @@ class ToolRequestManager(SubmissionManager):
     def _get_parser(cls):
         parser = argparse.ArgumentParser()
         parser.description = '''
-            TissueMAPS command line interface for asynchronous processing of
-            client tool requests.
+            TissueMAPS command line interface for processing client tool
+            requests.
         '''
         parser.add_argument(
             'experiment_id', type=int,
@@ -213,7 +197,7 @@ class ToolRequestManager(SubmissionManager):
         )
         parser.add_argument(
             '--submission_id', '-s', type=int, required=True,
-            help='ID of the corresponding tool job submission'
+            help='ID of the corresponding submission'
         )
         return parser
 
@@ -248,7 +232,7 @@ class ToolRequestManager(SubmissionManager):
 
         manager = cls(args.experiment_id, args.name, args.verbosity)
         manager._print_logo()
-        payload = manager.read_batch_file(args.submission_id)
+        payload = manager.get_payload(args.submission_id)
         tool_cls = get_tool_class(args.name)
         tool = tool_cls(args.experiment_id)
         tool.process_request(args.submission_id, payload)

@@ -221,11 +221,11 @@ class ClusterRoutines(BasicClusterRoutines):
         )
 
         for f in run_job_files:
-            batch = self.read_batch_file(f)
+            batch = self._read_batch_file(f)
             batches['run'].append(batch)
         if collect_job_files:
             f = collect_job_files[0]
-            batches['collect'] = self.read_batch_file(f)
+            batches['collect'] = self._read_batch_file(f)
 
         return batches
 
@@ -279,68 +279,7 @@ class ClusterRoutines(BasicClusterRoutines):
             log['stderr'] = f.read()
         return log
 
-    def list_output_files(self, batches):
-        '''Lists all output files that should be created by the step.
-
-        Parameters
-        ----------
-        batches: List[dict]
-            job descriptions
-        '''
-        files = list()
-        if batches['run']:
-            run_files = utils.flatten([
-                self._make_paths_absolute(j)['outputs'].values()
-                for j in batches['run']
-            ])
-            if all([isinstance(f, list) for f in run_files]):
-                run_files = utils.flatten(run_files)
-                if all([isinstance(f, list) for f in run_files]):
-                    run_files = utils.flatten(run_files)
-                files.extend(run_files)
-            else:
-                files.extend(run_files)
-        if 'collect' in batches.keys():
-            outputs = batches['collect']['outputs']
-            collect_files = utils.flatten(outputs.values())
-            if all([isinstance(f, list) for f in collect_files]):
-                collect_files = utils.flatten(collect_files)
-                if all([isinstance(f, list) for f in collect_files]):
-                    collect_files = utils.flatten(collect_files)
-                files.extend(collect_files)
-            else:
-                files.extend(collect_files)
-        return files
-
-    def list_input_files(self, batches):
-        '''Provides a list of all input files that are required by the step.
-
-        Parameters
-        ----------
-        batches: List[dict]
-            job descriptions
-        '''
-        files = list()
-        if batches['run']:
-            run_files = utils.flatten([
-                self._make_paths_absolute(j)['inputs'].values()
-                for j in batches['run']
-            ])
-            if all([isinstance(f, list) for f in run_files]):
-                run_files = utils.flatten(run_files)
-                if all([isinstance(f, list) for f in run_files]):
-                    run_files = utils.flatten(run_files)
-                files.extend(run_files)
-            elif any([isinstance(f, dict) for f in run_files]):
-                files.extend(utils.flatten([
-                    utils.flatten(f.values())
-                    for f in run_files if isinstance(f, dict)
-                ]))
-            else:
-                files.extend(run_files)
-        return files
-
-    def build_batch_filename_for_run_job(self, job_id):
+    def _build_batch_filename_for_run_job(self, job_id):
         '''Builds the path to a batch file for a run job.
 
         Parameters
@@ -363,7 +302,7 @@ class ClusterRoutines(BasicClusterRoutines):
             '%s_run_%.6d.batch.json' % (self.step_name, job_id)
         )
 
-    def build_batch_filename_for_collect_job(self):
+    def _build_batch_filename_for_collect_job(self):
         '''Builds the path to a batch file for a "collect" job.
 
         Returns
@@ -377,63 +316,44 @@ class ClusterRoutines(BasicClusterRoutines):
             '%s_collect.batch.json' % self.step_name
         )
 
-    def _make_paths_absolute(self, batch):
-        for key, value in batch['inputs'].items():
-            if isinstance(value, dict):
-                for k, v in batch['inputs'][key].items():
-                    if isinstance(v, list):
-                        batch['inputs'][key][k] = [
-                            os.path.join(self.workflow_location, sub_v)
-                            for sub_v in v
-                        ]
-                    else:
-                        batch['inputs'][key][k] = os.path.join(
-                            self.workflow_location, v
-                        )
-            elif isinstance(value, list):
-                if len(value) == 0:
-                    continue
-                if isinstance(value[0], list):
-                    for i, v in enumerate(value):
-                        batch['inputs'][key][i] = [
-                            os.path.join(self.workflow_location, sub_v)
-                            for sub_v in v
-                        ]
-                else:
-                    batch['inputs'][key] = [
-                        os.path.join(self.workflow_location, v)
-                        for v in value
-                    ]
-            else:
-                raise TypeError(
-                    'Value of "inputs" must have type list or dict.'
-                )
-        for key, value in batch['outputs'].items():
-            if isinstance(value, list):
-                if len(value) == 0:
-                    continue
-                if isinstance(value[0], list):
-                    for i, v in enumerate(value):
-                        batch['outputs'][key][i] = [
-                            os.path.join(self.workflow_location, sub_v)
-                            for sub_v in v
-                        ]
-                else:
-                    batch['outputs'][key] = [
-                        os.path.join(self.workflow_location, v)
-                        for v in value
-                    ]
-            elif isinstance(value, basestring):
-                batch['outputs'][key] = os.path.join(
-                    self.workflow_location, value
-                )
-            else:
-                raise TypeError(
-                    'Value of "outputs" must have type list or str.'
-                )
-        return batch
+    def get_run_batch(self, job_id):
+        '''Get description for a "run" job.
 
-    def read_batch_file(self, filename):
+        Parameters
+        ----------
+        job_id: int
+            one-based job identifier
+
+        Returns
+        -------
+        Dict[str, Union[int, str, list, dict]]
+            job description
+        '''
+        batch_filename = self._build_batch_filename_for_run_job(job_id)
+        return self._read_batch_file(batch_filename)
+
+    def get_collect_batch(self):
+        '''Get description for a "collect" job.
+
+        Returns
+        -------
+        Dict[str, Union[int, str, list, dict]]
+            job description
+        '''
+        batch_filename = self._build_batch_filename_for_collect_job()
+        return self._read_batch_file(batch_filename)
+
+    def store_batches(self, batches):
+        '''Persists job descriptions on disk.
+
+        Parameters
+        ----------
+        batches: List[Dict[str, Union[int, str, list, dict]]]
+            job descriptions
+        '''
+        self._write_batch_files(batches)
+
+    def _read_batch_file(self, filename):
         '''Reads job description from JSON file.
 
         Parameters
@@ -451,10 +371,6 @@ class ClusterRoutines(BasicClusterRoutines):
         ------
         OSError
             when `filename` does not exist
-
-        Note
-        ----
-        The relative paths for "inputs" and "outputs" are made absolute.
         '''
         if not os.path.exists(filename):
             raise OSError(
@@ -464,94 +380,9 @@ class ClusterRoutines(BasicClusterRoutines):
             )
         with JsonReader(filename) as f:
             batch = f.read()
-        return self._make_paths_absolute(batch)
-
-    @staticmethod
-    def _check_io_description(batches):
-        if not all([
-                isinstance(batch['inputs'], dict)
-                for batch in batches['run']]):
-            raise TypeError('"inputs" must have type dictionary')
-        if not all([
-                isinstance(batch['inputs'].values(), list)
-                for batch in batches['run']]):
-            raise TypeError('Elements of "inputs" must have type list')
-        if not all([
-                isinstance(batch['outputs'], dict)
-                for batch in batches['run']]):
-            raise TypeError('"outputs" must have type dictionary')
-        if not all([
-                all([isinstance(o, list) for o in batch['outputs'].values()])
-                for batch in batches['run']]):
-            raise TypeError('Elements of "outputs" must have type list.')
-        if 'collect' in batches:
-            batch = batches['collect']
-            if not isinstance(batch['inputs'], dict):
-                raise TypeError('"inputs" must have type dictionary')
-            if not isinstance(batch['inputs'].values(), list):
-                raise TypeError('Elements of "inputs" must have type list')
-            if not isinstance(batch['outputs'], dict):
-                raise TypeError('"outputs" must have type dictionary')
-            if not all([isinstance(o, list) for o in batch['outputs'].values()]):
-                raise TypeError('Elements of "outputs" must have type list')
-
-    def _make_paths_relative(self, batch):
-        for key, value in batch['inputs'].items():
-            if isinstance(value, dict):
-                for k, v in batch['inputs'][key].items():
-                    if isinstance(v, list):
-                        batch['inputs'][key][k] = [
-                            os.path.relpath(sub_v, self.workflow_location)
-                            for sub_v in v
-                        ]
-                    else:
-                        batch['inputs'][key][k] = os.path.relpath(
-                            v, self.workflow_location
-                        )
-            elif isinstance(value, list):
-                if len(value) == 0:
-                    continue
-                if isinstance(value[0], list):
-                    for i, v in enumerate(value):
-                        batch['inputs'][key][i] = [
-                            os.path.relpath(sub_v, self.workflow_location)
-                            for sub_v in v
-                        ]
-                else:
-                    batch['inputs'][key] = [
-                        os.path.relpath(v, self.workflow_location)
-                        for v in value
-                    ]
-            else:
-                raise TypeError(
-                    'Value of "inputs" must have type list or dict.'
-                )
-        for key, value in batch['outputs'].items():
-            if isinstance(value, list):
-                if len(value) == 0:
-                    continue
-                if isinstance(value[0], list):
-                    for i, v in enumerate(value):
-                        batch['outputs'][key][i] = [
-                            os.path.relpath(sub_v, self.workflow_location)
-                            for sub_v in v
-                        ]
-                else:
-                    batch['outputs'][key] = [
-                        os.path.relpath(v, self.workflow_location)
-                        for v in value
-                    ]
-            elif isinstance(value, basestring):
-                batch['outputs'][key] = os.path.relpath(
-                    value, self.workflow_location
-                )
-            else:
-                raise TypeError(
-                    'Value of "outputs" must have type list or str.'
-                )
         return batch
 
-    def write_batch_files(self, batches):
+    def _write_batch_files(self, batches):
         '''Writes job descriptions to files in JSON format.
 
         Parameters
@@ -564,16 +395,13 @@ class ClusterRoutines(BasicClusterRoutines):
         The paths for "inputs" and "outputs" are made relative to the
         experiment directory.
         '''
-        self._check_io_description(batches)
-        for batch in batches['run']:
-            logger.debug('make paths relative to experiment directory')
-            batch = self._make_paths_relative(batch)
-            batch_file = self.build_batch_filename_for_run_job(batch['id'])
+        for i, batch in enumerate(batches['run']):
+            batch_file = self._build_batch_filename_for_run_job(i+1)
             with JsonWriter(batch_file) as f:
                 f.write(batch)
         if 'collect' in batches.keys():
-            batch = self._make_paths_relative(batches['collect'])
-            batch_file = self.build_batch_filename_for_collect_job()
+            batch = batches['collect']
+            batch_file = self._build_batch_filename_for_collect_job()
             with JsonWriter(batch_file) as f:
                 f.write(batch)
 
@@ -641,54 +469,34 @@ class ClusterRoutines(BasicClusterRoutines):
 
     @abstractmethod
     def create_batches(self, args):
-        '''Creates job descriptions with information required for the creation
-        and processing of individual jobs.
+        '''Creates job descriptions with information required for
+        processing of individual batch jobs.
 
-        There are three phases:
+        Job descriptions need to be provided for the following phases:
 
-            * *init*: a single task that asserts the presence of required inputs,
-              deletes outputs of previous runs and builds the tasks for the
-              subsequent phases
             * *run*: collection of tasks that are processed in parallel
-            * *collect* (optional): a single task that may be required to
-              aggregate outputs of individual *run* tasks
+            * *collect* (optional): a single task that may be processed
+              after the *run* phase, for exmample for the aggregation of outputs
 
-        Each batch is a mapping that must provide the following key-value pairs:
+        Each batch is a mapping that must provide at least the following
+        key-value pair:
 
             * "id": one-based job identifier number (*int*)
-            * "inputs": absolute paths to input files required to run the job
-              (Dict[*str*, List[*str*]])
-            * "outputs": absolute paths to output files produced the job
-              (Dict[*str*, List[*str*]])
 
-        In case a *collect* job is required, the corresponding batch must
-        provide the following key-value pairs:
+        Additional key-value pairs may be provided, depending on the
+        requirements of the step. In case a *collect* phase is implemented for
+        the step, the corresponding batch may provide additional key-value pairs.
 
-            * "inputs": absolute paths to input files required to *collect* job
-              output of the *run* phase (Dict[*str*, List[*str*]])
-            * "outputs": absolute paths to output files produced by the job
-              (Dict[*str*, List[*str*]])
-
-        A *collect* job description can have the optional key "removals", which
-        provides a list of strings indicating which of the inputs are removed
-        during the *collect* phase.
-
-        A complete batches has the following structure::
+        A minimal job description has the following structure::
 
             {
                 "run": [
                     {
-                        "id": ,            # int
-                        "inputs": ,        # list or dict,
-                        "outputs": ,       # list or dict,
+                        "id": 1
                     },
                     ...
                 ]
-                "collect":
-                    {
-                        "inputs": ,        # list or dict,
-                        "outputs": ,       # list or dict
-                    }
+                "collect": {}
             }
 
         Parameters
@@ -698,13 +506,13 @@ class ClusterRoutines(BasicClusterRoutines):
 
         Returns
         -------
-        Dict[str, List[dict] or dict]
+        Dict[str, Union[List[dict], dict]]
             job descriptions
         '''
         pass
 
     def print_job_descriptions(self, batches):
-        '''Prints `batches` to standard output in YAML format.
+        '''Prints job descriptions to standard output in YAML format.
 
         Parameters
         ----------

@@ -148,9 +148,7 @@ class ImageRegistrator(ClusterRoutines):
                     job_descriptions['run'].append({
                         'id': job_count,
                         'input_ids': input_ids,
-                        'illumcorr': args.illumcorr,
-                        'inputs': dict(),
-                        'outputs': dict(),
+                        'illumcorr': args.illumcorr
                     })
 
         return job_descriptions

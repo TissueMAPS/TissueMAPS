@@ -97,10 +97,6 @@ class MetadataExtractor(ClusterRoutines):
                     count += 1
                     job_descriptions['run'].append({
                         'id': count,
-                        'inputs': {
-                            'microscope_image_files': file_map.values()
-                        },
-                        'outputs': {},
                         'microscope_image_file_ids': file_map.keys()
                     })
 

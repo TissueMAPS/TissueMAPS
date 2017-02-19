@@ -263,15 +263,14 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
                 done = 0.0
                 for t in task_.tasks:
                     if hasattr(t, 'persistent_id'):
-                        t_info = session.query(tm.Task).get(t.persistent_id)
-                        if t_info.state == gc3libs.Run.State.TERMINATED:
+                        if t.execution.state == gc3libs.Run.State.TERMINATED:
                             done += 1
                 if len(task_.tasks) > 0:
                     data['percent_done'] = done / len(task_.tasks) * 100
                 else:
                     data['percent_done'] = 0
             else:
-                if task_info.state == gc3libs.Run.State.TERMINATED:
+                if t.execution.state == gc3libs.Run.State.TERMINATED:
                     data['percent_done'] = 100
                 else:
                     data['percent_done'] = 0

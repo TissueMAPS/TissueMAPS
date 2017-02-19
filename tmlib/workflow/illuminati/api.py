@@ -249,7 +249,6 @@ class PyramidBuilder(ClusterRoutines):
                                     image_file_ids.append(f.id)
                                 description = {
                                     'id': job_count,
-                                    'inputs': {'image_files': input_files},
                                     'outputs': {},
                                     'layer_id': layer.id,
                                     'level': level,
@@ -266,8 +265,6 @@ class PyramidBuilder(ClusterRoutines):
                                 )[batch].tolist()
                                 description = {
                                     'id': job_count,
-                                    'inputs': {},
-                                    'outputs': {},
                                     'layer_id': layer.id,
                                     'level': level,
                                     'index': index,
@@ -276,7 +273,7 @@ class PyramidBuilder(ClusterRoutines):
 
                             job_descriptions['run'].append(description)
 
-        job_descriptions['collect'] = {'inputs': {}, 'outputs': {}}
+        job_descriptions['collect'] = {}
         return job_descriptions
 
     def delete_previous_job_output(self):

@@ -374,7 +374,7 @@ class CommandLineInterface(WorkflowSubmissionManager):
                 'complete successfully?'
             )
         logger.info('write batches to files')
-        api.write_batch_files(batches)
+        api.store_batches(batches)
         return batches
 
     @climethod(
@@ -386,10 +386,9 @@ class CommandLineInterface(WorkflowSubmissionManager):
     def run(self, job_id):
         self._print_logo()
         api = self.api_instance
-        logger.info('read job description from batch file')
-        batch_file = api.build_batch_filename_for_run_job(job_id)
-        batch = api.read_batch_file(batch_file)
-        logger.info('run job #%d' % batch['id'])
+        logger.info('get batch for job #%d', job_id)
+        batch = api.get_run_batch(job_id)
+        logger.info('run job #%d' % job_id)
         api.run_job(batch)
 
     @climethod(
@@ -416,10 +415,9 @@ class CommandLineInterface(WorkflowSubmissionManager):
             )
         api = self.api_instance
         if phase == 'run':
-            batch_file = api.build_batch_filename_for_run_job(job_id)
+            batch = api.get_run_batch(job_id)
         else:
-            batch_file = api.build_batch_filename_for_collect_job()
-        batch = api.read_batch_file(batch_file)
+            batch = api.get_collect_batch()
         print('\nJOB DESCRIPTION\n===============\n\n%s'
               % yaml.safe_dump(batch, default_flow_style=False))
 
@@ -577,7 +575,6 @@ class CommandLineInterface(WorkflowSubmissionManager):
         self._print_logo()
         api = self.api_instance
         logger.info('read job description from file')
-        batch_file = api.build_batch_filename_for_collect_job()
-        batch = api.read_batch_file(batch_file)
+        batch = api.get_collect_batch()
         logger.info('collect job output')
         api.collect_job_output(batch)

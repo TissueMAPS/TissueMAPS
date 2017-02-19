@@ -215,8 +215,7 @@ def calc_grid_coordinates_from_layout(stitch_dims, stitch_layout):
 
 
 def calc_grid_coordinates_from_positions(stage_positions, n,
-                                         reverse_rows=False,
-                                         reverse_columns=False):
+        reverse_rows=False, reverse_columns=False):
     '''Calculates the relative position of each image within the acquisition
     grid. The coordinates are one-based to be consistent with the OME data model.
 

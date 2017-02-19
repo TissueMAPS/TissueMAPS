@@ -83,15 +83,6 @@ class MetadataConfigurator(ClusterRoutines):
                 job_count += 1
                 description = {
                     'id': job_count,
-                    'inputs': {
-                        'microscope_metadata_files': [
-                            os.path.join(
-                                acq.microscope_metadata_location, f.name
-                            )
-                            for f in acq.microscope_metadata_files
-                        ]
-                    },
-                    'outputs': {},
                     'microscope_image_file_ids': [
                         f.id for f in acq.microscope_image_files
                     ],

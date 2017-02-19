@@ -66,7 +66,9 @@ class ImageExtractor(ClusterRoutines):
             job descriptions
         '''
         job_count = 0
-        job_descriptions = collections.defaultdict(list)
+        job_descriptions = dict()
+        job_descriptions['run'] = list()
+        job_descriptions['collect'] = {'delete': args.delete}
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             # Group file mappings per site to ensure that all z-planes of
             # one site end up on the same machine.
@@ -93,28 +95,9 @@ class ImageExtractor(ClusterRoutines):
                 job_count += 1
                 job_descriptions['run'].append({
                     'id': job_count,
-                    'inputs': {
-                        'microscope_image_files': [
-                            [
-                                os.path.join(
-                                    fmap.acquisition.microscope_images_location,
-                                    f
-                                )
-                                for f in fmap.map['files']
-                            ]
-                            for fmap in fmappings
-                        ]
-                    },
-                    'outputs': {},
                     'image_file_mapping_ids': ids,
                     'mip': args.mip
                 })
-
-            job_descriptions['collect'] = {
-                'inputs': dict(),
-                'outputs': dict(),
-                'delete': args.delete
-            }
 
         return job_descriptions
 
