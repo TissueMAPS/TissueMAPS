@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """API view functions for file upload."""
-import os.path as p
 import json
 import datetime
 import importlib
 import logging
+import numpy as np
 import re
 
 from flask import request, jsonify
@@ -137,7 +137,7 @@ def register_upload(experiment_id, acquisition_id):
 @jwt_required()
 @assert_form_params('files')
 @decode_query_ids('write')
-def file_validity_check(experiment_id, acquisition_id):
+def check_file_validity(experiment_id, acquisition_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/upload/validity-check
 
@@ -170,24 +170,27 @@ def file_validity_check(experiment_id, acquisition_id):
         :statuscode 500: server error
 
     """
+    logger.info('check whether files are valid for upload')
     data = json.loads(request.data)
     if not 'files' in data:
         raise MalformedRequestError()
     if not type(data['files']) is list:
         raise MalformedRequestError('No image files provided.')
 
-    def check_file(fname):
-        is_imgfile = imgfile_regex.search(fname) is not None
-        is_metadata_file = metadata_regex.search(fname) is not None
-        return is_metadata_file or is_imgfile
-
     with tm.utils.ExperimentSession(experiment_id) as session:
         experiment = session.query(tm.Experiment).one()
         microscope_type = experiment.microscope_type
     imgfile_regex, metadata_regex = get_microscope_type_regex(microscope_type)
 
+    def check_file(fname):
+        is_imgfile = imgfile_regex.search(fname) is not None
+        is_metadata_file = metadata_regex.search(fname) is not None
+        return is_metadata_file or is_imgfile
+
     # TODO: check if metadata files are missing
     is_valid = [check_file(f['name']) for f in data['files']]
+
+    logger.info('%d of %d files are valid', np.sum(is_valid), len(is_valid))
 
     return jsonify({
         'is_valid': is_valid

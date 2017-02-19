@@ -166,7 +166,7 @@ def process_tool_request(experiment_id):
         experiment_id, tool_name, server_cfg.logging_verbosity
     )
     submission_id, user_name = manager.register_submission(current_identity.id)
-    manager.write_batch_file(payload, submission_id)
+    manager.store_payload(payload, submission_id)
     job = manager.create_job(submission_id, user_name)
 
     # with tm.utils.ExperimentSession(experiment_id) as session:

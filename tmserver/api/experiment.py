@@ -972,8 +972,7 @@ def create_acquisition(experiment_id):
         if plate is None:
             raise ResourceNotFoundError('Plate "%s" not found' % plate_name)
         acquisition = tm.Acquisition(
-            name=name, description=desc,
-            plate_id=plate.id
+            name=name, description=desc, plate_id=plate.id
         )
         session.add(acquisition)
         session.commit()
