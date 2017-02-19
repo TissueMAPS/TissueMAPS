@@ -480,25 +480,21 @@ def run_jobs(experiment_id):
     job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
     with tm.utils.ExperimentSession(experiment_id) as session:
         for j in job_ids:
-            image_file_locations = session.query(tm.ChannelImageFile._location).\
+            image_file_count = session.query(tm.ChannelImageFile.id).\
                 join(tm.Channel).\
                 filter(tm.Channel.name.in_(channel_names)).\
                 filter(tm.ChannelImageFile.site_id == j).\
-                all()
-            if not image_file_locations:
+                count()
+            if image_file_count == 0:
                 raise JtUIError('No images found for job ID %s.' % j)
             job_descriptions['run'].append({
                 'id': j,
-                'inputs': {
-                    'image_files': [f[0] for f in image_file_locations]
-                },
-                'outputs': {},
                 'site_ids': [j],
                 'plot': True,
                 'debug': False
             })
 
-    jt.write_batch_files(job_descriptions)
+    jt.store_batches(job_descriptions)
     with tm.utils.MainSession() as session:
         submission = tm.Submission(
             experiment_id=experiment_id, program='jtui',
