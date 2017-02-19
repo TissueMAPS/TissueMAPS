@@ -146,7 +146,8 @@ def create_app(verbosity=None):
 
     # Create a session scope for interacting with the main database
     engine = create_db_engine(cfg.db_uri_sqla)
-    session_factory = create_db_session_factory(engine)
+    session_factory = create_db_session_factory()
+    session_factory.configure(bind=engine)
     session = flask_scoped_session(session_factory, app)
 
     from tmserver.extensions import gc3pie
