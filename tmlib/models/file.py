@@ -319,11 +319,12 @@ class ChannelImageFile(FileModel, DateMixIn):
             metadata.lower_overhang = self.site.intersection.lower_overhang
             metadata.right_overhang = self.site.intersection.right_overhang
             metadata.left_overhang = self.site.intersection.left_overhang
-            shift = [
-                s for s in self.site.shifts if s.cycle_id == self.cycle_id
-            ][0]
-            metadata.x_shift = shift.x
-            metadata.y_shift = shift.y
+            if self.site.shifts:
+                shift = [
+                    s for s in self.site.shifts if s.cycle_id == self.cycle_id
+                ][0]
+                metadata.x_shift = shift.x
+                metadata.y_shift = shift.y
         return ChannelImage(array, metadata)
 
     @assert_type(image='tmlib.image.ChannelImage')

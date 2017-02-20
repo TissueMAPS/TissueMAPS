@@ -72,84 +72,81 @@ class ImageRegistrator(ClusterRoutines):
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
 
-            for plate in session.query(tm.Plate):
+            cycles = session.query(tm.Cycle).all()
 
-                if not(len(plate.cycles) > 1):
-                    raise NotSupportedError(
-                        'Alignment requires more than one cycle.'
-                    )
+            if not(len(cycles) > 1):
+                raise NotSupportedError(
+                    'Alignment requires more than one cycle.'
+                )
 
-                if args.ref_cycle >= len(plate.cycles):
-                    raise JobDescriptionError(
-                        'Cycle index must not exceed total number of cycles.'
-                    )
+            if args.ref_cycle >= len(cycles):
+                raise JobDescriptionError(
+                    'Cycle index must not exceed total number of cycles.'
+                )
 
-                site_ids = session.query(tm.Site.id).\
-                    join(tm.Well).\
-                    join(tm.Plate).\
-                    filter(tm.Plate.id == plate.id).\
-                    order_by(tm.Site.id).\
-                    all()
+            site_ids = session.query(tm.Site.id).\
+                order_by(tm.Site.id).\
+                all()
 
-                batches = self._create_batches(site_ids, args.batch_size)
-                for batch in batches:
+            batches = self._create_batches(site_ids, args.batch_size)
+            for batch in batches:
 
-                    job_count += 1
-                    input_ids = {
-                        'reference_file_ids': list(),
-                        'target_file_ids': defaultdict(list)
-                    }
+                job_count += 1
+                input_ids = {
+                    'reference_file_ids': list(),
+                    'target_file_ids': defaultdict(list)
+                }
 
-                    for cycle in plate.cycles:
+                for cycle in cycles:
 
-                        n = session.query(tm.ChannelImageFile.id).\
+                    n = session.query(tm.ChannelImageFile.id).\
+                        join(tm.Cycle).\
+                        join(tm.Channel).\
+                        filter(tm.Cycle.id == cycle.id).\
+                        filter(tm.Channel.wavelength == args.ref_wavelength).\
+                        filter(~tm.Site.omitted).\
+                        count()
+
+                    if n == 0:
+                        raise ValueError(
+                            'No image files found for cycle %d and '
+                            'wavelength "%s"'
+                            % (cycle.id, args.ref_wavelength)
+                        )
+
+                    for s in batch:
+
+                        files = session.query(tm.ChannelImageFile.id).\
+                            join(tm.Site).\
                             join(tm.Cycle).\
                             join(tm.Channel).\
+                            filter(tm.Site.id == s).\
                             filter(tm.Cycle.id == cycle.id).\
                             filter(tm.Channel.wavelength == args.ref_wavelength).\
                             filter(~tm.Site.omitted).\
-                            count()
+                            all()
 
-                        if n == 0:
-                            raise ValueError(
-                                'No image files found for cycle %d and '
-                                'wavelength "%s"'
-                                % (cycle.id, args.ref_wavelength)
+                        if not files:
+                            # We don't raise an Execption here, because
+                            # there may be situations were an aquisition
+                            # failed at a given site in one cycle, but
+                            # is present in the other cycles.
+                            logger.warning(
+                                'no files for site %d and cycle %d',
+                                s, cycle.id
                             )
+                            continue
 
-                        for s in batch:
+                        ids = [f.id for f in files]
+                        if cycle.index == args.ref_cycle:
+                            input_ids['reference_file_ids'].extend(ids)
+                        input_ids['target_file_ids'][cycle.id].extend(ids)
 
-                            files = session.query(tm.ChannelImageFile.id).\
-                                join(tm.Site).\
-                                join(tm.Cycle).\
-                                join(tm.Channel).\
-                                filter(tm.Site.id == s).\
-                                filter(tm.Cycle.id == cycle.id).\
-                                filter(tm.Channel.wavelength == args.ref_wavelength).\
-                                filter(~tm.Site.omitted).\
-                                all()
-
-                            if not files:
-                                # We don't raise an Execption here, because
-                                # there may be situations were an aquisition
-                                # failed at a given site in one cycle, but
-                                # is present in the other cycles.
-                                logger.warning(
-                                    'no files for site %d and cycle %d',
-                                    s, cycle.id
-                                )
-                                continue
-
-                            ids = [f.id for f in files]
-                            if cycle.index == args.ref_cycle:
-                                input_ids['reference_file_ids'].extend(ids)
-                            input_ids['target_file_ids'][cycle.id].extend(ids)
-
-                    job_descriptions['run'].append({
-                        'id': job_count,
-                        'input_ids': input_ids,
-                        'illumcorr': args.illumcorr
-                    })
+                job_descriptions['run'].append({
+                    'id': job_count,
+                    'input_ids': input_ids,
+                    'illumcorr': args.illumcorr
+                })
 
         return job_descriptions
 
@@ -224,9 +221,9 @@ class ImageRegistrator(ClusterRoutines):
                     target_stats[cycle_id] = illumstats_file.get()
 
             for i, rid in enumerate(reference_file_ids):
+                reference_file = session.query(tm.ChannelImageFile).get(rid)
                 logger.info('register images at site %d', reference_file.site_id)
                 logger.debug('load reference image %d', rid)
-                reference_file = session.query(tm.ChannelImageFile).get(rid)
                 reference_img = reference_file.get()
                 if batch['illumcorr']:
                     logger.debug('correct reference image')
