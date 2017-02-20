@@ -14,7 +14,6 @@
 import numpy as np
 import pandas as pd
 import mahotas as mh
-import pysal as ps
 import logging
 from abc import ABCMeta
 from abc import abstractproperty
