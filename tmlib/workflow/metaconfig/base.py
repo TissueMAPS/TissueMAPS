@@ -118,6 +118,8 @@ class MetadataHandler(object):
         omexml_metadata: bioformats.omexml.OMEXML, optional
             OMEXML metadata generated based on microscope metadata files
         '''
+        logger.info('instantiate metadata handler')
+        logger.debug('check format of provided metadata')
         for name, md in omexml_images.iteritems():
             if not isinstance(md, bioformats.omexml.OMEXML):
                 raise TypeError(
@@ -634,13 +636,12 @@ class MetadataHandler(object):
 
         logger.info('group metadata per z-stack')
 
-        # Remove all z-plane image entries except for the first
-        grouped_md = md.drop_duplicates(subset=[
-            'well_name', 'well_position_x', 'well_position_y',
-            'channel_name', 'tpoint'
-        ]).copy()
-        grouped_md.index = range(grouped_md.shape[0])
-        # NOTE: z-planes will no only be tracked via the file mapping
+        # # Remove all z-plane image entries except for the first
+        # grouped_md = md.drop_duplicates(subset=[
+        #     'well_name', 'well_position_x', 'well_position_y',
+        #     'channel_name', 'tpoint'
+        # ], keep='first').copy()
+        # grouped_md.index = range(grouped_md.shape[0])
 
         # Group metadata by focal planes (z-stacks)
         zstacks = md.groupby([
@@ -653,24 +654,27 @@ class MetadataHandler(object):
         # in order to be able to perform the intensity projection later on
         grouped_file_mapper_list = list()
         grouped_file_mapper_lookup = collections.defaultdict(list)
-        sorted_indices = sorted(zstacks.groups.values(), key=lambda k: k[0])
-        for i, indices in enumerate(sorted_indices):
+        rows_to_drop = list()
+        for key, indices in zstacks.groups.iteritems():
             fm = ImageFileMapping()
             fm.files = list()
             fm.series = list()
             fm.planes = list()
             fm.zlevels = list()
+            fm.ref_index = indices[0]
             for index in indices:
-                fm.ref_index = i  # new index
                 fm.files.extend(self._file_mapper_list[index].files)
                 fm.series.extend(self._file_mapper_list[index].series)
                 fm.planes.extend(self._file_mapper_list[index].planes)
                 fm.zlevels.append(md.loc[index, 'zplane'])
             grouped_file_mapper_list.append(fm)
             grouped_file_mapper_lookup[tuple(fm.files)].append(fm)
+            # Keep only the first record
+            rows_to_drop.extend(indices[1:])
 
         # Update metadata and file mapper objects
-        self.metadata = grouped_md
+        self.metadata.drop(self.metadata.index[rows_to_drop], inplace=True)
+        del self.metadata['zplane']
         self._file_mapper_list = grouped_file_mapper_list
         self._file_mapper_lookup =  grouped_file_mapper_lookup
 

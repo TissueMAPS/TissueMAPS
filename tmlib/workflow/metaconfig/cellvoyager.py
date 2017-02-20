@@ -131,7 +131,6 @@ class CellvoyagerMetadataReader(MetadataReader):
         ])
         lookup = defaultdict(list)
 
-        count = 0
         for e in mlf_elements:
             # Translate positional information into well identifier string
             well_row = utils.map_number_to_letter(
@@ -146,7 +145,11 @@ class CellvoyagerMetadataReader(MetadataReader):
                     % (well_id, field_index)
                 )
                 continue
-            img = metadata.image(count)
+            # This microscope stores each plane in a separate file. Therefore,
+            # we can use the filename to match images.
+            name = e.text
+            index = microscope_image_files.index(name)
+            img = metadata.image(index)
             img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
             # Image files always contain only a single plane
             img.Pixels.SizeT = 1
@@ -155,7 +158,7 @@ class CellvoyagerMetadataReader(MetadataReader):
             img.Pixels.plane_count = 1
             # A name has to be set as a flag for the handler to update
             # the metadata
-            img.Name = e.text
+            img.Name = name
             img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
@@ -165,7 +168,6 @@ class CellvoyagerMetadataReader(MetadataReader):
 
             idx = microscope_image_files.index(img.Name)
             lookup[well_id].append(idx)
-            count += 1
 
         # Obtain the general experiment information and well plate format
         # specifications from the ".mrf" file:

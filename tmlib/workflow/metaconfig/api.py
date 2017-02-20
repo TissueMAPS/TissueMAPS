@@ -167,9 +167,6 @@ class MetadataConfigurator(ClusterRoutines):
                 metadata_filenames, omexml_images.keys()
             )
 
-        if not isinstance(omexml_metadata, bioformats.omexml.OMEXML):
-            raise TypeError('Metadata must have type bioformats.omexml.OMEXML.')
-
         MetadataHandler = metadata_handler_factory(batch['microscope_type'])
         mdhandler = MetadataHandler(omexml_images, omexml_metadata)
         mdhandler.configure_omexml_from_image_files()
