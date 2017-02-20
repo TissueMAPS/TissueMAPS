@@ -170,11 +170,11 @@ class ToolRequestManager(SubmissionManager):
         TypeError
             when `payload` is not a mapping
         '''
-        if not isinstance(batch, dict):
+        if not isinstance(payload, dict):
             raise TypeError('Playload must have type dict.')
         batch_file = self._build_batch_filename_for_job(submission_id)
         with JsonWriter(batch_file) as f:
-            f.write(batch)
+            f.write(payload)
 
     @classmethod
     def _get_parser(cls):
