@@ -185,10 +185,7 @@ class ImageRegistrator(ClusterRoutines):
                         reference_file.cycle_id
                     )
                     illumstats_file = session.query(tm.IllumstatsFile).\
-                        filter_by(
-                            channel_id=reference_file.channel_id,
-                            cycle_id=reference_file.cycle_id
-                        ).\
+                        filter_by(channel_id=reference_file.channel_id).\
                         one()
                 except NoResultFound:
                     raise WorkflowError(
