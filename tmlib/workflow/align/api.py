@@ -19,7 +19,8 @@ from collections import defaultdict
 import tmlib.models as tm
 from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
-from tmlib.errors import NotSupportedError, NoResultFound
+from tmlib.errors import NotSupportedError
+from sqlalchemy.orm.exc import NoResultFound
 from tmlib.errors import JobDescriptionError
 from tmlib.workflow.align import registration as reg
 from tmlib.workflow.api import ClusterRoutines
