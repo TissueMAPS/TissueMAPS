@@ -91,7 +91,7 @@ class _CliMeta(ABCMeta):
         BatchArgs, SubmissionArgs = get_step_args(step_name)
         subparsers = parser.add_subparsers(dest='method', help='methods')
         subparsers.required = True
-        flags = collections.defaultdict(list)
+        # flags = collections.defaultdict(list)
         for attr_name in dir(cls):
             if attr_name.startswith('__'):
                 continue
@@ -107,8 +107,10 @@ class _CliMeta(ABCMeta):
                     method_parser.description = attr_value.help
                     for arg in attr_value.args.iterargs():
                         arg.add_to_argparser(method_parser)
-                        if arg.flag is not None:
-                            flags[attr_name].append(arg.flag)
+                        # if arg.flag is not None:
+                        #     flags[attr_name].append(arg.flag)
+                        # if arg.short_flag is not None:
+                        #     flags[attr_name].append(arg.short_flag)
         # The "init" and "submit" methods require additional arguments
         # that also need to be accessible outside the scope of the
         # command line interface. Therefore, they are handled separately.
@@ -126,8 +128,10 @@ class _CliMeta(ABCMeta):
             )
             for arg in args_class.iterargs():
                 arg.add_to_argparser(parser_group)
-                if arg.flag is not None:
-                    flags[attr_name].append(arg.flag)
+                # if arg.flag is not None:
+                #     flags[attr_name].append(arg.flag)
+                # if arg.short_flag is not None:
+                #     flags[attr_name].append(arg.short_flag)
 
         add_step_specific_method_args(step_name, 'init', BatchArgs)
         setattr(cls, '_batch_args_class', BatchArgs)
@@ -378,9 +382,10 @@ class CommandLineInterface(WorkflowSubmissionManager):
         return batches
 
     @climethod(
-        help='runs an invidiual jobs on the local machine',
+        help='runs an invidiual batch job on the local machine',
         job_id=Argument(
-            type=int, help='ID of the job that should be run', flag='j'
+            type=int, help='ID of the job that should be run',
+            flag='job', short_flag='j'
         )
     )
     def run(self, job_id):
@@ -394,11 +399,11 @@ class CommandLineInterface(WorkflowSubmissionManager):
     @climethod(
         help='prints the description of a given batch job to the console',
         phase=Argument(
-            type=str, flag='p', choices={'run', 'collect'},
+            type=str, short_flag='p', choices={'run', 'collect'},
             help='phase of the workflow step to which the job belongs'
         ),
         job_id=Argument(
-            type=int, flag='j', dependency=('phase', 'run'),
+            type=int, flag='job', short_flag='j', dependency=('phase', 'run'),
             help='ID of the job for which information should be displayed'
         )
     )
@@ -424,12 +429,12 @@ class CommandLineInterface(WorkflowSubmissionManager):
     @climethod(
         help='prints the log output of a given batch job to the console',
         phase=Argument(
-            type=str, choices={'init', 'run', 'collect'}, flag='p',
+            type=str, choices={'init', 'run', 'collect'}, short_flag='p',
             required=True,
             help='phase of the workflow step to which the job belongs'
         ),
         job_id=Argument(
-            type=int, flag='j', dependency=('phase', 'run'),
+            type=int, flag='job', short_flag='j', dependency=('phase', 'run'),
             help='ID of the job for which log output should be shown'
         )
     )
@@ -478,11 +483,11 @@ class CommandLineInterface(WorkflowSubmissionManager):
         ),
         monitoring_depth=Argument(
             type=int, help='number of child tasks that should be monitored',
-            meta='INDEX', default=1, flag='d'
+            meta='INDEX', default=1, flag='depth', short_flag='d'
         ),
         monitoring_interval=Argument(
             type=int, help='seconds to wait between monitoring iterations',
-            meta='SECONDS', default=10, flag='i'
+            meta='SECONDS', default=10, flag='interval', short_flag='i'
         )
     )
     def submit(self, monitoring_depth, monitoring_interval):
@@ -533,11 +538,11 @@ class CommandLineInterface(WorkflowSubmissionManager):
         ),
         monitoring_depth=Argument(
             type=int, help='number of child tasks that should be monitored',
-            meta='INDEX', default=1, flag='d'
+            meta='INDEX', default=1, flag='depth', short_flag='d'
         ),
         monitoring_interval=Argument(
             type=int, help='seconds to wait between monitoring iterations',
-            meta='SECONDS', default=10, flag='i'
+            meta='SECONDS', default=10, flag='interval', short_flag='i'
         )
     )
     def resubmit(self, monitoring_depth, monitoring_interval):

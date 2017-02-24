@@ -24,27 +24,27 @@ from tmlib.workflow import register_step_submission_args
 class IlluminatiBatchArguments(BatchArguments):
 
     batch_size = Argument(
-        type=int, default=100, flag='b',
+        type=int, default=100, flag='batch-size', short_flag='b',
         help='number of image files that should be processed per job'
     )
 
     align = Argument(
-        type=bool, default=False, flag='a',
+        type=bool, default=False, short_flag='a',
         help='whether images should be aligned between multiplexing cycles'
     )
 
     illumcorr = Argument(
-        type=bool, default=False, flag='i',
+        type=bool, default=False, short_flag='i',
         help='wether images should be corrected for illumination artifacts'
     )
 
     clip = Argument(
-        type=bool, default=False, flag='c',
+        type=bool, default=False, short_flag='c',
         help='whether images intensities should be clipped'
     )
 
     clip_value = Argument(
-        type=int,
+        type=int, flag='clip-value',
         help='''threshold value at which image intensities should be clipped
             (defaults to 99.99th percentile; the set value overwrites
             calculated percentile)
@@ -52,10 +52,9 @@ class IlluminatiBatchArguments(BatchArguments):
     )
 
     clip_percent = Argument(
-        type=float,
+        type=float, default=99.90, flag='clip-percent',
         help='''threshold percentile at which image intensities should be clipped
-        ''',
-        default=99.90
+        '''
     )
 
 @register_step_submission_args('illuminati')

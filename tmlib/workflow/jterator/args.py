@@ -24,13 +24,13 @@ from tmlib.workflow import register_step_submission_args
 class JteratorBatchArguments(BatchArguments):
 
     plot = Argument(
-        type=bool, default=False, flag='p', disabled=True,
+        type=bool, default=False, short_flag='p', disabled=True,
         help='whether plotting should be activated'
     )
 
     batch_size = Argument(
         type=int, help='number of sites that should be processed per job',
-        default=100, flag='b'
+        default=100, flag='batch-size', short_flag='b'
     )
 
 

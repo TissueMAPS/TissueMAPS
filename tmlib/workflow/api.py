@@ -27,8 +27,7 @@ from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
 import gc3libs
-from gc3libs.quantity import Duration
-from gc3libs.quantity import Memory
+from gc3libs.quantity import Duration, Memory
 
 import tmlib.models as tm
 from tmlib import utils
@@ -416,10 +415,10 @@ class ClusterRoutines(BasicClusterRoutines):
             if arg.type == bool:
                 if ((value and not arg.default) or
                     (not value and arg.default)):
-                    command.append('--%s' % arg.name)
+                    command.append('--%s' % arg.flag)
             else:
                 if value is not None:
-                    command.extend(['--%s' % arg.name, str(value)])
+                    command.extend(['--%s' % arg.flag, str(value)])
         return command
 
     def _build_run_command(self, job_id):

@@ -28,6 +28,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
 from psycopg2 import ProgrammingError
 from psycopg2.extras import Json
+from gc3libs.quantity import Duration, Memory
 
 import tmlib.models as tm
 from tmlib.utils import autocreate_directory_property
@@ -44,6 +45,7 @@ from tmlib.workflow.jterator.utils import get_module_path
 from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.handles import SegmentedObjects
+from tmlib.workflow.jterator.jobs import DebugRunJob
 from tmlib.workflow import register_step_api
 from tmlib import cfg
 
@@ -329,6 +331,14 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
 
         return store
 
+    def _build_debug_run_command(self, site_id):
+        logger.debug('build "debug" command')
+        command = [self.step_name]
+        command.extend(['-v' for x in range(self.verbosity)])
+        command.append(self.experiment_id)
+        command.extend(['debug', '--site', str(site_id)])
+        return command
+
     def _save_pipeline_outputs(self, store):
         logger.info('save pipeline outputs')
         objects_output = self.project.pipe.description.output.objects
@@ -475,6 +485,62 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                         tm.FeatureValues.add(
                             conn, values, mapobject_ids[label], t
                         )
+
+    def create_debug_run_jobs(self, submission_id, user_name, job_collection,
+            batches, duration, memory, cores):
+        '''Creates debug jobs for the parallel "run" phase of the step.
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding submission
+        user_name: str
+            name of the submitting user
+        job_collection: tmlib.workflow.job.SingleRunJobCollection
+            empty collection of *run* jobs that should be populated
+        batches: List[dict]
+            job descriptions
+        duration: str
+            computational time that should be allocated for a single job;
+            in HH:MM:SS format
+        memory: int
+            amount of memory in Megabyte that should be allocated for a single
+        cores: int
+            number of CPU cores that should be allocated for a single job
+
+        Returns
+        -------
+        tmlib.workflow.jobs.SingleRunJobCollection
+            run jobs
+        '''
+        logger.info('create "debug" run jobs for submission %d', submission_id)
+        logger.debug('allocated time for debug run jobs: %s', duration)
+        logger.debug('allocated memory for debug run jobs: %d MB', memory)
+        logger.debug('allocated cores for debug run jobs: %d', cores)
+
+        for b in batches:
+            job = DebugRunJob(
+                step_name=self.step_name,
+                arguments=self._build_debug_run_command(site_id=b['site_id']),
+                output_dir=self.log_location,
+                job_id=b['site_id'],
+                submission_id=submission_id,
+                user_name=user_name
+            )
+            job.requested_walltime = Duration(duration)
+            job.requested_memory = Memory(memory, Memory.MB)
+            if not isinstance(cores, int):
+                raise TypeError(
+                    'Argument "cores" must have type int.'
+                )
+            if not cores > 0:
+                raise ValueError(
+                    'The value of "cores" must be positive.'
+                )
+            job.requested_cores = cores
+            job_collection.add(job)
+        return job_collection
+
 
     def run_job(self, batch):
         '''Runs the pipeline, i.e. executes modules sequentially. After

@@ -24,24 +24,24 @@ from tmlib.workflow import register_step_submission_args
 class AlignBatchArguments(BatchArguments):
 
     ref_cycle = Argument(
-        type=int, required=True, flag='c',
+        type=int, required=True, flag='ref-cycle', short_flag='c',
         help='''zero-based index of the cycle whose sites should be used
             as reference
         '''
     )
 
     ref_wavelength = Argument(
-        type=str, required=True, flag='w',
+        type=str, required=True, flag='ref-wavelength', short_flag='w',
         help='name of the wavelength whose images should be used as reference'
     )
 
     batch_size = Argument(
-        type=int, default=100, flag='b',
+        type=int, default=100, flag='batch-size', short_flag='b',
         help='number of acquisition sites that should be processed per job'
     )
 
     illumcorr = Argument(
-        type=bool, default=False, flag='i',
+        type=bool, default=False, short_flag='i',
         help='wether images should be corrected for illumination artifacts'
     )
 

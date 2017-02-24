@@ -25,7 +25,7 @@ class MetaextractBatchArguments(BatchArguments):
 
     batch_size = Argument(
         type=int, help='number of images that should be processed per job',
-        default=100, flag='b'
+        default=100, flag='batch-size', short_flag='b'
     )
 
 

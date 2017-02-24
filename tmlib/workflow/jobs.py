@@ -131,8 +131,6 @@ class RunJob(WorkflowStepJob):
     def __init__(self, step_name, arguments, output_dir, job_id,
                  submission_id, user_name, index=None):
         '''
-        Initialize an instance of class RunJob.
-
         Parameters
         ----------
         step_name: str
@@ -154,7 +152,7 @@ class RunJob(WorkflowStepJob):
         if not isinstance(index, int) and index is not None:
             raise TypeError('Argument "index" must have type int.')
         self.index = index
-        super(self.__class__, self).__init__(
+        super(RunJob, self).__init__(
             step_name=step_name,
             arguments=arguments,
             output_dir=output_dir,
@@ -164,8 +162,7 @@ class RunJob(WorkflowStepJob):
 
     @property
     def name(self):
-        '''str: name of the job
-        '''
+        '''str: name of the job'''
         if self.index is None:
             return '%s_run_%.6d' % (self.step_name, self.job_id)
         else:

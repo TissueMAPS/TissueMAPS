@@ -55,12 +55,13 @@ class Argument(object):
         type='type', help='basestring',
         choices=['set', 'list', 'types.NoneType'],
         flag=['basestring', 'types.NoneType'],
+        short_flag=['basestring', 'types.NoneType'],
         dependency=['tuple'],
         meta=['basestring', 'types.NoneType']
     )
     def __init__(self, type, help, default=None, choices=None, flag=None,
-            required=False, disabled=False, get_choices=None, meta=None,
-            dependency=()):
+            short_flag=None, required=False, disabled=False,
+            get_choices=None, meta=None, dependency=()):
         '''
         Parameters
         ----------
@@ -68,12 +69,18 @@ class Argument(object):
             type of the argument
         help: str
             help message that describes the argument
-        default: , optional
+        default: Union[str, int, float, bool], optional
             default value (default: ``None``)
         choices: set or list or function, optional
             choices for value
         flag: str, optional
-            single letter that serves as a flag for command line usage
+            alternative name that serves as a flag for command line usage;
+            will be prepented with two hyphens ``--``
+            (default: ``None``;
+            defaults to `name` of the argument when not provided)
+        short_flag: str, optional
+            single letter that serves as an additional flag for
+            command line usage; will be prepended with one hyphen ``-``
             (default: ``None``)
         required: bool, optional
             whether the argument is required (default: ``False``)
@@ -148,9 +155,16 @@ class Argument(object):
             if self.type == bool:
                 self.choices = {True, False}
         if flag is not None:
-            if not(flag.isalpha() and len(flag) == 1):
-                raise ValueError('Argument "flag" must be a letter.')
+            if not re.search(r'[a-z]+[_-]?[a-z]+', flag):
+                raise ValueError(
+                    'Argument "flag" may only contain lower case letters and '
+                    'optionally a single separating hyphen or underscore.'
+                )
+        if short_flag is not None:
+            if not(short_flag.isalpha() and len(short_flag) == 1):
+                raise ValueError('Argument "short_flag" must be a letter.')
         self.flag = flag
+        self.short_flag = short_flag
         formatted_help_message = self.help.replace('\n', ' ').split(' ')
         formatted_help_message[0] = formatted_help_message[0].lower()
         formatted_help_message = ' '.join(formatted_help_message)
@@ -175,6 +189,10 @@ class Argument(object):
                 'Attribute "name" must be lower case and only contain letters '
                 '(a-z) or underscores (_).'
             )
+        # We cannot set this in the constructor, because this property gets
+        # set later.
+        if self.flag is None:
+            self.flag = value
         self._name = value
 
     @property
@@ -235,11 +253,13 @@ class Argument(object):
         argparse.ArgumentParser
             `parser` with added arguments
         '''
-        # flags = [self.name]
-        flags = ['--%s' % self.name]
+        if self.flag is None:
+            flags = ['--%s' % self.name]
+        else:
+            flags = ['--%s' % self.flag]
+        if self.short_flag is not None:
+            flags.append('-%s' % self.short_flag)
         kwargs = dict()
-        if self.flag is not None:
-            flags.append('-%s' % self.flag)
         kwargs['dest'] = self.name
         kwargs['help'] = re.sub(r'\s+', ' ', self.help).strip()
         if self.type == bool:
