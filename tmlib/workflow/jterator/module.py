@@ -66,7 +66,7 @@ class ImageAnalysisModule(object):
     pipeline.
     '''
 
-    def __init__(self, name, source_file, description):
+    def __init__(self, name, source_file, handles):
         '''
         Parameters
         ----------
@@ -74,24 +74,14 @@ class ImageAnalysisModule(object):
             name of the module
         source_file: str
             path to program file that should be executed
-        description: Dict[str, List[dict]]
-            description of module input/output as provided by `handles`
+        handles: tmlib.workflow.jterator.description.HandleDescriptions
+            description of module input/output as provided
         '''
         self.name = name
         self.source_file = source_file
-        self.description = description
+        self.handles = handles
         self.outputs = dict()
         self.persistent_store = dict()
-
-    def instantiate_handles(self):
-        '''Instantiates a handle for each described parameter.'''
-        self.handles = dict()
-        self.handles['input'] = list()
-        for item in self.description['input']:
-            self.handles['input'].append(hdls.create_handle(**item))
-        self.handles['output'] = list()
-        for item in self.description['output']:
-            self.handles['output'].append(hdls.create_handle(**item))
 
     def build_figure_filename(self, figures_dir, job_id):
         '''Builds name of figure file into which module will write figure
@@ -117,7 +107,7 @@ class ImageAnalysisModule(object):
     def keyword_arguments(self):
         '''dict: name and value of each input handle as key-value pairs'''
         kwargs = collections.OrderedDict()
-        for handle in self.handles['input']:
+        for handle in self.handles.input:
             kwargs[handle.name] = handle.value
         return kwargs
 
@@ -140,9 +130,9 @@ class ImageAnalysisModule(object):
             'evaluating Matlab function with INPUTS: "%s"',
             '", "'.join(kwargs.keys())
         )
-        output_names = [handle.name for handle in self.handles['output']]
+        output_names = [handle.name for handle in self.handles.output]
         version = engine.get('jtmodules.{0}.version'.format(module_name))
-        if version != self.description['version']:
+        if version != self.handles.version:
             raise PipelineRunError(
                 'Version of module and handles is not the same.'
             )
@@ -160,7 +150,7 @@ class ImageAnalysisModule(object):
         # TODO: log to file
         engine.eval(func_call_string)
 
-        for handle in self.handles['output']:
+        for handle in self.handles.output:
             val = engine.get('%s' % handle.name)
             if isinstance(val, np.ndarray):
                 # Matlab returns arrays in Fortran order
@@ -168,7 +158,7 @@ class ImageAnalysisModule(object):
             else:
                 handle.value = val
 
-        return self.handles['output']
+        return self.handles.output
 
     def _exec_py_module(self):
         logger.debug('importing Python module: "%s"' % self.source_file)
@@ -186,7 +176,7 @@ class ImageAnalysisModule(object):
             raise ImportError(
                 'Import of module "%s" failed:\n%s' % (module_name, str(err))
             )
-        if module.VERSION != self.description['version']:
+        if module.VERSION != self.handles.version:
             raise PipelineRunError(
                 'Version of module and handles is not the same.'
             )
@@ -209,7 +199,7 @@ class ImageAnalysisModule(object):
             )
 
         # Modules return a namedtuple.
-        for handle in self.handles['output']:
+        for handle in self.handles.output:
             if not hasattr(py_out, handle.name):
                 raise PipelineRunError(
                     'Module "%s" didn\'t return output argument "%s".'
@@ -217,7 +207,7 @@ class ImageAnalysisModule(object):
                 )
             handle.value = getattr(py_out, handle.name)
 
-        return self.handles['output']
+        return self.handles.output
 
     def _exec_r_module(self):
         try:
@@ -235,7 +225,7 @@ class ImageAnalysisModule(object):
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
         rpackage = importr('jtmodules')
         module = getattr(rpackage, module_name)
-        if module.get('version') != self.description['version']:
+        if module.get('version') != self.handles.version:
             raise PipelineRunError(
                 'Version of module and handles is not the same.'
             )
@@ -265,7 +255,7 @@ class ImageAnalysisModule(object):
         base = importr('base')
         r_out = base.do_call(func, args)
 
-        for handle in self.handles['output']:
+        for handle in self.handles.output:
             # NOTE: R functions are supposed to return a list. Therefore
             # we can extract the output argument using rx2(name).
             # The R equivalent would be indexing the list with "[[name]]".
@@ -276,7 +266,7 @@ class ImageAnalysisModule(object):
                 # handle.value = np.array(r_var.rx2(name))
                 handle.value = rpy2.robjects.numpy2ri(r_out.rx2(handle.name))
 
-        return self.handles['output']
+        return self.handles.output
 
     def update_handles(self, store, headless=True):
         '''Updates values of handles that define the arguments of the
@@ -299,7 +289,7 @@ class ImageAnalysisModule(object):
         This method must be called BEFORE calling
         ::meth:`tmlib.jterator.module.Module.run`.
         '''
-        for handle in self.handles['input']:
+        for handle in self.handles.input:
             if isinstance(handle, hdls.PipeHandle):
                 try:
                     handle.value = store['pipe'][handle.key]
@@ -313,7 +303,7 @@ class ImageAnalysisModule(object):
             elif isinstance(handle, hdls.Plot) and headless:
                 # Overwrite to enforce headless mode if required.
                 handle.value = False
-        return self.handles['input']
+        return self.handles.input
 
     def _get_objects_name(self, handle):
         '''Determines the name of the segmented objects that are referenced by
@@ -331,7 +321,7 @@ class ImageAnalysisModule(object):
             name of the referenced segmented objects
         '''
         objects_names = [
-            h.key for h in self.handles['input'] + self.handles['output']
+            h.key for h in self.handles.input + self.handles.output
             if h.name == handle.objects and
             isinstance(h, hdls.SegmentedObjects)
         ]
@@ -358,7 +348,7 @@ class ImageAnalysisModule(object):
             name of the referenced segmented objects
         '''
         objects_names = [
-            h.key for h in self.handles['input']
+            h.key for h in self.handles.input
             if h.name == handle.objects_ref and
             isinstance(h, hdls.SegmentedObjects)
         ]
@@ -387,7 +377,7 @@ class ImageAnalysisModule(object):
         if handle.channel_ref is None:
             return None
         channel_names = [
-            h.key for h in self.handles['input']
+            h.key for h in self.handles.input
             if h.name == handle.channel_ref and
             isinstance(h, hdls.IntensityImage)
         ]
@@ -417,7 +407,7 @@ class ImageAnalysisModule(object):
         This method must be called AFTER calling
         ::meth:`tmlib.jterator.module.Module.run`.
         '''
-        for i, handle in enumerate(self.handles['output']):
+        for i, handle in enumerate(self.handles.output):
             if isinstance(handle, hdls.Figure):
                 store['current_figure'] = handle.value
             elif isinstance(handle, hdls.SegmentedObjects):

@@ -272,8 +272,8 @@ def __str__(self):
 class _ArgumentMeta(ABCMeta):
 
     '''Metaclass for adding class attributes of type
-    :class:`Argument <tmlib.workflow.args.Argument>` as descriptors to instances of
-    the class.
+    :class:`Argument <tmlib.workflow.args.Argument>` as descriptors to instances
+    of the class.
     '''
 
     def __init__(cls, clsname, bases, attrs):

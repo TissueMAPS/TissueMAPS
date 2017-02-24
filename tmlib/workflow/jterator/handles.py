@@ -70,14 +70,9 @@ class Handle(object):
         self.help = help
 
     @property
-    def store(self):
-        '''
-        Returns
-        -------
-        dict
-            in-memory key-value store
-        '''
-        return self._store
+    def type(self):
+        '''str: handle type'''
+        return self.__class__.__name__
 
 
 class InputHandle(Handle):
@@ -103,6 +98,21 @@ class InputHandle(Handle):
         super(InputHandle, self).__init__(name, help)
         self.value = value
 
+    def to_dict(self):
+        '''Returns attributes "name", "type", "help" and "value" as
+        key-value pairs.
+
+        Return
+        ------
+        dict
+        '''
+        attrs = dict()
+        attrs['name'] = self.name
+        attrs['type'] = self.type
+        attrs['help'] = self.help
+        attrs['value'] = self.value
+        return attrs
+
 
 class OutputHandle(Handle):
 
@@ -120,6 +130,19 @@ class OutputHandle(Handle):
     def value(self):
         '''value returned by module function'''
         pass
+
+    def to_dict(self):
+        '''Returns attributes "name", "type" and "help" as key-value pairs.
+
+        Return
+        ------
+        dict
+        '''
+        attrs = dict()
+        attrs['name'] = self.name
+        attrs['type'] = self.type
+        attrs['help'] = self.help
+        return attrs
 
 
 class PipeHandle(Handle):
@@ -156,6 +179,21 @@ class PipeHandle(Handle):
         to other module functions.
         '''
         pass
+
+    def to_dict(self):
+        '''Returns attributes "name", "type", "help" and "key" as key-value
+        pairs.
+
+        Return
+        ------
+        dict
+        '''
+        attrs = dict()
+        attrs['name'] = self.name
+        attrs['type'] = self.type
+        attrs['help'] = self.help
+        attrs['key'] = self.key
+        return attrs
 
 
 class Image(PipeHandle):
@@ -1013,5 +1051,5 @@ def create_handle(type, **kwargs):
     try:
         class_object = getattr(current_module, type)
     except AttributeError:
-        raise AttributeError('Type "%s" is not a valid class name.' % type)
+        raise AttributeError('"%s" is not a valid handles type.' % type)
     return class_object(**kwargs)

@@ -44,7 +44,6 @@ from tmlib.workflow.jterator.utils import get_module_path
 from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.handles import SegmentedObjects
-from tmlib.workflow.jterator.checkers import PipelineChecker
 from tmlib.workflow import register_step_api
 from tmlib import cfg
 
@@ -52,11 +51,12 @@ logger = logging.getLogger(__name__)
 
 
 @register_step_api('jterator')
-class ImageAnalysisPipeline(ClusterRoutines):
+class ImageAnalysisPipelineEngine(ClusterRoutines):
 
-    '''Class for running image processing pipelines.'''
+    '''Class for running image analysis pipelines.'''
 
-    def __init__(self, experiment_id, verbosity, pipe=None, handles=None):
+    def __init__(self, experiment_id, verbosity, pipeline_description=None,
+            handles_descriptions=None):
         '''
         Parameters
         ----------
@@ -64,10 +64,10 @@ class ImageAnalysisPipeline(ClusterRoutines):
             ID of the processed experiment
         verbosity: int
             logging level
-        pipe: dict, optional
+        pipeline_description: tmlib.workflow.jterator.description.PipelineDescription, optional
             description of pipeline, i.e. module order and paths to module
             source code and descriptor files (default: ``None``)
-        handles: List[dict], optional
+        handles_descriptions: Dict[str, tmlib.workflow.jterator.description.HandleDescriptions], optional
             description of module input/output (default: ``None``)
 
         Note
@@ -75,68 +75,50 @@ class ImageAnalysisPipeline(ClusterRoutines):
         If `pipe` or `handles` are not provided
         they are obtained from the persisted YAML descriptor files on disk.
         '''
-        super(ImageAnalysisPipeline, self).__init__(experiment_id, verbosity)
-        self.engines = {'Python': None, 'R': None}
-        self.project = Project(
-            step_location=self.step_location, pipe=pipe, handles=handles
+        super(ImageAnalysisPipelineEngine, self).__init__(
+            experiment_id, verbosity
         )
-
-    def check_pipeline(self):
-        '''Checks descriptions provided via `pipe` and `handles` files.
-        '''
-        handles_descriptions = [h['description'] for h in self.project.handles]
-        checker = PipelineChecker(
+        self._engines = {'Python': None, 'R': None}
+        self.project = Project(
             step_location=self.step_location,
-            pipe_description=self.project.pipe['description'],
+            pipeline_description=pipeline_description,
             handles_descriptions=handles_descriptions
         )
-        checker.check_all()
 
     @autocreate_directory_property
     def figures_location(self):
-        '''str: location where figure files are stored
-        '''
+        '''str: location where figure files are stored'''
         return os.path.join(self.step_location, 'figures')
 
     def remove_previous_pipeline_output(self):
-        '''Removes all figure and module log files.'''
+        '''Removes all figure files.'''
         shutil.rmtree(self.figures_location)
         os.mkdir(self.figures_location)
 
     @cached_property
     def pipeline(self):
-        '''List[tmlib.jterator.module.JtModule]: pipeline built in modular form
-        based on `pipe` and `handles` descriptions
-
-        Raises
-        ------
-        tmlib.errors.PipelineDescriptionError
-            when information in *pipe* description is missing or incorrect
-        OSError
-            when environment variable "TMAPS_MODULES_HOME" would be required but
-            doesn't exist
+        '''List[tmlib.jterator.module.ImageAnalysisModule]:
+        pipeline built based on
+        :class`PipelineDescription <tmlib.workflow.jterator.description.PipelineDescription>` and
+        :class:`HandleDescriptions <tmlib.workflow.jterator.description.HandleDescriptions>`.
         '''
         libpath = cfg.modules_home
-        # libpath = self.project.pipe['description'].get('lib', None)
-        # libpath = complete_path(libpath, self.step_location)
         pipeline = list()
-        for i, element in enumerate(self.project.pipe['description']['pipeline']):
-            if not element['active']:
+        for i, element in enumerate(self.project.pipe.description.pipeline):
+            if not element.active:
                 continue
-            module_filename = element['source']
+            module_filename = element.source
             source_path = get_module_path(module_filename, libpath)
             if not os.path.exists(source_path):
                 raise PipelineDescriptionError(
                     'Module file does not exist: %s' % source_path
                 )
-            name = self.project.handles[i]['name']
-            description = self.project.handles[i]['description']
+            name = self.project.handles[i].name
+            handles = self.project.handles[i].description
             module = ImageAnalysisModule(
-                name=name, source_file=source_path, description=description
+                name=name, source_file=source_path, handles=handles
             )
             pipeline.append(module)
-        # if not pipeline:
-        #     raise PipelineDescriptionError('No pipeline description available')
         return pipeline
 
     def start_engines(self):
@@ -163,7 +145,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
             # hang up and get killed due to timeout.
             startup_ops = '-nosplash -singleCompThread -nojvm -nosoftwareopengl'
             logger.debug('Matlab startup options: %s', startup_ops)
-            self.engines['Matlab'] = matlab.MatlabSession(options=startup_ops)
+            self._engines['Matlab'] = matlab.MatlabSession(options=startup_ops)
             # We have to make sure that code which may be called by a module,
             # are actually on the MATLAB path.
             # To this end, the MATLABPATH environment variable can be used.
@@ -177,12 +159,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 if not p:
                     continue
                 logger.debug('add "%s" to MATLABPATH', p)
-                self.engines['Matlab'].eval(
+                self._engines['Matlab'].eval(
                     'addpath(genpath(\'{0}\'));'.format(p)
                 )
         # if 'Julia' in languages:
         #     print 'jt - Starting Julia engine'
-        #     self.engines['Julia'] = julia.Julia()
+        #     self._engines['Julia'] = julia.Julia()
 
     def _configure_loggers(self):
         # TODO: configure loggers for Python, Matlab, and R modules
@@ -205,11 +187,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         Dict[str, List[dict] or dict]
             job descriptions
         '''
-        self.check_pipeline()
-
         channel_names = [
-            ch['name']
-            for ch in self.project.pipe['description']['input']['channels']
+            ch.name for ch in self.project.pipe.description.input.channels
         ]
 
         if args.plot and args.batch_size != 1:
@@ -235,8 +214,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 job_descriptions['run'].append({
                     'id': j + 1,  # job IDs are one-based!
                     'site_ids': batch,
-                    'plot': args.plot,
-                    'debug': False
+                    'plot': args.plot
                 })
 
         return job_descriptions
@@ -251,36 +229,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
         with tm.utils.ExperimentConnection(self.experiment_id) as connection:
             tm.MapobjectType.delete_cascade(connection, ref_type='NULL')
 
-    def _load_pipeline_inputs_debug(self):
-        logger.info('load pipeline inputs from files for debugging')
-        # Use an in-memory store for pipeline data and only insert outputs
-        # into the database once the whole pipeline has completed successfully.
-        store = {
-            'pipe': dict(),
-            'current_figure': list(),
-            'objects': dict(),
-            'channels': list()
-        }
 
-        channel_input = self.project.pipe['description']['input'].get(
-            'channels', list()
-        )
-        for item in channel_input:
-            path = item.get('path', None)
-            if path is None:
-                raise JobDescriptionError(
-                    'Input items require key "path" in debug mode.'
-                )
-            logger.info(
-                'load image for channel "%s" from file: %s',
-                item['name'], path
-            )
-            with ImageReader(path) as f:
-                store['pipe'][item['name']] = f.read()
-
-        return store
-
-    def _load_pipeline_inputs(self, site_id):
+    def _load_pipeline_input(self, site_id):
         logger.info('load pipeline inputs')
         # Use an in-memory store for pipeline data and only insert outputs
         # into the database once the whole pipeline has completed successfully.
@@ -296,9 +246,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
         # NOTE: When the experiment was acquired in "multiplexing" mode,
         # images will be automatically aligned, assuming that this is the
         # desired behavior.
-        channel_input = self.project.pipe['description']['input'].get(
-            'channels', list()
-        )
+        channel_input = self.project.pipe.description.input.channels
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             for item in channel_input:
                 # NOTE: When "path" key is present, the image is loaded from
@@ -306,30 +254,30 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # corrected for illuminatiion artifacts or aligned.
                 images = collections.defaultdict(list)
                 site = session.query(tm.Site).get(site_id)
-                if item['correct']:
+                if item.correct:
                     logger.info(
                         'load illumination statistics for channel "%s"',
-                        item['name']
+                        item.name
                     )
                     try:
                         stats_file = session.query(tm.IllumstatsFile).\
                             join(tm.Channel).\
-                            filter(tm.Channel.name == item['name']).\
+                            filter(tm.Channel.name == item.name).\
                             one()
                     except NoResultFound:
                         raise PipelineDescriptionError(
                             'No illumination statistics file found for '
-                            'channel "%s"' % item['name']
+                            'channel "%s"' % item.name
                         )
                     stats = stats_file.get()
                 else:
                     stats = None
 
-                logger.info('load images for channel "%s"', item['name'])
+                logger.info('load images for channel "%s"', item.name)
                 image_files = session.query(tm.ChannelImageFile).\
                     join(tm.Channel).\
                     filter(
-                        tm.Channel.name == item['name'],
+                        tm.Channel.name == item.name,
                         tm.ChannelImageFile.site_id == site.id
                     ).\
                     all()
@@ -337,14 +285,14 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 for f in image_files:
                     logger.info('load image %d', f.id)
                     img = f.get()
-                    if item['correct']:
+                    if item.correct:
                         logger.info('correct image %d', f.id)
                         img = img.correct(stats)
                     logger.debug('align image %d', f.id)
                     img = img.align()  # shifted and cropped!
                     images[f.tpoint].append(img.array)
 
-                store['pipe'][item['name']] = np.stack(images.values(), axis=-1)
+                store['pipe'][item.name] = np.stack(images.values(), axis=-1)
 
         # Remove single-dimensions from image arrays.
         # NOTE: It would be more consistent to preserve shape, but most people
@@ -361,13 +309,12 @@ class ImageAnalysisPipeline(ClusterRoutines):
             logger.info('run module "%s"', module.name)
             # When plotting is not deriberately activated it defaults to
             # headless mode
-            module.instantiate_handles()
             module.update_handles(store, headless=not plot)
-            module.run(self.engines[module.language])
+            module.run(self._engines[module.language])
             store = module.update_store(store)
 
             plotting_active = [
-                h.value for h in module.handles['input'] if h.name == 'plot'
+                h.value for h in module.handles.input if h.name == 'plot'
             ]
             if len(plotting_active) > 0:
                 plotting_active = plotting_active[0]
@@ -384,13 +331,11 @@ class ImageAnalysisPipeline(ClusterRoutines):
 
     def _save_pipeline_outputs(self, store):
         logger.info('save pipeline outputs')
-        objects_output = self.project.pipe['description']['output'].get(
-            'objects', list()
-        )
+        objects_output = self.project.pipe.description.output.objects
         for item in objects_output:
-            as_polygons = item['as_polygons']
-            store['objects'][item['name']].save = True
-            store['objects'][item['name']].represent_as_polygons = as_polygons
+            as_polygons = item.as_polygons
+            store['objects'][item.name].save = True
+            store['objects'][item.ame].represent_as_polygons = as_polygons
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).first()
@@ -416,8 +361,8 @@ class ImageAnalysisPipeline(ClusterRoutines):
                         mapobject_type_id=mapobject_type.id,
                         tpoint=t, zplane=z
                     )
-                    segmentation_layer_ids[(obj_name, t, z)] = \
-                        segmentation_layer.id
+
+                    segmentation_layer_ids[(obj_name, t, z)] = segmentation_layer.id
                     # We will update this in collect phase, but we need to set
                     # some limits in case the user already starts viewing
                     # Without any contraints the user interface might explode.
@@ -442,9 +387,7 @@ class ImageAnalysisPipeline(ClusterRoutines):
                 # generated in a previous run of the same pipeline. In case
                 # they were passed to the pipeline as inputs don't delete them
                 # because this means they were generated by another pipeline.
-                inputs = self.project.pipe['description']['input'].get(
-                    'objects', list()
-                )
+                inputs = self.project.pipe.description.input.objects
                 if obj_name not in inputs:
                     logger.info(
                         'delete segmentations for existing mapobjects of '
@@ -551,31 +494,17 @@ class ImageAnalysisPipeline(ClusterRoutines):
             job description
         '''
         logger.info('handle pipeline input')
-        checker = PipelineChecker(
-            step_location=self.step_location,
-            pipe_description=self.project.pipe['description'],
-            handles_descriptions=[
-                h['description'] for h in self.project.handles
-            ]
-        )
-        checker.check_all()
         self._configure_loggers()
 
         self.start_engines()
 
         # Enable debugging of pipelines by providing the full path to images.
         # This requires a work around for "plot" and "job_id" arguments.
-        if batch['debug']:
-            store = self._load_pipeline_inputs_debug()
-            # We use job_id 0 for debugging, which does normally not exist since
-            # IDs are one based.
-            store = self._run_pipeline(store, 0, True)
-        else:
-            for site_id in batch['site_ids']:
-                logger.info('process site %d', site_id)
-                store = self._load_pipeline_inputs(site_id)
-                store = self._run_pipeline(store, site_id, batch['plot'])
-                self._save_pipeline_outputs(store)
+        for site_id in batch['site_ids']:
+            logger.info('process site %d', site_id)
+            store = self._load_pipeline_input(site_id)
+            store = self._run_pipeline(store, site_id, batch['plot'])
+            self._save_pipeline_outputs(store)
 
     def collect_job_output(self, batch):
         '''Computes the optimal representation of each

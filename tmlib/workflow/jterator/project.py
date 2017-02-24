@@ -24,6 +24,9 @@ from cached_property import cached_property
 from natsort import natsorted
 
 from tmlib.workflow.jterator.utils import get_module_directories
+from tmlib.workflow.jterator.description import (
+    PipelineDescription, HandleDescriptions
+)
 from tmlib.readers import YamlReader
 from tmlib.writers import YamlWriter
 from tmlib.errors import PipelineOSError
@@ -34,61 +37,179 @@ logger = logging.getLogger(__name__)
 HANDLES_SUFFIX = '.handles.yaml'
 
 
+class Pipe(object):
+
+    '''Representation of the content of the *pipeline.yaml* file.'''
+
+    __slots__ = ('_description', )
+
+    def __init__(self, description):
+        '''
+        Parameters
+        ----------
+        description: tmlib.workflow.jterator.description.PipelineDescription
+            pipeline description
+        '''
+        self.description = description
+
+    @property
+    def description(self):
+        '''tmlib.workflow.jterator.description.PipelineDescription:
+        pipeline description
+        '''
+        return self._description
+
+    @description.setter
+    def description(self, value):
+        if not isinstance(value, PipelineDescription):
+            raise TypeError(
+                'Attibute "description" must have type PipelineDescription.')
+        self._description = value
+
+    def to_dict(self):
+        '''Returns attribute "description" as key-value pairs.
+
+        Returns
+        -------
+        dict
+        '''
+        attrs = dict()
+        # NOTE: We need to include the name of modules in the pipelines for
+        # compatibility with the viewer.
+        attrs['description'] = {
+            'input': self.description.input.to_dict(),
+            'output': self.description.output.to_dict(),
+            'pipeline': [
+                {
+                    'name': m.name, 'source': m.source,
+                    'handles': m.handles, 'active': m.active
+                }
+                for m in self.description.pipeline
+            ]
+        }
+        return attrs
+
+
+class Handles(object):
+
+    '''Representation of the content of a *.handles.yaml* file.'''
+
+    __slots__ = ('_description', '_name')
+
+    def __init__(self, name, description):
+        '''
+        Parameters
+        ----------
+        name: str
+            module name
+        description: tmlib.workflow.jterator.description.HandleDescriptions
+            module description
+        '''
+        self.name = name
+        self.description = description
+
+    @property
+    def name(self):
+        '''str: module name'''
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "name" must have type basestring.')
+        self._name = str(value)
+
+    @property
+    def description(self):
+        '''tmlib.workflow.jterator.description.HandleDescriptions:
+        module description
+        '''
+        return self._description
+
+    @description.setter
+    def description(self, value):
+        if not isinstance(value, HandleDescriptions):
+            raise TypeError(
+                'Attibute "description" must have type HandleDescriptions.')
+        self._description = value
+
+    def to_dict(self):
+        '''Returns attributes "name" and "description" as key-value pairs.
+
+        Returns
+        -------
+        dict
+        '''
+        attrs = dict()
+        attrs['name'] = self.name
+        attrs['description'] = self.description.to_dict()
+        return attrs
+
+
 class Project(object):
 
-    '''A Jterator project is defined as a folder containing a `pipeline.yaml`
+    '''A project is defined as a folder containing a `pipeline.yaml`
     file. The class holds information about the project, in particular on
-    the content of the *pipeline* and *handles* module descriptor files.
+    the content of the *pipeline.yaml* and *.handles.yaml* module descriptor
+    files and provides methods for retrieving and updating this information.
     '''
 
-    def __init__(self, step_location, pipe=None, handles=None):
+    def __init__(self, step_location, pipeline_description=None,
+            handles_descriptions=None):
         '''
         Parameters
         ----------
         step_location: str
             path to the project folder
-        pipe: dict, optional
+        pipeline_description: tmlib.workflow.jterator.description.PipelineDescription, optional
             pipeline description (default: ``None``)
-        handles: List[dict], optional
+        handles_descriptions: Dict[str, tmlib.workflow.jterator.description.HandleDescriptions], optional
             module descriptions (default: ``None``)
         '''
         self.step_location = step_location
         if not os.path.exists(self._get_pipe_file()):
             self.create()
-        self.pipe = pipe
-        self.handles = handles
+        if pipeline_description is None:
+            self.pipe = self._create_pipe()
+        else:
+            self.pipe = Pipe(pipeline_description)
+        if handles_descriptions is None:
+            self.handles = self._create_handles()
+        else:
+            handles = list()
+            for m in self.pipe.description.pipeline:
+                h = Handles(m.name, handles_descriptions[m.name])
+                handles.append(h)
+            self.handles = handles
 
     @property
     def pipe(self):
-        '''dict: name and description of the pipeline'''
-        if self._pipe is None:
-            self._pipe = self._create_pipe()
+        '''tmlib.workflow.jterator.project.Pipe: pipeline description
+        '''
         return self._pipe
 
     @pipe.setter
     def pipe(self, value):
+        if not isinstance(value, Pipe):
+            raise TypeError('Attribute "pipe"')
         self._pipe = value
 
     @property
     def handles(self):
-        '''List[dict]: name and description of modules'''
-        if self._handles is None:
-            self._handles = self._create_handles()
+        '''List[tmlib.workflow.jterator.project.Handles]: module descriptions
+        '''
         return self._handles
 
     @handles.setter
     def handles(self, value):
-        # Ensure that handles descriptions are sorted according to the order
-        # specified in the pipeline description.
-        if value is not None:
-            handles_names = [v['name'] for v in value]
-            handles = list()
-            for module in self.pipe['description']['pipeline']:
-                index = handles_names.index(module['name'])
-                handles.append(value[index])
-        else:
-            handles = value
-        self._handles = handles
+        if not isinstance(value, list):
+            raise TypeError('Attribute "handles" must have type list.')
+        for v in value:
+            if not isinstance(v, Handles):
+                raise TypeError(
+                    'Items of attribute "handles" must have type Handles.'
+                )
+        self._handles = value
 
     @property
     def _pipe_filename(self):
@@ -109,7 +230,7 @@ class Project(object):
         else:
             return self.pipe_file
 
-    def _get_handles_files(self, directory=None):
+    def _get_handles_file(self, name, directory=None):
         if not directory:
             directory = os.path.join(self.step_location, 'handles')
         else:
@@ -117,120 +238,35 @@ class Project(object):
         if not os.path.exists(directory):
             logger.debug('create handles directory')
             os.mkdir(directory)
-        handles_files = glob.glob(
-            os.path.join(directory, '*%s' % HANDLES_SUFFIX)
-        )
-        if not handles_files:
-            # We don't raise an exception, because an empty handles folder
-            # can occur, for example upon creation of a new project
-            logger.warning('No handles files found: %s' % directory)
-        return handles_files
-
-    @staticmethod
-    def _get_descriptor_name(filename):
-        return os.path.splitext(
-            os.path.splitext(os.path.basename(filename))[0]
-        )[0]
-
-    @staticmethod
-    def _replace_values(old, new):
-        # Recursively replace values in the `old` mapping with those of `new`.
-        # NOTE: This is not a general approach, but targeted for the design of
-        # the pipeline and module descriptor files.
-        # TODO: make this general using a recursive strategy
-        for k1, v1 in old.iteritems():
-            # 'project', 'images', and 'description' keys in the pipeline
-            # descriptor file or 'input' and 'output' keys in the module
-            # descriptor file
-            if isinstance(v1, dict):
-                # this affects 'pipeline'
-                for k2, v2 in v1.iteritems():
-                    if isinstance(v2, list):
-                        # this is the array of 'channels' in the 'input' section
-                        old[k1][k2] = []
-                        for i, element in enumerate(new[k1][k2]):
-                            if isinstance(element, dict):
-                                old[k1][k2].append(new[k1][k2][i])
-
-                    else:
-                        old[k1][k2] = new[k1][k2]
-            elif isinstance(v1, list):
-                # this affects the 'description' key in the pipeline descriptor
-                # file and the 'input' and 'output' keys in the module
-                # descriptor file
-                old[k1] = []
-                for i, element in enumerate(new[k1]):
-                    if isinstance(element, dict):
-                        old[k1].append(new[k1][i])
-            else:
-                old[k1] = new[k1]
-        return old
+        filename = os.path.join(directory, '%s%s' % (name, HANDLES_SUFFIX))
+        if not os.path.exists(filename):
+            raise PipelineOSError(
+                'Handles file for module "%s" does not exist: %s' % (
+                    name, filename
+                )
+            )
+        return filename
 
     def _create_pipe(self):
         with YamlReader(self.pipe_file) as f:
-            pipe = {'description': f.read()}
-        # We need to do some basic checks here, because this code gets executed
-        # before the actual checks in checker.py.
-        if 'pipeline' not in pipe['description']:
-            raise PipelineDescriptionError(
-                'Pipeline descriptor file "%s" must contain key "pipeline".'
-                % self.pipe_file
-            )
-        if pipe['description']['pipeline']:
-            if not isinstance(pipe['description']['pipeline'], list):
-                raise PipelineDescriptionError(
-                    'Pipeline description in "%s" must be an array.'
-                    % self.pipe_file
-                )
-            # Add module 'name' to pipeline for display in the interface
-            for i, module in enumerate(pipe['description']['pipeline']):
-                if 'handles' not in pipe['description']['pipeline'][i]:
-                    raise PipelineDescriptionError(
-                        'Element #%d of "pipeline" array in pipeline '
-                        'descriptor file "%s" must contain key "handles".'
-                        % (i, self.pipe_file)
-                    )
-                pipe['description']['pipeline'][i]['name'] = \
-                    self._get_descriptor_name(
-                        pipe['description']['pipeline'][i]['handles']
-                    )
-        else:
-            logger.warn(
-                'no pipeline description provided in "%s"', self.pipe_file
-            )
-        return pipe
+            content = f.read()
+        description = PipelineDescription(**content)
+        return Pipe(description)
 
     @property
     def _module_names(self):
-        return [m['name'] for m in self.pipe['description']['pipeline']]
+        return [m.name for m in self.pipe.description.pipeline]
 
     def _create_handles(self):
         handles = list()
-        handles_files = self._get_handles_files()
-        if handles_files:
-            for h_file in handles_files:
-                if not os.path.isabs(h_file):
-                    h_file = os.path.join(self.step_location, h_file)
-                if not os.path.exists(h_file):
-                    raise PipelineOSError(
-                        'Handles file does not exist: "%s"' % h_file
-                    )
-                with YamlReader(h_file) as f:
-                    handles.append({
-                        'name': self._get_descriptor_name(h_file),
-                        'description': f.read()
-                    })
-        # Sort handles information according to order of modules in the pipeline
-        names = [h['name'] for h in handles]
-        sorted_handles = list()
         for name in self._module_names:
-            if name not in names:
-                raise ValueError(
-                    'Handles for module "%s" does not exist.' % name
-                )
-            sorted_handles.append(handles[names.index(name)])
-
-        return sorted_handles
+            h_file = self._get_handles_file(name)
+            with YamlReader(h_file) as f:
+                content = f.read()
+            description = HandleDescriptions(**content)
+            h = Handles(name, description)
+            handles.append(h)
+        return handles
 
     @cached_property
     def pipe_file(self):
@@ -251,15 +287,13 @@ class Project(object):
     def _create_pipe_file(self, filename):
         logger.info('create pipeline descriptor file: %s', filename)
         pipe = {
-            'description': str(),
             'input': {
-                'channels': [
-                    {'name': str(), 'correct': True}
-                ]
+                'channels': list(),
+                'objects': list()
             },
             'pipeline': list(),
             'output': {
-                'objects': []
+                'objects': list()
             }
         }
         with YamlWriter(filename) as f:
@@ -288,54 +322,30 @@ class Project(object):
         handles_dir = os.path.join(self.step_location, 'handles')
         shutil.rmtree(handles_dir)
 
-    def _modify_pipe(self):
+    def _update_pipe(self):
         pipe_file = self._get_pipe_file()
-        with YamlReader(pipe_file) as f:
-            old_pipe_content = f.read()
-        new_pipe_content = self.pipe['description']
-        # Remove module 'name' from pipeline (only used internally)
-        for i, module in enumerate(new_pipe_content['pipeline']):
-            new_pipe_content['pipeline'][i].pop('name', None)
-        mod_pipe_content = self._replace_values(
-            old_pipe_content, new_pipe_content
-        )
-        with YamlWriter(pipe_file) as writer:
-            writer.write(mod_pipe_content)
+        with YamlWriter(pipe_file) as f:
+            f.write(self.pipe.description.to_dict())
 
-    def _modify_handles(self):
+    def _update_handles(self):
         handles_files = []
         # Create new .handles files for added modules
-        for h in self.handles:
-            filename = os.path.join(
-                self.step_location, 'handles',
-                '%s%s' % (h['name'], HANDLES_SUFFIX)
-            )
-            handles_files.append(filename)
-            for i, handles_file in enumerate(handles_files):
-                # If file already exists, modify its content
-                if os.path.exists(handles_file):
-                    with YamlReader(handles_file) as f:
-                        old_handles_content = f.read()
-                    new_handles_content = self.handles[i]['description']
-                    mod_handles_content = self._replace_values(
-                        old_handles_content, new_handles_content
-                    )
-                # If file doesn't yet exist, create it and add content
-                else:
-                    mod_handles_content = self.handles[i]['description']
-                with YamlWriter(handles_file) as f:
-                    f.write(mod_handles_content)
-        # Remove .handles file that are no longer in the pipeline
-        existing_handles_files = glob.glob(
+        old_handles_files = glob.glob(
             os.path.join(self.step_location, 'handles', '*%s' % HANDLES_SUFFIX)
         )
-        for f in existing_handles_files:
-            if f not in handles_files:
+        new_handles_files = list()
+        for h in self.handles:
+            filename = self._get_handles_file(h.name)
+            new_handles_files.append(filename)
+            with YamlWriter(filename) as f:
+                f.write(h.description.to_dict())
+        # Remove .handles file that are no longer in the pipeline
+        for f in old_handles_files:
+            if f not in new_handles_files:
                 os.remove(f)
 
     def to_dict(self):
-        '''Returns the attributes "name", "pipe" and "handles" as
-        key-value pairs.
+        '''Returns attributes "pipe" and "handles" as key-value pairs.
 
         Returns
         -------
@@ -343,11 +353,15 @@ class Project(object):
         '''
         attrs = dict()
         attrs['pipe'] = yaml.safe_load(
-            ruamel.yaml.dump(self.pipe, Dumper=ruamel.yaml.RoundTripDumper)
+            ruamel.yaml.dump(
+                self.pipe.to_dict(), Dumper=ruamel.yaml.RoundTripDumper
+            )
         )
         attrs['handles'] = [
             yaml.safe_load(
-                ruamel.yaml.dump(h, Dumper=ruamel.yaml.RoundTripDumper)
+                ruamel.yaml.dump(
+                    h.to_dict(), Dumper=ruamel.yaml.RoundTripDumper
+                )
             )
             for h in self.handles
         ]
@@ -362,8 +376,8 @@ class Project(object):
             raise PipelineOSError(
                 'Project does not exist: %s' % self.step_location
             )
-        self._modify_pipe()
-        self._modify_handles()
+        self._update_pipe()
+        self._update_handles()
 
     def create(self, repo_dir=None, skel_dir=None):
         '''Creates a Jterator project:
