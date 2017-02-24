@@ -428,7 +428,7 @@ def get_channel_image(experiment_id, channel_name):
             # same channel
             logger.info('correct image for illumination artefacts')
             illumstats_file = session.query(tm.IllumstatsFile).\
-                filter_by(channel_id=channel_id, cycle_id=image_file.cycle_id).\
+                filter_by(channel_id=channel_id).\
                 one_or_none()
             if illumstats_file is None:
                 raise ResourceNotFoundError(
