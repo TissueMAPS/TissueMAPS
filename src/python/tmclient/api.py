@@ -20,6 +20,7 @@ import cgi
 import re
 import json
 import cv2
+import glob
 import tempfile
 import pandas as pd
 from cStringIO import StringIO
@@ -518,7 +519,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmlib.models.aquisition.Acquisition`
+        :class:`tmlib.models.acquisition.Acquisition`
         '''
         logger.info(
             'create acquisition "%s" for plate "%s"',
@@ -750,7 +751,7 @@ class TmClient(HttpClient):
         registered_filenames = self._register_files_for_upload(
             acquisition_id, filenames
         )
-        for name in registered_filenames:
+        for name in filenames:
             logger.info('upload file: %s', name)
             filepath = os.path.join(directory, name)
             self._upload_file(acquisition_id, filepath)
