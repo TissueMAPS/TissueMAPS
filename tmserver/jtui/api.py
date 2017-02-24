@@ -36,10 +36,12 @@ from tmlib.workflow import get_step_args
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import RunJobCollection
 import tmlib.workflow.utils as cluster_utils
-from tmlib.workflow.jterator.api import ImageAnalysisPipeline
 from tmlib.log import configure_logging
-from tmlib.workflow.jterator.project import Project
-from tmlib.workflow.jterator.project import AvailableModules
+from tmlib.workflow.jterator.api import ImageAnalysisPipelineEngine
+from tmlib.workflow.jterator.project import Project, AvailableModules
+from tmlib.workflow.jterator.description import (
+    PipelineDescription, HandleDescriptions
+)
 
 from tmserver.util import decode_query_ids
 from tmserver.util import assert_form_params, assert_query_params
@@ -69,56 +71,6 @@ class JtUIError(HTTPException):
         super(JtUIError, self).__init__(message=message, status_code=400)
 
 
-def _make_thumbnail(figure_file):
-    '''Makes a PNG thumbnail of a plotly figure by screen capture.
-
-    Parameters
-    ----------
-    figure_file: str
-        absolute path to the figure file (``".json"`` extension)
-
-    Note
-    ----
-    Requires the phantomjs library and the "rasterize.js" script.
-    The phantomjs executable must be on the `PATH` and the environment
-    variable "RASTERIZE" must be set and point to the location of the
-    "rasterize.js" file.
-    '''
-    import plotly
-    if not os.path.exists(figure_file):
-        logger.warn('figure file does not exist: %s', figure_file)
-        html = ''
-    else:
-        logger.debug('read figure file: %s', figure_file)
-        with TextReader(figure_file) as f:
-            figure = json.loads(f.read())
-        logger.debug('create HTML figure')
-        html = plotly.offline.plot(figure, show_link=False, output_type='div')
-    html = ''.join([
-        '<html>',
-        '<head><meta charset="utf-8" /></head>',
-        '<body>',
-        html,
-        '</body>',
-        '</html>'
-    ])
-    # from xhtml2pdf import pisa
-    html_file = figure_file.replace('.json', '.html')
-    logger.debug('write html file: %s', html_file)
-    with TextWriter(html_file) as f:
-        # pisa.CreatePDF(html, f)
-        f.write(html)
-    # Produce thumbnails for html figures by screen capture.
-    png_file = figure_file.replace('.json', '.png')
-    logger.debug('generate PNG thumbnail file: %s', png_file)
-    rasterize_file = os.path.expandvars('$RASTERIZE')
-    subprocess.call([
-        'phantomjs', rasterize_file, html_file, png_file
-    ])
-    logger.debug('remove HTML file: %s', html_file)
-    os.remove(html_file)
-
-
 def list_module_names(pipeline):
     '''Lists all names of active module in the pipeline.
 
@@ -135,10 +87,10 @@ def list_module_names(pipeline):
     modules_names = [
         os.path.splitext(
             os.path.splitext(
-                os.path.basename(m['handles'])
+                os.path.basename(m.handles)
             )[0]
         )[0]
-        for m in pipeline if m['active']
+        for m in pipeline if m.active
     ]
     return modules_names
 
@@ -154,7 +106,7 @@ def get_project(experiment_id):
     several module descriptions ("handles").
     '''
     logger.info('get jterator project for experiment %d', experiment_id)
-    jt = ImageAnalysisPipeline(experiment_id, verbosity=2)
+    jt = ImageAnalysisPipelineEngine(experiment_id, verbosity=2)
     serialized_project = yaml.safe_dump(jt.project.to_dict())
     return jsonify(jtproject=serialized_project)
 
@@ -227,7 +179,7 @@ def get_module_figure(experiment_id):
         'get figure for module "%s" and job %d of experiment %d',
         module_name, job_id, experiment_id
     )
-    jt = ImageAnalysisPipeline(experiment_id, verbosity=2)
+    jt = ImageAnalysisPipelineEngine(experiment_id, verbosity=2)
     fig_file = [
         m.build_figure_filename(jt.figures_location, job_id)
         for m in jt.pipeline if m.name == module_name
@@ -261,7 +213,8 @@ def create_joblist(experiment_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         query = session.query(
                 tm.Site.y, tm.Site.x,
-                tm.Well.name.alias('well'), tm.Plate.name.alias('plate')
+                tm.Well.name.alias('well'),
+                tm.Plate.name.alias('plate')
             ).\
             join(tm.Well).\
             join(tm.Plate).\
@@ -287,9 +240,15 @@ def save_project(experiment_id):
     logger.info('save jterator project of experiment %d', experiment_id)
     data = json.loads(request.data)
     project = yaml.load(data['project'])
-    jt = ImageAnalysisPipeline(
+    pipeline_description = PipelineDescription(**project['pipe']['description'])
+    handles_descriptions = {
+        h['name']: HandleDescriptions(**h['description'])
+        for h in project['handles']
+    }
+    jt = ImageAnalysisPipelineEngine(
         experiment_id, verbosity=2,
-        pipe=project['pipe'], handles=project['handles'],
+        pipeline_description=pipeline_description,
+        handles_descriptions=handles_descriptions,
     )
     try:
         jt.project.save()
@@ -310,12 +269,17 @@ def check_jtproject(experiment_id):
     )
     data = json.loads(request.data)
     project = yaml.load(data['project'])
-    jt = ImageAnalysisPipeline(
-        experiment_id, verbosity=2,
-        pipe=project['pipe'], handles=project['handles'],
-    )
+    pipeline_description = PipelineDescription(**project['pipe']['description'])
+    handles_descriptions = {
+        h['name']: HandleDescriptions(**h['description'])
+        for h in project['handles']
+    }
     try:
-        jt.check_pipeline()
+        jt = ImageAnalysisPipelineEngine(
+            experiment_id, verbosity=2,
+            pipeline_description=pipeline_description,
+            handles_descriptions=handles_descriptions,
+        )
         return jsonify({'success': True})
     except Exception as err:
         raise JtUIError('Pipeline check failed:\n%s' % str(err))
@@ -328,7 +292,7 @@ def delete_project(experiment_id):
     '''Removes `.pipe` and `.handles` files from a given Jterator project.
     '''
     logger.info('delete jterator project of experiment %d', experiment_id)
-    jt = ImageAnalysisPipeline(experiment_id, verbosity=2,)
+    jt = ImageAnalysisPipelineEngine(experiment_id, verbosity=2,)
     jt.project.remove()
     return jsonify({'success': True})
 
@@ -346,7 +310,7 @@ def create_jtproject(experiment_id):
     '''
     # experiment_dir = os.path.join(cfg.EXPDATA_DIR_LOCATION, experiment_id)
     data = json.loads(request.data)
-    jt = ImageAnalysisPipeline(experiment_id, verbosity=2)
+    jt = ImageAnalysisPipelineEngine(experiment_id, verbosity=2)
     # TODO
     # Create the project, i.e. create a folder that contains a .pipe file and
     # handles subfolder with .handles files
@@ -431,9 +395,15 @@ def get_job_output(experiment_id):
     '''Gets output generated by a previous submission.'''
     data = json.loads(request.data)
     project = yaml.load(data['project'])
-    jt = ImageAnalysisPipeline(
+    pipeline_description = PipelineDescription(**project['pipe']['description'])
+    handles_descriptions = {
+        h['name']: HandleDescriptions(**h['description'])
+        for h in project['handles']
+    }
+    jt = ImageAnalysisPipelineEngine(
         experiment_id, verbosity=2,
-        pipe=project['pipe'], handles=project['handles']
+        pipeline_description=pipeline_description,
+        handles_descriptions=handles_descriptions,
     )
     try:
         jobs = gc3pie.retrieve_jobs(experiment_id=experiment_id, program='jtui')
@@ -460,11 +430,16 @@ def run_jobs(experiment_id):
     data = json.loads(request.data)
     job_ids = map(int, data['job_ids'])
     project = yaml.load(data['project'])
-    jt = ImageAnalysisPipeline(
+    pipeline_description = PipelineDescription(**project['pipe']['description'])
+    handles_descriptions = {
+        h['name']: HandleDescriptions(**h['description'])
+        for h in project['handles']
+    }
+    jt = ImageAnalysisPipelineEngine(
         experiment_id, verbosity=2,
-        pipe=project['pipe'], handles=project['handles']
+        pipeline_description=pipeline_description,
+        handles_descriptions=handles_descriptions,
     )
-    jt.check_pipeline()
 
     # 1. Delete figures and logs from previous submission
     #    since they are not tracked per submission.
@@ -473,11 +448,9 @@ def run_jobs(experiment_id):
 
     # 2. Build job descriptions
     channel_names = [
-        ch['name'] for ch in jt.project.pipe['description']['input']['channels']
+        ch.name for ch in jt.project.pipe.description.input.channels
     ]
-    job_descriptions = dict()
-    job_descriptions['run'] = list()
-    job_descriptions['collect'] = {'inputs': dict(), 'outputs': dict()}
+    job_descriptions = list()
     with tm.utils.ExperimentSession(experiment_id) as session:
         for j in job_ids:
             image_file_count = session.query(tm.ChannelImageFile.id).\
@@ -487,14 +460,8 @@ def run_jobs(experiment_id):
                 count()
             if image_file_count == 0:
                 raise JtUIError('No images found for job ID %s.' % j)
-            job_descriptions['run'].append({
-                'id': j,
-                'site_ids': [j],
-                'plot': True,
-                'debug': False
-            })
+            job_descriptions.append({'site_id': j, 'plot': True})
 
-    jt.store_batches(job_descriptions)
     with tm.utils.MainSession() as session:
         submission = tm.Submission(
             experiment_id=experiment_id, program='jtui',
@@ -506,13 +473,14 @@ def run_jobs(experiment_id):
         SubmitArgs = get_step_args('jterator')[1]
         submit_args = SubmitArgs()
         job_collection = jt.create_run_job_collection(submission.id)
-        jobs = jt.create_run_jobs(
+        jobs = jt.create_debug_run_jobs(
             submission_id=submission.id,
             user_name=current_identity.name,
-            batches=job_descriptions['run'],
+            batches=job_descriptions,
             job_collection=job_collection,
             duration=submit_args.duration,
-            memory=submit_args.memory, cores=submit_args.cores
+            memory=submit_args.memory,
+            cores=submit_args.cores
         )
 
     # 3. Store jobs in session
