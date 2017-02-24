@@ -78,7 +78,7 @@ class Jterator(CommandLineInterface):
         self._print_logo()
         api = self.api_instance
         logger.info('DEBUG mode')
-        logger.info('create batch for site #%d', site_id)
+        logger.info('create debug batch for site %d', site_id)
         batch = {'site_ids': [site_id], 'plot': plot}
         api.run_job(batch)
 

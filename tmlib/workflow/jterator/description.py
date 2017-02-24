@@ -462,7 +462,7 @@ class PipelineObjectOutputDescription(object):
     :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`.
     '''
 
-    __slots__ = ('name', '_as_polygons')
+    __slots__ = ('_name', '_as_polygons')
 
     def __init__(self, name, as_polygons=True):
         '''
@@ -487,7 +487,7 @@ class PipelineObjectOutputDescription(object):
     def name(self, value):
         if not isinstance(value, basestring):
             raise TypeError('Attribute "name" must have type basestring.')
-        self._name = str(name)
+        self._name = str(value)
 
     @property
     def as_polygons(self):

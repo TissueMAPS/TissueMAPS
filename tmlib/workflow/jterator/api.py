@@ -335,7 +335,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
         for item in objects_output:
             as_polygons = item.as_polygons
             store['objects'][item.name].save = True
-            store['objects'][item.ame].represent_as_polygons = as_polygons
+            store['objects'][item.name].represent_as_polygons = as_polygons
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).first()

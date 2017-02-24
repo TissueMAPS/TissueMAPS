@@ -250,7 +250,12 @@ class Project(object):
     def _create_pipe(self):
         with YamlReader(self.pipe_file) as f:
             content = f.read()
-        description = PipelineDescription(**content)
+        try:
+            description = PipelineDescription(**content)
+        except TypeError as err:
+            raise PipelineDescription(
+                'Incorrect pipeline description: %s' % str(err)
+            )
         return Pipe(description)
 
     @property
@@ -263,7 +268,14 @@ class Project(object):
             h_file = self._get_handles_file(name)
             with YamlReader(h_file) as f:
                 content = f.read()
-            description = HandleDescriptions(**content)
+            try:
+                description = HandleDescriptions(**content)
+            except TypeError as err:
+                raise PipelineDescription(
+                    'Incorrect handles description of module "%s": %s' % (
+                        name, str(err)
+                    )
+                )
             h = Handles(name, description)
             handles.append(h)
         return handles
