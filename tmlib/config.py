@@ -41,7 +41,7 @@ class TmapsConfig(object):
 
     Properties defined on this base class are written into the ``DEFAULT``
     section of the file. Each package that requires configuration should
-    implement this base class. This will create a separate package-specific
+    implement this base class and create a separate package-specific
     section in the config file for the derived class.
     '''
 
