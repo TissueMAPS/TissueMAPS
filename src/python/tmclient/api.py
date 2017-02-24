@@ -23,6 +23,7 @@ import cv2
 import glob
 import tempfile
 import pandas as pd
+import numpy as np
 from cStringIO import StringIO
 
 from tmclient.base import HttpClient
@@ -900,7 +901,8 @@ class TmClient(HttpClient):
             cycle_index=cycle_index, tpoint=tpoint, zplane=zplane,
             correct=correct
         )
-        return cv2.imdecode(response.content)
+        data = np.frombuffer(response.content, np.uint8)
+        return cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
 
     def download_channel_image_file(self, channel_name, plate_name,
             well_name, well_pos_y, well_pos_x, cycle_index=0,
@@ -999,9 +1001,8 @@ class TmClient(HttpClient):
 
         Returns
         -------
-        Tuple[numpy.ndarray[numpy.int32], str]
-            labeled image where each label encodes a segmented object and
-            filename
+        numpy.ndarray[numpy.int32]
+            labeled image where each label encodes a segmented object
 
         See also
         --------
@@ -1013,7 +1014,8 @@ class TmClient(HttpClient):
             object_type, plate_name, well_name, well_pos_y, well_pos_x,
             tpoint=0, zplane=0
         )
-        return response.content
+        data = np.frombuffer(response.content, np.uint8)
+        return cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
 
     def download_segmentation_image_file(self, object_type,
             plate_name, well_name, well_pos_y, well_pos_x, tpoint=0, zplane=0,
