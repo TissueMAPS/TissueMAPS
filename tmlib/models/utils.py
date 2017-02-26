@@ -339,7 +339,7 @@ class Query(sqlalchemy.orm.query.Query):
                 )
             elif cls.__name__ == 'ExperimentReference':
                 experiments = self.from_self(cls.id).all()
-                engine = create_db_engine(cfg.db_uri_sqla)
+                engine = create_db_engine(cfg.db_uri)
                 for exp in experiments:
                     logger.info('drop schema of experiment %d', exp.id)
                     _drop_schema(engine, exp.id)
@@ -573,10 +573,10 @@ class MainSession(_Session):
         ----------
         db_uri: str, optional
             URI of the ``tissuemaps`` database; defaults to the value of
-            :attr:`db_uri_sqla <tmlib.config.DefaultConfig.db_uri_sqla>`
+            :attr:`db_uri <tmlib.config.DefaultConfig.db_uri>`
         '''
         if db_uri is None:
-            db_uri = cfg.db_uri_sqla
+            db_uri = cfg.db_uri
         super(MainSession, self).__init__(db_uri)
         self._schema = None
         self._engine = create_db_engine(db_uri)
@@ -617,10 +617,10 @@ class ExperimentSession(_Session):
             ID of the experiment that should be queried
         db_uri: str, optional
             URI of the ``tissuemaps`` database; defaults to the value of
-            :attr:`db_uri_sqla <tmlib.config.LibraryConfig.db_uri_sqla>`
+            :attr:`db_uri <tmlib.config.LibraryConfig.db_uri>`
         '''
         if db_uri is None:
-            db_uri = cfg.db_uri_sqla
+            db_uri = cfg.db_uri
         self.experiment_id = experiment_id
         self._engine = create_db_engine(db_uri)
         exists = _create_schema_if_not_exists(self._engine, experiment_id)
@@ -734,10 +734,10 @@ class ExperimentConnection(Connection):
             ID of the experiment that should be queried
         db_uri: str, optional
             database URI; defaults to the value of
-            :attr:`db_uri_sqla <tmlib.config.DefaultConfig.db_uri_sqla>`
+            :attr:`db_uri <tmlib.config.DefaultConfig.db_uri>`
         '''
         if db_uri is None:
-            db_uri = cfg.db_uri_sqla
+            db_uri = cfg.db_uri
         super(ExperimentConnection, self).__init__(db_uri)
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=experiment_id
@@ -801,8 +801,8 @@ class MainConnection(Connection):
         ----------
         db_uri: str, optional
             database URI; defaults to the value returned by
-            :attr:`db_uri_sqla <tmlib.config.DefaultConfig.db_uri_sqla>`
+            :attr:`db_uri <tmlib.config.DefaultConfig.db_uri>`
         '''
         if db_uri is None:
-            db_uri = cfg.db_uri_sqla
+            db_uri = cfg.db_uri
         super(MainConnection, self).__init__(db_uri)

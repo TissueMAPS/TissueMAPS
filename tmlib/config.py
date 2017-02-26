@@ -113,10 +113,7 @@ class TmapsConfig(object):
             # Workaround special characters like %
             return self._config.get('DEFAULT', 'db_password')
         except NoOptionError:
-            raise ValueError(
-                'Parameter "db_password" is required in "DEFAULT" '
-                'section of configuration file.'
-            )
+            return ''
 
     @db_password.setter
     def db_password(self, value):
@@ -179,21 +176,17 @@ class TmapsConfig(object):
         return database
 
     @property
-    def db_uri_sqla(self):
+    def db_uri(self):
         '''str: database URI in the format required by *SQLAlchemy*.'''
-        return 'postgresql://{user}:{pw}@{host}:{port}/tissuemaps'.format(
-            user=self.db_user, pw=self.db_password,
-            host=self.db_host, port=self.db_port,
-        )
-
-    @property
-    def db_uri_spark(self):
-        '''str: database URI in *JDBC* format as required by *Spark*.'''
-        return 'jdbc:postgresql://{host}:{port}/{database}?user={user}&password={pw}'.format(
-            user=self.db_user, pw=self.db_password,
-            host=self.db_host, port=self.db_port,
-            database=self._get_database_name(experiment_id)
-        )
+        if self.db_password:
+            return 'postgresql://{user}:{pw}@{host}:{port}/tissuemaps'.format(
+                user=self.db_user, pw=self.db_password,
+                host=self.db_host, port=self.db_port,
+            )
+        else:
+            return 'postgresql://{user}@{host}:{port}/tissuemaps'.format(
+                user=self.db_user, host=self.db_host, port=self.db_port,
+            )
 
     @property
     def items(self):
