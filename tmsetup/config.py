@@ -149,7 +149,6 @@ class CloudSection(SetupSection):
     def __init__(self, description):
         self.ip_range = '10.65.4.0/24'
         self.network = 'tmaps'
-        self.subnetwork = '%s-subnet' % self.network
         self.key_name = 'tmaps'
         super(CloudSection, self).__init__(description)
 
@@ -214,7 +213,7 @@ class CloudSection(SetupSection):
         '''str: name or the subnetwork that should be used
         (default: ``"tmaps-subnet"``)
         '''
-        return self._subnetwork
+        return getattr(self, '_subnetwork', '%s-subnet' % self.network)
 
     @subnetwork.setter
     def subnetwork(self, value):
