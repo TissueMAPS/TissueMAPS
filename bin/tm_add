@@ -60,6 +60,7 @@ def add_experiment(experiment_name, user_name, microscope_type, plate_format,
 
         with tm.utils.ExperimentSession(experiment_id) as session:
             experiment = tm.Experiment(
+                id=experiment_id,
                 microscope_type=microscope_type,
                 plate_format=plate_format,
                 plate_acquisition_mode=plate_acquisition_mode,
