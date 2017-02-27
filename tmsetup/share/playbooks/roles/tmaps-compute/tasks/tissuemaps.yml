@@ -15,10 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Install apt packages required by TissueMAPS Python packages
-  become: yes
   apt:
-    name={{ item }}
-    state=installed
+    name: "{{ item }}"
+    state: installed
   with_items:
     # h5py:
     - libhdf5-dev
@@ -27,7 +26,7 @@
     - libxml2-dev
     - libxslt1-dev
     # javabridge:
-    - openjdk-7-jdk
+    - openjdk-8-jdk  # openjdk-7-jdk
     # matplotlib:
     - pyqt4-dev-tools
     - libfreetype6-dev
@@ -37,45 +36,65 @@
   tags:
     - tissuemaps
 
-- name: Install cython Python package
-  become: yes
-  command: /usr/local/bin/pip install cython --upgrade
+
+# NOTE: We install all TissueMAPS python packages into the home folder because
+# we export this folder on the cluster. This is convenient, because packages
+# can then be updated on the frontend only and these changes become immediatly
+# effective on all compute nodes.
+
+- name: Install cython package
+  # command: /usr/local/bin/pip install cython --upgrade
   # TODO: Using the pip module doesn't work???
-  # pip: name=cython
+  pip:
+    name: cython
+    editable: false
+  tags:
+    - tissuemaps
+
+# This shouldn't be necessary, but some packages don't build correctly when
+# numpy is not already installed.
+- name: Install numpy package
+  pip:
+    name: numpy
+    editable: false
   tags:
     - tissuemaps
 
 - name: Clone JtLibrary repository
+  become_user: "{{ tm_user }}"
   git:
-    repo={{ tm_github_url }}/jtlibrary
-    dest={{ ansible_env.HOME }}/jtlibrary
-    version={{ tm_version }}
-    force=yes
+    repo: "{{ tm_github_url }}/jtlibrary"
+    dest: "{{ tm_home }}/jtlibrary"
+    version: "{{ tm_version }}"
+    force: yes
   tags:
     - tissuemaps
 
 - name: Install jtlibrary package
-  shell: pip install -e {{ ansible_env.HOME }}/jtlibrary --user
+  become_user: "{{ tm_user }}"
+  shell: pip install -e {{ tm_home }}/jtlibrary --user
   args:
-    chdir={{ ansible_env.HOME }}/jtlibrary/
-    executable=/bin/bash
+    chdir: "{{ tm_home }}/jtlibrary/"
+    executable: /bin/bash
   tags:
     - tissuemaps
 
 - name: Clone JtModules repository
+  become_user: "{{ tm_user }}"
   git:
-    repo={{ tm_github_url }}/jtmodules
-    dest={{ ansible_env.HOME }}/jtmodules
-    version={{ tm_version }}
-    force=yes
+    repo: "{{ tm_github_url }}/jtmodules"
+    dest: "{{ tm_home }}/jtmodules"
+    version: "{{ tm_version }}"
+    force: yes
   tags:
     - tissuemaps
 
 - name: Install jtmodules package
-  shell: pip install -e {{ ansible_env.HOME }}/jtmodules --user
+  become_user: "{{ tm_user }}"
+  shell: pip install -e {{ tm_home }}/jtmodules --user
   args:
-    chdir={{ ansible_env.HOME }}/jtmodules/
-    executable=/bin/bash
+    chdir: "{{ tm_home }}/jtmodules/"
+    executable: /bin/bash
   tags:
     - tissuemaps
 
@@ -83,42 +102,47 @@
 # upon installation of tmlibrary, I get HTTP erros when installing on multiple
 # hosts simulatneously???
 - name: Clone GC3Pie repository
+  become_user: "{{ tm_user }}"
   git:
-    repo={{ tm_github_url }}/gc3pie
-    dest={{ ansible_env.HOME }}/gc3pie
-    version=master
-    force=yes
+    repo: "{{ tm_github_url }}/gc3pie"
+    dest: "{{ tm_home }}/gc3pie"
+    version: master
+    force: yes
   tags:
     - tissuemaps
 
 - name: Install gc3pie package
-  shell: pip install -e {{ ansible_env.HOME }}/gc3pie --user
+  become_user: "{{ tm_user }}"
+  shell: pip install -e {{ tm_home }}/gc3pie --user
   args:
-    chdir={{ ansible_env.HOME }}/gc3pie
-    executable=/bin/bash
+    chdir: "{{ tm_home }}/gc3pie"
+    executable: /bin/bash
   tags:
     - tissuemaps
 
 - name: Clone TmLibrary repository
+  become_user: "{{ tm_user }}"
   git:
-    repo={{ tm_github_url }}/tmlibrary
-    dest={{ ansible_env.HOME }}/tmlibrary
-    version={{ tm_version }}
-    force=yes
+    repo: "{{ tm_github_url }}/tmlibrary"
+    dest: "{{ tm_home }}/tmlibrary"
+    version: "{{ tm_version }}"
+    force: yes
   tags:
     - tissuemaps
 
 - name: Install tmlibrary package
-  shell: pip install -e {{ ansible_env.HOME }}/tmlibrary --user
+  become_user: "{{ tm_user }}"
+  shell: pip install -e {{ tm_home }}/tmlibrary --user
   args:
-    chdir={{ ansible_env.HOME }}/tmlibrary/
-    executable=/bin/bash
+    chdir: "{{ tm_home }}/tmlibrary/"
+    executable: /bin/bash
   tags:
     - tissuemaps
 
 - name: Create directory for TissueMAPS related files
+  become_user: "{{ tm_user }}"
   file:
-    path={{ ansible_env.HOME }}/.tmaps
-    state=directory
+    path: "{{ tm_home }}/.tmaps"
+    state: directory
   tags:
     - tissuemaps

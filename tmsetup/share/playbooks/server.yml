@@ -13,5 +13,15 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-[defaults]
-sudo_flags=-H -S
+
+---
+- name: Install web and application servers
+  hosts: server
+  vars:
+    app_host: unix                        # 127.0.0.1
+    app_port: /etc/uwsgi/tissuemaps.sock  # 5002
+  roles:
+    - web-server
+    - app-server
+  tags:
+    - web

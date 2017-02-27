@@ -17,10 +17,10 @@
 # Warning, this is not safe.
 - name: Create SSH directory in case it doesn't exist
   file:
-    path={{ ansible_env.HOME }}/.ssh
-    state=directory
+    path: "{{ tm_home }}/.ssh"
+    state: directory
 
 - name: Enable confirmation-free outgoing ssh connections
   template:
-    src=ssh_config.j2
-    dest={{ ansible_env.HOME }}/.ssh/config
+    src: ssh_config.j2
+    dest: "{{ tm_home }}/.ssh/config"

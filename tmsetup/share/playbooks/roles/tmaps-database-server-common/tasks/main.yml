@@ -25,9 +25,9 @@
 # "pg_ctlcluster" is a wrapper around "pg_ctl" and internally used by service.
 # With "pg_ctlcluster" we can control which cluster will be restarted,
 # while "service" would restart all clusters.
-- name: Ensure database cluster is running
-  become: yes
-  command: pg_ctlcluster {{ postgresql_version }} {{ db_node }} restart
+- name: Start database cluster
+  command: pg_ctlcluster {{ postgresql_version }} {{ db_node }} start
+  ignore_errors: yes
   tags:
     - database
 

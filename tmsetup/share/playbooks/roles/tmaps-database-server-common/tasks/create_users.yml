@@ -15,43 +15,35 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Change password of database superuser
-  become: yes
-  become_user: postgres
-  vars:
-    ansible_ssh_pipelining: true
   postgresql_user:
-    db=postgres
-    port={{ db_port }}
-    user=postgres
-    password={{ db_password }}
+    db: postgres
+    port: "{{ db_port }}"
+    user: postgres
+    login_user: postgres
+    login_host: 127.0.0.1
   tags:
     - database
 
 - name: Create database user
-  become: yes
-  become_user: postgres
-  vars:
-    ansible_ssh_pipelining: true
   postgresql_user:
-    db={{ db_name }}
-    port={{ db_port }}
-    user={{ db_user }}
-    password={{ db_password }}
-    role_attr_flags=LOGIN
+    db: "{{ db_name }}"
+    port: "{{ db_port }}"
+    user: "{{ db_user }}"
+    role_attr_flags: LOGIN
+    login_user: postgres
+    login_host: 127.0.0.1
   tags:
     - database
 
 - name: Grant database user all permissions
-  become: yes
-  become_user: postgres
-  vars:
-    ansible_ssh_pipelining: true
   postgresql_privs:
-    db=postgres
-    type=database
-    obj={{ db_name }}
-    port={{ db_port }}
-    role={{ db_user }}
-    privs=ALL
+    db: postgres
+    type: database
+    obj: "{{ db_name }}"
+    port: "{{ db_port }}"
+    role: "{{ db_user }}"
+    privs: ALL
+    login_user: postgres
+    login_host: 127.0.0.1
   tags:
     - database

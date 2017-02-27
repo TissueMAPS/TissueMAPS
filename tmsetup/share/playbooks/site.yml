@@ -18,7 +18,7 @@
 # Playbook for deployment of all TissueMAPS components on already existing
 # virtual machine instance(s).
 - include: compute.yml
-- include: web.yml
+- include: server.yml
 - include: database.yml
 - include: postconfig.yml
 - include: init.yml

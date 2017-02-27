@@ -6,17 +6,18 @@ export SQUEUE_FORMAT="%.18a %.18i %.40j %.8T %.10M %.9l %.6D %R"
 export SACCT_FORMAT="Account,JobId,JobName%40,State,Exitcode,DerivedExitCode,Elapsed,CPUTime,AveCPU,AveDiskRead,AveDiskWrite"
 
 # Bioformats CLI Tools
-export PATH=$HOME/bftools:$PATH
+export PATH=/home/{{ tm_user }}/bftools:$PATH
 
 # Python
-export PATH=$HOME/.local/bin:$PATH
+export PATH=/home/{{ tm_user }}/.local/bin:$PATH
+export PYTHONPATH=/home/{{ tm_user }}/.local/lib/python2.7/site-packages:$PYTHONPATH
 export PYTHONPATH=/usr/local/lib/python2.7/dist-packages:$PYTHONPATH
 
 # Matlab
 export MATLABHOME=/usr/local/MATLAB/{{ matlab_version }}
 export MATLABROOT=${MATLABHOME}
-export MATLABPATH=$HOME/jtlibrary/src/matlab:$MATLABPATH
-export MATLABPATH=$HOME/jtmodules/src/matlab:$MATLABPATH
+export MATLABPATH=/home/{{ tm_user }}/jtlibrary/src/matlab:$MATLABPATH
+export MATLABPATH=/home/{{ tm_user }}/jtmodules/src/matlab:$MATLABPATH
 
 # Postgres database
 export PGPASSFILE=~/.pgpass

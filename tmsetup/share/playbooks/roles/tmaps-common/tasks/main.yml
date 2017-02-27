@@ -18,13 +18,11 @@
 # - include_vars: file={{ playbook_dir }}/vars/tissuemaps.yml
 
 - name: Update apt packages
-  become: yes
-  tags:
-    - update
   apt:
-    upgrade=safe
-    update_cache=yes
-    cache_valid_time=3600
+    upgrade: safe
+    update_cache: yes
+
+- include: create_user.yml
 
 - include: utils.yml
 

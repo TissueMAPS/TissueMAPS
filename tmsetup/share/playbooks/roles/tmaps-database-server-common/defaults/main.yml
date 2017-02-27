@@ -19,9 +19,8 @@ postgis_version: 2.3
 citus_version: 6.0
 
 volume_mountpoint: /storage
-
-db_data_directory: /var/lib/postgresql
-db_log_directory: /var/log/postgresql
+db_data_directory: "{{ volume_mountpoint }}/data/postgresql"
+db_log_directory: "{{ volume_mountpoint }}/log/postgresql"
 
 pg_max_files_per_process: 10000
 pg_max_connections: 1000

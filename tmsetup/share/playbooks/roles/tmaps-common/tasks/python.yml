@@ -15,108 +15,48 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# - name: Download latest Python version
-#   get_url:
-#     url=https://www.python.org/ftp/python/2.7.13/Python-2.7.13.tgz
-#     dest="{{ ansible_env.HOME }}/"
-#   tags:
-#     - python
-
-# - name: Unpack latest Python version
-#   unarchive:
-#     src="{{ ansible_env.HOME }}/Python-2.7.13.tgz"
-#     dest="{{ ansible_env.HOME }}/"
-#     copy=no
-
-# - name: Configure latest Python version
-#   shell: ./configure
-#   args:
-#     chdir: "{{ ansible_env.HOME }}/Python-2.7.13"
-#   tags:
-#     - python
-
-# - name: Compile latest Python version
-#   shell: make
-#   args:
-#     chdir: "{{ ansible_env.HOME }}/Python-2.7.13"
-#   tags:
-#     - python
-
-# - name: Install latest Python version
-#   become: true
-#   shell: make install
-#   args:
-#     chdir: "{{ ansible_env.HOME }}/Python-2.7.13"
-#   tags:
-#     - python
-
-# - name: Remove build directory for latest Python version
-#   file:
-#     path="{{ ansible_env.HOME }}/python"
-#     state=directory
-#     state=absent
-#   tags:
-#     - python
-
-# - name: Add apt-get repository for latest version of Python2.7
-#   become: yes
-#   apt_repository:
-#     repo="rpa:fkrull/deadsnakes-python2.7"
-#     state=present
-#   tags:
-#     - python
-
-# - name: Update apt packages
-#   become: yes
-#   apt:
-#     upgrade=safe
-#     update_cache=yes
-#     cache_valid_time=3600
-#   tags:
-#     - update
-
-# - name: Install latest version of Python2.7
-#   become: yes
-#   apt:
-#     name="python2.7"
-#     state=installed
-
 - name: Install apt packages required for Python
-  become: yes
   apt:
-    name={{ item }}
-    state=installed
+    name: "{{ item }}"
+    state: installed
   with_items:
+    - build-essential
     - python-dev
     - python-pip
     - python-setuptools
-    - build-essential
-    # Required for the cryptography package
+    # Required for cryptography package
     - libssl-dev
-    - libpq-dev
     - libffi-dev
+    # Required for psycopg2 package
+    - libpq-dev
+  tags:
+    - tissuemaps
 
 - name: Upgrade pip
-  become: yes
   pip:
-    name=pip
-    extra_args='--upgrade'
-    editable=false
+    name: pip
+    extra_args: "--upgrade"
+    editable: false
+    executable: pip2.7
+  tags:
+    - tissuemaps
 
 - name: Upgrade setuptools
-  become: yes
   pip:
-    name=setuptools
-    extra_args='--upgrade'
-    editable=false
-    executable=pip2.7
+    name: setuptools
+    extra_args: "--upgrade"
+    editable: false
+    executable: pip2.7
+  tags:
+    - tissuemaps
 
 - name: Install iPython
-  become: yes
   pip:
-    name={{ item }}
-    editable=false
-    executable=pip2.7
+    name: "{{ item }}"
+    editable: false
+    executable: pip2.7
   with_items:
     - ipython
     - ipdb
+  tags:
+    - tissuemaps

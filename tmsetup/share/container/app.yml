@@ -1,0 +1,33 @@
+---
+- name: Setup container
+  hosts: localhost
+  gather_facts: no
+  vars:
+  - container_hosts:
+    - container_name: test_trusty
+      image_name: python  # ubuntu
+      image_tag: 2.7.13   # 14.04
+  tasks:
+  - pip:
+      name: docker-py
+      version: 1.8.0
+      state: present
+  - docker_container:
+      name: '{{ item.container_name }}'
+      image: '{{ item.image_name }}:{{ item.image_tag }}'
+      command: tail -f /dev/null
+      pull: yes
+    with_items: '{{ container_hosts }}'
+  - add_host:
+      name: '{{ item.container_name }}'
+      hostname: '{{ item.container_name }}'
+      ansible_host: '{{ item.container_name }}'
+      ansible_connection: docker
+      ansible_user: root
+      groups: container
+    with_items: '{{ container_hosts }}'
+
+- name: Deploy container
+  hosts: container
+  tasks:
+    - debug: msg="hello"

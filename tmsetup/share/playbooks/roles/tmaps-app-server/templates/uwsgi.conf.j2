@@ -3,8 +3,7 @@ description "uWSGI server instance configured to serve TissueMAPS"
 start on runlevel [2345]
 stop on runlevel [!2345]
 
-setuid {{ ansible_ssh_user }}
-setgid {{ ansible_ssh_user }}
+setuid {{ tm_user }}
+setgid {{ tm_user }}
 
-chdir {{ ansible_env.HOME }}/.tmaps
-exec env HOME={{ ansible_env.HOME }} bash uwsgi.sh
+exec env HOME={{ tm_home }} bash /home/{{ tm_user }}/.tmaps/uwsgi.sh

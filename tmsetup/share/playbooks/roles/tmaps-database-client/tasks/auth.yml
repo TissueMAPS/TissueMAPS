@@ -14,42 +14,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Create pgpass file
-  template:
-    src=pgpass.j2
-    dest={{ ansible_env.HOME }}/.pgpass
-    group={{ ansible_ssh_user }}
-    owner={{ ansible_ssh_user }}
-    mode=600
-  tags:
-    - database
-
-- name: Update db_password in TissueMAPS configuration
-  ini_file:
-    dest={{ tm_config_file }}
-    create=yes
-    section=DEFAULT
-    state=present
-    option=db_password
-    value={{ db_password }}
-  tags:
-    - database
-    - tissuemaps
-
 - name: Update db_host in TissueMAPS configuration
   ini_file:
-    dest={{ tm_config_file }}
-    section=DEFAULT
-    state=present
-    option=db_host
-    value={{ db_host_master if db_host_master != client_host else 'localhost' }}
+    dest: "{{ tm_config_file }}"
+    section: DEFAULT
+    state: present
+    option: db_host
+    value: "{{ db_host_master if db_host_master != client_host else 'localhost' }}"
   tags:
     - database
     - tissuemaps
 
 - name: Update bash_profile
   lineinfile:
-    dest: "{{ ansible_env.HOME }}/.bash_profile"
+    dest: "{{ tm_home }}/.bash_profile"
     line: "export TMAPS_DB_HOST={{ db_host_master if db_host_master != client_host else 'localhost' }}"
     regexp: "^export.TMAPS_DB_HOST.*"
   tags:
@@ -57,7 +35,7 @@
     - tissuemaps
 
 - name: Source bash_profile
-  shell: . {{ ansible_env.HOME }}/.bash_profile
+  shell: . {{ tm_home }}/.bash_profile
   args:
     executable: /bin/bash
   tags:

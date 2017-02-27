@@ -19,4 +19,6 @@
 
 - include: auth.yml
 
+- include: add_worker.yml
+
 - include: populate_database.yml

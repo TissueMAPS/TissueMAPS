@@ -16,19 +16,17 @@
 
 ---
 - name: Update all packages to the latest version
-  become: yes
   apt:
-    upgrade=safe
-    update_cache=yes
-    cache_valid_time=3600
+    upgrade: safe
+    update_cache: yes
+    cache_valid_time: 3600
   tags:
     - opencv
 
 - name: Install apt packages for OpenCV
-  become: yes
   apt:
-    name={{ item }}
-    state=installed
+    name: "{{ item }}"
+    state: installed
   with_items:
     - libboost-python-dev
     - libopencv-dev
@@ -38,31 +36,31 @@
 
 - name: Check if OpenCV was built
   stat:
-    path=/usr/local/lib/python2.7/dist-packages/cv2.so
+    path: /usr/local/lib/python2.7/dist-packages/cv2.so
   register: opencv_was_built
   tags:
     - opencv
 
 - name: Install numpy Python package
-  become: yes
   pip:
-    name={{ item }}
-    extra_args='--user'
-    editable=no
-    executable=pip2.7
+    name: "{{ item }}"
+    extra_args: "--user"
+    editable: no
+    executable: pip2.7
   with_items:
     - numpy
   tags:
     - opencv
 
 - name: Get the latest OpenCV code
-  git: repo="https://github.com/Itseez/opencv.git"
-       dest="{{ ansible_env.HOME }}/opencv"
-       accept_hostkey=yes
-       update=yes
-       clone=yes
-       force=yes
-       version={{ opencv_version }}
+  git:
+    repo: https://github.com/Itseez/opencv.git
+    dest: "{{ tm_home }}/opencv"
+    accept_hostkey: yes
+    update: yes
+    clone: yes
+    force: yes
+    version: "{{ opencv_version }}"
   when: opencv_was_built.stat.exists == False
   vars:
     opencv_version: 3.1.0
@@ -71,7 +69,7 @@
 
 - name: Create build directory for OpenCV
   file:
-    path="{{ ansible_env.HOME }}/opencv/build"
+    path="{{ tm_home }}/opencv/build"
     state=directory
   when: opencv_was_built.stat.exists == False
   tags:
@@ -82,16 +80,15 @@
     cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local ..
     make
   args:
-    chdir: "{{ ansible_env.HOME }}/opencv/build"
+    chdir: "{{ tm_home }}/opencv/build"
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
 
 - name: Install OpenCV (system wide)
-  become: yes
   shell: "make install && ldconfig"
   args:
-    chdir: "{{ ansible_env.HOME }}/opencv/build"
+    chdir: "{{ tm_home }}/opencv/build"
   when: opencv_was_built.stat.exists == False
   tags:
     - opencv
@@ -106,7 +103,6 @@
     - opencv
 
 - name: Fix OpenCV driver issue
-  become: yes
   file:
     src=/dev/null
     dest=/dev/raw1394
@@ -116,7 +112,7 @@
 
 - name: Remove build directory for OpenCV
   file:
-    path="{{ ansible_env.HOME }}/opencv/build"
+    path="{{ tm_home }}/opencv/build"
     state=directory
     state=absent
   tags:

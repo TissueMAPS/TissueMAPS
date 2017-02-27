@@ -15,4 +15,3 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 client_host: "{{ hostvars[inventory_hostname].ansible_default_ipv4.address }}"
-tm_install_location: "{{ ansible_env.HOME }}/.local/bin"

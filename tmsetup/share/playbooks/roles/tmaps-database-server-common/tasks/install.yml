@@ -15,36 +15,38 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Get Citus repository
-  command: wget https://install.citusdata.com/community/deb.sh -O citus_dep.sh
+  command: wget https://install.citusdata.com/community/deb.sh -O {{ tm_home }}/citus_dep.sh
   args:
     executable=/bin/bash
-    chdir={{ ansible_env.HOME }}
+    chdir={{ tm_home }}
   # get_url:
-  #   url=https://install.citusdata.com/community/deb.sh
-  #   dest={{ ansible_env.HOME}}/citus_deb.sh
+  #   url: https://install.citusdata.com/community/deb.sh
+  #   dest: "{{ tm_home}}/citus_deb.sh"
+  #   validate_certs: no
+  #   unsafe_writes: yes
+  #   timeout: 60
+  #   mode: 0770
   tags:
     - database
 
 - name: Make Citus install script executable
   file:
-    path={{ ansible_env.HOME }}/citus_dep.sh
+    path={{ tm_home }}/citus_dep.sh
     mode=0770
   tags:
     - database
 
 - name: Add Citus repository
-  become: yes
-  command: "{{ ansible_env.HOME }}/citus_dep.sh"
+  command: "{{ tm_home }}/citus_dep.sh"
   args:
     creates: /etc/apt/sources.list.d/citusdata_community.list
   tags:
     - database
 
 - name: Install Citus PostgreSQL
-  become: yes
   apt:
-    state=installed
-    name={{ item }}
+    state: installed
+    name: "{{ item }}"
   with_items:
     - postgresql-{{ postgresql_version }}-citus-{{ citus_version }}
     - postgis

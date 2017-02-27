@@ -15,47 +15,70 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Update all packages to the latest version
-  become: yes
   apt:
-    upgrade=safe
-    update_cache=yes
-    cache_valid_time=3600
+    upgrade: safe
+    update_cache: yes
+    cache_valid_time: 3600
   tags:
     - nginx
     - web-server
 
 - name: Install nginx
-  become: yes
   apt:
-    name=nginx
-    state=installed
+    name: nginx
+    state: installed
   tags:
     - web-server
     - nginx
 
 - name: Create nginx site
-  become: yes
   template:
-    src=nginx_site.j2
-    dest="/etc/nginx/sites-available/tissuemaps"
+    src: nginx_site.j2
+    dest: /etc/nginx/sites-available/tissuemaps
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
   tags:
     - nginx
     - web-server
 
-- name: Put nginx conf.d
-  become: yes
+- name: Place site specific nginx conf.d
   template:
-    src=nginx_conf.j2
-    dest="/etc/nginx/conf.d/tmaps.conf"
+    src: nginx_conf.j2
+    dest: /etc/nginx/conf.d/tissuemaps.conf
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
   tags:
     - nginx
     - web-server
 
-# Check syntax of the nginx file:
-# $ become nginx -t
+- name: Change nginx user for worker processes
+  lineinfile:
+    dest: /etc/nginx/nginx.conf
+    state: present
+    regexp: 'user\s+.*;'
+    line: 'user {{ tm_user }};'
+  tags:
+    - nginx
+    - web-server
+
+# We may want to run nginx as a non-root user, e.g. within a container.
+- name: Give user permission to nginx directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+  with_items:
+    - /var/lib/nginx
+    - /var/log/nginx
+    - /usr/share/nginx
+    - /etc/nginx
+  tags:
+    - nginx
+    - web-server
 
 - name: Enable nginx site
-  become: yes
   shell: |
     if [ ! -s /etc/nginx/sites-enabled/tissuemaps ]; then
       ln -s /etc/nginx/sites-available/tissuemaps /etc/nginx/sites-enabled/tissuemaps

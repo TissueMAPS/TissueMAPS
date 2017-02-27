@@ -15,13 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Create database tables
-  shell: "{{ tm_install_location }}/tm_create_tables"
+  command: "/home/{{ tm_user }}/.local/bin/tm_create_tables"
+  args:
+    executable: /bin/bash
   tags:
     - database
     - tissuemaps
 
 - name: Create default user
-  command: "{{ tm_install_location }}/tm_add user --name testuser --password {{ tm_testuser_password }} --email testuser@tissuemaps.org"
+  command: "/home/{{ tm_user }}/.local/bin/tm_add user --name testuser --password {{ tm_testuser_password }} --email testuser@tissuemaps.org"
+  args:
+    executable: /bin/bash
   tags:
     - database
     - tissuemaps

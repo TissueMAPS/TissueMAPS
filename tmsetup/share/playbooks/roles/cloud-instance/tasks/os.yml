@@ -19,7 +19,7 @@
 #
 # Requires the following environment variables:
 #  - OS_AUTH_URL
-#  - OS_USERNAME
+#  - ansible_userNAME
 #  - OS_PASSWORD
 #  - OS_PROJECT_NAME
 - name: Create network

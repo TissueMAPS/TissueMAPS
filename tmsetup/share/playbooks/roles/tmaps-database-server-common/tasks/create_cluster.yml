@@ -13,105 +13,69 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+# - name: Stop PostgreSQL service
+#   service:
+#     name: postgresql
+#     state: stopped
+#   tags:
+#     - database
 
-- name: Stop PostgreSQL service
-  become: yes
-  service:
-    name=postgresql
-    state=stopped
+- name: Create data directory
+  file:
+    path: "{{ db_data_directory }}"
+    state: directory
+    owner: postgres
+    group: postgres
   tags:
     - database
 
-# Symlink /var/lib/postgresql -> /data/postgresql/
-- name: Create data directory (source for symlink)
-  become: yes
+- name: Remove version-specific data subdirectory
   file:
-    path={{ db_data_directory }}
-    state=absent
-  tags:
-    - database
-
-- name: Create data directory (target for symlink) on mounted filesystem
-  become: yes
-  file:
-    path={{ volume_mountpoint }}/postgresql/data
-    state=directory
-    owner=postgres
-    group=postgres
-  tags:
-    - database
-
-- name: Symlink data directory to mounted filesystem
-  become: yes
-  file:
-    src={{ volume_mountpoint }}/postgresql/data
-    dest={{ db_data_directory }}
-    state=link
-    force=yes
-    owner=postgres
-    group=postgres
+    path: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}"
+    state: absent
   tags:
     - database
 
 - name: Create version-specific data subdirectory
-  become: yes
   file:
-    path={{ db_data_directory }}/{{postgresql_version}}/{{ db_node }}
-    state=directory
-    owner=postgres
-    group=postgres
+    path: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: 0700
   tags:
     - database
 
-- name: Create log directory (source for symlink)
-  become: yes
+- name: Create log directory
   file:
-    path={{ db_log_directory }}
-    state=absent
-  tags:
-    - database
-
-- name: Create log directory (target for symlink) on mounted filesystem
-  become: yes
-  file:
-    path={{ volume_mountpoint }}/postgresql/logs
-    state=directory
-    owner=postgres
-    group=postgres
-  tags:
-    - database
-
-- name: Symlink log directory to mounted filesystem
-  become: yes
-  file:
-    src={{ volume_mountpoint }}/postgresql/logs
-    dest={{ db_log_directory }}
-    state=link
-    force=yes
-    owner=postgres
-    group=postgres
+    path: "{{ db_log_directory }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: 0700
   tags:
     - database
 
 - name: Install setfacl support
-  become: yes
   apt:
-    pkg=acl
-    state=installed
+    name: acl
   tags:
     - database
 
 - name: Remove empty default database cluster
-  become: yes
   command: pg_dropcluster {{ postgresql_version }} main --stop
   ignore_errors: yes
   tags:
     - database
 
+- name: Remove database directory
+  command: pg_dropcluster {{ postgresql_version }} {{ db_node }} --stop
+  ignore_errors: yes
+  tags:
+    - database
+
 - name: Initialize database cluster
-  become: yes
   command: pg_createcluster {{ postgresql_version }} {{ db_node }} -p {{ db_port }} -d {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
-  args:
-    creates: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/base"
   tags:
     - database

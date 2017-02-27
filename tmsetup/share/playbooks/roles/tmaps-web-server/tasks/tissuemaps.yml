@@ -15,86 +15,73 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install apt packages
-  become: yes
-  apt:
-    name={{ item }}
-    state=installed
-  with_items:
-    - nodejs
-    - npm
+- name: Download latest nodejs
+  shell: wget -qO- https://deb.nodesource.com/setup_6.x | bash -
   tags:
     - tissuemaps
-    - client
     - web-server
 
-- name: Corrections for nodejs
-  become: yes
-  file:
-    src=/usr/bin/nodejs
-    dest=/usr/bin/node
-    state=link
+- name: Install apt packages
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - nodejs
   tags:
-    - tmserver
+    - tissuemaps
     - web-server
 
 - name: Install npm packages
-  become: yes
   npm:
-    name={{ item }}
-    state=present
-    global=yes
+    name: "{{ item }}"
+    state: present
+    global: yes
   with_items:
     - bower
     - gulp
   tags:
     - tissuemaps
-    - client
     - web-server
 
 - name: Get the latest tmui code
+  become_user: "{{ tm_user }}"
   git:
-    repo={{ tm_github_url }}/tmui
-    version={{ tm_version }}
-    recursive=yes
-    dest={{ ansible_env.HOME }}/tmui
+    repo: "{{ tm_github_url }}/tmui"
+    version: "{{ tm_version }}"
+    recursive: yes
+    dest: "{{ tm_home }}/tmui"
   tags:
     - tissuemaps
-    - client
     - web-server
 
 - name: Update npm
-  become: yes
   command: npm install npm -g
   tags:
     - web-server
     - tissuemaps
-    - client
 
 - name: Install npm dependencies
   npm:
-    path={{ ansible_env.HOME }}/tmui/src/app
-    state=present
+    path: "{{ tm_home }}/tmui/src/app"
+    state: present
   tags:
     - web-server
     - tissuemaps
-    - client
 
 - name: Install bower dependencies
   bower:
-    path={{ ansible_env.HOME }}/tmui/src
-    state=present
+    path: "{{ tm_home }}/tmui/src"
+    state: present
   tags:
     - web-server
     - tissuemaps
-    - client
 
 - name: Build client code for production deployment
+  become_user: "{{ tm_user }}"
   shell: gulp build --prod
   args:
     executable: /bin/bash
-    chdir: "{{ ansible_env.HOME }}/tmui/src"
+    chdir: "{{ tm_home }}/tmui/src"
   tags:
     - web-server
     - tissuemaps
-    - client

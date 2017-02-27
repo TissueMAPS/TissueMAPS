@@ -15,75 +15,80 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Preload Citus extension
-  become: yes
   command: pg_conftool {{ postgresql_version }} {{ db_node }} set shared_preload_libraries citus
   tags:
     - database
 
 - name: Configure connection
-  become: yes
   command: pg_conftool {{ postgresql_version }} {{ db_node }} set listen_addresses '*'
   tags:
     - database
 
 - name: Configure max_connections
-  become: yes
   command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_connections {{ pg_max_connections }}
   tags:
     - database
 
 - name: Configure max_files_per_process
-  become: yes
   command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_files_per_process {{ pg_max_files_per_process }}
   tags:
     - database
 
 - name: Configure autovacuum_max_workers
-  become: yes
   command: pg_conftool {{ postgresql_version }} {{ db_node }} set autovacuum_max_workers {{ pg_autovacuum_max_workers }}
   tags:
     - database
 
 - name: Allow unrestricted access from private IP range
-  become: yes
   lineinfile:
-    dest=/etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
-    state=present
-    regexp="^host\s+all\s+all\s+[./0-9]*\s+trust"
-    line="host    all             all             {{ ip_range }}          trust"
+    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    state: present
+    regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
+    line: 'host    all             all             {{ ip_range }}          trust'
+  when: ip_range is defined
   tags:
     - database
 
 - name: Allow host unrestricted access to connect to itself I
-  become: yes
   lineinfile:
-    dest=/etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
-    state=present
-    regexp="^host\s+all\s+all\s+127\.0\.0\.1/32\s+md5"
-    line="host    all             all             127.0.0.1/32            trust"
+    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    state: present
+    regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
+    line: 'host    all             all             127.0.0.1/32            trust'
   tags:
     - database
 
 - name: Allow host unrestricted access to connect to itself II
-  become: yes
   lineinfile:
-    dest=/etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
-    state=present
-    regexp="^host\s+all\s+all\s+::1/128\s+md5"
-    line="host    all             all             ::1/128                 trust"
+    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    state: present
+    regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
+    line: 'host    all             all             ::1/128                 trust'
   tags:
     - database
 
+- name: Allow unrestricted host access from local network
+  lineinfile:
+    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    state: present
+    line: 'host    all             all              172.0.0.0/8            trust'
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - database
+
+- shell: cat /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+  register: content
+
+- debug: var=content.stdout_lines
+
 - name: Increase kernel limits for semaphores
-  become: yes
   shell: sysctl -w kernel.sem="250 60000 32 250"
   tags:
     - database
 
 - name: Increaese limit for number of open files
-  become: yes
   lineinfile:
-    dest=/etc/security/limits.conf
-    line=postgres soft nofile {{ pg_max_files_per_process }}
+    dest: /etc/security/limits.conf
+    line: postgres soft nofile {{ pg_max_files_per_process }}
   tags:
     - database

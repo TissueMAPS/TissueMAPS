@@ -14,13 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include: server.yml
+- include: nginx.yml
 
 - name: Stop nginx web server
-  become: yes
   service:
-    name=nginx
-    state=stopped
+    name: nginx
+    state: stopped
   ignore_errors: True
   tags:
     - web-server

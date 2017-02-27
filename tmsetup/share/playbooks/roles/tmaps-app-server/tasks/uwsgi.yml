@@ -15,36 +15,55 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Install uWSGI package
-  become: yes
   pip:
-    name=uwsgi
-    executable=pip2.7
-    editable=false
+    name: uwsgi
+    editable: false
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Set socket in case of a UNIX socket
+  set_fact:
+    uwsgi_socket: "{{ app_host }}:{{ app_port }}"
+  when: app_host != 'unix'
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Set socket in case of a HTTP socket
+  set_fact:
+    uwsgi_socket: "{{ app_port }}"
+  when: app_host == 'unix'
   tags:
     - app-server
     - uwsgi
 
 - name: Place uwsgi.ini
   template:
-    src=uwsgi.ini.j2
-    dest={{ ansible_env.HOME }}/.tmaps/uwsgi.ini
+    src: uwsgi.ini.j2
+    dest: /home/{{ tm_user }}/.tmaps/uwsgi.ini
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
   tags:
     - app-server
     - uwsgi
 
 - name: Place uwsgi.sh startup script
   template:
-    src=uwsgi.sh.j2
-    dest={{ ansible_env.HOME }}/.tmaps/uwsgi.sh
+    src: uwsgi.sh.j2
+    dest: /home/{{ tm_user }}/.tmaps/uwsgi.sh
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0550
   tags:
     - app-server
     - uwsgi
 
-- name: Place uwsgi config file
-  become: yes
+- name: Place uwsgi init config file
   template:
-    src=uwsgi.conf.j2
-    dest=/etc/init/uwsgi.conf
+    src: uwsgi.conf.j2
+    dest: /etc/init/uwsgi.conf
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - app-server
     - uwsgi

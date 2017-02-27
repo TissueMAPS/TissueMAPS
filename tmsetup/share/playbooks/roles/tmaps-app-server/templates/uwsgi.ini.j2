@@ -1,8 +1,8 @@
 [uwsgi]
 module = tmserver.wsgi:app
-http-socket = :8080
-logto = $(HOME)/.tmaps/uwsgi.log
-socket = $(HOME)/.tmaps/uwsgi.sock
+#http-socket = :8080
+logto = {{ tm_log_directory }}/uwsgi.log
+socket = {{ uwsgi_socket }}
 chmod-socket = 666
 vacuum = true
 master = true

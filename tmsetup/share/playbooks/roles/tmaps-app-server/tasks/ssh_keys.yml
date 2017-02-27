@@ -16,20 +16,20 @@
 
 ---
 - name: Drop sysadmin SSH keys and ensure they are authorized for `root` user
-  become: yes
   authorized_key:
-    user=root
-    key=https://github.com/{{ item }}.keys
+    user: root
+    key: https://github.com/{{ item }}.keys
   with_items: "{{ tm_admins }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - ssh
 
 - name: Drop SSH keys of authorized users
-  become: yes
   authorized_key:
-    user={{ ansible_ssh_user }}
-    key=https://github.com/{{ item }}.keys
+    user: "{{ tm_user }}"
+    key: https://github.com/{{ item }}.keys
   with_items: "{{ tm_users }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - ssh
 

@@ -5,20 +5,19 @@ server {
     server_name {{ public_host_name }}
     {% endif %}
 
-    access_log /var/log/nginx/tissuemaps-access.log;
-    error_log /var/log/nginx/tissuemaps-error.log;
+    access_log {{ tm_log_directory }}/nginx-access.log;
+    error_log {{ tm_log_directory }}/nginx--error.log;
 
     # all non-api requests are file requests and should be served
-    # from the built client dir
-    root {{ ansible_env.HOME }}/tmui/src/build;
+    # from the gulp built directory
+    root {{ tm_home }}/tmui/src/build;
     location / {
         try_files $uri $uri/ @proxy;
     }
 
-    # all other request (e.g. with /api or /auth prefix) to uwsgi
-    # listening on the unix socket
+    # all other request (e.g. with /api or /auth prefix) are redirected to uwsgi
     location @proxy {
         include uwsgi_params;
-        uwsgi_pass unix:{{ ansible_env.HOME }}/.tmaps/uwsgi.sock;
+        uwsgi_pass {{ app_host }}:{{ app_port }};
     }
 }

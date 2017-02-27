@@ -20,10 +20,8 @@
     dest=/etc/default/rcS
     regexp='^UTC='
     line='UTC=yes'
-  become: yes
 
 - name: Fix timezone
-  become: yes
   copy:
     dest=/etc/timezone
     owner=root

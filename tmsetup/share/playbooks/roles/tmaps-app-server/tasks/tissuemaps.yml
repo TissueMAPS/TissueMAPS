@@ -17,26 +17,40 @@
 ---
 - name: Clone TmServer repository
   git:
-    repo={{ tm_github_url }}/tmserver
-    dest={{ ansible_env.HOME }}/tmserver
-    version={{ tm_version }}
+    repo: "{{ tm_github_url }}/tmserver"
+    dest: "{{ tm_home }}/tmserver"
+    version: "{{ tm_version }}"
   tags:
     - tissuemaps
 
 - name: Install tmserver package
-  shell: pip install -e {{ ansible_env.HOME }}/tmserver --user --process-dependency-links
+  become: "{{ tm_user }}"
+  shell: pip install -e {{ tm_home }}/tmserver --user --no-cache-dir
   args:
-    chdir={{ ansible_env.HOME }}/tmserver
-    executable=/bin/bash
+    chdir: "{{ tm_home }}/tmserver"
+    executable: /bin/bash
   tags:
     - tissuemaps
 
-- name: Create storage directory
-  become: yes
+- name: Create log_home directory
   file:
-    state=directory
-    path={{ tm_storage_home }}
-    owner={{ ansible_user }}
-    group={{ ansible_user }}
+    state: directory
+    path: "{{ tm_log_directory }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  tags:
+    - tissuemaps
+
+- name: Update log_home in TissueMAPS configuration
+  ini_file:
+    dest: "{{ tm_config_file }}"
+    section: tmserver
+    state: present
+    option: log_home
+    value: "{{ tm_log_directory }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: "u+rwx"
   tags:
     - tissuemaps

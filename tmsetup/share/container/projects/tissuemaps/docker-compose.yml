@@ -1,0 +1,74 @@
+# TmSetup - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+version: '2'
+
+volumes:
+
+  # This will create persistent volumes on your host machine, where data
+  # and log files will be stored. These volumes will persist when containers
+  # are stopped or removed.
+  storage-app:
+  storage-db-master:
+  storage-db-worker:
+
+services:
+
+  web:
+    # image: tissuemaps/tissuemaps-web
+    image: tissuemaps-web
+    container_name: tissuemaps-web
+    volumes:
+      - storage-app:/storage
+    # By default, the web server listens to port 8002 on your host machine.
+    # You may want to override the port number. Be aware, however,
+    # that the container is run as non-root user and port numbers below 1024
+    # are reserved for root.
+    # ports:
+    #   - '8002:8002'
+
+  app:
+    # image: tissuemaps/tissuemaps-app
+    image: tissuemaps-app
+    container_name: tissuemaps-app
+    volumes:
+      - storage-app:/storage
+
+  db_master:
+    # image: tissuemaps/tissuemaps-db_master
+    image: tissuemaps-db_master
+    container_name: tissuemaps-db-master
+    hostname: db_master
+    depends_on:
+      - db_worker
+    volumes:
+      - storage-db-master:/storage
+    # By default, the database is not accessible from your host machine,
+    # but only from containers within the private network. You may want to
+    # publish the port to your host machine. In case you have already a
+    # database server on your host machine listening to the default port 5432,
+    # you will have to use another non-conflicting port number, e.g. 5433.
+    # ports:
+    #   - '5432:5432'
+
+  db_worker:
+    # NOTE: The architecture is configured for one database worker only.
+    # image: tissuemaps/tissuemaps-db_worker
+    image: tissuemaps-db_worker
+    container_name: tissuemaps-db-worker
+    hostname: db_worker
+    volumes:
+      - storage-db-worker:/storage

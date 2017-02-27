@@ -15,48 +15,40 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Create database
-  become: yes
-  become_user: postgres
-  vars:
-    ansible_ssh_pipelining: true
   postgresql_db:
-    name={{ db_name }}
-    port={{ db_port }}
+    name: "{{ db_name }}"
+    port: "{{ db_port }}"
+    login_host: 127.0.0.1
+    login_user: postgres
   tags:
     - database
 
 - name: Create Citus extension
-  become: yes
-  become_user: postgres
-  vars:
-    ansible_ssh_pipelining: true
   postgresql_ext:
-    name=citus
-    db={{ db_name }}
-    port={{ db_port }}
+    name: citus
+    db: "{{ db_name }}"
+    port: "{{ db_port }}"
+    login_host: 127.0.0.1
+    login_user: postgres
   tags:
     - database
 
 - name: Create Postgis extensions
-  become: yes
-  become_user: postgres
-  vars:
-    ansible_ssh_pipelining: true
   postgresql_ext:
-    name=postgis
-    db={{ db_name }}
-    port={{ db_port }}
+    name: postgis
+    db: "{{ db_name }}"
+    port: "{{ db_port }}"
+    login_host: 127.0.0.1
+    login_user: postgres
   tags:
     - database
 
 - name: Create Hstore extensions
-  become: yes
-  become_user: postgres
-  vars:
-    ansible_ssh_pipelining: true
   postgresql_ext:
-    name=hstore
-    db={{ db_name }}
-    port={{ db_port }}
+    name: hstore
+    db: "{{ db_name }}"
+    port: "{{ db_port }}"
+    login_host: 127.0.0.1
+    login_user: postgres
   tags:
     - database

@@ -80,10 +80,10 @@ def get_version():
 setuptools.setup(
     name='tmsetup',
     version=get_version(),
-    description='Interface for setting up TissueMAPS in the cloud.',
+    description='Interface for setting up TissueMAPS in virtual environments.',
     author='Markus D. Herrmann',
     author_email='markusdherrmann@gmail.com',
-    url='https://github.com/tissuemaps/tmclient',
+    url='https://github.com/tissuemaps/tmsetup',
     license='GPL-3.0+',
     platforms=['Linux', 'OS-X'],
     classifiers=[
@@ -108,15 +108,23 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
        'ansible>=2.2.0',
-       'elasticluster>=1.3.dev',
+       'ansible-container>=0.3',
        'apache-libcloud>=1.3.0',
-       'PyYAML>=3.11',
-       'shade>=1.12.1',
        'boto3>=1.4.1',
+       'docker-py>=1.7.0',
+       'docker-compose>=1.7.0',
+       'elasticluster>=1.3.dev',
+       'PyYAML>=3.11',
+       'psyopg2>=2.6.1',
+       # Docker compose requires a specific version of requests. Hereby, we
+       # ensure that it gets correctly installed.
+       'requests >= 2.6.1, != 2.11.0, < 2.12',
+       'shade>=1.12.1',
        'whichcraft>=0.4.0'
     ],
     dependency_links=[
         'https://github.com/gc3-uzh-ch/elasticluster/tarball/master#egg=elasticluster-1.3.dev',
+        'https://github.com/ansible/ansible-container/tarball/master#egg=ansible-container-0.3.0rc0'
     ]
 )
 

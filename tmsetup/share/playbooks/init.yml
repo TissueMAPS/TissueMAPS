@@ -20,30 +20,27 @@
 # Docker compose.
 - name: Restart database servers
   hosts:
-    - tissuemaps_database_worker
-    - tissuemaps_database_master
+    - db_worker
+    - db_master
   tasks:
     - name: Restart and enable postgresql service
-      become: yes
       service:
-        name=postgresql
-        state=restarted
-        enabled=yes
+        name: postgresql
+        state: restarted
+        enabled: yes
 
 - name: Restart web and application servers
   hosts:
-    - tissuemaps_web
+    - server
   tasks:
     - name: Restart and enable nginx service
-      become: yes
       service:
-        name=nginx
-        state=restarted
-        enabled=yes
+        name: nginx
+        state: restarted
+        enabled: yes
     - name: Restart and enable uwsgi service
-      become: yes
       service:
-        name=uwsgi
-        state=restarted
-        enabled=yes
+        name: uwsgi
+        state: restarted
+        enabled: yes
 

@@ -17,15 +17,15 @@
 ---
 - name: Create directory for GC3Pie data
   file:
-    path="{{ ansible_env.HOME }}/.gc3"
-    state=directory
+    path: "{{ tm_home }}/.gc3"
+    state: directory
   tags:
     - gc3pie
 
 - name: Drop GC3Pie configuration file
   template:
-    src=gc3pie.conf.j2
-    dest={{ ansible_env.HOME }}/.gc3/gc3pie.conf
+    src: gc3pie.conf.j2
+    dest: "{{ tm_home }}/.gc3/gc3pie.conf"
   tags:
     - gc3pie
 

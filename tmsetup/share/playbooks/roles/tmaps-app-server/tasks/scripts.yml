@@ -16,9 +16,9 @@
 ---
 - name: Place convenience scripts
   template:
-    src={{ item }}.j2
-    dest={{ ansible_env.HOME }}/{{ item }}
-    mode="u+x"
+    src: "{{ item }}.j2"
+    dest: "{{ tm_home }}/{{ item }}"
+    mode: "u+x"
   with_items:
     - create_slurm_account.sh
     - start_server.sh

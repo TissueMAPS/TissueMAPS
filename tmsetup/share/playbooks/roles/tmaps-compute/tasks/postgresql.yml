@@ -18,39 +18,36 @@
 # We need to update the apt repository based on the latest Postgres version
 # such that the correct version of postgresql-client package will be installed.
 - name: Add PostgreSQL apt repo (url)
-  become: yes
   lineinfile:
-    dest=/etc/apt/sources.list.d/pgdg.list state=present
-    create=yes
-    regexp='^deb http\\:\\/\\/apt.postgresql'
-    line='deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main'
+    dest: /etc/apt/sources.list.d/pgdg.list
+    state: present
+    create: yes
+    regexp: '^deb http\\:\\/\\/apt.postgresql'
+    line: 'deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main'
   register: pgs_aptrepo
   tags:
     - database
 
 - name: Add PostgreSQL apt repo (key)
-  become: yes
   apt_key:
-    url=https://www.postgresql.org/media/keys/ACCC4CF8.asc
-    state=present
-    validate_certs=no
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+    validate_certs: no
   register: pgs_aptkey
   tags:
     - database
 
 - name: Update apt packages to add PostgreSQL
-  become: yes
   tags:
     - update
     - database
   shell: aptitude update
   when: pgs_aptkey.changed or pgs_aptrepo.changed
 
-- name: Install apt packages for PostgreSQL
-  become: yes
+- name: Install apt packages for PostgreSQL client
   apt:
-    name={{ item }}
-    state=installed
+    name: "{{ item }}"
+    state: installed
   with_items:
     - libpq-dev
     - postgresql-client
