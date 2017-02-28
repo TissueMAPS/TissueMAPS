@@ -1,21 +1,21 @@
 {
   "name": "TissueMAPS",
   "version": "1.0.0",
-  "description": "A web-based software facilitating Multiplexed Analysis of Proteins in Single-Cells (MAPS) imaging technology.",
+  "description": "Web based user interface for TissueMAPS.",
   "main": "gruntfile.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/tissuemaps/tmclient"
+    "url": "https://github.com/tissuemaps/tmui"
   },
   "author": "Robin Hafen <robin.hafen@gmail.com>",
   "license": "",
   "bugs": {
-    "url": "https://github.com/tissuemaps/tmclient/issues"
+    "url": "https://github.com/tissuemaps/tmui/issues"
   },
-  "homepage": "https://github.com/tissuemaps/tmclient",
+  "homepage": "https://github.com/tissuemaps/tmui",
   "devDependencies": {
     "bower": "^1.4.1",
     "del": "^2.2.0",
