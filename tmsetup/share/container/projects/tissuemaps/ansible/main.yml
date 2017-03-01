@@ -16,55 +16,46 @@
 ---
 - name: Setup web container
   hosts: web
-  vars_files:
-    - /local-group-vars/all.yml
   vars:
+    web_port: 8002
     app_host: app
     app_port: 5002
   roles:
-    - tmaps-web-server
+    - web-server
 
 - name: Setup app container
   hosts: app
-  vars_files:
-    - /local-group-vars/all.yml
   vars:
     app_host: app
     app_port: 5002
   roles:
-    - tmaps-app-server
+    - app-server
 
 - name: Setup database worker container
   hosts: db_worker
-  vars_files:
-    - /local-group-vars/all.yml
   roles:
-    - tmaps-database-server-worker
+    - database-server-worker
 
 - name: Setup database master container
   hosts: db_master
-  vars_files:
-    - /local-group-vars/all.yml
   roles:
-    - tmaps-database-server-master
+    - database-server-master
 
 - name: Setup compute container
   hosts: compute
-  vars_files:
-    - /local-group-vars/all.yml
   roles:
-    - tmaps-compute
+    - compute
 
 - name: Configure web container as database client
   hosts: app
-  vars_files:
-    - /local-group-vars/all.yml
+  remote_user: "{{ tm_user }}"
   vars:
+    tm_devuser_password: 123456
     db_host_master: db_master
     db_hosts_workers:
       - db_worker
   roles:
-    - tmaps-database-client
+    - database-client
 
 # It is important for container to shut down the server in a clean mode, i.e.
 # wait for all clients to disconnect and backup processes to finish.

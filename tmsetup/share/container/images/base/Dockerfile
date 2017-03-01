@@ -12,7 +12,6 @@ RUN apt-get update && apt-get -y install \
         python-dev \
         python-pip \
         python-setuptools \
-        sudo \
         tar \
         wget \
     && apt-get clean \
@@ -28,9 +27,7 @@ RUN pip install --upgrade \
         urllib3 \
         dumb-init
 
-RUN adduser --quiet --home /home/tissuemaps --shell /bin/bash tissuemaps && \
-    usermod -a -G tissuemaps,sudo tissuemaps && \
+RUN adduser --quiet --disabled-password --home /home/tissuemaps tissuemaps && \
+    usermod -a -G tissuemaps tissuemaps && \
     chown -R tissuemaps:tissuemaps /home/tissuemaps && \
     chmod 0775 /home/tissuemaps
-
-RUN bash -c "echo 'tissuemaps ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/tissuemaps"

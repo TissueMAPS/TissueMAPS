@@ -13,12 +13,34 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ---
-# Cooks images used to launch VMs of frontend and compute nodes.
-- name: Install TissueMAPS python packages
-  hosts: tissuemaps_compute
-  roles:
-    - compute
+- name: Create directory for GC3Pie data
+  file:
+    path: "{{ tm_home }}/.gc3"
+    state: directory
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  tags:
+    - gc3pie
+
+- name: Drop GC3Pie configuration file
+  template:
+    src: gc3pie.conf.j2
+    dest: "{{ tm_home }}/.gc3/gc3pie.conf"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+  tags:
+    - gc3pie
+
+- name: Set permissions for GC3Pie directory
+  file:
+    path: "{{ tm_home }}/.gc3"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
   tags:
     - tissuemaps
-    - compute

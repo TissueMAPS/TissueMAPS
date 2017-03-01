@@ -14,11 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-# Cooks images used to launch VMs of frontend and compute nodes.
-- name: Install TissueMAPS python packages
-  hosts: tissuemaps_compute
-  roles:
-    - compute
-  tags:
-    - tissuemaps
-    - compute
+postgis_version: 2.3
+citus_version: 6.1
+
+pg_max_files_per_process: 10000
+pg_max_connections: 1000
+pg_autovacuum_max_workers: 6
+pg_maintenance_work_mem: 1GB

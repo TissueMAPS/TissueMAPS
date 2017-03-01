@@ -14,15 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
+version: '2'
+
 services:
 
   web:
     command:
       - 'dumb-init'
-      - '/home/tissuemaps/tmui/src/gulp'
+      - '/usr/bin/gulp'
+      - '--gulpfile'
+      - '/home/tissuemaps/tmui/src/gulpfile.js'
 
   app:
     command:
       - 'dumb-init'
       - '/home/tissuemaps/.local/bin/tm_server'
-      - '-vv'
+      - '-vvv'

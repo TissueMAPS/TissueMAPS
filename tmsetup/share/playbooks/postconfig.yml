@@ -16,8 +16,8 @@
 
 ---
 - name: Configure web host as database client
-  hosts: server
-  remote_user: "{{ ansible_user }}"
+  hosts: tissuemaps_server
+  remote_user: "{{ tm_user }}"
   vars:
     db_host_master: "{{ hostvars[groups['tissuemaps_database_master'][0]].ansible_default_ipv4.address }}"
     db_hosts_workers: "{{ groups['tissuemaps_database_worker']|map('extract', hostvars, ['ansible_default_ipv4', 'address'])|list }}"

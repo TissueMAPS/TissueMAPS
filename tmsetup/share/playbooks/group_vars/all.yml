@@ -14,12 +14,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-# NOTE: These variables are not required by "all" groups, but by multiple
-# different groups. So we make them available globally.
+# NOTE: Don't use Ansible variables here, since this is not
+# compatible with ansible-container.
 tm_user: tissuemaps
-tm_home: /home/{{ tm_user }}
-tm_config_file: "{{ tm_home }}/.tmaps/tissuemaps.cfg"
+tm_home: /home/tissuemaps
+tm_config_file: /home/tissuemaps/.tmaps/tissuemaps.cfg
+# tm_home: /home/{{ tm_user }}
+# tm_config_file: "{{ tm_home }}/.tmaps/tissuemaps.cfg"
+
+volume_mountpoint: /storage
+postgresql_version: 9.6
+
 db_user: tissuemaps
 db_name: tissuemaps
 db_port_master: 5432
 db_port_worker: 9700
+db_data_directory: /storage/data/postgresql
+db_log_directory: /storage/log/postgresql
+# db_data_directory: "{{ volume_mountpoint }}/data/postgresql"
+# db_log_directory: "{{ volume_mountpoint }}/log/postgresql"

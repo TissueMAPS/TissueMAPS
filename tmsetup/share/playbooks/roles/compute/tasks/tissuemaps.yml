@@ -1,0 +1,148 @@
+# TmSetup - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+- name: Install apt packages required by TissueMAPS Python packages
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - libopenblas-dev
+    # gc3pie:
+    - time
+    # h5py:
+    - libhdf5-dev
+    - hdf5-tools
+    # lxml:
+    - libxml2-dev
+    - libxslt1-dev
+    # javabridge:
+    - openjdk-8-jdk
+    # matplotlib:
+    - pyqt4-dev-tools
+    - libfreetype6-dev
+    - python-tk
+    # shapely:
+    - libgeos-dev
+  tags:
+    - tissuemaps
+
+
+# NOTE: We install all TissueMAPS python packages into the home folder because
+# we export this folder on the cluster. This is convenient, because packages
+# can then be updated on the frontend only and these changes become immediatly
+# effective on all compute nodes.
+
+# This shouldn't be necessary, but some packages don't build correctly when
+# cython and numpy are not already installed.
+- name: Install cython and numpy packages
+  # command: /usr/local/bin/pip install cython --upgrade
+  pip:
+    name: "{{ item }}"
+    editable: false
+  with_items:
+    - cython
+    - numpy
+  tags:
+    - tissuemaps
+
+- name: Clone JtLibrary repository
+  git:
+    repo: "{{ tm_github_url }}/jtlibrary"
+    dest: "{{ tm_home }}/jtlibrary"
+    version: "{{ tm_version }}"
+    force: yes
+  tags:
+    - tissuemaps
+
+- name: Install jtlibrary package
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/jtlibrary --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/jtlibrary/"
+    executable: /bin/bash
+  tags:
+    - tissuemaps
+
+- name: Clone JtModules repository
+  git:
+    repo: "{{ tm_github_url }}/jtmodules"
+    dest: "{{ tm_home }}/jtmodules"
+    version: "{{ tm_version }}"
+    force: yes
+  tags:
+    - tissuemaps
+
+- name: Install jtmodules package
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/jtmodules --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/jtmodules/"
+    executable: /bin/bash
+  tags:
+    - tissuemaps
+
+# NOTE: When including the GC3Pie dependency via --process-dependency-links
+# upon installation of tmlibrary, I get HTTP erros when installing on multiple
+# hosts simulatneously???
+- name: Clone GC3Pie repository
+  git:
+    repo: "{{ tm_github_url }}/gc3pie"
+    dest: "{{ tm_home }}/gc3pie"
+    version: master
+    force: yes
+  tags:
+    - tissuemaps
+
+- name: Install gc3pie package
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/gc3pie --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/gc3pie"
+    executable: /bin/bash
+  tags:
+    - tissuemaps
+
+- name: Clone TmLibrary repository
+  git:
+    repo: "{{ tm_github_url }}/tmlibrary"
+    dest: "{{ tm_home }}/tmlibrary"
+    version: "{{ tm_version }}"
+    force: yes
+  tags:
+    - tissuemaps
+
+- name: Install tmlibrary package
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/tmlibrary --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/tmlibrary/"
+    executable: /bin/bash
+  tags:
+    - tissuemaps
+
+- name: Create directory for TissueMAPS related files
+  file:
+    path: "{{ tm_home }}/.tmaps"
+    state: directory
+  tags:
+    - tissuemaps
+
+- name: Set permissions for home folder
+  file:
+    path: "{{ tm_home }}"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  tags:
+    - tissuemaps

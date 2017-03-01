@@ -14,11 +14,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-# Cooks images used to launch VMs of frontend and compute nodes.
-- name: Install TissueMAPS python packages
-  hosts: tissuemaps_compute
-  roles:
-    - compute
+- name: Create database tables
+  shell: "source {{ tm_home }}/.bash_profile && tm_create_tables"
+  args:
+    executable: /bin/bash
   tags:
+    - database
     - tissuemaps
-    - compute
+
+- name: Create default user
+  shell: "source {{ tm_home }}/.bash_profile && tm_add user --name devuser --password {{ tm_devuser_password | string | quote }} --email devuser@tissuemaps.org"
+  args:
+    executable: /bin/bash
+  tags:
+    - database
+    - tissuemaps
+  when: tm_devuser_password is defined

@@ -19,8 +19,8 @@ version: '2'
 volumes:
 
   # This will create persistent volumes on your host machine, where data
-  # and log files will be stored. These volumes will persist when containers
-  # are stopped or removed.
+  # and log files will be stored. These volumes and their data will persist
+  # when containers are stopped or removed.
   storage-app:
   storage-db-master:
   storage-db-worker:
@@ -32,20 +32,21 @@ services:
     image: tissuemaps-web
     container_name: tissuemaps-web
     volumes:
-      - storage-app:/storage
-    # By default, the web server listens to port 8002 on your host machine.
-    # You may want to override the port number. Be aware, however,
-    # that the container is run as non-root user and port numbers below 1024
-    # are reserved for root.
-    # ports:
-    #   - '8002:8002'
+      - storage-app:/storage/log/tissuemaps
+    # By default, the web container publishes port 8002 on your host machine.
+    # You may want to override the external port number. Don't change the
+    # internal port number, because the web server is configured to listen to
+    # port 8002. Also note that port numbers below 1024 are reserved for root.
+    ports:
+      - '8002:8002'
 
   app:
     # image: tissuemaps/tissuemaps-app
     image: tissuemaps-app
     container_name: tissuemaps-app
     volumes:
-      - storage-app:/storage
+      - storage-app:/storage/data/tissuemaps
+      - storage-app:/storage/log/tissuemaps
 
   db_master:
     # image: tissuemaps/tissuemaps-db_master

@@ -20,7 +20,7 @@
   gather_facts: yes
 
 - name: Configure PostgreSQL workers
-  hosts: db_worker
+  hosts: tissuemaps_db_worker
   remote_user: "{{ ansible_user }}"
   roles:
     - database-server-worker
@@ -28,7 +28,7 @@
     - database
 
 - name: Configure PostgreSQL master
-  hosts: db_master
+  hosts: tissuemaps_db_master
   remote_user: "{{ ansible_user }}"
   roles:
     - database-server-master

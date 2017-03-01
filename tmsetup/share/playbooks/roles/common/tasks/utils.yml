@@ -13,12 +13,22 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ---
-# Cooks images used to launch VMs of frontend and compute nodes.
-- name: Install TissueMAPS python packages
-  hosts: tissuemaps_compute
-  roles:
-    - compute
-  tags:
-    - tissuemaps
-    - compute
+- name: Install generally required packages
+  apt:
+    name: "{{ item }}"
+  with_items:
+    - cmake
+    - wget
+    - git
+    - zlib1g-dev
+    - cifs-utils
+
+- name: Install goodies
+  apt:
+    name: "{{ item }}"
+  with_items:
+    - vim
+    - parallel
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
