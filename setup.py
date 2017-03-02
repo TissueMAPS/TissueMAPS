@@ -184,7 +184,6 @@ setuptools.setup(
        'tables>=3.2.2',
        'ruamel.yaml>=0.10.11'
        'rpy2>=2.7.4',
-       'pyfakefs',
        'APScheduler>=3.0.5',
        # Ubuntu:
        #    sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
