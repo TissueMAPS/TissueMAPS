@@ -241,64 +241,60 @@ def get_mapobject_feature_values(experiment_id, mapobject_type_name):
             mapobject_type = session.query(tm.MapobjectType).\
                 filter_by(name=mapobject_type_name).\
                 one()
+            mapobject_type_id = mapobject_type.id
         except NoResultFound:
             raise ResourceNotFoundError(
                 tm.MapobjectType, {'mapobject_type_name': mapobject_type_name}
             )
 
-        def generate_feature_matrix(mapobject_type_id):
+    def generate_feature_matrix(mapobject_type_id):
+        with tm.utils.ExperimentSession(experiment_id) as session:
             n_mapobjects = session.query(tm.Mapobject.id).\
                 filter_by(mapobject_type_id=mapobject_type_id).\
                 count()
 
-            locations = pd.DataFrame(
-                session.query(
-                    tm.Site.id, tm.Site.y, tm.Site.x,
-                    tm.Well.name, tm.Plate.name,
-                ).\
-                join(tm.Well).\
-                join(tm.Plate).\
+            features = session.query(tm.Feature.name).\
+                filter_by(mapobject_type_id=mapobject_type_id).\
+                order_by(tm.Feature.id).\
                 all()
-            )
-            locations.set_index('site_id', inplace=True)
+            feature_names = [f.name for f in features]
+
             # First line of CSV are column names
-            names = [
-                'id', 'label', 'tpoint', 'zplane',
-                'site_y', 'site_x', 'well_name', 'plate_name'
-            ]
-            yield ','.join(names) + '\n'
+            yield ','.join(feature_names) + '\n'
+            # Loading all feature values into memory may cause problems for
+            # really large datasets. Therefore, we perform several queries
+            # each returning only a few thousand objects at once.
+            # Performing a query for each object would create too much overhead.
             batch_size = 10000
-            for n in xrange(np.ceil(n_mapobjects / float(batch_size))):
-                segmentations = session.query(
-                        tm.MapobjectSegmentation.mapobject_id,
-                        tm.MapobjectSegmentation.label,
-                        tm.MapobjectSegmentation.tpoint,
-                        tm.MapobjectSegmentation.zplane,
-                    ).\
+            for n in xrange(int(np.ceil(n_mapobjects / float(batch_size)))):
+                # One could nicely filter values using slice()
+                feature_values = session.query(tm.FeatureValues.values).\
                     join(tm.Mapobject).\
                     filter(tm.Mapobject.mapobject_type_id == mapobject_type_id).\
-                    order_by(tm.MapobjectSegmentation.site_id).\
+                    order_by(tm.Mapobject.id).\
                     limit(batch_size).\
                     offset(n).\
                     all()
-                for segm in segmentations:
-                    values = [str(v) for v in segm]
-                    values += [str(v) for v in locations.loc[segm.site_id, :]]
+                for v in feature_values:
+                    # The keys in a dictionary don't have any order.
+                    # Values must be sorted based on feature_id, such that they
+                    # end up in the correct column of the CSV table matching
+                    # the corresponding column names.
+                    values = [v.values[k] for k in sorted(v.values)]
                     yield ','.join(values) + '\n'
 
-        return Response(
-            generate_feature_matrix(mapobject_type.id),
-            mimetype='text/csv',
-            headers={
-                'Content-Disposition': 'attachment; filename={filename}'.format(
-                    filename='{experiment}_{object_type}_data.csv'.format(
-                        experiment=experiment_name,
-                        object_type=mapobject_type_name
-                    )
+    return Response(
+        generate_feature_matrix(mapobject_type_id),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': 'attachment; filename={filename}'.format(
+                filename='{experiment}_{object_type}_feature-values.csv'.format(
+                    experiment=experiment_name,
+                    object_type=mapobject_type_name
                 )
-            }
-        )
-
+            )
+        }
+    )
 
 @api.route(
     '/experiments/<experiment_id>/mapobjects/<mapobject_type_name>/metadata',
