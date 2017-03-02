@@ -343,39 +343,55 @@ def get_mapobject_metadata(experiment_id, mapobject_type_name):
                 filter_by(mapobject_type_id=mapobject_type_id).\
                 count()
 
-            locations = pd.DataFrame(
-                session.query(
-                    tm.Site.id, tm.Site.y, tm.Site.x,
-                    tm.Well.name, tm.Plate.name,
-                ).\
-                join(tm.Well).\
-                join(tm.Plate).\
-                all()
-            )
-            locations.set_index('site_id', inplace=True)
             # First line of CSV are column names
             names = [
-                'id', 'label', 'tpoint', 'zplane',
+                'id', 'tpoint', 'zplane',
                 'site_y', 'site_x', 'well_name', 'plate_name'
             ]
             yield ','.join(names) + '\n'
             batch_size = 10000
-            for n in xrange(np.ceil(n_mapobjects / float(batch_size))):
+            for n in xrange(int(np.ceil(n_mapobjects / float(batch_size)))):
                 segmentations = session.query(
                         tm.MapobjectSegmentation.mapobject_id,
-                        tm.MapobjectSegmentation.label,
-                        tm.MapobjectSegmentation.tpoint,
-                        tm.MapobjectSegmentation.zplane,
+                        tm.MapobjectSegmentation.segmentation_layer_id,
+                        tm.MapobjectSegmentation.geom_polygon
                     ).\
                     join(tm.Mapobject).\
                     filter(tm.Mapobject.mapobject_type_id == mapobject_type_id).\
-                    order_by(tm.MapobjectSegmentation.site_id).\
+                    order_by(tm.MapobjectSegmentation.mapobject_id).\
                     limit(batch_size).\
                     offset(n).\
                     all()
                 for segm in segmentations:
-                    values = [str(v) for v in segm]
-                    values += [str(v) for v in locations.loc[segm.site_id, :]]
+                    site_mapobject_type = session.query(tm.MapobjectType.id).\
+                        filter_by(ref_type=tm.Site.__name__).\
+                        one()
+                    site_mapobject = session.query(tm.Mapobject.ref_id).\
+                        join(tm.MapobjectSegmentation).\
+                        filter(
+                            tm.MapobjectSegmentation.geom_polygon.ST_Intersects(
+                                segm.geom_polygon
+                            )
+                        ).\
+                        filter(tm.Mapobject.mapobject_type_id == site_mapobject_type.id).\
+                        order_by(tm.Mapobject.id).\
+                        one()
+                    layer = session.query(
+                            tm.SegmentationLayer.tpoint,
+                            tm.SegmentationLayer.zplane
+                        ).\
+                        filter_by(id=segm.segmentation_layer_id).\
+                        one()
+                    location = session.query(
+                            tm.Site.y, tm.Site.x, tm.Well.name, tm.Plate.name
+                        ).\
+                        join(tm.Well).\
+                        join(tm.Plate).\
+                        filter(tm.Site.id == site_mapobject.ref_id).\
+                        one()
+                    values = [str(segm.mapobject_id)]
+                    values += [str(v) for v in layer]
+                    values += [str(v) for v in location]
                     yield ','.join(values) + '\n'
 
     return Response(
