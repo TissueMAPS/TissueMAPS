@@ -290,9 +290,10 @@ def get_mapobject_feature_values(experiment_id, mapobject_type_name):
             generate_feature_matrix(mapobject_type.id),
             mimetype='text/csv',
             headers={
-                'Content-Disposition': 'attachment; filename=%s' % (
-                    '%s_%s_metadata.csv' % (
-                        experiment_name, mapobject_type_name
+                'Content-Disposition': 'attachment; filename={filename}'.format(
+                    filename='{experiment}_{object_type}_data.csv'.format(
+                        experiment=experiment_name,
+                        object_type=mapobject_type_name
                     )
                 )
             }
@@ -334,12 +335,14 @@ def get_mapobject_metadata(experiment_id, mapobject_type_name):
             mapobject_type = session.query(tm.MapobjectType).\
                 filter_by(name=mapobject_type_name).\
                 one()
+            mapobject_type_id = mapobject_type.id
         except NoResultFound:
             raise ResourceNotFoundError(
                 tm.MapobjectType, {'mapobject_type_name': mapobject_type_name}
             )
 
-        def generate_feature_matrix(mapobject_type_id):
+    def generate_feature_matrix(mapobject_type_id):
+        with tm.utils.ExperimentSession(experiment_id) as session:
             n_mapobjects = session.query(tm.Mapobject.id).\
                 filter_by(mapobject_type_id=mapobject_type_id).\
                 count()
@@ -379,15 +382,16 @@ def get_mapobject_metadata(experiment_id, mapobject_type_name):
                     values += [str(v) for v in locations.loc[segm.site_id, :]]
                     yield ','.join(values) + '\n'
 
-        return Response(
-            generate_feature_matrix(mapobject_type.id),
-            mimetype='text/csv',
-            headers={
-                'Content-Disposition': 'attachment; filename=%s' % (
-                    '%s_%s_metadata.csv' % (
-                        experiment_name, mapobject_type_name
-                    )
+    return Response(
+        generate_feature_matrix(mapobject_type_id),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': 'attachment; filename={filename}'.format(
+                filename='{experiment}_{object_type}_metadata.csv'.format(
+                    experiment=experiment_name,
+                    object_type=mapobject_type_name
                 )
-            }
-        )
+            )
+        }
+    )
 
