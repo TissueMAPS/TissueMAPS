@@ -251,34 +251,39 @@ def get_mapobject_feature_values(experiment_id, mapobject_type_name):
                 filter_by(mapobject_type_id=mapobject_type_id).\
                 count()
 
-            features = session.query(tm.Feature.name).\
-                filter_by(mapobject_type_id=mapobject_type_id).\
-                order_by(tm.Feature.id).\
+            locations = pd.DataFrame(
+                session.query(
+                    tm.Site.id, tm.Site.y, tm.Site.x,
+                    tm.Well.name, tm.Plate.name,
+                ).\
+                join(tm.Well).\
+                join(tm.Plate).\
                 all()
-            feature_names = [f.name for f in features]
-
+            )
+            locations.set_index('site_id', inplace=True)
             # First line of CSV are column names
-            yield ','.join(feature_names) + '\n'
-            # Loading all feature values into memory may cause problems for
-            # really large datasets. Therefore, we perform several queries
-            # each returning only a few thousand objects at once.
-            # Performing a query for each object would create too much overhead.
+            names = [
+                'id', 'label', 'tpoint', 'zplane',
+                'site_y', 'site_x', 'well_name', 'plate_name'
+            ]
+            yield ','.join(names) + '\n'
             batch_size = 10000
             for n in xrange(np.ceil(n_mapobjects / float(batch_size))):
-                # One could nicely filter values using slice()
-                feature_values = session.query(tm.FeatureValue.values).\
+                segmentations = session.query(
+                        tm.MapobjectSegmentation.mapobject_id,
+                        tm.MapobjectSegmentation.label,
+                        tm.MapobjectSegmentation.tpoint,
+                        tm.MapobjectSegmentation.zplane,
+                    ).\
                     join(tm.Mapobject).\
-                    filter(tm.FeatureValue.mapobject_type_id == mapobject_type_id).\
-                    order_by(tm.Mapobject.id).\
+                    filter(tm.Mapobject.mapobject_type_id == mapobject_type_id).\
+                    order_by(tm.MapobjectSegmentation.site_id).\
                     limit(batch_size).\
                     offset(n).\
                     all()
-                for v in feature_values:
-                    # The keys in a dictionary don't have any order.
-                    # Values must be sorted based on feature_id, such that they
-                    # end up in the correct column of the CSV table matching
-                    # the corresponding column names.
-                    values = [v.values[k] for k in sorted(v.values)]
+                for segm in segmentations:
+                    values = [str(v) for v in segm]
+                    values += [str(v) for v in locations.loc[segm.site_id, :]]
                     yield ','.join(values) + '\n'
 
         return Response(
@@ -286,7 +291,7 @@ def get_mapobject_feature_values(experiment_id, mapobject_type_name):
             mimetype='text/csv',
             headers={
                 'Content-Disposition': 'attachment; filename=%s' % (
-                    '%s_%s_feature-values.csv' % (
+                    '%s_%s_metadata.csv' % (
                         experiment_name, mapobject_type_name
                     )
                 )
