@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-version: '2'
+version: '3'
 
 services:
 
@@ -29,4 +29,8 @@ services:
     command:
       - 'dumb-init'
       - '/home/tissuemaps/.local/bin/tm_server'
-      - '-vvv'
+      - '--host'
+      - '0.0.0.0'
+      - '--port'
+      - '5002'
+      - '-vv'

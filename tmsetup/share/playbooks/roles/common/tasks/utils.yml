@@ -22,13 +22,13 @@
     - cmake
     - wget
     - git
-    - zlib1g-dev
-    - cifs-utils
+    - vim
 
 - name: Install goodies
   apt:
     name: "{{ item }}"
   with_items:
-    - vim
+    - zlib1g-dev
+    - cifs-utils
     - parallel
   when: ansible_env.ANSIBLE_CONTAINER is undefined

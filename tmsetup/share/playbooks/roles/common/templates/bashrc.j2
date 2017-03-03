@@ -1,0 +1,13 @@
+# Bioformats CLI Tools
+export PATH=/home/{{ tm_user }}/bftools:$PATH
+
+# Python
+export PATH=/home/{{ tm_user }}/.local/bin:$PATH
+export PYTHONPATH=/home/{{ tm_user }}/.local/lib/python2.7/site-packages:$PYTHONPATH
+export PYTHONPATH=/usr/local/lib/python2.7/dist-packages:$PYTHONPATH
+
+# Matlab
+export MATLABHOME=/usr/local/MATLAB/{{ matlab_version }}
+export MATLABROOT=${MATLABHOME}
+export MATLABPATH=/home/{{ tm_user }}/jtlibrary/src/matlab:$MATLABPATH
+export MATLABPATH=/home/{{ tm_user }}/jtmodules/src/matlab:$MATLABPATH

@@ -46,6 +46,24 @@
   tags:
     - tissuemaps
 
+- name: Update gulp proxy settings
+  replace:
+    dest: "{{ tm_home }}/tmui/src/tasks/server.js"
+    regexp: 'target:\s.http.*$'
+    replace: "target: 'http://{{ app_host }}:{{ app_port }}',"
+  when: app_host != 'unix'
+  tags:
+    - tissuemaps
+
+- name: Update gulp proxy settings
+  replace:
+    dest: "{{ tm_home }}/tmui/src/tasks/server.js"
+    regexp: 'changeOrigin:\s.*$'
+    replace: "xfwd: true"
+  when: app_host != 'unix'
+  tags:
+    - tissuemaps
+
 - name: Update npm package manager
   command: npm install -g npm
   tags:
@@ -86,6 +104,17 @@
 - name: Set permissions for tmui/src/build directory recursively
   file:
     path: "{{ tm_home }}/tmui/src/build"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  tags:
+    - tissuemaps
+
+- name: Set permissions for tmui/src/tasks directory recursively
+  file:
+    path: "{{ tm_home }}/tmui/src/tasks"
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"

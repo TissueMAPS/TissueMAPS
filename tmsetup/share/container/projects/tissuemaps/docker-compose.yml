@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-version: '2'
+version: '3'
 
 volumes:
 
@@ -44,6 +44,8 @@ services:
     # image: tissuemaps/tissuemaps-app
     image: tissuemaps-app
     container_name: tissuemaps-app
+    # environment:
+    #   - BASH_ENV=/home/tissuemaps/.bashrc
     volumes:
       - storage-app:/storage/data/tissuemaps
       - storage-app:/storage/log/tissuemaps
