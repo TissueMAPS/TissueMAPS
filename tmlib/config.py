@@ -47,6 +47,8 @@ class TmapsConfig(object):
 
     __meta__ = ABCMeta
 
+    __slots__ = ('_config_file', '_config', '_section')
+
     def __init__(self):
         if 'TMAPS_CONFIG_FILE' in os.environ:
             self._config_file = os.environ['TMAPS_CONFIG_FILE']
@@ -71,7 +73,7 @@ class TmapsConfig(object):
         self.db_nodes = 2
 
     def read(self):
-        '''Reads the configuration from a file
+        '''Reads the configuration from file.
 
         See Also
         --------
@@ -84,7 +86,7 @@ class TmapsConfig(object):
             logger.warn('no configuration file found')
 
     def write(self):
-        '''Writes the configuration to a file'''
+        '''Writes the configuration to file.'''
         with open(self._config_file, 'wb') as f:
             self._config.write(f)
 
@@ -107,7 +109,7 @@ class TmapsConfig(object):
 
         Note
         ----
-        Must be an alphanumeric string without any special characters.
+        Must be an alphanumeric string without special characters.
         '''
         try:
             # Workaround special characters like %
@@ -200,10 +202,14 @@ class LibraryConfig(TmapsConfig):
 
     '''`TissueMAPS` configuration specific to the `tmlib` package.'''
 
+    __slots__ = ('_config', )
+
     def __init__(self):
         super(LibraryConfig, self).__init__()
         self.modules_home = '~/jtmodules'
         self.storage_home = '/storage/experiments'
+        self.cpu_cores = 1
+        self.cpu_memory = 2000
         self.read()
 
     @property
@@ -241,3 +247,41 @@ class LibraryConfig(TmapsConfig):
                 'Configuration parameter "storage_home" must have type str.'
             )
         self._config.set(self._section, 'storage_home', str(value))
+
+    @property
+    def cpu_memory(self):
+        '''int: amount of memory in Megabyte per CPU core that should be
+        allocated for a single job (default: ``2000``)
+        '''
+        return self._config.getint(self._section, 'cpu_memory')
+
+    @cpu_memory.setter
+    def cpu_memory(self, value):
+        if not isinstance(value, int):
+            raise TypeError(
+                'Configuration parameter "cpu_memory" must have type int.'
+            )
+        if value <= 0:
+            raise ValueError(
+                'Configuration parameter "cpu_memory" must be a positive number.'
+            )
+        self._config.set(self._section, 'cpu_memory', str(value))
+
+    @property
+    def cpu_cores(self):
+        '''int: number of CPU cores that should be allocated for a single
+        job (default: ``1``)
+        '''
+        return self._config.getint(self._section, 'cpu_cores')
+
+    @cpu_cores.setter
+    def cpu_cores(self, value):
+        if not isinstance(value, int):
+            raise TypeError(
+                'Configuration parameter "cpu_cores" must have type int.'
+            )
+        if value <= 0:
+            raise ValueError(
+                'Configuration parameter "cpu_cores" must be a positive number.'
+            )
+        self._config.set(self._section, 'cpu_cores', str(value))

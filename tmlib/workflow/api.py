@@ -30,6 +30,7 @@ import gc3libs
 from gc3libs.quantity import Duration, Memory
 
 import tmlib.models as tm
+from tmlib import cfg
 from tmlib import utils
 from tmlib.readers import JsonReader
 from tmlib.writers import JsonWriter
@@ -569,6 +570,7 @@ class ClusterRoutines(BasicClusterRoutines):
             in HH:MM:SS format
         memory: int
             amount of memory in Megabyte that should be allocated for a single
+            job
         cores: int
             number of CPU cores that should be allocated for a single job
 
@@ -593,20 +595,12 @@ class ClusterRoutines(BasicClusterRoutines):
             )
             job.requested_walltime = Duration(duration)
             job.requested_memory = Memory(memory, Memory.MB)
-            if not isinstance(cores, int):
-                raise TypeError(
-                    'Argument "cores" must have type int.'
-                )
-            if not cores > 0:
-                raise ValueError(
-                    'The value of "cores" must be positive.'
-                )
             job.requested_cores = cores
             job_collection.add(job)
         return job_collection
 
     def create_init_job(self, submission_id, user_name, batch_args,
-            duration='12:00:00', memory=3800, cores=1):
+            duration='12:00:00'):
         '''Creates job for the "init" phase of the step.
 
         Parameters
@@ -621,12 +615,6 @@ class ClusterRoutines(BasicClusterRoutines):
         duration: str, optional
             computational time that should be allocated for the job
             in HH:MM:SS format (default: ``"12:00:00"``)
-        memory: int, optional
-            amount of memory in Megabyte that should be allocated for the job
-            (default: ``3800``)
-        cores: int, optional
-            number of CPU cores that should be allocated for the job
-            (default: ``1``)
 
         Returns
         -------
@@ -636,8 +624,8 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         logger.info('create "init" job for submission %d', submission_id)
         logger.debug('allocated time for "init" job: %s', duration)
-        logger.debug('allocated memory for "init" job: %d MB', memory)
-        logger.debug('allocated cores for "init" job: %d', cores)
+        logger.debug('allocated memory for "init" job: %d MB', cfg.cpu_memory)
+        logger.debug('allocated cores for "init" job: %d', cfg.cpu_cores)
         job = InitJob(
             step_name=self.step_name,
             arguments=self._build_init_command(batch_args),
@@ -646,20 +634,11 @@ class ClusterRoutines(BasicClusterRoutines):
             user_name=user_name
         )
         job.requested_walltime = Duration(duration)
-        job.requested_memory = Memory(memory, Memory.MB)
-        if not isinstance(cores, int):
-            raise TypeError(
-                'Argument "cores" must have type int.'
-            )
-        if not cores > 0:
-            raise ValueError(
-                'The value of "cores" must be positive.'
-            )
-        job.requested_cores = cores
+        job.requested_memory = Memory(cfg.cpu_memory, Memory.MB)
+        job.requested_cores = cfg.cpu_cores
         return job
 
-    def create_collect_job(self, submission_id, user_name,
-            duration='06:00:00', memory=3800, cores=1):
+    def create_collect_job(self, submission_id, user_name, duration='06:00:00'):
         '''Creates job for the "collect" phase of the step.
 
         Parameters
@@ -671,12 +650,6 @@ class ClusterRoutines(BasicClusterRoutines):
         duration: str, optional
             computational time that should be allocated for a single job;
             in HH:MM:SS format (default: ``"06:00:00"``)
-        memory: int, optional
-            amount of memory in Megabyte that should be allocated for a single
-            (default: ``3800``)
-        cores: int, optional
-            number of CPU cores that should be allocated for a single job
-            (default: ``1``)
 
         Returns
         -------
@@ -686,8 +659,8 @@ class ClusterRoutines(BasicClusterRoutines):
         '''
         logger.info('create "collect" job for submission %d', submission_id)
         logger.debug('allocated time for "collect" job: %s', duration)
-        logger.debug('allocated memory for "collect" job: %d MB', memory)
-        logger.debug('allocated cores for "collect" job: %d', cores)
+        logger.debug('allocated memory for "collect" job: %d MB', cfg.cpu_memory)
+        logger.debug('allocated cores for "collect" job: %d', cfg.cpu_cores)
         job = CollectJob(
             step_name=self.step_name,
             arguments=self._build_collect_command(),
@@ -696,15 +669,7 @@ class ClusterRoutines(BasicClusterRoutines):
             user_name=user_name
         )
         job.requested_walltime = Duration(duration)
-        job.requested_memory = Memory(memory, Memory.MB)
-        if not isinstance(cores, int):
-            raise TypeError(
-                'Argument "cores" must have type int.'
-            )
-        if not cores > 0:
-            raise ValueError(
-                'The value of "cores" must be positive.'
-            )
-        job.requested_cores = cores
+        job.requested_memory = Memory(cfg.cpu_memory, Memory.MB)
+        job.requested_cores = cfg.cpu_cores
         return job
 

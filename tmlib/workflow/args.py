@@ -20,6 +20,7 @@ import inspect
 import argparse
 from abc import ABCMeta
 
+from tmlib import cfg
 from tmlib.utils import assert_type
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,6 @@ def _check_dependency(required_arg, required_value=None):
                     )
             setattr(namespace, self.dest, values)
     return ArgumentDependencyAction
-
 
 
 class Argument(object):
@@ -531,7 +531,7 @@ class SubmissionArguments(ArgumentCollection):
     # NOTE: This reflects the job's real memory, which is typically lower than
     # the total memory of each CPU. Here it's assumed that CPUs have 4GB memory.
     memory = Argument(
-        type=int, default=3500, meta='MB',
+        type=int, default=cfg.cpu_memory, meta='MB',
         help='''
             amount of memory that should be allocated to each "run" job
             in megabytes
@@ -540,10 +540,10 @@ class SubmissionArguments(ArgumentCollection):
     )
 
     cores = Argument(
-        type=int, default=1, meta='NUMBER',
+        type=int, default=cfg.cpu_cores, meta='NUMBER',
         help='''
             number of cores that should be allocated to each "run" job
-            (may be increased in case jobs can parallelize over cores)
+            (may be increased in case jobs parallelize over cores)
         '''
     )
 
