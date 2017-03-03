@@ -25,7 +25,11 @@ LOGO = """
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='TissueMAPS dev server')
     parser.add_argument(
-        '--port', type=int, default=5002,
+        '--host', '-H', type=str, default='localhost',
+        help='the host on which the server should listen (default: localhost)'
+    )
+    parser.add_argument(
+        '--port', '-p', type=int, default=5002,
         help='the port on which the server should listen (default: 5002)'
     )
     parser.add_argument(
@@ -44,7 +48,7 @@ if __name__ == '__main__':
         app = create_app(verbosity=args.verbosity)
         app.debug = True
         http_server = WSGIServer(
-            listener=('127.0.0.1', args.port),
+            listener=(args.host, args.port),
             application=DebuggedApplication(app, evalex=True)
         )
         http_server.serve_forever()
