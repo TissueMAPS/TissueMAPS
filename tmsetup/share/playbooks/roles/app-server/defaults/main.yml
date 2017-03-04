@@ -15,5 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+uwsgi_processes: 16
+
 tm_admins: []  # Github user names of TissueMAPS system administrators
 tm_users: []   # Github user names of TissueMAPS users

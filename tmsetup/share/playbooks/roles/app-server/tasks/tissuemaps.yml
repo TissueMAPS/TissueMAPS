@@ -75,3 +75,14 @@
     mode: 0700
   tags:
     - tissuemaps
+
+- name: Place tm_server startup script
+  template:
+    src: tm_server.sh.j2
+    dest: "{{ tm_home }}/.tmaps/tm_server.sh"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - tissuemaps

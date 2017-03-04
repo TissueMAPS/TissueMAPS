@@ -28,6 +28,7 @@
   vars:
     app_host: app
     app_port: 5002
+    uwsgi_processes: 1
   roles:
     - app-server
 
