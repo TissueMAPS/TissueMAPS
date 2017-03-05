@@ -404,7 +404,8 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                         'type "%s"', obj_name
                     )
                     tm.Mapobject.delete_cascade(
-                        conn, mapobject_type_ids[obj_name]
+                        conn, mapobject_type_ids[obj_name],
+                        ref_type=tm.Site.__name__, ref_id=store['site_id']
                     )
 
                 # Get existing mapobjects for this site in case they were
