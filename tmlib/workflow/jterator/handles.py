@@ -972,6 +972,23 @@ class Measurement(OutputHandle):
                     )
         self._value = value
 
+    def to_dict(self):
+        '''Returns attributes "name", "type", "help", "objects", "objects_ref"
+        and "channel_ref" as key-value pairs.
+
+        Return
+        ------
+        dict
+        '''
+        attrs = dict()
+        attrs['name'] = self.name
+        attrs['objects'] = self.objects
+        attrs['objects_ref'] = self.objects_ref
+        attrs['channel_ref'] = self.channel_ref
+        attrs['type'] = self.type
+        attrs['help'] = self.help
+        return attrs
+
     def __str__(self):
         return '<Measurement(name=%r, objects=%r)>' % (self.name, self.objects)
 

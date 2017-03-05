@@ -404,8 +404,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                         'type "%s"', obj_name
                     )
                     tm.Mapobject.delete_cascade(
-                        conn, mapobject_type_ids[obj_name],
-                        ref_type=tm.Site.__name__, ref_id=store['site_id']
+                        conn, mapobject_type_ids[obj_name]
                     )
 
                 # Get existing mapobjects for this site in case they were
@@ -540,7 +539,6 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
             job.requested_cores = cores
             job_collection.add(job)
         return job_collection
-
 
     def run_job(self, batch):
         '''Runs the pipeline, i.e. executes modules sequentially. After

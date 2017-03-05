@@ -238,14 +238,7 @@ class Project(object):
         if not os.path.exists(directory):
             logger.debug('create handles directory')
             os.mkdir(directory)
-        filename = os.path.join(directory, '%s%s' % (name, HANDLES_SUFFIX))
-        if not os.path.exists(filename):
-            raise PipelineOSError(
-                'Handles file for module "%s" does not exist: %s' % (
-                    name, filename
-                )
-            )
-        return filename
+        return os.path.join(directory, '%s%s' % (name, HANDLES_SUFFIX))
 
     def _create_pipe(self):
         with YamlReader(self.pipe_file) as f:
