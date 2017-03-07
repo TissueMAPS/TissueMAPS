@@ -107,15 +107,15 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
-       'ansible>=2.2.0',
-       'ansible-container>=0.3',
+       'ansible>=2.2.1',
+       'ansible-container==0.3.0rc0',
        'apache-libcloud>=1.3.0',
        'boto3>=1.4.1',
-       'docker-py>=1.7.0',
-       'docker-compose>=1.7.0',
+       'docker-py>=1.10.6',
+       'docker-compose>=1.9',
        'elasticluster>=1.3.dev',
        'PyYAML>=3.11',
-       'psyopg2>=2.6.1',
+       'psycopg2>=2.6.1',
        # Docker compose requires a specific version of requests. Hereby, we
        # ensure that it gets correctly installed.
        'requests >= 2.6.1, != 2.11.0, < 2.12',
