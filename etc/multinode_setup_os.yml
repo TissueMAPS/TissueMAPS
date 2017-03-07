@@ -14,9 +14,7 @@ architecture:
         - name: master
           count: 1
           groups:
-            - name: tissuemaps_database_master
-              vars:
-                db_password: XXX
+            - name: tissuemaps_db_master
             - name: ganglia_client
           instance:
             volume_size: 1000
@@ -27,9 +25,7 @@ architecture:
         - name: worker
           count: 2
           groups:
-            - name: tissuemaps_database_worker
-              vars:
-                db_password: XXX
+            - name: tissuemaps_db_worker
             - name: ganglia_client
           instance:
             volume_size: 1000
@@ -55,9 +51,7 @@ architecture:
         - name: master
           count: 1
           groups:
-            - name: tissuemaps_web
-              vars:
-                db_password: XXX
+            - name: tissuemaps_server
             - name: slurm_master
             - name: glusterfs_client
             - name: ganglia_client

@@ -13,13 +13,13 @@ architecture:
           count: 1
           groups:
             - name: tissuemaps_compute
-            - name: tissuemaps_web
+            - name: tissuemaps_server
               vars:
                 db_password: XXX
-            - name: tissuemaps_database_master
+            - name: tissuemaps_db_master
               vars:
                 db_password: XXX
-            - name: tissuemaps_database_worker
+            - name: tissuemaps_db_worker
               vars:
                 db_password: XXX
           instance:

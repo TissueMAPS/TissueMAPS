@@ -13,15 +13,9 @@ architecture:
           count: 1
           groups:
             - name: tissuemaps_compute
-            - name: tissuemaps_web
-              vars:
-                db_password: XXX
-            - name: tissuemaps_database_master
-              vars:
-                db_password: XXX
-            - name: tissuemaps_database_worker
-              vars:
-                db_password: XXX
+            - name: tissuemaps_server
+            - name: tissuemaps_db_master
+            - name: tissuemaps_db_worker
           instance:
             image: ubuntu-1404-trusty-v20161020
             flavor: n1-standard-4
