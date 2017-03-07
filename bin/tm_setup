@@ -163,11 +163,10 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
         playbook = os.path.join(elasticluster_playbooks_dir, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
         # variables['ansible_remote_user'] = 'root'
-        variables['ansible_become'] = 'yes'
-        logger.debug('run playbook as superuser')
         cmd = _build_ansible_vm_command(
             verbosity, playbook, variables, set(groups_to_deploy.keys())
         )
+        cmd.extend(['-e', 'ansible_become=yes'])
         commands.append(cmd)
 
         # Run the TissueMAPS-specific playbooks implemented in tmsetup
@@ -177,6 +176,7 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
         cmd = _build_ansible_vm_command(
             verbosity, playbook, variables, set(groups_to_deploy.keys())
         )
+        cmd.extend(['-e', 'ansible_become=yes'])
         commands.append(cmd)
 
         for group, plays in groups_to_deploy.iteritems():
@@ -199,9 +199,9 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict(), hosts=set()
         cmd.append('-%s' % (verbosity * 'v'))
     # It's important that these strings get quoted for security reasons.
     if variables:
-        cmd.extend(['-e', '"%s"' % ','.join(var_strings)])
+        cmd.extend(['-e', '%s' % ','.join(var_strings)])
     if hosts:
-        cmd.extend(['--limit', '"%s"' % ','.join(hosts)])
+        cmd.extend(['--limit', '%s' % ','.join(hosts)])
     return cmd
 
 

@@ -202,6 +202,7 @@ def update_static_inventory(inventory_info, setup):
                 'ansible_user': 'ubuntu',
                 'ansible_ssh_private_key_file': private_key_file
             })
+
             # NOTE: --refresh is supposed to be triggered by ansible via
             # (meta: refresh_inventory), but it's not!
             if args.refresh or args.refresh_cache:
