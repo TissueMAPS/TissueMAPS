@@ -28,8 +28,6 @@
     # lxml:
     - libxml2-dev
     - libxslt1-dev
-    # javabridge:
-    - openjdk-8-jdk
     # matplotlib:
     - pyqt4-dev-tools
     - libfreetype6-dev
@@ -39,6 +37,19 @@
   tags:
     - tissuemaps
 
+- name: Intsall version-specific apt packages required by Python packages
+  apt:
+    name: openjdk-7-jdk
+  when: ansible_distribution_version|int <= 14.10
+  tags:
+    - tissuemaps
+
+- name: Intsall version-specific apt packages required by Python packages
+  apt:
+    name: openjdk-8-jdk
+  when: ansible_distribution_version|int >= 14.10
+  tags:
+    - tissuemaps
 
 # NOTE: We install all TissueMAPS python packages into the home folder because
 # we export this folder on the cluster. This is convenient, because packages

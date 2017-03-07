@@ -17,6 +17,16 @@
 ---
 # - include_vars: file={{ playbook_dir }}/vars/tissuemaps.yml
 
+- name: Ensure Ubuntu distribution
+  fail:
+    msg: Requires Ubuntu distribution!
+  when: ansible_distribution != 'Ubuntu'
+
+- name: Ensure Ubuntu distribution version
+  fail:
+    msg: Requires Ubuntu distribution version >= 14.04!
+  when: (ansible_distribution_version|int) < 14
+
 - name: Update apt packages
   apt:
     upgrade: safe

@@ -46,7 +46,6 @@
     name: "{{ item }}"
     extra_args: "--user"
     editable: no
-    executable: pip2.7
   with_items:
     - numpy
   tags:

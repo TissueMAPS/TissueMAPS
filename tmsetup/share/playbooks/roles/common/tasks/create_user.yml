@@ -16,6 +16,10 @@
 
 ---
 
+- name: Add user group
+  group:
+    name: "{{ tm_user }}"
+
 - name: Add tissuemaps user
   user:
     name: "{{ tm_user }}"
@@ -23,10 +27,6 @@
     group: "{{ tm_user }}"
     groups: sudo
     append: yes
-
-- name: Add user group
-  group:
-    name: "{{ tm_user }}"
 
 - name: Add user
   user:
