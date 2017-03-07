@@ -31,7 +31,7 @@ services:
     image: tissuemaps/tissuemaps-web
     container_name: tissuemaps-web
     volumes:
-      - storage-app:/storage/log/tissuemaps
+      - storage-app:/storage/tissuemaps/log
     # By default, the web container publishes port 8002 on your host machine.
     # You may want to override the external port number. Don't change the
     # internal port number, because the web server is configured to listen to
@@ -43,8 +43,8 @@ services:
     image: tissuemaps/tissuemaps-app
     container_name: tissuemaps-app
     volumes:
-      - storage-app:/storage/data/tissuemaps
-      - storage-app:/storage/log/tissuemaps
+      - storage-app:/storage/tissuemaps/data
+      - storage-app:/storage/tissuemaps/log
 
   db_master:
     image: tissuemaps/tissuemaps-db_master

@@ -35,12 +35,6 @@ services:
       - 'nginx'
       - '-g'
       - 'daemon off;'
-    dev_overrides:
-      command:
-        - 'dumb-init'
-        - '/usr/bin/gulp'
-        - '--gulpfile'
-        - '/home/tissuemaps/tmui/src/gulpfile.js'
 
   app:
     image: tissuemaps/base
@@ -53,11 +47,6 @@ services:
     command:
       - 'dumb-init'
       - '/home/tissuemaps/.tmaps/uwsgi.sh'
-    dev_overrides:
-      command:
-        - 'dumb-init'
-        - '/home/tissuemaps/.local/bin/tm_server'
-        - '-vv'
 
   db_master:
     image: tissuemaps/base
@@ -70,7 +59,7 @@ services:
       - 'dumb-init'
       - '/usr/lib/postgresql/9.6/bin/postgres'
       - '-D'
-      - '/storage/data/postgresql/9.6/master'
+      - '/storage/postgresql/data/9.6/master'
       - '-c'
       - 'config_file=/etc/postgresql/9.6/master/postgresql.conf'
 
@@ -83,6 +72,6 @@ services:
       - 'dumb-init'
       - '/usr/lib/postgresql/9.6/bin/postgres'
       - '-D'
-      - '/storage/data/postgresql/9.6/worker'
+      - '/storage/postgresql/data/9.6/worker'
       - '-c'
       - 'config_file=/etc/postgresql/9.6/worker/postgresql.conf'
