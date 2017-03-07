@@ -243,11 +243,13 @@ def update_static_inventory(inventory_info, setup):
                 # We therefore use the "web" host as a bastion host through
                 # which we can connect to other hosts.
                 if 'ansible_host' in host_vars:
+                    inventory_info['all']['vars']['ansible_ssh_pipelining'] = \
+                        True
                     inventory_info['all']['vars']['ansible_ssh_common_args'] = \
-                        '-o ProxyCommand="ssh -i {file} -W %h:%p -q {user}@{host}"'.format(
-                            file=host_vars['ansible_ssh_private_key_file'],
-                            user=host_vars['ansible_user'],
-                            host=host_vars['ansible_host']
+                        '-o ProxyCommand="ssh -i {f} -W %h:%p -q {u}@{h}"'.format(
+                            f=host_vars['ansible_ssh_private_key_file'],
+                            u=host_vars['ansible_user'],
+                            h=host_vars['ansible_host']
                         )
                     inventory_info['all']['vars']['timeout'] = 60
                 else:

@@ -354,19 +354,19 @@ if __name__ == '__main__':
     '''
 
     container_run_subparser = container_subparsers.add_parser(
-        'run', help='run container'
+        'run', help='run containers'
     )
     container_run_subparser.set_defaults(function='container_manage')
     container_run_subparser.description = '''
-        Run container. Requires a prior "build".
+        Run containers. Requires a prior "build".
     '''
 
     container_stop_subparser = container_subparsers.add_parser(
-        'stop', help='stop running container'
+        'stop', help='stop running containers'
     )
     container_stop_subparser.set_defaults(function='container_manage')
     container_stop_subparser.description = '''
-        Stop running container.
+        Stop running containers.
     '''
 
     container_push_subparser = container_subparsers.add_parser(
