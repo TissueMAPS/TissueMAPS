@@ -47,7 +47,7 @@ from tmserver.util import decode_query_ids
 from tmserver.util import assert_form_params, assert_query_params
 from tmserver.extensions import gc3pie
 from tmserver.jtui import jtui
-from tmserver.jtui import register_error
+# from tmserver.jtui import register_error
 from tmserver.error import (
     MalformedRequestError,
     MissingGETParameterError,
@@ -61,7 +61,7 @@ from tmserver.error import (
 logger = logging.getLogger(__name__)
 
 
-@register_error
+# @error_handler_factory
 class JtUIError(HTTPException):
     '''Error class for Jterator user interface errors that should be reported
     to the client.

@@ -19,7 +19,8 @@ def register_error(cls):
         return response
     return cls
 
-register_http_error_classes(register_error)
+
+register_http_error_classes(jtui.errorhandler)
 
 
 import tmserver.jtui.api

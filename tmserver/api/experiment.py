@@ -352,7 +352,8 @@ def get_channel_layers(experiment_id):
 )
 @jwt_required()
 @assert_query_params(
-    'plate_name', 'cycle_index', 'well_name', 'x', 'y', 'tpoint', 'zplane'
+    'plate_name', 'cycle_index', 'well_name', 'well_pos_x', 'well_pos_y',
+    'tpoint', 'zplane'
 )
 @decode_query_ids('read')
 def get_channel_image(experiment_id, channel_name):
@@ -368,13 +369,13 @@ def get_channel_image(experiment_id, channel_name):
             HTTP/1.1 200 OK
             Content-Type: image/png
 
-        :query plate_name: the name of the plate (required)
-        :query cycle_index: the cycle's index (required)
-        :query well_name: the name of the well (required)
-        :query x: the x-coordinate (required)
-        :query y: the y-coordinate (required)
-        :query tpoint: the time point (required)
-        :query zplane: the z-plane (required)
+        :query plate_name: name of the plate (required)
+        :query cycle_index: cycle's index (required)
+        :query well_name: name of the well (required)
+        :query well_pos_x: x-coordinate of the site within the well (optional)
+        :query well_pos_y: y-coordinate of the site within the well (optional)
+        :query tpoint: time point (required)
+        :query zplane: z-plane (required)
         :query illumcorr: correct image for illumination artifacts (optional)
         :query align: align image relative to reference cycle (optional)
 
@@ -389,8 +390,8 @@ def get_channel_image(experiment_id, channel_name):
     )
     plate_name = request.args.get('plate_name')
     well_name = request.args.get('well_name')
-    x = request.args.get('x', type=int)
-    y = request.args.get('y', type=int)
+    x = request.args.get('well_pos_x', type=int)
+    y = request.args.get('well_pos_y', type=int)
     cycle_index = request.args.get('cycle_index', type=int)
     tpoint = request.args.get('tpoint', type=int)
     zplane = request.args.get('zplane', type=int)
@@ -439,18 +440,20 @@ def get_channel_image(experiment_id, channel_name):
             img = img.correct(stats)
     if align:
         img = img.align()
-    f = StringIO()
-    f.write(img.png_encode())
-    f.seek(0)
-    filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
-        experiment_name, well_name, x, y, zplane, tpoint, channel_name
-    )
-    return send_file(
-        f,
-        attachment_filename=secure_filename(filename),
-        mimetype='image/png',
-        as_attachment=True
-    )
+
+    for pixels in img.png_encode():
+        f = StringIO()
+        f.write(pixels)
+        f.seek(0)
+        filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
+            experiment_name, well_name, x, y, zplane, tpoint, channel_name
+        )
+        return send_file(
+            f,
+            attachment_filename=secure_filename(filename),
+            mimetype='image/png',
+            as_attachment=True
+        )
 
 
 @api.route('/microscope_types', methods=['GET'])

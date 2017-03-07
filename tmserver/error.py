@@ -29,8 +29,17 @@ from tmserver.serialize import json_encoder
 logger = logging.getLogger(__name__)
 
 
+def handle_error(error):
+    # current_app.logger.error(error)
+    response = jsonify(error=error)
+    response.status_code = error.status_code
+    return response
+
+
 class HTTPException(Exception):
+
     def __init__(self, message, status_code):
+        Exception.__init__(self)
         self.message = message
         self.status_code = status_code
 
@@ -50,12 +59,8 @@ def encode_api_exception(obj, encoder):
 
 class MalformedRequestError(HTTPException):
 
-    default_message = 'Invalid request.'
-
-    def __init__(self, message=default_message):
-        super(MalformedRequestError, self).__init__(
-            message=message, status_code=400
-        )
+    def __init__(self, message='Invalid request'):
+        super(MalformedRequestError, self).__init__(message, 400)
 
 
 class MissingGETParameterError(MalformedRequestError):
@@ -63,8 +68,8 @@ class MissingGETParameterError(MalformedRequestError):
     def __init__(self, *parameters):
         super(MissingGETParameterError, self).__init__(
             message=(
-                'The following GET parameters are required but were missing'
-                ' in the request: "%s".' % '", "'.join(parameters)
+                'The following GET parameters are required but were missing '
+                'in the request: "%s".' % '", "'.join(parameters)
             )
         )
 
@@ -74,20 +79,16 @@ class MissingPOSTParameterError(MalformedRequestError):
     def __init__(self, *parameters):
         super(MissingPOSTParameterError, self).__init__(
             message=(
-                'The following POST parameters are required but were missing'
-                ' in the request body: "%s".' % '", "'.join(parameters)
+                'The following POST parameters are required but were missing '
+                'in the request body: "%s".' % '", "'.join(parameters)
             )
         )
 
 
 class NotAuthorizedError(HTTPException):
 
-    default_message = 'This user does not have access to the requested resource.'
-
-    def __init__(self, message=default_message):
-        super(NotAuthorizedError, self).__init__(
-            message=message, status_code=401
-        )
+    def __init__(self, message='User cannot access the requested resource.'):
+        super(NotAuthorizedError, self).__init__(message, 401)
 
 
 class ResourceNotFoundError(HTTPException):
@@ -108,34 +109,22 @@ class ResourceNotFoundError(HTTPException):
                 'The requested resource of type "%s" was not found.' %
                 model.__name__
             )
-        super(ResourceNotFoundError, self).__init__(
-            message=message, status_code=404
-        )
+        super(ResourceNotFoundError, self).__init__(message, 404)
 
 
-class InternalServerError(HTTPException):
-
-    default_message = 'The server encountered an unexpected problem.'
-
-    def __init__(self, message=default_message):
-        super(InternalServerError, self).__init__(
-            message=message, status_code=500
-        )
-
-
-def register_http_error_classes(error_handler_func):
+def register_http_error_classes(error_handler):
     """Registers an error handler for error classes derived from
     :class:`HTTPException <tmserver.error.HTTPException>`.
 
     Parameters
     ----------
-    error_handler_func: function
+    error_handler: function
+        blueprint-specific error handler
     """
     module = importlib.import_module('tmserver.error')
     HTTPException = getattr(module, 'HTTPException')
-    for name, obj in inspect.getmembers(module):
-    # for name, obj in inspect.getmembers(globals()):
-        if inspect.isclass(obj):
-            if HTTPException in inspect.getmro(obj):
-                logger.debug('mokey path class %r with error handler', obj)
-                globals()[obj.__name__] = error_handler_func(obj)
+    for name, cls in inspect.getmembers(module):
+        if inspect.isclass(cls):
+            if HTTPException in inspect.getmro(cls):
+                logger.debug('register error handler for class %r', cls)
+                # globals()[cls.__name__] = error_handler(handle_error)(cls)

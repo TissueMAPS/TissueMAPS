@@ -26,13 +26,7 @@ from flask_jwt import current_identity
 import tmlib.models as tm
 
 from tmserver.model import decode_pk
-from tmserver.error import (
-    MalformedRequestError,
-    ResourceNotFoundError,
-    NotAuthorizedError,
-    MissingGETParameterError,
-    MissingPOSTParameterError
-)
+from tmserver.error import *
 
 
 logger = logging.getLogger(__name__)

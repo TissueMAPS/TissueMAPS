@@ -152,7 +152,7 @@ class GC3Pie(object):
 
     def retrieve_jobs(self, experiment_id, program):
         """Retrieves the top level job for the given `experiment`
-        from the store that were most recently submitted by `program`.
+        from the store that was most recently submitted by `program`.
 
         Parameters
         ----------

@@ -34,11 +34,10 @@ jwt = JWT()
 def authenticate(username, password):
     """Check if there is a user with this username-pw-combo
     and return the user object if a matching user has been found."""
-    user = current_session.query(tm.User).filter_by(name=username).one()
+    user = current_session.query(tm.User).filter_by(name=username).one_or_none()
     if not(user and sha256_crypt.verify(password, user.password)):
         raise ResourceNotFoundError(tm.User)
     return user
-
 
 
 @jwt.identity_handler
@@ -56,7 +55,6 @@ def make_payload(user):
     iat = datetime.datetime.utcnow()
     exp = iat + current_app.config.get('JWT_EXPIRATION_DELTA')
     nbf = iat + datetime.timedelta(seconds=0)
-
     return {
         'uid': user.id,
         'uname': user.name,

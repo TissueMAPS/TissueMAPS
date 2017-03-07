@@ -32,6 +32,7 @@ def register_error(cls):
     serialized to JSON"""
     @api.errorhandler(cls)
     def handle_invalid_usage(error):
+        print 'handle error'
         current_app.logger.error(error)
         response = jsonify(error=error)
         response.status_code = error.status_code
@@ -47,7 +48,7 @@ def _handle_no_result_found(error):
         'type': error.__class__.__name__
     })
     current_app.logger.error('NoResultFound: ' + error.message)
-    response.status_code = 404
+    response.status_code = 400
     return response
 
 
@@ -64,7 +65,7 @@ def _handle_integrity_error(error):
     return response
 
 
-register_http_error_classes(register_error)
+register_http_error_classes(api.errorhandler)
 
 
 import tmserver.api.experiment
