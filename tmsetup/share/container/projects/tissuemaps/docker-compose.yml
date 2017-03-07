@@ -28,8 +28,7 @@ volumes:
 services:
 
   web:
-    # image: tissuemaps/tissuemaps-web
-    image: tissuemaps-web
+    image: tissuemaps/tissuemaps-web
     container_name: tissuemaps-web
     volumes:
       - storage-app:/storage/log/tissuemaps
@@ -41,18 +40,14 @@ services:
       - '8002:8002'
 
   app:
-    # image: tissuemaps/tissuemaps-app
-    image: tissuemaps-app
+    image: tissuemaps/tissuemaps-app
     container_name: tissuemaps-app
-    # environment:
-    #   - BASH_ENV=/home/tissuemaps/.bashrc
     volumes:
       - storage-app:/storage/data/tissuemaps
       - storage-app:/storage/log/tissuemaps
 
   db_master:
-    # image: tissuemaps/tissuemaps-db_master
-    image: tissuemaps-db_master
+    image: tissuemaps/tissuemaps-db_master
     container_name: tissuemaps-db-master
     hostname: db_master
     depends_on:
@@ -69,8 +64,7 @@ services:
 
   db_worker:
     # NOTE: The architecture is configured for one database worker only.
-    # image: tissuemaps/tissuemaps-db_worker
-    image: tissuemaps-db_worker
+    image: tissuemaps/tissuemaps-db_worker
     container_name: tissuemaps-db-worker
     hostname: db_worker
     volumes:
