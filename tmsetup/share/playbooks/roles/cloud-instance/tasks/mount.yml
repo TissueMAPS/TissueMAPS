@@ -16,11 +16,14 @@
 
 ---
 - name: Ensure that group exists for storage volume
-  group: name: "{{ volume_user }}"
+  become: yes
+  group:
+    name: "{{ volume_user }}"
   tags:
     - volume
 
 - name: Ensure that user exist for storage volume
+  become: yes
   user:
       name: "{{ volume_user }}"
       group: "{{ volume_user }}"
@@ -29,6 +32,7 @@
     - volume
 
 - name: Ensure mount point for storage volume exists and has correct permissions
+  become: yes
   file:
     path: "{{ volume_mountpoint }}"
     owner: "{{ volume_user }}"
@@ -38,6 +42,7 @@
     - volume
 
 - name: Mount storage volume
+  become: yes
   mount:
     name: "{{ volume_mountpoint }}"
     fstype: "{{ volume_fstype }}"

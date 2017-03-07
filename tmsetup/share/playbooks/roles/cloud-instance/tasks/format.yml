@@ -70,6 +70,7 @@
     - volume
 
 - name: Format attached storage volume
+  become: yes
   filesystem:
     fstype: "{{ volume_fstype }}"
     dev: "{{ volume_device_name }}"

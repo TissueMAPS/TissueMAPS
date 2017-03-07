@@ -24,10 +24,10 @@
 - name: Wait for instance
   local_action: wait_for
   args:
-    host: "{{ hostvars[instance_name].ansible_default_ipv4.address }}"
+    host: "{{ hostvars[instance_name].ansible_host }}"
     port: 22
     delay: 30
-    timeout: 300
+    timeout: 60
     state: started
   when: instance_state == "present"
 
