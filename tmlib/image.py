@@ -21,58 +21,29 @@ import mahotas as mh
 import skimage.measure
 import skimage.color
 import skimage.draw
+import shapely.geometry
 from geoalchemy2.shape import to_shape
 from abc import ABCMeta
 import logging
 
 from tmlib.utils import assert_type
-from tmlib import image_utils
+from tmlib.metadata import ImageMetadata
 
 logger = logging.getLogger(__name__)
-
-#: Set[str]: supported image file extensions
-SUPPORTED_IMAGE_FILE_EXTENSIONS = {'.png', '.tif', '.tiff', '.jpg', '.jpeg'}
-
-
-def is_image_file(filename):
-    '''Checks if file represents an image based on the file extension.
-
-    Parameters
-    ----------
-    filename: str
-        name of the image file
-
-    Returns
-    -------
-    bool
-        ``True`` if `filename` represents an image and ``False`` otherwise
-
-    See also
-    --------
-    :const:`tmlib.image.SUPPORTED_IMAGE_FILE_EXTENSIONS`
-    '''
-    return os.path.splitext(filename)[1] in SUPPORTED_IMAGE_FILE_EXTENSIONS
 
 
 class Image(object):
 
-    '''Base class for an image. An image contains as a 2D pixels or
-    3D voxels array.
+    '''Base class for an image that holds a 2D pixels array.'''
 
-    Note
-    ----
-    The first two dimensions are the y, x axes of individual pixel planes.
-    The optional third dimension represents either z resolution and is referred
-    to as *zlevels* or color, which is referred to as *bands*.
-    '''
+    __slots__ = ('_array', '_metadata')
 
-    @assert_type(array='numpy.ndarray')
     def __init__(self, array, metadata=None):
         '''
         Parameters
         ----------
         array: numpy.ndarray
-            2D pixels or 3D voxels array
+            2D pixels array
         metadata: tmlib.metadata.ImageMetadata, optional
             image metadata (default: ``None``)
         '''
@@ -80,23 +51,40 @@ class Image(object):
         self.metadata = metadata
 
     @property
+    def metadata(self):
+        '''tmlib.metadata.ImageMetadata: image metadata
+        '''
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, value):
+        if value is not None:
+            if not isinstance(value, ImageMetadata):
+                raise TypeError(
+                    'Argument "metadata" must have type '
+                    'tmlib.metadata.ImageMetadata.'
+                )
+        self._metadata = value
+
+    @property
     def array(self):
-        '''numpy.ndarray: pixels/voxels array'''
-        return np.squeeze(self._array)
+        '''numpy.ndarray: 2D pixels array'''
+        return self._array
 
     @array.setter
     def array(self, value):
-        if value.ndim == 2:
-            self._array = value[..., np.newaxis]
-        elif value.ndim == 3:
-            self._array = value
-        else:
-            raise ValueError('An image must be either a 2D or 3D array.')
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Argument "array" must have type numpy.ndarray.'
+            )
+        if value.ndim != 2:
+            raise ValueError('Argument "array" must be a two dimensional.')
+        self._array = value
 
     @property
     def dimensions(self):
-        '''Tuple[int]: y, x, z/c dimensions of the pixels/voxels array'''
-        return self._array.shape
+        '''Tuple[int]: y, x, z dimensions of the voxels array'''
+        return self.array.shape
 
     @property
     def dtype(self):
@@ -135,46 +123,8 @@ class Image(object):
         '''bool: whether voxels array has boolean data type'''
         return self.array.dtype == np.bool
 
-    def iter_planes(self, axis='z'):
-        '''Iterates over pixel planes of the image along the given `axis`.
-
-        Parameters
-        ----------
-        axis: str, optional
-            axis along which planes should be iterated (default: ``"z"``)
-
-        Returns
-        -------
-        generator
-
-        Examples
-        --------
-        >>>arr = numpy.zeros((3, 10, 10), dtype=np.uint8)
-        >>>img = Image(arr)
-        >>>for z, plane in img.iter_planes():
-        ...    print plane
-        '''
-        axis_map = {'y': 0, 'x': 1, 'z': 2}
-        for z in range(self.dimensions[axis_map[axis]]):
-            yield (z, self._array[:, :, z, ...])
-
-    def get_plane(self, index):
-        '''Gets an individual pixel plane of the image.
-
-        Parameters
-        ----------
-        index: int
-            zero-based z-plane index
-
-        Returns
-        -------
-        numpy.ndarray
-        '''
-        return self._array[:, :, index, ...]
-
-    def extract(self, y_offset, height, x_offset, width, z_offset=0, depth=1):
-        '''Extracts a continuous, hyperrectangular volumne of voxels
-        from the image.
+    def extract(self, y_offset, height, x_offset, width):
+        '''Extracts a continuous, rectangular plane of pixels from the image.
 
         Parameters
         ----------
@@ -188,28 +138,17 @@ class Image(object):
         width: int
             width of the hyperrectangle, i.e. length of the hyperrectangle along
             the *x* axis
-        z_offset: int, optional
-            index of the top, left point of the hyperrectangle on the *z* axis
-            (default: ``0``)
-        width: int
-            depth of the hyperrectangle, i.e. length of the hyperrectangle
-            along the *z* axis (default: ``1``)
 
         Returns
         -------
         tmlib.image.Image
-            extracted image with dimensions `height` x `width` x `depth`
+            extracted image with dimensions `height` x `width`
         '''
-        arr = self._array[
-                y_offset:(y_offset+height),
-                x_offset:(x_offset+width),
-                z_offset:(z_offset+depth),
-                ...
-        ]
-        return self.__class__(arr, self.metadata)
+        array = self.array[y_offset:(y_offset+height), x_offset:(x_offset+width)]
+        return self.__class__(array, self.metadata)
 
     @assert_type(image='tmlib.image.Image')
-    def insert(self, image, y_offset, x_offset, z_offset=0, inplace=True):
+    def insert(self, image, y_offset, x_offset, inplace=True):
         '''Inserts a continuous, hyperrectangular volume of voxels into
         an image.
 
@@ -221,9 +160,6 @@ class Image(object):
             index of the top, left point of the hyperrectangle on the *y* axis
         x_offset: int
             index of the top, left point of the hyperrectangle on the *x* axis
-        z_offset: int, optional
-            index of the top, left point of the hyperrectangle on the *z* axis
-            (default: ``0``)
         inplace: bool, optional
             insert voxels into the existing image rather than into a copy
             (default: ``True``)
@@ -234,24 +170,18 @@ class Image(object):
             modified image
         '''
         if (image.dimensions[0] + y_offset > self.dimensions[0] or
-                image.dimensions[1] + x_offset > self.dimensions[1] or
-                image.dimensions[2] + z_offset > self.dimensions[2]):
+            image.dimensions[1] + x_offset > self.dimensions[1]):
             raise ValueError('Image doesn\'t fit.')
         if inplace:
-            arr = self._array
+            array = self.array
         else:
-            arr = self._array.copy()
-        height, width, depth = image.dimensions
-        arr[
-            y_offset:(y_offset+height),
-            x_offset:(x_offset+width),
-            z_offset:(z_offset+depth),
-            ...
-        ] = image._array
+            array = self.array.copy()
+        height, width = image.dimensions
+        array[y_offset:(y_offset+height), x_offset:(x_offset+width)] = image.array
         if inplace:
             return self
         else:
-            return self.__class__(arr, self.metadata)
+            return self.__class__(array, self.metadata)
 
     @assert_type(image='tmlib.image.Image')
     def merge(self, image, axis, offset, inplace=True):
@@ -262,8 +192,8 @@ class Image(object):
         image: tmlib.image.Image
             image object whose values should used for merging
         axis: str
-            axis along which the two images should be merged,
-            either ``"x"``, ``"y"``, or ``"z"``
+            axis along which the two images should be merged
+            (options: ``{"x", "y"}``)
         offset: int
             offset for `image` in the existing object
         inplace: bool, optional
@@ -276,21 +206,19 @@ class Image(object):
             rescaled image
         '''
         if inplace:
-            arr = self._array
+            array = self.array
         else:
-            arr = self._array.copy()
+            array = self.array.copy()
         if axis == 'y':
-            arr[offset:, :, :, ...] = image._array[offset:, :, :, ...]
+            array[offset:, :] = image.array[offset:, :]
         elif axis == 'x':
-            arr[:, offset:, :, ...] = image._array[:, offset:, :, ...]
-        elif axis == 'z':
-            arr[:, :, offset:, ...] = image._array[:, :, offset:, ...]
+            array[:, offset:] = image.array[:, offset:]
         else:
             raise ValueError('Unknown axis.')
         if inplace:
             return self
         else:
-            return self.__class__(arr, self.metadata)
+            return self.__class__(array, self.metadata)
 
     @assert_type(image='tmlib.image.Image')
     def join(self, image, axis):
@@ -301,70 +229,55 @@ class Image(object):
         image: tmlib.image.Image
             image object whose values should be joined
         axis: str
-            axis along which the two images should be merged,
-            either ``"x"``, ``"y"``, or ``"z"``
+            axis along which the two images should be merged
+            (options: ``{"x", "y"}``)
 
         Returns
         -------
         tmlib.image.Image
             joined image
         '''
-        # Numpy's nomenclature is different, it would stack the "z" dimension
-        # along the first axis. This would make indexing harder in case the
-        # image has only two dimensions. This approach could result in worse
-        # performance, though.
-        # TODO: consider use of __slots__ on the Image class
         if axis == 'y':
-            arr = np.vstack([self._array, image._array])
+            array = np.vstack([self.array, image.array])
         elif axis == 'x':
-            arr = np.hstack([self._array, image._array])
-        elif axis == 'z':
-            arr = np.dstack([self._array, image._array])
+            array = np.hstack([self.array, image.array])
         else:
             raise ValueError('Unknown axis.')
-        return self.__class__(arr, self.metadata)
+        return self.__class__(array, self.metadata)
 
     def pad_with_background(self, n, side):
-        '''Pads one side of the pixels/voxels array with zero values.
+        '''Pads one side of the pixels array with zero values.
 
         Parameters
         ----------
         n: int
             number of pixels/voxels that should be added along the given axis
         side: str
-            side of the array that should be padded relative to the y, x axis
-            of an individual plane; either ``"top"``, ``"bottom"``, ``"left"``,
-            ``"right"``, ``"front"`` or ``"back"``
+            side of the array that should be padded relative to the *y*, *x*
+            axis of an individual plane
+            (options: ``{"top", "bottom", "left", "right"}``)
 
         Returns
         -------
         tmlib.image.Image
             padded image
         '''
-        if self.dimensions[2] > 1:
-            raise ValueError('Not supported for color images.')
-        height, width, depth = self.dimensions
+        height, width = self.dimensions
         if side == 'top':
-            arr = np.zeros((n, width, depth), dtype=self.dtype)
-            arr = np.vstack([arr, self._array])
+            array = np.zeros((n, width), dtype=self.dtype)
+            array = np.vstack([array, self.array])
         elif side == 'bottom':
-            arr = np.zeros((n, width, depth), dtype=self.dtype)
-            arr = np.vstack([self._array, arr])
+            array = np.zeros((n, width), dtype=self.dtype)
+            array = np.vstack([self.array, array])
         elif side == 'left':
-            arr = np.zeros((height, n, depth), dtype=self.dtype)
-            arr = np.hstack([arr, self._array])
+            array = np.zeros((height, n), dtype=self.dtype)
+            array = np.hstack([array, self.array])
         elif side == 'right':
-            arr = np.zeros((height, n, depth), dtype=self.dtype)
-            arr = np.hstack([self._array, arr])
-        elif side == 'front':
-            arr = np.zeros((height, width, n), dtype=self.dtype)
-            arr = np.dstack([self._array, arr])
-        elif side == 'back':
-            arr = np.zeros((height, width, n), dtype=self.dtype)
-            arr = np.dstack([self._array, arr])
+            array = np.zeros((height, n), dtype=self.dtype)
+            array = np.hstack([self.array, array])
         else:
             raise ValueError('Unknown side.')
-        return self.__class__(arr, self.metadata)
+        return self.__class__(array, self.metadata)
 
     def smooth(self, sigma, inplace=True):
         '''Applies a Gaussian smoothing filter to the pixels/voxels array.
@@ -382,13 +295,13 @@ class Image(object):
         tmlib.image.Image
             smoothed image
         '''
-        arr = mh.gaussian_filter(self._array, sigma)
+        array = mh.gaussian_filter(self.array, sigma)
         if inplace:
-            self._array = arr
+            self.array = array
             self.metadata.is_smoothed = True
             return self
         else:
-            new_img = self.__class__(arr, self.metadata)
+            new_img = self.__class__(array, self.metadata)
             new_img.metadata.is_smoothed = True
             return new_img
 
@@ -412,15 +325,85 @@ class Image(object):
         tmlib.image.Image
             shrunken image
         '''
-        shrink_factors = (factor,) * 2 + (1,) * (self._array.ndim - 2)
-        arr = skimage.measure.block_reduce(
-            self._array, shrink_factors, func=np.mean
-        ).astype(self.dtype)
+        height, width = self.dimensions
+        # NOTE: OpenCV uses (x, y) instead of (y, x)
+        array = cv2.resize(
+            self.array, (width/factor, height/factor),
+            interpolation=cv2.INTER_AREA
+        )
         if inplace:
-            self._array = arr
+            self.array = array
             return self
         else:
-            return self.__class__(arr, self.metadata)
+            return self.__class__(array, self.metadata)
+
+    @staticmethod
+    def _shift_and_crop(img, y, x, bottom, top, right, left, crop=True):
+        '''Shifts and crops an image according to the calculated values shift and
+        overhang values.
+
+        Parameters
+        ----------
+        img: numpy.ndarray
+            image that should be aligned
+        y: int
+            shift in y direction (positive value -> down, negative value -> up)
+        x: int
+            shift in x direction (position value -> right, negative value -> left)
+        bottom: int
+            pixels to crop at the bottom
+        top: int
+            pixels to crop at the top
+        right: int
+            pixels to crop at the right
+        left: int
+            pixels to crop at the left
+        crop: bool, optional
+            whether image should cropped or rather padded with zero valued pixels
+            (default: ``True``)
+
+        Returns
+        -------
+        numpy.array
+            potentially shifted and cropped image
+
+        Raises
+        ------
+        IndexError
+            when shift or overhang values are too extreme
+        '''
+        try:
+            row_start = top - y
+            row_end = bottom + y
+            if row_end == 0:
+                row_end = img.shape[0]
+            else:
+                row_end = -row_end
+            col_start = left - x
+            col_end = right + x
+            if col_end == 0:
+                col_end = img.shape[1]
+            else:
+                col_end = -col_end
+            if crop:
+                aligned_im = img[row_start:row_end, col_start:col_end]
+            else:
+                aligned_im = np.zeros(img.shape, dtype=img.dtype)
+                extracted_im = img[row_start:row_end, col_start:col_end]
+                row_end = top + extracted_im.shape[0]
+                col_end = left + extracted_im.shape[1]
+                aligned_im[top:row_end, left:col_end] = extracted_im
+            return aligned_im
+        except IndexError as e:
+            raise IndexError(
+                'Shifting and cropping of the image failed!\n'
+                'Shift or overhang values are incorrect:\n%s' % str(e)
+            )
+        except Exception as e:
+            raise Exception(
+                'Shifting and cropping of the image failed!\n'
+                'Reason: %s' % str(e)
+            )
 
     def align(self, crop=True, inplace=True):
         '''Aligns, i.e. shifts and optionally crops, an image based on
@@ -445,62 +428,57 @@ class Image(object):
         Alignment may change the dimensions of the image when `crop` is
         ``True``.
         '''
-        # TODO: optional inplace operation
         if self.metadata is None:
             raise AttributeError(
                 'Image requires attribute "metadata" for alignment.'
             )
         md = self.metadata
         # The shape of the arrays may change when cropped
-        arrays = list()
-        for z, pixels in self.iter_planes():
-            arr = image_utils.shift_and_crop(
-                pixels, y=md.y_shift, x=md.x_shift,
-                bottom=md.upper_overhang, top=md.lower_overhang,
-                right=md.left_overhang, left=md.right_overhang, crop=crop
-            )
-            arrays.append(arr)
-        arr = np.dstack(arrays)
+        array = self._shift_and_crop(
+            self.array, y=md.y_shift, x=md.x_shift,
+            bottom=md.upper_overhang, top=md.lower_overhang,
+            right=md.left_overhang, left=md.right_overhang, crop=crop
+        )
         if inplace:
             self.metadata.is_aligned = True
-            self._array = arr
+            self.array = array
             return self
         else:
-            new_object = self.__class__(arr, self.metadata)
+            new_object = self.__class__(array, self.metadata)
             new_object.metadata.is_aligned = True
             return new_object
 
     def png_encode(self):
-        '''Encodes the image as a PNG file.
+        '''Encodes pixels of the image as a PNG file.
 
         Returns
         -------
         numpy.ndarray[numpy.uint8]
-            encoded image
+            encoded pixels
         '''
         return cv2.imencode('.png', self.array)[1]
 
     def tiff_encode(self):
-        '''Encodes the image as a TIFF file.
+        '''Encodes pixels of the image as a TIFF file.
 
         Returns
         -------
         numpy.ndarray[numpy.uint8]
-            encoded image
+            encoded pixels
         '''
         return cv2.imencode('.tif', self.array)[1]
 
+
 class ChannelImage(Image):
 
-    '''Class for a channel image: a grayscale image with a single band.'''
+    '''Class for a channel image: a grayscale image.'''
 
-    @assert_type(metadata='tmlib.metadata.ChannelImageMetadata')
     def __init__(self, array, metadata):
         '''
         Parameters
         ----------
         array: numpy.ndarray[uint16]
-            pixels/voxels array
+            2D pixels array
         metadata: tmlib.metadata.ChannelImageMetadata
             image metadata
         '''
@@ -508,22 +486,46 @@ class ChannelImage(Image):
         if not self.is_uint:
             raise TypeError('Image must have unsigned integer type.')
 
-    def project(self, func=np.max, axis='z'):
-        '''Performs a projection of the array along a given `axis` using
-        a provided function.
+    @staticmethod
+    def _map_to_uint8(img, lower_bound=None, upper_bound=None):
+        '''Maps a 16-bit image trough a lookup table to convert it to 8-bit.
 
         Parameters
         ----------
-        func: function, optional
-            function that should be used for the projection
-            (default: ``numpy.max``)
-        axis: str, optional
-            axis along which the image array should be projected
-            (default: ``"z"``)
+        img: numpy.ndarray[np.uint16]
+            image that should be mapped
+        lower_bound: int, optional
+            lower bound of the range that should be mapped to ``[0, 255]``,
+            value must be in the range ``[0, 65535]``
+            (defaults to ``numpy.min(img)``)
+        upper_bound: int, optional
+            upper bound of the range that should be mapped to ``[0, 255]``,
+            value must be in the range ``[0, 65535]``
+            (defaults to ``numpy.max(img)``)
+
+        Returns
+        -------
+        numpy.ndarray[uint8]
+            mapped image
         '''
-        axis_map = {'y': 0, 'x': 1, 'z': 2}
-        arr = func(self._array, axis=axis_map[axis])
-        return self.__class__(arr, self.metadata)
+        if img.dtype != np.uint16:
+            raise TypeError('"img" must have 16-bit unsigned integer type.')
+        if not(0 <= lower_bound < 2**16) and lower_bound is not None:
+                raise ValueError('"lower_bound" must be in the range [0, 65535]')
+        if not(0 <= upper_bound < 2**16) and upper_bound is not None:
+            raise ValueError('"upper_bound" must be in the range [0, 65535]')
+        if lower_bound is None:
+            lower_bound = np.min(img)
+        if upper_bound is None:
+            upper_bound = np.max(img)
+        if lower_bound >= upper_bound:
+            raise ValueError('"lower_bound" must be smaller than "upper_bound"')
+        lut = np.concatenate([
+            np.zeros(lower_bound, dtype=np.uint16),
+            np.linspace(0, 255, upper_bound - lower_bound).astype(np.uint16),
+            np.ones(2**16 - upper_bound, dtype=np.uint16) * 255
+        ])
+        return lut[img].astype(np.uint8)
 
     def scale(self, lower, upper, inplace=True):
         '''Scales values to 8-bit such that the range [`lower`, `upper`]
@@ -545,13 +547,13 @@ class ChannelImage(Image):
             image with rescaled voxels
         '''
         if self.is_uint16:
-            arr = image_utils.map_to_uint8(self._array, lower, upper)
+            array = self._map_to_uint8(self.array, lower, upper)
             if inplace:
-                self._array = arr
+                self.array = array
                 self.metadata.is_rescaled = True
                 return self
             else:
-                new_image = self.__class__(arr, self.metadata)
+                new_image = self.__class__(array, self.metadata)
                 new_image.metadata.is_rescaled = True
                 return new_image
         elif self.is_uint8:
@@ -580,15 +582,49 @@ class ChannelImage(Image):
         tmlib.image.ChannelImage
             image with clipped voxels
         '''
-        arr = np.clip(self._array, lower, upper)
+        array = np.clip(self.array, lower, upper)
         if inplace:
-            self._array = arr
+            self.array = array
             self.metadata.is_clipped = True
             return self
         else:
-            new_image = self.__class__(arr, self.metadata)
+            new_image = self.__class__(array, self.metadata)
             new_image.metadata.is_clipped = True
             return new_image
+
+    @staticmethod
+    def _correct_illumination(img, mean, std, log_transform=True):
+        '''Corrects an image for illumination artifacts.
+
+        Parameters
+        ----------
+        img: numpy.ndarray[numpy.uint8 or numpy.uint16]
+            image that should be corrected
+        mean: numpy.ndarray[numpy.float64]
+            matrix of mean values (same dimensions as `img`)
+        std: numpy.ndarray[numpy.float64]
+            matrix of standard deviation values (same dimensions as `img`)
+        log_transform: bool, optional
+            log10 transform `img` (default: ``True``)
+
+        Returns
+        -------
+        numpy.ndarray
+            corrected image (same data type as `img`)
+        '''
+        img_type = img.dtype
+        # Do all computations with type float
+        img = img.astype(np.float64)
+        is_zero = img == 0
+        if log_transform:
+            img = np.log10(img)
+            img[is_zero] = 0
+        img = (img - mean) / std
+        img = (img * np.mean(std)) + np.mean(mean)
+        if log_transform:
+            img = 10 ** img
+        # Cast back to original type.
+        return img.astype(img_type)
 
     @assert_type(stats='tmlib.image.IllumstatsContainer')
     def correct(self, stats, inplace=True):
@@ -617,17 +653,15 @@ class ChannelImage(Image):
         if (stats.mean.metadata.channel_id != self.metadata.channel_id or
                 stats.std.metadata.channel_id != self.metadata.channel_id):
             raise ValueError('Channels don\'t match!')
-        arr = np.zeros(self.dimensions, dtype=self.dtype)
-        for z, pixels in self.iter_planes():
-            arr[:, :, z, ...] = image_utils.correct_illumination(
-                pixels, stats.mean.array, stats.std.array
-            )
+        array = self._correct_illumination(
+            self.array, stats.mean.array, stats.std.array
+        )
         if inplace:
-            self._array = arr
+            self.array = array
             self.metadata.is_corrected = True
             return self
         else:
-            new_object = ChannelImage(arr, self.metadata)
+            new_object = ChannelImage(array, self.metadata)
             new_object.metadata.is_corrected = True
             return new_object
 
@@ -636,9 +670,6 @@ class SegmentationImage(Image):
 
     '''Class for a segmentation image: a label image with a single band.'''
 
-    @assert_type(metadata=[
-        'tmlib.metadata.SegmentationImageMetadata', 'types.NoneType'
-    ])
     def __init__(self, array, metadata=None):
         '''
         Parameters
@@ -660,9 +691,8 @@ class SegmentationImage(Image):
 
         Parameters
         ----------
-        polygons: Dict[Tuple[int], shapely.geometry.polygon.Polygon]]
-            polygon for each segmented object hashable by
-            time point, z-plane and site-specific label
+        polygons: Tuple[Union[int, shapely.geometry.polygon.Polygon]]
+            label and geometry for each segmented object
         y_offset: int
             global vertical offset that needs to be subtracted from
             y-coordinates
@@ -670,7 +700,7 @@ class SegmentationImage(Image):
             global horizontal offset that needs to be subtracted from
             x-coordinates
         dimensions: Tuple[int]
-            dimensions of the label image that should be created
+            *x*, *y* dimensions of image *z*-planes that should be created
         metadata: tmlib.metadata.SegmentationImageMetadata, optional
             image metadata (default: ``None``)
 
@@ -680,8 +710,8 @@ class SegmentationImage(Image):
             created image
         '''
         array = np.zeros(dimensions, dtype=np.int32)
-        for (t, z, label), poly in polygons.iteritems():
-            poly = to_shape(poly)
+        for label, geometry in polygons:
+            poly = to_shape(geometry)
             coordinates = np.array(poly.exterior.coords).astype(int)
             x, y = np.split(coordinates, 2, axis=1)
             y *= -1
@@ -691,18 +721,152 @@ class SegmentationImage(Image):
             array[y, x] = label
         return cls(array, metadata)
 
-    # def bounding_box(self, label):
-    #     '''Extracts the bounding box of an individual object from the image.
+    def extract_polygons(self, y_offset, x_offset):
+        '''Creates a polygon representation for each segmented object.
+        The coordinates of the polygon contours are relative to the global map,
+        i.e. an offset is added to the image site specific coordinates.
 
-    #     Parameters
-    #     ----------
-    #     label: int
-    #         site-specific object ID
+        Parameters
+        ----------
+        y_offset: int
+            global vertical offset that needs to be subtracted from
+            *y*-coordinates (*y*-axis is inverted)
+        x_offset: int
+            global horizontal offset that needs to be added to *x*-coordinates
 
-    #     Returns
-    #     -------
-    #     tmlib.image.SegmentedImage
-    #     '''
+        Returns
+        -------
+        Generator[Tuple[Union[int, shapely.geometry.polygon.Polygon]]]
+            label and geometry for each segmented object
+        '''
+        bboxes = mh.labeled.bbox(self.array)
+        # We set border pixels to zero to get closed contours for
+        # border objects. This may cause problems for very small objects
+        # at the border, because they may get lost.
+        # We recreate them later on (see below).
+        plane = self.array.copy()
+        plane[0, :] = 0
+        plane[-1, :] = 0
+        plane[:, 0] = 0
+        plane[:, -1] = 0
+
+        for label in np.unique(plane[plane > 0]):
+            bbox = bboxes[label]
+            obj_im = self._get_bbox_image(plane, bbox)
+            logger.debug('find contour for object #%d', label)
+            # We could do this for all objects at once, but doing it
+            # for each object individually ensures that we get the
+            # correct number of objects and that coordinates are in the
+            # correct order, i.e. sorted according to their label.
+            mask = obj_im == label
+            # NOTE: OpenCV return x, y coordinates. That means that
+            # for numpy indexing one would need to flip the axes.
+            _, contours, hierarchy = cv2.findContours(
+                (mask).astype(np.uint8) * 255,
+                cv2.RETR_CCOMP,  # two-level  hierarchy (holes)
+                cv2.CHAIN_APPROX_SIMPLE  # TODO: how to add offset?
+            )
+            if len(contours) == 0:
+                logger.warn(
+                    'no contours identified for object #%d', label
+                )
+                # This is most likely an object that does not extend
+                # beyond the line of border pixels.
+                # To ensure a correct number of objects we represent
+                # it by a small polygon.
+                coords = np.array(np.where(self.value == label)).T
+                y, x = np.mean(coords, axis=0).astype(int)
+                shell = np.array([
+                    [x-1, x+1, x+1, x-1, x-1],
+                    [y-1, y-1, y+1, y+1, y-1]
+                ]).T
+                holes = None
+            elif len(contours) > 1:
+                # It may happens that more than one contour is
+                # identified per object, for example if the object
+                # has holes, i.e. enclosed background pixels.
+                logger.debug(
+                    '%d contours identified for object #%d',
+                    len(contours), label
+                )
+                holes = list()
+                for i in range(len(contours)):
+                    child_idx = hierarchy[0][i][2]
+                    parent_idx = hierarchy[0][i][3]
+                    # There should only be two levels with one
+                    # contour each.
+                    # TODO: prevent creation of holes for objects
+                    # that are not supposed to have holes.
+                    if parent_idx >= 0:
+                        shell = np.squeeze(contours[parent_idx])
+                    elif child_idx >= 0:
+                        holes.append(np.squeeze(contours[child_idx]))
+                    else:
+                        # Same hierarchy level. This shouldn't happen.
+                        # Take only the largest one.
+                        lengths = [len(c) for c in contours]
+                        idx = lengths.index(np.max(lengths))
+                        shell = np.squeeze(contours[idx])
+                        break
+            else:
+                shell = np.squeeze(contours[0])
+                holes = None
+
+            if shell.ndim < 2 or shell.shape[0] < 3:
+                logger.warn('polygon doesn\'t have enough coordinates')
+                # In case the contour cannot be represented as a
+                # valid polygon we create a little square to not loose
+                # the object.
+                y, x = np.array(mask.shape) / 2
+                # Create a closed ring with coordinates sorted
+                # counter-clockwise
+                shell = np.array([
+                    [x-1, x+1, x+1, x-1, x-1],
+                    [y-1, y-1, y+1, y+1, y-1]
+                ]).T
+
+            # Add offset required due to alignment and cropping and
+            # invert the y-axis as required by Openlayers.
+            add_y = y_offset + bbox[0] - 1
+            add_x = x_offset + bbox[2] - 1
+            shell[:, 0] = shell[:, 0] + add_x
+            shell[:, 1] = -1 * (shell[:, 1] + add_y)
+            if holes is not None:
+                for i in range(len(holes)):
+                    holes[i][:, 0] = holes[i][:, 0] + add_x
+                    holes[i][:, 1] = -1 * (holes[i][:, 1] + add_y)
+            poly = shapely.geometry.Polygon(shell, holes)
+            if not poly.is_valid:
+                logger.warn(
+                    'invalid polygon for object #%d - trying to fix it',
+                    label
+                )
+                # In some cases there may be invalid intersections
+                # that can be fixed with the buffer trick.
+                poly = poly.buffer(0)
+                if not poly.is_valid:
+                    raise ValueError(
+                        'Polygon of object #%d is invalid.' % label
+                    )
+                if isinstance(poly, shapely.geometry.MultiPolygon):
+                    logger.warn(
+                        'object #%d has multiple polygons - '
+                        'take largest', label
+                    )
+                    # Repair may create multiple polygons.
+                    # We take the largest and discard the smaller ones.
+                    areas = [g.area for g in poly.geoms]
+                    index = areas.index(np.max(areas))
+                    poly = poly.geoms[index]
+            yield (int(label), poly)
+
+    @staticmethod
+    def _get_bbox_image(img, bbox):
+        return np.lib.pad(
+            img[bbox[0]:bbox[1], bbox[2]:bbox[3]],
+            (1, 1), 'constant', constant_values=(0)
+        )
+
 
 class PyramidTile(Image):
 
@@ -725,8 +889,6 @@ class PyramidTile(Image):
             image metadata (default: ``None``)
         '''
         super(PyramidTile, self).__init__(array, metadata)
-        if self.dimensions[2] > 1:
-            raise ValueError('Image must be two-dimensional.')
         if not self.is_uint8:
             raise TypeError(
                 'Image must have 8-bit unsigned integer data type.'
@@ -752,9 +914,9 @@ class PyramidTile(Image):
         -------
         tmlib.image.PyramidTile
         '''
-        arr = np.fromstring(string, np.uint8)
-        arr = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
-        return cls(arr, metadata)
+        array = np.fromstring(string, np.uint8)
+        array = cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
+        return cls(array, metadata)
 
     @classmethod
     def create_from_buffer(cls, buf, metadata=None):
@@ -771,9 +933,9 @@ class PyramidTile(Image):
         -------
         tmlib.image.PyramidTile
         '''
-        arr = np.frombuffer(buf, np.uint8)
-        arr = cv2.imdecode(arr, cv2.IMREAD_UNCHANGED)
-        return cls(arr, metadata)
+        array = np.frombuffer(buf, np.uint8)
+        array = cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
+        return cls(array, metadata)
 
     @classmethod
     def create_as_background(cls, add_noise=False, mu=None, sigma=None,
@@ -804,10 +966,10 @@ class PyramidTile(Image):
                     'Arguments "mu" and "sigma" are required '
                     'when argument "add_noise" is set to True.'
                 )
-            arr = np.random.normal(mu, sigma, self._tile_size**2).astype(np.uint8)
+            array = np.random.normal(mu, sigma, cls.TILE_SIZE**2).astype(np.uint8)
         else:
-            arr = np.zeros((cls.TILE_SIZE,) * 2, dtype=np.uint8)
-        return cls(arr, metadata)
+            array = np.zeros((cls.TILE_SIZE,) * 2, dtype=np.uint8)
+        return cls(array, metadata)
 
     def jpeg_encode(self, quality=95):
         '''Encodes the image as a JPEG buffer object.
@@ -833,90 +995,6 @@ class PyramidTile(Image):
         )[1]
 
 
-class BrightfieldImage(Image):
-
-    '''Class for a brightfield image: a 3D RGB image with three bands
-    and voxels with 8-bit unsigned integer type.
-    '''
-
-    def __init__(self, pixels, metadata=None):
-        '''
-        Parameters
-        ----------
-        pixels: numpy.ndarray[uint8]
-            pixel plane
-        metadata: tmlib.metadata.ImageMetadata, optional
-            image metadata (default: ``None``)
-        '''
-        super(BrightfieldImage, self).__init__(pixel, metadata, is_color=True)
-        if self.dtype != np.uint8:
-            raise TypeError(
-                'Image must have 8-bit unsigned integer data type.'
-            )
-        if self.dimensions[2] != 3:
-            raise ValueError('Image must be RGB.')
-
-    def split_bands(self, separation_mat=skimage.color.hed_from_rgb):
-        '''Split different colors of a immunohistochemistry stain
-        into separate channels based on Ruifrok and Johnston's color
-        deconvolution method [1]_.
-
-        Parameters
-        ----------
-        separation_mat: numpy.ndarray
-            stain separation matrix as available in
-            :mod:`skimage.color`, for information on how to create custom
-            matrices see G. Landini's description for the corresponding
-            `Fiji plugin <http://www.mecourse.com/landinig/software/cdeconv/cdeconv.html>`_
-            (default: :attr:`skimage.color.hed_from_rgb`)
-
-        Returns
-        -------
-        Tuple[tmlib.image.ChannelImage]
-            separate channel image for each band
-
-        References
-        ----------
-        .. _[1]: Ruifrok AC, Johnston DA. Quantification of histochemical staining by color deconvolution. Anal Quant Cytol Histol 23: 291-299, 2001
-        '''
-        # TODO: metadata for brightfield images
-        arr = skimage.color.separate_stains(self.array, separation_mat)
-        channel_img_1 = ChannelImage(arr[:, :, 1], self.metadata)
-        channel_img_2 = ChannelImage(arr[:, :, 2], self.metadata)
-        channel_img_3 = ChannelImage(arr[:, :, 3], self.metadata)
-        return (channel_img_1, channel_img_2, channel_img_3)
-
-
-class ProbabilityImage(Image):
-
-    '''Class for a probability image: a greyscale image with a single band.
-
-    Note
-    ----
-    Despite its name, pixel values are represented by 16-bit unsigned integers
-    rather than floats in the range [0, 1].
-    '''
-
-    @assert_type(
-        metadata=['tmlib.metadata.ProbabilityImageMetadata', 'types.NoneType']
-    )
-    def __init__(self, array, metadata=None):
-        '''
-        Parameters
-        ----------
-        array: numpy.ndarray[uint16]
-            pixels/voxels array
-        metadata: tmlib.metadata.ProbabilityImageMetadata, optional
-            image metadata (default: ``None``)
-        '''
-        super(ChannelImage, self).__init__(array, metadata)
-        if not self.is_uint16:
-            raise TypeError(
-                'Image must have 16-bit unsigned integer type.'
-            )
-        if self.dimensions[2] != 1:
-            raise ValueError('Image must be grayscale.')
-
 
 class IllumstatsImage(Image):
 
@@ -937,8 +1015,6 @@ class IllumstatsImage(Image):
             metadata (default: ``None``)
         '''
         super(IllumstatsImage, self).__init__(array, metadata)
-        if self.dimensions[2] != 1:
-            raise ValueError('Image must be two-dimensional.')
         if not self.is_float:
             raise TypeError('Image must have data type float.')
 

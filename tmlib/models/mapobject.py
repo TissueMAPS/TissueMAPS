@@ -18,7 +18,6 @@ import os
 import logging
 import random
 import collections
-
 import pandas as pd
 from sqlalchemy.sql import func
 from geoalchemy2 import Geometry
@@ -36,6 +35,7 @@ from tmlib.models.dialect import compile_distributed_query
 from tmlib.models.result import ToolResult, LabelValues
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
 from tmlib.models.feature import Feature, FeatureValues
+from tmlib.models.types import ST_SimplifyPreserveTopology
 from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
@@ -117,7 +117,26 @@ class MapobjectType(ExperimentModel):
             a `ref_type` will be deleted)
 
         '''
-        if ref_type is not None:
+        if ref_type is 'NULL':
+            logger.debug('delete non-static mapobjects')
+            connection.execute('''
+                SELECT id, name FROM mapobject_types
+                WHERE ref_type IS NULL;
+            ''')
+            mapobject_type = connection.fetchone()
+            if mapobject_type:
+                logger.debug(
+                    'delete mapobjects of type "%s"', mapobject_type.name
+                )
+                Mapobject.delete_cascade(connection, mapobject_type.id)
+                logger.debug('delete mapobject type %s', mapobject_type.name)
+                connection.execute('''
+                    DELETE FROM mapobject_types
+                    WHERE id = %(mapobject_type_id)s;
+                ''', {
+                    'mapobject_type_id': mapobject_type.id
+                })
+        elif ref_type is not None:
             logger.debug('delete static mapobjects referencing "%s"', ref_type)
             connection.execute('''
                 SELECT id, name FROM mapobject_types
@@ -138,30 +157,86 @@ class MapobjectType(ExperimentModel):
                 ''', {
                     'mapobject_type_id': mapobject_type.id
                 })
-        elif ref_type is 'NULL':
-            logger.debug('delete non-static mapobjects')
-            connection.execute('''
-                SELECT id, name FROM mapobject_types
-                WHERE ref_type IS NULL;
-            ''')
-            mapobject_type = connection.fetchone()
-            if mapobject_type:
-                logger.debug(
-                    'delete mapobjects of type "%s"', mapobject_type.name
-                )
-                Mapobject.delete_cascade(connection, mapobject_type.id)
-                logger.debug('delete mapobject type %s', mapobject_type.name)
-                connection.execute('''
-                    DELETE FROM mapobject_types
-                    WHERE id = %(mapobject_type_id)s;
-                ''', {
-                    'mapobject_type_id': mapobject_type.id
-                })
         else:
             logger.debug('delete all mapobjects')
             Mapobject.delete_cascade(connection)
             logger.debug('delete all mapobject types')
             connection.execute('DELETE FROM mapobject_types;')
+
+    def get_segmentations_per_site(self, site_id, tpoints=None, zplanes=None,
+            as_polgons=True):
+        '''Gets each
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        that intersects with a given site.
+
+        Parameters
+        ----------
+        site_id: int
+            ID of a given :class:`Site <tmlib.models.site.Site>`
+        tpoints: List[int], optional
+            time points for which segmentations should be filtered
+            (default: ``None``)
+        zplanes: List[int], optional
+            z-planes for which segmentations should be filtered
+            (default: ``None``)
+        as_polygons: bool, optional
+            whether segmentations should be returned as polygons;
+            if ``False`` segmentations will be returned as points
+            (default: ``True``)
+
+        Returns
+        -------
+        List[List[Tuple[Union[int, shapely.geometry.polygon.Polygon, shapely.geometry.point.Point]]]]
+            label and geometry of segmentated objects for each z-plane
+            and time point
+        '''
+        session = Session.object_session(self)
+        site_mapobject_type = session.query(MapobjectType).\
+            filter_by(ref_type=tm.Site.__name__).\
+            one()
+        site_segmentation = session.query(MapobjectSegmentation).\
+            join(tm.Mapobject).\
+            filter(
+                Mapobject.ref_id == site_id,
+                Mapobject.mapobject_type_id == site_mapobject_type.id
+            ).\
+            one()
+
+        segmentation_layers = session.query(SegmentationLayer).\
+            filter_by(mapobject_type_id=mapobject_type.id)
+        if tpoints:
+            segmentation_layers = segmentation_layers.\
+                filter(SegmentationLayer.tpoint.in_(tpoints))
+        if zplanes:
+            segmentation_layers = segmentation_layers.\
+                filter(SegmentationLayer.zplane.in_(zplanes))
+
+        polygons = collections.defaultdict(list)
+        for layer in segmentation_layers.\
+            order_by(SegmentationLayer.tpoint, SegmentationLayer.zplane):
+            if as_polygons:
+                segmentations = session.query(
+                        MapobjectSegmentation.label,
+                        MapobjectSegmentation.geom_polygon
+                    )
+            else:
+                segmentations = session.query(
+                        MapobjectSegmentation.label,
+                        MapobjectSegmentation.geom_centroid
+                    )
+            segmentations = segmentations.\
+                join(tm.Mapobject).\
+                filter(
+                    Mapobject.mapobject_type_id == mapobject_type_id,
+                    MapobjectSegmentation.segmentation_layer_id == layer.id,
+                    MapobjectSegmentation.geom_polygon.ST_Intersects(
+                        site_segmentation.geom_polygon
+                    )
+                ).\
+                all()
+            polygons[layer.tpoint].append(segmentations)
+
+        return sorted(polygons.values(), key=polygons.get)
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
@@ -440,11 +515,14 @@ class MapobjectSegmentation(ExperimentModel):
 
     __distribute_by_hash__ = 'mapobject_id'
 
-    #: EWKT POLYGON geometry
+    #: str: EWKT POLYGON geometry
     geom_polygon = Column(Geometry('POLYGON'))
 
-    #: EWKT POINT geometry
+    #: str: EWKT POINT geometry
     geom_centroid = Column(Geometry('POINT'), nullable=False)
+
+    #: int: label assigned to the object upon segmentation
+    label = Column(Integer)
 
     #: int: ID of parent mapobject
     mapobject_id = Column(
@@ -455,7 +533,7 @@ class MapobjectSegmentation(ExperimentModel):
     segmentation_layer_id = Column(Integer, nullable=False)
 
     def __init__(self, geom_polygon, geom_centroid, mapobject_id,
-            segmentation_layer_id):
+            segmentation_layer_id, label=None):
         '''
         Parameters
         ----------
@@ -468,15 +546,18 @@ class MapobjectSegmentation(ExperimentModel):
         segmentation_layer_id: int
             ID of parent
             :class:`SegmentationLayer <tmlib.models.layer.SegmentationLayer>`
+        label: int, optional
+            label assigned to the segmented object
         '''
         self.geom_polygon = geom_polygon
         self.geom_centroid = geom_centroid
         self.mapobject_id = mapobject_id
         self.segmentation_layer_id = segmentation_layer_id
+        self.label = label
 
     @classmethod
     def add(cls, connection, mapobject_id, segmentation_layer_id,
-            polygon=None, centroid=None):
+            polygon=None, centroid=None, label=None):
         '''Adds a new record.
 
         Parameters
@@ -494,6 +575,8 @@ class MapobjectSegmentation(ExperimentModel):
             outline of the segmented object
         centroid: shapely.geometry.point, optional
             centroid of the segmented object
+        label: int, optional
+            label assigned to the segmented object
 
         Raises
         ------
@@ -515,16 +598,17 @@ class MapobjectSegmentation(ExperimentModel):
         connection.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id, segmentation_layer_id,
-                geom_polygon, geom_centroid
+                geom_polygon, geom_centroid, label
             )
             VALUES (
                 %(mapobject_id)s, %(segmentation_layer_id)s,
-                %(geom_polygon)s, %(geom_centroid)s
+                %(geom_polygon)s, %(geom_centroid)s, %(label)s
             );
         ''', {
             'mapobject_id': mapobject_id,
             'segmentation_layer_id': segmentation_layer_id,
             'geom_polygon': geom_polygon, 'geom_centroid': geom_centroid,
+            'label': label
         })
 
     def __repr__(self):
@@ -532,3 +616,208 @@ class MapobjectSegmentation(ExperimentModel):
             self.__class__.__name__, self.id, self.mapobject_id,
             self.segmentation_layer_id
         )
+
+
+class SegmentationLayer(ExperimentModel):
+
+    __tablename__ = 'segmentation_layers'
+
+    #: int: zero-based index in time series
+    tpoint = Column(Integer, index=True)
+
+    #: int: zero-based index in z stack
+    zplane = Column(Integer, index=True)
+
+    #: int: zoom level threshold below which polygons will not be visualized
+    polygon_thresh = Column(Integer)
+
+    #: int: zoom level threshold below which centroids will not be visualized
+    centroid_thresh = Column(Integer)
+
+    #: int: ID of parent channel
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: tmlib.models.mapobject.MapobjectType: parent mapobject type
+    mapobject_type = relationship(
+        'MapobjectType',
+        backref=backref('layers', cascade='all, delete-orphan'),
+    )
+
+    def __init__(self, mapobject_type_id, tpoint=None, zplane=None):
+        '''
+        Parameters
+        ----------
+        mapobject_type_id: int
+            ID of parent
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        tpoint: int, optional
+            zero-based time point index
+        zplane: int, optional
+            zero-based z-resolution index
+        '''
+        self.tpoint = tpoint
+        self.zplane = zplane
+        self.mapobject_type_id = mapobject_type_id
+
+    @classmethod
+    def get_tile_bounding_box(cls, x, y, z, maxzoom):
+        '''Calculates the bounding box of a layer tile.
+
+        Parameters
+        ----------
+        x: int
+            horizontal tile coordinate
+        y: int
+            vertical tile coordinate
+        z: int
+            zoom level
+        maxzoom: int
+            maximal zoom level of layers belonging to the visualized experiment
+
+        Returns
+        -------
+        Tuple[int]
+            bounding box coordinates (x_top, y_top, x_bottom, y_bottom)
+        '''
+        # The extent of a tile of the current zoom level in mapobject
+        # coordinates (i.e. coordinates on the highest zoom level)
+        size = 256 * 2 ** (maxzoom - z)
+        # Coordinates of the top-left corner of the tile
+        x0 = x * size
+        y0 = y * size
+        # Coordinates with which to specify all corners of the tile
+        # NOTE: y-axis is inverted!
+        minx = x0
+        maxx = x0 + size
+        miny = -y0
+        maxy = -y0 - size
+        return (minx, miny, maxx, maxy)
+
+    def calculate_zoom_thresholds(self, maxzoom_level):
+        '''Calculates the zoom level below which mapobjects are
+        represented on the map as centroids rather than polygons and the
+        zoom level below which mapobjects are no longer visualized at all.
+        These thresholds are necessary, because it would result in too much
+        network traffic and the client would be overwhelmed by the large number
+        of objects.
+
+        Parameters
+        ----------
+        maxzoom_level: int
+            maximum zoom level of the pyramid
+
+        Returns
+        -------
+        Tuple[int]
+            threshold zoom levels for visualization of polygons and centroids
+
+        Note
+        ----
+        The optimal threshold levels depend on the number of points on the
+        contour of objects, but also the size of the browser window and the
+        resolution settings of the browser.
+        '''
+        # TODO: This is too simplistic. Calculate optimal zoom level by
+        # sampling mapobjects at the highest resolution level and approximate
+        # number of points that would be sent to the client.
+        if self.mapobject_type.ref_type is None:
+            polygon_thresh = 0
+            centroid_thresh = 0
+        else:
+            polygon_thresh = maxzoom_level - 4
+            polygon_thresh = 0 if polygon_thresh < 0 else polygon_thresh
+            centroid_thresh = polygon_thresh - 2
+            centroid_thresh = 0 if centroid_thresh < 0 else centroid_thresh
+        return (polygon_thresh, centroid_thresh)
+
+    def get_segmentations(self, x, y, z, tolerance=2):
+        '''Get outlines of each
+        :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
+        contained by a given pyramid tile.
+
+        Parameters
+        ----------
+        x: int
+            zero-based column map coordinate at the given `z` level
+        y: int
+            zero-based row map coordinate at the given `z` level
+            (negative integer values due to inverted *y*-axis)
+        z: int
+            zero-based zoom level index
+        tolerance: int, optional
+            maximum distance in pixels between points on the contour of
+            original polygons and simplified polygons;
+            the higher the `tolerance` the less coordinates will be used to
+            describe the polygon and the less accurate it will be
+            approximated and; if ``0`` the original polygon is used
+            (default: ``2``)
+
+        Returns
+        -------
+        List[Tuple[int, str]]
+            GeoJSON representation of each selected mapobject
+
+        Note
+        ----
+        If *z* > `polygon_thresh` mapobjects are represented by polygons, if
+        `polygon_thresh` < *z* < `centroid_thresh`,
+        mapobjects are represented by points and if *z* < `centroid_thresh`
+        they are not represented at all.
+        '''
+        logger.debug('get mapobject outlines falling into tile')
+        session = Session.object_session(self)
+
+        maxzoom = self.mapobject_type.experiment.pyramid_depth - 1
+        do_simplify = self.centroid_thresh <= z < self.polygon_thresh
+        do_nothing = z < self.centroid_thresh
+        if do_nothing:
+            logger.debug('dont\'t represent objects')
+            return list()
+        elif do_simplify:
+            logger.debug('represent objects by centroids')
+            query = session.query(
+                MapobjectSegmentation.mapobject_id,
+                MapobjectSegmentation.geom_centroid.ST_AsGeoJSON()
+            )
+        else:
+            logger.debug('represent objects by polygons')
+            tolerance = (maxzoom - z) ** 2 + 1
+            logger.debug('simplify polygons using tolerance %d', tolerance)
+            query = session.query(
+                MapobjectSegmentation.mapobject_id,
+                MapobjectSegmentation.geom_polygon.
+                ST_SimplifyPreserveTopology(tolerance).ST_AsGeoJSON()
+            )
+
+        minx, miny, maxx, maxy = self.get_tile_bounding_box(x, y, z, maxzoom)
+        tile = (
+            'POLYGON(('
+                '{maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, '
+                '{maxx} {maxy}'
+            '))'.format(minx=minx, maxx=maxx, miny=miny, maxy=maxy)
+        )
+
+        outlines = query.filter(
+            MapobjectSegmentation.segmentation_layer_id == self.id,
+            MapobjectSegmentation.geom_polygon.ST_Intersects(tile)
+        ).\
+        all()
+
+        if len(outlines) == 0:
+            logger.warn(
+                'no outlines found for objects of type "%s" within tile: '
+                'x=%d, y=%d, z=%d', self.mapobject_type.name, x, y, z
+            )
+
+        return outlines
+
+    def __repr__(self):
+        return (
+            '<%s(id=%d, mapobject_type_id=%r)>'
+            % (self.__class__.__name__, self.id, self.mapobject_type_id)
+        )
+

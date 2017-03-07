@@ -139,11 +139,10 @@ from tmlib.models.experiment import (
     Experiment, ExperimentReference, ExperimentShare
 )
 from tmlib.models.well import Well
-from tmlib.models.channel import Channel
-from tmlib.models.layer import ChannelLayer, SegmentationLayer
+from tmlib.models.channel import Channel, ChannelLayer
 from tmlib.models.tile import ChannelLayerTile
 from tmlib.models.mapobject import (
-    MapobjectType, Mapobject, MapobjectSegmentation
+    MapobjectType, Mapobject, MapobjectSegmentation, SegmentationLayer
 )
 from tmlib.models.feature import Feature, FeatureValues
 from tmlib.models.plate import Plate

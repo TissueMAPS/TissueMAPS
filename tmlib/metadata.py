@@ -21,11 +21,176 @@ from tmlib.utils import assert_type
 logger = logging.getLogger(__name__)
 
 
-class ChannelImageMetadata(object):
+class ImageMetadata(object):
 
-    '''Class for metadata that describes channel images.'''
+    '''Base class for image metadata.'''
 
-    def __init__(self, channel_id, site_id, cycle_id, tpoint, **kwargs):
+    __slots__ = ('_is_aligned', '_is_omitted')
+
+    def __init__(self):
+        self.is_aligned = False
+        self.is_omitted = False
+
+    @property
+    def is_omitted(self):
+        '''bool: whether the image should be omitted from further analysis'''
+        return self._is_omitted
+
+    @is_omitted.setter
+    def is_omitted(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "omit" must have type bool.')
+        self._is_omitted = value
+
+    @property
+    def is_aligned(self):
+        '''bool: whether the image has been aligned between cycles'''
+        return self._is_aligned
+
+    @is_aligned.setter
+    def is_aligned(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "is_aligned" must have type bool.')
+        self._is_aligned = value
+
+
+class SiteImageMetadata(ImageMetadata):
+
+    '''Base class for metadata of images that map to an individual
+    :class:`Site <tmlib.models.site.Site>`.
+    '''
+
+    __slots__ = ('_site_id', '_cycle_id', '_tpoint', '_zplane')
+
+    def __init__(self, site_id, cycle_id, tpoint, zplane):
+        '''
+        Parameters
+        ----------
+        site_id: int
+            ID of the parent :class:`Site <tmlib.models.site.Site>`
+        cycle_id: int
+            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
+        tpoint: int
+            zero-based time point index
+        zplane: int
+            zero-based z-level index
+        '''
+        super(SiteImageMetadata, self).__init__()
+        self.tpoint = tpoint
+        self.zplane = zplane
+        self.site_id = site_id
+        self.cycle_id = cycle_id
+
+    @property
+    def tpoint(self):
+        '''int: zero-based time point index'''
+        return self._tpoint
+
+    @tpoint.setter
+    def tpoint(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Argument "tpoint" must have type int.')
+        self._tpoint = value
+
+    @property
+    def zplane(self):
+        '''int: zero-based time point index'''
+        return self._zplane
+
+    @zplane.setter
+    def zplane(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Argument "zplane" must have type int.')
+        self._zplane = value
+
+    @property
+    def site_id(self):
+        '''int: ID of the corresponding
+        :class:`Site <tmlib.models.site.Site>`
+        '''
+        return self._site_id
+
+    @site_id.setter
+    def site_id(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Argument "site_id" must have type int.')
+        self._site_id = value
+
+    @property
+    def cycle_id(self):
+        '''int: ID of the corresponding
+        :class:`Cycle <tmlib.models.cycle.Cycle>`
+        '''
+        return self._cycle_id
+
+    @cycle_id.setter
+    def cycle_id(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Argument "cycle_id" must have type int.')
+        self._cycle_id = value
+
+
+class SegmentationImageMetadata(SiteImageMetadata):
+
+    '''Metadata for :class:`SegmentationImage <tmlib.image.SegmentationImage>`.
+    '''
+
+    __slots__ = ('_mapobject_type_id', )
+
+    def __init__(self, mapobject_type_id, site_id, cycle_id, tpoint, zplane):
+        '''
+        Parameters
+        ----------
+        mapobject_type_id: int
+            ID of the parent
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        site_id: int
+            ID of the parent :class:`Site <tmlib.models.site.Site>`
+        cycle_id: int
+            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
+        tpoint: int
+            zero-based time point index
+        zplane: int
+            zero-based z-level index
+        '''
+        super(SegmentationImageMetadata, self).__init__(
+            site_id, cycle_id, tpoint, zplane
+        )
+        self.mapobject_type_id = mapobject_type_id
+
+    @property
+    def mapobject_type_id(self):
+        '''int: ID of the corresponding
+        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        '''
+        return self._mapobject_type_id
+
+    @mapobject_type_id.setter
+    def mapobject_type_id(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Argument "mapobject_type_id" must have type int.')
+        self._mapobject_type_id = value
+
+    def __repr__(self):
+        return (
+            '<%s(mapobject_type_id=%r, site_id=%r, cycle_id=%r, tpoint=%r)' % (
+                self.__class__.__name__, self.mapobject_type_id,
+                self.site_id, self.cycle_id, self.tpoint
+            )
+        )
+
+
+class ChannelImageMetadata(SiteImageMetadata):
+
+    '''Metadata for :class:`ChannelImage <tmlib.image.ChannelImage>`.'''
+
+    __slots__ = (
+        '_channel_id', '_is_corrected', '_is_rescaled', '_is_clipped',
+        '_upper_overhang', '_lower_overhang',
+        '_right_overhang', '_left_overhang', '_x_shift', '_y_shift'
+    )
+
+    def __init__(self, channel_id, site_id, cycle_id, tpoint, zplane):
         '''
         Parameters
         ----------
@@ -37,27 +202,35 @@ class ChannelImageMetadata(object):
             ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
         tpoint: int
             zero-based time point index
-        **kwargs: dict, optional
-            additional keyword arguments
+        zplane: int
+            zero-based z-level index
         '''
-        self.tpoint = tpoint
+        super(ChannelImageMetadata, self).__init__(
+            site_id, cycle_id, tpoint, zplane
+        )
         self.channel_id = channel_id
-        self.cycle_id = cycle_id
         self.is_corrected = False
         self.is_rescaled = False
         self.is_clipped = False
-        self.is_aligned = False
-        self.is_omitted = False
         self.upper_overhang = 0
         self.lower_overhang = 0
         self.right_overhang = 0
         self.left_overhang = 0
         self.x_shift = 0
         self.y_shift = 0
-        for key, value in kwargs.iteritems():
-            if hasattr(self.__class__, key):
-                if isinstance(getattr(self.__class__, key), property):
-                    setattr(self, key, value)
+
+    @property
+    def channel_id(self):
+        '''int: ID of the corresponding
+        :class:`Channel <tmlib.models.channel.Channel>`
+        '''
+        return self._channel_id
+
+    @channel_id.setter
+    def channel_id(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Argument "channel_id" must have type int.')
+        self._channel_id = value
 
     @property
     def upper_overhang(self):
@@ -149,26 +322,26 @@ class ChannelImageMetadata(object):
         self._is_corrected = value
 
     @property
-    def is_omitted(self):
-        '''bool: whether the image should be omitted from further analysis'''
-        return self._is_omitted
+    def is_clipped(self):
+        '''bool: whether the image is clipped'''
+        return self._is_clipped
 
-    @is_omitted.setter
-    def is_omitted(self, value):
+    @is_clipped.setter
+    def is_clipped(self, value):
         if not isinstance(value, bool):
-            raise TypeError('Attribute "omit" must have type bool.')
-        self._is_omitted = value
+            raise TypeError('Attribute "is_clipped" must have type bool')
+        self._is_clipped = value
 
     @property
-    def is_aligned(self):
-        '''bool: whether the image has been aligned between cycles'''
-        return self._is_aligned
+    def is_rescaled(self):
+        '''bool: whether the image is rescaled'''
+        return self._is_rescaled
 
-    @is_aligned.setter
-    def is_aligned(self, value):
+    @is_rescaled.setter
+    def is_rescaled(self, value):
         if not isinstance(value, bool):
-            raise TypeError('Attribute "is_aligned" must have type bool.')
-        self._is_aligned = value
+            raise TypeError('Attribute "is_rescaled" must have type bool')
+        self._is_rescaled = value
 
     def __repr__(self):
         return (
@@ -181,9 +354,16 @@ class ChannelImageMetadata(object):
 
 class ImageFileMapping(object):
 
-    '''Class for a mapping of an extracted image file to microscope image
-    file(s) and the location of the individual pixel planes within these files.
+    '''Mapping of 2D pixel planes to original microscope image
+    file(s) and the location of individual planes within these files.
+
+    Note
+    ----
+    The class groups z-planes per :class:`Site <tmlib.models.site.Site>`,
+    which is necessary to perform intensity projections.
     '''
+
+    __slots__ = ('_files', '_series', '_planes', '_ref_index', '_zlevels')
 
     def __init__(self, **kwargs):
         '''
@@ -267,12 +447,11 @@ class ImageFileMapping(object):
         self._ref_index = value
 
     def to_dict(self):
-        '''
+        '''Attributes of the class as key-value pairs.
 
         Returns
         -------
         dict
-            attributes as mapping of key-value pairs
 
         Examples
         --------
@@ -306,7 +485,7 @@ class ImageFileMapping(object):
 
 class PyramidTileMetadata(object):
 
-    '''Class for metadata to describe a pyramid tile.'''
+    '''Metadata for a :class:`PyramidTile <tmlib.image.PyramidTile>`.'''
 
     def __init__(self, z, y, x, channel_layer_id):
         '''
@@ -334,11 +513,13 @@ class PyramidTileMetadata(object):
         )
 
 
-class IllumstatsImageMetadata(object):
+class IllumstatsImageMetadata(ImageMetadata):
 
-    '''Class for metadata to describe an illumination statistics image.'''
+    '''Metadata for an :class:`IllumstatsImage <tmlib.image.IllumstatsImage>`.
+    '''
 
-    @assert_type(channel_id='int')
+    __slots__ = ('_channel_id', '_is_smoothed')
+
     def __init__(self, channel_id):
         '''
         Parameters
@@ -346,8 +527,22 @@ class IllumstatsImageMetadata(object):
         channel_id: int
             ID of the parent :class:`Channel <tmlib.models.channel.Channel>`
         '''
+        super(IllumstatsImageMetadata, self).__init__()
         self.channel_id = channel_id
         self.is_smoothed = False
+
+    @property
+    def channel_id(self):
+        '''int: ID of the corresponding
+        :class:`Channel <tmlib.models.channel.Channel>`
+        '''
+        return self._channel_id
+
+    @channel_id.setter
+    def channel_id(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Argument "channel_id" must have type int.')
+        self._channel_id = value
 
     @property
     def is_smoothed(self):

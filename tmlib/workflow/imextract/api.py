@@ -118,21 +118,19 @@ class ImageExtractor(ClusterRoutines):
             series = np.array([m[0]['series'] for m in fmappings]).flatten()
             planes = np.array([m[0]['planes'] for m in fmappings]).flatten()
             if len(np.unique(series)) > 1 or len(np.unique(planes)) > 1:
-                # Let's not use Java in case we don't have to!
                 logger.debug('use BioFormats image reader')
                 Reader = BFImageReader
                 subset = True
             else:
+                # Let's not use Java in case we don't have to!
                 logger.debug('use standard image reader')
-                # Don't take the risk. Python-Bioformats may overcomplicate
-                # things for this simple case.
                 Reader = ImageReader
                 subset = False
             with JavaBridge(active=subset):
                 with tm.utils.ExperimentSession(self.experiment_id) as session:
                     for i, fid in enumerate(file_mapping_ids):
                         fmapping = session.query(tm.ImageFileMapping).get(fid)
-                        planes = list()
+                        planes = dict()
                         for j, f in enumerate(fmapping.map['files']):
                             logger.info(
                                 'extract pixel planes from file: %s', f
@@ -150,30 +148,35 @@ class ImageExtractor(ClusterRoutines):
                                     )
                                 else:
                                     p = reader.read()
-                            planes.append(p)
+                            planes[fmapping.map['zlevels'][j]] = p
 
-                        dtype = planes[0].dtype
-                        dims = planes[0].shape
-                        stack = np.dstack(planes)
-                        image_file = session.get_or_create(
-                            tm.ChannelImageFile,
-                            tpoint=fmapping.tpoint,
-                            site_id=fmapping.site_id,
-                            cycle_id=fmapping.cycle_id,
-                            channel_id=fmapping.channel_id
-                        )
-                        metadata = ChannelImageMetadata(
-                            channel_id=image_file.channel_id,
-                            cycle_id=image_file.cycle_id,
-                            site_id=image_file.site_id,
-                            tpoint=image_file.tpoint
-                        )
-                        img = ChannelImage(stack, metadata)
                         if batch['mip']:
                             logger.info('perform intensity projection')
-                            img = img.project()
-                        logger.info('store image file: %d', image_file.id)
-                        image_file.put(img)
+                            stack = np.dstack(planes)
+                            planes = {0: np.max(stack, axis=2)}
+
+                        for i, z in enumerate(sorted(planes)):
+                            # We give zplanes zero-based indices.
+                            image_file = session.get_or_create(
+                                tm.ChannelImageFile,
+                                tpoint=fmapping.tpoint,
+                                zplane=i,
+                                site_id=fmapping.site_id,
+                                cycle_id=fmapping.cycle_id,
+                                channel_id=fmapping.channel_id
+                            )
+                            metadata = ChannelImageMetadata(
+                                channel_id=image_file.channel_id,
+                                cycle_id=image_file.cycle_id,
+                                site_id=image_file.site_id,
+                                tpoint=image_file.tpoint,
+                                zplane=i
+                            )
+                            img = ChannelImage(planes[z], metadata)
+                            logger.info(
+                                'store image file: %d', image_file.id
+                            )
+                            image_file.put(img)
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class
@@ -185,8 +188,7 @@ class ImageExtractor(ClusterRoutines):
             session.drop_and_recreate(tm.ChannelImageFile)
 
     def collect_job_output(self, batch):
-        '''Omits channel image files that do not exist across all cycles
-        and delete all instances of
+        '''Deletes all instances of
         :class:`MicroscopeImageFile <tmlib.models.file.MicroscopeImageFile>`
         in case
         :attr:`delete <tmlib.workflow.imextract.args.ImextractBatchArguments>`
@@ -207,29 +209,3 @@ class ImageExtractor(ClusterRoutines):
             logger.info('delete all microscope image files')
             with tm.utils.ExperimentSession(self.experiment_id) as session:
                 session.query(tm.MicroscopeImageFile).delete()
-        # TODO: this does not work for experiments with multiple plates
-        # with tm.utils.Session() as session:
-        #     metadata = pd.DataFrame(
-        #         session.query(
-        #             tm.ChannelImageFile.id,
-        #             tm.ChannelImageFile.site_id,
-        #             tm.ChannelImageFile.cycle_id,
-        #             tm.Cycle.plate_id
-        #         ).
-        #         join(tm.Cycle).\
-        #         join(tm.Plate).
-        #         filter(tm.Plate.experiment_id == self.experiment_id).
-        #         all()
-        #     )
-        #     cycle_ids = np.unique(metadata.cycle_id)
-        #     site_group = metadata.groupby('site_id')
-        #     for i, sg in site_group:
-        #         # If files don't exist
-        #         if (len(np.setdiff1d(cycle_ids, sg.cycle_id.values)) > 0 and
-        #                 len(np.unique(sg.plate_id)) == 1):
-        #             sites_to_omit = session.query(tm.ChannelImageFile).\
-        #                 filter(tm.ChannelImageFile.id.in_(sg.id.values)).\
-        #                 all()
-        #             for site in sites_to_omit:
-        #                 site.omitted = True
-        #             session.add_all(sites_to_omit)

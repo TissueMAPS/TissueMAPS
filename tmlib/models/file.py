@@ -204,24 +204,23 @@ class ChannelImageFile(FileModel, DateMixIn):
 
     '''A *channel image file* holds a single 2D pixels plane that was extracted
     from a microscope image file. It represents a unique combination of
-    time point, site, and channel.
-
+    time point, z-level, site, and channel.
     '''
 
     #: str: name of the corresponding database table
     __tablename__ = 'channel_image_files'
 
     __table_args__ = (
-        UniqueConstraint('tpoint', 'site_id', 'cycle_id', 'channel_id'),
+        UniqueConstraint(
+            'tpoint', 'zplane', 'site_id', 'cycle_id', 'channel_id'
+        ),
     )
-
-    _n_planes = Column('n_planes', Integer, index=True)
 
     #: int: zero-based index in the time series
     tpoint = Column(Integer, index=True)
 
-    #: int: number of z planes
-    n_planes = Column(Integer, index=True)
+    #: int: zero-based index in the z-stack
+    zplane = Column(Integer, index=True)
 
     #: int: ID of the parent cycle
     cycle_id = Column(
@@ -265,12 +264,14 @@ class ChannelImageFile(FileModel, DateMixIn):
     #: Format string for filenames
     FILENAME_FORMAT = 'channel_image_file_{id}.h5'
 
-    def __init__(self, tpoint, site_id, cycle_id, channel_id):
+    def __init__(self, tpoint, zplane, site_id, cycle_id, channel_id):
         '''
         Parameters
         ----------
         tpoint: int
             zero-based time point index in the time series
+        zplane: int
+            zero-based z-level index in the 3D stack
         site_id: int
             ID of the parent site
         cycle_id: int
@@ -279,18 +280,13 @@ class ChannelImageFile(FileModel, DateMixIn):
             ID of the parent channel
         '''
         self.tpoint = tpoint
+        self.zplane = zplane
         self.site_id = site_id
         self.cycle_id = cycle_id
         self.channel_id = channel_id
-        self._n_planes = 0
 
-    def get(self, z=None):
+    def get(self):
         '''Gets stored image.
-
-        Parameters
-        ----------
-        z: int, optional
-            zero-based z index of an individual pixel plane (default: ``None``)
 
         Returns
         -------
@@ -301,19 +297,11 @@ class ChannelImageFile(FileModel, DateMixIn):
             channel_id=self.channel_id,
             site_id=self.site_id,
             tpoint=self.tpoint,
+            zplane=self.zplane,
             cycle_id=self.cycle_id
         )
-        if z is not None:
-            with DatasetReader(self.location) as f:
-                array = f.read('z_%d' % z)
-            metadata.zplane = z
-        else:
-            pixels = list()
-            with DatasetReader(self.location) as f:
-                datasets = f.list_datasets(pattern='z_\d+')
-                for z in datasets:
-                    pixels.append(f.read(z))
-            array = np.dstack(pixels)
+        with DatasetReader(self.location) as f:
+            array = f.read('array')
         if self.site.intersection is not None:
             metadata.upper_overhang = self.site.intersection.upper_overhang
             metadata.lower_overhang = self.site.intersection.lower_overhang
@@ -328,41 +316,16 @@ class ChannelImageFile(FileModel, DateMixIn):
         return ChannelImage(array, metadata)
 
     @assert_type(image='tmlib.image.ChannelImage')
-    def put(self, image, z=None):
+    def put(self, image):
         '''Puts image to storage.
 
         Parameters
         ----------
         image: tmlib.image.ChannelImage
-            pixels/voxels data that should be stored in the image file
-        z: int, optional
-            zero-based z index of an individual pixel plane (default: ``None``)
-
-        Note
-        ----
-        When no `z` index is provided, the file will be truncated and all
-        planes replaced.
+            pixels data that should be stored in the image file
         '''
-        if z is not None:
-            if image.dimensions[2] > 1:
-                raise ValueError('Image must be a 2D pixels plane.')
-            with DatasetWriter(self.location) as f:
-                f.write('z_%d' % z, image.array)
-                self.n_planes = len(f.list_datasets(pattern='z_\d+'))
-        else:
-            with DatasetWriter(self.location, truncate=True) as f:
-                for z, plane in image.iter_planes():
-                    f.write('z_%d' % z, plane)
-            self.n_planes = image.dimensions[2]
-
-    @hybrid_property
-    def n_planes(self):
-        '''int: number of planes stored in the file'''
-        return self._n_planes
-
-    @n_planes.setter
-    def n_planes(self, value):
-        self._n_planes = value
+        with DatasetWriter(self.location, truncate=True) as f:
+            f.write('array', image.array)
 
     @hybrid_property
     def location(self):
@@ -375,12 +338,10 @@ class ChannelImageFile(FileModel, DateMixIn):
         return self._location
 
     def __repr__(self):
-        return '<%s(id=%r, tpoint=%r, well=%r, y=%r, x=%r, channel=%r)>' % (
-            self.__class__.__name__, self.id, self.tpoint,
-            self.site.well.name, self.site.y,
-            self.site.x, self.channel.index
+        return '<%s(id=%r, tpoint=%r, zplane=%r, site_id=%r, channel_id=%r)>' % (
+            self.__class__.__name__, self.id, self.tpoint, self.zplane,
+            self.site_id, self.channel_id
         )
-
 
 
 @remove_location_upon_delete

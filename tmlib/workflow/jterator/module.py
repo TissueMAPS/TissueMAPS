@@ -289,6 +289,7 @@ class ImageAnalysisModule(object):
         This method must be called BEFORE calling
         ::meth:`tmlib.jterator.module.Module.run`.
         '''
+        logger.debug('update handles')
         for handle in self.handles.input:
             if isinstance(handle, hdls.PipeHandle):
                 try:
@@ -407,13 +408,19 @@ class ImageAnalysisModule(object):
         This method must be called AFTER calling
         ::meth:`tmlib.jterator.module.Module.run`.
         '''
+        logger.debug('update store')
         for i, handle in enumerate(self.handles.output):
             if isinstance(handle, hdls.Figure):
+                logger.debug('add value of Figure handle to store')
                 store['current_figure'] = handle.value
             elif isinstance(handle, hdls.SegmentedObjects):
+                logger.debug('add value of SegmentedObjects handle to store')
+                # Measurements need to be reset.
+                handle.measurements = []
                 store['objects'][handle.key] = handle
                 store['pipe'][handle.key] = handle.value
             elif isinstance(handle, hdls.Measurement):
+                logger.debug('add value of Measurement handle to store')
                 ref_objects_name = self._get_reference_objects_name(handle)
                 objects_name = self._get_objects_name(handle)
                 ref_channel_name = self._get_reference_channel_name(handle)
@@ -428,8 +435,7 @@ class ImageAnalysisModule(object):
                     new_names.append(new_name)
                 for t in range(len(handle.value)):
                     handle.value[t].columns = new_names
-                obj_handle = store['objects'][objects_name]
-                obj_handle.add_measurement(handle)
+                store['objects'][objects_name].add_measurement(handle)
             else:
                 store['pipe'][handle.key] = handle.value
         return store

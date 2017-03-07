@@ -132,21 +132,17 @@ class PyramidBuilder(ClusterRoutines):
             count = 0
             for cid in session.query(tm.Channel.id).distinct():
 
-                n_zplanes = session.query(tm.ChannelImageFile.n_planes).\
+                zplanes = session.query(tm.ChannelImageFile.zplane).\
                     filter_by(channel_id=cid).\
-                    first()[0]
-                zplanes = range(n_zplanes)
-
+                    distinct()
                 tpoints = session.query(tm.ChannelImageFile.tpoint).\
                     filter_by(channel_id=cid).\
                     distinct()
-
                 for t, z in itertools.product(tpoints, zplanes):
                     image_files = session.query(tm.ChannelImageFile).\
-                        filter_by(channel_id=cid, tpoint=t).\
+                        filter_by(channel_id=cid, tpoint=t, zplane=z).\
                         order_by(tm.ChannelImageFile.site_id).\
                         all()
-
                     layer = session.get_or_create(
                         tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
                     )
@@ -417,7 +413,7 @@ class PyramidBuilder(ClusterRoutines):
                 logger.info('process image %d', file.id)
                 tiles = layer.map_image_to_base_tiles(file)
                 image_store = dict()
-                image = file.get(z=layer.zplane)
+                image = file.get()
                 if batch['illumcorr']:
                     logger.debug('correct image')
                     image = image.correct(stats)
@@ -452,7 +448,7 @@ class PyramidBuilder(ClusterRoutines):
                         extra_file = session.query(tm.ChannelImageFile).\
                             get(efid)
                         if extra_file.id not in image_store:
-                            image = extra_file.get(z=layer.zplane)
+                            image = extra_file.get()
                             if batch['illumcorr']:
                                 logger.debug('correct image')
                                 image = image.correct(stats)

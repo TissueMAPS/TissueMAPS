@@ -16,7 +16,6 @@
 import os
 import logging
 from sqlalchemy import tablesample
-from sqlalchemy.orm import aliased
 
 import tmlib.models as tm
 from tmlib.utils import notimplemented
@@ -125,16 +124,15 @@ class IllumstatsCalculator(ClusterRoutines):
         file_ids = batch['channel_image_files_ids']
         logger.info('calculate illumination statistics')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            file = session.query(tm.ChannelImageFile).get(file_ids[0])
-            img = file.get(z=0)
+            img_file = session.query(tm.ChannelImageFile).get(file_ids[0])
+            img = img_file.get()
         stats = OnlineStatistics(image_dimensions=img.dimensions[0:2])
         for fid in file_ids:
             with tm.utils.ExperimentSession(self.experiment_id) as session:
-                file = session.query(tm.ChannelImageFile).get(fid)
-                logger.info('update statistics for image: %d', file.id)
-                for z in xrange(file.n_planes):
-                    img = file.get(z=z)
-                    stats.update(img)
+                img_file = session.query(tm.ChannelImageFile).get(fid)
+                logger.info('update statistics for image: %d', img_file.id)
+                img = img_file.get()
+                stats.update(img)
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             stats_file = session.get_or_create(

@@ -334,9 +334,9 @@ class PipelineChannelInputDescription(object):
     available to the pipeline.
     '''
 
-    __slots__ = ('_name', '_correct', '_align')
+    __slots__ = ('_name', '_correct')
 
-    def __init__(self, name, correct=True, align=True):
+    def __init__(self, name, correct=True):
         '''
         Parameters
         ----------
@@ -344,12 +344,9 @@ class PipelineChannelInputDescription(object):
             name of the channel
         correct: bool, optional
             whether images should be corrected (default: ``True``)
-        align: bool, optional
-            whether images should ba aligned (default: ``True``)
         '''
         self.name = name
         self.correct = correct
-        self.align = align
 
     @property
     def name(self):
@@ -374,29 +371,14 @@ class PipelineChannelInputDescription(object):
             raise TypeError('Attribute "correct" must have type bool.')
         self._correct = value
 
-    @property
-    def align(self):
-        '''bool: whether images should be aligned between cycles'''
-        return self._align
-
-    @align.setter
-    def align(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "align" must have type bool.')
-        self._align = value
-
     def to_dict(self):
-        '''Returns attributes "name", "correct", and "align" as key-value pairs.
+        '''Returns attributes "name" and "correct" as key-value pairs.
 
         Returns
         -------
         dict
         '''
-        attrs = dict()
-        attrs['name'] = self.name
-        attrs['correct'] = self.correct
-        attrs['align'] = self.align
-        return attrs
+        return {'name': self.name, 'correct': self.correct}
 
 
 class PipelineObjectInputDescription(object):
@@ -405,19 +387,16 @@ class PipelineObjectInputDescription(object):
     should be made available to the pipeline.
     '''
 
-    __slots__ = ('name', '_align')
+    __slots__ = ('name', )
 
-    def __init__(self, name, align=True):
+    def __init__(self, name):
         '''
         Parameters
         ----------
         name: str
             name of the object type
-        align: bool, optional
-            whether objects should ba aligned (default: ``True``)
         '''
         self.name = name
-        self.align = align
 
     @property
     def name(self):
@@ -430,28 +409,14 @@ class PipelineObjectInputDescription(object):
             raise TypeError('Attribute "name" must have type basestring.')
         self._name = str(name)
 
-    @property
-    def align(self):
-        '''bool: whether object coordinates should be aligned between cycles'''
-        return self._align
-
-    @align.setter
-    def align(self, value):
-        if not isinstance(value, bool):
-            raise TypeError('Attribute "align" must have type bool.')
-        self._align = value
-
     def to_dict(self):
-        '''Returns attributes "name" and "align" as key-value pairs.
+        '''Returns attribute "name" as key-value pair.
 
         Returns
         -------
         dict
         '''
-        attrs = dict()
-        attrs['name'] = self.name
-        attrs['align'] = self.align
-        return attrs
+        return {'name': self.name}
 
 
 class PipelineObjectOutputDescription(object):
@@ -507,10 +472,7 @@ class PipelineObjectOutputDescription(object):
         -------
         dict
         '''
-        attrs = dict()
-        attrs['name'] = self.name
-        attrs['as_polygons'] = self.as_polygons
-        return attrs
+        return {'name': self.name, 'as_polygons': self.as_polygons}
 
 
 class PipelineModuleDescription(object):
@@ -579,11 +541,11 @@ class PipelineModuleDescription(object):
         -------
         dict
         '''
-        attrs = dict()
-        attrs['handles'] = self.handles
-        attrs['source'] = self.source
-        attrs['active'] = self.active
-        return attrs
+        return {
+            'handles': self.handles,
+            'source': self.source,
+            'active': self.active
+        }
 
 
 class HandleDescriptions(object):
@@ -772,8 +734,8 @@ class HandleDescriptions(object):
         -------
         dict
         '''
-        attrs = dict()
-        attrs['version'] = self.version
-        attrs['input'] = [i.to_dict() for i in self.input]
-        attrs['output'] = [o.to_dict() for o in self.output]
-        return attrs
+        return {
+            'version': self.version,
+            'input': [i.to_dict() for i in self.input],
+            'output': [o.to_dict() for o in self.output]
+        }

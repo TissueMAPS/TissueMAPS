@@ -137,6 +137,48 @@ class Site(ExperimentModel):
         )
         return (y_offset, x_offset)
 
+    @property
+    def aligned_height(self):
+        '''int: number of pixels along the vertical axis of the site after
+        alignment between cycles
+        '''
+        if self.intersection is not None:
+            return self.height - (
+                    site.intersection.lower_overhang +
+                    site.intersection.upper_overhang
+                )
+        else:
+            return self.height
+
+    @property
+    def aligned_width(self):
+        '''int: number of pixels along the horizontal axis of the site after
+        alignment between cycles
+        '''
+        if self.intersection is not None:
+            return self.width - (
+                    site.intersection.left_overhang +
+                    site.intersection.right_overhang
+                )
+        else:
+            return self.width
+
+    @property
+    def aligned_offset(self):
+        '''Tuple[int]: *y*, *x* coordinate of the top, left corner of the site
+        relative to the layer overview at the maximum zoom level after
+        alignment for shifts between cycles
+        '''
+        if self.intersection is not None:
+            y_offset, x_offset = self.offset
+            return (
+                y_offset + site.intersection.lower_overhang,
+                x_offset + site.intersection.right_overhang
+            )
+        else:
+            return self.offset
+
+
     def __repr__(self):
         return (
             '<Site(id=%r, well_id=%r, y=%r, x=%r)>'

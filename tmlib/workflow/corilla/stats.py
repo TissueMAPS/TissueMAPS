@@ -73,20 +73,19 @@ class OnlineStatistics(object):
             log10 transform image (default: ``True``)
         '''
         # Calculate percentiles with unsigned integer data type
-        for z, pixels in image.iter_planes():
-            self._percentiles += np.percentile(pixels, self._q)
-            # The other statistics require float data type
-            array = pixels.astype(float)
-            if log_transform:
-                is_zero = array == 0
-                if np.any(is_zero):
-                    logger.warn('image contains zero values')
-                array = np.log10(array)
-                # The log10 transform sets zero pixel values to -inf
-                array[is_zero] = 0
-            if np.any(np.isinf(array)):
-                logger.warn('skip image because it contains infinite values')
-                continue
+        self._percentiles += np.percentile(image.array, self._q)
+        # The other statistics require float data type
+        array = image.array.astype(float)
+        if log_transform:
+            is_zero = array == 0
+            if np.any(is_zero):
+                logger.warn('image contains zero values')
+            array = np.log10(array)
+            # The log10 transform sets zero pixel values to -inf
+            array[is_zero] = 0
+        if np.any(np.isinf(array)):
+            logger.warn('skip image because it contains infinite values')
+        else:
             self.n += 1
             delta_mean = array - self._mean
             self._mean = self._mean + delta_mean / self.n

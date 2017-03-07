@@ -32,6 +32,34 @@ from tmlib import cfg
 logger = logging.getLogger(__name__)
 
 
+def _get_task_time(task, attr):
+    def get_recursive(_task, duration):
+        if hasattr(_task, 'tasks'):
+            if len(_task.tasks) > 0:
+                duration += np.sum([
+                    get_recursive(t, duration) for t in _task.tasks
+                ])
+        else:
+            if hasattr(_task.execution, attr):
+                duration += getattr(_task.execution, attr).to_timedelta()
+        return duration
+    return get_recursive(task, timedelta())
+
+
+def _get_task_memory(task, attr):
+    def get_recursive(_task, memory):
+        if hasattr(_task, 'tasks'):
+            if len(_task.tasks) > 0:
+                memory += np.sum([
+                    get_recursive(t, memory) for t in _task.tasks
+                ])
+        else:
+            if hasattr(_task.execution, attr):
+                memory += getattr(_task.execution, attr).amount(Memory.MB)
+        return memory
+    return get_recursive(task, 0)
+
+
 def create_gc3pie_sql_store():
     '''Creates a `Store` instance for job persistence in the PostgreSQL table
     :class:`Tasks <tmlib.models.submission.Tasks>`.
@@ -45,32 +73,6 @@ def create_gc3pie_sql_store():
     -------
     The "tasks" table must already exist.
     '''
-    def get_time(task, attr):
-        def get_recursive(_task, duration):
-            if hasattr(_task, 'tasks'):
-                if len(_task.tasks) > 0:
-                    duration += np.sum([
-                        get_recursive(t, duration) for t in _task.tasks
-                    ])
-            else:
-                if hasattr(_task.execution, attr):
-                    duration += getattr(_task.execution, attr).to_timedelta()
-            return duration
-        return get_recursive(task, timedelta())
-
-    def get_memory(task, attr):
-        def get_recursive(_task, memory):
-            if hasattr(_task, 'tasks'):
-                if len(_task.tasks) > 0:
-                    memory += np.sum([
-                        get_recursive(t, memory) for t in _task.tasks
-                    ])
-            else:
-                if hasattr(_task.execution, attr):
-                    memory += getattr(_task.execution, attr).amount(Memory.MB)
-            return memory
-        return get_recursive(task, 0)
-
     logger.info('create GC3Pie store using "tasks" table')
     store_url = Url(cfg.db_uri)
     table_columns = tm.Task.__table__.columns
@@ -84,11 +86,11 @@ def create_gc3pie_sql_store():
             table_columns['exitcode']:
                 lambda task: task.execution.exitcode,
             table_columns['time']:
-                lambda task: get_time(task, 'duration'),
+                lambda task: _get_task_time(task, 'duration'),
             table_columns['memory']:
-                lambda task: get_memory(task, 'max_used_memory'),
+                lambda task: _get_task_memory(task, 'max_used_memory'),
             table_columns['cpu_time']:
-                lambda task: get_time(task, 'used_cpu_time'),
+                lambda task: _get_task_time(task, 'used_cpu_time'),
             table_columns['submission_id']:
                 lambda task: task.submission_id,
             table_columns['is_collection']:
@@ -232,55 +234,76 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
     dict
         information about each task and its subtasks
     '''
+    logger.debug('get information about GC3Pie tasks from SQL store')
     def get_info(task_, i):
         data = dict()
         if recursion_depth is not None:
             if i > recursion_depth:
                 return
-        with tm.utils.MainSession() as session:
-            if not hasattr(task_, 'persistent_id'):
-                # If the task doesn't have a "persistent_id", it means that
-                # it hasn't yet been inserted into the database table and
-                # consequently hasn't yet been processed either.
-                data = {
-                    'done': False,
-                    'failed': False,
-                    'name': task_.name,
-                    'state': task_.execution.state,
-                    'live': False,
-                    'memory': None,
-                    'type': type(task_).__name__,
-                    'exitcode': None,
-                    'id': None,
-                    'submission_id': task_.submission_id,
-                    'time': None,
-                    'cpu_time': None
-                }
+        if not hasattr(task_, 'persistent_id'):
+            # If the task doesn't have a "persistent_id", it means that
+            # it hasn't yet been inserted into the database table and
+            # consequently hasn't yet been processed either.
+            data = {
+                'done': False,
+                'failed': False,
+                'name': task_.name,
+                'state': task_.execution.state,
+                'live': False,
+                'memory': None,
+                'type': type(task_).__name__,
+                'exitcode': None,
+                'id': None,
+                'submission_id': task_.submission_id,
+                'time': None,
+                'cpu_time': None
+            }
+        else:
+            live_states = {
+                gc3libs.Run.State.SUBMITTED,
+                gc3libs.Run.State.RUNNING,
+                gc3libs.Run.State.TERMINATING,
+                gc3libs.Run.State.STOPPED
+            }
+            data = {
+                'done': task_.execution.state == gc3libs.Run.State.TERMINATED,
+                'failed': (
+                    task_.execution.exitcode != 0 and
+                    task_.execution.exitcode is not None
+                ),
+                'name': task_.jobname,
+                'state': task_.execution.state,
+                'live': task_.execution.state in live_states,
+                'memory': _get_task_memory(task_, 'max_used_memory'),
+                'type': type(task_).__name__,
+                'exitcode': task_.execution.exitcode,
+                'id': task_.persistent_id,
+                'submission_id': task_.submission_id,
+                'time': str(_get_task_time(task_, 'duration')),
+                'cpu_time': str(_get_task_time(task_, 'used_cpu_time'))
+            }
+        if hasattr(task_, 'tasks'):
+            done = 0.0
+            for t in task_.tasks:
+                if hasattr(t, 'persistent_id'):
+                    if t.execution.state == gc3libs.Run.State.TERMINATED:
+                        done += 1
+            if len(task_.tasks) > 0:
+                data['percent_done'] = done / len(task_.tasks) * 100
             else:
-                task_info = session.query(tm.Task).get(task_.persistent_id)
-                data = task_info.status
-            if hasattr(task_, 'tasks'):
-                done = 0.0
-                for t in task_.tasks:
-                    if hasattr(t, 'persistent_id'):
-                        if t.execution.state == gc3libs.Run.State.TERMINATED:
-                            done += 1
-                if len(task_.tasks) > 0:
-                    data['percent_done'] = done / len(task_.tasks) * 100
-                else:
-                    data['percent_done'] = 0
+                data['percent_done'] = 0
+        else:
+            if task_.execution.state == gc3libs.Run.State.TERMINATED:
+                data['percent_done'] = 100
             else:
-                if task_.execution.state == gc3libs.Run.State.TERMINATED:
-                    data['percent_done'] = 100
-                else:
-                    data['percent_done'] = 0
+                data['percent_done'] = 0
 
-            if hasattr(task_, 'tasks'):
-                data['n_subtasks'] = len(task_.tasks)
-                data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
-            else:
-                data['n_subtasks'] = 0
-                data['subtasks'] = []
+        if hasattr(task_, 'tasks'):
+            data['n_subtasks'] = len(task_.tasks)
+            data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
+        else:
+            data['n_subtasks'] = 0
+            data['subtasks'] = []
 
         return data
 

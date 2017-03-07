@@ -241,8 +241,6 @@ class MetadataHandler(object):
             # within the image file.
             for s in xrange(n_series):
                 image = self.omexml_images[f].image(s)
-                # Create an instance of class ChannelImageMetadata for each channel
-                # specified in an OMEXML *Image* element.
                 # It is assumed that all *Plane* elements where
                 # acquired at the same site, i.e. microscope stage position.
                 pixels = image.Pixels
@@ -279,7 +277,6 @@ class MetadataHandler(object):
                     metadata['stage_position_x'].append(plane.PositionX)
 
                     fm = ImageFileMapping()
-                    fm.name = image.Name
                     fm.ref_index = i
                     fm.files = [f]
                     fm.series = [s]
@@ -635,15 +632,6 @@ class MetadataHandler(object):
         md = self.metadata
 
         logger.info('group metadata per z-stack')
-
-        # # Remove all z-plane image entries except for the first
-        # grouped_md = md.drop_duplicates(subset=[
-        #     'well_name', 'well_position_x', 'well_position_y',
-        #     'channel_name', 'tpoint'
-        # ], keep='first').copy()
-        # grouped_md.index = range(grouped_md.shape[0])
-
-        # Group metadata by focal planes (z-stacks)
         zstacks = md.groupby([
             'well_name', 'well_position_x', 'well_position_y',
             'channel_name', 'tpoint'

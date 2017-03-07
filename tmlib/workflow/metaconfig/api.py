@@ -296,10 +296,12 @@ class MetadataConfigurator(ClusterRoutines):
                 logger.info('time points are interpreted as multiplexing cycles')
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            acquisitions = session.query(tm.ImageFileMapping.acquisition_id).\
-                distinct().\
+            # We order acquisitions by the time they got created. This will
+            # determine the order of multiplexing cycles.
+            acquisitions = session.query(tm.Acquisition.id).\
+                order_by(tm.Acquisition.created_at).\
                 all()
-            acquisitions = [a.acquisition_id for a in acquisitions]
+            acquisitions = [a.id for a in acquisitions]
             bit_depth = session.query(tm.ImageFileMapping.bit_depth).\
                 distinct().\
                 one()

@@ -249,52 +249,81 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
         # images will be automatically aligned, assuming that this is the
         # desired behavior.
         channel_input = self.project.pipe.description.input.channels
+        objects_input = self.project.pipe.description.input.objects
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            for item in channel_input:
-                # NOTE: When "path" key is present, the image is loaded from
-                # a file on disk. The image is not further processed, such as
-                # corrected for illuminatiion artifacts or aligned.
-                images = collections.defaultdict(list)
-                site = session.query(tm.Site).get(site_id)
-                if item.correct:
+            site = session.query(tm.Site).get(site_id)
+
+            n_tpoints = session.query(tm.ChannelImageFile.tpoint).\
+                filter_by(site_id=site.id).\
+                distinct().\
+                count()
+            n_zplanes = session.query(tm.ChannelImageFile.zplane).\
+                filter_by(site_id=site.id).\
+                distinct().\
+                count()
+
+            y_offset, x_offset = site.aligned_offset
+            height = site.aligned_height
+            width = site.aligned_width
+
+            for ch in channel_input:
+                channel = session.query(
+                        tm.Channel.bit_depth, tm.Channel.id
+                    ).\
+                    filter_by(name=ch.name).\
+                    one()
+                if channel.bit_depth == 16:
+                    dtype = np.uint16
+                elif channel.bit_depth == 8:
+                    dtype = np.uint8
+                image_array = np.zeros(
+                    (height, width, n_zplanes, n_tpoints), dtype
+                )
+                if ch.correct:
                     logger.info(
-                        'load illumination statistics for channel "%s"',
-                        item.name
+                        'load illumination statistics for channel "%s"', ch.name
                     )
                     try:
                         stats_file = session.query(tm.IllumstatsFile).\
                             join(tm.Channel).\
-                            filter(tm.Channel.name == item.name).\
+                            filter(tm.Channel.name == ch.name).\
                             one()
                     except NoResultFound:
                         raise PipelineDescriptionError(
                             'No illumination statistics file found for '
-                            'channel "%s"' % item.name
+                            'channel "%s"' % ch.name
                         )
                     stats = stats_file.get()
                 else:
                     stats = None
 
-                logger.info('load images for channel "%s"', item.name)
+                logger.info('load images for channel "%s"', ch.name)
                 image_files = session.query(tm.ChannelImageFile).\
-                    join(tm.Channel).\
-                    filter(
-                        tm.Channel.name == item.name,
-                        tm.ChannelImageFile.site_id == site.id
-                    ).\
+                    filter_by(site_id=site.id, channel_id=channel.id).\
                     all()
-
                 for f in image_files:
                     logger.info('load image %d', f.id)
                     img = f.get()
-                    if item.correct:
+                    if ch.correct:
                         logger.info('correct image %d', f.id)
                         img = img.correct(stats)
                     logger.debug('align image %d', f.id)
                     img = img.align()  # shifted and cropped!
-                    images[f.tpoint].append(img.array)
+                    image_array[:, :, f.zplane, f.tpoint] = img.array
+                store['pipe'][ch.name] = image_array
 
-                store['pipe'][item.name] = np.stack(images.values(), axis=-1)
+            for obj in objects_input:
+                mapobject_type = session.query(tm.MapobjectType).\
+                    filter_by(name=obj.name).\
+                    one()
+                polygons = mapobject_type.get_segmentations_per_site(site.id)
+
+                segm_obj = SegmentedObjects(obj.name, obj.name)
+                segm_obj.add_polygons(
+                    polygons, y_offset, x_offset, (height, width)
+                )
+                store['objects'][segm_obj.name] = segm_obj
+                store['pipe'][segm_obj.name] = segm_obj.value
 
         # Remove single-dimensions from image arrays.
         # NOTE: It would be more consistent to preserve shape, but most people
@@ -365,7 +394,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                     name=obj_name
                 )
                 mapobject_type_ids[obj_name] = mapobject_type.id
-                for (t, z), plane in segm_objs.iterplanes():
+                for (t, z), plane in segm_objs.iter_planes():
                     segmentation_layer = session.get_or_create(
                         tm.SegmentationLayer,
                         mapobject_type_id=mapobject_type.id,
@@ -427,8 +456,8 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                 )
                 if segm_objs.represent_as_polygons:
                     logger.debug('represent segmented objects as polygons')
-                    polygons = segm_objs.to_polygons(y_offset, x_offset)
-                    for (t, z, label), polygon in polygons:
+                    iterator = segm_objs.iter_polygons(y_offset, x_offset)
+                    for t, z, label, polygon in iterator:
                         logger.debug(
                             'add segmentation for object #%d at '
                             'tpoint %d and zplane %d', label, t, z
@@ -445,12 +474,12 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                         tm.MapobjectSegmentation.add(
                             conn, mapobject_ids[label],
                             segmentation_layer_ids[(obj_name, t, z)],
-                            polygon=polygon
+                            polygon=polygon, label=label
                         )
                 else:
                     logger.debug('represent segmented objects only as points')
-                    centroids = segm_objs.to_points(y_offset, x_offset)
-                    for (t, z, label), centroid in centroids:
+                    iterator = segm_objs.to_points(y_offset, x_offset)
+                    for t, z, label, centroid in iterator:
                         logger.debug(
                             'add segmentation for object #%d at '
                             'tpoint %d and zplane %d', label, t, z
@@ -458,7 +487,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                         tm.MapobjectSegmentation.add(
                             conn, mapobject_ids[label],
                             segmentation_layer_ids[(obj_name, t, z)],
-                            centroid=centroid
+                            centroid=centroid, label=label
                         )
 
                 logger.info('add features for objects of type "%s"', obj_name)
