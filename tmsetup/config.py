@@ -18,6 +18,7 @@ import re
 from abc import ABCMeta
 from abc import abstractproperty
 from ConfigParser import SafeConfigParser
+from Crypto.PublicKey import RSA
 
 from tmsetup.errors import SetupDescriptionError, SetupEnvironmentError
 from tmsetup.utils import read_yaml_file
@@ -273,6 +274,15 @@ class CloudSection(SetupSection):
             raise OSError(
                 'Private key file "%s" does not exist.' % value
             )
+        if not os.path.exists(value):
+            logger.info('create SSH key pair')
+            key = RSA.generate(2048)
+            with open(self.key_file_private, 'w') as f:
+                os.chmod("/tmp/private.key", 0400)
+                f.write(key.exportKey('PEM'))
+            pubkey = key.publickey()
+            with open(self.key_file_public, 'w') as f:
+                f.write(pubkey.exportKey('OpenSSH'))
         self._key_file_private = value
 
     @property
