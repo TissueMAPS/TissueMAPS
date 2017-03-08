@@ -12,7 +12,6 @@ architecture:
         - name: server
           count: 1
           groups:
-            - name: tissuemaps_compute
             - name: tissuemaps_server
             - name: tissuemaps_db_master
             - name: tissuemaps_db_worker

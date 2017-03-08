@@ -12,16 +12,9 @@ architecture:
         - name: server
           count: 1
           groups:
-            - name: tissuemaps_compute
             - name: tissuemaps_server
-              vars:
-                db_password: XXX
             - name: tissuemaps_db_master
-              vars:
-                db_password: XXX
             - name: tissuemaps_db_worker
-              vars:
-                db_password: XXX
           instance:
             volume_size: 500
             image: Matlab-R2016a - ubuntu 14.04.4 x86-64 - (2016-03-17)
