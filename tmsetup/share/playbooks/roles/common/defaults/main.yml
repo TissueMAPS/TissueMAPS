@@ -24,7 +24,3 @@ python_version: 2.7.12
 
 tm_github_url: https://github.com/TissueMAPS
 tm_version: master
-
-volume_mountpoint: /storage
-tm_data_directory: "{{ volume_mountpoint }}/data/tissuemaps"
-tm_log_directory: "{{ volume_mountpoint }}/log/tissuemaps"

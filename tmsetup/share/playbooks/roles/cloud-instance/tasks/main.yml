@@ -40,3 +40,8 @@
   delegate_to: "{{ instance_name }}"
   delegate_facts: yes
   when: (volume_size is defined) and (instance_state == "present")
+
+- include: create_user.yml
+  delegate_to: "{{ instance_name }}"
+  delegate_facts: yes
+  when: instance_state == "present"

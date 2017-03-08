@@ -20,6 +20,11 @@ from tmsetup.utils import to_yaml, to_json
 
 logger = logging.getLogger(os.path.basename(__file__))
 
+TM_GROUPS = {
+    'tissuemaps_server', 'tissuemaps_compute',
+    'tissuemaps_db_master', 'tissuemaps_db_worker'
+}
+
 
 def _get_playbooks_dir(pkg_name):
     rel_path = os.path.join('share', 'playbooks')
@@ -52,11 +57,7 @@ def get_deployment_groups(selected_cluster, selected_nodetype, selected_groups):
                 logger.info('include Ansible group: %s', group.name)
                 groups_to_deploy[group.name].append(group.playbook)
 
-    required_groups = {
-        'tissuemaps_web', 'tissuemaps_compute',
-        'tissuemaps_database_master', 'tissuemaps_database_worker'
-    }
-    for group in required_groups:
+    for group in TM_GROUPS:
         if group not in groups_to_deploy.keys():
             logger.warn('core group "%s" not provided', group)
 
@@ -78,23 +79,25 @@ def _build_container_commands(action, verbosity):
 def _build_ansible_container_command(mode, verbosity,
         project_dir, roles_dir, vars_dir):
     cmd = ['ansible-container', '--project', os.path.abspath(project_dir)]
-    var_files = os.listdir(vars_dir)
+    group_dirs = os.listdir(vars_dir)
     # NOTE: Ansible variables {{ }} declared in files are not expanded!
-    for var_file in var_files:
-        filename = os.path.abspath(os.path.join(vars_dir, var_file))
+    for group in group_dirs:
+        filename = os.path.abspath(os.path.join(vars_dir, group, 'vars.yml'))
         cmd.extend(['--var-file', filename])
-    cmd.extend([mode, '--roles-path', os.path.abspath(roles_dir)])
     if verbosity > 3:
         cmd.append('--debug')
+    cmd.extend([mode, '--roles-path', os.path.abspath(roles_dir)])
     if mode == 'build':
         cmd.append('--from-scratch')
         # The following options are parsed to the "ansible-playbooks" command.
         cmd.append('--')
+        if verbosity > 1:
+            verbosity -= 1
         if verbosity > 0:
             cmd.append('-%s' % (verbosity * 'v'))
         variables = collections.OrderedDict()
-        for var_file in var_files:
-            filename = os.path.join(vars_dir, var_file)
+        for group in group_dirs:
+            filename = os.path.abspath(os.path.join(vars_dir, group, 'vars.yml'))
             with open(filename) as f:
                 for line in f.readlines():
                     var_mapping = yaml.load(line)
@@ -157,17 +160,19 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
         if args.refresh_cache:
             commands.append(['tm_inventory', '--refresh'])
 
-        # Run the playbooks implemented in elasticluster
-        # NOTE: These playbooks also configure the SSH host-based authorization.
-        elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
-        playbook = os.path.join(elasticluster_playbooks_dir, 'site.yml')
-        logger.debug('build command for playbook: %s', playbook)
-        # variables['ansible_remote_user'] = 'root'
-        cmd = _build_ansible_vm_command(
-            verbosity, playbook, variables, set(groups_to_deploy.keys())
-        )
-        cmd.extend(['-e', 'ansible_become=yes'])
-        commands.append(cmd)
+        if set(groups_to_deploy.keys()) != TM_GROUPS:
+            # Run the playbooks implemented in elasticluster. We only need
+            # this in case we use groups not implemented in tmsetup.
+            # NOTE: This playbook also configures SSH host-based authorization,
+            # so it's a bad idea to run this only on a subset of groups!
+            elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
+            playbook = os.path.join(elasticluster_playbooks_dir, 'site.yml')
+            logger.debug('build command for playbook: %s', playbook)
+            cmd = _build_ansible_vm_command(
+                verbosity, playbook, variables, set(groups_to_deploy.keys())
+            )
+            cmd.extend(['-e', 'ansible_become=yes'])
+            commands.append(cmd)
 
         # Run the TissueMAPS-specific playbooks implemented in tmsetup
         tmsetup_playbooks_dir = _get_playbooks_dir('tmsetup')
@@ -195,6 +200,8 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict(), hosts=set()
     # The "tm_inventory" script should be on the path upon installation.
     inventory_file = which('tm_inventory')
     cmd = ['ansible-playbook', '-i', inventory_file, playbook]
+    if verbosity > 1:
+        verbosity -= 1
     if verbosity > 0:
         cmd.append('-%s' % (verbosity * 'v'))
     # It's important that these strings get quoted for security reasons.

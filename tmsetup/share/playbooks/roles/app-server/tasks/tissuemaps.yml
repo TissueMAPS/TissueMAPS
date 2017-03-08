@@ -20,6 +20,7 @@
     repo: "{{ tm_github_url }}/tmserver"
     dest: "{{ tm_home }}/tmserver"
     version: "{{ tm_version }}"
+    force: yes
   tags:
     - tissuemaps
 
@@ -31,10 +32,11 @@
   tags:
     - tissuemaps
 
-- name: Create log_home directory
+- name: Create log directory
   file:
-    state: directory
     path: "{{ tm_log_directory }}"
+    state: directory
+    recurse: yes
     owner: "{{ tm_user }}"
     group: "{{ tm_user }}"
     mode: 0700

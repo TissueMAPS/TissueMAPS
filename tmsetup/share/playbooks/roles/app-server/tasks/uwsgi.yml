@@ -22,7 +22,9 @@
     - app-server
     - uwsgi
 
-- name: Set socket in case of a UNIX socket
+# When app_host is "unix", app_port is assumed to be the path to the socket file.
+
+- name: Set socket in case of a HTTP socket
   set_fact:
     uwsgi_socket: "{{ app_host }}:{{ app_port }}"
   when: app_host != 'unix'
@@ -30,9 +32,22 @@
     - app-server
     - uwsgi
 
-- name: Set socket in case of a HTTP socket
+- name: Set socket in case of a UNIX socket
   set_fact:
     uwsgi_socket: "{{ app_port }}"
+  when: app_host == 'unix'
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Create directory for UNIX socket
+  file:
+    path: "{{ app_port | dirname }}"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
   when: app_host == 'unix'
   tags:
     - app-server
@@ -59,13 +74,20 @@
     - app-server
     - uwsgi
 
-- name: Place uwsgi init config file
+- name: Place uwsgi init config file for update-rc.d
   template:
     src: uwsgi.conf.j2
     dest: /etc/init/uwsgi.conf
-  when: ansible_env.ANSIBLE_CONTAINER is undefined
+  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) < 16
   tags:
     - app-server
     - uwsgi
 
-
+- name: Place uwsgi service file for serviced
+  template:
+    src: uwsgi.service.j2
+    dest: /etc/systemd/system/uwsgi.service
+  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) > 16
+  tags:
+    - app-server
+    - uwsgi

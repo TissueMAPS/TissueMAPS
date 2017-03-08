@@ -1,0 +1,16 @@
+[Unit]
+Description=The NGINX HTTP and reverse proxy server
+After=syslog.target network.target remote-fs.target nss-lookup.target
+
+[Service]
+Type=forking
+PIDFile={{ nginx_pid_file }}
+ExecStartPre=/usr/sbin/nginx -t -q -g 'daemon on; master_process on;'
+ExecStart=/usr/sbin/nginx -g 'daemon on; master_process on;'
+ExecReload=/bin/kill -g 'daemon on; master_process on;' -s reload
+ExecStop=/bin/kill --quiet --stop --retry QUIT/5 --pidfile {{ nginx_pid_file }}
+TimeoutStopSec=5
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

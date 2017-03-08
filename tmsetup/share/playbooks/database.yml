@@ -15,23 +15,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Collecting facts
-  hosts: all
-  gather_facts: yes
-
 - name: Configure PostgreSQL workers
-  hosts: tissuemaps_db_worker
-  remote_user: "{{ ansible_user }}"
+  hosts:
+    - tissuemaps_db_worker
   roles:
     - database-server-worker
   tags:
     - database
 
 - name: Configure PostgreSQL master
-  hosts: tissuemaps_db_master
-  remote_user: "{{ ansible_user }}"
+  hosts:
+    - tissuemaps_db_master
   roles:
     - database-server-master
   tags:
     - database
 
+- name: Set startup for PostgreSQL databases
+  hosts:
+    - tissuemaps_db_master
+    - tissuemaps_db_worker
+  tasks:
+    - name: Enable PostgreSQL service
+      service:
+        name: postgresql
+        enabled: yes

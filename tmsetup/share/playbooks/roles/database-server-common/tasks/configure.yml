@@ -14,6 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
+# - name: Change log_directory
+#   command: pg_conftool {{ postgresql_version }} {{ db_node }} set log_directory {{ db_log_directory }}
+#   tags:
+#     - database
+
 - name: Preload Citus extension
   command: pg_conftool {{ postgresql_version }} {{ db_node }} set shared_preload_libraries citus
   tags:
@@ -45,6 +50,8 @@
     state: present
     regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
     line: 'host    all             all             {{ ip_range }}          trust'
+    owner: postgres
+    group: postgres
   when: ip_range is defined
   tags:
     - database
@@ -55,6 +62,8 @@
     state: present
     regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
     line: 'host    all             all             127.0.0.1/32            trust'
+    owner: postgres
+    group: postgres
   tags:
     - database
 
@@ -64,6 +73,8 @@
     state: present
     regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
     line: 'host    all             all             ::1/128                 trust'
+    owner: postgres
+    group: postgres
   tags:
     - database
 
@@ -72,14 +83,16 @@
     dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
     state: present
     line: 'host    all             all              172.0.0.0/8            trust'
+    owner: postgres
+    group: postgres
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
 
-- shell: cat /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
-  register: content
+# - shell: cat /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+#   register: content
 
-- debug: var=content.stdout_lines
+# - debug: var=content.stdout_lines
 
 - name: Increase kernel limits for semaphores
   shell: sysctl -w kernel.sem="250 60000 32 250"

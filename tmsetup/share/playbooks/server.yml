@@ -23,5 +23,16 @@
   roles:
     - web-server
     - app-server
+  tasks:
+    - name: Enable NGINX service
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+    - name: Enable uWSGI service
+      service:
+        name: uwsgi
+        state: started
+        enabled: yes
   tags:
     - web

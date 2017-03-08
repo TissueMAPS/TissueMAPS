@@ -15,8 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# - include_vars: file={{ playbook_dir }}/vars/tissuemaps.yml
-
 - name: Ensure Ubuntu distribution
   fail:
     msg: Requires Ubuntu distribution!
@@ -27,17 +25,14 @@
     msg: Requires Ubuntu distribution version >= 14.04!
   when: (ansible_distribution_version|int) < 14
 
+- name: Install aptitude
+  raw: apt-get update && apt-get install -y aptitude
+
 - name: Update apt packages
   apt:
     upgrade: safe
     update_cache: yes
 
-- include: create_user.yml
-
 - include: utils.yml
 
-- include: env.yml
-
 - include: ssh.yml
-
-- include: python.yml

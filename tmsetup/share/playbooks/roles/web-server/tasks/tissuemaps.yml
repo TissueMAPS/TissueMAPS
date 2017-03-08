@@ -18,12 +18,14 @@
 - name: Download latest node
   shell: wget -qO- https://deb.nodesource.com/setup_6.x | bash -
   tags:
+    - web-server
     - tissuemaps
 
 - name: Install node
   apt:
     name: nodejs
   tags:
+    - web-server
     - tissuemaps
 
 - name: Install bower and gulp node packages
@@ -35,6 +37,7 @@
     - bower
     - gulp
   tags:
+    - web-server
     - tissuemaps
 
 - name: Get the latest tmui code
@@ -43,7 +46,9 @@
     version: "{{ tm_version }}"
     recursive: yes
     dest: "{{ tm_home }}/tmui"
+    force: yes
   tags:
+    - web-server
     - tissuemaps
 
 - name: Update gulp proxy settings
@@ -53,6 +58,7 @@
     replace: "target: 'http://{{ app_host }}:{{ app_port }}',"
   when: app_host != 'unix'
   tags:
+    - web-server
     - tissuemaps
 
 - name: Update gulp proxy settings
@@ -62,11 +68,13 @@
     replace: "xfwd: true"
   when: app_host != 'unix'
   tags:
+    - web-server
     - tissuemaps
 
 - name: Update npm package manager
   command: npm install -g npm
   tags:
+    - web-server
     - tissuemaps
 
 - name: Install node dependencies
@@ -74,6 +82,7 @@
     path: "{{ tm_home }}/tmui/src/app"
     state: present
   tags:
+    - web-server
     - tissuemaps
 
 - name: Install bower dependencies
@@ -81,6 +90,7 @@
     path: "{{ tm_home }}/tmui/src"
     state: present
   tags:
+    - web-server
     - tissuemaps
 
 - name: Build client code for production deployment
@@ -89,6 +99,7 @@
     executable: /bin/bash
     chdir: "{{ tm_home }}/tmui/src"
   tags:
+    - web-server
     - tissuemaps
 
 - name: Set permissions for tmui/src directory
@@ -99,6 +110,7 @@
     group: "{{ tm_user }}"
     mode: 0700
   tags:
+    - web-server
     - tissuemaps
 
 - name: Set permissions for tmui/src/build directory recursively
@@ -110,6 +122,7 @@
     group: "{{ tm_user }}"
     mode: 0700
   tags:
+    - web-server
     - tissuemaps
 
 - name: Set permissions for tmui/src/tasks directory recursively
@@ -121,4 +134,5 @@
     group: "{{ tm_user }}"
     mode: 0700
   tags:
+    - web-server
     - tissuemaps

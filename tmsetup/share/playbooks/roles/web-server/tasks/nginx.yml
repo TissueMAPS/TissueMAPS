@@ -14,19 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Update all packages to the latest version
-  apt:
-    upgrade: safe
-    update_cache: yes
-    cache_valid_time: 3600
-  tags:
-    - nginx
-
 - name: Install nginx
   apt:
     name: nginx
     state: installed
   tags:
+    - web-server
     - nginx
 
 - name: Create nginx site
@@ -35,7 +28,9 @@
     dest: /etc/nginx/sites-available/tissuemaps
     owner: "{{ tm_user }}"
     group: "{{ tm_user }}"
+    mode: 0700
   tags:
+    - web-server
     - nginx
 
 - name: Place site specific nginx conf.d
@@ -44,7 +39,78 @@
     dest: /etc/nginx/conf.d/tissuemaps.conf
     owner: "{{ tm_user }}"
     group: "{{ tm_user }}"
+    mode: 0700
   tags:
+    - web-server
+    - nginx
+
+- name: Set path to nginx pid file
+  set_fact:
+    nginx_pid_file: /var/run/nginx/nginx.pid
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - web-server
+    - nginx
+
+- name: Set path to nginx pid file
+  set_fact:
+    nginx_pid_file: /var/run/nginx.pid
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+  tags:
+    - web-server
+    - nginx
+
+- name: Place nginx init config file for update-rc.d
+  template:
+    src: nginx.conf.j2
+    dest: /etc/init/nxing.conf
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) < 16
+  tags:
+    - web-server
+    - nginx
+
+- name: Create directory for nginx pid file
+  file:
+    path: "{{ nginx_pid_file }}"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - web-server
+    - nginx
+
+- name: Change nginx pid in config
+  lineinfile:
+    dest: /etc/nginx/nginx.conf
+    state: present
+    regexp: 'pid\s+.*;'
+    line: 'pid {{ nginx_pid_file }};'
+  tags:
+    - web-server
+    - nginx
+
+- name: Change nginx pid for serviced
+  template:
+    src: nginx.service.j2
+    dest: /lib/systemd/system/nginx.service
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) > 16
+  tags:
+    - web-server
+    - nginx
+
+- name: Reload systemctl for serviced
+  command: systemctl daemon-reload
+  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) > 16
+  tags:
+    - web-server
     - nginx
 
 - name: Change nginx user for worker processes
@@ -54,25 +120,7 @@
     regexp: 'user\s+.*;'
     line: 'user {{ tm_user }};'
   tags:
-    - nginx
-
-- name: Create directory for nginx master process
-  file:
-    path: /var/run/nginx
-    state: directory
-    owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
-    mode: 0700
-  tags:
-    - nginx
-
-- name: Change nginx pid for master processes
-  lineinfile:
-    dest: /etc/nginx/nginx.conf
-    state: present
-    regexp: 'pid\s+.*;'
-    line: 'pid /var/run/nginx/nginx.pid;'
-  tags:
+    - web-server
     - nginx
 
 # We may want to run nginx as a non-root user, e.g. within a container.
@@ -84,12 +132,12 @@
     owner: "{{ tm_user }}"
     group: "{{ tm_user }}"
   with_items:
-    - /var/run/nginx
     - /var/lib/nginx
     - /var/log/nginx
     - /usr/share/nginx
     - /etc/nginx
   tags:
+    - web-server
     - nginx
 
 - name: Enable nginx site
@@ -101,4 +149,5 @@
       rm /etc/nginx/sites-enabled/default
     fi
   tags:
+    - web-server
     - nginx

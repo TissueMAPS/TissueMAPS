@@ -14,15 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Create database tables
-  shell: ". {{ tm_home }}/.bash_profile && tm_create_tables"
-  tags:
-    - database
-    - tissuemaps
+# NOTE: Don't use Ansible variables here, since this is not
+# compatible with ansible-container.
+volume_mountpoint: /storage
 
-- name: Create default user
-  shell: ". {{ tm_home }}/.bash_profile && tm_add user --name devuser --password {{ tm_devuser_password | string | quote }} --email devuser@tissuemaps.org"
-  tags:
-    - database
-    - tissuemaps
-  when: tm_devuser_password is defined
+tm_user: tissuemaps
+tm_home: /home/tissuemaps
+tm_config_file: /home/tissuemaps/.tmaps/tissuemaps.cfg
+
+tm_data_directory: /storage/tissuemaps/data
+tm_log_directory: /storage/tissuemaps/log
+postgresql_version: 9.6
+
+db_user: tissuemaps
+db_name: tissuemaps
+db_port_master: 5432
+db_port_worker: 9700
+db_data_directory: /storage/postgresql/data
+db_log_directory: /storage/postgresql/log
