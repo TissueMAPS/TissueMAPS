@@ -249,9 +249,8 @@ def upload_file(experiment_id, acquisition_id):
         is_imgfile = imgfile is not None
         is_metafile = metafile is not None
         if not is_metafile and not is_imgfile:
-            raise MalformedRequestError(
-                'File was not registered: "%s"' % filename
-            )
+            logger.warn('skip file that was not registered: "%s"' % filename)
+            return jsonify(message='non-registered file: skipped')
         elif is_imgfile:
             file_obj = imgfile
         elif is_metafile:
