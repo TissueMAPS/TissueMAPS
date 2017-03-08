@@ -18,11 +18,14 @@
   template:
     src: "{{ item }}.j2"
     dest: "{{ tm_home }}/{{ item }}"
-    mode: "u+x"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
   with_items:
     - create_slurm_account.sh
     - start_server.sh
     - stop_server.sh
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - web
 
