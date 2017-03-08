@@ -365,7 +365,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
         command = [self.step_name]
         command.extend(['-v' for x in range(self.verbosity)])
         command.append(self.experiment_id)
-        command.extend(['debug', '--site', str(site_id)])
+        command.extend(['debug', '--site', str(site_id), '--plot'])
         return command
 
     def _save_pipeline_outputs(self, store):
