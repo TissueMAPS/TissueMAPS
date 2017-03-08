@@ -91,10 +91,10 @@ def _build_ansible_container_command(mode, verbosity,
         cmd.append('--from-scratch')
         # The following options are parsed to the "ansible-playbooks" command.
         cmd.append('--')
-        if verbosity > 1:
-            verbosity -= 1
         if verbosity > 0:
-            cmd.append('-%s' % (verbosity * 'v'))
+            verbosity -= 1
+            if verbosity > 0:
+                cmd.append('-%s' % (verbosity * 'v'))
         variables = collections.OrderedDict()
         for group in group_dirs:
             filename = os.path.abspath(os.path.join(vars_dir, group, 'vars.yml'))
@@ -160,9 +160,13 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
         if args.refresh_cache:
             commands.append(['tm_inventory', '--refresh'])
 
-        if set(groups_to_deploy.keys()) != TM_GROUPS:
-            # Run the playbooks implemented in elasticluster. We only need
-            # this in case we use groups not implemented in tmsetup.
+        run_elasticluster = False
+        for group in groups_to_deploy.keys():
+            if group not in TM_GROUPS:
+                run_elasticluster = True
+        if run_elasticluster:
+            # Run playbooks for groups implemented in elasticluster. We only
+            # need this in case there are groups not implemented in tmsetup.
             # NOTE: This playbook also configures SSH host-based authorization,
             # so it's a bad idea to run this only on a subset of groups!
             elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
@@ -200,10 +204,10 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict(), hosts=set()
     # The "tm_inventory" script should be on the path upon installation.
     inventory_file = which('tm_inventory')
     cmd = ['ansible-playbook', '-i', inventory_file, playbook]
-    if verbosity > 1:
-        verbosity -= 1
     if verbosity > 0:
-        cmd.append('-%s' % (verbosity * 'v'))
+        verbosity -= 1
+        if verbosity > 0:
+            cmd.append('-%s' % (verbosity * 'v'))
     # It's important that these strings get quoted for security reasons.
     if variables:
         cmd.extend(['-e', '%s' % ','.join(var_strings)])
