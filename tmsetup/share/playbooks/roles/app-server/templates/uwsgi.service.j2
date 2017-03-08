@@ -3,13 +3,12 @@ Description=uWSGI application server
 After=syslog.target
 
 [Service]
-ExecStart=exec env HOME={{ tm_home }} sh /home/{{ tm_user }}/.tmaps/uwsgi.sh
-# Requires systemd version 211 or newer
-#RuntimeDirectory=uwsgi
+Environment="HOME={{ tm_home }}"
+ExecStart=/home/{{ tm_user }}/.tmaps/uwsgi.sh
+RuntimeDirectory=uwsgi
 Restart=always
-KillSignal=SIGQUIT
-User={{ tm_user }}
-Group={{ tm_user }}
+#KillSignal=SIGQUIT
+KillSignal=SIGTERM + “die-on-term” UWSGI
 Type=notify
 StandardError=syslog
 NotifyAccess=all

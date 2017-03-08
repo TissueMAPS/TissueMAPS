@@ -101,14 +101,14 @@
     dest: /lib/systemd/system/nginx.service
     owner: "{{ tm_user }}"
     group: "{{ tm_user }}"
-  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) > 16
+  when: (ansible_env.ANSIBLE_CONTAINER is undefined) and (ansible_distribution_version|int > 16)
   tags:
     - web-server
     - nginx
 
 - name: Reload systemctl for serviced
   command: systemctl daemon-reload
-  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) > 16
+  when: (ansible_env.ANSIBLE_CONTAINER is undefined) and (ansible_distribution_version|int >= 16)
   tags:
     - web-server
     - nginx

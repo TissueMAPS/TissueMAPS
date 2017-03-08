@@ -78,7 +78,7 @@
   template:
     src: uwsgi.conf.j2
     dest: /etc/init/uwsgi.conf
-  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) < 16
+  when: (ansible_env.ANSIBLE_CONTAINER is undefined) and (ansible_distribution_version|int < 16)
   tags:
     - app-server
     - uwsgi
@@ -86,8 +86,16 @@
 - name: Place uwsgi service file for serviced
   template:
     src: uwsgi.service.j2
-    dest: /etc/systemd/system/uwsgi.service
-  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) > 16
+    dest: /lib/systemd/system/uwsgi.service
+  when: (ansible_env.ANSIBLE_CONTAINER is undefined) and (ansible_distribution_version|int >= 16)
   tags:
     - app-server
     - uwsgi
+
+- name: Reload systemctl for serviced
+  command: systemctl daemon-reload
+  when: (ansible_env.ANSIBLE_CONTAINER is undefined) and (ansible_distribution_version|int >= 16)
+  tags:
+    - app-server
+    - uwsgi
+

@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Install apt packages required by TissueMAPS Python packages
+- name: Install apt packages required by Python packages
   apt:
     name: "{{ item }}"
     state: installed
@@ -37,14 +37,14 @@
   tags:
     - tissuemaps
 
-- name: Intsall version-specific apt packages required by Python packages
+- name: Install version-specific apt packages required by Python packages
   apt:
     name: openjdk-7-jdk
   when: ansible_distribution_version|int <= 14.10
   tags:
     - tissuemaps
 
-- name: Intsall version-specific apt packages required by Python packages
+- name: Install version-specific apt packages required by Python packages
   apt:
     name: openjdk-8-jdk
   when: ansible_distribution_version|int >= 14.10
@@ -58,8 +58,8 @@
 
 # This shouldn't be necessary, but some packages don't build correctly when
 # cython and numpy are not already installed.
+# Note that these two packages get installed globally!
 - name: Install cython and numpy packages
-  # command: /usr/local/bin/pip install cython --upgrade
   pip:
     name: "{{ item }}"
     editable: false
