@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
+import logging
 from abc import ABCMeta
 from abc import abstractproperty
 from ConfigParser import SafeConfigParser
@@ -27,6 +28,8 @@ from tmsetup.utils import read_yaml_file
 CONFIG_DIR = os.path.expanduser('~/.tmaps/setup')
 SETUP_FILE = os.path.join(CONFIG_DIR, 'setup.yml')
 
+
+logger = logging.getLogger(__name__)
 
 
 class SetupSection(object):
@@ -271,17 +274,15 @@ class CloudSection(SetupSection):
                 value
             )
         if not os.path.exists(value):
-            raise OSError(
-                'Private key file "%s" does not exist.' % value
-            )
-        if not os.path.exists(value):
+            logger.warn('private key file "%s" does not exist.' % value)
+            key_file_public = self.key_file_public
             logger.info('create SSH key pair')
             key = RSA.generate(2048)
-            with open(self.key_file_private, 'w') as f:
-                os.chmod("/tmp/private.key", 0400)
+            with open(value, 'w') as f:
+                os.chmod(value, 0400)
                 f.write(key.exportKey('PEM'))
             pubkey = key.publickey()
-            with open(self.key_file_public, 'w') as f:
+            with open(key_file_public, 'w') as f:
                 f.write(pubkey.exportKey('OpenSSH'))
         self._key_file_private = value
 
@@ -306,9 +307,7 @@ class CloudSection(SetupSection):
                 value
             )
         if not os.path.exists(value):
-            raise SetupDescriptionError(
-                'Public key file "%s" does not exist.' % value
-            )
+            logger.warn('public key file "%s" does not exist.' % value)
         self._key_file_public = value
 
     @property
