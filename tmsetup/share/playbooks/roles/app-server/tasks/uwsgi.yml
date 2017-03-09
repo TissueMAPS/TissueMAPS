@@ -53,6 +53,29 @@
     - app-server
     - uwsgi
 
+- name: Create log directory
+  file:
+    path: "{{ tm_log_directory }}"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Create uwsgi log file with correct permissions
+  file:
+    path: "{{ tm_log_directory }}/uwsgi.log"
+    state: touch
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  tags:
+    - app-server
+    - uwsgi
+
 - name: Place uwsgi.ini
   template:
     src: uwsgi.ini.j2
