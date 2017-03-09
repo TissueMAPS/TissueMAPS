@@ -7,8 +7,7 @@ Environment="HOME={{ tm_home }}"
 ExecStart=/home/{{ tm_user }}/.tmaps/uwsgi.sh
 RuntimeDirectory=uwsgi
 Restart=always
-#KillSignal=SIGQUIT
-KillSignal=SIGTERM + “die-on-term” UWSGI
+KillSignal=SIGTERM + "die-on-term" UWSGI
 Type=notify
 StandardError=syslog
 NotifyAccess=all

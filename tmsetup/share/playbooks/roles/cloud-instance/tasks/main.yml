@@ -15,10 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# TODO: Create security group (firewall)
-# os: os_security_group
-# ec2: ec2_group
-# gce: gce_net
 - include: "{{provider}}.yml"
 
 - name: Wait for instance
