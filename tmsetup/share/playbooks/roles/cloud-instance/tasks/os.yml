@@ -240,12 +240,12 @@
 - name: Get host IP public address
   set_fact:
     instance_ip_address: "{{ instance_facts.openstack.public_v4 }}"
-  when: assign_public_ip|bool
+  when: assign_public_ip|bool and instance_state == 'present'
   
 - name: Get host IP private address
   set_fact:
     instance_ip_address: "{{ instance_facts.openstack.private_v4 if instance_facts.openstack.private_v4 else instance_facts.openstack.accessIPv4 }}"
-  when: not assign_public_ip|bool
+  when: not assign_public_ip|bool and instance_state == 'present'
   
 - name: Add new host to inventory
   add_host:
