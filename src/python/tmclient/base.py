@@ -41,14 +41,14 @@ class HttpClient(object):
         password: str, optional
             password for `username` (default: ``None``)
         '''
-        self.base_url = 'http://%s:%d' % (host, port)
-        self.session = requests.Session()
-        self.session.get(self.base_url)
+        self._base_url = 'http://%s:%d' % (host, port)
+        self._session = requests.Session()
+        self._session.get(self._base_url)
         if password is None:
-            password = self.load_credentials(user_name)
+            password = self._load_credentials(user_name)
         self.login(user_name, password)
 
-    def build_url(self, route, params={}):
+    def _build_url(self, route, params={}):
         '''Builds the full URL based on the base URL (``http://<host>:<port>``)
         and the provided `route`.
 
@@ -57,14 +57,14 @@ class HttpClient(object):
         route: str
             route used by the TissueMAPS RESTful API
         params: dict, optional
-            optional parameters that need to included in the URL
+            optional parameters that need to be included in the URL query string
 
         Returns
         -------
         str
             URL
         '''
-        url = self.base_url + route
+        url = self._base_url + route
         if not params:
             logger.debug('url: %s', url)
             return url
@@ -72,7 +72,7 @@ class HttpClient(object):
         logger.debug('url: %s', url)
         return url
 
-    def load_credentials(self, username):
+    def _load_credentials(self, username):
         '''Loads password for `username` from file.
 
         The file must be called ``~/.tm_pass`` and stored in
@@ -124,11 +124,11 @@ class HttpClient(object):
             password of the user
         '''
         logger.debug('login in as: "%s"' % username)
-        url = self.build_url('/auth')
+        url = self._build_url('/auth')
         payload = {'username': username, 'password': password}
-        res = self.session.post(url, json=payload)
+        res = self._session.post(url, json=payload)
         res.raise_for_status()
         self._access_token = res.json()['access_token']
-        self.session.headers.update(
+        self._session.headers.update(
             {'Authorization': 'JWT %s' % self._access_token}
         )
