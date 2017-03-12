@@ -142,8 +142,6 @@ class MetadataConfigurator(ClusterRoutines):
         --------
         :mod:`tmlib.workflow.metaconfig.cellvoyager`
         '''
-        MetadataReader = metadata_reader_factory(batch['microscope_type'])
-
         regexp = batch.get('regex', '')
         if not regexp:
             regexp = get_microscope_type_regex(
@@ -162,15 +160,18 @@ class MetadataConfigurator(ClusterRoutines):
                 for f in acquisition.microscope_image_files
             }
 
-        with MetadataReader() as mdreader:
-            omexml_metadata = mdreader.read(
-                metadata_filenames, omexml_images.keys()
-            )
+        MetadataReader = metadata_reader_factory(batch['microscope_type'])
+        if MetadataReader is not None:
+            with MetadataReader() as mdreader:
+                omexml_metadata = mdreader.read(
+                    metadata_filenames, omexml_images.keys()
+                )
+        else:
+            omexml_metadata = None
 
         MetadataHandler = metadata_handler_factory(batch['microscope_type'])
         mdhandler = MetadataHandler(omexml_images, omexml_metadata)
-        mdhandler.configure_omexml_from_image_files()
-        mdhandler.configure_omexml_from_metadata_files(regexp)
+        mdhandler.configure_from_omexml()
         missing = mdhandler.determine_missing_metadata()
         if missing:
             logger.warning(
@@ -183,7 +184,7 @@ class MetadataConfigurator(ClusterRoutines):
             )
             if regexp is None:
                 logger.warn('no regular expression provided')
-            mdhandler.configure_metadata_from_filenames(
+            mdhandler.configure_from_filenames(
                 plate_dimensions=plate_dimensions, regex=regexp
             )
         missing = mdhandler.determine_missing_metadata()

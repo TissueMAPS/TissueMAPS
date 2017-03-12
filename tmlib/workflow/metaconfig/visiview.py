@@ -218,11 +218,9 @@ class VisiviewMetadataReader(MetadataReader):
             metadata.image_count *= nd['NWavelengths']
         if nd['DoTimelapse']:
             metadata.image_count *= nd['NTimePoints']
-        if nd['DoZSeries']:
-            metadata.image_count *= nd['NZSteps']
 
         for i in xrange(metadata.image_count):
-            img = metadata.image(0)
+            img = metadata.image(i)
             img.Name = ''
             # Images files may contain a variable number of z-stacks
             # (SizeZ >= 1), but only one time point (SizeT == 1)
@@ -249,7 +247,7 @@ class VisiviewMetadataReader(MetadataReader):
         ]
         plate.Columns = len(set(columns))
 
-        # Create a lookup table to get all images planes per well
+        # Create a lut table to get all images planes per well
         sites = [
             nd['Stage%d' % (i+1)]['site']
             for i in xrange(nd['NStagePositions'])
@@ -258,20 +256,14 @@ class VisiviewMetadataReader(MetadataReader):
             '%s%.2d' % (rows[i], columns[i])
             for i in xrange(len(sites))
         ]
-        lookup = defaultdict(list)
-        count = 0
-        for f in microscope_image_files:
+        lut = defaultdict(list)
+        for i, f in enumerate(natsorted(microscope_image_files)):
             fields = MetadataHandler.extract_fields_from_filename(
                 IMAGE_FILE_REGEX_PATTERN, f, defaults=False
             )
             # NOTE: We assume that the "site" id is global per plate
             field_index = sites.index(int(fields.s))
-            # Create a separate fields objects for each z-plane
-            for z in xrange(nd['NZSteps']):
-                # NOTE: _replace() is a documented "public" method!
-                # ref = fields._replace(z=str(z))
-                lookup[wells[field_index]].append(count)
-                count += 1
+            lut[wells[field_index]].append(i)
 
         for w in set(wells):
             # Create a "Well" instance for each imaged well in the plate
@@ -281,7 +273,7 @@ class VisiviewMetadataReader(MetadataReader):
                 row=row_index, column=col_index
             )
             well_samples = metadata.WellSampleDucktype(well.node)
-            for i, ref in enumerate(lookup[w]):
+            for i, ref in enumerate(lut[w]):
                 # Create a *WellSample* element for each acquisition site
                 well_samples.new(index=i)
                 well_samples[i].ImageRef = ref

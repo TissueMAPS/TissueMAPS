@@ -127,7 +127,7 @@ def get_microscope_type_regex(microscope_type, as_string=False):
 
 def metadata_reader_factory(microscope_type):
     '''Gets the `microscope_type`-specific implementation of
-    :class:`tmlib.workflow.metaconfig.base.MetadataReader`.
+    :class:`MetadataReader <tmlib.workflow.metaconfig.base.MetadataReader>`.
 
     Parameters
     ----------
@@ -136,13 +136,8 @@ def metadata_reader_factory(microscope_type):
 
     Returns
     -------
-    classobj
-
-    Raises
-    ------
-    AttributeError
-        when the `miroscope_type`-specific module does not implement a reader
-        class
+    Union[classobj, None]
+        metadata reader class in case one is implemented
     '''
     module = import_microscope_type_module(microscope_type)
     reader_cls = None
@@ -153,8 +148,8 @@ def metadata_reader_factory(microscope_type):
                 reader_cls = v
                 break
     if reader_cls is None:
-        raise AttributeError(
-            'Module "%s" does not implement a MetadataReader class.' %
+        logger.warn(
+            'module "%s" does not implement a MetadataReader class',
             module.__name__
         )
     return reader_cls

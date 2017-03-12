@@ -24,8 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
-    '''
-    Simple algorithm to guess correct dimensions of a stitched mosaic image.
+    '''Guesses dimensions of a stitched mosaic image.
 
     Parameters
     ----------
@@ -249,32 +248,37 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     if reverse_columns:
         coordinates[:, 1] *= -1
 
-    # Caluculate the centroids for each grid position.
+    # Caluculate centroids for each grid position
     model = KMeans(n_clusters=n)
     model.fit(coordinates)
-    centroids = np.round(model.cluster_centers_)
-    sort_index = np.lexsort(np.fliplr(centroids).T)
-    centroids = centroids[sort_index]
-    rows = len(np.unique(centroids[:, 0]))
-    cols = len(np.unique(centroids[:, 1]))
-    positions = np.array([
-        p for p in itertools.product(np.arange(rows), np.arange(cols))
-    ])
-    logger.info('stitch dimensions: %d x %d', rows, cols)
+    centroids = model.cluster_centers_
+    indices = model.labels_
 
+    # Determine grid dimensions
+    spread = np.std(centroids, axis=0)
+    splits = list()
+    for i in range(2, n):
+        div = n / float(i)
+        if div % 1 == 0:
+            splits.append((i, int(div)))
+    splits = np.array(splits)
+    if spread[0] > spread[1]:
+        splits = splits[splits.shape[0]/2:, :]
+    else:
+        splits = splits[0:splits.shape[0]/2, :]
+    cost = splits[:, 0] / float(splits[:, 1]) - spread[0] / spread[1]
+    best_fit_index = np.where(cost == np.min(cost))[0][0]
+    rows, cols = splits[best_fit_index]
+    logger.info('calculated stitch dimensions: %d x %d', rows, cols)
+
+    # Assign relative grid coordinates to each absolute stage position
+    row_edges = np.histogram(coordinates[:, 0], bins=rows)[1][:-1]
+    col_edges = np.histogram(coordinates[:, 1], bins=cols)[1][:-1]
     grid_positions = np.zeros(coordinates.shape, int)
-    for i, c in enumerate(coordinates):
-        # Find the stage position that's closest to the centroid.
-        distance = centroids - c
-        closest = np.sum(np.abs(distance), axis=1)
-        index = np.where(closest == np.min(closest))[0][0]
-        grid_positions[i, :] = positions[index, :]
+    for i, (r, c) in enumerate(coordinates):
+        row_index = np.where(row_edges <= r)[0]
+        col_index = np.where(col_edges <= c)[0]
+        grid_positions[i, 0] = row_index[-1]
+        grid_positions[i, 1] = col_index[-1]
 
-    grid_positions = zip(*grid_positions.T)
-    if len(set(grid_positions)) != n:
-        raise MetadataError(
-            'Either the expected number of grid positions is incorrect or '
-            'wrong stage positions were provided.'
-        )
-        # Or there is a bug in this code ;)
-    return grid_positions
+    return zip(*grid_positions.T)

@@ -35,14 +35,14 @@ from tmlib.errors import NotSupportedError
 logger = logging.getLogger(__name__)
 
 
-SUPPORTED_FIELDS = {'w', 'c', 'z', 't', 's'}
+_SUPPORTED__FIELDS = {'w', 'c', 'z', 't', 's'}
 
 
-FIELD_DEFAULTS = {'w': 'A01', 'z': 0, 't': 0, 's': 0}
+_FIELD_DEFAULTS = {'w': 'A01', 'z': 0, 't': 0, 's': 0}
 
 
 MetadataFields = collections.namedtuple(
-    'MetadataFields', list(SUPPORTED_FIELDS)
+    'MetadataFields', list(_SUPPORTED__FIELDS)
 )
 
 
@@ -53,15 +53,11 @@ class MetadataHandler(object):
     `Bio-Formats <http://www.openmicroscopy.org/site/products/bio-formats>`_
     library.
 
-    Metadata has to be available as OMEXML according to the
+    Metadata has to be provided as *OMEXML* according to the
     `OME schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_.
 
     Attributes
     ----------
-    omexml_images: Dict[str, bioformats.omexml.OMEXML]
-        name and OMEXML metadata for each microscope image file
-    omexml_metadata: bioformats.omexml.OMEXML
-        OMEXML metadata generated based on microscope metadata files
     metadata: pandas.DataFrame
         configured metadata
     '''
@@ -70,26 +66,54 @@ class MetadataHandler(object):
 
     @classmethod
     def check_regular_expression(cls, regex):
+        '''Checks whether a named regular expression has all required fields.
+
+        Parameters
+        ----------
+        regex: str
+            regular expression
+
+        Raises
+        ------
+        tmlib.erros.RegexError
+            when a provided field is not supported
+        '''
         if not regex:
             raise RegexError('No regular expression provided.')
         provided_fields = re.findall(r'\(\?P\<(\w+)\>', regex)
         for name in provided_fields:
-            if name not in SUPPORTED_FIELDS:
+            if name not in _SUPPORTED__FIELDS:
                 raise RegexError(
                     '"%s" is not a supported regular expression field.\n'
                     'Supported are "%s"'
-                    % (name, '", "'.join(SUPPORTED_FIELDS))
+                    % (name, '", "'.join(_SUPPORTED__FIELDS))
                 )
 
-        for name in SUPPORTED_FIELDS:
-            if name not in provided_fields and name in FIELD_DEFAULTS:
+        for name in _SUPPORTED__FIELDS:
+            if name not in provided_fields and name in _FIELD_DEFAULTS:
                 logger.warning(
                     'regular expression field "%s" not provided, defaults to %s',
-                    name, str(FIELD_DEFAULTS[name])
+                    name, str(_FIELD_DEFAULTS[name])
                 )
 
     @classmethod
     def extract_fields_from_filename(cls, regex, filename, defaults=True):
+        '''Extracts fields from image filenames using a regular expression.
+
+        Parameters
+        ----------
+        regex: str
+            regular expression
+        filename: str
+            name of a microscope image file
+        defaults: bool, optional
+            whether default values should be used
+
+        Returns
+        -------
+        tmlib.workflow.metaconfig.base.MetadataFields
+            named tuple with extracted values
+        '''
         r = re.compile(regex)
         match = r.search(str(filename))
         if match is None:
@@ -100,56 +124,46 @@ class MetadataHandler(object):
                 )
             )
         captures = match.groupdict()
-        for k in SUPPORTED_FIELDS:
+        for k in _SUPPORTED__FIELDS:
             v = captures.get(k, None)
             if v is None:
                 if defaults:
-                    captures[k] = str(FIELD_DEFAULTS[k])
+                    captures[k] = str(_FIELD_DEFAULTS[k])
                 else:
                     captures[k] = v
         return MetadataFields(**captures)
 
-    def __init__(self, omexml_images, omexml_metadata):
+    def __init__(self, omexml_images, omexml_metadata=None):
         '''
         Parameters
         ----------
         omexml_images: Dict[str, bioformats.omexml.OMEXML]
-            name and OMEXML metadata for each microscope image file
+            name and extracted metadata for each
+            :class:`MicroscopeImageFile <tmlib.models.file.MicroscopeImageFile>`
         omexml_metadata: bioformats.omexml.OMEXML, optional
-            OMEXML metadata generated based on microscope metadata files
+            additional metadata obtained from additional
+            :class:`MicroscopeMetadataFile <tmlib.modles.file.MicroscopeMetdataFile>`
+            via a microscope type specific implementation of
+            :class:`MetdataReader <tmlib.workflow.metaconfig.base.MetadataReader>`
         '''
         logger.info('instantiate metadata handler')
-        logger.debug('check format of provided metadata')
         for name, md in omexml_images.iteritems():
             if not isinstance(md, bioformats.omexml.OMEXML):
                 raise TypeError(
-                    'Value of key "%s" of argument "omexml_images" must '
+                    'Value of "%s" of argument "omexml_images" must '
                     'have type bioformats.omexml.OMEXL.' % name
                 )
-        self.omexml_images = omexml_images
-        if not isinstance(omexml_metadata, bioformats.omexml.OMEXML):
-            raise TypeError(
-                'Argument "omexml_metadata" must have type '
-                'bioformats.omexml.OMEXL.'
-            )
-        self.omexml_metadata = omexml_metadata
-        self.metadata = pd.DataFrame()
         self._file_mapper_list = list()
-        self._file_mapper_lookup = collections.defaultdict(list)
-        self._wells = dict()
+        self._file_mapper_lut = collections.defaultdict(list)
+        self._omexml = self._combine_omexml_elements(
+            omexml_images, omexml_metadata
+        )
+        self._filenames = natsorted(omexml_images)
+        self.metadata = pd.DataFrame()
 
     @staticmethod
     def _create_channel_planes(pixels):
-        '''Adds new `Plane` elements to an existing OMEXML `Pixels` element for
-        each channel, z-plane or time point.
-
-        Parameters
-        ----------
-        pixels: bioformats.OMEXML.Image.Pixels
-            pixels element to which new planes should be added
-        '''
-        # Add new *Plane* elements to an existing OMEXML *Pixels* object,
-        # such that z-stacks are grouped by channel.
+        # Add new *Plane* elements to an existing OMEXML *Pixels* object.
         n_channels = pixels.SizeC
         n_stacks = pixels.SizeZ
         n_timepoints = pixels.SizeT
@@ -182,10 +196,13 @@ class MetadataHandler(object):
 
         return pixels
 
-    def configure_omexml_from_image_files(self):
-        '''Collects image metadata from individual `OMEXML` elements (one for each
-        original image file) and combine them into a metadata table, where each
-        row represents a single-plane image elements.
+    def configure_from_omexml(self):
+        '''Collects image metadata from *OMEXML* elements extracted form
+        image files and an additional optional *OMEXML* element provided by
+        a microscope-specific implementation of
+        :class:`MetadataReader <tmlib.workflow.metaconfig.base.MetadataReader>`.
+        All all available metadata gets combined into a table, where each row
+        represents a single 2D pixels plane.
 
         Returns
         -------
@@ -204,17 +221,12 @@ class MetadataHandler(object):
         The actual structure of the image dataset, i.e. the distribution of
         images across files, is highly variable and microscope dependent.
 
-        In TissueMAPS, each *Plane* representing a unique combination of
-        channel, time point and z-resolution is ultimately stored in a
-        separate file. This is advantageous, because it makes it easy
+        In TissueMAPS, each *Plane* is stored in a separate file.
+        This is advantageous, because it makes it easy
         for libraries to read the contained pixel array without the need for
-        specialized readers and prevents problems with parallel I/O on
-        the cluster.
+        specialized readers and prevents problems with parallel I/O.
         '''
-        logger.info('configure OMEXML metadata extracted from image files')
-        i = 0
-        # NOTE: The order of files is important for some metadata information!
-        filenames = natsorted(self.omexml_images.keys())
+        logger.info('configure metadata from OMEXML')
 
         def get_bit_depth(pixel_type):
             r = re.compile(r'(\d+)$')
@@ -225,207 +237,149 @@ class MetadataHandler(object):
                 )
             return int(m.group(1))
 
-        metadata = collections.OrderedDict()
-        metadata['name'] = list()
-        metadata['channel_name'] = list()
-        metadata['tpoint'] = list()
-        metadata['zplane'] = list()
-        metadata['bit_depth'] = list()
-        metadata['stage_position_y'] = list()
-        metadata['stage_position_x'] = list()
-        metadata['height'] = list()
-        metadata['width'] = list()
-        for f in filenames:
-            n_series = self.omexml_images[f].image_count
-            # The number of series corresponds to the number of planes
-            # within the image file.
-            for s in xrange(n_series):
-                image = self.omexml_images[f].image(s)
-                # It is assumed that all *Plane* elements where
-                # acquired at the same site, i.e. microscope stage position.
-                pixels = image.Pixels
-                n_planes = pixels.plane_count
-                if n_planes == 0:
-                    # Sometimes an image doesn't have any plane elements.
-                    # Let's create them for consistency.
-                    pixels = self._create_channel_planes(pixels)
-                    n_planes = pixels.plane_count  # update plane count
+        metadata = collections.defaultdict(list)
+        for i in xrange(self._omexml.image_count):
+            image = self._omexml.image(i)
+            # It is assumed that all *Plane* elements where
+            # acquired at the same site, i.e. microscope stage position.
+            pixels = image.Pixels
 
-                bit_depth = get_bit_depth(image.Pixels.PixelType)
-                metadata['bit_depth'].extend(
-                    [bit_depth for _ in range(n_planes)]
-                )
-                # Each metadata element represents an image, which could
-                # correspond to an individual plane or a z-stack, i.e. a
-                # collection of several focal planes for the same channel
-                # and time point.
-                for p in xrange(n_planes):
-                    plane = pixels.Plane(p)
-                    metadata['name'].append(image.Name)
-                    metadata['channel_name'].append(
-                        pixels.Channel(plane.TheC).Name
-                    )
+            bit_depth = get_bit_depth(image.Pixels.PixelType)
 
-                    metadata['tpoint'].append(plane.TheT)
-                    metadata['zplane'].append(plane.TheZ)
-                    # "TheC" will be defined later on, because this information
-                    # is often not yet available at this point.
-                    metadata['height'].append(pixels.SizeY)
-                    metadata['width'].append(pixels.SizeX)
+            n_planes = pixels.plane_count
+            metadata['bit_depth'].extend([bit_depth for _ in range(n_planes)])
+            for p in xrange(n_planes):
+                plane = pixels.Plane(p)
 
-                    metadata['stage_position_y'].append(plane.PositionY)
-                    metadata['stage_position_x'].append(plane.PositionX)
+                metadata['name'].append(image.Name)
 
-                    fm = ImageFileMapping()
-                    fm.ref_index = i
-                    fm.files = [f]
-                    fm.series = [s]
-                    fm.planes = [p]
-                    self._file_mapper_list.append(fm)
-                    self._file_mapper_lookup[f].append(fm)
+                channel = pixels.Channel(plane.TheC)
+                metadata['channel_name'].append(channel.Name)
 
-                    i += 1
+                metadata['tpoint'].append(plane.TheT)
+                metadata['zplane'].append(plane.TheZ)
+
+                metadata['date'].append(image.AcquisitionDate)
+
+                metadata['height'].append(pixels.SizeY)
+                metadata['width'].append(pixels.SizeX)
+
+                metadata['stage_position_y'].append(plane.PositionY)
+                metadata['stage_position_x'].append(plane.PositionX)
 
         self.metadata = pd.DataFrame(metadata)
         length = self.metadata.shape[0]
-        self.metadata['date'] = np.empty((length, ), dtype=str)
         self.metadata['well_name'] = np.empty((length, ), dtype=str)
         self.metadata['well_position_y'] = np.empty((length, ), dtype=int)
         self.metadata['well_position_x'] = np.empty((length, ), dtype=int)
         self.metadata['site'] = np.empty((length, ), dtype=int)
 
+        if len(self._omexml.plates) == 0:
+            logger.warn('OMEXML does not specify a Plate element')
+        else:
+            plate = self._omexml.plates[0]
+            for w in plate.Well:
+                well = plate.Well[w]
+                n_samples = len(well.Sample)
+                for s in xrange(n_samples):
+                    image_index = well.Sample[s].ImageRef
+                    for p in xrange(n_planes):
+                        index = image_index + image_index * (n_planes - 1) + p
+                        self.metadata.at[index, 'well_name'] = str(w)
+
         return self.metadata
 
-    def configure_omexml_from_metadata_files(self, regex):
-        '''Uses the *OMEXML* metadata retrieved form additional
-        microscope metadata files to complement metadata retrieved
-        from microscope image files.
-
-        Additional metadata files contain information that is not available
-        from individual image files, for example information about wells.
-
-        Parameters
-        ----------
-        regex: str
-            named regular expression
-
-        Returns
-        -------
-        pandas.DataFrame
-            metadata for each 2D *Plane* element
-
-        Note
-        ----
-        The OME schema doesn't provide information about wells at the individual
-        *Image* level: see `OME data model <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_.
-        Instead, it provides a *Plate* element, which contains *Well* elements.
-        *Well* elements contain the positional information, such as row and
-        column index of each well within the plate. The *WellSample* elements
-        represent individual image acquisition sites within a well and can hold
-        metadata, such as the x and y positions of the *WellSample* within the
-        *Well*. In addition, there is an *ImageRef* element, which can be used
-        to map a *WellSample* to the corresponding *Image* element.
-
-        Custom handlers must provide the metadata from additional files
-        as a single *OMEXML* object that holds the information for all images.
-        This is in contrast to the way metadata is handled for individual
-        images, where there is a separate *OMEXML* object for each image file.
-        The value of the *image_count* attribute must equal
-        *number of channels* x *number of focal planes* x
-        *number of time series* x *number of acquisition sites*.
-        The values of the *SizeT*, *SizeC* and *SizeZ* attributes should
-        match the actual pattern in the image files.
-        For example, if the image file contains
-        planes for one time point, one acquisition site and 10 focal planes,
-        then *SizeT* == 1, *SizeC* == 1 and *SizeZ* == 10. Thereby we can keep
-        track of individual planes upon formatting.
-
-        Custom handlers are further required to provide information for the
-        SPW *Plate* element. For consistency a slide should be represented
-        as a plate with a single *Well* element.
-        The *ImageRef* attribute of *WellSample* elements must be provided in
-        form of a unique integer that can be used to map the well sample to
-        its corresponding image (2D pixel plane).
-
-        Warning
-        -------
-        If the *Name* attribute of *Image* elements is not set,
-        `python-bioformats` automatically assigns the name "default.png".
-        *Image* elements with this name are assumed to be irrelevant
-        and consequently skipped, i.e. the corresponding metadata entries are
-        not updated.
-
-        Raises
-        ------
-        NotSupportedError
-            when metadata specifies more than one *Plate* element
-            or when *Plane* elements have different x, y positions
-        MetadataError
-            when no additional metadata is available or when *Plate* element
-            provides no or incorrect references to image files
-        '''
-        if self.omexml_metadata.image_count == 0:
-            logger.info('no additional metadata provided')
-            return self.metadata
-
-        if not regex:
-            raise RegexError('No regular expression provided.')
-
-        logger.info('configure OMEXML provided by additional files')
-
-        # NOTE: The value of the "image_count" attribute must equal the
-        # total number of planes.
-        n_images = self.omexml_metadata.image_count
-        if not n_images == self.metadata.shape[0]:
-            logger.warning(
-                'number of images specified in metadata doesn\'t match the '
-                'number of available images'
-            )
-
-        md = self.metadata
-        index = md.index.tolist()
-        for i in xrange(n_images):
-            # Only consider image elements for which the value of the *Name*
-            # attribute matches.
-            image = self.omexml_metadata.image(i)
-            pixels = image.Pixels
-            if i not in index:
-                logger.warning('image #%d "%s" is missing', i, image.Name)
-                continue
-
-            if pixels.channel_count > 1:
-                raise NotSupportedError(
-                    'Only image elements with one channel are supported.'
+    def _combine_omexml_elements(self, omexml_images, omexml_metadata):
+        logger.info('combine OMEXML elements')
+        n_images = np.sum([v.image_count for v in omexml_images.values()])
+        if omexml_metadata is not None:
+            extra_omexml_available = True
+            if not isinstance(omexml_metadata, bioformats.omexml.OMEXML):
+                raise TypeError(
+                    'Argument "omexml_metadata" must have type '
+                    'bioformats.omexml.OMEXML.'
                 )
+            if omexml_metadata.image_count != n_images:
+                raise MetadataError(
+                    'Number of images in "omexml_metadata" must match '
+                    'the total number of Image elements in "omexml_images".'
+                )
+        else:
+            extra_omexml_available = False
+            omexml_metadata = bioformats.OMEXML(XML_DECLARATION)
+            omexml_metadata.image_count = n_images
 
-            if getattr(image, 'AcquisitionDate', None) is not None:
-                md.at[i, 'date'] = image.AcquisitionDate
+        image_element_attributes = {'AcquisitionDate', 'Name'}
+        channel_element_attributes = {'Name'}
+        pixel_element_attributes = {
+            'PixelType', 'SizeC', 'SizeT', 'SizeX', 'SizeY', 'SizeZ'
+        }
+        plane_element_attributes = {
+            'PositionX', 'PositionY', 'PositionZ', 'TheC', 'TheT', 'TheZ'
+        }
+        filenames = natsorted(omexml_images)
+        count = 0
+        for i, f in enumerate(filenames):
+            current_omexml_element = omexml_images[f]
+            n_series = current_omexml_element.image_count
+            for s in xrange(n_series):
+                current_image = current_omexml_element.image(s)
+                md_image = omexml_metadata.image(count)
+                for attr in image_element_attributes:
+                    value = getattr(current_image, attr)
+                    if value is not None:
+                        setattr(md_image, attr, value)
 
-            if hasattr(pixels, 'Channel'):
-                if getattr(pixels.Channel(0), 'Name', None) is not None:
-                    md.at[i, 'channel_name'] = pixels.Channel(0).Name
+                current_pixels = current_image.Pixels
+                n_planes = current_pixels.plane_count
+                if n_planes == 0:
+                    # Sometimes an image doesn't have any plane elements.
+                    # Let's create them for consistency.
+                    current_pixels = self._create_channel_planes(current_pixels)
+                    n_planes = current_pixels.plane_count
 
-            if hasattr(pixels, 'Plane'):
-                if getattr(pixels.Plane(0), 'TheZ', None) is not None:
-                    md.at[i, 'zplane'] = pixels.Plane(0).TheZ
-                if getattr(pixels.Plane(0), 'TheT', None) is not None:
-                    md.at[i, 'tpoint'] = pixels.Plane(0).TheT
-                if (getattr(pixels.Plane(0), 'PositionX', None) is not None and
-                        getattr(pixels.Plane(0), 'PositionY', None) is not None):
-                    md.at[i, 'stage_position_x'] = pixels.Plane(0).PositionX
-                    md.at[i, 'stage_position_y'] = pixels.Plane(0).PositionY
+                md_pixels = md_image.Pixels
+                if extra_omexml_available and (md_pixels.plane_count != n_planes):
+                    raise MetadataError(
+                        'Image element #%d in OMEXML obtained from additional '
+                        'metdata files must have the same number of Plane  '
+                        'elements as the corresponding Image elements in the '
+                        'OMEXML element obtained from image file "%s".' % (i, f)
+                    )
 
-        # NOTE: Plate information is usually not readily available from images
-        # or additional metadata files and thus requires custom readers/handlers
-        plate = self.omexml_metadata.plates[0]
-        for w in plate.Well:
-            well = plate.Well[w]
-            n_samples = len(well.Sample)
-            for s in xrange(n_samples):
-                i = well.Sample[s].ImageRef
-                md.at[i, 'well_name'] = w
+                for attr in pixel_element_attributes:
+                    value = getattr(current_pixels, attr)
+                    if value is not None:
+                        setattr(md_pixels, attr, value)
 
-        return self.metadata
+                for p in xrange(n_planes):
+                    current_plane = current_pixels.Plane(p)
+                    md_plane = md_pixels.Plane(p)
+                    for attr in plane_element_attributes:
+                        value = getattr(current_plane, attr)
+                        if value is not None:
+                            setattr(md_plane, attr, value)
+
+                    fm = ImageFileMapping()
+                    fm.ref_index = count + p
+                    fm.files = [f]
+                    fm.series = [s]
+                    fm.planes = [p]
+                    self._file_mapper_list.append(fm)
+                    self._file_mapper_lut[f].append(fm)
+
+                n_channels = current_pixels.channel_count
+                for c in xrange(n_channels):
+                    current_channel = current_pixels.Channel(c)
+                    md_channel = md_pixels.Channel(c)
+                    for attr in channel_element_attributes:
+                        value = getattr(current_channel, attr)
+                        if value is not None:
+                            setattr(md_channel, attr, value)
+
+                count += 1
+
+        return omexml_metadata
 
     def determine_missing_metadata(self):
         '''Determines if required basic metadata information, such as
@@ -449,24 +403,14 @@ class MetadataHandler(object):
             missing_metadata.add('time point')
         return missing_metadata
 
-    def configure_metadata_from_filenames(self, plate_dimensions, regex):
+    def configure_from_filenames(self, plate_dimensions, regex):
         '''Configures metadata based on information encoded in image filenames
-        using a regular expression with named groups:
+        using a regular expression with the followsing fields:
             - *w*: well
             - *t*: time point
             - *s*: acquisition site
             - *z*: focal plane (z dimension)
             - *c*: channel
-
-        For details on how to build a named regular expression
-        please refer to documentation of the `re` package for
-        `regular expression syntax <https://docs.python.org/2/library/re.html#regular-expression-syntax>`_.
-
-        Expressions can be tested conveniently online at
-        `pythex.org <http://pythex.org/>`_. Here is an
-        `example <http://pythex.org/?regex=%5B%5E_%5D%2B_(%3FP%3Cw%3E%5Cw%2B)_T(%3FP%3Ct%3E%5Cd%2B)F(%3FP%3Cs%3E%5Cd%2B)L%5Cd%2BA%5Cd%2BZ(%3FP%3Cz%3E%5Cd%2B)C(%3FP%3Cc%3E%5Cd%2B)%5C.&test_string=150820-Testset-CV-2_D03_T0001F001L01A01Z01C02.tif&ignorecase=0&multiline=0&dotall=0&verbose=0>`_
-        of a named regular expression string for retrieval of information from
-        an image filename generated by the Yokogawa CellVoyager microscope.
 
         Parameters
         ----------
@@ -495,7 +439,7 @@ class MetadataHandler(object):
         if md.shape[0] != len(filenames):
             raise MetadataError(
                 'Configuration of metadata based on filenames '
-                'works only when each image file contains a single plane.'
+                'works only when each image file contains only a single plane.'
             )
 
         logger.info('retrieve metadata from filenames via regular expression')
@@ -553,7 +497,8 @@ class MetadataHandler(object):
         for well_name in np.unique(md.well_name):
             ix = planes_per_well.groups[well_name]
             positions = zip(
-                md.loc[ix, 'stage_position_y'], md.loc[ix, 'stage_position_x']
+                md.loc[ix, 'stage_position_y'],
+                md.loc[ix, 'stage_position_x']
             )
             n = len(positions) / (n_tpoints * n_channels * n_zplanes)
             coordinates = self._calculate_coordinates(positions, n)
@@ -641,7 +586,7 @@ class MetadataHandler(object):
         # Map the locations of each plane with the original image files
         # in order to be able to perform the intensity projection later on
         grouped_file_mapper_list = list()
-        grouped_file_mapper_lookup = collections.defaultdict(list)
+        grouped_file_mapper_lut = collections.defaultdict(list)
         rows_to_drop = list()
         for key, indices in zstacks.groups.iteritems():
             fm = ImageFileMapping()
@@ -656,7 +601,7 @@ class MetadataHandler(object):
                 fm.planes.extend(self._file_mapper_list[index].planes)
                 fm.zlevels.append(md.loc[index, 'zplane'])
             grouped_file_mapper_list.append(fm)
-            grouped_file_mapper_lookup[tuple(fm.files)].append(fm)
+            grouped_file_mapper_lut[tuple(fm.files)].append(fm)
             # Keep only the first record
             rows_to_drop.extend(indices[1:])
 
@@ -664,7 +609,7 @@ class MetadataHandler(object):
         self.metadata.drop(self.metadata.index[rows_to_drop], inplace=True)
         del self.metadata['zplane']
         self._file_mapper_list = grouped_file_mapper_list
-        self._file_mapper_lookup =  grouped_file_mapper_lookup
+        self._file_mapper_lut =  grouped_file_mapper_lut
 
         return self.metadata
 
@@ -748,27 +693,45 @@ class MetadataHandler(object):
 
 class MetadataReader(object):
 
-    '''Abstract base class for reading metadata from additional, non-image files.
+    '''Abstract base class for reading metadata from additional non-image
+    files, which are either generated by the microscope or provided by users.
 
-    The ``read()`` method of derived classes must return metadata as a single
-    *OMEXML* object, according to the OME data model,
-    see `python-bioformats <http://pythonhosted.org/python-bioformats/#metadata>`.
+    The ``read()`` method of derived classes must return a single *OMEXML*
+    object, according to the OME data model, see
+    `python-bioformats <http://pythonhosted.org/python-bioformats/#metadata>`.
+    The value of the *image_count* attribute in the *OMEXML* element provided
+    by the implemented reader must equal the number of image files * the number
+    of *Image* elements per file * number of *Plane* elements per *Image*
+    element. In addition, the number of *Plane* elements and the values of
+    *SizeT*, *SizeC* and *SizeZ* elements of the *Image* element must match
+    those in *OMEXML* elements obtained from the corresponding image files.
+    For example, if an image file contains one series with planes for one time
+    point, one channel and 10 focal planes, then
+    *SizeT* = 1, *SizeC* = 1 and *SizeZ* = 10.
 
-    Warning
-    -------
-    The number of *Image* elements within the *OMEXML* object must match
-    the total number of 2D pixel planes, which may be different from the number
-    of image files!
+    The OME schema doesn't provide information about wells at the individual
+    *Image* level: see `OME data model <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_.
+    Instead, it provides a *Plate* element, which contains *Well* elements.
+    *Well* elements contain the positional information, such as row and
+    column index of each well within the plate. *WellSample* elements map to
+    to individual *Image* elements and hold information about the position
+    of images within the *Well*. In addition, there is an *ImageRef* element,
+    which can be used to map the *WellSample* to its corresponding *Image*
+    element.
 
-    Note
-    ----
-    In case custom readers provide a *Plate* element, they also have to specify
-    an *ImageRef* element for each *WellSample* element, which serves as
-    reference to the respective *Image* element. Each *ImageRef* attribute
-    must be a unique integer that maps the *WellSample* to its corresponding
-    *Image* element (2D *Pixels* plane) and can be used to index
-    :attr:`tmlib.workflow.metaconfig.base.MetadataHandler.metadata` in order
-    to retrieve the metadata for this element.
+    Derived classes should provide information for the SPW *Plate* element.
+    For consistency, a slide should be represented as a *Plate* with a single
+    *Well* element. Custom readers should futher specify the *ImageRef* element
+    for each *WellSample* element.
+    The value of *ImageRef* must be an unsigned integer in the range [0, *n*],
+    where *n* is the total number of *Image* elements in the *OMEXML* element
+    provided by the class.
+    Individual *Image* elements may be distributed accross several *OMEXML*
+    elements (one *OMEXML* element for each
+    :class:`MicroscopeImageFile <tmlib.models.file.MicroscopeImageFile>`). The
+    *ImageRef* value for a particular *Image* can be calculated as follows:
+    one-based index in the naturally sorted list of image filenames * number
+    of *Image* elements per image file.
 
     See also
     --------
@@ -793,7 +756,7 @@ class MetadataReader(object):
 
     @abstractmethod
     def read(self, microscope_metadata_files, microscope_image_files):
-        '''Reads metadata from vendor specific files on disk.
+        '''Reads metadata from arbitrary files.
 
         Parameters
         ----------

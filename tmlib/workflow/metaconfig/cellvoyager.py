@@ -84,24 +84,21 @@ class CellvoyagerMetadataReader(MetadataReader):
     '''
 
     def read(self, microscope_metadata_files, microscope_image_files):
-        '''Read metadata from "mlf" and "mrf" metadata files.
+        '''Reads metadata from "mlf" and "mrf" metadata files in case they
+        are provided.
 
         Parameters
         ----------
         microscope_metadata_files: List[str]
-            absolute path to the microscope metadata files
+            absolute path to microscope metadata files
         microscope_image_files: List[str]
-            absolute path to the microscope image files
+            absolute path to microscope image files
 
         Returns
         -------
         bioformats.omexml.OMEXML
             OMEXML image metadata
 
-        Raises
-        ------
-        ValueError
-            when `microscope_metadata_files` doesn't have length two
         '''
         microscope_image_files = natsorted(microscope_image_files)
         metadata = bioformats.OMEXML(XML_DECLARATION)
