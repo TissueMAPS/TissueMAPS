@@ -409,18 +409,19 @@ class ChannelLayer(ExperimentModel):
         Parameters
         ----------
         image_file: tmlib.models.ChannelImageFile
+            file containing the image that should be mapped
 
         Returns
         -------
         List[Dict[str, Tuple[int]]]
-            array of mappings with *y* and *x* coordinate as well as
-            *y_offset* and *x_offset* relative to `image_file` for each tile
-            whose pixels are part of `image_file`
+            mappings with *y* and *x* coordinate as well as
+            *y_offset* and *x_offset* relative to the image in `image_file`
+            for each tile whose pixels are part of the image
 
         Note
         ----
         For those tiles that overlap multiple images, only map those at the
-        upper and/or left border of the image in `image_file`
+        upper and/or left border of the image in `image_file`.
         '''
         mappings = list()
         experiment = self.channel.experiment
@@ -579,7 +580,10 @@ class ChannelLayer(ExperimentModel):
             if current_site.omitted:
                 continue
             fid = session.query(ChannelImageFile.id).\
-                filter_by(site_id=current_site.id, channel_id=self.channel.id).\
+                filter_by(
+                    site_id=current_site.id, channel_id=self.channel.id,
+                    tpoint=self.tpoint, zplane=self.zplane
+                ).\
                 one()[0]
             y_offset_site, x_offset_site = current_site.offset
             row_indices = self._calc_tile_indices(
@@ -613,7 +617,10 @@ class ChannelLayer(ExperimentModel):
             if site.omitted:
                 continue
             fid = session.query(ChannelImageFile.id).\
-                filter_by(site_id=site.id, channel_id=self.channel.id).\
+                filter_by(
+                    site_id=site.id, channel_id=self.channel.id,
+                    tpoint=self.tpoint, zplane=self.zplane
+                ).\
                 one()[0]
             y_offset_site, x_offset_site = site.offset
             row_indices = self._calc_tile_indices(
