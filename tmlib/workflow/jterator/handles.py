@@ -228,7 +228,7 @@ class Image(PipeHandle):
         array = self.value
         if array.ndim == 2:
             array = array[..., np.newaxis, np.newaxis]
-        elif array.shape == 3:
+        elif array.ndim == 3:
             array = array[..., np.newaxis]
         for t in xrange(array.shape[-1]):
             for z in xrange(array[..., t].shape[-1]):
@@ -245,7 +245,7 @@ class Image(PipeHandle):
         array = self.value
         if array.ndim == 2:
             array = array[..., np.newaxis, np.newaxis]
-        elif array.shape == 3:
+        elif array.ndim == 3:
             array = array[..., np.newaxis]
         for t in xrange(array.shape[-1]):
             yield (t, array[:, :, :, t])
