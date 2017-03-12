@@ -57,37 +57,6 @@ class PyramidBuilder(ClusterRoutines):
         '''
         super(PyramidBuilder, self).__init__(experiment_id, verbosity)
 
-    def list_input_files(self, batches):
-        '''Provides a list of all input files that are required by the step.
-
-        Parameters
-        ----------
-        batches: List[dict]
-            job descriptions
-        '''
-        files = list()
-        if batches['run']:
-            run_files = flatten([
-                self._make_paths_absolute(j)['inputs'].values()
-                for j in batches['run']
-                if j['index'] == 0  # only base tile inputs
-            ])
-            if all([isinstance(f, list) for f in run_files]):
-                run_files = flatten(run_files)
-                if all([isinstance(f, list) for f in run_files]):
-                    run_files = flatten(run_files)
-                files.extend(run_files)
-            elif any([isinstance(f, dict) for f in run_files]):
-                files.extend(
-                    flatten([
-                        flatten(f.values())
-                        for f in run_files if isinstance(f, dict)
-                    ])
-                )
-            else:
-                files.extend(run_files)
-        return files
-
     def create_batches(self, args):
         '''Creates job descriptions for parallel computing.
 
@@ -646,10 +615,14 @@ class PyramidBuilder(ClusterRoutines):
                     )
                     # First element: x axis
                     # Second element: inverted (!) y axis
-                    ul = (obj.offset[1], -1 * obj.offset[0])
-                    ll = (ul[0] + obj.image_size[1], ul[1])
-                    ur = (ul[0], ul[1] - obj.image_size[0])
-                    lr = (ll[0], ul[1] - obj.image_size[0])
+                    # We further subtract one pixel such that the polygon
+                    # defines the exact boundary of the objects. This is
+                    # crucial for testing whether other objects intersect with
+                    # the border.
+                    ul = (obj.offset[1] - 1, -1 * obj.offset[0] + 1)
+                    ll = (ul[0] + obj.image_size[1] - 1, ul[1] + 1)
+                    ur = (ul[0] - 1, ul[1] - obj.image_size[0] + 1)
+                    lr = (ll[0] - 1, ul[1] - obj.image_size[0] + 1)
                     # Closed circle with coordinates sorted counter-clockwise
                     contour = np.array([ur, ul, ll, lr, ur])
                     polygon = shapely.geometry.Polygon(contour)
