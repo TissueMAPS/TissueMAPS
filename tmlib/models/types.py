@@ -70,6 +70,16 @@ class ST_ExteriorRing(GenericFunction):
     type = Geometry
 
 
+class ST_Boundary(GenericFunction):
+
+    '''Implementation of the Postgis function
+    `ST_Boundary <http://postgis.net/docs/ST_Boundary.html>`_.
+    '''
+
+    name = 'ST_Boundary'
+    type = Geometry
+
+
 class ST_SimplifyPreserveTopology(GenericFunction):
 
     '''Implementation of the Postgis function
