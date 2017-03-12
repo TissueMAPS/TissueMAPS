@@ -152,8 +152,10 @@ class ImageExtractor(ClusterRoutines):
 
                         if batch['mip']:
                             logger.info('perform intensity projection')
-                            stack = np.dstack(planes)
-                            planes = {0: np.max(stack, axis=2)}
+                            stack = np.dstack(planes.values())
+                            planes = {
+                                0: np.max(stack, axis=2).astype(stack.dtype)
+                            }
 
                         for i, z in enumerate(sorted(planes)):
                             # We give zplanes zero-based indices.
