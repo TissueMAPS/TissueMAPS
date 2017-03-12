@@ -31,6 +31,7 @@ from tmlib.workflow.illuminati import stitch
 from tmlib.errors import MetadataError
 from tmlib.errors import RegexError
 from tmlib.errors import NotSupportedError
+from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
 
 logger = logging.getLogger(__name__)
 
@@ -339,6 +340,7 @@ class MetadataHandler(object):
                     n_planes = current_pixels.plane_count
 
                 md_pixels = md_image.Pixels
+                md_pixels.plane_count = n_planes
                 if extra_omexml_available and (md_pixels.plane_count != n_planes):
                     raise MetadataError(
                         'Image element #%d in OMEXML obtained from additional '
@@ -369,6 +371,7 @@ class MetadataHandler(object):
                     self._file_mapper_lut[f].append(fm)
 
                 n_channels = current_pixels.channel_count
+                md_image.channel_count = n_channels
                 for c in xrange(n_channels):
                     current_channel = current_pixels.Channel(c)
                     md_channel = md_pixels.Channel(c)

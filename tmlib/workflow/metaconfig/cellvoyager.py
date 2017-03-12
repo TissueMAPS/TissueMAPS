@@ -104,10 +104,10 @@ class CellvoyagerMetadataReader(MetadataReader):
         metadata = bioformats.OMEXML(XML_DECLARATION)
         if len(microscope_metadata_files) == 0:
             logger.warn('no microscope metadata files found')
-            return metadata
+            return None
         elif len(microscope_metadata_files) != 2:
             logger.warn('expected two microscope metadata files')
-            return metadata
+            return None
         for f in microscope_metadata_files:
             if f.endswith('mlf'):
                 mlf_filename = f
