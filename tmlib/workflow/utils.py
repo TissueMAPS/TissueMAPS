@@ -73,7 +73,7 @@ def create_gc3pie_sql_store():
     -------
     The "tasks" table must already exist.
     '''
-    logger.info('create GC3Pie store using "tasks" table')
+    logger.debug('create GC3Pie store using "tasks" table')
     store_url = Url(cfg.db_uri)
     table_columns = tm.Task.__table__.columns
     now = datetime.now()
@@ -121,7 +121,7 @@ def create_gc3pie_session(location, store):
     gc3libs.persistence.session.Session
         `GC3Pie` session
     '''
-    logger.info('create GC3Pie session')
+    logger.debug('create GC3Pie session')
     # NOTE: Unfortunately, we cannot parse the store instance to the constructor
     # of Session.
     return Session(location, store=store)
@@ -144,7 +144,7 @@ def create_gc3pie_engine(store, forget=False):
     gc3libs.core.Engine
         engine
     '''
-    logger.info('create GC3Pie engine')
+    logger.debug('create GC3Pie engine')
     n = 1000  # NOTE: match with number of db connections!!!
     logger.debug('set maximum number of submitted jobs to %d', n)
     engine = gc3libs.create_engine(
