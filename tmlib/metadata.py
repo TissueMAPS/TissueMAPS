@@ -60,16 +60,14 @@ class SiteImageMetadata(ImageMetadata):
     :class:`Site <tmlib.models.site.Site>`.
     '''
 
-    __slots__ = ('_site_id', '_cycle_id', '_tpoint', '_zplane')
+    __slots__ = ('_site_id', '_tpoint', '_zplane')
 
-    def __init__(self, site_id, cycle_id, tpoint, zplane):
+    def __init__(self, site_id, tpoint, zplane):
         '''
         Parameters
         ----------
         site_id: int
             ID of the parent :class:`Site <tmlib.models.site.Site>`
-        cycle_id: int
-            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
         tpoint: int
             zero-based time point index
         zplane: int
@@ -79,7 +77,6 @@ class SiteImageMetadata(ImageMetadata):
         self.tpoint = tpoint
         self.zplane = zplane
         self.site_id = site_id
-        self.cycle_id = cycle_id
 
     @property
     def tpoint(self):
@@ -116,19 +113,6 @@ class SiteImageMetadata(ImageMetadata):
             raise TypeError('Argument "site_id" must have type int.')
         self._site_id = value
 
-    @property
-    def cycle_id(self):
-        '''int: ID of the corresponding
-        :class:`Cycle <tmlib.models.cycle.Cycle>`
-        '''
-        return self._cycle_id
-
-    @cycle_id.setter
-    def cycle_id(self, value):
-        if not isinstance(value, int):
-            raise TypeError('Argument "cycle_id" must have type int.')
-        self._cycle_id = value
-
 
 class SegmentationImageMetadata(SiteImageMetadata):
 
@@ -137,7 +121,7 @@ class SegmentationImageMetadata(SiteImageMetadata):
 
     __slots__ = ('_mapobject_type_id', )
 
-    def __init__(self, mapobject_type_id, site_id, cycle_id, tpoint, zplane):
+    def __init__(self, mapobject_type_id, site_id, tpoint, zplane):
         '''
         Parameters
         ----------
@@ -146,16 +130,12 @@ class SegmentationImageMetadata(SiteImageMetadata):
             :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
         site_id: int
             ID of the parent :class:`Site <tmlib.models.site.Site>`
-        cycle_id: int
-            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
         tpoint: int
             zero-based time point index
         zplane: int
             zero-based z-level index
         '''
-        super(SegmentationImageMetadata, self).__init__(
-            site_id, cycle_id, tpoint, zplane
-        )
+        super(SegmentationImageMetadata, self).__init__(site_id, tpoint, zplane)
         self.mapobject_type_id = mapobject_type_id
 
     @property
@@ -185,7 +165,7 @@ class ChannelImageMetadata(SiteImageMetadata):
     '''Metadata for :class:`ChannelImage <tmlib.image.ChannelImage>`.'''
 
     __slots__ = (
-        '_channel_id', '_is_corrected', '_is_rescaled', '_is_clipped',
+        '_channel_id', '_cycle_id', '_is_corrected', '_is_rescaled', '_is_clipped',
         '_upper_overhang', '_lower_overhang',
         '_right_overhang', '_left_overhang', '_x_shift', '_y_shift'
     )
@@ -205,10 +185,9 @@ class ChannelImageMetadata(SiteImageMetadata):
         zplane: int
             zero-based z-level index
         '''
-        super(ChannelImageMetadata, self).__init__(
-            site_id, cycle_id, tpoint, zplane
-        )
+        super(ChannelImageMetadata, self).__init__(site_id, tpoint, zplane)
         self.channel_id = channel_id
+        self.cycle_id = cycle_id
         self.is_corrected = False
         self.is_rescaled = False
         self.is_clipped = False
@@ -231,6 +210,19 @@ class ChannelImageMetadata(SiteImageMetadata):
         if not isinstance(value, int):
             raise TypeError('Argument "channel_id" must have type int.')
         self._channel_id = value
+
+    @property
+    def cycle_id(self):
+        '''int: ID of the corresponding
+        :class:`Cycle <tmlib.models.cycle.Cycle>`
+        '''
+        return self._cycle_id
+
+    @cycle_id.setter
+    def cycle_id(self, value):
+        if not isinstance(value, int):
+            raise TypeError('Argument "cycle_id" must have type int.')
+        self._cycle_id = value
 
     @property
     def upper_overhang(self):

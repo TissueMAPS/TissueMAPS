@@ -78,49 +78,54 @@ class Image(object):
                 'Argument "array" must have type numpy.ndarray.'
             )
         if value.ndim != 2:
-            raise ValueError('Argument "array" must be a two dimensional.')
+            raise ValueError('Argument "array" must be two dimensional.')
         self._array = value
 
     @property
     def dimensions(self):
-        '''Tuple[int]: y, x, z dimensions of the voxels array'''
+        '''Tuple[int]: y, x, z dimensions of the pixels array'''
         return self.array.shape
 
     @property
     def dtype(self):
-        '''str: data type of voxels array elements'''
+        '''str: data type of pixels array elements'''
         return self.array.dtype
 
     @property
     def is_int(self):
-        '''bool: whether voxels array has integer data type
+        '''bool: whether pixels array has integer data type
         '''
         return issubclass(self.array.dtype.type, np.integer)
 
     @property
     def is_float(self):
-        '''bool: whether voxels array has float data type
+        '''bool: whether pixels array has float data type
         '''
         return issubclass(self.array.dtype.type, np.float)
 
     @property
     def is_uint(self):
-        '''bool: whether voxels array has unsigned integer data type'''
+        '''bool: whether pixels array has unsigned integer data type'''
         return issubclass(self.array.dtype.type, np.unsignedinteger)
 
     @property
     def is_uint8(self):
-        '''bool: whether voxels array has 8-bit unsigned integer data type'''
+        '''bool: whether pixels array has 8-bit unsigned integer data type'''
         return self.array.dtype == np.uint8
 
     @property
     def is_uint16(self):
-        '''bool: whether voxels array has 16-bit unsigned integer data type'''
+        '''bool: whether pixels array has 16-bit unsigned integer data type'''
         return self.array.dtype == np.uint16
 
     @property
+    def is_int32(self):
+        '''bool: whether pixels array has 32-bit integer data type'''
+        return self.array.dtype == np.int32
+
+    @property
     def is_binary(self):
-        '''bool: whether voxels array has boolean data type'''
+        '''bool: whether pixels array has boolean data type'''
         return self.array.dtype == np.bool
 
     def extract(self, y_offset, height, x_offset, width):
@@ -149,19 +154,19 @@ class Image(object):
 
     @assert_type(image='tmlib.image.Image')
     def insert(self, image, y_offset, x_offset, inplace=True):
-        '''Inserts a continuous, hyperrectangular volume of voxels into
+        '''Inserts a continuous, hyperrectangular volume of pixels into
         an image.
 
         Parameters
         ----------
         image: tmlib.image.Image
-            image whose voxels should be inserted
+            image whose pixels should be inserted
         y_offset: int
             index of the top, left point of the hyperrectangle on the *y* axis
         x_offset: int
             index of the top, left point of the hyperrectangle on the *x* axis
         inplace: bool, optional
-            insert voxels into the existing image rather than into a copy
+            insert pixels into the existing image rather than into a copy
             (default: ``True``)
 
         Returns
@@ -185,7 +190,7 @@ class Image(object):
 
     @assert_type(image='tmlib.image.Image')
     def merge(self, image, axis, offset, inplace=True):
-        '''Merges pixels/voxels arrays of two images into one.
+        '''Merges pixels arrays of two images into one.
 
         Parameters
         ----------
@@ -222,7 +227,7 @@ class Image(object):
 
     @assert_type(image='tmlib.image.Image')
     def join(self, image, axis):
-        '''Joins two pixels/voxels arrays.
+        '''Joins two pixels arrays.
 
         Parameters
         ----------
@@ -251,7 +256,7 @@ class Image(object):
         Parameters
         ----------
         n: int
-            number of pixels/voxels that should be added along the given axis
+            number of pixels that should be added along the given axis
         side: str
             side of the array that should be padded relative to the *y*, *x*
             axis of an individual plane
@@ -280,7 +285,7 @@ class Image(object):
         return self.__class__(array, self.metadata)
 
     def smooth(self, sigma, inplace=True):
-        '''Applies a Gaussian smoothing filter to the pixels/voxels array.
+        '''Applies a Gaussian smoothing filter to the pixels array.
 
         Parameters
         ----------
@@ -306,9 +311,9 @@ class Image(object):
             return new_img
 
     def shrink(self, factor, inplace=True):
-        '''Shrinks the first two dimensions of the pixels/voxels array
-        by `factor`. Pixels/voxels values of the aggregated array
-        are the mean of the neighbouring pixels/voxels, where the neighbourhood
+        '''Shrinks the first two dimensions of the pixels array
+        by `factor`. pixels values of the aggregated array
+        are the mean of the neighbouring pixels, where the neighbourhood
         is defined by `factor`.
 
         Parameters
@@ -448,26 +453,6 @@ class Image(object):
             new_object.metadata.is_aligned = True
             return new_object
 
-    def png_encode(self):
-        '''Encodes pixels of the image as a PNG file.
-
-        Returns
-        -------
-        numpy.ndarray[numpy.uint8]
-            encoded pixels
-        '''
-        return cv2.imencode('.png', self.array)[1]
-
-    def tiff_encode(self):
-        '''Encodes pixels of the image as a TIFF file.
-
-        Returns
-        -------
-        numpy.ndarray[numpy.uint8]
-            encoded pixels
-        '''
-        return cv2.imencode('.tif', self.array)[1]
-
 
 class ChannelImage(Image):
 
@@ -485,6 +470,25 @@ class ChannelImage(Image):
         super(ChannelImage, self).__init__(array, metadata)
         if not self.is_uint:
             raise TypeError('Image must have unsigned integer type.')
+
+    @property
+    def array(self):
+        '''numpy.ndarray[numpy.uint16]: 2D pixels array'''
+        return self._array
+
+    @array.setter
+    def array(self, value):
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Argument "array" must have type numpy.ndarray.'
+            )
+        if value.ndim != 2:
+            raise ValueError('Argument "array" must be two dimensional.')
+        if not(value.dtype == np.uint16 or value.dtype == np.uint8):
+            raise ValueError(
+                'Argument "array" must have numpy.uint8 or numpy.uint16 data type.'
+            )
+        self._array = value
 
     @staticmethod
     def _map_to_uint8(img, lower_bound=None, upper_bound=None):
@@ -544,7 +548,7 @@ class ChannelImage(Image):
         Returns
         -------
         tmlib.image.Image
-            image with rescaled voxels
+            image with rescaled pixels
         '''
         if self.is_uint16:
             array = self._map_to_uint8(self.array, lower, upper)
@@ -560,7 +564,7 @@ class ChannelImage(Image):
             return self
         else:
             TypeError(
-                'Only voxels with unsigned integer type can be scaled.'
+                'Only pixels with unsigned integer type can be scaled.'
             )
 
     def clip(self, lower, upper, inplace=True):
@@ -580,7 +584,7 @@ class ChannelImage(Image):
         Returns
         -------
         tmlib.image.ChannelImage
-            image with clipped voxels
+            image with clipped pixels
         '''
         array = np.clip(self.array, lower, upper)
         if inplace:
@@ -642,7 +646,7 @@ class ChannelImage(Image):
         Returns
         -------
         tmlib.image.ChannelImage
-            image with voxels corrected for illumination
+            image with pixels corrected for illumination
 
         Raises
         ------
@@ -665,23 +669,73 @@ class ChannelImage(Image):
             new_object.metadata.is_corrected = True
             return new_object
 
+    def png_encode(self):
+        '''Encodes pixels of the image in *PNG* format.
+
+        Returns
+        -------
+        numpy.ndarray[numpy.uint8]
+            encoded pixels array
+
+        '''
+        logger.info('encode image as PNG')
+        return cv2.imencode('.png', self.array)[1]
+
+    def tiff_encode(self):
+        '''Encodes pixels of the image in *TIFF* format.
+
+        Returns
+        -------
+        numpy.ndarray[numpy.uint8]
+            encoded pixels array
+        '''
+        logger.info('encode image as TIFF')
+        return cv2.imencode('.tif', self.array)[1]
+
 
 class SegmentationImage(Image):
 
-    '''Class for a segmentation image: a label image with a single band.'''
+    '''Class for a segmentation image: a labeled image where each segmented
+    object is encoded by a unique one-based identifier value.
+
+    Warning
+    -------
+    Pixels values are 32-bit integers. This can create problems when pixels
+    should be encoded in *PNG* format. This approach is thus limited to images
+    containing less than 65536 objects. *TissueMAPS* doesn't store segmented
+    objects in image files, so this limitation only applies to externally
+    generated segmentations.
+    '''
 
     def __init__(self, array, metadata=None):
         '''
         Parameters
         ----------
-        array: numpy.ndarray[uint16]
-            pixels/voxels array
+        array: numpy.ndarray[numpy.int32]
+            pixels array
         metadata: tmlib.metadata.SegmentationImageMetadata, optional
             image metadata (default: ``None``)
         '''
         super(SegmentationImage, self).__init__(array, metadata)
-        if not self.is_int:
-            raise TypeError('Image must have integer type.')
+        if not self.is_int32:
+            raise TypeError('Image must have 32-bit integer type.')
+
+    @property
+    def array(self):
+        '''numpy.ndarray[numpy.int32]: 2D pixels array'''
+        return self._array
+
+    @array.setter
+    def array(self, value):
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Argument "array" must have type numpy.ndarray.'
+            )
+        if value.ndim != 2:
+            raise ValueError('Argument "array" must be two dimensional.')
+        if not value.dtype == np.int32:
+            raise ValueError('Argument "array" must have numpy.int32 data type.')
+        self._array = value
 
     @classmethod
     def create_from_polygons(cls, polygons, y_offset, x_offset, dimensions,
@@ -871,7 +925,7 @@ class SegmentationImage(Image):
 class PyramidTile(Image):
 
     '''Class for a pyramid tile: an image with a single z-level and
-    y, x dimensions of 256 x 256 voxels.
+    y, x dimensions of 256 x 256 pixels.
     '''
 
     TILE_SIZE = 256
@@ -884,7 +938,7 @@ class PyramidTile(Image):
         Parameters
         ----------
         array: numpy.ndarray[uint8]
-            2D pixel plane
+            pixels array
         metadata: tmlib.metadata.PyramidTileMetadata, optional
             image metadata (default: ``None``)
         '''
@@ -899,9 +953,28 @@ class PyramidTile(Image):
                 'maximally %d pixels.' % self.TILE_SIZE
             )
 
+    @property
+    def array(self):
+        '''numpy.ndarray[numpy.uint8]: 2D pixels array'''
+        return self._array
+
+    @array.setter
+    def array(self, value):
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Argument "array" must have type numpy.ndarray.'
+            )
+        if value.ndim != 2:
+            raise ValueError('Argument "array" must be two dimensional.')
+        if not value.dtype == np.uint8:
+            raise ValueError(
+                'Argument "array" must have numpy.uint8 data type.'
+            )
+        self._array = value
+
     @classmethod
     def create_from_binary(cls, string, metadata=None):
-        '''Creates an image from a binary string.
+        '''Creates an image from a *JPEG* encoded binary string.
 
         Parameters
         ----------
@@ -913,6 +986,10 @@ class PyramidTile(Image):
         Returns
         -------
         tmlib.image.PyramidTile
+
+        Warning
+        -------
+        This assumes pixels are encoded as 8-bit unsigned integers.
         '''
         array = np.fromstring(string, np.uint8)
         array = cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
@@ -920,7 +997,7 @@ class PyramidTile(Image):
 
     @classmethod
     def create_from_buffer(cls, buf, metadata=None):
-        '''Creates an image from a buffer object.
+        '''Creates an image from a *JPEG* encoded buffer object.
 
         Parameters
         ----------
@@ -932,6 +1009,10 @@ class PyramidTile(Image):
         Returns
         -------
         tmlib.image.PyramidTile
+
+        Warning
+        -------
+        This assumes pixels are encoded as 8-bit unsigned integers.
         '''
         array = np.frombuffer(buf, np.uint8)
         array = cv2.imdecode(array, cv2.IMREAD_UNCHANGED)
@@ -940,7 +1021,7 @@ class PyramidTile(Image):
     @classmethod
     def create_as_background(cls, add_noise=False, mu=None, sigma=None,
             metadata=None):
-        '''Creates an image with background voxels. By default background will
+        '''Creates an image with background pixels. By default background will
         be zero values. Optionally, Gaussian noise can be added to simulate
         camera background.
 
@@ -995,7 +1076,6 @@ class PyramidTile(Image):
         )[1]
 
 
-
 class IllumstatsImage(Image):
 
     '''Class for a statistics image: a 2D greyscale image with a
@@ -1009,7 +1089,7 @@ class IllumstatsImage(Image):
         '''
         Parameters
         ----------
-        array: numpy.ndarray[float]
+        array: numpy.ndarray[numpy.float]
             2D pixels array
         metadata: tmlib.metadata.IllumstatsImageMetadata
             metadata (default: ``None``)
@@ -1018,13 +1098,32 @@ class IllumstatsImage(Image):
         if not self.is_float:
             raise TypeError('Image must have data type float.')
 
+    @property
+    def array(self):
+        '''numpy.ndarray[numpy.float]: 2D pixels array'''
+        return self._array
+
+    @array.setter
+    def array(self, value):
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Argument "array" must have type numpy.ndarray.'
+            )
+        if value.ndim != 2:
+            raise ValueError('Argument "array" must be two dimensional.')
+        if not value.dtype == np.float:
+            raise ValueError(
+                'Argument "array" must have numpy.float data type.'
+            )
+        self._array = value
+
 
 class IllumstatsContainer(object):
 
-    '''Class that serves as a container for illumination statistics images.
+    '''Container for illumination statistics images.
 
-    It provides the mean and standard deviation matrices for a given
-    channel. The statistics are calculated at each pixel position over all
+    Provides the mean and standard deviation matrices for a given channel.
+    The statistics are calculated at each pixel position over all
     sites acquired in the same channel [1]_.
 
     References
@@ -1041,20 +1140,22 @@ class IllumstatsContainer(object):
         Parameters
         ----------
         mean: tmlib.image.IllumstatsImage
-            matrix of mean values calculated over all sites
+            mean values at each pixel coordinate calculated over all sites
         std: tmlib.image.IllumstatsImage
-            matrix of standard deviation values calculated over all sites
+            standard deviation values at each pixel coordinate calculated
+            over all sites
         percentiles: Dict[float, int]
-            intensity percentiles over all sites
+            intensity percentiles calculated over all sites
         '''
         self.mean = mean
         self.std = std
         self.percentiles = percentiles
 
     def smooth(self, sigma=5):
-        '''Smooth mean and standard deviation statistic matrices with a
-        Gaussian filter. This is useful to prevent outliers voxels with
-        extreme values to introduce artifacts into the image upon correction.
+        '''Smoothes mean and standard deviation statistic images with a
+        Gaussian filter. This is useful to prevent the introduction of
+        artifacts upon coorection due to individual outliers pixels with
+        extreme values.
 
         Parameters
         ----------
@@ -1064,7 +1165,8 @@ class IllumstatsContainer(object):
 
         Note
         ----
-        `mean` and `std` are modified in place.
+        :attr:`mean <tmlib.image.IllumstatsImage.mean>` and
+        :attr:`std <tmlib.image.IllumstatsImage.std>` are modified in place.
         '''
         self.mean.array = self.mean.smooth(sigma).array
         self.mean.metadata.is_smoothed = True
@@ -1083,6 +1185,10 @@ class IllumstatsContainer(object):
         Returns
         -------
         int
+
+        Note
+        ----
+        Necessary due to precision problems with floating-point arithmetic.
         '''
         keys = np.array(self.percentiles.keys())
         idx = np.abs(keys - value).argmin()
