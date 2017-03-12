@@ -79,7 +79,7 @@ class Feature(ExperimentModel):
         self.is_aggregate = is_aggregate
 
     @classmethod
-    def delete_cascade(cls, connection, mapobject_type_ids=[]):
+    def delete_cascade(cls, connection, mapobject_type_ids=[], id=None):
         '''Deletes all instances for the given experiment as well as all
         referencing fields in
         :attr:`FeatureValues.values <tmlib.models.feature.FeatureValues.values>`.
@@ -91,7 +91,10 @@ class Feature(ExperimentModel):
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
         mapobject_type_ids: List[int], optional
             IDs of parent
-            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` for
+            which features should be deleted
+        id: int, optional
+            ID of a specific feature that should be deleted
         '''
         logger.info('delete feature values')
         if mapobject_type_ids:
@@ -111,6 +114,19 @@ class Feature(ExperimentModel):
                 WHERE mapobject_type_id = ANY(%(mapobject_type_ids)s)
             ''', {
                 'mapobject_type_ids': mapobject_type_ids
+            })
+        elif id is not None:
+            sql = '''
+                UPDATE feature_values SET values = delete(values, %(id)s);
+            '''
+            connection.execute(
+                compile_distributed_query(sql),
+                {'id': str(id)}
+            )
+            connection.execute('''
+                DELETE FROM features where id = %(id)s;
+            ''', {
+                'id': id
             })
         else:
             sql = 'UPDATE feature_values SET values = hstore();'

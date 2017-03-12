@@ -529,10 +529,10 @@ class _Session(object):
         self._schema = schema
         self._session_factory = create_db_session_factory()
 
-    @cached_property
-    def engine(self):
-        '''sqlalchemy.engine: engine object for the currently used database'''
-        return create_db_engine(self._db_uri)
+    # @cached_property
+    # def engine(self):
+    #     '''sqlalchemy.engine: engine object for the currently used database'''
+    #     return create_db_engine(self._db_uri)
 
     def __exit__(self, except_type, except_value, except_trace):
         if except_value:
@@ -622,6 +622,7 @@ class ExperimentSession(_Session):
         if db_uri is None:
             db_uri = cfg.db_uri
         self.experiment_id = experiment_id
+        logger.debug('create session for experiment %d', self.experiment_id)
         self._engine = create_db_engine(db_uri)
         exists = _create_schema_if_not_exists(self._engine, experiment_id)
         if not exists:
@@ -631,6 +632,7 @@ class ExperimentSession(_Session):
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=self.experiment_id
         )
+        logger.debug('schema: "%s"', self._schema)
         super(ExperimentSession, self).__init__(db_uri, self._schema)
 
     def __enter__(self):

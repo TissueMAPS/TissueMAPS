@@ -36,6 +36,7 @@ from tmlib.models.result import ToolResult, LabelValues
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
 from tmlib.models.feature import Feature, FeatureValues
 from tmlib.models.types import ST_SimplifyPreserveTopology
+from tmlib.models.site import Site
 from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
@@ -97,7 +98,7 @@ class MapobjectType(ExperimentModel):
         self.experiment_id = experiment_id
 
     @classmethod
-    def delete_cascade(cls, connection, ref_type=None):
+    def delete_cascade(cls, connection, ref_type=None, id=None):
         '''Deletes all instances as well as "children"
         instances of :class:`Mapobject <tmlib.models.mapobject.Mapobject>`,
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
@@ -115,6 +116,8 @@ class MapobjectType(ExperimentModel):
         ref_type: str, optional
             name of reference type (if ``"NULL"`` all mapobject types without
             a `ref_type` will be deleted)
+        id: int, optional
+            ID of a specific mapobject type that should be deleted
 
         '''
         if ref_type is 'NULL':
@@ -131,10 +134,9 @@ class MapobjectType(ExperimentModel):
                 Mapobject.delete_cascade(connection, mapobject_type.id)
                 logger.debug('delete mapobject type %s', mapobject_type.name)
                 connection.execute('''
-                    DELETE FROM mapobject_types
-                    WHERE id = %(mapobject_type_id)s;
+                    DELETE FROM mapobject_types WHERE id = %(id)s;
                 ''', {
-                    'mapobject_type_id': mapobject_type.id
+                    'id': mapobject_type.id
                 })
         elif ref_type is not None:
             logger.debug('delete static mapobjects referencing "%s"', ref_type)
@@ -152,11 +154,19 @@ class MapobjectType(ExperimentModel):
                 Mapobject.delete_cascade(connection, mapobject_type.id)
                 logger.debug('delete mapobject type %s', mapobject_type.name)
                 connection.execute('''
-                    DELETE FROM mapobject_types
-                    WHERE id = %(mapobject_type_id)s;
+                    DELETE FROM mapobject_types WHERE id = %(id)s;
                 ''', {
-                    'mapobject_type_id': mapobject_type.id
+                    'id': mapobject_type.id
                 })
+        elif id is not None:
+            logger.debug('delete mapobjects of type %d', id)
+            Mapobject.delete_cascade(connection, id)
+            logger.debug('delete mapobject type %d', id)
+            connection.execute('''
+                DELETE FROM mapobject_types WHERE id = %(id)s;
+            ''', {
+                'id': id
+            })
         else:
             logger.debug('delete all mapobjects')
             Mapobject.delete_cascade(connection)
@@ -164,7 +174,7 @@ class MapobjectType(ExperimentModel):
             connection.execute('DELETE FROM mapobject_types;')
 
     def get_segmentations_per_site(self, site_id, tpoints=None, zplanes=None,
-            as_polgons=True):
+            as_polygons=True):
         '''Gets each
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
         that intersects with a given site.
@@ -192,10 +202,10 @@ class MapobjectType(ExperimentModel):
         '''
         session = Session.object_session(self)
         site_mapobject_type = session.query(MapobjectType).\
-            filter_by(ref_type=tm.Site.__name__).\
+            filter_by(ref_type=Site.__name__).\
             one()
         site_segmentation = session.query(MapobjectSegmentation).\
-            join(tm.Mapobject).\
+            join(Mapobject).\
             filter(
                 Mapobject.ref_id == site_id,
                 Mapobject.mapobject_type_id == site_mapobject_type.id
@@ -203,7 +213,7 @@ class MapobjectType(ExperimentModel):
             one()
 
         segmentation_layers = session.query(SegmentationLayer).\
-            filter_by(mapobject_type_id=mapobject_type.id)
+            filter_by(mapobject_type_id=self.id)
         if tpoints:
             segmentation_layers = segmentation_layers.\
                 filter(SegmentationLayer.tpoint.in_(tpoints))
@@ -225,18 +235,18 @@ class MapobjectType(ExperimentModel):
                         MapobjectSegmentation.geom_centroid
                     )
             segmentations = segmentations.\
-                join(tm.Mapobject).\
+                join(Mapobject).\
                 filter(
-                    Mapobject.mapobject_type_id == mapobject_type_id,
+                    Mapobject.mapobject_type_id == self.id,
                     MapobjectSegmentation.segmentation_layer_id == layer.id,
-                    MapobjectSegmentation.geom_polygon.ST_Intersects(
+                    MapobjectSegmentation.geom_centroid.ST_Intersects(
                         site_segmentation.geom_polygon
                     )
                 ).\
                 all()
             polygons[layer.tpoint].append(segmentations)
 
-        return sorted(polygons.values(), key=polygons.get)
+        return [polygons[k] for k in sorted(polygons.keys())]
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
