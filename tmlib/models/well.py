@@ -81,6 +81,18 @@ class Well(ExperimentModel, DateMixIn):
         description: Dict[str, Union[str, int, float, bool, List, Dict]], optional
             description of the well content
         '''
+        if not name.isalnum():
+            raise ValueError('Well name must be alphanumeric.')
+        if not len(name) == 3:
+            raise ValueError('Well name must have 3 characters.')
+        if not name[0].isalpha():
+            raise ValueError('First character of well name must be alphabetic.')
+        if not name[0].isupper():
+            raise ValueError('First character of well name must be upper case.')
+        if not name[1:].isdigit():
+            raise ValueError(
+                'Second and thrid character of well name must be numeric.'
+            )
         self.name = name
         self.plate_id = plate_id
         self.description = description
