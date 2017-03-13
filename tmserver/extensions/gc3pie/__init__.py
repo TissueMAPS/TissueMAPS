@@ -26,7 +26,7 @@ import tmlib.models as tm
 from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.utils import create_gc3pie_session
 from tmlib.workflow.utils import create_gc3pie_engine
-from tmlib.workflow.utils import get_task_status
+from tmlib.workflow.utils import get_task_status_recursively
 from tmlib.workflow.workflow import WorkflowStep, ParallelWorkflowStage
 
 logger = logging.getLogger(__name__)
@@ -292,4 +292,4 @@ class GC3Pie(object):
         --------
         :func:`tmlib.workflow.utils.get_task_data_from_sql_store`
         '''
-        return get_task_status(jobs, recursion_depth)
+        return get_task_status_recursively(jobs, recursion_depth)

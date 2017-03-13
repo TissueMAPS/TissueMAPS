@@ -26,9 +26,10 @@ from flask_jwt import jwt_required
 from flask_jwt import current_identity
 
 import tmlib.models as tm
+from tmlib.workflow.workflow import Workflow
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
-from tmlib.workflow.workflow import Workflow
+from tmlib.workflow.utils import format_task_data
 
 from tmserver.util import (
     decode_query_ids, decode_form_ids, assert_query_params, assert_form_params
@@ -321,7 +322,11 @@ def get_jobs_status(experiment_id):
                     else:
                         task_ids.append(phase.persistent_id)
                 if task_ids:
-                    tasks = session.query(tm.Task).\
+                    tasks = session.query(
+                            tm.Task.id, tm.Task.name, tm.Task.type,
+                            tm.Task.state, tm.Task.exitcode, tm.Task.memory,
+                            tm.Task.time, tm.Task.cpu_time
+                        ).\
                         filter(
                             tm.Task.id.in_(task_ids), ~tm.Task.is_collection
                         ).\
@@ -333,7 +338,10 @@ def get_jobs_status(experiment_id):
                     tasks = sorted(tasks, key=lambda k: k.name)
                     status = []
                     for t in tasks:
-                        s = t.status
+                        s = format_task_data(
+                            t.name, t.type, t.state, t.exitcode, t.memory,
+                            t.time, t.cpu_time
+                        )
                         s['id'] = encode_pk(t.id)
                         status.append(s)
                 else:
