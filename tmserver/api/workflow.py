@@ -33,6 +33,7 @@ from tmlib.workflow.workflow import Workflow
 from tmserver.util import (
     decode_query_ids, decode_form_ids, assert_query_params, assert_form_params
 )
+from tmserver.model import encode_pk
 from tmserver.extensions import gc3pie
 from tmserver.api import api
 from tmserver.error import *
@@ -213,6 +214,7 @@ def get_workflow_status(experiment_id):
             }
 
         :query depth: number of subtasks that should be queried (optional, default: 2)
+
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
@@ -225,8 +227,7 @@ def get_workflow_status(experiment_id):
 
 
 @api.route(
-    '/experiments/<experiment_id>/workflow/jobs/status',
-    methods=['GET']
+    '/experiments/<experiment_id>/workflow/jobs/status', methods=['GET']
 )
 @jwt_required()
 @decode_query_ids('read')
@@ -234,7 +235,8 @@ def get_jobs_status(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/workflow/steps/(string:step_name)/status
 
-        Query the status of n jobs for a given workflow step.
+        Query the status of n jobs for a given
+        :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>`.
 
         **Example response**:
 
@@ -264,11 +266,11 @@ def get_jobs_status(experiment_id):
         :statuscode 200: no error
 
     """
+    step_name = request.args.get('step_name')
     logger.info(
         'get status of jobs for workflow step "%s" of experiment %d',
         step_name, experiment_id
     )
-    step_name = request.args.get('step_name')
     index = request.args.get('index', 0, type=int)
     batch_size = request.args.get('batch_size', 50, type=int)
 
@@ -318,20 +320,24 @@ def get_jobs_status(experiment_id):
                             ])
                     else:
                         task_ids.append(phase.persistent_id)
-                tasks = session.query(tm.Task).\
-                    filter(
-                        tm.Task.id.in_(task_ids),
-                        ~tm.Task.is_collection
-                    )
-                if batch_size is not None:
-                    logger.debug('query status of %d jobs', batch_size)
-                    tasks = tasks.limit(batch_size)
-                tasks = tasks.\
-                    offset(index).\
-                    all()
-                # order_by(tm.Task.id).\
-                tasks = sorted(tasks, key=lambda k: k.name)
-                status = [t.status for t in tasks]
+                if task_ids:
+                    tasks = session.query(tm.Task).\
+                        filter(
+                            tm.Task.id.in_(task_ids), ~tm.Task.is_collection
+                        ).\
+                        order_by(tm.Task.name)
+                    if batch_size is not None:
+                        logger.debug('query status of %d jobs', batch_size)
+                        tasks = tasks.limit(batch_size)
+                    tasks = tasks.offset(index).all()
+                    tasks = sorted(tasks, key=lambda k: k.name)
+                    status = []
+                    for t in tasks:
+                        s = t.status
+                        s['id'] = encode_pk(t.id)
+                        status.append(s)
+                else:
+                    status = []
 
     return jsonify(data=status)
 
@@ -433,6 +439,7 @@ def kill_workflow(experiment_id):
                 "message": "ok"
             }
 
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
     """
@@ -442,15 +449,17 @@ def kill_workflow(experiment_id):
     return jsonify(message='ok')
 
 
-@api.route('/experiments/<experiment_id>/workflow/job-log', methods=['POST'])
+@api.route(
+    '/experiments/<experiment_id>/workflow/jobs/<job_id>/log', methods=['GET']
+)
 @jwt_required()
-@assert_form_params('job_id')
 @decode_query_ids('read')
-def get_job_log_output(experiment_id):
+def get_job_log(experiment_id, job_id):
     """
-    .. http:post:: /api/experiments/(string:experiment_id)/workflow/job-log
+    .. http:get:: /api/experiments/(string:experiment_id)/workflow/jobs/(string:job_id)/log
 
-        Get the log file for a specific job.
+        Get the log output of a
+        :class:`WorkflowStepJob <tmlib.workflow.jobs.WorkflowStepJob>`.
 
         **Example response**:
 
@@ -465,11 +474,10 @@ def get_job_log_output(experiment_id):
                 "stderr": string
             }
 
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
     """
-    data = request.get_json()
-    job_id = data['job_id']
     logger.info(
         'get job log output for experiment %d and job %d',
         experiment_id, job_id
