@@ -211,36 +211,3 @@ class Task(MainModel, DateMixIn):
             '<Task(id=%r, name=%r, submission_id=%r)>'
             % (self.id, self.name, self.submission_id)
         )
-
-    @property
-    def status(self):
-        '''Dict[str, str or int or bool]: current task status'''
-        failed = (
-            self.exitcode != 0 and self.exitcode is not None
-        )
-        live_states = {
-            gc3libs.Run.State.SUBMITTED,
-            gc3libs.Run.State.RUNNING,
-            gc3libs.Run.State.TERMINATING,
-            gc3libs.Run.State.STOPPED
-        }
-        data = {
-            'done': self.state == gc3libs.Run.State.TERMINATED,
-            'failed': failed,
-            'name': self.name,
-            'state': self.state,
-            'live': self.state in live_states,
-            'memory': self.memory,
-            'type': self.type,
-            'exitcode': self.exitcode,
-            'submission_id': self.submission_id,
-            'time': self.time,
-            'cpu_time': self.cpu_time
-        }
-        # Convert timedeltas to string to make it JSON serializable
-        if data['time'] is not None:
-            data['time'] = str(data['time'])
-        if data['cpu_time'] is not None:
-            data['cpu_time'] = str(data['cpu_time'])
-        return data
-

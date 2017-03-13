@@ -202,12 +202,9 @@ def format_timestamp(elapsed_time):
     )
 
 
-def get_task_status(task, recursion_depth=None):
-    '''Provides the following data for each task and recursively for each
-    subtask in form of a mapping:
+def format_task_data(name, type, state, exitcode, memory, time, cpu_time):
+    '''Formats task data in the way expected by clients:
 
-        * ``id`` (*int*): id of task
-        * ``submission_id`` (*int*): id of submission
         * ``name`` (*str*): name of task
         * ``state`` (*g3clibs.Run.State*): state of the task
         * ``live`` (*bool*): whether the task is currently processed
@@ -223,6 +220,53 @@ def get_task_status(task, recursion_depth=None):
 
     Parameters
     ----------
+    name: str
+    type: str
+    state: str
+    exitcode: int
+    memory: str
+    time: str
+    cpu_time: str
+
+    Returns
+    -------
+    Dict[str, Union[str, int, bool]]
+    '''
+    failed = (
+        exitcode != 0 and exitcode is not None
+    )
+    live_states = {
+        gc3libs.Run.State.SUBMITTED,
+        gc3libs.Run.State.RUNNING,
+        gc3libs.Run.State.TERMINATING,
+        gc3libs.Run.State.STOPPED
+    }
+    data = {
+        'done': state == gc3libs.Run.State.TERMINATED,
+        'failed': failed,
+        'name': name,
+        'state': state,
+        'live': state in live_states,
+        'memory': memory,
+        'type': type,
+        'exitcode': exitcode,
+        'time': time,
+        'cpu_time': cpu_time
+    }
+    # Convert timedeltas to string to make it JSON serializable
+    if data['time'] is not None:
+        data['time'] = str(data['time'])
+    if data['cpu_time'] is not None:
+        data['cpu_time'] = str(data['cpu_time'])
+    return data
+
+
+def get_task_status_recursively(task, recursion_depth=None):
+    '''Provides status information for each task and recursively for each
+    subtask.
+
+    Parameters
+    ----------
     task: gc3libs.workflow.TaskCollection or gc3libs.Task
         submitted highest level GC3Pie task
     recursion_depth: int, optional
@@ -233,8 +277,12 @@ def get_task_status(task, recursion_depth=None):
     -------
     dict
         information about each task and its subtasks
+
+    See also
+    --------
+    :func:`tmlib.workflow.utils.format_task_data`
     '''
-    logger.debug('get information about GC3Pie tasks from SQL store')
+    logger.debug('get information about GC3Pie tasks')
     def get_info(task_, i):
         data = dict()
         if recursion_depth is not None:
@@ -253,35 +301,17 @@ def get_task_status(task, recursion_depth=None):
                 'memory': None,
                 'type': type(task_).__name__,
                 'exitcode': None,
-                'id': None,
-                'submission_id': task_.submission_id,
                 'time': None,
                 'cpu_time': None
             }
         else:
-            live_states = {
-                gc3libs.Run.State.SUBMITTED,
-                gc3libs.Run.State.RUNNING,
-                gc3libs.Run.State.TERMINATING,
-                gc3libs.Run.State.STOPPED
-            }
-            data = {
-                'done': task_.execution.state == gc3libs.Run.State.TERMINATED,
-                'failed': (
-                    task_.execution.exitcode != 0 and
-                    task_.execution.exitcode is not None
-                ),
-                'name': task_.jobname,
-                'state': task_.execution.state,
-                'live': task_.execution.state in live_states,
-                'memory': _get_task_memory(task_, 'max_used_memory'),
-                'type': type(task_).__name__,
-                'exitcode': task_.execution.exitcode,
-                'id': task_.persistent_id,
-                'submission_id': task_.submission_id,
-                'time': str(_get_task_time(task_, 'duration')),
-                'cpu_time': str(_get_task_time(task_, 'used_cpu_time'))
-            }
+            data = format_task_data(
+                task_.jobname, type(task_).__name__, task_.execution.state,
+                task_.execution.exitcode,
+                _get_task_memory(task_, 'max_used_memory'),
+                str(_get_task_time(task_, 'duration')),
+                str(_get_task_time(task_, 'used_cpu_time'))
+            )
         if hasattr(task_, 'tasks'):
             done = 0.0
             for t in task_.tasks:

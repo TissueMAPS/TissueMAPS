@@ -21,7 +21,7 @@ import gc3libs
 import tmlib.models as tm
 from tmlib.utils import same_docstring_as
 from tmlib.submission import SubmissionManager
-from tmlib.workflow.utils import get_task_status
+from tmlib.workflow.utils import get_task_status_recursively
 from tmlib.workflow.utils import print_task_status
 from tmlib.workflow.utils import log_task_failure
 
@@ -138,7 +138,7 @@ class WorkflowSubmissionManager(SubmissionManager):
             logger.info('progress...')
             engine.progress()
 
-            status_data = get_task_status(jobs, monitoring_depth)
+            status_data = get_task_status_recursively(jobs, monitoring_depth)
             print_task_status(status_data)
 
             if break_next:
@@ -149,7 +149,7 @@ class WorkflowSubmissionManager(SubmissionManager):
                 break_next = True
                 engine.progress()  # one more iteration to update status_data
 
-        status_data = get_task_status(jobs)
+        status_data = get_task_status_recursively(jobs)
         log_task_failure(status_data, logger)
 
         return status_data
