@@ -233,7 +233,6 @@ class Task(MainModel, DateMixIn):
             'memory': self.memory,
             'type': self.type,
             'exitcode': self.exitcode,
-            'id': self.id,
             'submission_id': self.submission_id,
             'time': self.time,
             'cpu_time': self.cpu_time

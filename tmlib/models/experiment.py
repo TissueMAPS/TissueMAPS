@@ -29,6 +29,7 @@ from tmlib.writers import YamlWriter
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
 from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
+from tmlib.workflow.dependencies import get_workflow_type_information
 from tmlib.workflow.illuminati.stitch import guess_stitch_dimensions
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.metaconfig import SUPPORTED_MICROSCOPE_TYPES
@@ -117,84 +118,6 @@ class ExperimentReference(MainModel, DateMixIn):
             os.path.expandvars(self.root_directory),
             EXPERIMENT_LOCATION_FORMAT.format(id=self.id)
         )
-
-    @autocreate_directory_property
-    def workflow_location(self):
-        '''str: location where workflow data are stored'''
-        return os.path.join(self.location, 'workflow')
-
-    @autocreate_directory_property
-    def tools_location(self):
-        '''str: location where tool data are stored'''
-        return os.path.join(self.location, 'tools')
-
-    @property
-    def _workflow_descriptor_file(self):
-        return os.path.join(
-            self.workflow_location, 'workflow_description.yaml'
-        )
-
-    @property
-    def workflow_description(self):
-        '''tmlib.workflow.tmaps.description.WorkflowDescription: description
-        of the workflow
-
-        Raises
-        ------
-        TypeError
-            when description obtained from file is not a mapping
-        KeyError
-            when description obtained from file doesn't have key "type"
-
-        Note
-        ----
-        When no description is available from file, a default description is
-        provided. The type of the workflow will be determined based on the
-        :attribute:`tmlib.Experiment.plate_acquisition_mode`.
-        '''
-        if not os.path.exists(self._workflow_descriptor_file):
-            logger.warn('no persistent workflow description found')
-            # TODO: we might want to move the workflow description to the
-            # actual experiment class or handle it separately.
-            with ExperimentSession(self.id) as session:
-                exp = session.query(Experiment).get(self.id)
-                if exp.plate_acquisition_mode == 'multiplexing':
-                    workflow_type = 'multiplexing'
-                else:
-                    workflow_type = 'canonical'
-            logger.info('default to "%s" workflow type', workflow_type)
-            workflow_description = WorkflowDescription(workflow_type)
-            self.persist_workflow_description(workflow_description)
-        with YamlReader(self._workflow_descriptor_file) as f:
-            description = f.read()
-        if not isinstance(description, dict):
-            raise TypeError('Description must be a mapping.')
-        if 'type' not in description:
-            raise KeyError('Description must have key "type".')
-        if 'stages' not in description:
-            raise KeyError('Workflow description must have key "stages".')
-        workflow_description = WorkflowDescription(**description)
-        def update_choices(arguments):
-            for arg in arguments.iterargs():
-                if getattr(arg, 'get_choices', None):
-                    arg.choices = arg.get_choices(self)
-
-        for stage in workflow_description.stages:
-            for step in stage.steps:
-                update_choices(step.batch_args)
-                update_choices(step.submission_args)
-        return workflow_description
-
-    def persist_workflow_description(self, description):
-        '''Persists the workflow description.
-
-        Parameters
-        ----------
-        description: tmlib.workflow.tmaps.description.WorkflowDescription
-            description of the workflow
-        '''
-        with YamlWriter(self._workflow_descriptor_file) as f:
-            f.write(description.to_dict())
 
     def belongs_to(self, user):
         '''Determines whether the experiment belongs to a given `user`.
@@ -317,11 +240,14 @@ class Experiment(DirectoryModel):
     #: str: microscope that was used to acquire the images
     microscope_type = Column(String, index=True, nullable=False)
 
+    #: str: workflow type
+    workflow_type = Column(String, index=True, nullable=False)
+
     #: int: number of wells in the plate, e.g. 384
     plate_format = Column(Integer, nullable=False)
 
     #: str: the order in which plates were acquired via the microscope
-    plate_acquisition_mode = Column(String)
+    plate_acquisition_mode = Column(String, nullable=False)
 
     #: int: number of pixels along *y*-axis of the pyramid at highest zoom level
     pyramid_height = Column(Integer)
@@ -347,8 +273,9 @@ class Experiment(DirectoryModel):
     well_spacer_size = Column(Integer, nullable=False)
 
     def __init__(self, id, microscope_type, plate_format, plate_acquisition_mode,
-            location, zoom_factor=2, well_spacer_size=500,
-            vertical_site_displacement=0, horizontal_site_displacement=0):
+            location, workflow_type='canonical', zoom_factor=2,
+            well_spacer_size=500, vertical_site_displacement=0,
+            horizontal_site_displacement=0):
         '''
         Parameters
         ----------
@@ -362,6 +289,8 @@ class Experiment(DirectoryModel):
             the way plates were acquired with the microscope
         location: str
             absolute path to the location of the experiment on disk
+        workflow_type: str, optional
+            name of an implemented workflow type (default: ``"canonical"``)
         zoom_factor: int, optional
             zoom factor between pyramid levels (default: ``2``)
         well_spacer_size: int
@@ -375,6 +304,7 @@ class Experiment(DirectoryModel):
 
         See also
         --------
+        :func:`tmlib.workflow.get_workflow_type_information`
         :attr:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
         :attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
         :attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`
@@ -406,6 +336,14 @@ class Experiment(DirectoryModel):
                 % '", "'.join(SUPPORTED_PLATE_AQUISITION_MODES)
             )
         self.plate_acquisition_mode = plate_acquisition_mode
+
+        implemented_workflow_types = get_workflow_type_information()
+        if workflow_type not in implemented_workflow_types:
+            raise ValueError(
+                'Unsupported workflow type! Supported are: "%s"'
+                % '", "'.join(implemented_workflow_types)
+            )
+        self.workflow_type = workflow_type
 
     @property
     def location(self):
@@ -443,6 +381,76 @@ class Experiment(DirectoryModel):
         for i, (x, y) in enumerate(cooridinates):
             grid[y, x] = plates[i].id
         return grid
+
+    @autocreate_directory_property
+    def workflow_location(self):
+        '''str: location where workflow data are stored'''
+        return os.path.join(self.location, 'workflow')
+
+    @autocreate_directory_property
+    def tools_location(self):
+        '''str: location where tool data are stored'''
+        return os.path.join(self.location, 'tools')
+
+    @property
+    def _workflow_descriptor_file(self):
+        return os.path.join(
+            self.workflow_location, 'workflow_description.yaml'
+        )
+
+    @property
+    def workflow_description(self):
+        '''tmlib.workflow.tmaps.description.WorkflowDescription: description
+        of the workflow
+
+        Note
+        ----
+        When no description is available from file, a default description is
+        provided. The type of the workflow will be determined based on
+        :attr:`workflow_type <tmlib.models.experiment.Experiment.workflow_type>`.
+        '''
+        if not os.path.exists(self._workflow_descriptor_file):
+            logger.warn('no persistent workflow description found')
+            with ExperimentSession(self.id) as session:
+                exp = session.query(Experiment).get(self.id)
+                workflow_type = exp.workflow_type
+            logger.info('create workflow of type "%s"', workflow_type)
+            workflow_description = WorkflowDescription(workflow_type)
+            self.persist_workflow_description(workflow_description)
+
+        with YamlReader(self._workflow_descriptor_file) as f:
+            description = f.read()
+        if not isinstance(description, dict):
+            raise TypeError('Description must be a mapping.')
+        if 'type' not in description:
+            raise KeyError('Workflow description must have key "type".')
+        if 'stages' not in description:
+            raise KeyError('Workflow description must have key "stages".')
+
+        workflow_description = WorkflowDescription(**description)
+        def update_choices(arguments):
+            for arg in arguments.iterargs():
+                if getattr(arg, 'get_choices', None):
+                    arg.choices = arg.get_choices(self)
+
+        for stage in workflow_description.stages:
+            for step in stage.steps:
+                update_choices(step.batch_args)
+                update_choices(step.submission_args)
+
+        return workflow_description
+
+    def persist_workflow_description(self, description):
+        '''Persists the workflow description and updates `workflow_type`.
+
+        Parameters
+        ----------
+        description: tmlib.workflow.tmaps.description.WorkflowDescription
+            description of the workflow
+        '''
+        self.workflow_type = description.type
+        with YamlWriter(self._workflow_descriptor_file) as f:
+            f.write(description.to_dict())
 
     def get_mapobject_type(self, name):
         '''Returns a mapobject type belonging to this experiment by name.

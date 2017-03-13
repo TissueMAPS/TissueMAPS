@@ -558,8 +558,7 @@ class ClusterRoutines(BasicClusterRoutines):
             collection of "run" jobs
         '''
         return SingleRunJobCollection(
-            step_name=self.step_name, submission_id=submission_id,
-            output_dir=self.log_location
+            step_name=self.step_name, submission_id=submission_id
         )
 
     def create_run_jobs(self, submission_id, user_name, job_collection, batches,
