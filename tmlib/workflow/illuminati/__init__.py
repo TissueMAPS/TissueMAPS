@@ -34,9 +34,9 @@ __optional_dependencies__ = {'align', 'corilla'}
 
 __fullname__ = 'Pyramid image builder'
 
-__description__ = '''Creation of pyramids for interactive, web-based
-    visualization of images.
-'''
+__description__ = (
+    'Creation of pyramids for interactive, web-based visualization of images.'
+)
 
 __logo__ = u'''
    .

@@ -17,19 +17,10 @@ import collections
 from abc import ABCMeta
 
 
+_workflow_register = dict()
+
+
 class _WorkflowDependenciesMeta(ABCMeta):
-
-    '''Metaclass for :class:`tmlib.workflow.dependencies.WorkflowDependencies`.
-
-    Raises
-    ------
-    AttributeError:
-        when classes derived from
-        :class:`tmlib.workflow.dependencies.WorkflowDependencies` don't
-        implement any of the required class attributes
-    TypeError:
-        when the implemented class attributes don't have the correct type
-    '''
 
     def __init__(self, name, bases, d):
         ABCMeta.__init__(self, name, bases, d)
@@ -38,7 +29,8 @@ class _WorkflowDependenciesMeta(ABCMeta):
             'STAGE_MODES': dict,
             'STEPS_PER_STAGE': dict,
             'INTER_STAGE_DEPENDENCIES': dict,
-            'INTRA_STAGE_DEPENDENCIES': dict
+            'INTRA_STAGE_DEPENDENCIES': dict,
+            '__type__': str
         }
         if '__abstract__' in vars(self):
             if getattr(self, '__abstract__'):
@@ -59,6 +51,7 @@ class _WorkflowDependenciesMeta(ABCMeta):
                 )
             # TODO: check intra_stage_dependencies inter_stage_dependencies
             # based on __dependencies__
+        _workflow_register[getattr(self, '__type__')] = self
 
 
 class WorkflowDependencies(object):
@@ -67,11 +60,10 @@ class WorkflowDependencies(object):
 
     Derived classes will be used by descriptor classes in
     :mod:`tmlib.worklow.description` to declare a workflow `type`.
-    To this end, derived classes need to be registered by decorating it with
-    :func:`register_workflow_type <tmlib.workflow.register_workflow_type>`.
 
     In addtion, derived classes must implement the following attributes:
 
+        * ``__type__``: name of the workflow type
         * ``STAGES`` (list): names of stages that the workflow should have
         * ``STAGE_MODES`` (dict): mapping of stage name to processing mode
           (either ``"parallel"`` or ``"sequential"``)
@@ -87,3 +79,130 @@ class WorkflowDependencies(object):
     __metaclass__ = _WorkflowDependenciesMeta
 
     __abstract__ = True
+
+
+class CanonicalWorkflowDependencies(WorkflowDependencies):
+
+    '''Declaration of dependencies for the canonical workflow.'''
+
+    __type__ = 'canonical'
+
+    #: List[str]: names of workflow stages
+    STAGES = [
+        'image_conversion', 'image_preprocessing',
+        'pyramid_creation', 'image_analysis'
+    ]
+
+    #: Dict[str, str]: mode for each workflow stage, i.e. whether setps of a stage
+    #: should be submitted in parallel or sequentially
+    STAGE_MODES = {
+        'image_conversion': 'sequential',
+        'image_preprocessing': 'parallel',
+        'pyramid_creation': 'sequential',
+        'image_analysis': 'sequential'
+    }
+
+    #: collections.OrderedDict[str, List[str]]: names of steps within each stage
+    STEPS_PER_STAGE = {
+        'image_conversion':
+            ['metaextract', 'metaconfig', 'imextract'],
+        'image_preprocessing':
+            ['corilla'],
+        'pyramid_creation':
+            ['illuminati'],
+        'image_analysis':
+            ['jterator']
+    }
+
+    #: collections.OrderedDict[str, Set[str]]: dependencies between workflow stages
+    INTER_STAGE_DEPENDENCIES = {
+        'image_conversion': {
+
+        },
+        'image_preprocessing': {
+            'image_conversion'
+        },
+        'pyramid_creation': {
+            'image_conversion', 'image_preprocessing'
+        },
+        'image_analysis': {
+            'image_conversion', 'image_preprocessing'
+        }
+    }
+
+    #: Dict[str, Set[str]: dependencies between workflow steps within one stage
+    INTRA_STAGE_DEPENDENCIES = {
+        'metaextract': {
+
+        },
+        'metaconfig': {
+            'metaextract'
+        },
+        'imextract': {
+            'metaconfig'
+        }
+    }
+
+
+class MultiplexingWorkflowDependencies(CanonicalWorkflowDependencies):
+
+    '''Declaration of dependencies for a multiplexing workflow, which includes
+    the :mod:`algin <tmlib.workflow.align>` step.
+    '''
+
+    __type__ = 'multiplexing'
+
+    #: Dict[str, str]: mode for each workflow stage, i.e. whether setps of a stage
+    #: should be submitted in parallel or sequentially
+    STAGE_MODES = {
+        'image_conversion': 'sequential',
+        'image_preprocessing': 'sequential',
+        'pyramid_creation': 'sequential',
+        'image_analysis': 'sequential'
+    }
+
+    #: Dict[str, List[str]]: names of steps within each stage
+    STEPS_PER_STAGE = {
+        'image_conversion':
+            ['metaextract', 'metaconfig', 'imextract'],
+        'image_preprocessing':
+            ['corilla', 'align'],
+        'pyramid_creation':
+            ['illuminati'],
+        'image_analysis':
+            ['jterator']
+    }
+
+
+
+def get_workflow_type_information():
+    '''Gets the names of each implemented workflow type.
+
+    Returns
+    -------
+    Set[str]
+        names of workflow types
+
+    See also
+    --------
+    :func:`tmlib.workflow.register_workflow_type`
+    '''
+    return set(_workflow_register.keys())
+
+
+def get_workflow_dependencies(name):
+    '''Gets a workflow type specific implementation of
+    :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>`.
+
+    Parameters
+    ----------
+    name: str
+        name of the workflow type
+
+    Returns
+    -------
+    classobj
+    '''
+    return _workflow_register[name]
+
+

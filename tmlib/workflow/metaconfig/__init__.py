@@ -49,10 +49,11 @@ __dependencies__ = {'metaextract'}
 
 __fullname__ = 'Configuration of image metadata'
 
-__description__ = '''Configuration of extracted OMEXML metadata
-    and integration with additional microscope-specific information about
-    the image acquisition process.
-'''
+__description__ = (
+    'Configuration of extracted OMEXML metadata '
+    'and integration with additional microscope-specific information about '
+    'the image acquisition process.'
+)
 
 __logo__ = '''
             _                     __ _
@@ -64,8 +65,7 @@ __logo__ = '''
 
 
 SUPPORTED_MICROSCOPE_TYPES = {
-    'visiview', 'cellvoyager', 'axio', 'default', 'metamorph', 'niselements',
-    'incell', 'imc'
+    'visiview', 'cellvoyager'
 }
 
 

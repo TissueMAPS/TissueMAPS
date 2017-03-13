@@ -48,10 +48,11 @@ __dependencies__ = {'metaconfig'}
 
 __fullname__ = 'Extration of pixel data from microscopy image files'
 
-__description__ = '''Extracts pixel elements from heterogeneous
-    microscopy image file formats based on the configured image metadata
-    and stores them in a standardized file format.
-'''
+__description__ = (
+    'Extracts pixel elements from heterogeneous '
+    'microscopy image file formats based on the configured image metadata '
+    'and stores them in a standardized file format.'
+)
 
 __logo__ = '''
   _               _               _

@@ -202,7 +202,7 @@ def format_timestamp(elapsed_time):
     )
 
 
-def get_task_data_from_sql_store(task, recursion_depth=None):
+def get_task_status(task, recursion_depth=None):
     '''Provides the following data for each task and recursively for each
     subtask in form of a mapping:
 
@@ -313,13 +313,13 @@ def get_task_data_from_sql_store(task, recursion_depth=None):
         return get_info(task, 0)
 
 
-def print_task_status(task_data):
+def print_task_status(task_info):
     '''Pretty prints the status of a submitted GC3Pie tasks to the console in
     table format.
 
     Parameters
     ----------
-    task_data: dict
+    task_info: dict
         information about each task and its subtasks
 
     See also
@@ -353,16 +353,16 @@ def print_task_status(task_data):
     x.align['Memory (MB)'] = 'r'
     x.align['ID'] = 'r'
     x.padding_width = 1
-    add_row_recursively(task_data, x, 0)
+    add_row_recursively(task_info, x, 0)
     print x
 
 
-def log_task_status(task_data, logger, monitoring_depth):
+def log_task_status(task_info, logger, monitoring_depth):
     '''Logs the status of a submitted GC3Pie task.
 
     Parameters
     ----------
-    task_data: dict
+    task_info: dict
         information about each task and its subtasks
     logger: logging.Logger
         configured logger instance
@@ -377,15 +377,15 @@ def log_task_status(task_data, logger, monitoring_depth):
         if i < monitoring_depth:
             for subtd in data.get('subtasks', list()):
                 log_recursive(subtd, i+1)
-    log_recursive(task_data, 0)
+    log_recursive(task_info, 0)
 
 
-def log_task_failure(task_data, logger):
+def log_task_failure(task_info, logger):
     '''Logs the failure of a submitted GC3Pie task.
 
     Parameters
     ----------
-    task_data: dict
+    task_info: dict
         information about each task and its subtasks
     logger: logging.Logger
         configured logger instance
@@ -398,4 +398,4 @@ def log_task_failure(task_data, logger):
             )
         for subtd in data.get('subtasks', list()):
             log_recursive(subtd, i+1)
-    log_recursive(task_data, 0)
+    log_recursive(task_info, 0)

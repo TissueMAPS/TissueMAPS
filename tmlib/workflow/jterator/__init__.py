@@ -33,9 +33,10 @@ __optional_dependencies__ = {'align', 'corilla'}
 
 __fullname__ = 'Image analysis pipeline engine'
 
-__description__ = '''Application of a sequence of algorithms to a set of images
-    to segment the images and extract features for the identified objects.
-'''
+__description__ = (
+    'Application of a sequence of algorithms to a set of images '
+    'to segment the images and extract features for the identified objects.'
+)
 
 __logo__ = '''
     _ _                _

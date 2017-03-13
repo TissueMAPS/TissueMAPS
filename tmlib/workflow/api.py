@@ -163,9 +163,8 @@ class ClusterRoutines(BasicClusterRoutines):
         super(ClusterRoutines, self).__init__()
         self.experiment_id = experiment_id
         self.verbosity = verbosity
-        with tm.utils.MainSession() as session:
-            experiment = session.query(tm.ExperimentReference).\
-                get(self.experiment_id)
+        with tm.utils.ExperimentSession(experiment_id) as session:
+            experiment = session.query(tm.Experiment).get(self.experiment_id)
             if experiment is None:
                 raise CliArgError(
                     'No experiment with ID %d found.' % self.experiment_id

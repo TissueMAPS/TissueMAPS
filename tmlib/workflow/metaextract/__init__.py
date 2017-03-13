@@ -31,9 +31,10 @@ __dependencies__ = {}
 
 __fullname__ = 'Extraction of image metadata'
 
-__description__ = '''Extraction of OMEXML metadata from heterogeneous
-    microscopy image file formats.
-'''
+__description__ = (
+    'Extraction of OMEXML metadata from heterogeneous microscopy image '
+    'file formats.'
+)
 
 __logo__ = '''
             _                _               _

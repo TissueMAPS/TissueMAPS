@@ -30,11 +30,12 @@ __dependencies__ = {'imextract'}
 
 __fullname__ = 'Correction of illumination artifacts'
 
-__description__ = '''Calculation of illumination statistics over a set of
-    images belonging to the same channel. The resulting statistics can
-    subsequently be applied to individual images to correct them for
-    illumination artifacts.
-'''
+__description__ = (
+    'Calculation of illumination statistics over a set of '
+    'images belonging to the same channel. The resulting statistics can '
+    'subsequently be applied to individual images to correct them for '
+    'illumination artifacts.'
+)
 
 __logo__ = u'''
              _ _ _

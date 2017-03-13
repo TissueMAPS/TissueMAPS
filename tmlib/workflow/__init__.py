@@ -15,9 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''`TissueMAPS` workflow.
 
-A `workflow` is a sequence of distributed computational tasks
-(`steps`). Each `step` represents a collection of batch jobs that can be
-processed in parallel. It is comprised of the following phases:
+A *workflow* is a sequence of distributed computational tasks
+(`steps`). Each *step* represents a collection of batch jobs that can be
+processed in parallel and is comprised of the following phases:
 
     * **init**: Paritioning of the computational task into smaller batches
       based on user provided arguments.
@@ -29,14 +29,14 @@ processed in parallel. It is comprised of the following phases:
 A *step* is implemented as a subpackage of :mod:`tmlib.workflow` containing
 three modules:
 
-    * **args**: Must implemement
+    * **args**: Must implement
       :class:`BatchArguments <tmlib.workflow.args.BatchArguments>` and
       :class:`SubmissionArguments <tmlib.workflow.args.SubmissionArguments>`
       and decorate them with
       :func:`register_step_batch_args <tmlib.workflow.register_step_batch_args>`
       and
       :func:`register_step_submission_args <tmlib.workflow.register_step_submission_args>`,
-      respectively. These classes provide `step`-specific arguments controlling
+      respectively. These classes provide *step*-specific arguments controlling
       the partitioning of the given computational task into separate batch jobs
       and the amount of computational resources, which should get allocated
       to each batch job.
@@ -76,7 +76,7 @@ implementation of
 To make a *type* available for use, the derived class must be
 registered via
 :func:`register_workflow_type <tmlib.workflow.register_workflow_type>`.
-As an example serves the "canonical" *type* declared by
+As an example serves the "canonical" type declared by
 :class:`CanonicalWorkflowDependencies <tmlib.workflow.canonical.CanonicalWorkflowDependencies>`.
 
 '''
@@ -101,8 +101,7 @@ _workflow_register = collections.defaultdict(dict)
 
 def register_step_api(name):
     '''Class decorator to register a derived class of
-    :class:`tmlib.workflow.api.ClusterRoutines` as a step API for use in
-    command line interface and workflow.
+    :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>` as a step API.
 
     Parameters
     ----------
@@ -111,13 +110,13 @@ def register_step_api(name):
 
     Returns
     -------
-    tmlib.workflow.args.ClusterRoutines
+    classobj
 
     Raises
     ------
     TypeError
         when decorated class is not derived from
-        :class:`tmlib.workflow.api.ClusterRoutines`
+        :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>`
     '''
     from tmlib.workflow.api import ClusterRoutines
     def decorator(cls):
@@ -133,8 +132,7 @@ def register_step_api(name):
 
 def register_workflow_type(name):
     '''Class decorator to register a derived class of
-    :class:`tmlib.workflow.description.WorkflowDependencies` for use in
-    command line interface and workflow.
+    :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>`.
 
     Parameters
     ----------
@@ -143,13 +141,13 @@ def register_workflow_type(name):
 
     Returns
     -------
-    tmlib.workflow.description.WorkflowDependencies
+    classobj
 
     Raises
     ------
     TypeError
         when decorated class is not derived from
-        :class:`tmlib.workflow.dependencies.WorkflowDependencies`
+        :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>`
     '''
     from tmlib.workflow.dependencies import WorkflowDependencies
     def decorator(cls):
@@ -256,13 +254,13 @@ def register_step_batch_args(name):
 
     Returns
     -------
-    tmlib.workflow.args.BatchArguments
+    classobj
 
     Raises
     ------
     TypeError
         when decorated class is not derived from
-        :class:`tmlib.workflow.args.BatchArguments`
+        :class:`BatchArguments <tmlib.workflow.args.BatchArguments>`
     '''
     from tmlib.workflow.args import BatchArguments
     def decorator(cls):
@@ -288,13 +286,13 @@ def register_step_submission_args(name):
 
     Returns
     -------
-    tmlib.workflow.args.SubmissionArguments
+    classobj
 
     Raises
     ------
     TypeError
         when decorated class is not derived from
-        :class:`tmlib.workflow.args.SubmissionArguments`
+        :class:`SubmissionArguments <tmlib.workflow.args.SubmissionArguments>`
     '''
     from tmlib.workflow.args import SubmissionArguments
     def decorator(cls):
@@ -321,7 +319,7 @@ def get_step_args(name):
     Returns
     -------
     Tuple[Union[tmlib.workflow.args.BatchArguments, tmlib.workflow.args.SubmissionArguments]]
-        class for batch and submission arguments, respectively
+        class for batch and submission arguments
     '''
     module_name = '%s.%s.args' % (__name__, name)
     try:
@@ -353,8 +351,8 @@ def get_step_api(name):
 
     Returns
     -------
-    tmlib.workflow.api.ClusterRoutines
-        api class
+    classobj
+        API class
     '''
     module_name = '%s.%s.api' % (__name__, name)
     try:
@@ -383,6 +381,10 @@ def get_step_information(name):
     -------
     Tuple[str]
         full name and brief description
+
+    See also
+    --------
+    :func:`tmlib.workflow.register_step_api`
     '''
     subpkg_name = '%s.%s' % (__name__, name)
     try:
@@ -394,29 +396,6 @@ def get_step_information(name):
     except:
         raise
     return (subpkg.__fullname__, subpkg.__description__)
-
-
-def get_workflow_dependencies(name):
-    '''Gets a specific implementation of
-    :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>`.
-
-    Parameters
-    ----------
-    name: str
-        name of the workflow type
-
-    Returns
-    -------
-    classobj
-    '''
-    module_name = '%s.%s' % (__name__, name)
-    try:
-        module = importlib.import_module(module_name)
-    except ImportError as error:
-        raise ImportError(
-            'Import of module "%s" failed: %s' % (module_name, str(error))
-        )
-    return _workflow_register[name]
 
 
 from workflow import Workflow

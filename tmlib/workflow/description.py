@@ -22,7 +22,7 @@ from tmlib.errors import WorkflowDescriptionError
 from tmlib.workflow import get_step_args
 from tmlib.workflow import get_step_api
 from tmlib.workflow import get_step_information
-from tmlib.workflow import get_workflow_dependencies
+from tmlib.workflow.dependencies import get_workflow_dependencies
 from tmlib.workflow.args import BatchArguments
 from tmlib.workflow.args import SubmissionArguments
 
