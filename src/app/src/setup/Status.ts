@@ -22,7 +22,7 @@ interface JobStatusArgs {
     memory: number;
     type: string;
     exitcode: number;
-    id: number;
+    id: string;
     submission_id: number;
     time: string;
     cpu_time: string;

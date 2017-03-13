@@ -272,11 +272,8 @@ class WorkflowService {
         });
     }
 
-    getLogOutput(experiment: Experiment, jobId: number) {
-        var data = {
-            job_id: jobId
-        };
-        return this._$http.post('/api/experiments/' + experiment.id + '/workflow/job-log', data)
+    getLogOutput(experiment: Experiment, jobId: string) {
+        return this._$http.get('/api/experiments/' + experiment.id + '/workflow/jobs/' + jobId + '/log')
         .then((resp) => {
             // console.log(resp)
             return resp;
