@@ -14,12 +14,14 @@
 class CreateExperimentCtrl {
 
     error: string;
+    supportedWorkflowTypes: any;
     supportedMicroscopeTypes: any;
     supportedAcquisitionModes: any;
 
     opt = {
         name: undefined,
         description: '',
+        workflowType: 'canonical',
         plateFormat: '384',
         microscopeType: 'cellvoyager',
         plateAcquisitionMode: 'basic'
@@ -32,6 +34,7 @@ class CreateExperimentCtrl {
     constructor(private _$scope, private _$state) {
         this._$http = $injector.get<ng.IHttpService>('$http');
         this._$q = $injector.get<ng.IQService>('$q');
+        this._getWorkflowTypes();
         this._getMicroscopeTypes();
         this._getAcquisitionModes();
     }
@@ -40,8 +43,19 @@ class CreateExperimentCtrl {
         return this._$http.get('/api/microscope_types')
         .then((resp: any) => {
             // console.log(resp)
-            // experiment.workflowDescription = resp.data.data;
             this.supportedMicroscopeTypes = resp.data.data;
+            return resp.data.data;
+        })
+        .catch((resp) => {
+            return this._$q.reject(resp.data.error);
+        });
+    }
+
+    private _getWorkflowTypes(): ng.IPromise<any> {
+        return this._$http.get('/api/workflow_types')
+        .then((resp: any) => {
+            // console.log(resp)
+            this.supportedWorkflowTypes = resp.data.data;
             return resp.data.data;
         })
         .catch((resp) => {
@@ -68,6 +82,7 @@ class CreateExperimentCtrl {
             name: opt.name,
             description: opt.description,
             plate_format: parseInt(opt.plateFormat),
+            workflow_type: opt.workflowType,
             microscope_type: opt.microscopeType,
             plate_acquisition_mode: opt.plateAcquisitionMode
         }).then((exp) => {

@@ -88,8 +88,8 @@ class StepCtrl {
         get: (index, count, success) => {
             var experimentId = this._experiment.id;
             var stepName = this._$state.params.stepName;
-            var url = '/api/experiments/' + experimentId + '/workflow/status/jobs' +
-                      '?index=' + index + '&step_name=' + stepName + '&batch_size=' + count;
+            var url = '/api/experiments/' + experimentId + '/workflow/jobs/status' +
+                      '?step_name=' + stepName + '&index=' + index + '&batch_size=' + count;
             this._$http.get(url).then((resp) => {
                 var jobs = resp.data.data;
                 // console.log('received job status for step ', stepName, ' : ', jobs)

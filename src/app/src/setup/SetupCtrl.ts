@@ -229,17 +229,17 @@ class SetupCtrl {
     }
 
     kill() {
-        var result = {
-            success: false,
-            message: 'Not yet implemented'
-        };
-        // var result = this._workflowService.kill(this.experiment)
-        // .then(function(res) {
-        //     return {
-        //         success: res.status == 200,
-        //         message: res.statusText
-        //     }
-        // });
+        // var result = {
+        //     success: false,
+        //     message: 'Not yet implemented'
+        // };
+        var result = this._workflowService.kill(this.experiment)
+        .then(function(res) {
+            return {
+                success: res.status == 200,
+                message: res.statusText
+            }
+        });
         this._displayResult('Kill', result);
     }
 

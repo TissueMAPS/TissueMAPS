@@ -276,7 +276,7 @@ class WorkflowService {
         var data = {
             job_id: jobId
         };
-        return this._$http.post('/api/experiments/' + experiment.id + '/workflow/log', data)
+        return this._$http.post('/api/experiments/' + experiment.id + '/workflow/job-log', data)
         .then((resp) => {
             // console.log(resp)
             return resp;

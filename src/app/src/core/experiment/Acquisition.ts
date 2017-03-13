@@ -68,9 +68,9 @@ class Acquisition {
     fetchExistingFiles(): ng.IPromise<MicroscopeFile[]> {
         this.clearFiles();
         var imageUrl = '/api/experiments/' + this._$stateParams.experimentid +
-            '/acquisitions/' + this.id + '/image-files';
+            '/acquisitions/' + this.id + '/images';
         var metaDataUrl = '/api/experiments/' + this._$stateParams.experimentid +
-            '/acquisitions/' + this.id + '/metadata-files';
+            '/acquisitions/' + this.id + '/metadata';
         return this._$q.all({
             imageFiles: this._$http.get(imageUrl),
             metaDataFiles: this._$http.get(metaDataUrl)
@@ -104,7 +104,7 @@ class Acquisition {
      */
     private _uploadRegisteredFiles(newFiles): any {
         var url = '/api/experiments/' + this._$stateParams.experimentid +
-            '/acquisitions/' + this.id + '/upload/upload-file';
+            '/acquisitions/' + this.id + '/microscope-file';
         var $window = $injector.get<ng.IWindowService>('$window');
         var $timeout = $injector.get<any>('$timeout');
         this.status = 'UPLOADING';

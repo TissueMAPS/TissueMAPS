@@ -28,6 +28,7 @@ class AcquisitionDetailCtrl {
     }
 
     filterValidFiles(files: {name: string;}[]) {
+        console.log('validate files')
         var url = '/api/experiments/' + this._$stateParams.experimentid +
             '/acquisitions/' + this.acquisition.id + '/upload/validity-check';
         return this._$http.post(url, {

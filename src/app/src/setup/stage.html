@@ -78,14 +78,14 @@
     </button>
 
     <button ng-click="setupCtrl.kill()"
-        ng-disabled="!setupCtrl.isRunning()"
+        ng-disabled="setupCtrl.canSubmit()"
         class="btn btn-default">
         <i class="fa fa-stop"></i>
         Kill
     </button>
 
     <button ng-click="setupCtrl.save()"
-        ng-disabled="setupCtrl.isRunning()"
+        ng-disabled="!setupCtrl.canSubmit()"
         class="btn btn-default">
         <i class="fa fa-floppy-o"></i>
         Save

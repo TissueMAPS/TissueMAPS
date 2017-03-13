@@ -15,6 +15,17 @@
       </div>
 
       <div class="form-group">
+        <label>Workflow type</label>
+        <select class="form-control" ng-model="createExpCtrl.opt.workflowType"
+          ng-options="o for o in createExpCtrl.supportedWorkflowTypes">
+        </select>
+
+        <p class="help-block">
+          Please specify which workflow type should be used for processing the experiment.
+        </p>
+      </div>
+
+      <div class="form-group">
         <label>Plate format</label>
         <select class="form-control" ng-model="createExpCtrl.opt.plateFormat">
           <option value="">---Please select---</option>
