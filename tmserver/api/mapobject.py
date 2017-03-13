@@ -13,34 +13,33 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""API view functions for querying resources related to mapobjects
-like their polygonal outlines or feature data.
+"""API view functions for querying :mod:`mapobject <tmlib.models.mapobject>` 
+resources.
 """
-import os.path as p
 import json
 import logging
 import numpy as np
 import pandas as pd
 from cStringIO import StringIO
-from zipfile import ZipFile
-from geoalchemy2.shape import to_shape
-import skimage.draw
-from flask_jwt import current_identity, jwt_required
+from flask_jwt import jwt_required
 from flask import jsonify, request, send_file, Response
-from sqlalchemy.sql import text
 from sqlalchemy.orm.exc import NoResultFound
 from werkzeug import secure_filename
 
 import tmlib.models as tm
 from tmlib.image import SegmentationImage
-from tmlib.utils import create_partitions
+from tmlib.metadata import SegmentationImageMetadata
 
 from tmserver.api import api
-from tmserver.util import decode_query_ids, assert_query_params
+from tmserver.util import (
+    decode_query_ids, assert_query_params, assert_form_params,
+    is_true, is_false
+)
 from tmserver.error import *
 
 
 logger = logging.getLogger(__name__)
+
 
 def _get_matching_sites(session, plate_name, well_name, well_pos_y, well_pos_x):
     query = session.query(
@@ -104,48 +103,206 @@ def _get_matching_layers(session, tpoint):
     return query.all()
 
 
-def _get_mapobjects_per_site(session, mapobject_type_id, site_mapobject_type_id,
+def _get_mapobjects_at_site(session, mapobject_type_id, site_mapobject_type_id,
         site_id, segmentation_layer_ids):
-        try:
-            site_segmentation = session.query(
-                    tm.MapobjectSegmentation.geom_polygon
-                ).\
-                join(tm.Mapobject).\
-                filter(
-                    tm.Mapobject.ref_id == site_id,
-                    tm.Mapobject.mapobject_type_id == site_mapobject_type_id
-                ).\
-                one()
-        except NoResultFound:
-            raise ResourceNotFound(
-                tm.Mapobject, ref_id=site_id,
-                mapobject_type_id=mapobject_type_id
+    site_segmentation = session.query(
+            tm.MapobjectSegmentation.geom_polygon
+        ).\
+        join(tm.Mapobject).\
+        filter(
+            tm.Mapobject.ref_id == site_id,
+            tm.Mapobject.mapobject_type_id == site_mapobject_type_id
+        ).\
+        one()
+
+    return session.query(
+            tm.Mapobject.id, tm.MapobjectSegmentation.label,
+            tm.MapobjectSegmentation.segmentation_layer_id
+        ).\
+        join(tm.MapobjectSegmentation).\
+        filter(
+            tm.Mapobject.mapobject_type_id == mapobject_type_id,
+            tm.MapobjectSegmentation.geom_centroid.ST_Intersects(
+                site_segmentation.geom_polygon
+            ),
+            tm.MapobjectSegmentation.segmentation_layer_id.in_(
+                segmentation_layer_ids
             )
-
-        return session.query(
-                tm.Mapobject.id, tm.MapobjectSegmentation.label,
-                tm.MapobjectSegmentation.segmentation_layer_id
-            ).\
-            join(tm.MapobjectSegmentation).\
-            filter(
-                tm.Mapobject.mapobject_type_id == mapobject_type_id,
-                tm.MapobjectSegmentation.geom_polygon.ST_Intersects(
-                    site_segmentation.geom_polygon
-                ),
-                tm.MapobjectSegmentation.segmentation_layer_id.in_(
-                    segmentation_layer_ids
-                )
-            ).\
-            order_by(tm.Mapobject.id).\
-            all()
+        ).\
+        order_by(tm.Mapobject.id).\
+        all()
 
 
-@api.route('/experiments/<experiment_id>/features', methods=['GET'])
+def _get_border_mapobjects_at_site(session, mapobject_ids,
+        site_mapobject_type_id, site_id):
+    site_segmentation = session.query(
+            tm.MapobjectSegmentation.geom_polygon
+        ).\
+        join(tm.Mapobject).\
+        filter(
+            tm.Mapobject.ref_id == site_id,
+            tm.Mapobject.mapobject_type_id == site_mapobject_type_id
+        ).\
+        one()
+
+    return session.query(tm.MapobjectSegmentation.mapobject_id).\
+        filter(
+            tm.MapobjectSegmentation.mapobject_id.in_(mapobject_ids),
+            tm.MapobjectSegmentation.geom_polygon.ST_Intersects(
+                site_segmentation.geom_polygon.ST_Boundary()
+            )
+        ).\
+        all()
+
+
+@api.route('/experiments/<experiment_id>/mapobject_types', methods=['GET'])
 @jwt_required()
 @decode_query_ids('read')
-def get_features(experiment_id):
+def get_mapobject_types(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/features
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobject_types
+
+        Get the supported mapobject types for a specific experiment.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "name": "Cells",
+                        "features": [
+                            {
+                                "id": "MQ==",
+                                "name": "Cell_Area"
+                            },
+                            ...
+                        ]
+                    },
+                    ...
+                ]
+            }
+
+        :query name: name of a mapobject type (optional)
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+
+    """
+    logger.info('get all mapobject types from experiment %d', experiment_id)
+    name = request.args.get('name')
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        mapobject_types = session.query(tm.MapobjectType)
+        if name is not None:
+            logger.info('filter mapobject types by name "%s"', name)
+            mapobject_types = mapobject_types.filter_by(name=name)
+        mapobject_types = mapobject_types.\
+            order_by(tm.MapobjectType.name).\
+            all()
+        return jsonify(data=mapobject_types)
+
+
+@api.route(
+    '/experiments/<experiment_id>/mapobject_types/<mapobject_type_id>',
+    methods=['PUT']
+)
+@jwt_required()
+@decode_query_ids('read')
+def rename_mapobject_type(experiment_id, mapobject_type_id):
+    """
+    .. http:put:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)
+
+        Rename a mapobject type.
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "name": "New Name"
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+
+    """
+    data = request.get_json()
+    name = data.get('name')
+    logger.info(
+        'rename mapobject type %d of experiment %d',
+        mapobject_type_id, experiment_id
+    )
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        mapobject_type = session.query(tm.MapobjectType).\
+            get(mapobject_type_id)
+        mapobject_type.name = name
+    return jsonify(message='ok')
+
+
+@api.route(
+    '/experiments/<experiment_id>/mapobject_types/<mapobject_type_id>',
+    methods=['DELETE']
+)
+@jwt_required()
+@decode_query_ids('write')
+def delete_mapobject_typed(experiment_id, mapobject_type_id):
+    """
+    .. http:delete:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)
+
+        Delete a specific :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 401: not authorized
+
+    """
+    logger.info(
+        'delete mapobject type %d of experiment %d',
+        mapobject_type_id, experiment_id
+    )
+    with tm.utils.ExperimentConnection(experiment_id) as connection:
+        tm.MapobjectType.delete_cascade(connection, id=mapobject_type_id)
+    return jsonify(message='ok')
+
+
+@api.route(
+    '/experiments/<experiment_id>/mapobject_types/<mapobject_type_id>/features',
+    methods=['GET']
+)
+@jwt_required()
+@decode_query_ids('read')
+def get_features(experiment_id, mapobject_type_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)/features
 
         Get a list of feature objects supported for this experiment.
 
@@ -157,36 +314,121 @@ def get_features(experiment_id):
             Content-Type: application/json
 
             {
-                "data": {
-                    "Cells": [
-                        {
-                            "name": "Cell_Area"
-                        },
-                        ...
-                    ],
-                    "Nuclei": [
-                        ...
-                    ],
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "name": "Morpholgy_Area"
+                    },
                     ...
-                }
+                ]
             }
+
+        :query name: name of a feature (optional)
 
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
         :statuscode 400: malformed request
 
     """
+    logger.info(
+        'get features for experiment %d and mapobject type %d',
+        experiment_id, mapobject_type_id
+    )
+    name = request.args.get('name')
     with tm.utils.ExperimentSession(experiment_id) as session:
-        features = session.query(tm.Feature).all()
+        features = session.query(tm.Feature).\
+            filter_by(mapobject_type_id=mapobject_type_id)
+        if name is not None:
+            logger.info('filter features by name "%s"', name)
+            features = features.filter_by(name=name)
+        features = features.order_by(tm.Feature.name).all()
         if not features:
-            logger.waring('no features found')
-        return jsonify({
-            'data': features
-        })
+            logger.waring(
+                'no features found for mapobject type %d', mapobject_type_id
+            )
+        return jsonify(data=features)
 
 
 @api.route(
-    '/experiments/<experiment_id>/mapobjects/<mapobject_type_name>/segmentations',
+    '/experiments/<experiment_id>/mapobject_types/<mapobject_type_id>/segmentations',
+    methods=['POST']
+)
+@jwt_required()
+@assert_form_params(
+    'plate_name', 'well_name', 'well_pos_x', 'well_pos_y', 'zplane', 'tpoint',
+    'image'
+)
+@decode_query_ids('write')
+def upload_segmentations(experiment_id, mapobject_type_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)/segmentations
+
+        Provide segmentations in form of a labeled 2D array
+        for a given :class:`Site <tmlib.models.site.Site>`.
+        A :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        will be created for each labeled object in the provided *image*.
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 400: malformed request
+
+        :query image: 2D pixels array (required)
+        :query plate_name: name of the plate (required)
+        :query well_name: name of the well (required)
+        :query well_pos_x: x-coordinate of the site within the well (required)
+        :query well_pos_y: y-coordinate of the site within the well (required)
+        :query tpoint: time point (required)
+        :query zplane: z-plane (required)
+
+    """
+    data = request.get_json()
+    plate_name = data.get('plate_name')
+    well_name = data.get('well_name')
+    well_pos_x = int(data.get('well_pos_x'))
+    well_pos_y = int(data.get('well_pos_y'))
+    zplane = int(data.get('zplane'))
+    tpoint = int(data.get('tpoint'))
+
+    # TODO: apply gzip compression filter
+    array = np.array(data.get('image'), type=np.int32)
+
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        segmentation_layer = session.get_or_create(
+            tm.SegmentationLayer,
+            mapobject_type_id=mapobject_type.id, tpoint=tpoint, zplane=zplane
+        )
+        segmentation_layer_id = segmentation_layer.id
+
+        site = session.query(tm.Site).\
+            join(tm.Well).\
+            join(tm.Plate).\
+            filter(
+                tm.Plate.name == plate_name, tm.Well.name == well_name,
+                tm.Site.y == well_pos_y, tm.Site.x == well_pos_x
+            ).\
+            one()
+        y_offset, y_offset = site.offset
+
+        metadata = SegmentationImageMetadata(
+            mapobject_type_id, site.id, tpoint, zplane
+        )
+        image = SegmentationImage(array, metadata)
+
+    # We need to use a raw connection, since we insert into a distributed table.
+    with tm.utils.ExperimentConnection(experiment_id) as connection:
+        for label, polygon in image.extract_polygons(y_offset, x_offset):
+            mapobject_id = tm.Mapobject.add(connection, mapobject_type_id)
+            tm.MapobjectSegmentation.add(
+                connection, mapobject_id, segmentation_layer_id,
+                polygon=polygon, label=label
+            )
+
+    return jsonify(message='ok')
+
+
+@api.route(
+    '/experiments/<experiment_id>/mapobject_types/<mapobject_type_id>/segmentations',
     methods=['GET']
 )
 @jwt_required()
@@ -194,11 +436,36 @@ def get_features(experiment_id):
     'plate_name', 'well_name', 'well_pos_x', 'well_pos_y', 'zplane', 'tpoint'
 )
 @decode_query_ids('read')
-def get_segmentation_image(experiment_id, mapobject_type_name):
+def get_segmentations(experiment_id, mapobject_type_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type_name)/segmentations
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)/segmentations
 
-        Get the segmentation image at a specified coordinate.
+        Get segmentations for each
+        :class:`Mapobject <tmlib.model.mapobject.Mapobject>` contained within
+        the specified :class:`Site <tmlib.models.site.Site>. Segmentations are
+        provided in form of a 2D labeled array, where pixel values encode
+        object identity with unsigned integer values and background pixels are
+        zero.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": [
+                   [1205, 7042, 4438, 7446, 3213, 8773, 5445, 9884, 8326, 6357],
+                   [4663, 2740, 9954, 5187,  309, 8029, 4502, 4927, 5259, 1802],
+                   [8117, 8489, 8495, 1194, 9788, 8182, 5431, 9969, 5931, 6490],
+                   [7974, 3990, 8892, 1866, 7890, 1147, 9630, 3687, 1565, 3613],
+                   [3977, 7318, 5252, 3270, 6746,  822, 7035, 5184, 7808, 4013],
+                   [4380, 6719, 5882, 4279, 7996, 2139, 1760, 2548, 3753, 5511],
+                   [7829, 8825,  224, 1192, 9296, 1663, 5213, 9040,  463, 9080],
+                   [6922, 6781, 9776, 9002, 6992, 8887, 9672, 8500, 1085,  563]
+                ]
+            }
 
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
@@ -218,6 +485,7 @@ def get_segmentation_image(experiment_id, mapobject_type_name):
     well_pos_y = request.args.get('well_pos_y', type=int)
     zplane = request.args.get('zplane', type=int)
     tpoint = request.args.get('tpoint', type=int)
+    align = is_true(request.args.get('align'))
 
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
@@ -234,259 +502,26 @@ def get_segmentation_image(experiment_id, mapobject_type_name):
             ).\
             one()
         mapobject_type = session.query(tm.MapobjectType).\
-            filter_by(name=mapobject_type_name).\
-            one()
-        # TODO
+            get(mapobject_type_id)
         polygons = mapobject_type.get_segmentations_per_site(
-            site_id, tpoints=[tpoint], zplanes=[zplane]
+            site.id, tpoints=[tpoint], zplanes=[zplane]
         )
         if len(polygons) == 0:
             raise ResourceNotFoundError(tm.MapobjectSegmentation, request.args)
 
-        y_offset, x_offset = site.aligned_offset
-        height = site.aligned_height
-        width = site.aligned_width
-
-        filename = '%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
-            experiment_name, site.well.name, site.x, site.y, zplane, tpoint,
-            mapobject_type_name
-        )
+        if align:
+            y_offset, x_offset = site.aligned_offset
+            height = site.aligned_height
+            width = site.aligned_width
+        else:
+            y_offset, x_offset = site.offset
+            height = site.height
+            width = site.width
 
     img = SegmentationImage.create_from_polygons(
         polygons[0][0], y_offset, x_offset, (height, width)
     )
-    f = StringIO()
-    f.write(img.png_encode())
-    f.seek(0)
-    return send_file(
-        f, attachment_filename=secure_filename(filename),
-        mimetype='image/png', as_attachment=True
-    )
+    # TODO: apply gzip compression filter
+    return jsonify(data=img.array.tolist())
 
-
-@api.route(
-    '/experiments/<experiment_id>/mapobjects/<mapobject_type_name>/feature-values',
-    methods=['GET']
-)
-@jwt_required()
-@decode_query_ids('read')
-def get_feature_values(experiment_id, mapobject_type_name):
-    """
-    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type_name)/feature-values
-
-        Get all feature values
-        (:class:`FeatureValue.values <tmlib.models.feature.FeatureValue.values>`)
-        for objects of the given
-        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-        as a *n*x*p* *CSV* table, where *n* is the number of
-        mapobjects (:class:`Mapobject <tmlib.models.mapobject.Mapobject>`) and
-        *p* is the number of features
-        (:class:`Feature <tmlib.models.feature.Feature>`).
-
-        :query plate_name: name of the plate (optional)
-        :query well_name: name of the well (optional)
-        :query well_pos_x: x-coordinate of the site within the well (optional)
-        :query well_pos_y: y-coordinate of the site within the well (optional)
-        :query tpoint: time point (optional)
-
-        :reqheader Authorization: JWT token issued by the server
-        :statuscode 200: no error
-        :statuscode 400: malformed request
-        :statuscode 401: unauthorized
-        :statuscode 404: not found
-
-    .. note:: The table is send in form of a *CSV* stream with the first row
-        representing column names.
-    """
-    plate_name = request.args.get('plate_name')
-    well_name = request.args.get('well_name')
-    well_pos_x = request.args.get('well_pos_x', type=int)
-    well_pos_y = request.args.get('well_pos_y', type=int)
-    tpoint = request.args.get('tpoint', type=int)
-
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        experiment_name = experiment.name
-
-    with tm.utils.ExperimentSession(experiment_id) as session:
-        mapobject_type = session.query(tm.MapobjectType).\
-            filter_by(name=mapobject_type_name).\
-            one()
-        mapobject_type_id = mapobject_type.id
-
-    def generate_feature_matrix(mapobject_type_id):
-        with tm.utils.ExperimentSession(experiment_id) as session:
-
-            results = _get_matching_layers(session, tpoint)
-            layer_lookup = dict()
-            for record in results:
-                layer_lookup[record.id] = {
-                    'tpoint': record.tpoint, 'zplane': record.zplane
-                }
-
-            results = _get_matching_sites(
-                session, plate_name, well_name, well_pos_y, well_pos_x
-            )
-            site_lookup = dict()
-            for record in results:
-                site_lookup[record.id] = {
-                    'well_pos_y': record.well_pos_y,
-                    'well_pos_x': record.well_pos_x,
-                    'plate_name': record.plate_name,
-                    'well_name': record.well_name,
-                }
-
-            features = session.query(tm.Feature.name).\
-                filter_by(mapobject_type_id=mapobject_type_id).\
-                order_by(tm.Feature.id).\
-                all()
-            feature_names = [f.name for f in features]
-
-            yield ','.join(feature_names) + '\n'
-            site_mapobject_type = session.query(tm.MapobjectType.id).\
-                filter_by(ref_type=tm.Site.__name__).\
-                one()
-            for site_id in site_lookup:
-                results = _get_mapobjects_per_site(
-                    session, mapobject_type_id, site_mapobject_type.id,
-                    site_id, layer_lookup.keys()
-                        )
-                for mapobject_id, label, segmenation_layer_id in results:
-                    # One could nicely filter features values using slice()
-                    feature_values = session.query(tm.FeatureValues.values).\
-                        filter_by(mapobject_id=mapobject_id).\
-                        one()
-                    values = feature_values.values
-                    # The keys in a dictionary don't have any order.
-                    # Values must be sorted based on feature_id, such that they
-                    # end up in the correct column of the CSV table matching
-                    # the corresponding column names.
-                    values = [values[k] for k in sorted(values)]
-                    yield ','.join(values) + '\n'
-
-    return Response(
-        generate_feature_matrix(mapobject_type_id),
-        mimetype='text/csv',
-        headers={
-            'Content-Disposition': 'attachment; filename={filename}'.format(
-                filename='{experiment}_{object_type}_feature-values.csv'.format(
-                    experiment=experiment_name,
-                    object_type=mapobject_type_name
-                )
-            )
-        }
-    )
-
-
-@api.route(
-    '/experiments/<experiment_id>/mapobjects/<mapobject_type_name>/metadata',
-    methods=['GET']
-)
-@jwt_required()
-@decode_query_ids('read')
-def get_metadata(experiment_id, mapobject_type_name):
-    """
-    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_type_name)/metadata
-
-        Get positional information for
-        the given :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-        as a *n*x*p* feature table, where *n* is the number of
-        mapobjects (:class:`Mapobject <tmlib.models.mapobject.Mapobject>`) and
-        *p* is the number of metadata attributes.
-
-        :query plate_name: name of the plate (optional)
-        :query well_name: name of the well (optional)
-        :query well_pos_x: x-coordinate of the site within the well (optional)
-        :query well_pos_y: y-coordinate of the site within the well (optional)
-        :query tpoint: time point (optional)
-
-        :reqheader Authorization: JWT token issued by the server
-        :statuscode 200: no error
-        :statuscode 400: malformed request
-        :statuscode 401: unauthorized
-        :statuscode 404: not found
-
-    .. note:: The table is send in form of a *CSV* stream with the first row
-        representing column names.
-    """
-    plate_name = request.args.get('plate_name')
-    well_name = request.args.get('well_name')
-    well_pos_x = request.args.get('well_pos_x', type=int)
-    well_pos_y = request.args.get('well_pos_y', type=int)
-    tpoint = request.args.get('tpoint', type=int)
-
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        experiment_name = experiment.name
-
-    with tm.utils.ExperimentSession(experiment_id) as session:
-        try:
-            mapobject_type = session.query(tm.MapobjectType).\
-                filter_by(name=mapobject_type_name).\
-                one()
-            mapobject_type_id = mapobject_type.id
-        except NoResultFound:
-            raise ResourceNotFoundError(
-                tm.MapobjectType, {'mapobject_type_name': mapobject_type_name}
-            )
-
-    def generate_feature_matrix(mapobject_type_id):
-        with tm.utils.ExperimentSession(experiment_id) as session:
-
-            results = _get_matching_layers(session, tpoint)
-            layer_lookup = dict()
-            for record in results:
-                layer_lookup[record.id] = {
-                    'tpoint': record.tpoint, 'zplane': record.zplane
-                }
-
-            results = _get_matching_sites(
-                session, plate_name, well_name, well_pos_y, well_pos_x
-            )
-            site_lookup = dict()
-            for record in results:
-                site_lookup[record.id] = {
-                    'well_pos_y': record.well_pos_y,
-                    'well_pos_x': record.well_pos_x,
-                    'plate_name': record.plate_name,
-                    'well_name': record.well_name,
-                }
-
-            names = [
-                'plate_name', 'well_name', 'well_pos_y', 'well_pos_x',
-                'tpoint', 'zplane', 'label'
-            ]
-            yield ','.join(names) + '\n'
-            site_mapobject_type = session.query(tm.MapobjectType.id).\
-                filter_by(ref_type=tm.Site.__name__).\
-                one()
-            for site_id in site_lookup:
-                results = _get_mapobjects_per_site(
-                    session, mapobject_type_id, site_mapobject_type.id,
-                    site_id, layer_lookup.keys()
-                )
-                for mapobject_id, label, segmenation_layer_id in results:
-                    values = [
-                        site_lookup[site_id]['plate_name'],
-                        site_lookup[site_id]['well_name'],
-                        str(site_lookup[site_id]['well_pos_y']),
-                        str(site_lookup[site_id]['well_pos_x']),
-                        str(layer_lookup[segmenation_layer_id]['tpoint']),
-                        str(layer_lookup[segmenation_layer_id]['zplane']),
-                        str(label)
-                    ]
-                    yield ','.join(values) + '\n'
-
-    return Response(
-        generate_feature_matrix(mapobject_type_id),
-        mimetype='text/csv',
-        headers={
-            'Content-Disposition': 'attachment; filename={filename}'.format(
-                filename='{experiment}_{object_type}_metadata.csv'.format(
-                    experiment=experiment_name,
-                    object_type=mapobject_type_name
-                )
-            )
-        }
-    )
 

@@ -13,88 +13,32 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""User interface view functions that deal with layers."""
+"""API view functions for querying :mod:`layer <tmlib.models.layer>`
+and :mod:`tile <tmlib.models.tile>` resources.
+"""
 import json
 import logging
-import numpy as np
-from flask import jsonify, request, current_app, send_file
-from flask_jwt import current_identity, jwt_required
-from cStringIO import StringIO
-from sqlalchemy import case
+from flask import jsonify, request, send_file
+from flask_jwt import jwt_required
 
 import tmlib.models as tm
-from tmlib.image import PyramidTile
 
 from tmserver.api import api
-from tmserver.util import decode_query_ids, decode_form_ids
-from tmserver.util import assert_query_params, assert_form_params
+from tmserver.util import (
+    decode_query_ids, decode_form_ids, assert_query_params, assert_form_params
+)
 
 logger = logging.getLogger(__name__)
 
 
-@api.route(
-    '/experiments/<experiment_id>/channel_layers/<channel_layer_id>/tiles',
-    methods=['GET']
-)
-@assert_query_params('x', 'y', 'z')
-@decode_query_ids(None)
-def get_channel_layer_tile(experiment_id, channel_layer_id):
+@api.route('/experiments/<experiment_id>/channel_layers', methods=['GET'])
+@jwt_required()
+@decode_query_ids('read')
+def get_channel_layers(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/channel_layer/(string:channel_layer_id)/tiles
+    .. http:get:: /api/experiments/(string:experiment_id)/channel_layers
 
-        Sends a pyramid tile image for a specific channel layer.
-
-        :query x: zero-based `x` coordinate
-        :query y: zero-based `y` coordinate
-        :query z: zero-based zoom level index
-
-    """
-    x = request.args.get('x', type=int)
-    y = request.args.get('y', type=int)
-    z = request.args.get('z', type=int)
-
-    logger.debug(
-        'get tile for channel layer %d of experiment %d: x=%d, y=%d, z=%d',
-        channel_layer_id, experiment_id, x, y, z
-    )
-
-    with tm.utils.ExperimentSession(experiment_id) as session:
-        channel_layer = session.query(tm.ChannelLayer).get(channel_layer_id)
-        logger.debug(
-            'get channel layer tile: x=%d, y=%d, z=%d, zplane=%d, tpoint=%d',
-            x, y, z, channel_layer.zplane, channel_layer.tpoint
-        )
-        tile = session.query(tm.ChannelLayerTile).\
-            filter_by(channel_layer_id=channel_layer.id, z=z, y=y, x=x).\
-            one_or_none()
-        if tile is not None:
-            # TODO: We shouldn't access the "privat" attribute, but it's more
-            # performant in this case, since it provides direct access to the
-            # column without accessing the property.
-            pixels = tile._pixels
-            # pixels = tile.pixels.jpeg_encode()
-        else:
-            logger.warn('tile does not exist - create empty')
-            tile = PyramidTile.create_as_background()
-            pixels = tile.jpeg_encode()
-        f = StringIO()
-        f.write(pixels)
-        f.seek(0)
-        return send_file(f, mimetype='image/jpeg')
-
-
-@api.route(
-    '/experiments/<experiment_id>/segmentation_layers/<segmentation_layer_id>/tiles',
-    methods=['GET']
-)
-@assert_query_params('x', 'y', 'z')
-@decode_query_ids(None)
-def get_segmentation_layer_tile(experiment_id, segmentation_layer_id):
-    """
-    .. http:get:: /api/experiments/(string:experiment_id)/segmentation_layers/(string:segmentation_layer_id)/tile
-
-        Sends all mapobject outlines as a GeoJSON feature collection
-        that intersect with the tile at position x, y, z.
+        Get channel layers.
 
         **Example response**:
 
@@ -104,110 +48,64 @@ def get_segmentation_layer_tile(experiment_id, segmentation_layer_id):
             Content-Type: application/json
 
             {
-                "type": "FeatureCollection",
-                "features": [
-                    "type": "Feature",
-                    "id": 1,
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [x1, y1], [x2, y2], ...
-                        ]]
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "max_zoom": 12,
+                        "tpoint": 0,
+                        "zplane": 0,
+                        "max_intensity": 6056,
+                        "min_intensity": 0,
+                        "experiment_id": "MQ==",
+                        "image_size": {
+                            "width":  2200,
+                            "height": 2100
+                        }
                     },
-                    "properties": {
-                        "type": "Cells"
-                    }
                     ...
                 ]
             }
 
-        :query x: zero-based `x` coordinate
-        :query y: zero-based `y` coordinate
-        :query z: zero-based zoom level index
+        :query channel_name: the name of the channel (optional)
+        :query tpoint: the time point associated with this layer (optional)
+        :query zplane: the zplane of this layer (optional)
 
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
-        :statuscode 400: malformed request
+        :statuscode 404: no matching layer found
 
     """
-    # The coordinates of the requested tile
-    x = request.args.get('x', type=int)
-    y = request.args.get('y', type=int)
-    # "z" is the pyramid zoom level and "zlevel" the z-resolution of the
-    # acquired image
-    z = request.args.get('z', type=int)
-
-    logger.debug(
-        'get tile for segmentation layer %d : x=%d, y=%d, z=%d',
-        segmentation_layer_id, x, y, z
-    )
-
-    # if mapobject_type_name == 'DEBUG_TILE':
-    #     with tm.utils.ExperimentSession(experiment_id) as session:
-    #         layer = session.query(tm.ChannelLayer).first()
-    #         # TODO: "maxzoom" should be stored in Experiment
-    #         maxzoom = layer.maxzoom_level_index
-    #     minx, miny, maxx, maxy = tm.SegmentationLayer.get_tile_bounding_box(
-    #         x, y, z, maxzoom
-    #     )
-    #     return jsonify({
-    #         'type': 'Feature',
-    #         'geometry': {
-    #             'type': 'Polygon',
-    #             'coordinates': [[
-    #                 [maxx, maxy], [minx, maxy], [minx, miny], [maxx, miny],
-    #                 [maxx, maxy]
-    #             ]]
-    #         },
-    #         'properties': {
-    #             'x': x, 'y': y, 'z': z,
-    #             'type': 'DEBUG_TILE'
-    #         }
-    #     })
-
+    logger.info('get channel layers of experiment %d', experiment_id)
+    channel_name = request.args.get('channel_name')
+    tpoint = request.args.get('tpoint', type=int)
+    zplane = request.args.get('zplane', type=int)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        segmentation_layer = session.query(tm.SegmentationLayer).get(
-            segmentation_layer_id
-        )
-        outlines = segmentation_layer.get_segmentations(x, y, z)
-        mapobject_type_name = segmentation_layer.mapobject_type.name
-
-    # Try to estimate how many points there are in total within
-    # the polygons of this tile.
-    # TODO: Make this more light weight by sending binary coordinates
-    # without GEOJSON overhead. Requires a hack on the client side.
-    if len(outlines) > 0:
-        features = [
-            {
-                'type': 'Feature',
-                'id': mapobject_id,
-                'geometry': json.loads(geom_geojson_str),
-                'properties': {
-                    'type': mapobject_type_name
-                }
-            }
-            for mapobject_id, geom_geojson_str in outlines
-        ]
-    else:
-        features = []
-
-    return jsonify({
-        'type': 'FeatureCollection',
-        'features': features
-    })
+        layers = session.query(tm.ChannelLayer)
+        if tpoint is not None:
+            logger.info('filter channel layers for tpoint %d', tpoint)
+            layers = layers.filter_by(tpoint=tpoint)
+        if zplane is not None:
+            logger.info('filter channel layers for zplane %d', zplane)
+            layers = layers.filter_by(zplane=zplane)
+        if channel_name is not None:
+            logger.info(
+                'filter channel layers for channel with name "%s"', channel_name
+            )
+            layers = layers.\
+                join(tm.Channel).\
+                filter(tm.Channel.name == channel_name)
+        layers = layers.all()
+        return jsonify(data=layers)
 
 
-@api.route(
-    '/experiments/<experiment_id>/segmentation_layers/<segmentation_layer_id>/labeled_tiles',
-    methods=['GET']
-)
-@decode_query_ids(None)
-@assert_query_params('x', 'y', 'z', 'result_name')
-def get_segmentation_layer_label_tile(experiment_id, segmentation_layer_id):
+@api.route('/experiments/<experiment_id>/segmentation_layers', methods=['GET'])
+@jwt_required()
+@decode_query_ids('read')
+def get_segmentation_layers(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/segmentation_layers/(string:segmentation_layer_id)/labeled_tiles
+    .. http:get:: /api/experiments/(string:experiment_id)/segmentation_layers
 
-        Get all mapobjects together with the labels that were assigned to them
-        for a given tool result and tile coordinate.
+        Get segmentation layers.
 
         **Example response**:
 
@@ -217,71 +115,49 @@ def get_segmentation_layer_label_tile(experiment_id, segmentation_layer_id):
             Content-Type: application/json
 
             {
-                "type": "FeatureCollection",
-                "features": [
-                    "type": "Feature",
-                    "id": 1,
-                    "geometry": {
-                        "type": "Polygon",
-                        "coordinates": [[
-                            [x1, y1], [x2, y2], ...
-                        ]]
+                "data": [
+                    {
+                        "id": "MQ==",
+                        "tpoint": 0,
+                        "zplane": 0,
+                        "image_size": {
+                            "width":  2200,
+                            "height": 2100
+                        }
                     },
-                    "properties": {
-                        "label": 123
-                    }
                     ...
                 ]
             }
 
-        :query x: zero-based `x` coordinate
-        :query y: zero-based `y` coordinate
-        :query z: zero-based zoom level index
+        :query mapobject_type_name: the name of the mapobject type (optional)
+        :query tpoint: the time point associated with this layer (optional)
+        :query zplane: the zplane of this layer (optional)
 
-        :statuscode 400: malformed request
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
+        :statuscode 404: no matching layer found
 
     """
-    # The coordinates of the requested tile
-    x = request.args.get('x', type=int)
-    y = request.args.get('y', type=int)
-    z = request.args.get('z', type=int)
-    result_name = request.args.get('result_name')
-
-    logger.debug(
-        'get labeled tile for segmentation layer of tool result "%s": '
-        'x=%d, y=%d, z=%d', result_name, x, y, z
-    )
+    logger.info('get segmentation layers of experiment %d', experiment_id)
+    mapobject_type_name = request.args.get('mapobject_type_name')
+    tpoint = request.args.get('tpoint', type=int)
+    zplane = request.args.get('zplane', type=int)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        segmentation_layer = session.query(tm.SegmentationLayer).\
-            get(segmentation_layer_id)
-        outlines = segmentation_layer.get_segmentations(x, y, z)
-        mapobject_type = segmentation_layer.mapobject_type
-        mapobject_type_name = mapobject_type.name
-
-        result = session.query(tm.ToolResult).\
-            filter_by(name=result_name, mapobject_type_id=mapobject_type.id).\
-            one()
-
-        if len(outlines) > 0:
-            mapobject_ids = [c.mapobject_id for c in outlines]
-            mapobject_id_to_label = result.get_labels(mapobject_ids)
-            features = [
-                {
-                    'type': 'Feature',
-                    'id': mapobject_id,
-                    'geometry': json.loads(geom_geojson_str),
-                    'properties': {
-                        'label': str(mapobject_id_to_label[mapobject_id])
-                     }
-                }
-                for mapobject_id, geom_geojson_str in outlines
-            ]
-        else:
-            features = []
-
-    return jsonify({
-        'type': 'FeatureCollection',
-        'features': features
-    })
+        layers = session.query(tm.SegmentationLayer)
+        if tpoint is not None:
+            logger.info('filter segmentation layers for tpoint %d', tpoint)
+            layers = layers.filter_by(tpoint=tpoint)
+        if zplane is not None:
+            logger.info('filter segmentation layers for zplane %d', zplane)
+            layers = layers.filter_by(zplane=zplane)
+        if channel_name is not None:
+            logger.info(
+                'filter segmentation layers for mapobject type with name "%s"',
+                channel_name
+            )
+            layers = layers.\
+                join(tm.MapobjectType).\
+                filter(tm.MapobjectType.name == mapobject_type_name)
+        layers = layers.all()
+        return jsonify(data=layers)
 

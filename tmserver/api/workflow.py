@@ -13,7 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""API view functions for workflow management."""
+"""API view functions for querying :mod:`workflow <tmlib.workflow>`
+resources.
+"""
 import json
 import os
 from cStringIO import StringIO
@@ -27,32 +29,21 @@ import tmlib.models as tm
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.workflow import Workflow
-from tmlib import cfg as lib_cfg
 
-from tmserver.util import decode_query_ids, decode_form_ids
-from tmserver.util import assert_query_params, assert_form_params
-from tmserver.model import decode_pk
-from tmserver.model import encode_pk
+from tmserver.util import (
+    decode_query_ids, decode_form_ids, assert_query_params, assert_form_params
+)
 from tmserver.extensions import gc3pie
 from tmserver.api import api
-from tmserver.error import (
-    MalformedRequestError,
-    MissingGETParameterError,
-    MissingPOSTParameterError,
-    ResourceNotFoundError,
-    NotAuthorizedError
-)
+from tmserver.error import *
 from tmserver import cfg as server_cfg
 
 
 logger = logging.getLogger(__name__)
 
 
-
-
 @api.route('/experiments/<experiment_id>/workflow/submit', methods=['POST'])
 @jwt_required()
-@assert_form_params('description')
 @decode_query_ids('write')
 def submit_workflow(experiment_id):
     """
@@ -84,16 +75,23 @@ def submit_workflow(experiment_id):
                 "submission_id": 1
             }
 
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
     """
     logger.info('submit workflow for experiment %d', experiment_id)
     data = request.get_json()
-    # data = json.loads(request.data)
-    workflow_description = WorkflowDescription(**data['description'])
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        experiment.persist_workflow_description(workflow_description)
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        experiment = session.query(tm.Experiment).get(experiment_id)
+        if 'description' in data:
+            logger.info('use provided workflow description')
+            workflow_description = WorkflowDescription(**data['description'])
+            experiment.persist_workflow_description(workflow_description)
+        else:
+            logger.warn('no workflow description provided')
+            logger.info('load workflow description')
+            workflow_description = experiment.workflow_description
+        workflow_type = experiment.workflow_type
     submission_manager = SubmissionManager(experiment_id, 'workflow')
     submission_id, user_name = submission_manager.register_submission()
     workflow = Workflow(
@@ -114,15 +112,15 @@ def submit_workflow(experiment_id):
 
 @api.route('/experiments/<experiment_id>/workflow/resubmit', methods=['POST'])
 @jwt_required()
-@assert_form_params('description')
 @decode_query_ids('write')
 def resubmit_workflow(experiment_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/workflow/resubmit
 
-        Resubmit a workflow for an experiment providing a new ``WorkflowDescription``.
-        Please refer to the respective class documention for more details on how to
-        structure such a description object.
+        Resubmit a workflow for an experiment providing a new
+        :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>`
+        in YAML format and optionally an ``index`` of a stage at which the
+        workflow should be resubmitted.
 
         **Example request**:
 
@@ -131,7 +129,8 @@ def resubmit_workflow(experiment_id):
             Content-Type: application/json
 
             {
-                "description": {...}
+                "description": {...},
+                "index": 1
             }
 
         **Example response**:
@@ -146,13 +145,43 @@ def resubmit_workflow(experiment_id):
                 "submission_id": 1
             }
 
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
     """
     logger.info('resubmit workflow for experiment %d', experiment_id)
     data = json.loads(request.data)
-    index = data.get('index', 0)
-    workflow_description = WorkflowDescription(**data['description'])
+    index = data.get('index')
+    stage_name = data.get('stage_name')
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        experiment = session.query(tm.Experiment).get(experiment_id)
+        if 'description' in data:
+            logger.info('use provided workflow description')
+            workflow_description = WorkflowDescription(**data['description'])
+            experiment.persist_workflow_description(workflow_description)
+        else:
+            logger.info('load workflow description')
+            workflow_description = experiment.workflow_description
+    if stage_name is None and index is None:
+        index = 0
+    elif index is not None:
+        index = int(index)
+    elif stage_name is not None:
+        indices = [
+            i for i, d in enumerate(workflow_description.stages)
+            if d.name == stage_name and d.active
+        ]
+        if len(indices) == 0:
+            raise MalformedRequestError(
+                'The specified stage "%s" does not exist or is not set active.'
+                % stage_name
+            )
+        index = indices[0]
+    else:
+        raise MalformedRequestError(
+            'Only one of the following parameters can be specified in the '
+            'request body: "index", "stage_name"'
+        )
     workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
     workflow.update_description(workflow_description)
     workflow.update_stage(index)
@@ -163,9 +192,7 @@ def resubmit_workflow(experiment_id):
     })
 
 
-@api.route(
-    '/experiments/<experiment_id>/workflow/status', methods=['GET']
-)
+@api.route('/experiments/<experiment_id>/workflow/status', methods=['GET'])
 @jwt_required()
 @decode_query_ids('read')
 def get_workflow_status(experiment_id):
@@ -185,28 +212,29 @@ def get_workflow_status(experiment_id):
                 "data": status # TODO
             }
 
+        :query depth: number of subtasks that should be queried (optional, default: 2)
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
     """
     logger.info('get workflow status for experiment %d', experiment_id)
+    depth = request.args.get('depth', 2, type=int)
     workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
-    status = gc3pie.get_status_of_submitted_jobs(workflow, 2)
-    return jsonify({
-        'data': status
-    })
+    status = gc3pie.get_status_of_submitted_jobs(workflow, depth)
+    return jsonify(data=status)
 
 
 @api.route(
-    '/experiments/<experiment_id>/workflow/status/jobs', methods=['GET']
+    '/experiments/<experiment_id>/workflow/jobs/status',
+    methods=['GET']
 )
 @jwt_required()
-@assert_query_params('step_name')
 @decode_query_ids('read')
 def get_jobs_status(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/workflow/jobs
+    .. http:get:: /api/experiments/(string:experiment_id)/workflow/steps/(string:step_name)/status
 
-        Query the status of n jobs currently associated with step.
+        Query the status of n jobs for a given workflow step.
 
         **Example response**:
 
@@ -228,20 +256,21 @@ def get_jobs_status(experiment_id):
                 ]
             }
 
-        :query step_name: the name of the step (required)
+        :query step_name: name of the workflow step for which jobs should be queried (required)
+        :query batch_size: the amount of job stati to return starting from ``index`` (optional)
         :query index: the index of the first job queried (optional)
-        :query batch_size: the amount of job stati to return starting from ``index``.
+
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
     """
-    step_name = request.args.get('step_name')
-    index = request.args.get('index', 0, type=int)
-    batch_size = request.args.get('batch_size', type=int)
-
     logger.info(
-        'get status of jobs for workflow step "%s" for experiment %d',
+        'get status of jobs for workflow step "%s" of experiment %d',
         step_name, experiment_id
     )
+    step_name = request.args.get('step_name')
+    index = request.args.get('index', 0, type=int)
+    batch_size = request.args.get('batch_size', 50, type=int)
 
     # If the index is negative don't send `batch_size` jobs.
     # For example, if the index is -5 and the batch_size 50,
@@ -314,9 +343,8 @@ def get_workflow_description(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/workflow/description
 
-        Get the workflow description for the experiment with id ``experiment_id``.
-        Please refer to the respective documentation to see how such description objects
-        are structured.
+        Get the persisted
+        :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>`.
 
         **Example response**:
 
@@ -329,27 +357,27 @@ def get_workflow_description(experiment_id):
                 "data": {...}
             }
 
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
     """
     logger.info('get workflow description for experiment %d', experiment_id)
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        experiment = session.query(tm.Experiment).get(experiment_id)
         description = experiment.workflow_description
-    return jsonify({
-        'data': description.to_dict()
-    })
+    return jsonify(data=description.to_dict())
 
 
 @api.route('/experiments/<experiment_id>/workflow/description', methods=['POST'])
 @jwt_required()
 @assert_form_params('description')
 @decode_query_ids('write')
-def save_workflow_description(experiment_id):
+def update_workflow_description(experiment_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/workflow/description
 
-        Save a new workflow description for the specified experiment.
+        Upload a
+        :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>`.
 
         **Example request**:
 
@@ -372,18 +400,17 @@ def save_workflow_description(experiment_id):
                 "message": "ok"
             }
 
+        :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
     """
     logger.info('save workflow description for experiment %d', experiment_id)
     data = request.get_json()
     workflow_description = WorkflowDescription(**data['description'])
-    with tm.utils.MainSession() as session:
-        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        experiment = session.query(tm.Experiment).get(experiment_id)
         experiment.persist_workflow_description(workflow_description)
-    return jsonify({
-        'message': 'ok'
-    })
+    return jsonify(message='ok')
 
 
 @api.route('/experiments/<experiment_id>/workflow/kill', methods=['POST'])
@@ -412,18 +439,16 @@ def kill_workflow(experiment_id):
     logger.info('kill workflow for experiment %d', experiment_id)
     workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
     gc3pie.kill_jobs(workflow)
-    return jsonify({
-        'message': 'ok'
-    })
+    return jsonify(message='ok')
 
 
-@api.route('/experiments/<experiment_id>/workflow/log', methods=['POST'])
+@api.route('/experiments/<experiment_id>/workflow/job-log', methods=['POST'])
 @jwt_required()
 @assert_form_params('job_id')
 @decode_query_ids('read')
 def get_job_log_output(experiment_id):
     """
-    .. http:post:: /api/experiments/(string:experiment_id)/workflow/log
+    .. http:post:: /api/experiments/(string:experiment_id)/workflow/job-log
 
         Get the log file for a specific job.
 

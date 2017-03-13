@@ -17,61 +17,26 @@
 
 """
 import logging
-import sqlalchemy
-from flask import Blueprint, current_app, jsonify
-
-from tmserver.error import register_http_error_classes
+from flask import Blueprint
 
 api = Blueprint('api', __name__)
 
 logger = logging.getLogger(__name__)
 
 
-def register_error(cls):
-    """Decorator to register exception classes as errors that can be
-    serialized to JSON"""
-    @api.errorhandler(cls)
-    def handle_invalid_usage(error):
-        print 'handle error'
-        current_app.logger.error(error)
-        response = jsonify(error=error)
-        response.status_code = error.status_code
-        return response
-    return cls
-
-
-@api.errorhandler(sqlalchemy.orm.exc.NoResultFound)
-def _handle_no_result_found(error):
-    response = jsonify(error={
-        'message': error.message,
-        'status_code': 404,
-        'type': error.__class__.__name__
-    })
-    current_app.logger.error('NoResultFound: ' + error.message)
-    response.status_code = 400
-    return response
-
-
-@api.errorhandler(sqlalchemy.exc.IntegrityError)
-def _handle_integrity_error(error):
-    response = jsonify(error={
-        'error': True,
-        'message': error.message,
-        'status_code': 500,
-        'type': error.__class__.__name__
-    })
-    current_app.logger.error('IntegrityError: ' + error.message)
-    response.status_code = 500
-    return response
-
-
-register_http_error_classes(api.errorhandler)
-
-
 import tmserver.api.experiment
-import tmserver.api.workflow
-import tmserver.api.upload
+import tmserver.api.plate
+import tmserver.api.acquisition
+import tmserver.api.channel
+import tmserver.api.well
+import tmserver.api.site
+import tmserver.api.file
 import tmserver.api.user
 import tmserver.api.mapobject
+import tmserver.api.feature
 import tmserver.api.layer
+import tmserver.api.tile
+
 import tmserver.api.tools
+
+import tmserver.api.workflow

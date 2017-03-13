@@ -13,8 +13,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""User interface view functions that deal with data analysis tools and their
-results.
+"""API view functions for querying :mod:`tools <tmlib.tools>` resources
+as well as related :mod:`result <tmlib.models.result>` and
+:mod:`plot <tmlib.models.plot>` resources.
 """
 import os
 import json
