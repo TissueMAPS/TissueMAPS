@@ -45,6 +45,7 @@ class HttpClient(object):
         self._session = requests.Session()
         self._session.get(self._base_url)
         if password is None:
+            logger.debug('no password provided')
             password = self._load_credentials(user_name)
         self.login(user_name, password)
 
@@ -98,32 +99,42 @@ class HttpClient(object):
         KeyError
             when `username` is not found in file
         '''
-        cred_filepath = os.path.expanduser('~/.tm_pass')
+        logger.debug('trying to obtain credentials from "~/.tm_pass" file')
+        cred_filepath = os.path.expandvars(os.path.join('$HOME', '.tm_pass'))
         if not os.path.exists(cred_filepath):
-            raise OSError('Credentials file "~/.tm_pass" not found.')
-        try:
-            with open(cred_filepath) as cred_file:
-                credentials = yaml.load(cred_file.read())
-        except Exception as err:
-            raise ValueError(
-                'Credentials could not be read from file: %s.' % err
+            logger.error(
+                'no credentials provided and no %s file found', cred_filepath
             )
+            sys.exit(1)
+        try:
+            with open(cred_filepath) as f:
+                credentials = yaml.load(f.read())
+        except Exception as err:
+            logger.error(
+                'could not be read credentials from %s file: %s',
+                cred_file, str(err)
+            )
+            sys.exit(1)
         if username not in credentials:
-            raise KeyError('No credentials found for user "%s".' % username)
+            logger.error(
+                'no credentials provided for user "%s" in %s file',
+                username, cred_filepath
+            )
+            sys.exit(1)
         return credentials[username]
 
 
     def login(self, username, password):
-        '''Authenticates the user.
+        '''Authenticates a TissueMAPS user.
 
         Parameters
         ----------
         username: str
-            name of the TissueMAPS user
+            name
         password: str
-            password of the user
+            password
         '''
-        logger.debug('login in as: "%s"' % username)
+        logger.debug('login in as user "%s"' % username)
         url = self._build_url('/auth')
         payload = {'username': username, 'password': password}
         res = self._session.post(url, json=payload)
