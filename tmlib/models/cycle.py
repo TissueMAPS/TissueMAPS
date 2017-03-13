@@ -28,8 +28,7 @@ class Cycle(ExperimentModel, DateMixIn):
 
     '''A *cycle* represents an individual image acquisition time point.
     In case of a time series experiment, *cycles* have different time points,
-    but the same channel index, while in case of a "multiplexing"
-    experiment, they have the same time point, but different channel indices.
+    while in case of a "multiplexing" experiment, they have the same time point.
 
     Attributes
     ----------

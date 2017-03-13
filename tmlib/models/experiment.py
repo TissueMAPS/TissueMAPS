@@ -304,12 +304,12 @@ class Experiment(DirectoryModel):
     ----------
     plates: List[tmlib.models.plate.Plate]
         plates belonging to the experiment
+    cycles: List[tmlib.model.cycle.Cycle]
+        cycles belonging to the plate
     channels: List[tmlib.models.channel.Channel]
         channels belonging to the experiment
     mapobject_types: List[tmlib.models.mapobject.MapobjectType]
         mapobject types belonging to the experiment
-    cycles: List[tmlib.model.Cycle]
-        cycles belonging to the plate
     '''
 
     __tablename__ = 'experiment'

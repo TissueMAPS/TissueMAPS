@@ -344,8 +344,8 @@ class PyramidBuilder(ClusterRoutines):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info(
-                'process layer: channel=%d, zplane=%d, tpoint=%d',
-                layer.channel.index, layer.zplane, layer.tpoint
+                'process layer: channel=%s, zplane=%d, tpoint=%d',
+                layer.channel.name, layer.zplane, layer.tpoint
             )
             logger.info(
                 'create non-empty tiles at maximum zoom level %d',
@@ -491,7 +491,7 @@ class PyramidBuilder(ClusterRoutines):
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
-            logger.info('processing layer: channel %d', layer.channel.index)
+            logger.info('processing layer for channel %s', layer.channel.name)
             level = batch['level']
             logger.info('creating tiles at zoom level %d', batch['level'])
             layer_id = layer.id

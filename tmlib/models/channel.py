@@ -70,13 +70,10 @@ class Channel(DirectoryModel, DateMixIn):
 
     __tablename__ = 'channels'
 
-    __table_args__ = (UniqueConstraint('name'), UniqueConstraint('index'))
+    __table_args__ = (UniqueConstraint('name'), )
 
     #: str: name given by the microscope or user
     name = Column(String, index=True)
-
-    #: int: zero-based channel index
-    index = Column(Integer, index=True)
 
     #: str: name of wavelength
     wavelength = Column(String, index=True)
@@ -97,14 +94,12 @@ class Channel(DirectoryModel, DateMixIn):
         backref=backref('channels', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, index, wavelength, bit_depth, experiment_id):
+    def __init__(self, name, wavelength, bit_depth, experiment_id):
         '''
         Parameters
         ----------
         name: str
             name of the channel
-        index: int
-            zero-based channel index
         wavelength: str
             name of the corresponding wavelength
         bit_depth: int
@@ -114,7 +109,6 @@ class Channel(DirectoryModel, DateMixIn):
             :class:`Experiment <tmlib.models.experiment.Experiment>`
         '''
         self.name = name
-        self.index = index
         self.wavelength = wavelength
         self.bit_depth = bit_depth
         self.experiment_id = experiment_id

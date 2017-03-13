@@ -339,16 +339,15 @@ class MetadataConfigurator(ClusterRoutines):
                             name = 'wavelength-%s' % w
                         channel = session.get_or_create(
                             tm.Channel, experiment_id=self.experiment_id,
-                            name=name, index=w_index, wavelength=w,
-                            bit_depth=bit_depth
+                            name=name, wavelength=w, bit_depth=bit_depth
                         )
 
                         file_mapping_ids = session.query(tm.ImageFileMapping.id).\
                             filter_by(tpoint=t, wavelength=w, acquisition_id=a)
                         logger.info(
                             'update time point and channel metadata '
-                            'of file mappings: tpoint=%d, channel=%d',
-                            t_index, channel.index
+                            'of file mappings: tpoint=%d, channel=%s',
+                            t_index, channel.name
                         )
                         session.bulk_update_mappings(
                             tm.ImageFileMapping, [
@@ -360,8 +359,6 @@ class MetadataConfigurator(ClusterRoutines):
                               } for i in file_mapping_ids
                             ]
                         )
-
-                        w_index += 1
 
                     if is_time_series:
                         t_index += 1

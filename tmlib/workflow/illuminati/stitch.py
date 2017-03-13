@@ -254,7 +254,8 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     centroids = model.cluster_centers_
     indices = model.labels_
 
-    # Determine grid dimensions
+    # Determine grid dimensions: consider all possible splits and select the
+    # one that fits best given the provided coordinate values
     spread = np.std(centroids, axis=0)
     splits = list()
     for i in range(2, n):
@@ -274,11 +275,11 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     # Assign relative grid coordinates to each absolute stage position
     row_edges = np.histogram(coordinates[:, 0], bins=rows)[1][:-1]
     col_edges = np.histogram(coordinates[:, 1], bins=cols)[1][:-1]
-    grid_positions = np.zeros(coordinates.shape, int)
+    positions = np.zeros(coordinates.shape, int)
     for i, (r, c) in enumerate(coordinates):
         row_index = np.where(row_edges <= r)[0]
         col_index = np.where(col_edges <= c)[0]
-        grid_positions[i, 0] = row_index[-1]
-        grid_positions[i, 1] = col_index[-1]
+        positions[i, 0] = row_index[-1]
+        positions[i, 1] = col_index[-1]
 
-    return zip(*grid_positions.T)
+    return zip(*positions.T)
