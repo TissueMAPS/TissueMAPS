@@ -33,22 +33,9 @@ class WorkflowStepJob(Job):
 
     Note
     ----
-    Jobs are constructed based on job descriptions, which persist on disk
-    in form of JSON files.
+    Jobs are constructed based on descriptions, which persist on disk
+    in form of *JSON* files.
     '''
-
-    # TODO: inherit from RetryableTask(max_retries=1) and implement
-    # re-submission logic by overwriting retry() :meth:
-    # 
-    #     with open(err_file, 'r') as err:
-    #         if re.search(r'^FAILED', err, re.MULTILINE):
-    #             reason = 'Exception'
-    #         elif re.search(r'^TIMEOUT', err, re.MULTILINE):
-    #             reason = 'Timeout'
-    #         elif re.search(r'^[0-9]*\s*\bKilled\b', err, re.MULTILINE):
-    #             reason = 'Memory'
-    #         else:
-    #             reason = 'Unknown'
 
     __metaclass__ = ABCMeta
 
@@ -225,12 +212,16 @@ class SingleRunJobCollection(ParallelTaskCollection, RunJobCollection):
 
     '''Class for a single run job collection.'''
 
-    def __init__(self, step_name, submission_id, jobs=None, index=None):
+    def __init__(self, step_name, output_dir, submission_id, jobs=None,
+            index=None):
         '''
         Parameters
         ----------
         step_name: str
             name of the corresponding TissueMAPS workflow step
+        output_dir: str
+            absolute path to the output directory, where log reports will
+            be stored
         submission_id: int
             ID of the corresponding submission
         jobs: List[tmlibs.workflow.jobs.RunJob], optional
@@ -255,7 +246,9 @@ class SingleRunJobCollection(ParallelTaskCollection, RunJobCollection):
                 raise TypeError('Argument "index" must have type int.')
             self.name = '%s_run-%.2d' % (self.step_name, index)
         self.submission_id = submission_id
-        super(self.__class__, self).__init__(jobname=self.name, tasks=jobs)
+        super(self.__class__, self).__init__(
+            jobname=self.name, tasks=jobs, output_dir=output_dir
+        )
 
     def add(self, job):
         '''Adds a job to the collection.
@@ -289,12 +282,15 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection, RunJobCollec
 
     '''Class for multiple run job collections.'''
 
-    def __init__(self, step_name, submission_id, run_job_collections=list()):
+    def __init__(self, step_name, output_dir, submission_id, run_job_collections=list()):
         '''
         Parameters
         ----------
         step_name: str
             name of the corresponding TissueMAPS workflow step
+        output_dir: str
+            absolute path to the output directory, where log reports will
+            be stored
         submission_id: int
             ID of the corresponding submission
         run_job_collections: List[tmlib.workflow.jobs.SingleRunJobCollection], optional
@@ -306,7 +302,7 @@ class MultiRunJobCollection(AbortOnError, SequentialTaskCollection, RunJobCollec
         if run_job_collections is None:
             run_job_collections = list()
         super(self.__class__, self).__init__(
-            jobname=self.name, tasks=run_job_collections
+            jobname=self.name, tasks=run_job_collections, output_dir=output_dir
         )
 
     def add(self, run_job_collection):
@@ -344,12 +340,15 @@ class CliJobCollection(SequentialTaskCollection, JobCollection):
     :meth:`submit <tmlib.workflow.cli.CommandLineInterface.submit>`.
     '''
 
-    def __init__(self, step_name, submission_id, jobs=None):
+    def __init__(self, step_name, output_dir, submission_id, jobs=None):
         '''
         Parameters
         ----------
         step_name: str
             name of the corresponding TissueMAPS workflow step
+        output_dir: str
+            absolute path to the output directory, where log reports will
+            be stored
         submission_id: int
             ID of the corresponding submission
         jobs: List[tmlibs.workflow.jobs.RunJobCollection or tmlibs.workflow.jobs.CollectJob], optional
@@ -362,4 +361,6 @@ class CliJobCollection(SequentialTaskCollection, JobCollection):
                     'First job must have type '
                     'tmlib.workflow.jobs.RunJobCollection.'
                 )
-        super(self.__class__, self).__init__(jobname=step_name, tasks=jobs)
+        super(self.__class__, self).__init__(
+            jobname=step_name, tasks=jobs, output_dir=output_dir
+        )

@@ -545,10 +545,22 @@ class ClusterRoutines(BasicClusterRoutines):
         )
 
     def create_run_job_collection(self, submission_id):
-        '''tmlib.workflow.job.SingleRunJobCollection: collection of "run" jobs
+        '''Creates a job collection for the "run" phase of the step.
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding
+            :class:`Submission <tmlib.models.submission.Submission>`
+
+        Returns
+        -------
+        tmlib.workflow.job.SingleRunJobCollection
+            collection of "run" jobs
         '''
         return SingleRunJobCollection(
-            step_name=self.step_name, submission_id=submission_id
+            step_name=self.step_name, submission_id=submission_id,
+            output_dir=self.log_location
         )
 
     def create_run_jobs(self, submission_id, user_name, job_collection, batches,

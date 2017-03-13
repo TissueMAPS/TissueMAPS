@@ -261,17 +261,30 @@ class PyramidBuilder(ClusterRoutines):
             )
 
     def create_run_job_collection(self, submission_id):
-        '''tmlib.workflow.job.MultiRunJobCollection: collection of "run" jobs
+        '''Creates a job collection for the "run" phase of the step.
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding
+            :class:`Submission <tmlib.models.submission.Submission>`
+
+        Returns
+        -------
+        tmlib.workflow.job.MultiRunJobCollection
+            collection of "run" jobs
         '''
         return MultiRunJobCollection(
-            step_name=self.step_name, submission_id=submission_id
+            step_name=self.step_name, submission_id=submission_id,
+            output_dir=self.log_location
         )
 
     def create_run_jobs(self, submission_id, user_name, job_collection, batches,
             duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
         The `illuminati` step is special in the sense that it implements
-        a mutliple sequential runs with the "run" phase.
+        multiple sequential runs within the "run" phase to build one pyramid
+        zoom level after another.
 
         Parameters
         ----------
@@ -334,6 +347,7 @@ class PyramidBuilder(ClusterRoutines):
                     step_name=self.step_name,
                     jobs=jobs,
                     index=index,
+                    output_dir=self.log_location,
                     submission_id=submission_id
                 )
             )
