@@ -32,6 +32,36 @@ from tmserver.error import *
 logger = logging.getLogger(__name__)
 
 
+def is_true(value):
+    """Whether a query string parameter should be interpreted as ``True``.
+    ``True`` are "True", "TRUE", "true", "yes" and 1.
+
+    Parameters
+    ----------
+    value: Union[str, int]
+
+    Returns
+    -------
+    bool
+    """
+    return value in {'True', 'TRUE', 'true', 'yes', 1}
+
+
+def is_false(value):
+    """Whether a query string parameter should be interpreted as ``False``.
+    ``False`` are "False", "FALSE", "false", "no" and 0.
+
+    Parameters
+    ----------
+    value: Union[str, int]
+
+    Returns
+    -------
+    bool
+    """
+    return value in {'False', 'false', 'FALSE', 'no', 0}
+
+
 def assert_query_params(*params):
     """A decorator for GET request functions that asserts that the
     query string contains the required parameters.
@@ -81,20 +111,27 @@ def assert_form_params(*params):
     def decorator(f):
         @functools.wraps(f)
         def wrapped(*args, **kwargs):
-            if request.method != 'POST':
+            if request.method not in {'POST', 'PUT'}:
                 raise ValueError(
-                    '"assert_form_params" must decorate POST request functions'
+                    '"assert_form_params()" must decorate PUT or POST request '
+                    'view functions'
                 )
             data = request.get_json()
             missing = []
             for p in params:
                 if data is None:
-                    raise MissingPOSTParameterError(*params)
+                    if request.method == 'PUT':
+                        raise MissingPUTParameterError(*params)
+                    else:
+                        raise MissingPOSTParameterError(*params)
                 else:
                     if p not in data:
                         missing.append(p)
             if missing:
-                raise MissingPOSTParameterError(*missing)
+                if request.method == 'PUT':
+                    raise MissingPUTParameterError(*missing)
+                else:
+                    raise MissingPOSTParameterError(*missing)
             return f(*args, **kwargs)
         return wrapped
     return decorator
@@ -179,7 +216,9 @@ def decode_query_ids(permission='write'):
             for arg in url_args:
                 if arg.endswith('_id'):
                     encoded_model_id = request.view_args.get(arg)
+                    logger.debug('encoded model ID: %s', encoded_model_id)
                     model_id = decode_pk(encoded_model_id)
+                    logger.debug('decoded model ID: %d', model_id)
                     kwargs[arg] = model_id
                 if arg == 'experiment_id':
                     if permission is not None:
@@ -194,7 +233,7 @@ def decode_query_ids(permission='write'):
                                 current_identity.id, permission
                             )
                             if not granted:
-                                raise NotAuthorizedError(
+                                raise ForbiddenError(
                                     'User is not authorized to access '
                                     'experiment %s.' % model_id
                                 )

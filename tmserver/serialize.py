@@ -143,7 +143,29 @@ def enocode_microscope_metadata_file(obj, encoder):
 def encode_cycle(obj, encoder):
     return {
         'id': encode_pk(obj.id),
-        'plate_id': encode_pk(obj.plate_id),
+        'index': obj.index,
+        'tpoint': obj.tpoint
+    }
+
+
+@json_encoder(tm.Well)
+def encode_well(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'name': obj.name,
+        'description': obj.description
+    }
+
+
+@json_encoder(tm.Site)
+def encode_site(obj, encoder):
+    return {
+        'id': encode_pk(obj.id),
+        'y': obj.y,
+        'x': obj.x,
+        'height': obj.height,
+        'width': obj.width
+        # shifts ?
     }
 
 
@@ -181,6 +203,7 @@ def encode_segmentation_layer(obj, encoder):
 @json_encoder(tm.MicroscopeImageFile)
 def encode_microscope_image_file(obj, encoder):
     return {
+        'id': encode_pk(obj.id),
         'name': obj.name,
         'status': obj.status
     }
@@ -189,6 +212,7 @@ def encode_microscope_image_file(obj, encoder):
 @json_encoder(tm.MicroscopeMetadataFile)
 def encode_microscope_metadata_file(obj, encoder):
     return {
+        'id': encode_pk(obj.id),
         'name': obj.name,
         'status': obj.status
     }

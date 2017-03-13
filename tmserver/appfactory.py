@@ -17,9 +17,10 @@ import sys
 import os
 from os.path import join, dirname, abspath
 import logging
-
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from flask_sqlalchemy_session import flask_scoped_session
-from flask import Flask
+from flask import Flask, jsonify
 import gc3libs
 
 import tmlib.models as tm
@@ -28,6 +29,7 @@ from tmlib.models.utils import create_db_engine, create_db_session_factory
 
 from tmserver.extensions import jwt
 from tmserver.serialize import TmJSONEncoder
+from tmserver.error import register_http_error_classes
 from tmserver import cfg
 from tmlib import cfg as libcfg
 
@@ -105,8 +107,6 @@ def create_app(verbosity=None):
     gevent_logger.addHandler(log_handler)
     gc3pie_logger = logging.getLogger('gc3.gc3libs')
     gc3pie_logger.addHandler(log_handler)
-    werkzeug_logger = logging.getLogger('werkzeug')
-    werkzeug_logger.addHandler(log_handler)
     wsgi_logger = logging.getLogger('wsgi')
     wsgi_logger.addHandler(log_handler)
     apscheduler_logger = logging.getLogger('apscheduler')
@@ -115,20 +115,16 @@ def create_app(verbosity=None):
         gevent_logger.setLevel(logging.DEBUG)
         gc3pie_logger.setLevel(logging.DEBUG)
         wsgi_logger.setLevel(logging.DEBUG)
-        werkzeug_logger.setLevel(logging.DEBUG)
         apscheduler_logger.setLevel(logging.DEBUG)
     elif verbosity > 3:
         gevent_logger.setLevel(logging.INFO)
         gc3pie_logger.setLevel(logging.INFO)
         wsgi_logger.setLevel(logging.INFO)
-        werkzeug_logger.setLevel(logging.INFO)
         apscheduler_logger.setLevel(logging.INFO)
     else:
         gevent_logger.setLevel(logging.ERROR)
         gc3pie_logger.setLevel(logging.ERROR)
         wsgi_logger.setLevel(logging.ERROR)
-        werkzeug_logger.setLevel(logging.ERROR)
-        werkzeug_logger.disabled = True
         apscheduler_logger.setLevel(logging.ERROR)
 
     app.json_encoder = TmJSONEncoder
@@ -141,6 +137,47 @@ def create_app(verbosity=None):
     app.config['SECRET_KEY'] = cfg.secret_key
 
     app.config['JWT_EXPIRATION_DELTA'] = cfg.jwt_expiration_delta
+
+    ## Error handling
+
+    # Register custom error classes
+    register_http_error_classes(app)
+
+    # Register SQLAlchemy error classes
+    @app.errorhandler(NoResultFound)
+    def _handle_no_result_found(error):
+        response = jsonify(error={
+            'message': error.message,
+            'status_code': 400,
+            'type': error.__class__.__name__
+        })
+        logger.error('no result found: ' + error.message)
+        response.status_code = 400
+        return response
+
+    @app.errorhandler(MultipleResultsFound)
+    def _multiple_results_found(error):
+        response = jsonify(error={
+            'message': error.message,
+            'status_code': 409,
+            'type': error.__class__.__name__
+        })
+        logger.error('multiple results found: ' + error.message)
+        response.status_code = 409
+        return response
+
+    @app.errorhandler(IntegrityError)
+    def _handle_integrity_error(error):
+        response = jsonify(error={
+            'error': True,
+            'message': error.message,
+            'status_code': 500,
+            'type': error.__class__.__name__
+        })
+        logger.error('database integrity error: ' + error.message)
+        response.status_code = 500
+        return response
+
 
     ## Initialize Plugins
     jwt.init_app(app)

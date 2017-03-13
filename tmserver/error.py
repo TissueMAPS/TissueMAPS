@@ -23,6 +23,7 @@ import logging
 import importlib
 import inspect
 import sqlalchemy
+from flask import jsonify
 
 from tmserver.serialize import json_encoder
 
@@ -30,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 def handle_error(error):
-    # current_app.logger.error(error)
+    logger.error(error)
     response = jsonify(error=error)
     response.status_code = error.status_code
     return response
@@ -85,10 +86,28 @@ class MissingPOSTParameterError(MalformedRequestError):
         )
 
 
+class MissingPUTParameterError(MalformedRequestError):
+
+    def __init__(self, *parameters):
+        super(MissingPUTParameterError, self).__init__(
+            message=(
+                'The following PUT parameters are required but were missing '
+                'in the request body: "%s".' % '", "'.join(parameters)
+            )
+        )
+
+
 class NotAuthorizedError(HTTPException):
 
     def __init__(self, message='User cannot access the requested resource.'):
         super(NotAuthorizedError, self).__init__(message, 401)
+
+
+class ForbiddenError(HTTPException):
+
+    def __init__(self,
+            message='User is not authorized to access requested resource.'):
+        super(ForbiddenError, self).__init__(message, 403)
 
 
 class ResourceNotFoundError(HTTPException):
@@ -100,7 +119,7 @@ class ResourceNotFoundError(HTTPException):
                 'for parameters: %s' % (
                     model.__name__,
                     ', '.join([
-                        '='.join([k, v]) for k, v in parameters.iteritems()
+                        '='.join([k, str(v)]) for k, v in parameters.iteritems()
                     ])
                 )
             )
@@ -112,7 +131,7 @@ class ResourceNotFoundError(HTTPException):
         super(ResourceNotFoundError, self).__init__(message, 404)
 
 
-def register_http_error_classes(error_handler):
+def register_http_error_classes(app):
     """Registers an error handler for error classes derived from
     :class:`HTTPException <tmserver.error.HTTPException>`.
 
@@ -127,4 +146,4 @@ def register_http_error_classes(error_handler):
         if inspect.isclass(cls):
             if HTTPException in inspect.getmro(cls):
                 logger.debug('register error handler for class %r', cls)
-                # globals()[cls.__name__] = error_handler(handle_error)(cls)
+                app.register_error_handler(cls, handle_error)
