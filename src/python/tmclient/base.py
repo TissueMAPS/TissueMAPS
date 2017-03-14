@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class HttpClient(object):
 
-    '''Abstract base class for HTTP interface.'''
+    '''Abstract base class for HTTP client interface.'''
 
     __metaclass__ = ABCMeta
 
@@ -41,13 +41,13 @@ class HttpClient(object):
         password: str, optional
             password for `username` (default: ``None``)
         '''
-        self._base_url = 'http://%s:%d' % (host, port)
+        self._base_url = 'http://{host}:{port}'.format(host=host, port=port)
         self._session = requests.Session()
         self._session.get(self._base_url)
         if password is None:
             logger.debug('no password provided')
             password = self._load_credentials(user_name)
-        self.login(user_name, password)
+        self._login(user_name, password)
 
     def _build_url(self, route, params={}):
         '''Builds the full URL based on the base URL (``http://<host>:<port>``)
@@ -69,7 +69,7 @@ class HttpClient(object):
         if not params:
             logger.debug('url: %s', url)
             return url
-        url = '%s?%s' % (url, urllib.urlencode(params))
+        url = '{url}?{params}'.format(url=url, params=urllib.urlencode(params))
         logger.debug('url: %s', url)
         return url
 
@@ -123,8 +123,7 @@ class HttpClient(object):
             sys.exit(1)
         return credentials[username]
 
-
-    def login(self, username, password):
+    def _login(self, username, password):
         '''Authenticates a TissueMAPS user.
 
         Parameters

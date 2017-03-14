@@ -195,7 +195,13 @@ workflow_subparsers.required = True
 
 workflow_description_parser = workflow_subparsers.add_parser(
     'description', help='workflow description resources',
-    description='Access workflow description resources.',
+    description=(
+        'Access workflow description resources. A description provides '
+        'information on individual workflow stages and steps and is '
+        'represented on disk as a file in YAML format. A description doesn\'t '
+        'need to be build from scratch. Upon first download the server '
+        'will respond with a template that can be modified locally and uploaded.'
+    )
 )
 workflow_description_subparsers = workflow_description_parser.add_subparsers(
     dest='workflow_description_methods', help='access methods'
@@ -233,7 +239,11 @@ workflow_description_upload_parser.set_defaults(
 
 workflow_job_parser = workflow_subparsers.add_parser(
     'job', help='workflow job resources',
-    description='Access workflow job resources.',
+    description=(
+        'Access workflow job resources. Before first submission of a workflow '
+        'a custom description should to be uploaded. Otherwise, the default '
+        'description will be used, which may lead to unexpected results. '
+    )
 )
 workflow_job_subparsers = workflow_job_parser.add_subparsers(
     dest='workflow_job_methods', help='access methods'
@@ -274,6 +284,49 @@ workflow_job_status_parser.add_argument(
 )
 workflow_job_status_parser.set_defaults(method='_show_workflow_status')
 
+
+####################
+# Jterator project #
+####################
+
+project_description_parser = workflow_subparsers.add_parser(
+    'project', help='jterator project resources',
+    description=(
+        'Access jterator project resources. A jterator project consists of '
+        'a pipeline descriptor file in YAML format and additional '
+        'module descriptor files (handles) in YAML format. A project is '
+        'represented on disk as a folder containing the "pipeline.yaml" file '
+        'and a "handles" subfolder containing any "*.handles.yaml" files.'
+    )
+)
+project_description_subparsers = project_description_parser.add_subparsers(
+    dest='project_description_methods', help='access methods'
+)
+project_description_subparsers.required = True
+
+project_description_download_parser = project_description_subparsers.add_parser(
+    'download', help='download the project',
+    description='Download the project.'
+)
+project_description_download_parser.add_argument(
+    '--directory', required=True,
+    help='path to directory to which project should be written'
+)
+project_description_download_parser.set_defaults(
+    method='download_project_description_file'
+)
+
+project_description_upload_parser = project_description_subparsers.add_parser(
+    'upload', help='upload a project',
+    description='Upload a project.',
+)
+project_description_upload_parser.add_argument(
+    '--directory', required=True,
+    help='path to directory from which project should be read'
+)
+project_description_upload_parser.set_defaults(
+    method='upload_project_description_file'
+)
 
 ##########
 ## Data ##

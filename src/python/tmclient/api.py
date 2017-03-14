@@ -39,22 +39,24 @@ logger = logging.getLogger(__name__)
 
 class TmClient(HttpClient):
 
-    '''Class for interacting with a *TissueMAPS* server via *RESTful API*.'''
+    '''*TissueMAPS* RESTful API client.'''
 
     def __init__(self, host, port, experiment_name, user_name, password=None):
         '''
         Parameters
         ----------
         host: str
-            name of the TissueMAPS host
+            name or IP address of the machine that hosts the *TissueMAPS* server
+            (e.g. ``"localhost"`` or ``127.0.0.1``)
         port: int
-            number of the port to which TissueMAPS server listens
+            number of the port to which *TissueMAPS* server listens
+            (e.g. ``8002``)
         experiment_name: str
             name of the experiment that should be queried
         user_name: str
-            name of the TissueMAPS user
+            name of the *TissueMAPS* user
         password: str
-            password for `username`
+            password for `user_name`
         '''
         super(TmClient, self).__init__(host, port, user_name, password)
         self.experiment_name = experiment_name
@@ -117,12 +119,15 @@ class TmClient(HttpClient):
         except:
             raise
 
+    def _build_api_url(self, route, params={}):
+        route = '/api/{0}'.format(route)
+        return super(TmClient, self)._build_url(route, params)
+
     @property
     def _experiment_id(self):
-        '''str: ID of an existing experiment'''
         logger.debug('get ID for experiment "%s"', self.experiment_name)
         params = {'name': self.experiment_name}
-        url = self._build_url('/api/experiments', params)
+        url = self._build_api_url('/experiments', params)
         res = self._session.get(url)
         res.raise_for_status()
         data = res.json()['data']
@@ -144,7 +149,7 @@ class TmClient(HttpClient):
 
     def create_experiment(self, workflow_type, microscope_type, plate_format,
             plate_acquisition_mode):
-        '''Creates a new experiment.
+        '''Creates the experiment.
 
         Parameters
         ----------
@@ -174,30 +179,31 @@ class TmClient(HttpClient):
             'plate_format': plate_format,
             'plate_acquisition_mode': plate_acquisition_mode
         }
-        url = self._build_url('/api/experiments')
+        url = self._build_api_url('/experiments')
         res = self._session.post(url, json=content)
         res.raise_for_status()
 
     def rename_experiment(self, new_name):
-        '''Renames an experiment.
+        '''Renames the experiment.
 
         See also
         --------
-        :class:`tmserver.api.experiment.rename_experiment`
+        :class:`tmserver.api.experiment.update_experiment`
         :class:`tmlib.models.experiment.ExperimentReference`
         '''
         logger.info('rename experiment "%s"', self.experiment_name)
         content = {'name': new_name}
-        url = self._build_url(
-            '/api/experiments/{experiment_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}'.format(
                 experiment_id=self._experiment_id
             )
         )
         res = self._session.put(url, json=content)
         res.raise_for_status()
+        self.experiment_name = new_name
 
     def delete_experiment(self):
-        '''Deletes an experiment.
+        '''Deletes the experiment.
 
         See also
         --------
@@ -206,8 +212,8 @@ class TmClient(HttpClient):
         :class:`tmlib.models.experiment.Experiment`
         '''
         logger.info('delete experiment "%s"', self.experiment_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -215,19 +221,6 @@ class TmClient(HttpClient):
         res.raise_for_status()
 
     def _get_plate_id(self, name):
-        '''Gets the ID of an existing plate given its name.
-
-        Parameters
-        ----------
-        name: str
-            name of the plate
-
-        Returns
-        -------
-        str
-            plate ID
-
-        '''
         logger.debug(
             'get plate ID for experiment "%s", plate "%s"',
             self.experiment_name, name
@@ -235,8 +228,8 @@ class TmClient(HttpClient):
         params = {
             'name': name,
         }
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/plates'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/plates'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -279,8 +272,8 @@ class TmClient(HttpClient):
             'name': name,
             'description': description
         }
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/plates'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/plates'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -305,8 +298,8 @@ class TmClient(HttpClient):
             name, self.experiment_name
         )
         plate_id = self._get_plate_id(name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/plates/{plate_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/plates/{plate_id}'.format(
                 experiment_id=self._experiment_id, plate_id=plate_id
             )
         )
@@ -325,7 +318,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.plate.rename_plate`
+        :class:`tmserver.api.plate.update_plate`
         :class:`tmlib.models.plate.Plate`
         '''
         logger.info(
@@ -334,8 +327,8 @@ class TmClient(HttpClient):
         )
         plate_id = self._get_plate_id(name)
         content = {'name': new_name}
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/plates/{plate_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/plates/{plate_id}'.format(
                 experiment_id=self._experiment_id, plate_id=plate_id
             )
         )
@@ -356,8 +349,8 @@ class TmClient(HttpClient):
         :class:`tmlib.models.plate.Plate`
         '''
         logger.info('get plates of experiment "%s"', self.experiment_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/plates'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/plates'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -385,8 +378,8 @@ class TmClient(HttpClient):
             'plate_name': plate_name,
             'name': name
         }
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/acquisitions'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -434,8 +427,8 @@ class TmClient(HttpClient):
             'name': name,
             'description': description
         }
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/acquisitions'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -456,7 +449,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.acquisition.rename_acquisition`
+        :class:`tmserver.api.acquisition.update_acquisition`
         :class:`tmlib.models.acquisition.Acquisition`
         '''
         logger.info(
@@ -465,8 +458,8 @@ class TmClient(HttpClient):
         )
         content = {'name': new_name}
         acquisition_id = self._get_acquisition_id(plate_name, name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/acquisitions/{acquisition_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions/{acquisition_id}'.format(
                 experiment_id=self._experiment_id, acquisition_id=acquisition_id
             )
         )
@@ -493,8 +486,8 @@ class TmClient(HttpClient):
             name, self.experiment_name, plate_name
         )
         acquisition_id = self._get_acquisition_id(plate_name, name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/acquisitions/{acquisition_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions/{acquisition_id}'.format(
                 experiment_id=self._experiment_id, acquisition_id=acquisition_id
             )
         )
@@ -524,8 +517,8 @@ class TmClient(HttpClient):
         if plate_name is not None:
             logger.info('filter acquisitions for plate "%s"', plate_name)
             params['plate_name'] = plate_name
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/acquisitions'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -551,8 +544,8 @@ class TmClient(HttpClient):
             'plate_name': plate_name,
             'name': name
         }
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/wells'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/wells'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -598,8 +591,8 @@ class TmClient(HttpClient):
         if plate_name is not None:
             logger.info('filter wells for plate "%s"', plate_name)
             params['plate_name'] = plate_name
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/wells'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/wells'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -628,8 +621,8 @@ class TmClient(HttpClient):
             'well_pos_y': well_pos_y,
             'well_pos_x': well_pos_x
         }
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/sites'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/sites'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -683,8 +676,8 @@ class TmClient(HttpClient):
         if well_name is not None:
             logger.info('filter sites for well "%s"', well_name)
             params['well_name'] = well_name
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/wells'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/wells'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -707,8 +700,8 @@ class TmClient(HttpClient):
             self.experiment_name, name
         )
         params = {'name': name}
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -737,8 +730,8 @@ class TmClient(HttpClient):
         )
         params = {'name': name}
         mapobject_type_id = self._get_mapobject_type_id(mapobject_type_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/features'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/features'.format(
                 experiment_id=self._experiment_id,
                 mapobject_type_id=mapobject_type_id
             ),
@@ -768,8 +761,8 @@ class TmClient(HttpClient):
             'plate_name': plate_name,
             'index': index
         }
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/cycles'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/cycles'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -799,8 +792,8 @@ class TmClient(HttpClient):
             self.experiment_name, name
         )
         params = {'name': name}
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/channels'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/channels'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -830,8 +823,8 @@ class TmClient(HttpClient):
             'tpoint': tpoint,
             'zplane': zplane
         }
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/channel_layers'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/channel_layers'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -901,8 +894,8 @@ class TmClient(HttpClient):
 
     def _get_image_files(self, acquisition_id):
         logger.debug('get image files for acquisition %s', acquisition_id)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/acquisitions/{acquisition_id}/images'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions/{acquisition_id}/images'.format(
                 experiment_id=self._experiment_id, acquisition_id=acquisition_id
             )
         )
@@ -915,8 +908,8 @@ class TmClient(HttpClient):
             'get metadata files for experiment "%s" and acquisition %s',
             self.experiment_name, acquisition_id
         )
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/acquisitions/{acquisition_id}/metadata'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions/{acquisition_id}/metadata'.format(
                 experiment_id=self._experiment_id, acquisition_id=acquisition_id
             )
         )
@@ -968,8 +961,8 @@ class TmClient(HttpClient):
             'register files for upload of experiment %s, acquisition %s',
             self._experiment_id, acquisition_id
         )
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/acquisitions/{acquisition_id}/upload/register'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions/{acquisition_id}/upload/register'.format(
                 experiment_id=self._experiment_id, acquisition_id=acquisition_id
             )
         )
@@ -989,8 +982,8 @@ class TmClient(HttpClient):
             absolute path to the file on the local disk
         '''
         logger.debug('upload file: %s', filepath)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/acquisitions/{acquisition_id}/microscope-file'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions/{acquisition_id}/microscope-file'.format(
                 experiment_id=self._experiment_id, acquisition_id=acquisition_id
             )
         )
@@ -1039,8 +1032,8 @@ class TmClient(HttpClient):
             'correct': correct
         }
         channel_id = self._get_channel_id(channel_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/channels/{channel_id}/image-file'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/channels/{channel_id}/image-file'.format(
                 experiment_id=self._experiment_id, channel_id=channel_id
             ),
             params
@@ -1061,7 +1054,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.channel.rename_channel`
+        :class:`tmserver.api.channel.update_channel`
         :class:`tmlib.models.channel.Channel`
         '''
         logger.info(
@@ -1070,8 +1063,8 @@ class TmClient(HttpClient):
         )
         channel_id = self._get_channel_id(name)
         content = {'name': new_name}
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/channels/{channel_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/channels/{channel_id}'.format(
                 experiment_id=self._experiment_id, channel_id=channel_id
             )
         )
@@ -1092,8 +1085,8 @@ class TmClient(HttpClient):
         :class:`tmlib.models.channel.Channel`
         '''
         logger.info('get channels of experiment "%s"', self.experiment_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/channels'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/channels'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -1223,8 +1216,8 @@ class TmClient(HttpClient):
             'zplane': zplane
         }
         mapobject_type_id = self._get_mapobject_type_id(mapobject_type_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/segmentations'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/segmentations'.format(
                 experiment_id=self._experiment_id,
                 mapobject_type_id=mapobject_type_id
             ),
@@ -1343,8 +1336,8 @@ class TmClient(HttpClient):
             'image': image
         }
         mapobject_type_id = self._get_mapobject_type_id(mapobject_type_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/segmentations'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/segmentations'.format(
                 experiment_id=self._experiment_id,
                 mapobject_type_id=mapobject_type_id
             )
@@ -1449,7 +1442,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :func:`tmserver.api.feature.rename_feature`
+        :func:`tmserver.api.feature.update_feature`
         :class:`tmlib.models.feature.Feature`
         '''
         logger.info(
@@ -1460,8 +1453,8 @@ class TmClient(HttpClient):
             'name': new_name,
         }
         feature_id = self._get_feature_id(mapobject_type_name, name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/features/{feature_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/features/{feature_id}'.format(
                 experiment_id=self._experiment_id, feature_id=feature_id
             )
         )
@@ -1488,8 +1481,8 @@ class TmClient(HttpClient):
             name, self.experiment_name, mapobject_type_name
         )
         feature_id = self._get_feature_id(mapobject_type_name, name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/features/{feature_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/features/{feature_id}'.format(
                 experiment_id=self._experiment_id, feature_id=feature_id
             )
         )
@@ -1508,7 +1501,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.mapobject.rename_mapobject_type`
+        :class:`tmserver.api.mapobject.update_mapobject_type`
         :class:`tmlib.models.mapobject.MapobjectType`
         '''
         logger.info(
@@ -1517,8 +1510,8 @@ class TmClient(HttpClient):
         )
         content = {'name': new_name}
         mapobject_type_id = self._get_mapobject_type_id(name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}'.format(
                 experiment_id=self._experiment_id,
                 mapobject_type_id=mapobject_type_id
             )
@@ -1544,8 +1537,8 @@ class TmClient(HttpClient):
             name, self.experiment_name
         )
         mapobject_type_id = self._get_mapobject_type_id(name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}'.format(
                 experiment_id=self._experiment_id,
                 mapobject_type_id=mapobject_type_id
             )
@@ -1567,8 +1560,8 @@ class TmClient(HttpClient):
         :class:`tmlib.models.mapobject.MapobjectType`
         '''
         logger.info('get object types of experiment "%s"', self.experiment_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -1608,8 +1601,8 @@ class TmClient(HttpClient):
             self.experiment_name, mapobject_type_name
         )
         mapobject_type_id = self._get_mapobject_type_id(mapobject_type_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/features'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/features'.format(
                 experiment_id=self._experiment_id,
                 mapobject_type_id=mapobject_type_id
             )
@@ -1645,8 +1638,8 @@ class TmClient(HttpClient):
         if tpoint is not None:
             params['tpoint'] = tpoint
         mapobject_type_id = self._get_mapobject_type_id(mapobject_type_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/feature-values'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/feature-values'.format(
                 experiment_id=self._experiment_id,
                 mapobject_type_id=mapobject_type_id
             ),
@@ -1705,8 +1698,8 @@ class TmClient(HttpClient):
                 'values': data.values.tolist()
             }
         }
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/feature-values'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/feature-values'.format(
                 experiment_id=self._experiment_id,
                 mapobject_type_id=mapobject_type_id
             )
@@ -1817,8 +1810,8 @@ class TmClient(HttpClient):
         if tpoint is not None:
             params['tpoint'] = tpoint
         mapobject_type_id = self._get_mapobject_type_id(mapobject_type_name)
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/metadata'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/metadata'.format(
                 experiment_id=self._experiment_id,
                 mapobject_type_id=mapobject_type_id
             ),
@@ -1884,8 +1877,8 @@ class TmClient(HttpClient):
             'download description for workflow of experiment "%s"',
             self.experiment_name
         )
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/workflow/description'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/description'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -1931,8 +1924,8 @@ class TmClient(HttpClient):
             self.experiment_name
         )
         content = {'description': description}
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/workflow/description'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/description'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -1975,8 +1968,8 @@ class TmClient(HttpClient):
         content = dict()
         if description is not None:
             content['description'] = description
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/workflow/submit'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/submit'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -2007,8 +2000,8 @@ class TmClient(HttpClient):
             content['description'] = description
         if stage_name is not None:
             content['stage_name'] = stage_name
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/workflow/resubmit'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/resubmit'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -2025,8 +2018,8 @@ class TmClient(HttpClient):
         '''
         logger.info('kill workflow of experiment "%s"', self.experiment_name)
         content = dict()
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/workflow/kill'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/kill'.format(
                 experiment_id=self._experiment_id
             )
         )
@@ -2055,8 +2048,8 @@ class TmClient(HttpClient):
             'get status for workflow of experiment "%s"', self.experiment_name
         )
         params = {'depth': depth}
-        url = self._build_url(
-            '/api/experiments/{experiment_id}/workflow/status'.format(
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/status'.format(
                 experiment_id=self._experiment_id
             ),
             params
