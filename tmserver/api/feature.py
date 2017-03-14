@@ -44,11 +44,11 @@ logger = logging.getLogger(__name__)
 @jwt_required()
 @assert_form_params('name')
 @decode_query_ids('read')
-def rename_feature(experiment_id, feature_id):
+def update_feature(experiment_id, feature_id):
     """
     .. http:put:: /api/experiments/(string:experiment_id)/features/(string:feature_id)
 
-        Rename a :class:`Feature <tmlib.models.feature.Feature>`.
+        Update a :class:`Feature <tmlib.models.feature.Feature>`.
 
         **Example request**:
 

@@ -239,11 +239,11 @@ def get_tool_result(experiment_id, tool_result_id):
 )
 @jwt_required()
 @decode_query_ids('read')
-def rename_tool_result(experiment_id, tool_result_id):
+def update_tool_result(experiment_id, tool_result_id):
     """
     .. http:put:: /api/experiments/(string:experiment_id)/tools/result/(string:tool_result_id)
 
-        Rename a tool result.
+        Update a :class:`ToolResult <tmlib.models.result.ToolResult>`.
 
         **Example request**:
 

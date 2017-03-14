@@ -61,16 +61,6 @@ from tmserver.error import (
 logger = logging.getLogger(__name__)
 
 
-# @error_handler_factory
-class JtUIError(HTTPException):
-    '''Error class for Jterator user interface errors that should be reported
-    to the client.
-    '''
-
-    def __init__(self, message):
-        super(JtUIError, self).__init__(message=message, status_code=400)
-
-
 def list_module_names(pipeline):
     '''Lists all names of active module in the pipeline.
 
@@ -254,7 +244,7 @@ def save_project(experiment_id):
         jt.project.save()
         return jsonify({'success': True})
     except Exception as err:
-        raise JtUIError('Project could not be saved:\n%s', str(err))
+        raise MalformedRequestError('Project could not be saved:\n%s', str(err))
 
 
 @jtui.route('/experiments/<experiment_id>/project/check', methods=['POST'])
@@ -280,9 +270,9 @@ def check_jtproject(experiment_id):
             pipeline_description=pipeline_description,
             handles_descriptions=handles_descriptions,
         )
-        return jsonify({'success': True})
+        return jsonify(success=True)
     except Exception as err:
-        raise JtUIError('Pipeline check failed:\n%s' % str(err))
+        raise MalformedRequestError('Pipeline check failed:\n%s' % str(err))
 
 
 @jtui.route('/experiments/<experiment_id>/project', methods=['DELETE'])
@@ -303,10 +293,10 @@ def delete_project(experiment_id):
 @decode_query_ids()
 def create_jtproject(experiment_id):
     '''Creates a new jterator project in an existing experiment folder, i.e.
-    create a `pipe` file with an *empty* pipeline description
-    and a "handles" subfolder that doesn't yet contain any `handles` files.
+    creates a pipeline description file and an empty "handles" subfolder.
 
-    Return a jtproject object from the newly created `pipe` file.
+    Respondes with a serialized
+    :class:`Project <tmlib.workflow.jterator.project.Project>`.
     '''
     # experiment_dir = os.path.join(cfg.EXPDATA_DIR_LOCATION, experiment_id)
     data = json.loads(request.data)
@@ -459,7 +449,7 @@ def run_jobs(experiment_id):
                 filter(tm.ChannelImageFile.site_id == j).\
                 count()
             if image_file_count == 0:
-                raise JtUIError('No images found for job ID %s.' % j)
+                raise MalformedRequestError('No images found for job ID %s.' % j)
             job_descriptions.append({'site_id': j, 'plot': True})
 
     with tm.utils.MainSession() as session:

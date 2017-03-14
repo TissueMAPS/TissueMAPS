@@ -84,11 +84,11 @@ def get_plate(experiment_id, plate_id):
 @jwt_required()
 @assert_form_params('name')
 @decode_query_ids('read')
-def rename_plate(experiment_id, plate_id):
+def update_plate(experiment_id, plate_id):
     """
     .. http:put:: /api/experiments/(string:experiment_id)/plates/(string:plate_id)
 
-        Rename a :class:`Plate <tmlib.models.plate.Plate>`.
+        Update a :class:`Plate <tmlib.models.plate.Plate>`.
 
         **Example request**:
 

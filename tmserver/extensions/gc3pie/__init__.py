@@ -219,10 +219,9 @@ class GC3Pie(object):
             individual computational task or collection of tasks
         """
         logger.info('kill jobs')
-        original_task = self._engine.find_task_by_id(jobs.persistent_id)
-        logger.debug('kill task %d', original_task.persistent_id)
-        self._engine.kill(original_task)
-        self._engine.progress()
+        task = self._engine.find_task_by_id(jobs.persistent_id)
+        logger.debug('kill task %d', task.persistent_id)
+        self._engine.kill(task)
 
     def continue_jobs(self, jobs):
         """Continous jobs that have been interrupted.
@@ -256,22 +255,22 @@ class GC3Pie(object):
         logger.info('redo jobs "%s" at %d', jobs.jobname, index)
         self._engine.redo(jobs, index)
 
-    def set_jobs_to_stopped(self, jobs):
-        '''Sets the state of jobs to ``STOPPED`` in a recursive manner.
+    # def set_jobs_to_stopped(self, jobs):
+    #     '''Sets the state of jobs to ``STOPPED`` in a recursive manner.
 
-        Parameters
-        ----------
-        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
-            individual computational task or collection of tasks
-        '''
-        def stop_recursively(task_):
-            task_.execution.state = 'STOPPED'
-            if hasattr(task_, 'tasks'):
-                for t in task_.tasks:
-                    if t.execution.state != gc3libs.Run.State.TERMINATED:
-                        stop_recursively(t)
+    #     Parameters
+    #     ----------
+    #     jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
+    #         individual computational task or collection of tasks
+    #     '''
+    #     def stop_recursively(task_):
+    #         task_.execution.state = 'STOPPED'
+    #         if hasattr(task_, 'tasks'):
+    #             for t in task_.tasks:
+    #                 if t.execution.state != gc3libs.Run.State.TERMINATED:
+    #                     stop_recursively(t)
 
-        stop_recursively(jobs)
+    #     stop_recursively(jobs)
 
     def get_status_of_submitted_jobs(self, jobs, recursion_depth=None):
         '''Gets the status of submitted jobs.

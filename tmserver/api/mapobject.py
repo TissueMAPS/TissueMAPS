@@ -213,11 +213,11 @@ def get_mapobject_types(experiment_id):
 )
 @jwt_required()
 @decode_query_ids('read')
-def rename_mapobject_type(experiment_id, mapobject_type_id):
+def update_mapobject_type(experiment_id, mapobject_type_id):
     """
     .. http:put:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)
 
-        Rename a mapobject type.
+        Update a :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
 
         **Example request**:
 

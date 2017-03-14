@@ -332,11 +332,11 @@ def create_experiment():
 )
 @jwt_required()
 @decode_query_ids('read')
-def rename_experiment(experiment_id):
+def update_experiment(experiment_id):
     """
     .. http:put:: /api/experiments/(string:experiment_id)
 
-        Rename an :class:`Experiment <tmlib.models.experiment.Experiment>`.
+        Update an :class:`Experiment <tmlib.models.experiment.Experiment>`.
 
         **Example request**:
 

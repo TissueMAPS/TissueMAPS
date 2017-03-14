@@ -154,11 +154,11 @@ def get_channel(experiment_id, channel_id):
 )
 @jwt_required()
 @decode_query_ids('read')
-def rename_channel(experiment_id, channel_id):
+def update_channel(experiment_id, channel_id):
     """
     .. http:put:: /api/experiments/(string:experiment_id)/channels/(string:channel_id)
 
-        Rename a :class:`Channel <tmlib.models.channel.Channel>`.
+        Update a :class:`Channel <tmlib.models.channel.Channel>`.
 
         **Example request**:
 

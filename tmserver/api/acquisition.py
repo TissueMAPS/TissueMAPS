@@ -150,11 +150,11 @@ def delete_acquisition(experiment_id, acquisition_id):
 @jwt_required()
 @assert_form_params('name')
 @decode_query_ids('write')
-def rename_acquisition(experiment_id, acquisition_id):
+def update_acquisition(experiment_id, acquisition_id):
     """
     .. http:put:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)
 
-        Rename an :class:`Acquisition <tmlib.models.acquisition.Acquisition>`.
+        Update an :class:`Acquisition <tmlib.models.acquisition.Acquisition>`.
 
         **Example request**:
 
