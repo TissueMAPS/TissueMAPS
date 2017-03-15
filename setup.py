@@ -146,8 +146,8 @@ setuptools.setup(
        'geoalchemy2>=0.3.0',
        'h5py>=2.5.0',
        'image-registration>=0.2.1',
+       'jtmodules>=0.1.0',
        'mahotas>=1.4.1',
-       'matlab-wrapper>=0.9.6',
        'matplotlib>=2.0.0',
        'mock>=1.0.1',
        'natsort>=4.0.3',
@@ -162,12 +162,13 @@ setuptools.setup(
        'pyparsing>=2.0.3',
        'pypng>=0.0.17',
        # Python-bioformats installs javabridge, which requires Java
-       # Ubuntu:
+       # Ubuntu 14.04:
        #    sudo apt-get -y install openjdk-7-jdk
-       #    export JAVA_HOME=/usr/lib/jvm/java-1.7.0-openjdk-amd64
+       # Ubuntu 16.04:
+       #    sudo apt-get -y install openjdk-8-jdk
        'python-bioformats>=1.0.9',
        'python-dateutil>=2.4.2',
-       'pytest>=2.9.1',
+       'pytest>=3.0.7',
        'pytz>=2015.7',
        'PyYAML>=3.11',
        'scikit-image>=0.12.0',
@@ -183,7 +184,6 @@ setuptools.setup(
        'psycopg2>=2.6.1',
        'tables>=3.2.2',
        'ruamel.yaml>=0.10.11'
-       'rpy2>=2.7.4',
        'APScheduler>=3.0.5',
        # Ubuntu:
        #    sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
@@ -192,7 +192,12 @@ setuptools.setup(
        'gc3pie==2.5.dev',
     ],
     extras_require = {
-       'jterator': ['jtmodules>=0.1.0']
+       'jterator_r_modules': [
+           'rpy2>=2.7.4' # Requires R
+        ],
+       'jterator_matlab_modules': [
+           'matlab-wrapper>=0.9.6', # Requires Matlab
+        ]
     },
     dependency_links=[
         # The dependency_links functionality has been deprecated, but it can
