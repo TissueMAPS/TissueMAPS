@@ -68,7 +68,7 @@ def _get_host_ip_os(region, network, host_name, host_vars):
             address = addresses[0]['addr']
     elif len(addresses) == 0:
         raise CloudError(
-            'No address found for network "%s"' % network
+            'no address found for network "%s"' % network
         )
     else:
         address = addresses[0]['addr']
@@ -168,7 +168,8 @@ def get_host_ip(provider, region, network, host_name, host_vars):
     elif provider == 'gce':
         ip = _get_host_ip_gce(region, network, host_name, host_vars)
     else:
-        raise ValueError('Provider "%s" is not supported.' % provider)
+        logger.error('unsupported cloud provider: %s', provider)
+        sys.exit(1)
     return str(ip)
 
 
@@ -218,7 +219,8 @@ def update_static_inventory(inventory_info, setup):
                     logger.debug('remove "ansible_host" variable')
                 except CloudError as err:
                     logger.error(
-                        'getting host address from cloud failed: %s', str(err)
+                        'host address could not be obtained from cloud: %s',
+                        str(err)
                     )
                     sys.exit(1)
             else:
@@ -282,9 +284,8 @@ def update_static_inventory(inventory_info, setup):
 def main(args):
 
     if not os.path.exists(CONFIG_DIR):
-        raise OSError(
-            'Configuration directory "%s" does not exist!' % CONFIG_DIR
-        )
+        logger.error('configuration directory does not exist: %s', CONFIG_DIR)
+        sys.exit(1)
 
     setup = Setup()
 
@@ -297,15 +298,14 @@ def main(args):
 
     update_static_inventory(inventory_info, setup)
 
-    # Print the requested inventory information to standard output
     if args.list:
-        print to_json(inventory_info)
+        print(to_json(inventory_info))
     elif args.host:
-        print to_json(inventory_info['_meta']['hostvars'][args.host])
+        print(to_json(inventory_info['_meta']['hostvars'][args.host]))
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Dynamic Ansible inventory')
+    parser = argparse.ArgumentParser(description='Dynamic Ansible inventory.')
     # parser.add_argument(
     #     '--private', action='store_true',
     #     help='use private address for ansible host'
@@ -334,7 +334,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     configure_logging()
-    log_level = map_logging_verbosity(logging.INFO)
+    if args.debug:
+        verbosity = 3
+    else:
+        verbosity = 2
+    log_level = map_logging_verbosity(verbosity)
     logger.setLevel(log_level)
     tmsetup_logger = logging.getLogger('tmsetup')
     tmsetup_logger.setLevel(log_level)
