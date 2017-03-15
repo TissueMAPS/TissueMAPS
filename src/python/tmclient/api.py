@@ -22,7 +22,6 @@ import json
 import yaml
 import cv2
 import glob
-import tempfile
 import pandas as pd
 import numpy as np
 from cStringIO import StringIO
@@ -56,7 +55,8 @@ class TmClient(HttpClient):
         user_name: str
             name of the *TissueMAPS* user
         password: str
-            password for `user_name`
+            password for `user_name` (may alternatively provided via the
+            *tm_pass* file)
         '''
         super(TmClient, self).__init__(host, port, user_name, password)
         self.experiment_name = experiment_name
@@ -120,32 +120,37 @@ class TmClient(HttpClient):
             raise
 
     def _build_api_url(self, route, params={}):
-        route = '/api/{0}'.format(route)
+        if not route.startswith('/'):
+            route = '/api/' + route
+        else:
+            route = '/api' + route
         return super(TmClient, self)._build_url(route, params)
 
     @property
     def _experiment_id(self):
-        logger.debug('get ID for experiment "%s"', self.experiment_name)
-        params = {'name': self.experiment_name}
-        url = self._build_api_url('/experiments', params)
-        res = self._session.get(url)
-        res.raise_for_status()
-        data = res.json()['data']
-        if len(data) > 1:
-            logger.error(
-                'more than one experiment found with name "{0}"'.format(
-                    experiment_name
+        if not hasattr(self, '__experiment_id'):
+            logger.debug('get ID for experiment "%s"', self.experiment_name)
+            params = {'name': self.experiment_name}
+            url = self._build_api_url('/experiments', params)
+            res = self._session.get(url)
+            res.raise_for_status()
+            data = res.json()['data']
+            if len(data) > 1:
+                logger.error(
+                    'more than one experiment found with name "{0}"'.format(
+                        self.experiment_name
+                    )
                 )
-            )
-            sys.exit(1)
-        if len(data) == 0:
-            logger.error(
-                'no experiment found with name "{0}"'.format(
-                    self.experiment_name
+                sys.exit(1)
+            if len(data) == 0:
+                logger.error(
+                    'no experiment found with name "{0}"'.format(
+                        self.experiment_name
+                    )
                 )
-            )
-            sys.exit(1)
-        return data[0]['id']
+                sys.exit(1)
+            self.__experiment_id = data[0]['id']
+        return self.__experiment_id
 
     def create_experiment(self, workflow_type, microscope_type, plate_format,
             plate_acquisition_mode):
@@ -167,7 +172,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.experiment.create_experiment`
+        :func:`tmserver.api.experiment.create_experiment`
         :class:`tmlib.models.experiment.ExperimentReference`
         :class:`tmlib.models.experiment.Experiment`
         '''
@@ -182,13 +187,15 @@ class TmClient(HttpClient):
         url = self._build_api_url('/experiments')
         res = self._session.post(url, json=content)
         res.raise_for_status()
+        data = res.json()['data']
+        self.__experiment_id = data['id']
 
     def rename_experiment(self, new_name):
         '''Renames the experiment.
 
         See also
         --------
-        :class:`tmserver.api.experiment.update_experiment`
+        :func:`tmserver.api.experiment.update_experiment`
         :class:`tmlib.models.experiment.ExperimentReference`
         '''
         logger.info('rename experiment "%s"', self.experiment_name)
@@ -207,7 +214,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.experiment.delete_experiment`
+        :func:`tmserver.api.experiment.delete_experiment`
         :class:`tmlib.models.experiment.ExperimentReference`
         :class:`tmlib.models.experiment.Experiment`
         '''
@@ -219,6 +226,7 @@ class TmClient(HttpClient):
         )
         res = self._session.delete(url)
         res.raise_for_status()
+        del self.__experiment_id
 
     def _get_plate_id(self, name):
         logger.debug(
@@ -261,7 +269,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.plate.create_plate`
+        :func:`tmserver.api.plate.create_plate`
         :class:`tmlib.models.plate.Plate`
         '''
         logger.info(
@@ -290,7 +298,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.plate.delete_plate`
+        :func:`tmserver.api.plate.delete_plate`
         :class:`tmlib.models.plate.Plate`
         '''
         logger.info(
@@ -318,7 +326,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.plate.update_plate`
+        :func:`tmserver.api.plate.update_plate`
         :class:`tmlib.models.plate.Plate`
         '''
         logger.info(
@@ -415,7 +423,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.acquisition.create_acquisition`
+        :func:`tmserver.api.acquisition.create_acquisition`
         :class:`tmlib.models.acquisition.Acquisition`
         '''
         logger.info(
@@ -449,7 +457,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.acquisition.update_acquisition`
+        :func:`tmserver.api.acquisition.update_acquisition`
         :class:`tmlib.models.acquisition.Acquisition`
         '''
         logger.info(
@@ -478,7 +486,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.acquisition.delete_acquisition`
+        :func:`tmserver.api.acquisition.delete_acquisition`
         :class:`tmlib.models.acquisition.Acquisition`
         '''
         logger.info(
@@ -932,8 +940,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :func:`tmserver.api.upload.register_upload`
-        :func:`tmserver.api.upload.upload_file`
+        :func:`tmserver.api.acquisition.add_microscope_file`
         :class:`tmlib.models.file.MicroscopeImageFile`
         :class:`tmlib.models.file.MicroscopeMetadataFile`
         '''
@@ -957,10 +964,7 @@ class TmClient(HttpClient):
             self._upload_file(acquisition_id, filepath)
 
     def _register_files_for_upload(self, acquisition_id, filenames):
-        logger.debug(
-            'register files for upload of experiment %s, acquisition %s',
-            self._experiment_id, acquisition_id
-        )
+        logger.debug('register files for upload')
         url = self._build_api_url(
             '/experiments/{experiment_id}/acquisitions/{acquisition_id}/upload/register'.format(
                 experiment_id=self._experiment_id, acquisition_id=acquisition_id
@@ -972,15 +976,6 @@ class TmClient(HttpClient):
         return res.json()['data']
 
     def _upload_file(self, acquisition_id, filepath):
-        '''Uploads an individual file.
-
-        Parameters
-        ----------
-        acquisition_id: str
-            ID of the acquisition
-        filepath: str
-            absolute path to the file on the local disk
-        '''
         logger.debug('upload file: %s', filepath)
         url = self._build_api_url(
             '/experiments/{experiment_id}/acquisitions/{acquisition_id}/microscope-file'.format(
@@ -1003,8 +998,6 @@ class TmClient(HttpClient):
 
     @classmethod
     def _write_file(cls, directory, filename, data):
-        if directory is None:
-            directory = tempfile.gettempdir()
         directory = os.path.expanduser(directory)
         directory = os.path.expandvars(directory)
         if not os.path.exists(directory):
@@ -1054,7 +1047,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.channel.update_channel`
+        :func:`tmserver.api.channel.update_channel`
         :class:`tmlib.models.channel.Channel`
         '''
         logger.info(
@@ -1153,8 +1146,8 @@ class TmClient(HttpClient):
         return cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
 
     def download_channel_image_file(self, channel_name, plate_name,
-            well_name, well_pos_y, well_pos_x, cycle_index=0,
-            tpoint=0, zplane=0, correct=True, directory=None):
+            well_name, well_pos_y, well_pos_x, cycle_index,
+            tpoint, zplane, correct, directory):
         '''Downloads a channel image and writes it to a `PNG` file on disk.
 
         Parameters
@@ -1169,18 +1162,16 @@ class TmClient(HttpClient):
             zero-based x cooridinate of the acquisition site within the well
         well_pos_y: int
             zero-based y cooridinate of the acquisition site within the well
-        cycle_index: str, optional
-            zero-based cycle index (default: ``0``)
-        tpoint: int, optional
-            zero-based time point index (default: ``0``)
-        zplane: int, optional
-            zero-based z-plane index (default: ``0``)
-        correct: bool, optional
+        cycle_index: str
+            zero-based cycle index
+        tpoint: int
+            zero-based time point index
+        zplane: int
+            zero-based z-plane index
+        correct: bool
             whether image should be corrected for illumination artifacts
-            (default: ``True``)
-        directory: str, optional
+        directory: str
             absolute path to the directory on disk where the file should be saved
-            (defaults to temporary directory)
 
         Note
         ----
@@ -1262,13 +1253,13 @@ class TmClient(HttpClient):
         '''
         response = self._download_segmentation_image(
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
-            tpoint=0, zplane=0
+            tpoint, zplane
         )
         return np.array(response, dtype=np.int32)
 
     def download_segmentation_image_file(self, mapobject_type_name,
             plate_name, well_name, well_pos_y, well_pos_x, tpoint, zplane,
-            directory=None):
+            directory):
         '''Downloads a segmentation image and writes it to a *PNG* file on disk.
 
         Parameters
@@ -1287,9 +1278,8 @@ class TmClient(HttpClient):
             zero-based time point index
         zplane: int
             zero-based z-plane index
-        directory: str, optional
+        directory: str
             absolute path to the directory on disk where the file should be saved
-            (defaults to temporary directory)
 
         Warning
         -------
@@ -1302,7 +1292,7 @@ class TmClient(HttpClient):
         '''
         response = self._download_segmentation_image(
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
-            tpoint=0, zplane=0
+            tpoint, zplane
         )
         image = np.array(response)
         if np.max(image) >= 2**16:
@@ -1310,7 +1300,7 @@ class TmClient(HttpClient):
                 'Cannot store segmentation image as PNG file because it '
                 'contains more than 65536 objects.'
             )
-        filename = '{0}_{1}_{2}_y{3}_x{4}_z{5}_t{6}_{7}.png'.format(
+        filename = '{0}_{1}_{2}_y{3:03d}_x{4:03d}_z{5:03d}_t{6:03d}_{7}.png'.format(
             self.experiment_name, plate_name, well_name, well_pos_y,
             well_pos_x, zplane, tpoint, mapobject_type_name
         )
@@ -1375,6 +1365,11 @@ class TmClient(HttpClient):
             when `image` is not provided in form of a `numpy` array
         ValueError
             when `image` doesn't have 32-bit unsigned integer data type
+
+        See also
+        --------
+        :func:`tmserver.api.mapobject.add_segmentations`
+        :class:`tmlib.models.mapobject.MapobjectSegmentation`
         '''
         if not isinstance(image, np.ndarray):
             raise TypeError('Image must be provided in form of a numpy array.')
@@ -1501,7 +1496,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.mapobject.update_mapobject_type`
+        :func:`tmserver.api.mapobject.update_mapobject_type`
         :class:`tmlib.models.mapobject.MapobjectType`
         '''
         logger.info(
@@ -1529,7 +1524,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :class:`tmserver.api.mapobject.delete_mapobject_type`
+        :func:`tmserver.api.mapobject.delete_mapobject_type`
         :class:`tmlib.models.mapobject.MapobjectType`
         '''
         logger.info(
@@ -1677,7 +1672,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :func:`tmserver.api.feature.upload_feature_values`
+        :func:`tmserver.api.feature.add_feature_values`
         :class:`tmlib.models.feature.FeatureValues`
         '''
         logger.info(
@@ -1748,8 +1743,8 @@ class TmClient(HttpClient):
         return pd.read_csv(file_obj)
 
     def download_feature_values_and_metadata_files(self, mapobject_type_name,
-            plate_name=None, well_name=None, well_pos_y=None, well_pos_x=None,
-            tpoint=None, directory=None):
+            directory, plate_name=None, well_name=None, well_pos_y=None,
+            well_pos_x=None, tpoint=None):
         '''Downloads all feature values for the given object type and writes
         it into a *CSV* file on disk.
 
@@ -1757,6 +1752,8 @@ class TmClient(HttpClient):
         ----------
         mapobject_type_name: str
             type of the segmented objects
+        directory: str
+            absolute path to the directory on disk where the file should be
         plate_name: str, optional
             name of the plate
         well_name: str, optional
@@ -1767,9 +1764,6 @@ class TmClient(HttpClient):
             x-position of the site relative to the well grid
         tpoint: int, optional
             zero-based time point index
-        directory: str, optional
-            absolute path to the directory on disk where the file should be
-            saved (defaults to temporary directory)
 
         See also
         --------
@@ -1822,8 +1816,7 @@ class TmClient(HttpClient):
         return res
 
     def download_object_metadata(self, mapobject_type_name, plate_name=None,
-            well_name=None, well_pos_y=None, well_pos_x=None, tpoint=None,
-            directory=None):
+            well_name=None, well_pos_y=None, well_pos_x=None, tpoint=None):
         '''Downloads metadata for the given object type, which describes the
         position of each segmented object on the map.
 
@@ -2032,7 +2025,7 @@ class TmClient(HttpClient):
         Parameters
         ----------
         depth: int, optional
-            query depth - in which detail the status of subtasks queried
+            query depth - in which detail status of subtasks will be queried
 
         Returns
         -------
@@ -2043,6 +2036,7 @@ class TmClient(HttpClient):
         --------
         :func:`tmserver.api.workflow.get_workflow_status`
         :func:`tmlib.workflow.utils.get_task_status`
+        :class:`tmlib.models.submission.Task`
         '''
         logger.info(
             'get status for workflow of experiment "%s"', self.experiment_name
@@ -2063,6 +2057,7 @@ class TmClient(HttpClient):
 
         def add_row_recursively(data, table, i):
             table.add_row([
+                data['id'],
                 data['name'],
                 data['type'],
                 data['state'],
@@ -2078,9 +2073,10 @@ class TmClient(HttpClient):
                 add_row_recursively(subtd, table, i+1)
 
         t = PrettyTable([
-                'Name', 'Type', 'State', 'Done (%)', 'ExitCode',
+                'ID', 'Name', 'Type', 'State', 'Done (%)', 'ExitCode',
                 'Time (HH:MM:SS)', 'CPU Time (HH:MM:SS)', 'Memory (MB)'
         ])
+        t.align['ID'] = 'l'
         t.align['Name'] = 'l'
         t.align['Type'] = 'l'
         t.align['State'] = 'l'
@@ -2089,3 +2085,214 @@ class TmClient(HttpClient):
         t.padding_width = 1
         add_row_recursively(status, t, 0)
         print(t)
+
+    def _get_job_id(self, step_name, name):
+        logger.debug(
+            'get job ID for experiment "%s" and job "%s"',
+            self.experiment_name, name
+        )
+        params = {'step_name': step_name, 'name': name}
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/jobs'.format(
+                experiment_id=self._experiment_id
+            ),
+            params
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        data = res.json()['data']
+        if len(data) > 1:
+            logger.error(
+                'more than one job found with name "{0}" for step "{1}"'.format(
+                    name, step_name
+                )
+            )
+            sys.exit(1)
+        elif len(data) == 0:
+            logger.error(
+                'no job found with name "{0}" for step "{1}"'.format(
+                    name, step_name
+                )
+            )
+            sys.exit(1)
+        return data[0]['id']
+
+    def _show_job_log(self, step_name, name):
+        logger.info(
+            'get log output for job "%s" of step "%s"', name, step_name
+        )
+        job_id = self._get_job_id(step_name, name)
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/jobs/{job_id}/log'.format(
+                experiment_id=self._experiment_id, job_id=job_id
+            )
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        data = res.json()['data']
+        print('\nSTANDARD OUTPUT\n===============')
+        print(data['stdout'])
+        print('\nSTANDARD ERROR\n==============')
+        print(data['stderr'])
+
+    def download_jterator_project_description(self):
+        '''Downloads the *jterator* project description.
+
+        Returns
+        -------
+        dict
+            "pipeline" description and "handles" descriptions for each module
+            of the pipeline
+
+        See also
+        --------
+        :func:`tmserver.api.workflow.get_jterator_project`
+        :class:`tmlib.workflow.jterator.description.PipelineDescription`
+        :class:`tmlib.workflow.jterator.description.HandleDescriptions`
+        '''
+        logger.info(
+            'download jterator project of experiment "%s"', self.experiment_name
+        )
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/jtproject'.format(
+                experiment_id=self._experiment_id
+            )
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        return res.json()['data']
+
+    def upload_jterator_project_description(self, pipeline_description,
+            handles_descriptions):
+        '''Uploads a *jterator* project description.
+
+        Parameters
+        ----------
+        pipeline_description: dict
+        handles_descriptions: dict, optional
+
+        See also
+        --------
+        :func:`tmserver.api.workflow.update_jterator_project`
+        :class:`tmlib.workflow.jterator.description.PipelineDescription`
+        :class:`tmlib.workflow.jterator.description.HandleDescriptions`
+        '''
+        logger.info(
+            'upload jterator project for experiment "%s"', self.experiment_name
+        )
+        content = {
+            'pipeline': pipeline_description,
+            'handles': handles_descriptions
+        }
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/workflow/jtproject'.format(
+                experiment_id=self._experiment_id
+            )
+        )
+        res = self._session.put(url, json=content)
+        res.raise_for_status()
+
+    def download_jterator_project_description_files(self, directory):
+        '''Downloads the *jterator* project decription and stores it
+        on disk in YAML format. The pipeline description will be stored
+        in a ``pipeline.yaml`` file in `directory` and each handle description
+        will be stored in a ``*handles.yaml`` file and placed into a ``handles``
+        subfolder of `directory`.
+
+        Parameters
+        ----------
+        directory: str
+            path to the root folder where files should be stored
+
+        See also
+        --------
+        :meth:`tmclient.api.TmClient.download_jterator_project_description`
+        '''
+        descriptions = self.download_jterator_project_description()
+        directory = os.path.expanduser(os.path.expandvars(directory))
+
+        logger.info(
+            'store jterator project description in directory: %s', directory
+        )
+        if not os.path.exists(directory):
+            raise OSError('Directory does not exit: {0}'.format(directory))
+
+        pipeline_filename = os.path.join(directory, 'pipeline.yaml')
+        logger.debug('write pipeline description to file: %s', pipeline_filename)
+        with open(pipeline_filename, 'w') as f:
+            content = yaml.safe_dump(
+                descriptions['pipeline'],
+                explicit_start=True, default_flow_style=False
+            )
+            f.write(content)
+
+        handles_subdirectory = os.path.join(directory, 'handles')
+        if not os.path.exists(handles_subdirectory):
+            logger.debug('create "handles" directory')
+            os.mkdir(handles_subdirectory)
+        for name, description in descriptions['handles'].iteritems():
+            handles_filename = os.path.join(
+                handles_subdirectory, '{name}.handles.yaml'.format(name=name)
+            )
+            logger.debug(
+                'write handles description to file: %s', handles_filename
+            )
+            with open(handles_filename, 'w') as f:
+                content = yaml.safe_dump(
+                    description,
+                    explicit_start=True, default_flow_style=False
+                )
+                f.write(content)
+
+    def upload_jterator_project_description_files(self, directory):
+        '''Uploads the *jterator* project description from files on disk in
+        YAML format. It expects a ``pipeline.yaml`` file in `directory` and
+        optionally ``*handles.yaml`` files in a ``handles`` subfolder of
+        `directory`.
+
+        Parameters
+        ----------
+        directory: str
+            path to the root folder where files are located
+
+        See also
+        --------
+        :meth:`tmclient.api.TmClient.upload_jterator_project_description`
+        '''
+        logger.info(
+            'load jterator project description from directory: %s', directory
+        )
+        if not os.path.exists(directory):
+            raise OSError('Directory does not exit: {0}'.format(directory))
+
+        pipeline_filename = os.path.join(directory, 'pipeline.yaml')
+        if not os.path.exists(pipeline_filename):
+            raise OSError(
+                'Pipeline description file does not exist: {0}'.format(
+                    pipeline_filename
+                )
+            )
+        logger.debug('load pipeline filename: %s', pipeline_filename)
+        with open(pipeline_filename) as f:
+            pipeline_description = yaml.safe_load(f.read())
+
+        handles_subdirectory = os.path.join(directory, 'handles')
+        if not os.path.exists(handles_subdirectory):
+            logger.warn(
+                'handles subdirectory does not exist: %s', handles_subdirectory
+            )
+        handles_filename_pattern = os.path.join(
+            handles_subdirectory, '*.handles.yaml'
+        )
+        handles_descriptions = dict()
+        for handles_filename in glob.glob(handles_filename_pattern):
+            name = os.path.splitext(os.path.splitext(
+                os.path.basename(handles_filename)
+            )[0])[0]
+            logger.debug('load handles file: %s', handles_filename)
+            with open(handles_filename) as f:
+                handles_descriptions[name] = yaml.safe_load(f.read())
+
+        self.upload_jterator_project_description(
+            pipeline_description, handles_descriptions
+        )

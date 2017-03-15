@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
+import tempfile
+
 
 def _check_dependency(required_arg, required_value=None):
     class ArgumentDependencyAction(argparse.Action):
@@ -174,7 +176,15 @@ abstract_description_parser.add_argument(
     '--description', default='', help='optional description'
 )
 
-abstract_workflow_description_parser = argparse.ArgumentParser(add_help=False)
+abstract_download_directory_parser = argparse.ArgumentParser(add_help=False)
+abstract_download_directory_parser.add_argument(
+    '--directory', default=tempfile.gettempdir(),
+    help=(
+        'directory where download should be stored '
+        '(defaults to temporary directory)'
+    )
+)
+
 
 ##############
 ## Workflow ##
@@ -200,7 +210,9 @@ workflow_description_parser = workflow_subparsers.add_parser(
         'information on individual workflow stages and steps and is '
         'represented on disk as a file in YAML format. A description doesn\'t '
         'need to be build from scratch. Upon first download the server '
-        'will respond with a template that can be modified locally and uploaded.'
+        'will respond with a template that can be modified locally and '
+        're-uploaded. The uploaded description will be used for any subsequent '
+        'job submission.'
     )
 )
 workflow_description_subparsers = workflow_description_parser.add_subparsers(
@@ -222,8 +234,10 @@ workflow_description_download_parser.set_defaults(
 
 workflow_description_upload_parser = workflow_description_subparsers.add_parser(
     'upload', help='upload a workflow description',
-    description='Upload a provided workflow description.',
-    parents=[abstract_workflow_description_parser]
+    description=(
+        'Upload a workflow description, updating any potentially existing '
+        'description.'
+    )
 )
 workflow_description_upload_parser.add_argument(
     '--file', dest='filename', required=True,
@@ -284,48 +298,58 @@ workflow_job_status_parser.add_argument(
 )
 workflow_job_status_parser.set_defaults(method='_show_workflow_status')
 
+workflow_job_log_parser = workflow_job_subparsers.add_parser(
+    'log', help='show the log of an individual job',
+    description='Show the log output of an individual job.'
+)
+workflow_job_log_parser.add_argument(
+    '-s', '--step', dest='step_name', required=True,
+    help='name of the workflow step'
+)
+workflow_job_log_parser.add_argument(
+    '-n', '--name', required=True, help='name of the job'
+)
+workflow_job_log_parser.set_defaults(method='_show_job_log')
+
 
 ####################
 # Jterator project #
 ####################
 
 project_description_parser = workflow_subparsers.add_parser(
-    'project', help='jterator project resources',
+    'jtproject', help='jterator project resources',
     description=(
         'Access jterator project resources. A jterator project consists of '
         'a pipeline descriptor file in YAML format and additional '
         'module descriptor files (handles) in YAML format. A project is '
-        'represented on disk as a folder containing the "pipeline.yaml" file '
+        'represented on disk as a folder containing a "pipeline.yaml" file '
         'and a "handles" subfolder containing any "*.handles.yaml" files.'
     )
 )
 project_description_subparsers = project_description_parser.add_subparsers(
-    dest='project_description_methods', help='access methods'
+    dest='jtproject_methods', help='access methods'
 )
 project_description_subparsers.required = True
 
 project_description_download_parser = project_description_subparsers.add_parser(
-    'download', help='download the project',
-    description='Download the project.'
-)
-project_description_download_parser.add_argument(
-    '--directory', required=True,
-    help='path to directory to which project should be written'
+    'download', help='download the project description',
+    description='Download the project description.',
+    parents=[abstract_download_directory_parser]
 )
 project_description_download_parser.set_defaults(
-    method='download_project_description_file'
+    method='download_jterator_project_description_files'
 )
 
 project_description_upload_parser = project_description_subparsers.add_parser(
-    'upload', help='upload a project',
-    description='Upload a project.',
+    'upload', help='upload a project from',
+    description='Upload a project, updating any potentially existing project.'
 )
 project_description_upload_parser.add_argument(
-    '--directory', required=True,
+    '--directory', default=tempfile.gettempdir(),
     help='path to directory from which project should be read'
 )
 project_description_upload_parser.set_defaults(
-    method='upload_project_description_file'
+    method='upload_jterator_project_description_files'
 )
 
 ##########
@@ -367,26 +391,26 @@ experiment_create_parser = experiment_subparsers.add_parser(
     description='Create the experiment.',
 )
 experiment_create_parser.add_argument(
-    '--workflow-type', dest='workflow type',
-    default='canonical', help='workflow type'
+    '--workflow-type', dest='workflow_type',
+    default='canonical', help='workflow type (default: canonical)'
 )
 experiment_create_parser.add_argument(
     '--microscope-type', dest='microscope_type',
-    default='cellvoyager', help='microscope type'
+    default='cellvoyager', help='microscope type (default: cellvoyager)'
 )
 experiment_create_parser.add_argument(
     '--plate-format', dest='plate_format',
     type=int, default=384,
-    help='well-plate format, i.e. total number of wells per plate'
+    help='well-plate format, i.e. total number of wells per plate (default: 384)'
 )
 experiment_create_parser.add_argument(
     '--plate-acquisition-mode', dest='plate_acquisition_mode',
     default='basic', choices={'basic', 'multiplexing'},
-    help='''
-        whether multiple acquisitions of the same plate are interpreted
-        as time points ("basic" mode) or multiplexing cycles
-        ("multiplexing" mode)
-    '''
+    help=(
+        'whether multiple acquisitions of the same plate are interpreted '
+        'as time points ("basic" mode) or multiplexing cycles '
+        '("multiplexing" mode) (default: basic)'
+    )
 )
 experiment_create_parser.set_defaults(method='create_experiment')
 
@@ -680,11 +704,11 @@ feature_values_subparsers.required = True
 
 feature_value_download_parser = feature_values_subparsers.add_parser(
     'download', help='download feature values for segmented objects',
-    description='''
-        Download feature values for segmented objects as well as the
-        corresponding metadata.
-    ''',
-    parents=[abstract_object_parser],
+    description=(
+        'Download feature values for segmented objects as well as the '
+        'corresponding metadata.'
+    ),
+    parents=[abstract_object_parser, abstract_download_directory_parser],
 )
 feature_value_download_parser.set_defaults(
     method='download_feature_values_and_metadata_files'
@@ -707,14 +731,13 @@ segmentation_subparsers.required = True
 segmentation_upload_parser = segmentation_subparsers.add_parser(
     'upload',
     help='upload segmenations from image file',
-    description='''
-        Upload object segmentations in from a 16-bit PNG image file.
-        The image must be labeled such that background pixels have zero
-        values and pixels within objects have unsigned integer values.
-
-        WARNING: This approach only works when the image contains less
-        than 65536 objects.
-    ''',
+    description=(
+        'Upload object segmentations in from a 16-bit PNG image file. '
+        'The image must be labeled such that background pixels have zero '
+        'values and pixels within objects have unsigned integer values. '
+        'WARNING: This approach only works when the image contains less '
+        'than 65536 objects.'
+    ),
     parents=[
         abstract_site_parser, abstract_tpoint_parser,
         abstract_zplane_parser, abstract_object_parser
@@ -730,23 +753,16 @@ segmentation_upload_parser.set_defaults(
 segmentation_download_parser = segmentation_subparsers.add_parser(
     'download',
     help='download segmented objects as label image',
-    description='''
-        Download segmentations in form of a 16-bit PNG image file.
-
-        WARNING: This approach only works when the image contains less
-        than 65536 objects.
-    ''',
+    description=(
+        'Download segmentations in form of a 16-bit PNG image file. '
+        'WARNING: This approach only works when the image contains less '
+        'than 65536 objects.'
+    ),
     parents=[
         abstract_site_parser, abstract_tpoint_parser,
-        abstract_zplane_parser, abstract_object_parser
+        abstract_zplane_parser, abstract_object_parser,
+        abstract_download_directory_parser
     ]
-)
-segmentation_download_parser.add_argument(
-    '--directory',
-    help='''
-        path to directory where file should be stored
-        (defaults to temporary directory)
-    '''
 )
 segmentation_download_parser.set_defaults(
     method='download_segmentation_image_file'
@@ -770,7 +786,8 @@ channel_image_download_parser = channel_image_subparsers.add_parser(
     description='Download channel image to PNG file.',
     parents=[
         abstract_site_parser, abstract_tpoint_parser,
-        abstract_zplane_parser, abstract_channel_parser
+        abstract_zplane_parser, abstract_channel_parser,
+        abstract_download_directory_parser
     ]
 )
 channel_image_download_parser.set_defaults(
@@ -783,13 +800,6 @@ channel_image_download_parser.add_argument(
 channel_image_download_parser.add_argument(
     '--correct', action='store_true',
     help='whether image should be corrected for illumination artifacts'
-)
-channel_image_download_parser.add_argument(
-    '--directory',
-    help='''
-        path to directory where file should be stored
-        (defaults to temporary directory)
-    '''
 )
 
 

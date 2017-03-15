@@ -53,26 +53,9 @@ except ImportError:
 
 import setuptools
 
-def find_scripts():
-    bin_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'bin'
-    )
-    scripts = list()
-    for f in os.listdir(bin_path):
-        if not f.endswith('pyc'):
-            script_path = os.path.relpath(
-                os.path.join(bin_path, f),
-                os.path.abspath(os.path.dirname(__file__))
-            )
-            scripts.append(script_path)
-    return scripts
-
 
 def build_console_scripts():
-    cli_tools = [
-        'tm_client = tmclient.api:TmClient.__main__',
-    ]
-    return cli_tools
+    return ['tm_client = tmclient.api:TmClient.__main__']
 
 
 def get_version():
@@ -87,7 +70,7 @@ def get_version():
 setuptools.setup(
     name='tmclient',
     version=get_version(),
-    description='TissueMAPS HTTP client.',
+    description='TissueMAPS RESTful API client.',
     author='Markus D. Herrmann',
     author_email='markusdherrmann@gmail.com',
     license='Apache-2.0',
@@ -96,14 +79,12 @@ setuptools.setup(
     classifiers=[
         'Topic :: Scientific/Engineering :: Information Analysis',
         'Topic :: System :: Emulators',
-        'Intended Audience :: Developers',
-        'Intended Audience :: System Administrators',
         'Programming Language :: Python',
         'Development Status :: 4 - Beta',
         'Operating System :: POSIX :: Linux',
+        'Operating System :: POSIX :: Other',
         'Operating System :: MacOS'
     ],
-    # scripts=find_scripts(),
     entry_points={'console_scripts': build_console_scripts()},
     packages=setuptools.find_packages(os.path.join('src', 'python')),
     package_dir={'': os.path.join('src', 'python')},
