@@ -203,8 +203,8 @@ def create_app(verbosity=None):
     with app.app_context():
         task_ids = get_interrupted_tasks()
         for tid in task_ids:
-            task = gc3pie.retrieve_single_job(tid)
-            gc3pie.continue_jobs(task)
+            task = gc3pie.retrieve_task(tid)
+            gc3pie.continue_task(task)
 
     # For uWSGI fork()
     engine.dispose()

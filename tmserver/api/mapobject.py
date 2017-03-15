@@ -359,7 +359,7 @@ def get_features(experiment_id, mapobject_type_id):
     'image'
 )
 @decode_query_ids('write')
-def upload_segmentations(experiment_id, mapobject_type_id):
+def add_segmentations(experiment_id, mapobject_type_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)/segmentations
 

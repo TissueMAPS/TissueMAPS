@@ -44,7 +44,7 @@ def get_channel_layer_tile(experiment_id, channel_layer_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/channel_layer/(string:channel_layer_id)/tiles
 
-        Sends a pyramid tile image for a specific channel layer.
+        Sends a :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile`.
 
         :query x: zero-based `x` coordinate
         :query y: zero-based `y` coordinate
@@ -95,8 +95,10 @@ def get_segmentation_layer_tile(experiment_id, segmentation_layer_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/segmentation_layers/(string:segmentation_layer_id)/tile
 
-        Sends all mapobject outlines as a GeoJSON feature collection
-        that intersect with the tile at position x, y, z.
+        Sends each the geometric representation of each
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        as a GeoJSON feature collection that intersect with the given Pyramid
+        tile at position x, y, z.
 
         **Example response**:
 
@@ -208,8 +210,12 @@ def get_segmentation_layer_label_tile(experiment_id, segmentation_layer_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/segmentation_layers/(string:segmentation_layer_id)/labeled_tiles
 
-        Get all mapobjects together with the labels that were assigned to them
-        for a given tool result and tile coordinate.
+        Sends each the geometric representation of each
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        as a GeoJSON feature collection that intersect with the given Pyramid
+        tile at position x, y, z together with the
+        :class:`LabelValues <tmlib.models.result.LabelValues>` for the specified
+        tool :class:`Result <tmlib.models.result.Result>`.
 
         **Example response**:
 

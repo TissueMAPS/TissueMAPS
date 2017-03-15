@@ -96,9 +96,37 @@ def get_project(experiment_id):
     several module descriptions ("handles").
     '''
     logger.info('get jterator project for experiment %d', experiment_id)
-    jt = ImageAnalysisPipelineEngine(experiment_id, verbosity=2)
+    jt = ImageAnalysisPipelineEngine(experiment_id)
     serialized_project = yaml.safe_dump(jt.project.to_dict())
     return jsonify(jtproject=serialized_project)
+
+
+@jtui.route('/experiments/<experiment_id>/project', methods=['POST'])
+@jwt_required()
+@assert_form_params('project')
+@decode_query_ids()
+def update_project(experiment_id):
+    '''Saves modifications of the pipeline and module descriptions to the
+    corresponding `.pipe` and `.handles` files.
+    '''
+    logger.info('save jterator project of experiment %d', experiment_id)
+    data = json.loads(request.data)
+    project = yaml.load(data['project'])
+    pipeline_description = PipelineDescription(**project['pipe']['description'])
+    handles_descriptions = {
+        h['name']: HandleDescriptions(**h['description'])
+        for h in project['handles']
+    }
+    jt = ImageAnalysisPipelineEngine(
+        experiment_id,
+        pipeline_description=pipeline_description,
+        handles_descriptions=handles_descriptions,
+    )
+    try:
+        jt.project.save()
+        return jsonify({'success': True})
+    except Exception as err:
+        raise MalformedRequestError('Project could not be saved:\n%s', str(err))
 
 
 @jtui.route('/available_modules')
@@ -169,7 +197,7 @@ def get_module_figure(experiment_id):
         'get figure for module "%s" and job %d of experiment %d',
         module_name, job_id, experiment_id
     )
-    jt = ImageAnalysisPipelineEngine(experiment_id, verbosity=2)
+    jt = ImageAnalysisPipelineEngine(experiment_id)
     fig_file = [
         m.build_figure_filename(jt.figures_location, job_id)
         for m in jt.pipeline if m.name == module_name
@@ -219,39 +247,11 @@ def create_joblist(experiment_id):
     return jsonify({'joblist': metadata})
 
 
-@jtui.route('/experiments/<experiment_id>/project/save', methods=['POST'])
-@jwt_required()
-@assert_form_params('project')
-@decode_query_ids()
-def save_project(experiment_id):
-    '''Saves modifications of the pipeline and module descriptions to the
-    corresponding `.pipe` and `.handles` files.
-    '''
-    logger.info('save jterator project of experiment %d', experiment_id)
-    data = json.loads(request.data)
-    project = yaml.load(data['project'])
-    pipeline_description = PipelineDescription(**project['pipe']['description'])
-    handles_descriptions = {
-        h['name']: HandleDescriptions(**h['description'])
-        for h in project['handles']
-    }
-    jt = ImageAnalysisPipelineEngine(
-        experiment_id, verbosity=2,
-        pipeline_description=pipeline_description,
-        handles_descriptions=handles_descriptions,
-    )
-    try:
-        jt.project.save()
-        return jsonify({'success': True})
-    except Exception as err:
-        raise MalformedRequestError('Project could not be saved:\n%s', str(err))
-
-
 @jtui.route('/experiments/<experiment_id>/project/check', methods=['POST'])
 @jwt_required()
 @assert_form_params('project')
 @decode_query_ids()
-def check_jtproject(experiment_id):
+def check_project(experiment_id):
     '''Checks pipeline and module descriptions.
     '''
     logger.info(
@@ -266,7 +266,7 @@ def check_jtproject(experiment_id):
     }
     try:
         jt = ImageAnalysisPipelineEngine(
-            experiment_id, verbosity=2,
+            experiment_id,
             pipeline_description=pipeline_description,
             handles_descriptions=handles_descriptions,
         )
@@ -282,36 +282,9 @@ def delete_project(experiment_id):
     '''Removes `.pipe` and `.handles` files from a given Jterator project.
     '''
     logger.info('delete jterator project of experiment %d', experiment_id)
-    jt = ImageAnalysisPipelineEngine(experiment_id, verbosity=2,)
+    jt = ImageAnalysisPipelineEngine(experiment_id, )
     jt.project.remove()
     return jsonify({'success': True})
-
-
-@jtui.route('/experiments/<experiment_id>/project', methods=['POST'])
-@jwt_required()
-@assert_form_params('template')
-@decode_query_ids()
-def create_jtproject(experiment_id):
-    '''Creates a new jterator project in an existing experiment folder, i.e.
-    creates a pipeline description file and an empty "handles" subfolder.
-
-    Respondes with a serialized
-    :class:`Project <tmlib.workflow.jterator.project.Project>`.
-    '''
-    # experiment_dir = os.path.join(cfg.EXPDATA_DIR_LOCATION, experiment_id)
-    data = json.loads(request.data)
-    jt = ImageAnalysisPipelineEngine(experiment_id, verbosity=2)
-    # TODO
-    # Create the project, i.e. create a folder that contains a .pipe file and
-    # handles subfolder with .handles files
-    if data.get('template', None):
-        skel_dir = os.path.join(libcfg.modules_home, 'pipes', data['template'])
-    else:
-        skel_dir = None
-    repo_dir = libcfg.modules_home
-    jt.project.create(repo_dir=repo_dir, skel_dir=skel_dir)
-    serialized_jtproject = yaml.safe_dump(jt.project.to_dict())
-    return jsonify(jtproject=serialized_jtproject)
 
 
 @jtui.route('/experiments/<experiment_id>/jobs/kill', methods=['POST'])
@@ -321,7 +294,8 @@ def create_jtproject(experiment_id):
 def kill_jobs(experiment_id):
     '''Kills submitted jobs.'''
     # TODO
-    raise NotImplementedError()
+    task = gc3pie.retrieve_task(task_id)
+    gc3pie.kill_task(task)
 
 
 def _get_output(jobs, modules, fig_location):
@@ -369,11 +343,11 @@ def _get_output(jobs, modules, fig_location):
 @decode_query_ids()
 def get_job_status(experiment_id):
     '''Gets the status of submitted jobs.'''
-    jobs = gc3pie.retrieve_jobs(experiment_id=experiment_id, program='jtui')
+    jobs = gc3pie.retrieve_most_recent_task(experiment_id, 'jtui')
     if jobs is None:
         status_result = {}
     else:
-        status_result = gc3pie.get_status_of_submitted_jobs(jobs)
+        status_result = gc3pie.get_task_status(jobs)
     return jsonify(status=status_result)
 
 
@@ -391,12 +365,12 @@ def get_job_output(experiment_id):
         for h in project['handles']
     }
     jt = ImageAnalysisPipelineEngine(
-        experiment_id, verbosity=2,
+        experiment_id,
         pipeline_description=pipeline_description,
         handles_descriptions=handles_descriptions,
     )
     try:
-        jobs = gc3pie.retrieve_jobs(experiment_id=experiment_id, program='jtui')
+        jobs = gc3pie.retrieve_most_recent_task(experiment_id, 'jtui')
         output = _get_output(jobs, jt.pipeline, jt.figures_location)
         return jsonify(output=output)
     except IndexError:
@@ -426,7 +400,7 @@ def run_jobs(experiment_id):
         for h in project['handles']
     }
     jt = ImageAnalysisPipelineEngine(
-        experiment_id, verbosity=2,
+        experiment_id,
         pipeline_description=pipeline_description,
         handles_descriptions=handles_descriptions,
     )
@@ -468,13 +442,14 @@ def run_jobs(experiment_id):
             user_name=current_identity.name,
             batches=job_descriptions,
             job_collection=job_collection,
+            verbosity=2,
             duration=submit_args.duration,
             memory=submit_args.memory,
             cores=submit_args.cores
         )
 
     # 3. Store jobs in session
-    gc3pie.store_jobs(jobs)
+    gc3pie.store_task(jobs)
     # session.remove(data['previousSubmissionId'])
-    gc3pie.submit_jobs(jobs)
-    return jsonify({'submission_id': jobs.submission_id})
+    gc3pie.submit_task(jobs)
+    return jsonify(submission_id=jobs.submission_id)

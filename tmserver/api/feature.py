@@ -32,6 +32,10 @@ from tmserver.util import (
     is_true, is_false
 )
 from tmserver.error import *
+from tmserver.api.mapobject import (
+    _get_matching_sites, _get_matching_layers, _get_mapobjects_at_site,
+    _get_border_mapobjects_at_site
+)
 
 
 logger = logging.getLogger(__name__)
@@ -126,7 +130,7 @@ def delete_feature(experiment_id, feature_id):
     'plate_name'
 )
 @decode_query_ids('write')
-def upload_feature_values(experiment_id, mapobject_type_id):
+def add_feature_values(experiment_id, mapobject_type_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)/feature-values
 

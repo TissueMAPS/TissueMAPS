@@ -30,6 +30,10 @@ from tmlib.workflow.workflow import Workflow
 from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.submission import SubmissionManager
 from tmlib.workflow.utils import format_task_data
+from tmlib.workflow.jterator.api import ImageAnalysisPipelineEngine
+from tmlib.workflow.jterator.description import (
+    PipelineDescription, HandleDescriptions
+)
 
 from tmserver.util import (
     decode_query_ids, decode_form_ids, assert_query_params, assert_form_params
@@ -103,8 +107,8 @@ def submit_workflow(experiment_id):
         user_name=user_name,
         description=workflow_description
     )
-    gc3pie.store_jobs(workflow)
-    gc3pie.submit_jobs(workflow)
+    gc3pie.store_task(workflow)
+    gc3pie.submit_task(workflow)
 
     return jsonify({
         'message': 'ok',
@@ -148,6 +152,7 @@ def resubmit_workflow(experiment_id):
             }
 
         :reqheader Authorization: JWT token issued by the server
+        :statuscode 400: malformed request
         :statuscode 200: no error
 
     """
@@ -184,10 +189,10 @@ def resubmit_workflow(experiment_id):
             'Only one of the following parameters can be specified in the '
             'request body: "index", "stage_name"'
         )
-    workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
+    workflow = gc3pie.retrieve_most_recent_task(experiment_id, 'workflow')
     workflow.update_description(workflow_description)
     workflow.update_stage(index)
-    gc3pie.resubmit_jobs(workflow, index)
+    gc3pie.resubmit_task(workflow, index)
     return jsonify({
         'message': 'ok',
         'submission_id': workflow.submission_id
@@ -222,21 +227,64 @@ def get_workflow_status(experiment_id):
     """
     logger.info('get workflow status for experiment %d', experiment_id)
     depth = request.args.get('depth', 2, type=int)
-    workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
-    status = gc3pie.get_status_of_submitted_jobs(workflow, depth)
+    workflow = gc3pie.retrieve_most_recent_task(experiment_id, 'workflow')
+    status = gc3pie.get_task_status(workflow, depth)
     return jsonify(data=status)
 
 
 @api.route(
-    '/experiments/<experiment_id>/workflow/jobs/status', methods=['GET']
+    '/experiments/<experiment_id>/workflow/jobs/<job_id>/log', methods=['GET']
 )
+@jwt_required()
+@decode_query_ids('read')
+def get_job_log(experiment_id, job_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/workflow/jobs/(string:job_id)/log
+
+        Get the log output of a
+        :class:`WorkflowStepJob <tmlib.workflow.jobs.WorkflowStepJob>`.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "stdout": string,
+                    "stderr": string
+                }
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+
+    """
+    logger.info(
+        'get job log output for experiment %d and job %d',
+        experiment_id, job_id
+    )
+    # NOTE: This is the persistent task ID of the job
+    job = gc3pie.retrieve_task(job_id)
+    stdout_file = os.path.join(job.output_dir, job.stdout)
+    with open(stdout_file, 'r') as f:
+        out = f.read()
+    stderr_file = os.path.join(job.output_dir, job.stderr)
+    with open(stderr_file, 'r') as f:
+        err = f.read()
+    return jsonify(data={'stdout': out, 'stderr': err})
+
+
+@api.route('/experiments/<experiment_id>/workflow/jobs', methods=['GET'])
 @jwt_required()
 @decode_query_ids('read')
 def get_jobs_status(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/workflow/steps/(string:step_name)/status
+    .. http:get:: /api/experiments/(string:experiment_id)/workflow/jobs
 
-        Query the status of n jobs for a given
+        Query the status of jobs for a given
         :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>`.
 
         **Example response**:
@@ -260,33 +308,64 @@ def get_jobs_status(experiment_id):
             }
 
         :query step_name: name of the workflow step for which jobs should be queried (required)
-        :query batch_size: the amount of job stati to return starting from ``index`` (optional)
+        :query step_phase: name of the workflow step phase for which jobs should be queried (optional)
+        :query name: name of the job (optional)
         :query index: the index of the first job queried (optional)
+        :query batch_size: the amount of job stati to return starting from ``index`` (optional)
 
         :reqheader Authorization: JWT token issued by the server
+        :statuscode 400: malformed request
         :statuscode 200: no error
 
+    .. note:: Parameters ``index`` and ``batch_size`` can only be used togethger.
+        Parameters ``name`` and ``step_phase`` are exclusive and cannot be
+        combined with ``index`` and ``batch_size``.
     """
     step_name = request.args.get('step_name')
     logger.info(
         'get status of jobs for workflow step "%s" of experiment %d',
         step_name, experiment_id
     )
-    index = request.args.get('index', 0, type=int)
-    batch_size = request.args.get('batch_size', 50, type=int)
+    step_phase = request.args.get('phase')
+    name = request.args.get('name')
+    index = request.args.get('index', type=int)
+    batch_size = request.args.get('batch_size', type=int)
+
+    if ((index is not None and batch_size is None) or
+            (index is None and batch_size is not None)):
+        raise MalformedRequestError(
+            'Either both or none of the following parameters must be specified: '
+            '"index", "batch_size"'
+        )
+    if index is not None and name is not None:
+        raise MalformedRequestError(
+            'Only one of the following parameters can be specified: '
+            '"name", "index"'
+        )
+    if batch_size is not None and name is not None:
+        raise MalformedRequestError(
+            'Only one of the following parameters can be specified: '
+            '"name", "batch_size"'
+        )
+    if step_phase is not None and name is not None:
+        raise MalformedRequestError(
+            'Only one of the following parameters can be specified: '
+            '"name", "step_phase"'
+        )
 
     # If the index is negative don't send `batch_size` jobs.
     # For example, if the index is -5 and the batch_size 50,
     # send the first 45 jobs back.
-    if index < 0 and batch_size is not None:
-        batch_size = batch_size + index
-        index = 0
-        if batch_size <= 0:
-            return jsonify({
-                'data': []
-            })
+    if index is not None and batch_size is not None:
+        if index < 0 and batch_size is not None:
+            batch_size = batch_size + index
+            index = 0
+            if batch_size <= 0:
+                return jsonify(data=[])
 
-    submission_id = gc3pie.get_id_of_last_submission(experiment_id, 'workflow')
+    submission_id = gc3pie.get_id_of_most_recent_submission(
+        experiment_id, 'workflow'
+    )
     # TODO: Upon reload, the submission_id of tasks doesn't get updated.
     # While this makes sense to track tasks belonging to the same collection
     # it doesn't allow the differentiation of submissions (as the name implies).
@@ -301,12 +380,15 @@ def get_jobs_status(experiment_id):
         if step_task_id is None:
             status = []
         else:
-            step = gc3pie.retrieve_single_job(step_task_id)
+            step = gc3pie.retrieve_task(step_task_id)
             if len(step.tasks) == 0:
                 status = []
             else:
                 task_ids = []
                 for phase in step.tasks:
+                    if step_phase is not None:
+                        if phase != step_phase:
+                            continue
                     if hasattr(phase, 'tasks'):
                         if len(phase.tasks) == 0:
                             continue
@@ -331,11 +413,15 @@ def get_jobs_status(experiment_id):
                             tm.Task.id.in_(task_ids), ~tm.Task.is_collection
                         ).\
                         order_by(tm.Task.name)
-                    if batch_size is not None:
-                        logger.debug('query status of %d jobs', batch_size)
-                        tasks = tasks.limit(batch_size)
-                    tasks = tasks.offset(index).all()
-                    tasks = sorted(tasks, key=lambda k: k.name)
+                    if index is not None and batch_size is not None:
+                        logger.debug(
+                            'query status of %d jobs starting at %d',
+                            batch_size, index
+                        )
+                        tasks = tasks.limit(batch_size).offset(index)
+                    if name is not None:
+                        tasks = tasks.filter_by(name=name)
+                    tasks = tasks.all()
                     status = []
                     for t in tasks:
                         s = format_task_data(
@@ -452,22 +538,23 @@ def kill_workflow(experiment_id):
 
     """
     logger.info('kill workflow for experiment %d', experiment_id)
-    workflow = gc3pie.retrieve_jobs(experiment_id, 'workflow')
-    gc3pie.kill_jobs(workflow)
+    workflow = gc3pie.retrieve_most_recent_task(experiment_id, 'workflow')
+    gc3pie.kill_task(workflow)
     return jsonify(message='ok')
 
 
-@api.route(
-    '/experiments/<experiment_id>/workflow/jobs/<job_id>/log', methods=['GET']
-)
+@api.route('/experiments/<experiment_id>/workflow/jtproject', methods=['GET'])
 @jwt_required()
-@decode_query_ids('read')
-def get_job_log(experiment_id, job_id):
+@decode_query_ids()
+def get_jterator_project(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/workflow/jobs/(string:job_id)/log
+    .. http:get:: /api/experiments/(string:experiment_id)/workflow/jtproject
 
-        Get the log output of a
-        :class:`WorkflowStepJob <tmlib.workflow.jobs.WorkflowStepJob>`.
+        Get a jterator project consisting of a
+        :class:`PipelineDescription <tmlib.workflow.jterator.description.PipelineDescription>`
+        and an optional
+        :class:`HandleDescriptions <tmlib.workflow.jterator.description.HandleDescriptions>`.
+        for each module of the pipeline.
 
         **Example response**:
 
@@ -477,31 +564,137 @@ def get_job_log(experiment_id, job_id):
             Content-Type: application/json
 
             {
-                "message": "ok",
-                "stdout": string,
-                "stderr": string
+                "data": {
+                    "pipeline": {
+                        "input": {
+                            "channels": [
+                                {
+                                    "name": "wavelength-1"
+                                }
+                            ],
+                            "objects": []
+                        },
+                        "output": {
+                            "objects": []
+                        },
+                        "pipeline": [
+                            {
+                                "handles": ../handles/module1.handles.yaml,
+                                "source": module1.py
+                                "active": true
+                            }
+                        ]
+
+                    },
+                    "handles": {
+                        "module1": {
+                            "version": 0.1.0,
+                            "input": [],
+                            "output": []
+                        },
+                        ...
+                    }
+                }
             }
 
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
 
     """
-    logger.info(
-        'get job log output for experiment %d and job %d',
-        experiment_id, job_id
-    )
-    # NOTE: This is the persistent task ID of the job
-    job = gc3pie.retrieve_single_job(job_id)
-    stdout_file = os.path.join(job.output_dir, job.stdout)
-    with open(stdout_file, 'r') as f:
-        out = f.read()
-    stderr_file = os.path.join(job.output_dir, job.stderr)
-    with open(stderr_file, 'r') as f:
-        err = f.read()
-    return jsonify({
-        'message': 'ok',
-        'stdout': out,
-        'stderr': err
+    logger.info('get jterator project of experiment %d', experiment_id)
+    jt = ImageAnalysisPipelineEngine(experiment_id)
+    pipe = jt.project.pipe.to_dict()
+    pipeline_description = pipe['description']
+    handles_descriptions = {}
+    for h in jt.project.handles:
+        handles = h.to_dict()
+        handles_descriptions[handles['name']] = handles['description']
+    return jsonify(data={
+        'pipeline': pipeline_description,
+        'handles': handles_descriptions
     })
 
+
+@api.route('/experiments/<experiment_id>/workflow/jtproject', methods=['PUT'])
+@jwt_required()
+@assert_form_params('pipeline', 'handles')
+@decode_query_ids()
+def update_project(experiment_id):
+    '''
+    .. http:put:: /api/experiments/(string:experiment_id)/workflow/jtproject
+
+        Update a jterator project consisting of a
+        :class:`PipelineDescription <tmlib.workflow.jterator.description.PipelineDescription>`
+        and an optional
+        :class:`HandleDescriptions <tmlib.workflow.jterator.description.HandleDescriptions>`
+        for each module in the pipeline.
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "pipeline": {
+                    "input": {
+                        "channels": [
+                            {
+                                "name": "wavelength-1"
+                            }
+                        ]
+                    },
+                    "output": {},
+                    "pipeline": [
+                        {
+                            "handles": ../handles/module1.handles.yaml,
+                            "source": module1.py
+                            "active": true
+                        }
+                    ]
+
+                },
+                "handles": {
+                    "module1": {
+                        "version": 0.1.0,
+                        "input": [],
+                        "output": []
+                    },
+                    ...
+                }
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "message": "ok"
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+    '''
+    logger.info('update jterator project of experiment %d', experiment_id)
+    data = json.loads(request.data)
+    pipeline = data.get('pipeline')
+    handles = data.get('handles')
+    logger.debug('read pipeline description')
+    pipeline_description = PipelineDescription(**pipeline)
+    handles_descriptions = dict()
+    for name, description in handles.iteritems():
+        logger.debug('read handles description for module "%s"', name)
+        handles_descriptions[name] = HandleDescriptions(**description)
+
+    jt = ImageAnalysisPipelineEngine(
+        experiment_id,
+        pipeline_description=pipeline_description,
+        handles_descriptions=handles_descriptions,
+    )
+    jt.project.save()
+    return jsonify(message='ok')
 

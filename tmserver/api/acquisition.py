@@ -454,7 +454,7 @@ def check_file_validity(experiment_id, acquisition_id):
 )
 @jwt_required()
 @decode_query_ids('write')
-def upload_microcope_file(experiment_id, acquisition_id):
+def add_microcope_file(experiment_id, acquisition_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/microscope-file
 

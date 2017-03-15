@@ -20,8 +20,6 @@ import collections
 from sqlalchemy import func
 from flask import current_app
 
-from tmserver.extensions.gc3pie.engine import BgEngine
-
 import tmlib.models as tm
 from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.utils import create_gc3pie_session
@@ -29,15 +27,19 @@ from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.utils import get_task_status_recursively
 from tmlib.workflow.workflow import WorkflowStep, ParallelWorkflowStage
 
+from tmserver.model import encode_pk
+from tmserver.extensions.gc3pie.engine import BgEngine
+
 logger = logging.getLogger(__name__)
 
 
 class GC3Pie(object):
 
-    def __init__(self, app=None):
-        """An extension that exposes a `GC3Pie` engine to submit computational
-        jobs to a batch cluster.
+    """An extension that exposes a *GC3Pie* engine to manage computational tasks.
+    """
 
+    def __init__(self, app=None):
+        """
         Parameters
         ----------
         app: flask.Flask, optional
@@ -52,36 +54,31 @@ class GC3Pie(object):
         --------
         gc3pie = GC3Pie()
         gc3pie.init_app(app)
-        gc3pie.engine.add(jobs)
         """
-        self.interval = 10
         if app is not None:
             self.init_app(app)
 
     def init_app(self, app):
-        """Initialize the extension for some flask application. This will create
-        a `GC3Pie` engine and start it in the background using the "gevent"
+        """Initializes the extension for a flask application. This will create
+        a *GC3Pie* engine and start it in the background using the "gevent"
         scheduler.
 
         Parameters
         ----------
         app: flask.Flask
             flask application
+
+        See also
+        --------
+        :class:`tmserver.extensions.gc3pie.engine.BGEngine`
         """
         logger.info('initialize GC3Pie extension')
-        logger.info('create GC3Pie engine')
+        logger.debug('create GC3Pie engine')
         store = create_gc3pie_sql_store()
         engine = create_gc3pie_engine(store, forget=True)
-        # NOTE: gevent scheduler is not available on localhost when app is
-        # started debug mode via run_simple()
-        app.config.setdefault('SCHEDULER', 'gevent')
-        scheduler = app.config.get('SCHEDULER')
-        bgengine = BgEngine(scheduler, engine)
-        logger.info(
-            'start GC3Pie engine in the background using "%s" scheduler',
-            scheduler
-        )
-        bgengine.start(self.interval)
+        bgengine = BgEngine('gevent', engine)
+        logger.debug('start GC3Pie engine in the background')
+        bgengine.start(10)
         app.extensions['gc3pie'] = {
             'engine': bgengine,
             'store': store,
@@ -89,49 +86,44 @@ class GC3Pie(object):
 
     @property
     def _engine(self):
-        """tmlib.workflow.BgEngine: `GC3Pie` engine running in the background
-        in a different thread
+        """tmserver.extensions.gc3pie.engine.BgEngine: engine running in the
+        background
         """
         return current_app.extensions.get('gc3pie', {}).get('engine')
 
     @property
     def _store(self):
-        """gc3libs.persistence.sql.SqlStore: `GC3Pie` store for job persistence
+        """gc3libs.persistence.sql.SqlStore: SQL store for job persistence
         """
         return current_app.extensions.get('gc3pie', {}).get('store')
 
-    def store_jobs(self, jobs):
-        """Stores jobs in the database.
+    def store_task(self, task):
+        """Stores task in the database.
 
         Parameters
         ----------
-        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
-            individual computational task or collection of tasks
-
-        See also
-        --------
-        :class:`tmlib.models.Submission`
-        :class:`tmlib.models.Task`
+        task: gc3libs.Task
+            computational task or collection of computational tasks
         """
-        logger.debug('insert jobs into tasks table')
-        persistent_id = self._store.save(jobs)
+        logger.debug('insert task into tasks table')
+        persistent_id = self._store.save(task)
         logger.debug('update submissions table')
-        if hasattr(jobs, 'submission_id'):
+        if hasattr(task, 'submission_id'):
             with tm.utils.MainSession() as session:
                 submission = session.query(tm.Submission).\
-                    get(jobs.submission_id)
+                    get(task.submission_id)
                 submission.top_task_id = persistent_id
 
-    def get_id_of_last_submission(self, experiment_id, program):
-        """Gets the ID of the most recent submitted by `program` for
-        experiment with id `experiment_id`.
+    def get_id_of_most_recent_submission(self, experiment_id, program):
+        """Gets the ID of the most recent
+        :class:`Submission <tmlib.models.submission.Submission>`.
 
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
         program: str
-            name of the program that submitted the jobs
+            name of the program that submitted the task
 
         Returns
         -------
@@ -148,31 +140,27 @@ class GC3Pie(object):
             if submission_id is not None:
                 return submission_id[0]
             else:
-                return submission_id
+                return None
 
-    def retrieve_jobs(self, experiment_id, program):
-        """Retrieves the top level job for the given `experiment`
+    def retrieve_most_recent_task(self, experiment_id, program):
+        """Retrieves the top level task for the given `experiment`
         from the store that was most recently submitted by `program`.
 
         Parameters
         ----------
         experiment_id: int
-            ID of the processed experiment
+            ID of the processed
+            :class:`Experiment <tmlib.models.experiment.Experiment>`
         program: str
-            name of the program that submitted the jobs, e.g. ``"workflow"``
+            name of the program that submitted the task, e.g. ``"workflow"``
 
         Returns
         -------
-        gc3libs.Task or gc3libs.workflow.TaskCollection
-
-        See also
-        --------
-        :class:`tmlib.models.Submission`
-        :class:`tmlib.models.Task`
+        gc3libs.Task
         """
-        # submission_manager = SubmissionManager(experiment.id, 'workflow')
-        # task_id = submission_manager.get_task_id_for_last_submission()
-        submission_id = self.get_id_of_last_submission(experiment_id, program)
+        submission_id = self.get_id_of_most_recent_submission(
+            experiment_id, program
+        )
         if submission_id is not None:
             with tm.utils.MainSession() as session:
                 submission = session.query(tm.Submission).get(submission_id)
@@ -184,84 +172,85 @@ class GC3Pie(object):
         else:
             return None
 
-    def retrieve_single_job(self, job_id):
-        """Retrieves an individual job from the store.
+    def retrieve_task(self, task_id):
+        """Retrieves a task from the store.
 
         Parameters
         ----------
-        job_id: int
-            persistent job Id
+        task_id: int
+            persistent task ID
 
         Returns
         -------
-        gc3libs.Task or gc3libs.TaskCollection
-            job
+        gc3libs.Task
+            computational task
         """
-        return self._store.load(job_id)
+        return self._store.load(task_id)
 
-    def submit_jobs(self, jobs):
-        """Submits jobs to the cluster.
+    def submit_task(self, task):
+        """Submits task.
 
         Parameters
         ----------
-        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
-            individual computational task or collection of tasks
+        task: gc3libs.Task
+            computational task
         """
-        logger.info('add jobs to engine')
-        self._engine.add(jobs)
+        logger.info('submit task "%s"', task.jobname)
+        logger.debug('add task %d to engine', task.persistent_id)
+        self._engine.add(task)
 
-    def kill_jobs(self, jobs):
-        """Kills jobs running on the cluster.
+    def kill_task(self, task):
+        """Kills submitted task.
 
         Parameters
         ----------
-        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
-            individual computational task or collection of tasks
+        task: gc3libs.Task
+            computational task
         """
-        logger.info('kill jobs')
-        task = self._engine.find_task_by_id(jobs.persistent_id)
+        logger.info('kill task "%s"', task.jobname)
         logger.debug('kill task %d', task.persistent_id)
+        task = self._engine.find_task_by_id(task.persistent_id)
         self._engine.kill(task)
 
-    def continue_jobs(self, jobs):
-        """Continous jobs that have been interrupted.
+    def continue_task(self, task):
+        """Continues interrupted task.
 
         Parameters
         ----------
-        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
-            individual computational task or collection of tasks
+        task: gc3libs.Task
+            computational task
         """
-        logger.info('update jobs in engine')
-        self._engine.add(jobs)
+        logger.info('continue task "%s"', task.jobname)
+        logger.debug('add task %d to engine', task.persistent_id)
+        self._engine.add(task)
 
-    def resubmit_jobs(self, jobs, index=0):
-        """Resubmits jobs to the cluster.
+    def resubmit_task(self, task, index=0):
+        """Resubmits a task.
 
         Parameters
         ----------
-        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
-            individual computational task or collection of tasks
+        task: gc3libs.Task
+            computational task
         index: int, optional
             index of an individual task within a sequential collection of tasks
             from where all subsequent tasks should be resubmitted
         """
-        logger.info('update jobs in engine')
-        # We need to remove the jobs first, simple addition doesn't update them!
+        # We need to remove the task first, simple addition doesn't update them!
         try:
-            self._engine.remove(jobs)
+            self._engine.remove(task)
         except:
             pass
-        self._engine.add(jobs)
-        logger.info('redo jobs "%s" at %d', jobs.jobname, index)
-        self._engine.redo(jobs, index)
+        self._engine.add(task)
+        logger.info('resubmit task "%s" at %d', task.jobname, index)
+        self._engine.redo(task, index)
 
     # def set_jobs_to_stopped(self, jobs):
     #     '''Sets the state of jobs to ``STOPPED`` in a recursive manner.
 
     #     Parameters
     #     ----------
-    #     jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
-    #         individual computational task or collection of tasks
+    #     jobs: gc3libs.Task
+    #         computational task
     #     '''
     #     def stop_recursively(task_):
     #         task_.execution.state = 'STOPPED'
@@ -272,23 +261,23 @@ class GC3Pie(object):
 
     #     stop_recursively(jobs)
 
-    def get_status_of_submitted_jobs(self, jobs, recursion_depth=None):
-        '''Gets the status of submitted jobs.
+    def get_task_status(self, task, recursion_depth=None):
+        '''Gets the status of submitted task.
 
         Parameters
         ----------
-        jobs: gc3libs.Task or gc3libs.workflow.TaskCollection
-            individual computational task or collection of tasks
+        task: gc3libs.Task
+            computational task
         recursion_depth: int, optional
            recursion depth for querying subtasks
 
         Returns
         -------
         dict
-            status of jobs
+            status of task
 
         See also
         --------
         :func:`tmlib.workflow.utils.get_task_data_from_sql_store`
         '''
-        return get_task_status_recursively(jobs, recursion_depth)
+        return get_task_status_recursively(task, recursion_depth, encode_pk)

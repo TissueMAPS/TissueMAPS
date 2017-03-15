@@ -276,10 +276,12 @@ def create_experiment():
             Content-Type: application/json
 
             {
-                "id": "MQ==",
-                "name": "Experiment XY",
-                "description": "Optional description",
-                "user": "Testuser"
+                "data": {
+                    "id": "MQ==",
+                    "name": "Experiment XY",
+                    "description": "Optional description",
+                    "user": "Testuser"
+                }
             }
 
         :reqheader Authorization: JWT token issued by the server

@@ -174,7 +174,7 @@ def process_tool_request(experiment_id):
     #     session = session.get_or_create(ToolSession, uuid=session_uuid)
     #     session_id = session.id
 
-    gc3pie.store_jobs(job)
+    gc3pie.store_task(job)
     gc3pie.submit_jobs(job)
 
     return jsonify(data={
