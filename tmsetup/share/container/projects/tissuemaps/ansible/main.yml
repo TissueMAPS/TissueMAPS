@@ -42,11 +42,6 @@
   roles:
     - database-server-master
 
-- name: Setup compute container
-  hosts: compute
-  roles:
-    - compute
-
 - name: Configure web container as database client
   hosts: app
   remote_user: "{{ tm_user }}"

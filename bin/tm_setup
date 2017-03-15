@@ -6,7 +6,6 @@ import subprocess
 import sys
 import yaml
 import collections
-import elasticluster
 from whichcraft import which
 from pkg_resources import resource_filename, resource_exists
 
@@ -20,46 +19,56 @@ from tmsetup.utils import to_yaml, to_json
 
 logger = logging.getLogger(os.path.basename(__file__))
 
-TM_GROUPS = {
-    'tissuemaps_server', 'tissuemaps_compute',
-    'tissuemaps_db_master', 'tissuemaps_db_worker'
+REQUIRED_TM_GROUPS = {
+    'tissuemaps_server', 'tissuemaps_db_master', 'tissuemaps_db_worker'
 }
+
+SUPPORTED_TM_GROUPS = REQUIRED_TM_GROUPS.union({'tissuemaps_compute'})
+
+SUPPORTED_EC_GROUPS = {
+    'ganglia_server', 'ganglia_client',
+    'glusterfs_server',
+    'slurm_master', 'slurm_workers'
+}
+
+SUPPORTED_GROUPS = SUPPORTED_TM_GROUPS.union(SUPPORTED_EC_GROUPS)
 
 
 def _get_playbooks_dir(pkg_name):
+    logger.debug('get playbooks directory for "%s" package', pkg_name)
+    if pkg_name == 'elasticluster':
+        try:
+            import elasticluster
+        except ImportError:
+            logger.error('package "elasticluster" is not installed')
+            sys.exit(1)
     rel_path = os.path.join('share', 'playbooks')
-    if not resource_exists(pkg_name, rel_path):
-        raise OSError(
-            'Package "%s" doesn\'t have resource: %s', pkg_name, rel_path
-        )
     path = os.path.abspath(resource_filename(pkg_name, rel_path))
     if not os.path.exists(path):
-        raise OSError('Playbooks path does not exist: %s', path)
+        logger.error('playbooks directory does not exist: %s', path)
+        sys.exit(1)
     return path
 
 
-def get_deployment_groups(selected_cluster, selected_nodetype, selected_groups):
+def get_host_groups():
     logger.info('build Ansible commands')
     setup = Setup()
     groups_to_deploy = collections.defaultdict(list)
     for cluster in setup.architecture.clusters:
-        if selected_cluster is not None:
-            if cluster.name != selected_cluster:
-                continue
         for node_type in cluster.node_types:
-            if selected_nodetype is not None:
-                if node_type.name != selected_nodetype:
-                    continue
             for group in node_type.groups:
-                if selected_groups:
-                    if group.name not in selected_groups:
-                        continue
-                logger.info('include Ansible group: %s', group.name)
+                if group.name not in SUPPORTED_GROUPS:
+                    logger.error(
+                        'unsupported Ansible host group: %s', group.name
+                    )
+                    sys.exit(1)
+                logger.info('include Ansible host group: %s', group.name)
                 groups_to_deploy[group.name].append(group.playbook)
 
-    for group in TM_GROUPS:
-        if group not in groups_to_deploy.keys():
-            logger.warn('core group "%s" not provided', group)
+    for group_name in REQUIRED_TM_GROUPS:
+        if group_name not in groups_to_deploy.keys():
+            logger.error('missing required Ansible host group: %s', group_name)
+            sys.exit(1)
 
     return groups_to_deploy
 
@@ -76,7 +85,7 @@ def _build_container_commands(action, verbosity):
     return [cmd]
 
 
-def _build_ansible_container_command(mode, verbosity,
+def _build_ansible_container_command(action, verbosity,
         project_dir, roles_dir, vars_dir):
     cmd = ['ansible-container', '--project', os.path.abspath(project_dir)]
     group_dirs = os.listdir(vars_dir)
@@ -86,38 +95,54 @@ def _build_ansible_container_command(mode, verbosity,
         cmd.extend(['--var-file', filename])
     if verbosity > 3:
         cmd.append('--debug')
-    cmd.extend([mode, '--roles-path', os.path.abspath(roles_dir)])
-    if mode == 'build':
-        cmd.append('--from-scratch')
-        # The following options are parsed to the "ansible-playbooks" command.
-        cmd.append('--')
-        if verbosity > 0:
-            verbosity -= 1
+    if action in {'build', 'start', 'stop'}:
+        if action == 'build':
+            cmd.extend([
+                'build', '--from-scratch',
+                '--roles-path', os.path.abspath(roles_dir)
+            ])
+        elif action == 'start':
+            cmd.extend([
+                'run', '--production', '--detached',
+                '--roles-path', os.path.abspath(roles_dir)
+            ])
+        elif action == 'stop':
+            cmd.append('stop')
+        if action == 'build':
+            # The following options are parsed to the "ansible-playbooks" command.
+            cmd.append('--')
             if verbosity > 0:
-                cmd.append('-%s' % (verbosity * 'v'))
-        variables = collections.OrderedDict()
-        for group in group_dirs:
-            filename = os.path.abspath(os.path.join(vars_dir, group, 'vars.yml'))
-            with open(filename) as f:
-                for line in f.readlines():
-                    var_mapping = yaml.load(line)
-                    if var_mapping is None:
-                        continue
-                    for k, v in var_mapping.iteritems():
-                        variables[k] = v
-        for k, v in variables.iteritems():
-            cmd.append('-e')
-            var_string = '='.join([k, str(v)])
-            # Values should not get quoted because this breaks
-            # the docker-compose.yml Jinja templating approach of
-            # ansible-container.
-            cmd.append('%s' % var_string)
-    elif mode == 'push':
+                verbosity -= 1
+                if verbosity > 0:
+                    cmd.append('-%s' % (verbosity * 'v'))
+            variables = collections.OrderedDict()
+            for group in group_dirs:
+                filename = os.path.abspath(
+                    os.path.join(vars_dir, group, 'vars.yml')
+                )
+                with open(filename) as f:
+                    for line in f.readlines():
+                        var_mapping = yaml.load(line)
+                        if var_mapping is None:
+                            continue
+                        for k, v in var_mapping.iteritems():
+                            variables[k] = v
+            for k, v in variables.iteritems():
+                cmd.append('-e')
+                var_string = '='.join([k, str(v)])
+                # Values should not get quoted because this breaks
+                # the docker-compose.yml Jinja templating approach of
+                # ansible-container.
+                cmd.append('%s' % var_string)
+    elif action == 'push':
+        # TODO: argument user or organization
+        logger.info('pushing container images to Docker Hub')
         # NOTE: This works only with write access to the "tissuemaps"
         # organization on Docker Hub.
         cmd.extend(['--push-to', 'tissuemaps'])
     else:
-        raise ValueError('Mode "%s" is not supported.' % action)
+        logger.error('unsupported action for containers: %s', action)
+        sys.exit(1)
     return cmd
 
 
@@ -136,13 +161,15 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
             # ec2: started
             # gce: running
             # os: -
-            raise ValueError('Starting VMs is not yet supported')
+            logger.error('starting VMs is not yet supported')
+            sys.exit(1)
         elif action == 'stop':
             # TODO: functionality not yet supported by OpenStack modules
             # ec2: stopped
             # gce: stopped
             # os: -
-            raise ValueError('Stopping VMs is not yet supported')
+            logger.error('stopping VMs is not yet supported')
+            sys.exit(1)
         # First refresh inventory
         if args.refresh_cache:
             commands.append(['tm_inventory', '--refresh'])
@@ -160,14 +187,14 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
         if args.refresh_cache:
             commands.append(['tm_inventory', '--refresh'])
 
+        # We need to run elasticluster playbooks only in case groups
+        # are provided that are not supported by tmsetup.
         run_elasticluster = False
         for group in groups_to_deploy.keys():
-            if group not in TM_GROUPS:
+            if group not in SUPPORTED_TM_GROUPS:
                 run_elasticluster = True
         if run_elasticluster:
-            # Run playbooks for groups implemented in elasticluster. We only
-            # need this in case there are groups not implemented in tmsetup.
-            # NOTE: This playbook also configures SSH host-based authorization,
+            # NOTE: This playbook also configures SSH host-based authentication,
             # so it's a bad idea to run this only on a subset of groups!
             elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
             playbook = os.path.join(elasticluster_playbooks_dir, 'site.yml')
@@ -193,6 +220,10 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
                 if playbook is not None:
                     cmd = _build_ansible_vm_command(verbosity, playbook)
                     commands.append(cmd)
+
+    else:
+        logger.error('unsupported action for VMs: %s', action)
+        sys.exit(1)
 
     return commands
 
@@ -231,7 +262,7 @@ def container_manage(args):
 
 
 def vm_manage(args):
-    groups = get_deployment_groups(args.cluster, args.node_type, args.groups)
+    groups = get_host_groups()
     commands = _build_vm_commands(args.action, args.verbosity, groups)
     logger.info('run Ansible commands')
     for cmd in commands:
@@ -239,7 +270,7 @@ def vm_manage(args):
 
 
 def vm_show(args):
-    groups = get_deployment_groups(args.cluster, args.node_type, args.groups)
+    groups = get_host_groups()
     setup = Setup()
     inventory_info = build_inventory_information(setup)
     print to_yaml(inventory_info)
@@ -253,28 +284,8 @@ def main(args):
 
 if __name__ == '__main__':
 
-    def check_dependency(required_arg, forbidden_args={}):
-        class ArgumentDependencyAction(argparse.Action):
-            def __call__(self, parser, namespace, values, option_string=None):
-                if getattr(namespace, required_arg) is None:
-                    parser.error(
-                        'Argument "--%s" also requires "--%s".' % (
-                            self.dest, required_arg
-                        )
-                    )
-                if forbidden_args:
-                    for arg in forbidden_args:
-                        if getattr(namespace, arg) is not None:
-                            parser.error(
-                                'Argument "--%s" cannot be used together with '
-                                ' "--%s".' % (self.dest, arg)
-                            )
-                setattr(namespace, self.dest, values)
-        return ArgumentDependencyAction
-
-
     parser = argparse.ArgumentParser(
-        description='Setup and deploy TissueMAPS in the cloud.'
+        description='Setup TissueMAPS on virtual machines or containers.'
     )
     parser.add_argument(
         '--verbosity', '-v', action='count', default=0,
@@ -284,71 +295,46 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='env', help='environment')
     subparsers.required = True
 
-    vm_parser = subparsers.add_parser('vm', help='virtual machine')
-
-    vm_target_parser = argparse.ArgumentParser(add_help=False)
-    vm_target_parser.add_argument(
-        '--cluster', '-c', metavar='CLUSTER', type=str,
-        help='limit action to VMs of a particular cluster'
-    )
-    vm_target_parser.add_argument(
-        '--groups', '-g', metavar='GROUP', type=str, nargs='*', default=[],
-        help='limit action to VMs of individual Ansible group(s)'
-    )
-    vm_target_parser.add_argument(
-        '--node_type', '-n', metavar='NODETYPE', type=str,
-        action=check_dependency('cluster'),
-        help='limit action to VMs of a partiuclar cluster node_type'
-    )
-    vm_target_parser.add_argument(
-        '--no-refresh', dest='refresh_cache', action='store_false',
-        help='when the inventory cache should not be refreshed'
+    vm_parser = subparsers.add_parser(
+        'vm', help='virtual machines',
+        description='Manage virtual machines.'
     )
 
     vm_subparsers = vm_parser.add_subparsers(dest='action', help='action')
     vm_subparsers.required = True
 
     vm_launch_subparser = vm_subparsers.add_parser(
-        'launch', parents=[vm_target_parser],
-        help='launch new virtual machine (VM) instances'
+        'launch', help='launch new virtual machine (VM) instances',
+        description='Launch new virtual machine instances.'
     )
     vm_launch_subparser.set_defaults(function='vm_manage')
-    vm_launch_subparser.description = '''
-        Launch new virtual machine instances.
-    '''
 
     vm_terminate_subparser = vm_subparsers.add_parser(
-        'terminate', parents=[vm_target_parser],
-        help='terminate existing virtual machine (VM) instances'
+        'terminate', help='terminate existing virtual machine (VM) instances',
+        description='Terminate existing virtual machine instances.'
     )
     vm_terminate_subparser.set_defaults(function='vm_manage')
-    vm_terminate_subparser.description = '''
-        Terminate existing virtual machine instances.
-    '''
 
     # TODO: start/stop subparsers once this functionality is implemented in
     # ansible modules os_server, ...
 
     vm_deploy_subparser = vm_subparsers.add_parser(
-        'deploy', parents=[vm_target_parser],
-        help='deploy TissueMAPS on existing virtual machine (VM) instances'
+        'deploy',
+        help='deploy TissueMAPS on existing virtual machine (VM) instances',
+        description='Deploy TissueMAPS on existing virtual machine instances.'
     )
     vm_deploy_subparser.set_defaults(function='vm_manage')
-    vm_deploy_subparser.description = '''
-        Deploy TissueMAPS on existing virtual machine instances.
-    '''
 
     vm_show_subparser = vm_subparsers.add_parser(
-        'show', parents=[vm_target_parser],
-        help='show mapping of groups to hosts defined via setup config file'
+        'show',
+        help='show configured groups to hosts',
+        description='Show configured groups and hosts defined in setup.yml file.'
     )
     vm_show_subparser.set_defaults(function='vm_show')
-    vm_show_subparser.description = '''
-        Show mapping of groups to hosts defined via setup configuration file.
-    '''
 
     container_parser = subparsers.add_parser(
-        'container', help='Docker container'
+        'container', help='docker containers',
+        description='Manage Docker containers.'
     )
 
     container_subparsers = container_parser.add_subparsers(
@@ -357,40 +343,30 @@ if __name__ == '__main__':
     container_subparsers.required = True
 
     container_build_subparser = container_subparsers.add_parser(
-        'build', help='build container images'
+        'build', help='build container images',
+        description='Build container images.'
     )
     container_build_subparser.set_defaults(function='container_manage')
-    container_build_subparser.description = '''
-        Build new container images.
-    '''
 
     container_run_subparser = container_subparsers.add_parser(
-        'run', help='run containers'
+        'start', help='create and run containers',
+        description='Create and run containers in the background.'
     )
     container_run_subparser.set_defaults(function='container_manage')
-    container_run_subparser.description = '''
-        Run containers. Requires a prior "build".
-    '''
 
     container_stop_subparser = container_subparsers.add_parser(
-        'stop', help='stop running containers'
+        'stop', help='stop running containers',
+        description='Stop running containers.'
     )
     container_stop_subparser.set_defaults(function='container_manage')
-    container_stop_subparser.description = '''
-        Stop running containers.
-    '''
 
     container_push_subparser = container_subparsers.add_parser(
-        'push', help='push container images to registry'
+        'push', help='push container images to registry',
+        description='Push built container images to Docker Hub registry.'
     )
     container_push_subparser.set_defaults(function='container_manage')
-    container_push_subparser.description = '''
-        Push container images to registry.
-    '''
 
     args = parser.parse_args()
-    if hasattr(args, 'groups'):
-        args.groups = set(args.groups)
 
     configure_logging()
     log_level = map_logging_verbosity(args.verbosity)
