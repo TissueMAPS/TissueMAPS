@@ -95,6 +95,7 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         'alembic>=0.8.3',
+        'apscheduler>=3.3.1',
         'Flask>=0.10.1',
         'Flask-JWT>=0.3.1',
         'Flask-Migrate>=1.6.0',
