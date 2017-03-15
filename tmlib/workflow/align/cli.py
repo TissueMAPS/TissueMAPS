@@ -26,12 +26,14 @@ logger = logging.getLogger(__name__)
 class Align(CommandLineInterface):
 
     @assert_type(api_instance='tmlib.workflow.align.api.ImageRegistrator')
-    def __init__(self, api_instance):
+    def __init__(self, api_instance, verbosity):
         '''
         Parameters
         ----------
         api_instance: tmlib.workflow.align.api.ImageRegistrator
-            instance of API class to which processing is delegated 
+            instance of API class to which processing is delegated
+        verbosity: int
+            logging verbosity
         '''
-        super(Align, self).__init__(api_instance)
+        super(Align, self).__init__(api_instance, verbosity)
 

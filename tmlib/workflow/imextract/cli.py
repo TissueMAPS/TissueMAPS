@@ -25,12 +25,14 @@ logger = logging.getLogger(__name__)
 class Imextract(CommandLineInterface):
 
     @assert_type(api_instance='tmlib.workflow.imextract.api.ImageExtractor')
-    def __init__(self, api_instance):
+    def __init__(self, api_instance, verbosity):
         '''
         Parameters
         ----------
         api_instance: tmlib.workflow.metaextract.api.ImageExtractor
             instance of API class to which processing is delegated
+        verbosity: int
+            logging level
         '''
-        super(Imextract, self).__init__(api_instance)
+        super(Imextract, self).__init__(api_instance, verbosity)
 

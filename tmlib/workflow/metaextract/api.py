@@ -39,18 +39,14 @@ class MetadataExtractor(ClusterRoutines):
     `Open Microscopy Environment (OME) schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2015-01/ome.html>`_.
     '''
 
-    def __init__(self, experiment_id, verbosity, **kwargs):
+    def __init__(self, experiment_id):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        verbosity: int
-            logging level
-        **kwargs: dict
-            ignored keyword arguments
         '''
-        super(MetadataExtractor, self).__init__(experiment_id, verbosity)
+        super(MetadataExtractor, self).__init__(experiment_id)
 
     @staticmethod
     def _get_ome_xml_filename(image_filename):

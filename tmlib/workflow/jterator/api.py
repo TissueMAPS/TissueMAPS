@@ -39,7 +39,6 @@ from tmlib.writers import TextWriter
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.errors import PipelineDescriptionError
 from tmlib.errors import JobDescriptionError
-from tmlib.log import map_logging_verbosity
 from tmlib.workflow.jterator.utils import complete_path
 from tmlib.workflow.jterator.utils import get_module_path
 from tmlib.workflow.jterator.project import Project
@@ -57,15 +56,13 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
 
     '''Class for running image analysis pipelines.'''
 
-    def __init__(self, experiment_id, verbosity, pipeline_description=None,
+    def __init__(self, experiment_id, pipeline_description=None,
             handles_descriptions=None):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        verbosity: int
-            logging level
         pipeline_description: tmlib.workflow.jterator.description.PipelineDescription, optional
             description of pipeline, i.e. module order and paths to module
             source code and descriptor files (default: ``None``)
@@ -77,12 +74,10 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
         If `pipe` or `handles` are not provided
         they are obtained from the persisted YAML descriptor files on disk.
         '''
-        super(ImageAnalysisPipelineEngine, self).__init__(
-            experiment_id, verbosity
-        )
+        super(ImageAnalysisPipelineEngine, self).__init__(experiment_id)
         self._engines = {'Python': None, 'R': None}
         self.project = Project(
-            step_location=self.step_location,
+            location=self.step_location,
             pipeline_description=pipeline_description,
             handles_descriptions=handles_descriptions
         )
@@ -167,14 +162,6 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
         # if 'Julia' in languages:
         #     print 'jt - Starting Julia engine'
         #     self._engines['Julia'] = julia.Julia()
-
-    def _configure_loggers(self):
-        # TODO: configure loggers for Python, Matlab, and R modules
-        level = map_logging_verbosity(self.verbosity)
-        jtlib_logger = logging.getLogger('jtlib')
-        jtlib_logger.setLevel(level)
-        jtmodules_logger = logging.getLogger('jtmodules')
-        jtmodules_logger.setLevel(level)
 
     def create_batches(self, args):
         '''Creates job descriptions for parallel computing.
@@ -360,10 +347,10 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
 
         return store
 
-    def _build_debug_run_command(self, site_id):
+    def _build_debug_run_command(self, site_id, verbosity):
         logger.debug('build "debug" command')
         command = [self.step_name]
-        command.extend(['-v' for x in range(self.verbosity)])
+        command.extend(['-v' for x in range(verbosity)])
         command.append(self.experiment_id)
         command.extend(['debug', '--site', str(site_id), '--plot'])
         return command
@@ -516,7 +503,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                         )
 
     def create_debug_run_jobs(self, submission_id, user_name, job_collection,
-            batches, duration, memory, cores):
+            batches, verbosity, duration, memory, cores):
         '''Creates debug jobs for the parallel "run" phase of the step.
 
         Parameters
@@ -529,6 +516,8 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
             empty collection of *run* jobs that should be populated
         batches: List[dict]
             job descriptions
+        verbosity: int
+            logging verbosity for jobs
         duration: str
             computational time that should be allocated for a single job;
             in HH:MM:SS format
@@ -550,7 +539,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
         for b in batches:
             job = DebugRunJob(
                 step_name=self.step_name,
-                arguments=self._build_debug_run_command(site_id=b['site_id']),
+                arguments=self._build_debug_run_command(b['site_id'], verbosity),
                 output_dir=self.log_location,
                 job_id=b['site_id'],
                 submission_id=submission_id,
@@ -588,7 +577,6 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
             job description
         '''
         logger.info('handle pipeline input')
-        self._configure_loggers()
 
         self.start_engines()
 

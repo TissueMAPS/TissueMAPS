@@ -24,12 +24,14 @@ logger = logging.getLogger(__name__)
 class Metaconfig(CommandLineInterface):
 
     @assert_type(api_instance='tmlib.workflow.metaconfig.api.MetadataConfigurator')
-    def __init__(self, api_instance):
+    def __init__(self, api_instance, verbosity):
         '''
         Parameters
         ----------
         api_instance: tmlib.workflow.metaconfig.api.MetadataConfigurator
             instance of API class to which processing is delegated
+        verbosity: int
+            logging verbosity
         '''
-        super(Metaconfig, self).__init__(api_instance)
+        super(Metaconfig, self).__init__(api_instance, verbosity)
 

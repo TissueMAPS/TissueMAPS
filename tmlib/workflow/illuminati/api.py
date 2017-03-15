@@ -46,16 +46,14 @@ logger = logging.getLogger(__name__)
 @register_step_api('illuminati')
 class PyramidBuilder(ClusterRoutines):
 
-    def __init__(self, experiment_id, verbosity):
+    def __init__(self, experiment_id):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        verbosity: int
-            logging level
         '''
-        super(PyramidBuilder, self).__init__(experiment_id, verbosity)
+        super(PyramidBuilder, self).__init__(experiment_id)
 
     def create_batches(self, args):
         '''Creates job descriptions for parallel computing.
@@ -279,7 +277,7 @@ class PyramidBuilder(ClusterRoutines):
         )
 
     def create_run_jobs(self, submission_id, user_name, job_collection, batches,
-            duration, memory, cores):
+            verbosity, duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
         The `illuminati` step is special in the sense that it implements
         multiple sequential runs within the "run" phase to build one pyramid
@@ -295,6 +293,8 @@ class PyramidBuilder(ClusterRoutines):
             emtpy collection for "run" jobs
         batches: List[dict]
             job descriptions
+        verbosity: int
+            logging verbosity for jobs
         duration: str
             computational time that should be allocated for a single job;
             in HH:MM:SS format
@@ -317,7 +317,7 @@ class PyramidBuilder(ClusterRoutines):
         for b in batches:
             job = RunJob(
                 step_name=self.step_name,
-                arguments=self._build_run_command(b['id']),
+                arguments=self._build_run_command(b['id'], verbosity),
                 output_dir=self.log_location,
                 job_id=b['id'],
                 index=b['index'],

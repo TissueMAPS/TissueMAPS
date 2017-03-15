@@ -73,21 +73,21 @@ class Pipe(object):
         -------
         dict
         '''
-        attrs = dict()
         # NOTE: We need to include the name of modules in the pipelines for
         # compatibility with the viewer.
-        attrs['description'] = {
-            'input': self.description.input.to_dict(),
-            'output': self.description.output.to_dict(),
-            'pipeline': [
-                {
-                    'name': m.name, 'source': m.source,
-                    'handles': m.handles, 'active': m.active
-                }
-                for m in self.description.pipeline
-            ]
+        return {
+            'description': {
+                'input': self.description.input.to_dict(),
+                'output': self.description.output.to_dict(),
+                'pipeline': [
+                    {
+                        'name': m.name, 'source': m.source,
+                        'handles': m.handles, 'active': m.active
+                    }
+                    for m in self.description.pipeline
+                ]
+            }
         }
-        return attrs
 
 
 class Handles(object):
@@ -140,10 +140,10 @@ class Handles(object):
         -------
         dict
         '''
-        attrs = dict()
-        attrs['name'] = self.name
-        attrs['description'] = self.description.to_dict()
-        return attrs
+        return {
+            'name': self.name,
+            'description': self.description.to_dict()
+        }
 
 
 class Project(object):
@@ -154,19 +154,19 @@ class Project(object):
     files and provides methods for retrieving and updating this information.
     '''
 
-    def __init__(self, step_location, pipeline_description=None,
+    def __init__(self, location, pipeline_description=None,
             handles_descriptions=None):
         '''
         Parameters
         ----------
-        step_location: str
+        location: str
             path to the project folder
         pipeline_description: tmlib.workflow.jterator.description.PipelineDescription, optional
             pipeline description (default: ``None``)
         handles_descriptions: Dict[str, tmlib.workflow.jterator.description.HandleDescriptions], optional
             module descriptions (default: ``None``)
         '''
-        self.step_location = step_location
+        self.location = location
         if not os.path.exists(self._get_pipe_file()):
             self.create()
         if pipeline_description is None:
@@ -217,7 +217,7 @@ class Project(object):
 
     def _get_pipe_file(self, directory=None):
         if not directory:
-            directory = self.step_location
+            directory = self.location
         pipe_files = glob.glob(
             os.path.join(directory, self._pipe_filename)
         )
@@ -232,7 +232,7 @@ class Project(object):
 
     def _get_handles_file(self, name, directory=None):
         if not directory:
-            directory = os.path.join(self.step_location, 'handles')
+            directory = os.path.join(self.location, 'handles')
         else:
             directory = os.path.join(directory, 'handles')
         if not os.path.exists(directory):
@@ -283,7 +283,7 @@ class Project(object):
         exist.
         '''
         pipe_file= os.path.join(
-            self.step_location, self._pipe_filename
+            self.location, self._pipe_filename
         )
         if not os.path.exists(pipe_file):
             self._create_pipe_file(pipe_file)
@@ -306,25 +306,25 @@ class Project(object):
         return pipe
 
     def _create_handles_folder(self):
-        handles_dir = os.path.join(self.step_location, 'handles')
+        handles_dir = os.path.join(self.location, 'handles')
         logger.info('create handles directory: %s', handles_dir)
         if not os.path.exists(handles_dir):
             os.mkdir(handles_dir)
 
     def _create_project_from_skeleton(self, skel_dir):
         skel_pipe_file = self._get_pipe_file(skel_dir)
-        shutil.copy(skel_pipe_file, self.step_location)
+        shutil.copy(skel_pipe_file, self.location)
         shutil.copytree(
             os.path.join(skel_dir, 'handles'),
-            os.path.join(self.step_location, 'handles')
+            os.path.join(self.location, 'handles')
         )
 
     def _remove_pipe_file(self, name):
-        pipe_file = os.path.join(self.step_location, self._pipe_filename)
+        pipe_file = os.path.join(self.location, self._pipe_filename)
         os.remove(pipe_file)
 
     def _remove_handles_folder(self):
-        handles_dir = os.path.join(self.step_location, 'handles')
+        handles_dir = os.path.join(self.location, 'handles')
         shutil.rmtree(handles_dir)
 
     def _update_pipe(self):
@@ -336,7 +336,7 @@ class Project(object):
         handles_files = []
         # Create new .handles files for added modules
         old_handles_files = glob.glob(
-            os.path.join(self.step_location, 'handles', '*%s' % HANDLES_SUFFIX)
+            os.path.join(self.location, 'handles', '*%s' % HANDLES_SUFFIX)
         )
         new_handles_files = list()
         for h in self.handles:
@@ -377,9 +377,9 @@ class Project(object):
         Updates the content of *pipeline* and *handles* files on disk
         according to modifications to the pipeline and module descriptions.
         '''
-        if not os.path.exists(self.step_location):
+        if not os.path.exists(self.location):
             raise PipelineOSError(
-                'Project does not exist: %s' % self.step_location
+                'Project does not exist: %s' % self.location
             )
         self._update_pipe()
         self._update_handles()
@@ -408,30 +408,30 @@ class Project(object):
             skel_dir = os.path.expandvars(skel_dir)
             skel_dir = os.path.expanduser(skel_dir)
             skel_dir = os.path.abspath(skel_dir)
-        # if os.path.exists(self.step_location):
+        # if os.path.exists(self.location):
         #     raise PipelineOSError(
         #         'Project already exists. Remove existing project first.'
         #     )
-        # os.mkdir(self.step_location)
+        # os.mkdir(self.location)
         # TODO: handle creation of project based on provided pipe
         if skel_dir:
             self._create_project_from_skeleton(skel_dir, repo_dir)
         else:
             pipe_file_path = os.path.join(
-                self.step_location, self._pipe_filename
+                self.location, self._pipe_filename
             )
             self._create_pipe_file(pipe_file_path)
             self._create_handles_folder()
 
     def remove(self):
         '''Removes a Jterator project.'''
-        # remove_pipe_file(self.step_location, self.pipe['name'])
-        # remove_handles_folder(self.step_location)
-        if not os.path.exists(self.step_location):
+        # remove_pipe_file(self.location, self.pipe['name'])
+        # remove_handles_folder(self.location)
+        if not os.path.exists(self.location):
             raise PipelineOSError(
-                'Project does not exist: %s' % self.step_location
+                'Project does not exist: %s' % self.location
             )
-        shutil.rmtree(self.step_location)
+        shutil.rmtree(self.location)
 
 
 class AvailableModules(object):

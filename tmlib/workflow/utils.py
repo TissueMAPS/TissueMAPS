@@ -122,8 +122,6 @@ def create_gc3pie_session(location, store):
         `GC3Pie` session
     '''
     logger.debug('create GC3Pie session')
-    # NOTE: Unfortunately, we cannot parse the store instance to the constructor
-    # of Session.
     return Session(location, store=store)
 
 
@@ -261,9 +259,8 @@ def format_task_data(name, type, state, exitcode, memory, time, cpu_time):
     return data
 
 
-def get_task_status_recursively(task, recursion_depth=None):
-    '''Provides status information for each task and recursively for each
-    subtask.
+def get_task_status_recursively(task, recursion_depth=None, id_encoder=None):
+    '''Provides status information for each task and recursively for subtasks.
 
     Parameters
     ----------
@@ -272,6 +269,8 @@ def get_task_status_recursively(task, recursion_depth=None):
     recursion_depth: int, optional
         recursion depth for subtask querying; by default
         data of all subtasks will be queried (default: ``None``)
+    id_encoder: function, optional
+        function that encodes task IDs
 
     Returns
     -------
@@ -282,36 +281,25 @@ def get_task_status_recursively(task, recursion_depth=None):
     --------
     :func:`tmlib.workflow.utils.format_task_data`
     '''
-    logger.debug('get information about GC3Pie tasks')
+    logger.debug('get status of task "%s" and subtasks', task.jobname)
     def get_info(task_, i):
         data = dict()
         if recursion_depth is not None:
             if i > recursion_depth:
                 return
-        if not hasattr(task_, 'persistent_id'):
-            # If the task doesn't have a "persistent_id", it means that
-            # it hasn't yet been inserted into the database table and
-            # consequently hasn't yet been processed either.
-            data = {
-                'done': False,
-                'failed': False,
-                'name': task_.name,
-                'state': task_.execution.state,
-                'live': False,
-                'memory': None,
-                'type': type(task_).__name__,
-                'exitcode': None,
-                'time': None,
-                'cpu_time': None
-            }
+        data = format_task_data(
+            task_.jobname, type(task_).__name__, task_.execution.state,
+            task_.execution.exitcode,
+            _get_task_memory(task_, 'max_used_memory'),
+            str(_get_task_time(task_, 'duration')),
+            str(_get_task_time(task_, 'used_cpu_time'))
+        )
+        if hasattr(task_, 'persistent_id'):
+            data['id'] = str(task_.persistent_id)
         else:
-            data = format_task_data(
-                task_.jobname, type(task_).__name__, task_.execution.state,
-                task_.execution.exitcode,
-                _get_task_memory(task_, 'max_used_memory'),
-                str(_get_task_time(task_, 'duration')),
-                str(_get_task_time(task_, 'used_cpu_time'))
-            )
+            data['id'] = str(id(task_))
+        if id_encoder is not None:
+            data['id'] = id_encoder(data['id'])
         if hasattr(task_, 'tasks'):
             done = 0.0
             for t in task_.tasks:
@@ -358,6 +346,7 @@ def print_task_status(task_info):
     '''
     def add_row_recursively(data, table, i):
         table.add_row([
+            data['id'],
             data['name'],
             data['type'],
             data['state'],
@@ -365,23 +354,22 @@ def print_task_status(task_info):
             data['exitcode'] if data['exitcode'] is not None else '',
             data['time'] if data['time'] is not None else '',
             data['memory'] if data['memory'] is not None else '',
-            data['cpu_time'] if data['cpu_time'] is not None else '',
-            data['id']
+            data['cpu_time'] if data['cpu_time'] is not None else ''
         ])
         for subtd in data.get('subtasks', list()):
             if subtd is None:
                 continue
             add_row_recursively(subtd, table, i+1)
     x = PrettyTable([
-            'Name', 'Type', 'State', 'Done (%)', 'ExitCode',
-            'Time (HH:MM:SS)', 'Memory (MB)', 'CPU Time (HH:MM:SS)', 'ID'
+            'ID', 'Name', 'Type', 'State', 'Done (%)', 'ExitCode',
+            'Time (HH:MM:SS)', 'Memory (MB)', 'CPU Time (HH:MM:SS)'
     ])
+    x.align['ID'] = 'r'
     x.align['Name'] = 'l'
     x.align['Type'] = 'l'
     x.align['State'] = 'l'
     x.align['Done (%)'] = 'r'
     x.align['Memory (MB)'] = 'r'
-    x.align['ID'] = 'r'
     x.padding_width = 1
     add_row_recursively(task_info, x, 0)
     print x

@@ -25,14 +25,16 @@ logger = logging.getLogger(__name__)
 class Corilla(CommandLineInterface):
 
     @assert_type(api_instance='tmlib.workflow.corilla.api.IllumstatsCalculator')
-    def __init__(self, api_instance):
+    def __init__(self, api_instance, verbosity):
         '''
         Parameters
         ----------
         api_instance: tmlib.workflow.corilla.api.IllumstatsCalculator
             instance of API class to which processing is delegated
+        verbosity: int
+            logging level
         '''
-        super(Corilla, self).__init__(api_instance)
+        super(Corilla, self).__init__(api_instance, verbosity)
 
     @notimplemented
     def collect(self, args):

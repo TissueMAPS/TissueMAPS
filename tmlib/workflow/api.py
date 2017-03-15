@@ -141,28 +141,23 @@ class ClusterRoutines(BasicClusterRoutines):
 
     __abstract__ = True
 
-    def __init__(self, experiment_id, verbosity):
+    def __init__(self, experiment_id):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        verbosity: int
-            logging level
 
         Attributes
         ----------
         experiment_id: int
             ID of the processed experiment
-        verbosity: int
-            logging level
         workflow_location: str
             absolute path to location where workflow related data should be
             stored
         '''
         super(ClusterRoutines, self).__init__()
         self.experiment_id = experiment_id
-        self.verbosity = verbosity
         with tm.utils.ExperimentSession(experiment_id) as session:
             experiment = session.query(tm.Experiment).get(self.experiment_id)
             if experiment is None:
@@ -404,10 +399,10 @@ class ClusterRoutines(BasicClusterRoutines):
             with JsonWriter(batch_file) as f:
                 f.write(batch)
 
-    def _build_init_command(self, batch_args):
+    def _build_init_command(self, batch_args, verbosity):
         logger.debug('build "init" command')
         command = [self.step_name]
-        command.extend(['-v' for x in range(self.verbosity)])
+        command.extend(['-v' for x in range(verbosity)])
         command.append(self.experiment_id)
         command.append('init')
         for arg in batch_args.iterargs():
@@ -421,18 +416,18 @@ class ClusterRoutines(BasicClusterRoutines):
                     command.extend(['--%s' % arg.flag, str(value)])
         return command
 
-    def _build_run_command(self, job_id):
+    def _build_run_command(self, job_id, verbosity):
         logger.debug('build "run" command')
         command = [self.step_name]
-        command.extend(['-v' for x in range(self.verbosity)])
+        command.extend(['-v' for x in range(verbosity)])
         command.append(self.experiment_id)
         command.extend(['run', '--job', str(job_id)])
         return command
 
-    def _build_collect_command(self):
+    def _build_collect_command(self, verbosity):
         logger.debug('build "collect" command')
         command = [self.step_name]
-        command.extend(['-v' for x in range(self.verbosity)])
+        command.extend(['-v' for x in range(verbosity)])
         command.append(self.experiment_id)
         command.extend(['collect'])
         return command
@@ -562,7 +557,7 @@ class ClusterRoutines(BasicClusterRoutines):
         )
 
     def create_run_jobs(self, submission_id, user_name, job_collection, batches,
-            duration, memory, cores):
+            verbosity, duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
 
         Parameters
@@ -575,6 +570,8 @@ class ClusterRoutines(BasicClusterRoutines):
             empty collection of *run* jobs that should be populated
         batches: List[dict]
             job descriptions
+        verbosity: int
+            logging verbosity for jobs
         duration: str
             computational time that should be allocated for a single job;
             in HH:MM:SS format
@@ -597,7 +594,7 @@ class ClusterRoutines(BasicClusterRoutines):
         for b in batches:
             job = RunJob(
                 step_name=self.step_name,
-                arguments=self._build_run_command(job_id=b['id']),
+                arguments=self._build_run_command(b['id'], verbosity),
                 output_dir=self.log_location,
                 job_id=b['id'],
                 submission_id=submission_id,
@@ -609,7 +606,7 @@ class ClusterRoutines(BasicClusterRoutines):
             job_collection.add(job)
         return job_collection
 
-    def create_init_job(self, submission_id, user_name, batch_args,
+    def create_init_job(self, submission_id, user_name, batch_args, verbosity,
             duration='12:00:00'):
         '''Creates job for the "init" phase of the step.
 
@@ -625,6 +622,8 @@ class ClusterRoutines(BasicClusterRoutines):
         duration: str, optional
             computational time that should be allocated for the job
             in HH:MM:SS format (default: ``"12:00:00"``)
+        verbosity: int
+            logging verbosity for job
 
         Returns
         -------
@@ -638,7 +637,7 @@ class ClusterRoutines(BasicClusterRoutines):
         logger.debug('allocated cores for "init" job: %d', cfg.cpu_cores)
         job = InitJob(
             step_name=self.step_name,
-            arguments=self._build_init_command(batch_args),
+            arguments=self._build_init_command(batch_args, verbosity),
             output_dir=self.log_location,
             submission_id=submission_id,
             user_name=user_name
@@ -648,7 +647,8 @@ class ClusterRoutines(BasicClusterRoutines):
         job.requested_cores = cfg.cpu_cores
         return job
 
-    def create_collect_job(self, submission_id, user_name, duration='06:00:00'):
+    def create_collect_job(self, submission_id, user_name, verbosity,
+            duration='06:00:00'):
         '''Creates job for the "collect" phase of the step.
 
         Parameters
@@ -657,6 +657,8 @@ class ClusterRoutines(BasicClusterRoutines):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        verbosity: int
+            logging verbosity for jobs
         duration: str, optional
             computational time that should be allocated for a single job;
             in HH:MM:SS format (default: ``"06:00:00"``)
@@ -673,7 +675,7 @@ class ClusterRoutines(BasicClusterRoutines):
         logger.debug('allocated cores for "collect" job: %d', cfg.cpu_cores)
         job = CollectJob(
             step_name=self.step_name,
-            arguments=self._build_collect_command(),
+            arguments=self._build_collect_command(verbosity),
             output_dir=self.log_location,
             submission_id=submission_id,
             user_name=user_name

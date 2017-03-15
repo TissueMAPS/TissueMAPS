@@ -16,6 +16,7 @@
 import logging
 
 from tmlib.utils import assert_type
+from tmlib.log import map_logging_verbosity
 from tmlib.workflow.cli import CommandLineInterface
 from tmlib.workflow.cli import climethod
 from tmlib.workflow.args import Argument
@@ -26,14 +27,25 @@ logger = logging.getLogger(__name__)
 class Jterator(CommandLineInterface):
 
     @assert_type(api_instance='tmlib.workflow.jterator.api.ImageAnalysisPipelineEngine')
-    def __init__(self, api_instance):
+    def __init__(self, api_instance, verbosity):
         '''
         Parameters
         ----------
         api_instance: tmlib.workflow.jterator.api.ImageAnalysisPipelineEngine
             instance of API class to which processing is delegated
+        verbosity: int
+            logging verbosity
         '''
-        super(Jterator, self).__init__(api_instance)
+        super(Jterator, self).__init__(api_instance, verbosity)
+        self._configure_loggers()
+
+    def _configure_loggers(self):
+        # TODO: configure loggers for Python, Matlab, and R modules
+        level = map_logging_verbosity(self.verbosity)
+        jtlib_logger = logging.getLogger('jtlib')
+        jtlib_logger.setLevel(level)
+        jtmodules_logger = logging.getLogger('jtmodules')
+        jtmodules_logger.setLevel(level)
 
     @climethod(
         help='creates a new project on disk',

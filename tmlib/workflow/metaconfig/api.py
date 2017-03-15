@@ -47,18 +47,14 @@ class MetadataConfigurator(ClusterRoutines):
 
     '''
 
-    def __init__(self, experiment_id, verbosity, **kwargs):
+    def __init__(self, experiment_id):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        verbosity: int
-            logging level
-        **kwargs: dict
-            ignored keyword arguments
         '''
-        super(MetadataConfigurator, self).__init__(experiment_id, verbosity)
+        super(MetadataConfigurator, self).__init__(experiment_id)
 
     def create_batches(self, args):
         '''Creates job descriptions for parallel processing.

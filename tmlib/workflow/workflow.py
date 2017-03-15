@@ -198,13 +198,14 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
     def _api_instance(self):
         logger.debug('load step interface "%s"', self.name)
         API = get_step_api(self.name)
-        return API(self.experiment_id, self.verbosity)
+        return API(self.experiment_id)
 
     def create_init_job(self):
         '''Creates the job for "init" phase.'''
         logger.info('create job for "init" phase of step "%s"', self.name)
         self.init_job = self._api_instance.create_init_job(
-            self.submission_id, self.user_name, self.description.batch_args
+            self.submission_id, self.user_name, self.description.batch_args,
+            self.verbosity
         )
 
     def create_run_job_collection(self):
@@ -233,6 +234,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         )
         self.run_jobs = self._api_instance.create_run_jobs(
             self.submission_id, self.user_name, self.run_jobs, batches['run'],
+            self.verbosity,
             duration=self.description.submission_args.duration,
             memory=self.description.submission_args.memory,
             cores=self.description.submission_args.cores
@@ -243,7 +245,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         created during the "init" phase.
         '''
         self.collect_job = self._api_instance.create_collect_job(
-            self.submission_id, self.user_name
+            self.submission_id, self.user_name, self.verbosity
         )
 
     def next(self, done):

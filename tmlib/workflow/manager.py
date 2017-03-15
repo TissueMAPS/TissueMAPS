@@ -65,7 +65,8 @@ class WorkflowManager(WorkflowSubmissionManager):
         ''' % __version__
 
     def submit(self, monitoring_depth, monitoring_interval, force=False):
-        '''Creates workflow, submits it to the cluster and monitors its progress.
+        '''Creates a workflow, submits it to the cluster and monitors its
+        progress.
 
         Parameters
         ----------
@@ -79,9 +80,8 @@ class WorkflowManager(WorkflowSubmissionManager):
         self._print_logo()
         logger.info('submit workflow')
         submission_id, user_name = self.register_submission()
-        with tm.utils.MainSession() as session:
-            experiment = session.query(tm.ExperimentReference).\
-                get(self.experiment_id)
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            experiment = session.query(tm.Experiment).get(self.experiment_id)
             workflow_description = experiment.workflow_description
         if force:
             for stage in workflow_description.stages:
@@ -118,7 +118,7 @@ class WorkflowManager(WorkflowSubmissionManager):
             raise
 
     def resubmit(self, monitoring_depth, stage):
-        '''Resumit previously created workflow to the cluster and monitor
+        '''Resumits a previously created workflow to the cluster and monitors
         its status.
 
         Parameters
@@ -131,10 +131,9 @@ class WorkflowManager(WorkflowSubmissionManager):
         self._print_logo()
         store = create_gc3pie_sql_store()
         task_id = self.get_task_id_of_last_submission()
-        with tm.utils.MainSession() as session:
-            experiment_ref = session.query(tm.ExperimentReference).\
-                get(self.experiment_id)
-            workflow_description = experiment_ref.workflow_description
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            experiment = session.query(tm.Experiment).get(self.experiment_id)
+            workflow_description = experiment.workflow_description
         workflow = store.load(task_id)
         workflow.update_description(workflow_description)
         stage_names = [s.name for s in workflow.description.stages]

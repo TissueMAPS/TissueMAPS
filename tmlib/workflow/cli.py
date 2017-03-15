@@ -197,14 +197,17 @@ class CommandLineInterface(WorkflowSubmissionManager):
 
     __abstract__ = True
 
-    def __init__(self, api_instance):
+    def __init__(self, api_instance, verbosity):
         '''
         Parameters
         ----------
         api_instance: tmlib.api.ClusterRoutines
             instance of API class to which processing is delegated
+        verbosity: int
+            logging verbosity level
         '''
         self.api_instance = api_instance
+        self.verbosity = verbosity
         super(CommandLineInterface, self).__init__(
             api_instance.experiment_id, self.name
         )
@@ -277,7 +280,7 @@ class CommandLineInterface(WorkflowSubmissionManager):
                     kwargs[arg_name] = arg_value
             api_instance = cls._api_class(**kwargs)
             logger.debug('instantiate CLI class "%s"', cls.__name__)
-            cli_instance = cls(api_instance)
+            cli_instance = cls(api_instance, arguments.verbosity)
             cli_instance(arguments)
             logger.info('JOB COMPLETED')
             sys.exit(0)
@@ -499,6 +502,7 @@ class CommandLineInterface(WorkflowSubmissionManager):
         run_job_collection = api.create_run_job_collection(submission_id)
         run_jobs = api.create_run_jobs(
             submission_id, user_name, run_job_collection, self.batches['run'],
+            self.verbosity,
             duration=self._submission_args.duration,
             memory=self._submission_args.memory,
             cores=self._submission_args.cores
@@ -506,7 +510,7 @@ class CommandLineInterface(WorkflowSubmissionManager):
         jobs.add(run_jobs)
         if api.has_collect_phase:
             collect_job = api.create_collect_job(
-                submission_id, user_name
+                submission_id, user_name, self.verbosity
             )
             jobs.add(collect_job)
 

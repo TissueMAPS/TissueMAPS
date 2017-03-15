@@ -33,16 +33,14 @@ class IllumstatsCalculator(ClusterRoutines):
 
     '''Class for calculating illumination statistics.'''
 
-    def __init__(self, experiment_id, verbosity):
+    def __init__(self, experiment_id):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of parent experiment
-        verbosity: int
-            logging level
         '''
-        super(IllumstatsCalculator, self).__init__(experiment_id, verbosity)
+        super(IllumstatsCalculator, self).__init__(experiment_id)
 
     def create_batches(self, args):
         '''Creates job descriptions for parallel computing.

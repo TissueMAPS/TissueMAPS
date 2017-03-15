@@ -26,14 +26,16 @@ class Metaextract(CommandLineInterface):
 
 
     @assert_type(api_instance='tmlib.workflow.metaextract.api.MetadataExtractor')
-    def __init__(self, api_instance):
+    def __init__(self, api_instance, verbosity):
         '''
         Parameters
         ----------
         api_instance: tmlib.workflow.metaextract.api.MetadataExtractor
             instance of API class to which processing is delegated
+        verbosity: int
+            logging verbosity
         '''
-        super(Metaextract, self).__init__(api_instance)
+        super(Metaextract, self).__init__(api_instance, verbosity)
 
     @notimplemented
     def collect(self, args):

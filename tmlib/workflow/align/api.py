@@ -36,16 +36,14 @@ class ImageRegistrator(ClusterRoutines):
     cycles.
     '''
 
-    def __init__(self, experiment_id, verbosity):
+    def __init__(self, experiment_id):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the processed experiment
-        verbosity: int
-            logging level
         '''
-        super(ImageRegistrator, self).__init__(experiment_id, verbosity)
+        super(ImageRegistrator, self).__init__(experiment_id)
 
     def create_batches(self, args):
         '''Creates job descriptions for parallel computing.
