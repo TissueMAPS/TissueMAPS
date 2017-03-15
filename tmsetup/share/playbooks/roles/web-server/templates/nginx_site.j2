@@ -6,7 +6,7 @@ server {
     {% endif %}
 
     access_log {{ tm_log_directory }}/nginx-access.log;
-    error_log {{ tm_log_directory }}/nginx-error.log;
+    error_log {{ tm_log_directory }}/nginx-error.log warn;
 
     # all non-api requests are file requests and should be served
     # from the gulp built directory
