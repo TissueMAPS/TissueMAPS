@@ -243,46 +243,6 @@ class SetupCtrl {
         this._displayResult('Kill', result);
     }
 
-    createPipeline() {
-        // TODO: create template pipelines
-        var pipelineNames = [];
-        this._getInput(
-            'Create pipeline',
-            'Select a pipeline template:',
-            'dropdown',
-            pipelineNames
-        )
-        .then((templateName) => {
-            if (templateName == undefined) {
-                templateName = null;
-            }
-            // console.log('create new pipeline using template: ', templateName)
-            this._getInput(
-                'Create pipeline',
-                'How should the new pipeline be called?',
-                'text',
-                null
-            )
-            .then((pipeName) => {
-                // console.log('create pipeline: ', pipeName)
-                this._createJteratorProject(templateName)
-                .then((res) => {
-                    var result = {
-                        success: res.status == 200,
-                        message: res.statusText
-                    };
-                    if (result.success) {
-                        this._$state.go('project', {
-                            experimentid: this.experiment.id
-                        });
-                    } else {
-                        this._displayResult('Create pipeline', result);
-                    }
-                });
-            });
-        });
-    }
-
     editPipeline() {
         // TODO: create pipeline if none exists yet
         this._$state.go('project', {experimentid: this.experiment.id});

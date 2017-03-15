@@ -120,8 +120,7 @@ angular.module('jtui.project')
 
         // console.log('changed project:', values2yaml(project))
 
-        var url = '/jtui/experiments/' + project.experiment_id +
-                  '/project/' + '/save';
+        var url = '/jtui/experiments/' + project.experiment_id + '/project';
         var request = $http({
             method: 'post',
             url: url,
