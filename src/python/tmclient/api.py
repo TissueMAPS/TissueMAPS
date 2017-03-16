@@ -99,7 +99,7 @@ class TmClient(HttpClient):
     @classmethod
     def __main__(cls):
         '''Main entry point for command line interface.'''
-        from tmclient.parse import parser
+        from tmclient.cli import parser
         args = parser.parse_args()
 
         configure_logging()
@@ -128,7 +128,7 @@ class TmClient(HttpClient):
 
     @property
     def _experiment_id(self):
-        if not hasattr(self, '__experiment_id'):
+        if not hasattr(self, '_TmClient__experiment_id'):
             logger.debug('get ID for experiment "%s"', self.experiment_name)
             params = {'name': self.experiment_name}
             url = self._build_api_url('/experiments', params)
@@ -151,6 +151,10 @@ class TmClient(HttpClient):
                 sys.exit(1)
             self.__experiment_id = data[0]['id']
         return self.__experiment_id
+
+    @_experiment_id.setter
+    def _experiment_id(self, value):
+        self.__experiment_id = value
 
     def create_experiment(self, workflow_type, microscope_type, plate_format,
             plate_acquisition_mode):
@@ -188,7 +192,7 @@ class TmClient(HttpClient):
         res = self._session.post(url, json=content)
         res.raise_for_status()
         data = res.json()['data']
-        self.__experiment_id = data['id']
+        self._experiment_id = data['id']
 
     def rename_experiment(self, new_name):
         '''Renames the experiment.

@@ -39,7 +39,8 @@ class HttpClient(object):
         user_name: str
             name of the TissueMAPS user
         password: str, optional
-            password for `username` (default: ``None``)
+            password for `user_name` (may alternatively provided via the
+            ``tm_pass`` file)
         '''
         self._base_url = 'http://{host}:{port}'.format(host=host, port=port)
         self._session = requests.Session()
