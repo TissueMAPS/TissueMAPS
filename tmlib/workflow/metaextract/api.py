@@ -84,16 +84,23 @@ class MetadataExtractor(ClusterRoutines):
                             acq.name, acq.plate.name
                         )
                     )
+                microscope_image_files = session.query(
+                        tm.MicroscopeImageFile.id
+                    ).\
+                    filter_by(acquisition_id=acq.id).\
+                    all()
+                microscope_image_file_ids = [
+                    f.id for f in microscope_image_files
+                ]
                 batches = self._create_batches(
-                    acq.microscope_image_files, args.batch_size
+                    microscope_image_file_ids, args.batch_size
                 )
 
-                for files in batches:
-                    file_map = {f.id: f.location for f in files}
+                for file_ids in batches:
                     count += 1
                     job_descriptions['run'].append({
                         'id': count,
-                        'microscope_image_file_ids': file_map.keys()
+                        'microscope_image_file_ids': file_ids
                     })
 
         return job_descriptions
