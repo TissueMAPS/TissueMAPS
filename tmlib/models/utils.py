@@ -725,7 +725,7 @@ class ExperimentConnection(Connection):
 
     See also
     --------
-    :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
+    :class:`tmlib.models.base.ExperimentModel`
     '''
 
     def __init__(self, experiment_id, db_uri=None):
@@ -794,7 +794,7 @@ class MainConnection(Connection):
 
     See also
     --------
-    :class:`MainModel <tmlib.models.base.MainModel>`
+    :class:`tmlib.models.base.MainModel`
     '''
 
     def __init__(self, db_uri=None):
