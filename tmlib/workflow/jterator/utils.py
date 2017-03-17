@@ -38,31 +38,6 @@ def get_module_directories(repo_dir):
     return {k: os.path.join(repo_dir, v) for k, v in dirs.iteritems()}
 
 
-def complete_path(input_path, step_location):
-    '''Completes a relative path.
-
-    Parameters
-    ----------
-    input_path: str
-        relative path the should be completed
-    step_location: str
-        absolute path to project folder
-
-    Returns
-    -------
-    str
-        absolute path
-    '''
-    if not input_path:
-        return input_path
-    else:
-        input_path = os.path.expandvars(input_path)
-        input_path = os.path.expanduser(input_path)
-        if not os.path.isabs(input_path):
-            input_path = os.path.join(step_location, input_path)
-        return input_path
-
-
 def get_module_path(module_file, repo_dir):
     '''Gets the absolute path to a module file.
 

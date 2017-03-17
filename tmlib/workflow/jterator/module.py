@@ -17,7 +17,7 @@ import os
 import sys
 import re
 import logging
-# import imp
+import imp
 import collections
 import importlib
 import traceback
@@ -73,7 +73,7 @@ class ImageAnalysisModule(object):
         name: str
             name of the module
         source_file: str
-            path to program file that should be executed
+            name or path to program file that should be executed
         handles: tmlib.workflow.jterator.description.HandleDescriptions
             description of module input/output as provided
         '''
@@ -99,9 +99,7 @@ class ImageAnalysisModule(object):
         str
             absolute path to the figure file
         '''
-        return os.path.join(
-            figures_dir, '%s_%.5d.json' % (self.name, job_id)
-        )
+        return os.path.join(figures_dir, '%s_%.5d.json' % (self.name, job_id))
 
     @property
     def keyword_arguments(self):
@@ -113,29 +111,42 @@ class ImageAnalysisModule(object):
 
     @property
     def language(self):
-        '''str: language of the module (e.g. "python")'''
+        '''str: language of the module (e.g. "Python")'''
         return determine_language(self.source_file)
 
     def _exec_m_module(self, engine):
-        logger.debug(
-            'adding module source file to Matlab path: "%s"',self.source_file
-        )
-        # engine.eval('addpath(\'{0}\');'.format(os.path.dirname(self.source_file)))
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        engine.eval('import \'jtmodules.{0}\''.format(module_name))
-        function_call_format_string = \
-            '[{outputs}] = jtmodules.{name}.main({inputs});'
+        if os.path.exists(self.source_file):
+            logger.debug(
+                'import module "%s" from source file: %s', self.source_file
+            )
+            logger.debug(
+                'add module source file to Matlab path: "%s"', self.source_file
+            )
+            engine.eval(
+                'addpath(\'{0}\');'.format(os.path.dirname(self.source_file))
+            )
+            engine.eval('version = {0}.version'.format(module_name))
+            function_call_format_string = '[{outputs}] = {name}.main({inputs});'
+        else:
+            logger.debug('import module "%s" from "jtmodules" package')
+            engine.eval('import \'jtmodules.{0}\''.format(module_name))
+            engine.eval('version = jtmodules.{0}.VERSION'.format(module_name))
+            function_call_format_string = \
+                '[{outputs}] = jtmodules.{name}.main({inputs});'
+        # NOTE: Matlab doesn't add imported classes to the workspace. It access
+        # the "VERSION" property, we need to assign it to a variable first.
+        version = engine.get('version')
+        if version != self.handles.version:
+            raise PipelineRunError(
+                'Version of source and handles is not the same.'
+            )
         kwargs = self.keyword_arguments
         logger.debug(
-            'evaluating Matlab function with INPUTS: "%s"',
+            'evaluate main() function with INPUTS: "%s"',
             '", "'.join(kwargs.keys())
         )
         output_names = [handle.name for handle in self.handles.output]
-        version = engine.get('jtmodules.{0}.version'.format(module_name))
-        if version != self.handles.version:
-            raise PipelineRunError(
-                'Version of module and handles is not the same.'
-            )
         func_call_string = function_call_format_string.format(
             outputs=', '.join(output_names),
             name=module_name,
@@ -161,24 +172,30 @@ class ImageAnalysisModule(object):
         return self.handles.output
 
     def _exec_py_module(self):
-        logger.debug('importing Python module: "%s"' % self.source_file)
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        try:
-            import jtmodules
-        except ImportError:
-            raise ImportError(
-                'Package "jtmodules" is not installed. '
-                'See https://github.com/TissueMAPS/JtModules'
+        if os.path.exists(self.source_file):
+            logger.debug(
+                'import module "%s" from source file: %s',
+                module_name, self.source_file
             )
-        try:
-            module = importlib.import_module('jtmodules.%s' % module_name)
-        except ImportError as err:
-            raise ImportError(
-                'Import of module "%s" failed:\n%s' % (module_name, str(err))
-            )
+            module = imp.load_source(module_name, self.source_file)
+        else:
+            logger.debug('import module "%s" from "jtmodules" package')
+            try:
+                import jtmodules
+            except ImportError:
+                raise ImportError('Package "jtmodules" is not installed.')
+            try:
+                module = importlib.import_module('jtmodules.%s' % module_name)
+            except ImportError as err:
+                raise ImportError(
+                    'Module "%s" could not be imported:\n%s' % (
+                        module_name, str(err)
+                    )
+                )
         if module.VERSION != self.handles.version:
             raise PipelineRunError(
-                'Version of module and handles is not the same.'
+                'Version of source and handles is not the same.'
             )
         func = getattr(module, 'main', None)
         if func is None:
@@ -188,7 +205,7 @@ class ImageAnalysisModule(object):
             )
         kwargs = self.keyword_arguments
         logger.debug(
-            'evaluating Python function with INPUTS: "%s"',
+            'evaluate main() function with INPUTS: "%s"',
             '", "'.join(kwargs.keys())
         )
         py_out = func(**kwargs)
@@ -217,25 +234,32 @@ class ImageAnalysisModule(object):
             from rpy2.robjects.packages import importr
         except ImportError:
             raise ImportError(
-                'Jtertor R modules cannot be run, because '
+                'R module cannot be run, because '
                 '"rpy2" package is not installed.'
             )
-        logger.debug('sourcing module: "%s"' % self.source_file)
-        # rpy2.robjects.r('source("{0}")'.format(self.source_file))
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        rpackage = importr('jtmodules')
-        module = getattr(rpackage, module_name)
-        if module.get('version') != self.handles.version:
+        if os.path.exists(self.source_file):
+            logger.debug(
+                'import module "%s" from source file: %s', self.source_file
+            )
+            logger.debug('source module: "%s"', self.source_file)
+            rpy2.robjects.r('source("{0}")'.format(self.source_file))
+            module = rpy2.robjects.r[module_name]
+        else:
+            logger.debug('import module "%s" from "jtmodules" package')
+            rpackage = importr('jtmodules')
+            module = getattr(rpackage, module_name)
+        version = module.get('VERSION')[0]
+        if version != self.handles.version:
             raise PipelineRunError(
-                'Version of module and handles is not the same.'
+                'Version of source and handles is not the same.'
             )
         func = module.get('main')
-        # func = rpy2.robjects.globalenv['main']
         numpy2ri.activate()   # enables use of numpy arrays
         pandas2ri.activate()  # enable use of pandas data frames
         kwargs = self.keyword_arguments
         logger.debug(
-            'evaluating R function with INPUTS: "%s"',
+            'evaluate main() function with INPUTS: "%s"',
             '", "'.join(kwargs.keys())
         )
         # R doesn't have unsigned integer types
@@ -248,23 +272,29 @@ class ImageAnalysisModule(object):
                         self.name, k
                     )
                     kwargs[k] = v.astype(int)
-            # TODO: we may have to translate pandas data frames into the
-            # R equivalent
-            # pd.com.convert_to_r_dataframe(v)
+            elif isinstance(v, pd.DataFrame):
+                # TODO: We may have to translate pandas data frames explicitly
+                # into the R equivalent.
+                # pandas2ri.py2ri(v)
+                kwargs[k] = v
         args = rpy2.robjects.ListVector({k: v for k, v in kwargs.iteritems()})
         base = importr('base')
         r_out = base.do_call(func, args)
 
         for handle in self.handles.output:
             # NOTE: R functions are supposed to return a list. Therefore
-            # we can extract the output argument using rx2(name).
-            # The R equivalent would be indexing the list with "[[name]]".
+            # we can extract the output argument using rx2().
+            # The R equivalent would be indexing the list with "[[]]".
             if isinstance(r_out.rx2(handle.name), rpy2.robjects.vectors.DataFrame):
-                # handle.value = pd.DataFrame(r_var.rx2(name))
-                handle.value = rpy2.robjects.pandas2ri(r_out.rx2(handle.name))
+                handle.value = pandas2ri.ri2py(r_out.rx2(handle.name))
+                # handle.value = pd.DataFrame(r_out.rx2(handle.name))
             else:
-                # handle.value = np.array(r_var.rx2(name))
-                handle.value = rpy2.robjects.numpy2ri(r_out.rx2(handle.name))
+                # NOTE: R doesn't have an unsigned integer data type.
+                # So we cast to uint16.
+                handle.value = numpy2ri.ri2py(r_out.rx2(handle.name)).astype(
+                    np.uint16
+                )
+                # handle.value = np.array(r_out.rx2(handle.name), np.uint16)
 
         return self.handles.output
 

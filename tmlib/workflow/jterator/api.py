@@ -39,8 +39,6 @@ from tmlib.writers import TextWriter
 from tmlib.workflow.api import ClusterRoutines
 from tmlib.errors import PipelineDescriptionError
 from tmlib.errors import JobDescriptionError
-from tmlib.workflow.jterator.utils import complete_path
-from tmlib.workflow.jterator.utils import get_module_path
 from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.handles import SegmentedObjects
@@ -99,21 +97,24 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
         :class`PipelineDescription <tmlib.workflow.jterator.description.PipelineDescription>` and
         :class:`HandleDescriptions <tmlib.workflow.jterator.description.HandleDescriptions>`.
         '''
-        libpath = cfg.modules_home
         pipeline = list()
         for i, element in enumerate(self.project.pipe.description.pipeline):
             if not element.active:
                 continue
-            module_filename = element.source
-            source_path = get_module_path(module_filename, libpath)
-            if not os.path.exists(source_path):
-                raise PipelineDescriptionError(
-                    'Module file does not exist: %s' % source_path
-                )
+            source_file = element.source
+            if '/' in source_file:
+                source_file = os.path.expandvars(source_file)
+                source_file = os.path.expanduser(source_file)
+                if not os.path.isabs(source_file):
+                    source_file = os.path.join(self.step_location, source_file)
+                if not os.path.exists(source_file):
+                    raise PipelineDescriptionError(
+                        'Module file does not exist: %s' % source_file
+                    )
             name = self.project.handles[i].name
             handles = self.project.handles[i].description
             module = ImageAnalysisModule(
-                name=name, source_file=source_path, handles=handles
+                name=name, source_file=source_file, handles=handles
             )
             pipeline.append(module)
         return pipeline
@@ -135,8 +136,14 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
         # TODO: JVM for java code
         languages = [m.language for m in self.pipeline]
         if 'Matlab' in languages:
-            import matlab_wrapper as matlab
             logger.info('start Matlab engine')
+            try:
+                import matlab_wrapper as matlab
+            except ImportError:
+                raise ImportError(
+                    'Matlab engine cannot be started, because '
+                    '"matlab-wrapper" package is not installed.'
+                )
             # NOTE: It is absolutely necessary to specify these startup options
             # for use parallel processing on the cluster. Otherwise some jobs
             # hang up and get killed due to timeout.
