@@ -121,7 +121,7 @@ setuptools.setup(
        'shade>=1.12.1',
        'whichcraft>=0.4.0'
     ],
-    extra_rquire = {
+    extras_require={
         'cluster': [
             'elasticluster>=1.3dev'
         ]
