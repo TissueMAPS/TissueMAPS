@@ -2087,7 +2087,8 @@ class TmClient(HttpClient):
         t.align['Done (%)'] = 'r'
         t.align['Memory (MB)'] = 'r'
         t.padding_width = 1
-        add_row_recursively(status, t, 0)
+        if status:
+            add_row_recursively(status, t, 0)
         print(t)
 
     def _get_job_id(self, step_name, name):
