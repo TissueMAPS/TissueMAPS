@@ -323,7 +323,11 @@ def get_feature_values(experiment_id, mapobject_type_id):
                     # Values must be sorted based on feature_id, such that they
                     # end up in the correct column of the CSV table matching
                     # the corresponding column names.
-                    values = [values[k] for k in sorted(values)]
+                    # Feature IDs must be sorted as integers, otherwise it will
+                    # cause problems when there are more than 10 features.
+                    values = [
+                        values[k] for k in sorted(values, key=lambda k: int(k))
+                    ]
                     yield ','.join(values) + '\n'
 
     return Response(
