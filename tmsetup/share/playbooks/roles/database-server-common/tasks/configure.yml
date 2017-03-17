@@ -78,21 +78,38 @@
   tags:
     - database
 
-- name: Allow unrestricted host access from local network
+- name: Allow unrestricted host access from local private network (10.0.0.0/8)
   lineinfile:
     dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
     state: present
-    line: 'host    all             all              172.0.0.0/8            trust'
+    line: 'host    all             all              10.0.0.0/8             trust'
     owner: postgres
     group: postgres
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
 
-# - shell: cat /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
-#   register: content
+- name: Allow unrestricted host access from local private network (172.16.0.0/12)
+  lineinfile:
+    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    state: present
+    line: 'host    all             all              172.16.0.0/12          trust'
+    owner: postgres
+    group: postgres
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - database
 
-# - debug: var=content.stdout_lines
+- name: Allow unrestricted host access from local private network (192.168.0.0/16)
+  lineinfile:
+    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    state: present
+    line: 'host    all             all              192.168.0.0/16         trust'
+    owner: postgres
+    group: postgres
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - database
 
 - name: Increase kernel limits for semaphores
   shell: sysctl -w kernel.sem="250 60000 32 250"
