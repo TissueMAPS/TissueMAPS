@@ -16,7 +16,7 @@
 ---
 # Cooks images used to launch VMs of frontend and compute nodes.
 - name: Install TissueMAPS python packages
-  hosts: tm_compute
+  hosts: tissuemaps_compute
   roles:
     - compute
   tags:

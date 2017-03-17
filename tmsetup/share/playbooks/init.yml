@@ -20,8 +20,8 @@
 # Docker compose.
 - name: Restart database servers
   hosts:
-    - tm_db_worker
-    - tm_db_master
+    - tissuemaps_db_worker
+    - tissuemaps_db_master
   tasks:
     - name: Restart and enable postgresql service
       service:
@@ -31,7 +31,7 @@
 
 - name: Restart web and application servers
   hosts:
-    - tm_server
+    - tissuemaps_server
   tasks:
     - name: Restart and enable nginx service
       service:
