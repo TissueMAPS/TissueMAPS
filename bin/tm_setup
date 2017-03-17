@@ -139,7 +139,10 @@ def _build_ansible_container_command(action, verbosity,
         logger.info('pushing container images to Docker Hub')
         # NOTE: This works only with write access to the "tissuemaps"
         # organization on Docker Hub.
-        cmd.extend(['--push-to', 'tissuemaps'])
+        cmd.extend([
+            'push', '--push-to', 'tissuemaps',
+            '--roles-path', os.path.abspath(roles_dir)
+        ])
     else:
         logger.error('unsupported action for containers: %s', action)
         sys.exit(1)
