@@ -97,22 +97,26 @@ class PyramidBuilder(ClusterRoutines):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             experiment = session.query(tm.Experiment).one()
             count = 0
-            for cid in session.query(tm.Channel.id).distinct():
-                logger.info('create layers for channel %d', cid)
-                zplanes = session.query(tm.ChannelImageFile.zplane).\
-                    filter_by(channel_id=cid).\
+            for channel in session.query(tm.Channel.id).distinct():
+                logger.info('create layers for channel %d', channel.id)
+                results = session.query(tm.ChannelImageFile.zplane).\
+                    filter_by(channel_id=channel.id).\
                     distinct()
-                tpoints = session.query(tm.ChannelImageFile.tpoint).\
-                    filter_by(channel_id=cid).\
+                zplanes = [r.zplane for r in results]
+                results = session.query(tm.ChannelImageFile.tpoint).\
+                    filter_by(channel_id=channel.id).\
                     distinct()
+                tpoints = [r.tpoint for r in results]
                 for t, z in itertools.product(tpoints, zplanes):
                     logger.info('create layer for tpoint %d, zplane %d', t, z)
                     image_files = session.query(tm.ChannelImageFile.id).\
-                        filter_by(channel_id=cid, tpoint=t, zplane=z).\
+                        filter_by(channel_id=channel.id, tpoint=t, zplane=z).\
                         order_by(tm.ChannelImageFile.site_id).\
                         all()
+                    image_file_ids = [f.id for f in image_files]
                     layer = session.get_or_create(
-                        tm.ChannelLayer, channel_id=cid, tpoint=t, zplane=z
+                        tm.ChannelLayer, channel_id=channel.id,
+                        tpoint=t, zplane=z
                     )
 
                     if args.clip:
@@ -184,7 +188,7 @@ class PyramidBuilder(ClusterRoutines):
                             # image files, which will get chopped into tiles.
                             batch_size = args.batch_size
                             batches = self._create_batches(
-                                np.arange(len(image_files)), batch_size
+                                image_file_ids, batch_size
                             )
                         else:
                             # For the subsequent levels, batches are composed of
@@ -206,16 +210,13 @@ class PyramidBuilder(ClusterRoutines):
                             # the inputs are the tiles of the next higher
                             # resolution level.
                             if level == max_zoomlevel_index:
-                                image_file_subset = np.array(image_files)[batch]
                                 description = {
                                     'id': job_count,
                                     'outputs': {},
                                     'layer_id': layer.id,
                                     'level': level,
                                     'index': index,
-                                    'image_file_ids': [
-                                        f.id for f in image_file_subset
-                                    ],
+                                    'image_file_ids': batch,
                                     'align': args.align,
                                     'illumcorr': args.illumcorr
                                 }
