@@ -16,6 +16,7 @@
 import os
 import logging
 from sqlalchemy import tablesample
+from sqlalchemy.orm import aliased
 
 import tmlib.models as tm
 from tmlib.utils import notimplemented
@@ -65,10 +66,10 @@ class IllumstatsCalculator(ClusterRoutines):
             # are consistent within an experiment.
             channels = session.query(tm.Channel.id, tm.Channel.name).all()
             for ch in channels:
-                # We only a subset of images in case there are tens or
-                # hundreds of thousands of them. Ten thousand should be
-                # enough for robust illumination statistics.
-                limit = 10000
+                # We only use a subset of images in case there are tens or
+                # hundreds of thousands of them. Twenty thousand should be more
+                # than enough for robust illumination statistics.
+                limit = 20000
                 n = session.query(tm.ChannelImageFile.id).\
                     filter_by(channel_id=ch.id).\
                     count()
@@ -76,14 +77,18 @@ class IllumstatsCalculator(ClusterRoutines):
                     percent = limit / float(n) * 100
                     logger.info(
                         'using a subset of image files (n=%d) to calculate '
-                        'illumination statistics', n
+                        'illumination statistics', limit
                     )
-                    model = tablesample(tm.ChannelImageFile, percent)
+                    model = aliased(
+                        tm.ChannelImageFile,
+                        tablesample(tm.ChannelImageFile, percent)
+                    )
                 else:
                     if n < 100:
                         logger.warn(
-                            'illumination statistics calculated on only %d '
-                            'image files may introduce artifacts', n
+                            'calculation of illumnation statistics for channel '
+                            '"%s" on only %d images - this may introduce '
+                            'artifacts upon illumination correction', n
                         )
                     model = tm.ChannelImageFile
                 file_ids = session.query(model.id).\
