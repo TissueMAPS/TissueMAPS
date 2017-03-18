@@ -98,7 +98,7 @@ class PyramidBuilder(ClusterRoutines):
             experiment = session.query(tm.Experiment).one()
             count = 0
             for cid in session.query(tm.Channel.id).distinct():
-
+                logger.info('create layers for channel %d', cid)
                 zplanes = session.query(tm.ChannelImageFile.zplane).\
                     filter_by(channel_id=cid).\
                     distinct()
@@ -106,7 +106,8 @@ class PyramidBuilder(ClusterRoutines):
                     filter_by(channel_id=cid).\
                     distinct()
                 for t, z in itertools.product(tpoints, zplanes):
-                    image_files = session.query(tm.ChannelImageFile).\
+                    logger.info('create layer for tpoint %d, zplane %d', t, z)
+                    image_files = session.query(tm.ChannelImageFile.id).\
                         filter_by(channel_id=cid, tpoint=t, zplane=z).\
                         order_by(tm.ChannelImageFile.site_id).\
                         all()
@@ -146,8 +147,8 @@ class PyramidBuilder(ClusterRoutines):
                                 if clip_max < 255:
                                     clip_max = 255
                             else:
-                                if clip_max < 1000:
-                                    clip_max = 1000
+                                if clip_max < 700:
+                                    clip_max = 700
                             logger.info('clip value: %d', clip_max)
                             clip_min = stats.get_closest_percentile(0.001)
                         else:
@@ -164,6 +165,7 @@ class PyramidBuilder(ClusterRoutines):
                     layer.min_intensity = clip_min
 
                     if count == 0:
+                        logger.info('calculate size of pyramid base level')
                         h, w = layer.calculate_max_image_size()
                         d = layer.calculate_zoom_levels(h, w)
                         experiment.pyramid_depth = d
@@ -173,7 +175,7 @@ class PyramidBuilder(ClusterRoutines):
                     n_levels = experiment.pyramid_depth
                     max_zoomlevel_index = n_levels - 1
                     for index, level in enumerate(reversed(range(n_levels))):
-                        logger.debug('pyramid level %d', level)
+                        logger.info('create batches for pyramid level %d', level)
                         # The layer "level" increases from top to bottom.
                         # We build the layer bottom-up, therefore, the "index"
                         # decreases from top to bottom.
@@ -205,18 +207,15 @@ class PyramidBuilder(ClusterRoutines):
                             # resolution level.
                             if level == max_zoomlevel_index:
                                 image_file_subset = np.array(image_files)[batch]
-                                input_files = list()
-                                image_file_ids = list()
-                                for f in image_file_subset:
-                                    input_files.append(f.location)
-                                    image_file_ids.append(f.id)
                                 description = {
                                     'id': job_count,
                                     'outputs': {},
                                     'layer_id': layer.id,
                                     'level': level,
                                     'index': index,
-                                    'image_file_ids': image_file_ids,
+                                    'image_file_ids': [
+                                        f.id for f in image_file_subset
+                                    ],
                                     'align': args.align,
                                     'illumcorr': args.illumcorr
                                 }
