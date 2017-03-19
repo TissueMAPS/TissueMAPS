@@ -91,10 +91,7 @@ class MetadataConfigurator(ClusterRoutines):
                 }
                 job_descriptions['run'].append(description)
 
-            job_descriptions['collect'] = {
-                'inputs': dict(),
-                'outputs': dict()
-            }
+            job_descriptions['collect'] = {}
 
         return job_descriptions
 
@@ -295,68 +292,77 @@ class MetadataConfigurator(ClusterRoutines):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             # We order acquisitions by the time they got created. This will
             # determine the order of multiplexing cycles.
-            acquisitions = session.query(tm.Acquisition.id).\
-                order_by(tm.Acquisition.created_at).\
+            plates = session.query(tm.Plate.id).\
+                order_by(tm.Plate.created_at).\
                 all()
-            acquisitions = [a.id for a in acquisitions]
+            plate_ids = [p.id for p in plates]
             bit_depth = session.query(tm.ImageFileMapping.bit_depth).\
                 distinct().\
                 one()
+            if len(bit_depth) > 1:
+                raise MetadataError('Images must all have the same bit depth.')
             bit_depth = bit_depth[0]
-            t_index = 0
-            w_index = 0
-            c_index = 0
-            for a in acquisitions:
-                logger.debug('acquisition %d', a)
-
-                tpoints = session.query(tm.ImageFileMapping.tpoint).\
-                    filter_by(acquisition_id=a).\
-                    distinct().\
+            for p in plate_ids:
+                acquisitions = session.query(tm.Acquisition.id).\
+                    filter_by(plate_id=p).\
+                    order_by(tm.Acquisition.created_at).\
                     all()
-                tpoints = [t[0] for t in tpoints]
-                for t in tpoints:
-                    logger.debug('time point #%d', t)
-                    cycle = session.get_or_create(
-                        tm.Cycle,
-                        index=c_index, tpoint=t_index,
-                        experiment_id=self.experiment_id
-                    )
-
-                    wavelengths = session.query(tm.ImageFileMapping.wavelength).\
+                acquisition_ids = [a.id for a in acquisitions]
+                t_index = 0
+                w_index = 0
+                c_index = 0
+                for a in acquisition_ids:
+                    logger.debug('acquisition %d', a)
+                    tpoints = session.query(tm.ImageFileMapping.tpoint).\
                         filter_by(acquisition_id=a).\
                         distinct().\
                         all()
-                    wavelengths = [w[0] for w in wavelengths]
-                    for w in wavelengths:
-                        logger.debug('configure wavelength "%s"', w)
-                        if is_multiplexing:
-                            name = 'cycle-%d_wavelength-%s' % (c_index, w)
-                        else:
-                            name = 'wavelength-%s' % w
-                        channel = session.get_or_create(
-                            tm.Channel, experiment_id=self.experiment_id,
-                            name=name, wavelength=w, bit_depth=bit_depth
+                    tpoints = [t[0] for t in tpoints]
+                    for t in tpoints:
+                        logger.debug('time point #%d', t)
+                        cycle = session.get_or_create(
+                            tm.Cycle,
+                            index=c_index, tpoint=t_index,
+                            experiment_id=self.experiment_id
                         )
 
-                        file_mapping_ids = session.query(tm.ImageFileMapping.id).\
-                            filter_by(tpoint=t, wavelength=w, acquisition_id=a)
-                        logger.info(
-                            'update time point and channel metadata '
-                            'of file mappings: tpoint=%d, channel=%s',
-                            t_index, channel.name
-                        )
-                        session.bulk_update_mappings(
-                            tm.ImageFileMapping, [
-                              {
-                                'id': i.id,
-                                'tpoint': t_index,
-                                'cycle_id': cycle.id,
-                                'channel_id': channel.id
-                              } for i in file_mapping_ids
-                            ]
-                        )
+                        wavelengths = session.query(
+                                tm.ImageFileMapping.wavelength
+                            ).\
+                            filter_by(acquisition_id=a).\
+                            distinct().\
+                            all()
+                        wavelengths = [w[0] for w in wavelengths]
+                        for w in wavelengths:
+                            logger.debug('configure wavelength "%s"', w)
+                            if is_multiplexing:
+                                name = 'cycle-%d_wavelength-%s' % (c_index, w)
+                            else:
+                                name = 'wavelength-%s' % w
+                            channel = session.get_or_create(
+                                tm.Channel, experiment_id=self.experiment_id,
+                                name=name, wavelength=w, bit_depth=bit_depth
+                            )
 
-                    if is_time_series:
-                        t_index += 1
+                            file_mapping_ids = session.query(tm.ImageFileMapping.id).\
+                                filter_by(tpoint=t, wavelength=w, acquisition_id=a)
+                            logger.info(
+                                'update time point and channel metadata '
+                                'of file mappings: tpoint=%d, channel=%s',
+                                t_index, channel.name
+                            )
+                            session.bulk_update_mappings(
+                                tm.ImageFileMapping, [
+                                  {
+                                    'id': i.id,
+                                    'tpoint': t_index,
+                                    'cycle_id': cycle.id,
+                                    'channel_id': channel.id
+                                  } for i in file_mapping_ids
+                                ]
+                            )
 
-                    c_index += 1
+                        if is_time_series:
+                            t_index += 1
+
+                        c_index += 1
