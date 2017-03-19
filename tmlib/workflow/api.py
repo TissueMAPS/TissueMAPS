@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import re
 import os
 import yaml
 import glob
@@ -99,7 +100,8 @@ class BasicClusterRoutines(object):
 
 class _ApiMeta(ABCMeta):
 
-    '''Metaclass for :class:`tmlib.workflow.api.ClusterRoutines`.
+    '''Metaclass for
+    :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>`.
 
     The metaclass inspects the method *collect_job_output* of derived classes
     to dynamically determine whether the given step has implemented the
@@ -190,38 +192,26 @@ class ClusterRoutines(BasicClusterRoutines):
         '''str: location where job description files are stored'''
         return os.path.join(self.step_location, 'batches')
 
-    def get_batches_from_files(self):
-        '''Gets batches from files.
+    def get_run_job_ids(self):
+        '''Gets IDs of jobs of the *run* phase from persisted descriptions.
 
         Returns
         -------
-        dict
-            job descriptions
+        List[int]
+            job IDs
 
-        Raises
-        ------
-        :exc:`IOError`
-            when no job descriptor files are found
         '''
-        batches = dict()
-        batches['run'] = list()
-        run_job_files = glob.glob(
+        job_description_files = glob.glob(
             os.path.join(self.batches_location, '*_run_*.batch.json')
         )
-        if not run_job_files:
-            raise IOError('No batch files found.')
-        collect_job_files = glob.glob(
-            os.path.join(self.batches_location, '*_collect.batch.json')
-        )
+        if not job_description_files:
+            raise IOError('No batches found.')
+        job_ids = list()
+        for f in job_description_files:
+            j = int(re.search(r'_run_(\d+)\.batch.json', f).groups()[0])
+            job_ids.append(j)
 
-        for f in run_job_files:
-            batch = self._read_batch_file(f)
-            batches['run'].append(batch)
-        if collect_job_files:
-            f = collect_job_files[0]
-            batches['collect'] = self._read_batch_file(f)
-
-        return batches
+        return job_ids
 
     def get_log_output_from_files(self, phase, job_id=None):
         '''Gets log outputs (standard output and error) from files.
@@ -249,10 +239,10 @@ class ClusterRoutines(BasicClusterRoutines):
                     'Argument "job_id" is required for "run" phase.'
                 )
             stdout_files = glob.glob(
-                os.path.join(self.log_location, '*_run*_%.6d*.out' % job_id)
+                os.path.join(self.log_location, '*_run*_%.7d*.out' % job_id)
             )
             stderr_files = glob.glob(
-                os.path.join(self.log_location, '*_run*_%.6d*.err' % job_id)
+                os.path.join(self.log_location, '*_run*_%.7d*.err' % job_id)
             )
             if not stdout_files or not stderr_files:
                 raise IOError('No log files found for run job # %d' % job_id)
@@ -274,44 +264,19 @@ class ClusterRoutines(BasicClusterRoutines):
         return log
 
     def _build_batch_filename_for_run_job(self, job_id):
-        '''Builds the path to a batch file for a run job.
-
-        Parameters
-        ----------
-        job_id: int
-            one-based job identifier number
-
-        Returns
-        -------
-        str
-            absolute path to the file that holds the description of the
-            job with the given `job_id`
-
-        Note
-        ----
-        The total number of jobs is limited to 10^6.
-        '''
         return os.path.join(
             self.batches_location,
-            '%s_run_%.6d.batch.json' % (self.step_name, job_id)
+            '%s_run_%.7d.batch.json' % (self.step_name, job_id)
         )
 
     def _build_batch_filename_for_collect_job(self):
-        '''Builds the path to a batch file for a "collect" job.
-
-        Returns
-        -------
-        str
-            absolute path to the file that holds the description of the
-            job with the given `job_id`
-        '''
         return os.path.join(
             self.batches_location,
             '%s_collect.batch.json' % self.step_name
         )
 
     def get_run_batch(self, job_id):
-        '''Get description for a "run" job.
+        '''Get description for a :class:`RunJob <tmlib.workflow.jobs.RunJob>`.
 
         Parameters
         ----------
@@ -323,49 +288,52 @@ class ClusterRoutines(BasicClusterRoutines):
         Dict[str, Union[int, str, list, dict]]
             job description
         '''
+        logger.info('get batch for run job #%d', job_id)
         batch_filename = self._build_batch_filename_for_run_job(job_id)
         return self._read_batch_file(batch_filename)
 
     def get_collect_batch(self):
-        '''Get description for a "collect" job.
+        '''Get description for a
+        :class:`CollectJob <tmlib.workflow.jobs.CollectJob>`.
 
         Returns
         -------
         Dict[str, Union[int, str, list, dict]]
             job description
         '''
+        logger.info('get batch for collect job')
         batch_filename = self._build_batch_filename_for_collect_job()
         return self._read_batch_file(batch_filename)
 
-    def store_batches(self, batches):
-        '''Persists job descriptions on disk.
+    def store_run_batch(self, batch, job_id):
+        '''Persists description for a
+        :class:`RunJob <tmlib.workflow.jobs.RunJob>`.
 
         Parameters
         ----------
-        batches: List[Dict[str, Union[int, str, list, dict]]]
-            job descriptions
+        batch: Dict[str, Union[int, str, list, dict]]
+            JSON serializable job description
+        job_id: str
+            job ID
         '''
-        self._write_batch_files(batches)
+        logger.debug('store batch for run job #%d', job_id)
+        filename = self._build_batch_filename_for_run_job(job_id)
+        self._write_batch_file(filename, batch)
+
+    def store_collect_batch(self, batch):
+        '''Persists description for a
+        :class:`CollectJob <tmlib.workflow.jobs.CollectJob>`.
+
+        Parameters
+        ----------
+        batch: Dict[str, Union[int, str, list, dict]]
+            JSON serializable job description
+        '''
+        logger.debug('store batch for collect job')
+        filename = self._build_batch_filename_for_collect_job()
+        self._write_batch_file(filename, batch)
 
     def _read_batch_file(self, filename):
-        '''Reads job description from JSON file.
-
-        Parameters
-        ----------
-        filename: str
-            absolute path to the file that contains the description
-            of a single job
-
-        Returns
-        -------
-        dict
-            batch
-
-        Raises
-        ------
-        OSError
-            when `filename` does not exist
-        '''
         if not os.path.exists(filename):
             raise OSError(
                 'Job description file does not exist: %s.\n'
@@ -376,28 +344,9 @@ class ClusterRoutines(BasicClusterRoutines):
             batch = f.read()
         return batch
 
-    def _write_batch_files(self, batches):
-        '''Writes job descriptions to files in JSON format.
-
-        Parameters
-        ----------
-        batches: List[dict]
-            job descriptions
-
-        Note
-        ----
-        The paths for "inputs" and "outputs" are made relative to the
-        experiment directory.
-        '''
-        for i, batch in enumerate(batches['run']):
-            batch_file = self._build_batch_filename_for_run_job(i+1)
-            with JsonWriter(batch_file) as f:
-                f.write(batch)
-        if 'collect' in batches.keys():
-            batch = batches['collect']
-            batch_file = self._build_batch_filename_for_collect_job()
-            with JsonWriter(batch_file) as f:
-                f.write(batch)
+    def _write_batch_file(self, filename, batch):
+        with JsonWriter(filename) as f:
+            f.write(batch)
 
     def _build_init_command(self, batch_args, verbosity):
         logger.debug('build "init" command')
@@ -462,48 +411,52 @@ class ClusterRoutines(BasicClusterRoutines):
         pass
 
     @abstractmethod
-    def create_batches(self, args):
+    def create_run_batches(self, args):
         '''Creates job descriptions with information required for
-        processing of individual batch jobs.
-
-        Job descriptions need to be provided for the following phases:
-
-            * *run*: collection of tasks that are processed in parallel
-            * *collect* (optional): a single task that may be processed
-              after the *run* phase, for exmample for the aggregation of outputs
+        processing of individual batch jobs of the parallel *run* phase.
 
         Each batch is a mapping that must provide at least the following
         key-value pair:
 
             * "id": one-based job identifier number (*int*)
 
-        Additional key-value pairs may be provided, depending on the
-        requirements of the step. In case a *collect* phase is implemented for
-        the step, the corresponding batch may provide additional key-value pairs.
-
-        A minimal job description has the following structure::
-
-            {
-                "run": [
-                    {
-                        "id": 1
-                    },
-                    ...
-                ]
-                "collect": {}
-            }
+        Additional key-value pairs may be provided, depending on requirements
+        of the step.
 
         Parameters
         ----------
-        args: tmlib.args.Args
-            an instance of an implemented subclass of the `Args` base class
+        args: tmlib.workflow.args.BatchArguments
+            an instance of a step-specific implementation
+            :class:`BatchArguments <tmlib.workflow.args.BatchArguments>`
 
         Returns
         -------
-        Dict[str, Union[List[dict], dict]]
+        Union[List[dict], generator]]
             job descriptions
         '''
         pass
+
+    def create_collect_batch(self, args):
+        '''Creates a job description with information required for
+        processing of the batch job of the optional *collect* phase.
+
+        This method returns an empty dictionary. In case the step implements
+        the *collect* phase and arguments need to be parsed to
+        :meth:`collect_job_output <tmlib.workflow.api.ClusterRoutines.collect_job_output>`,
+        the derived class can override this method.
+
+        Parameters
+        ----------
+        args: tmlib.workflow.args.BatchArguments
+            an instance of a step-specific implementation
+            :class:`BatchArguments <tmlib.workflow.args.BatchArguments>`
+
+        Returns
+        -------
+        dict
+            job description
+        '''
+        return {}
 
     def print_job_descriptions(self, batches):
         '''Prints job descriptions to standard output in YAML format.
@@ -556,7 +509,7 @@ class ClusterRoutines(BasicClusterRoutines):
             step_name=self.step_name, submission_id=submission_id
         )
 
-    def create_run_jobs(self, submission_id, user_name, job_collection, batches,
+    def create_run_jobs(self, submission_id, user_name, job_collection,
             verbosity, duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
 
@@ -568,8 +521,6 @@ class ClusterRoutines(BasicClusterRoutines):
             name of the submitting user
         job_collection: tmlib.workflow.job.SingleRunJobCollection
             empty collection of *run* jobs that should be populated
-        batches: List[dict]
-            job descriptions
         verbosity: int
             logging verbosity for jobs
         duration: str
@@ -591,12 +542,13 @@ class ClusterRoutines(BasicClusterRoutines):
         logger.debug('allocated memory for run jobs: %d MB', memory)
         logger.debug('allocated cores for run jobs: %d', cores)
 
-        for b in batches:
+        job_ids = self.get_run_job_ids()
+        for j in job_ids:
             job = RunJob(
                 step_name=self.step_name,
-                arguments=self._build_run_command(b['id'], verbosity),
+                arguments=self._build_run_command(j, verbosity),
                 output_dir=self.log_location,
-                job_id=b['id'],
+                job_id=j,
                 submission_id=submission_id,
                 user_name=user_name
             )

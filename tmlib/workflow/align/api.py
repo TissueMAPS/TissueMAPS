@@ -45,29 +45,25 @@ class ImageRegistrator(ClusterRoutines):
         '''
         super(ImageRegistrator, self).__init__(experiment_id)
 
-    def create_batches(self, args):
+    def create_run_batches(self, args):
         '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
-        args: tmlib.align.args.AlignInitArgs
+        args: tmlib.workflow.align.args.AlignBatchArguments
             step-specific arguments
 
         Returns
         -------
-        Dict[str, List[dict] or dict]
+        generator
             job descriptions
 
         Raises
         ------
-        tmlib.errors.NotSupportedError
-            when a plate contains only one cycle
         ValueError
             when `args.ref_wavelength` does not exist across all cycles
         '''
         job_count = 0
-        job_descriptions = dict()
-        job_descriptions['run'] = list()
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
 
@@ -141,13 +137,11 @@ class ImageRegistrator(ClusterRoutines):
                             input_ids['reference_file_ids'].extend(ids)
                         input_ids['target_file_ids'][cycle.id].extend(ids)
 
-                job_descriptions['run'].append({
+                yield {
                     'id': job_count,
                     'input_ids': input_ids,
                     'illumcorr': args.illumcorr
-                })
-
-        return job_descriptions
+                }
 
     @same_docstring_as(ClusterRoutines.delete_previous_job_output)
     def delete_previous_job_output(self):

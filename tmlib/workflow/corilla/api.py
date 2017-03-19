@@ -43,21 +43,19 @@ class IllumstatsCalculator(ClusterRoutines):
         '''
         super(IllumstatsCalculator, self).__init__(experiment_id)
 
-    def create_batches(self, args):
+    def create_run_batches(self, args):
         '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
-        args: tmlib.corilla.args.CorillaInitArgs
+        args: tmlib.workflow.corilla.args.CorillaBatchArguments
             step-specific arguments
 
         Returns
         -------
-        Dict[str, List[dict] or dict]
+        generator
             job descriptions
         '''
-        job_descriptions = dict()
-        job_descriptions['run'] = list()
         count = 0
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
@@ -101,12 +99,11 @@ class IllumstatsCalculator(ClusterRoutines):
                     continue
 
                 count += 1
-                job_descriptions['run'].append({
+                yield {
                     'id': count,
                     'channel_image_files_ids': file_ids,
                     'channel_id': ch.id,
-                })
-        return job_descriptions
+                }
 
     def delete_previous_job_output(self):
         '''Deletes all :class:`tmlib.models.file.IllumstatsFile` instances

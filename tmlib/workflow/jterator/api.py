@@ -170,7 +170,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
         #     print 'jt - Starting Julia engine'
         #     self._engines['Julia'] = julia.Julia()
 
-    def create_batches(self, args):
+    def create_run_batches(self, args):
         '''Creates job descriptions for parallel computing.
 
         Parameters
@@ -180,7 +180,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
 
         Returns
         -------
-        Dict[str, List[dict] or dict]
+        generator
             job descriptions
         '''
         channel_names = [
@@ -192,9 +192,6 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                 'Batch size must be 1 when plotting is active.'
             )
 
-        job_descriptions = dict()
-        job_descriptions['run'] = list()
-        job_descriptions['collect'] = {}
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             sites = session.query(tm.Site.id).order_by(tm.Site.id).all()
             site_ids = [s.id for s in sites]
@@ -207,13 +204,11 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                     filter(tm.Channel.name.in_(channel_names)).\
                     filter(tm.ChannelImageFile.site_id.in_(batch)).\
                     all()
-                job_descriptions['run'].append({
+                yield {
                     'id': j + 1,  # job IDs are one-based!
                     'site_ids': batch,
                     'plot': args.plot
-                })
-
-        return job_descriptions
+                }
 
     def delete_previous_job_output(self):
         '''Deletes all instances of

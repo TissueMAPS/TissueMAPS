@@ -55,17 +55,17 @@ class PyramidBuilder(ClusterRoutines):
         '''
         super(PyramidBuilder, self).__init__(experiment_id)
 
-    def create_batches(self, args):
+    def create_run_batches(self, args):
         '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
-        args: tmlib.illuminati.args.IlluminatiInitArgs
+        args: tmlib.workflow.illuminati.args.IlluminatiBatchArguments
             step-specific arguments
 
         Returns
         -------
-        Dict[str, List[dict] or dict]
+        generator
             job descriptions
         '''
         logger.info('performing data integrity tests')
@@ -77,7 +77,7 @@ class PyramidBuilder(ClusterRoutines):
                 all()
             if len(set(n_images_per_site)) > 1:
                 raise DataIntegrityError(
-                    'The number of channel image files must be the same for '
+                    'Number of channel image files must be the same for '
                     'each site!'
                 )
             n_wells_per_plate = session.query(func.count(tm.Well.id)).\
@@ -86,13 +86,11 @@ class PyramidBuilder(ClusterRoutines):
             # TODO: is this restraint still required?
             if len(set(n_wells_per_plate)) > 1:
                 raise DataIntegrityError(
-                    'The number of wells must be the same for each plate!'
+                    'Number of wells must be the same for each plate!'
                 )
 
         logger.info('create job descriptions')
         logger.debug('create descriptions for "run" jobs')
-        job_descriptions = dict()
-        job_descriptions['run'] = list()
         job_count = 0
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             experiment = session.query(tm.Experiment).one()
@@ -210,7 +208,7 @@ class PyramidBuilder(ClusterRoutines):
                             # the inputs are the tiles of the next higher
                             # resolution level.
                             if level == max_zoomlevel_index:
-                                description = {
+                                yield {
                                     'id': job_count,
                                     'outputs': {},
                                     'layer_id': layer.id,
@@ -226,18 +224,13 @@ class PyramidBuilder(ClusterRoutines):
                                 coordinates = np.array(
                                     list(itertools.product(rows, cols))
                                 )[batch].tolist()
-                                description = {
+                                yield {
                                     'id': job_count,
                                     'layer_id': layer.id,
                                     'level': level,
                                     'index': index,
                                     'coordinates': coordinates
                                 }
-
-                            job_descriptions['run'].append(description)
-
-        job_descriptions['collect'] = {}
-        return job_descriptions
 
     def delete_previous_job_output(self):
         '''Deletes all instances of
@@ -276,7 +269,7 @@ class PyramidBuilder(ClusterRoutines):
             step_name=self.step_name, submission_id=submission_id
         )
 
-    def create_run_jobs(self, submission_id, user_name, job_collection, batches,
+    def create_run_jobs(self, submission_id, user_name, job_collection,
             verbosity, duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
         The `illuminati` step is special in the sense that it implements
@@ -291,8 +284,6 @@ class PyramidBuilder(ClusterRoutines):
             name of the submitting user
         job_collection: tmlib.workflow.jobs.MultiRunJobCollection
             emtpy collection for "run" jobs
-        batches: List[dict]
-            job descriptions
         verbosity: int
             logging verbosity for jobs
         duration: str
@@ -314,13 +305,15 @@ class PyramidBuilder(ClusterRoutines):
         logger.debug('allocated cores for "run" jobs: %d', cores)
 
         multi_run_jobs = collections.defaultdict(list)
-        for b in batches:
+        job_ids = self.get_run_job_ids()
+        for j in job_ids:
+            batch = self.get_run_batch(j)
             job = RunJob(
                 step_name=self.step_name,
-                arguments=self._build_run_command(b['id'], verbosity),
+                arguments=self._build_run_command(j, verbosity),
                 output_dir=self.log_location,
-                job_id=b['id'],
-                index=b['index'],
+                job_id=j,
+                index=batch['index'],
                 submission_id=submission_id,
                 user_name=user_name
             )
@@ -338,7 +331,7 @@ class PyramidBuilder(ClusterRoutines):
                         'The value of "cores" must be positive.'
                     )
                 job.requested_cores = cores
-            multi_run_jobs[b['index']].append(job)
+            multi_run_jobs[batch['index']].append(job)
 
         for index, jobs in multi_run_jobs.iteritems():
             job_collection.add(
@@ -359,10 +352,7 @@ class PyramidBuilder(ClusterRoutines):
                 'process layer: channel=%s, zplane=%d, tpoint=%d',
                 layer.channel.name, layer.zplane, layer.tpoint
             )
-            logger.info(
-                'create non-empty tiles at maximum zoom level %d',
-                batch['level']
-            )
+            logger.info('create tiles at zoom level %d', batch['level'])
 
             if batch['illumcorr']:
                 logger.info('correct images for illumination artifacts')

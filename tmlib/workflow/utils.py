@@ -281,7 +281,7 @@ def get_task_status_recursively(task, recursion_depth=None, id_encoder=None):
     --------
     :func:`tmlib.workflow.utils.format_task_data`
     '''
-    logger.debug('get status of task recursively')
+    logger.debug('get task status recursively')
     def get_info(task_, i):
         data = dict()
         if recursion_depth is not None:

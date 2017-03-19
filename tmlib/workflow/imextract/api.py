@@ -50,23 +50,20 @@ class ImageExtractor(ClusterRoutines):
         '''
         super(ImageExtractor, self).__init__(experiment_id)
 
-    def create_batches(self, args):
+    def create_run_batches(self, args):
         '''Creates job descriptions for parallel processing.
 
         Parameters
         ----------
-        args: tmlib.imextract.args.ImextractInitArgs
+        args: tmlib.workflow.imextract.args.ImextractBatchArguments
             step-specific arguments
 
         Returns
         -------
-        Dict[str, List[dict] or dict]
+        generator
             job descriptions
         '''
         job_count = 0
-        job_descriptions = dict()
-        job_descriptions['run'] = list()
-        job_descriptions['collect'] = {'delete': args.delete}
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             # Group file mappings per site to ensure that all z-planes of
             # one site end up on the same machine.
@@ -91,13 +88,26 @@ class ImageExtractor(ClusterRoutines):
                     order_by(tm.ImageFileMapping.id).\
                     all()
                 job_count += 1
-                job_descriptions['run'].append({
+                yield {
                     'id': job_count,
                     'image_file_mapping_ids': ids,
                     'mip': args.mip
-                })
+                }
 
-        return job_descriptions
+    def create_collect_batch(self, args):
+        '''Creates a job description for the *collect* phase.
+
+        Parameters
+        ----------
+        args: tmlib.workflow.imextract.args.ImextractBatchArguments
+            step-specific arguments
+
+        Returns
+        -------
+        dict
+            job description
+        '''
+        return {'delete': args.delete}
 
     def run_job(self, batch):
         '''Extracts individual planes from microscope image files and writes

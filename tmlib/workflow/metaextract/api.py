@@ -55,22 +55,21 @@ class MetadataExtractor(ClusterRoutines):
             '.ome.xml', image_filename
         )
 
-    def create_batches(self, args):
+    def create_run_batches(self, args):
         '''Creates job descriptions for parallel computing.
 
         Parameters
         ----------
-        args: tmlib.steps.metaextract.args.MetaextractArgs
+        args: tmlib.workflow.metaextract.args.MetaextractBatchArguments
             step-specific arguments
 
         Returns
         -------
-        Dict[str, List[dict]]
+        generator
             job descriptions
         '''
-        job_descriptions = dict()
-        job_descriptions['run'] = list()
         count = 0
+
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             for acq in session.query(tm.Acquisition):
                 n_files = session.query(tm.MicroscopeImageFile.id).\
@@ -98,12 +97,10 @@ class MetadataExtractor(ClusterRoutines):
 
                 for file_ids in batches:
                     count += 1
-                    job_descriptions['run'].append({
+                    yield {
                         'id': count,
                         'microscope_image_file_ids': file_ids
-                    })
-
-        return job_descriptions
+                    }
 
     @same_docstring_as(ClusterRoutines.delete_previous_job_output)
     def delete_previous_job_output(self):

@@ -219,7 +219,6 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         created during the "init" phase.
         '''
         logger.info('create jobs for "run" phase of step "%s"', self.name)
-        batches = self._api_instance.get_batches_from_files()
         logger.info(
             'allocated time for "run" jobs: %s',
             self.description.submission_args.duration
@@ -233,7 +232,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             self.description.submission_args.cores
         )
         self.run_jobs = self._api_instance.create_run_jobs(
-            self.submission_id, self.user_name, self.run_jobs, batches['run'],
+            self.submission_id, self.user_name, self.run_jobs,
             self.verbosity,
             duration=self.description.submission_args.duration,
             memory=self.description.submission_args.memory,

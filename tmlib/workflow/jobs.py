@@ -151,10 +151,10 @@ class RunJob(WorkflowStepJob):
     def name(self):
         '''str: name of the job'''
         if self.index is None:
-            return '%s_run_%.6d' % (self.step_name, self.job_id)
+            return '%s_run_%.7d' % (self.step_name, self.job_id)
         else:
             return (
-                '%s_run-%.2d_%.6d' % (self.step_name, self.index, self.job_id)
+                '%s_run-%.2d_%.7d' % (self.step_name, self.index, self.job_id)
             )
 
 

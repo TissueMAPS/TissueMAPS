@@ -1,0 +1,12 @@
+---
+input:
+
+    - name: input_image
+      key: initial_py_module.output_image
+      type: IntensityImage
+
+output:
+
+    - name: output_image
+      key: py_module.output_image
+      type: IntensityImage

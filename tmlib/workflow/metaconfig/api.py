@@ -56,28 +56,26 @@ class MetadataConfigurator(ClusterRoutines):
         '''
         super(MetadataConfigurator, self).__init__(experiment_id)
 
-    def create_batches(self, args):
+    def create_run_batches(self, args):
         '''Creates job descriptions for parallel processing.
 
         Parameters
         ----------
-        args: tmlib.workflow.metaconfig.args.MetaconfigBatchArgs
+        args: tmlib.workflow.metaconfig.args.MetaconfigBatchArguments
             step-specific batch arguments
 
         Returns
         -------
-        Dict[str, List[dict] or dict]
+        generator
             job descriptions
         '''
-        job_descriptions = dict()
-        job_descriptions['run'] = list()
         job_count = 0
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             experiment = session.query(tm.Experiment).one()
             for acq in session.query(tm.Acquisition):
                 job_count += 1
-                description = {
+                yield {
                     'id': job_count,
                     'microscope_image_file_ids': [
                         f.id for f in acq.microscope_image_files
@@ -89,11 +87,6 @@ class MetadataConfigurator(ClusterRoutines):
                     'n_horizontal': args.n_horizontal,
                     'stitch_layout': args.stitch_layout
                 }
-                job_descriptions['run'].append(description)
-
-            job_descriptions['collect'] = {}
-
-        return job_descriptions
 
     def delete_previous_job_output(self):
         '''Deletes all instances of class :class:`tm.Cycle`,
