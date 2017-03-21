@@ -309,26 +309,40 @@ def get_feature_values(experiment_id, mapobject_type_id):
                 filter_by(ref_type=tm.Site.__name__).\
                 one()
             for site_id in site_ids:
-                results = _get_mapobjects_at_site(
+                mapobjects = _get_mapobjects_at_site(
                     session, mapobject_type_id, site_mapobject_type.id,
                     site_id, layer_lut.keys()
                 )
-                for mapobject_id, label, segmenation_layer_id in results:
-                    # One could nicely filter features values using slice()
-                    feature_values = session.query(tm.FeatureValues.values).\
-                        filter_by(mapobject_id=mapobject_id).\
-                        one()
-                    values = feature_values.values
-                    # The keys in a dictionary don't have any order.
+                mapobject_ids = [m.id for m in mapobjects]
+                feature_values = session.query(
+                        tm.FeatureValues.mapobject_id, tm.FeatureValues.values
+                    ).\
+                    filter(tm.FeatureValues.mapobject_id.in_(mapobject_ids)).\
+                    all()
+                feature_values_lut = dict(feature_values)
+
+                if not feature_values_lut:
+                    continue
+
+                for mapobject_id, label, segmentation_layer_id in mapobjects:
+                    if mapobject_id not in feature_values_lut:
+                        logger.warn(
+                            'no feature values found for mapobject %d',
+                            mapobject_id
+                        )
+                        yield '\n'
+                        continue
+
+                    vals = feature_values_lut[mapobject_id]
                     # Values must be sorted based on feature_id, such that they
                     # end up in the correct column of the CSV table matching
                     # the corresponding column names.
-                    # Feature IDs must be sorted as integers, otherwise it will
-                    # cause problems when there are more than 10 features.
-                    values = [
-                        values[k] for k in sorted(values, key=lambda k: int(k))
+                    # Feature IDs must be sorted as integers to get the
+                    # desired order.
+                    feature_values = [
+                        vals[k] for k in sorted(vals, key=lambda k: int(k))
                     ]
-                    yield ','.join(values) + '\n'
+                    yield ','.join(feature_values) + '\n'
 
     return Response(
         generate_feature_matrix(mapobject_type_id),
@@ -412,11 +426,17 @@ def get_metadata(experiment_id, mapobject_type_id):
                     'well_name': record.well_name,
                 }
 
-            names = [
+            metadata_names = [
                 'plate_name', 'well_name', 'well_pos_y', 'well_pos_x',
                 'tpoint', 'zplane', 'label', 'is_border'
             ]
-            yield ','.join(names) + '\n'
+            tool_results = session.query(tm.ToolResult.name).\
+                filter_by(mapobject_type_id=mapobject_type_id).\
+                order_by(tm.ToolResult.id).\
+                all()
+            tool_result_names = [t.name for t in tool_results]
+
+            yield ','.join(metadata_names + tool_result_names) + '\n'
             site_mapobject_type = session.query(tm.MapobjectType.id).\
                 filter_by(ref_type=tm.Site.__name__).\
                 one()
@@ -432,8 +452,19 @@ def get_metadata(experiment_id, mapobject_type_id):
                 border_mapobject_ids = [
                     s.mapobject_id for s in border_segmentations
                 ]
+                label_values = session.query(
+                        tm.LabelValues.mapobject_id, tm.LabelValues.values
+                    ).\
+                    filter(tm.LabelValues.mapobject_id.in_(mapobject_ids)).\
+                    all()
+                label_values_lut = dict(label_values)
+
+                warn = True
+                if not label_values_lut:
+                    warn = False
+
                 for mapobject_id, label, segmenation_layer_id in mapobjects:
-                    values = [
+                    metadata_values = [
                         site_lut[site_id]['plate_name'],
                         site_lut[site_id]['well_name'],
                         str(site_lut[site_id]['well_pos_y']),
@@ -443,7 +474,18 @@ def get_metadata(experiment_id, mapobject_type_id):
                         str(label),
                         str(1 if mapobject_id in border_mapobject_ids else 0)
                     ]
-                    yield ','.join(values) + '\n'
+                    if mapobject_id not in label_values_lut:
+                        if warn:
+                            logger.warn(
+                                'no label values found for mapobject %d',
+                                mapobject_id
+                            )
+                    else:
+                        vals = label_values_lut[mapobject_id]
+                        metadata_values += [
+                            vals[k] for k in sorted(vals, key=lambda k: int(k))
+                        ]
+                    yield ','.join(metadata_values) + '\n'
 
     return Response(
         generate_feature_matrix(mapobject_type_id),
@@ -457,4 +499,3 @@ def get_metadata(experiment_id, mapobject_type_id):
             )
         }
     )
-
