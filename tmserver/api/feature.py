@@ -308,7 +308,8 @@ def get_feature_values(experiment_id, mapobject_type_id):
             site_mapobject_type = session.query(tm.MapobjectType.id).\
                 filter_by(ref_type=tm.Site.__name__).\
                 one()
-            for site_id in site_ids:
+        for site_id in site_ids:
+            with tm.utils.ExperimentSession(experiment_id) as session:
                 mapobjects = _get_mapobjects_at_site(
                     session, mapobject_type_id, site_mapobject_type.id,
                     site_id, layer_lut.keys()
@@ -440,7 +441,8 @@ def get_metadata(experiment_id, mapobject_type_id):
             site_mapobject_type = session.query(tm.MapobjectType.id).\
                 filter_by(ref_type=tm.Site.__name__).\
                 one()
-            for site_id in site_lut:
+        for site_id in site_lut:
+            with tm.utils.ExperimentSession(experiment_id) as session:
                 mapobjects = _get_mapobjects_at_site(
                     session, mapobject_type_id, site_mapobject_type.id,
                     site_id, layer_lut.keys()
