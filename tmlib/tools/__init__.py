@@ -64,9 +64,7 @@ additional method ``bar`` (which does nothing):
             self.save_result_values(result_id, labels)
 
 
-Note
-----
-Each tool also requires a client-side representation.
+.. note:: Each tool also requires a client-side representation.
 '''
 import logging
 

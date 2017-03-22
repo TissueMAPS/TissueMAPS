@@ -40,9 +40,8 @@ class ToolRequestManager(SubmissionManager):
         self.verbosity = verbosity
         self.tool_name = tool_name
         super(ToolRequestManager, self).__init__(self.experiment_id, 'tool')
-        with tm.utils.MainSession() as session:
-            experiment = session.query(tm.ExperimentReference).\
-                get(self.experiment_id)
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            experiment = session.query(tm.Experiment).get(self.experiment_id)
             self._tools_location = experiment.tools_location
 
     @staticmethod
