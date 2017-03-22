@@ -175,7 +175,7 @@ def process_tool_request(experiment_id):
     #     session_id = session.id
 
     gc3pie.store_task(job)
-    gc3pie.submit_jobs(job)
+    gc3pie.submit_task(job)
 
     return jsonify(data={
         'submission_id': submission_id
