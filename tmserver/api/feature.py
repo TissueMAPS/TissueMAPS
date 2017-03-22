@@ -304,10 +304,11 @@ def get_feature_values(experiment_id, mapobject_type_id):
                 all()
             feature_names = [f.name for f in features]
 
-            yield ','.join(feature_names) + '\n'
             site_mapobject_type = session.query(tm.MapobjectType.id).\
                 filter_by(ref_type=tm.Site.__name__).\
                 one()
+
+        yield ','.join(feature_names) + '\n'
         for site_id in site_ids:
             with tm.utils.ExperimentSession(experiment_id) as session:
                 mapobjects = _get_mapobjects_at_site(
@@ -325,6 +326,7 @@ def get_feature_values(experiment_id, mapobject_type_id):
                 if not feature_values_lut:
                     continue
 
+                rows = list()
                 for mapobject_id, label, segmentation_layer_id in mapobjects:
                     if mapobject_id not in feature_values_lut:
                         logger.warn(
@@ -343,7 +345,8 @@ def get_feature_values(experiment_id, mapobject_type_id):
                     feature_values = [
                         vals[k] for k in sorted(vals, key=lambda k: int(k))
                     ]
-                    yield ','.join(feature_values) + '\n'
+                    rows.append(','.join(feature_values))
+                yield '\n'.join(rows) + '\n'
 
     return Response(
         generate_feature_matrix(mapobject_type_id),
@@ -437,10 +440,11 @@ def get_metadata(experiment_id, mapobject_type_id):
                 all()
             tool_result_names = [t.name for t in tool_results]
 
-            yield ','.join(metadata_names + tool_result_names) + '\n'
             site_mapobject_type = session.query(tm.MapobjectType.id).\
                 filter_by(ref_type=tm.Site.__name__).\
                 one()
+
+        yield ','.join(metadata_names + tool_result_names) + '\n'
         for site_id in site_lut:
             with tm.utils.ExperimentSession(experiment_id) as session:
                 mapobjects = _get_mapobjects_at_site(
@@ -465,6 +469,7 @@ def get_metadata(experiment_id, mapobject_type_id):
                 if not label_values_lut:
                     warn = False
 
+                rows = list()
                 for mapobject_id, label, segmenation_layer_id in mapobjects:
                     metadata_values = [
                         site_lut[site_id]['plate_name'],
@@ -487,7 +492,8 @@ def get_metadata(experiment_id, mapobject_type_id):
                         metadata_values += [
                             vals[k] for k in sorted(vals, key=lambda k: int(k))
                         ]
-                    yield ','.join(metadata_values) + '\n'
+                    rows.append(','.join(metadata_values))
+                yield '\n'.join(rows) + '\n'
 
     return Response(
         generate_feature_matrix(mapobject_type_id),
