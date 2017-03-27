@@ -403,10 +403,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
 
 
             site = session.query(tm.Site).get(store['site_id'])
-            y_offset, x_offset = site.offset
-            if site.intersection is not None:
-                y_offset += site.intersection.lower_overhang
-                x_offset += site.intersection.right_overhang
+            y_offset, x_offset = site.aligned_offset
 
         mapobject_ids = dict()
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
