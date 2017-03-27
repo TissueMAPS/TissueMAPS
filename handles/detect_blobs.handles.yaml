@@ -1,5 +1,5 @@
 ---
-version: 0.1.1
+version: 0.2.0
 
 input:
 
@@ -14,6 +14,16 @@ input:
       help: >
           Factor by which pixel values in "image" must be above background RMS
           noise to be considered part of a blob.
+
+    - name: back_size
+      type: Scalar
+      value: 3
+      help: Size of the mesh to estimate background.
+
+    - name: back_filtersize
+      type: Scalar
+      value: 2
+      help: Size of the background filtering mask.
 
     - name: plot
       type: Plot

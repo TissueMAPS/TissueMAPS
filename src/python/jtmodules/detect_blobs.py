@@ -18,17 +18,17 @@ import mahotas as mh
 import collections
 import logging
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 
 logger = logging.getLogger(__name__)
 
-sep.set_extract_pixstack(10**6)
+sep.set_extract_pixstack(10**7)
 
 Output = collections.namedtuple('Output', ['mask', 'label_image', 'figure'])
 
 
-def main(image, threshold_factor=5, plot=False):
-    '''Detects blobs in `image` using a Python implementation of
+def main(image, threshold_factor=5, back_size=3, back_filtersize=2, plot=False):
+    '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
 
     Parameters
@@ -38,6 +38,10 @@ def main(image, threshold_factor=5, plot=False):
     threshold_factor: int, optional
         factor by which pixel values must be above background RMS noise
         to be considered part of a blob (default: ``5``)
+    back_size: int, optional
+        size of the mesh to estimate backround (default: ``3``)
+    back_filtersize: int, optional
+        size of the background filtering mask (default: ``2``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -53,15 +57,21 @@ def main(image, threshold_factor=5, plot=False):
     img = image.astype('float')
 
     logger.info('estimate background')
-    bkg = sep.Background(img)
+    # TODO: use mask?
+    bkg = sep.Background(
+        img,
+        bw=back_size, bh=back_size,
+        fw=back_filtersize, fh=back_filtersize
+    )
 
     logger.info('subtract background')
     img_sub = img - bkg
 
     logger.info('detect blobs')
+
     out, blobs_img = sep.extract(
-        img_sub, threshold_factor, err=bkg.globalrms,
-        segmentation_map=True
+        img_sub, threshold_factor, err=bkg.globalrms, # err=bkg.rms(),
+        minarea=3, segmentation_map=True
     )
 
     centroids_img = np.zeros(img.shape, dtype=bool)
