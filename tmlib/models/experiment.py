@@ -377,7 +377,7 @@ class Experiment(DirectoryModel):
             range(dimensions[1]), range(dimensions[0])
         )
         grid = np.zeros(dimensions, dtype=int)
-        plates = sorted(self.plates, key=lambda p: p.name)
+        plates = sorted(self.plates, key=lambda p: p.id)
         for i, (x, y) in enumerate(cooridinates):
             grid[y, x] = plates[i].id
         return grid
