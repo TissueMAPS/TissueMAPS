@@ -467,7 +467,7 @@ class ImageAnalysisPipelineEngine(ClusterRoutines):
                         )
                 else:
                     logger.debug('represent segmented objects only as points')
-                    iterator = segm_objs.to_points(y_offset, x_offset)
+                    iterator = segm_objs.iter_points(y_offset, x_offset)
                     for t, z, label, centroid in iterator:
                         logger.debug(
                             'add segmentation for object #%d at '

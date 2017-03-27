@@ -34,6 +34,7 @@ import skimage
 import logging
 import collections
 import skimage.draw
+import shapely.geometry
 from geoalchemy2.shape import to_shape
 from abc import ABCMeta
 from abc import abstractproperty
