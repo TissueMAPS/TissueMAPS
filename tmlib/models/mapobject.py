@@ -813,7 +813,7 @@ class SegmentationLayer(ExperimentModel):
 
         outlines = query.filter(
             MapobjectSegmentation.segmentation_layer_id == self.id,
-            MapobjectSegmentation.geom_polygon.ST_Intersects(tile)
+            MapobjectSegmentation.geom_centroid.ST_Intersects(tile)
         ).\
         all()
 
