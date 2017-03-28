@@ -255,7 +255,7 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     indices = model.labels_
 
     # Determine grid dimensions: consider all possible splits and select the
-    # one that fits best given the provided coordinate values
+    # one that fits best given the spread of provided absolute coordinate values
     spread = np.std(centroids, axis=0)
     splits = list()
     for i in range(2, n):
@@ -267,7 +267,7 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
         splits = splits[splits.shape[0]/2:, :]
     else:
         splits = splits[0:splits.shape[0]/2, :]
-    cost = splits[:, 0] / float(splits[:, 1]) - spread[0] / spread[1]
+    cost = splits[:, 0] / splits[:, 1].astype(float) - spread[0] / spread[1]
     best_fit_index = np.where(cost == np.min(cost))[0][0]
     rows, cols = splits[best_fit_index]
     logger.info('calculated stitch dimensions: %d x %d', rows, cols)
