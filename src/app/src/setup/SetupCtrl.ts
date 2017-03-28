@@ -381,7 +381,7 @@ class SetupCtrl {
                 message: res.statusText
             };
             if (result.success) {
-                var log = res.data;
+                var log = res.data.data;
                 this._displayOutput(log.stdout, log.stderr);
             } else {
                 this._displayResult('Log', result);
