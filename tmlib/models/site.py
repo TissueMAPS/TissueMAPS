@@ -144,8 +144,8 @@ class Site(ExperimentModel):
         '''
         if self.intersection is not None:
             return self.height - (
-                    site.intersection.lower_overhang +
-                    site.intersection.upper_overhang
+                    self.intersection.lower_overhang +
+                    self.intersection.upper_overhang
                 )
         else:
             return self.height
@@ -157,8 +157,8 @@ class Site(ExperimentModel):
         '''
         if self.intersection is not None:
             return self.width - (
-                    site.intersection.left_overhang +
-                    site.intersection.right_overhang
+                    self.intersection.left_overhang +
+                    self.intersection.right_overhang
                 )
         else:
             return self.width
@@ -172,8 +172,8 @@ class Site(ExperimentModel):
         if self.intersection is not None:
             y_offset, x_offset = self.offset
             return (
-                y_offset + site.intersection.lower_overhang,
-                x_offset + site.intersection.right_overhang
+                y_offset + self.intersection.lower_overhang,
+                x_offset + self.intersection.right_overhang
             )
         else:
             return self.offset
