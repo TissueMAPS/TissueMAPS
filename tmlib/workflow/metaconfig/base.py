@@ -396,7 +396,7 @@ class MetadataHandler(object):
         logger.info('check whether required metadata information is missing')
         md = self.metadata
         missing_metadata = set()
-        if any([len(v) == 0 for v in md.well_name.values]):
+        if any([len(v) < 3 for v in md.well_name.values]):
             missing_metadata.add('well')
         if any(md.channel_name.isnull()):
             missing_metadata.add('channel')
