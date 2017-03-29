@@ -16,12 +16,14 @@
 """API view functions for querying :mod:`feature <tmlib.models.feature>`
 resources.
 """
+import csv
 import json
 import logging
 import numpy as np
 import pandas as pd
+from cStringIO import StringIO
 from flask_jwt import jwt_required
-from flask import jsonify, request, send_file, Response
+from flask import jsonify, request, send_file, Response, stream_with_context
 from sqlalchemy.orm.exc import NoResultFound
 
 import tmlib.models as tm
@@ -284,6 +286,9 @@ def get_feature_values(experiment_id, mapobject_type_id):
         mapobject_type_name = mapobject_type.name
 
     def generate_feature_matrix(mapobject_type_id):
+        data = StringIO()
+        w = csv.writer(data)
+
         with tm.utils.ExperimentSession(experiment_id) as session:
 
             results = _get_matching_layers(session, tpoint)
@@ -308,14 +313,24 @@ def get_feature_values(experiment_id, mapobject_type_id):
                 filter_by(ref_type=tm.Site.__name__).\
                 one()
 
-        yield ','.join(feature_names) + '\n'
+        w.writerow(tuple(feature_names))
+        yield data.getvalue()
+        data.seek(0)
+        data.truncate(0)
+
         for site_id in site_ids:
+            logger.debug('collect feature values at site %d', site_id)
             with tm.utils.ExperimentSession(experiment_id) as session:
                 mapobjects = _get_mapobjects_at_site(
                     session, mapobject_type_id, site_mapobject_type.id,
                     site_id, layer_lut.keys()
                 )
                 mapobject_ids = [m.id for m in mapobjects]
+
+                if not mapobject_ids:
+                    logger.warn('no mapobjects found at site %d', site_id)
+                    continue
+
                 feature_values = session.query(
                         tm.FeatureValues.mapobject_id, tm.FeatureValues.values
                     ).\
@@ -324,16 +339,21 @@ def get_feature_values(experiment_id, mapobject_type_id):
                 feature_values_lut = dict(feature_values)
 
                 if not feature_values_lut:
+                    logger.warn('no feature values found at site %d', site_id)
                     continue
 
-                rows = list()
                 for mapobject_id, label, segmentation_layer_id in mapobjects:
                     if mapobject_id not in feature_values_lut:
                         logger.warn(
                             'no feature values found for mapobject %d',
                             mapobject_id
                         )
-                        yield '\n'
+                        w.writerow(tuple(
+                            ['' for x in xrange(len(feature_names))]
+                        ))
+                        yield data.getvalue()
+                        data.seek(0)
+                        data.truncate(0)
                         continue
 
                     vals = feature_values_lut[mapobject_id]
@@ -342,14 +362,15 @@ def get_feature_values(experiment_id, mapobject_type_id):
                     # the corresponding column names.
                     # Feature IDs must be sorted as integers to get the
                     # desired order.
-                    feature_values = [
+                    w.writerow(tuple([
                         vals[k] for k in sorted(vals, key=lambda k: int(k))
-                    ]
-                    rows.append(','.join(feature_values))
-                yield '\n'.join(rows) + '\n'
+                    ]))
+                yield data.getvalue()
+                data.seek(0)
+                data.truncate(0)
 
     return Response(
-        generate_feature_matrix(mapobject_type_id),
+        stream_with_context(generate_feature_matrix(mapobject_type_id)),
         mimetype='text/csv',
         headers={
             'Content-Disposition': 'attachment; filename={filename}'.format(
@@ -409,6 +430,9 @@ def get_metadata(experiment_id, mapobject_type_id):
         mapobject_type_name = mapobject_type.name
 
     def generate_feature_matrix(mapobject_type_id):
+        data = StringIO()
+        w = csv.writer(data)
+
         with tm.utils.ExperimentSession(experiment_id) as session:
 
             results = _get_matching_layers(session, tpoint)
@@ -444,14 +468,24 @@ def get_metadata(experiment_id, mapobject_type_id):
                 filter_by(ref_type=tm.Site.__name__).\
                 one()
 
-        yield ','.join(metadata_names + tool_result_names) + '\n'
+        w.writerow(tuple(metadata_names + tool_result_names))
+        yield data.getvalue()
+        data.seek(0)
+        data.truncate(0)
+
         for site_id in site_lut:
+            logger.debug('collect feature values at site %d', site_id)
             with tm.utils.ExperimentSession(experiment_id) as session:
                 mapobjects = _get_mapobjects_at_site(
                     session, mapobject_type_id, site_mapobject_type.id,
                     site_id, layer_lut.keys()
                 )
                 mapobject_ids = [m.id for m in mapobjects]
+
+                if not mapobject_ids:
+                    logger.warn('no mapobjects found at site %d', site_id)
+                    continue
+
                 border_segmentations = _get_border_mapobjects_at_site(
                     session, mapobject_ids, site_mapobject_type.id, site_id
                 )
@@ -492,11 +526,13 @@ def get_metadata(experiment_id, mapobject_type_id):
                         metadata_values += [
                             vals[k] for k in sorted(vals, key=lambda k: int(k))
                         ]
-                    rows.append(','.join(metadata_values))
-                yield '\n'.join(rows) + '\n'
+                    w.writerow(tuple(metadata_values))
+                yield data.getvalue()
+                data.seek(0)
+                data.truncate(0)
 
     return Response(
-        generate_feature_matrix(mapobject_type_id),
+        stream_with_context(generate_feature_matrix(mapobject_type_id)),
         mimetype='text/csv',
         headers={
             'Content-Disposition': 'attachment; filename={filename}'.format(
