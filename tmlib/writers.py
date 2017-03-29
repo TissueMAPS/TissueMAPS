@@ -319,7 +319,7 @@ class DatasetWriter(Writer):
         else:
             return False
 
-    def write(self, path, data, compression=None):
+    def write(self, path, data, compression=False):
         '''Creates a dataset and writes data to it.
 
         Parameters
@@ -328,16 +328,14 @@ class DatasetWriter(Writer):
             absolute path to the dataset within the file
         data:
             dataset; will be put through ``numpy.array(data)``
-        compression: str, optional
-            compression filter, either ``"lzf"`` or ``"zip"``
-            (default: ``None``)
+        compression: bool, optional
+            whether zip compression filter should be applied
+            (default: ``False``)
 
         Raises
         ------
         IOError
             when `path` already exists
-        ValueError
-            when `compression` is unknown
 
         Note
         ----
@@ -383,22 +381,12 @@ class DatasetWriter(Writer):
                         % (path, self.filename)
                     )
             else:
-                if compression is None:
-                    self._stream.create_dataset(path, data=data)
+                if compression:
+                    self._stream.create_dataset(
+                        path, data=data, compression='gzip'
+                    )
                 else:
-                    if compression == 'lzf':
-                        self._stream.create_dataset(
-                            path, data=data, compression='lzf'
-                        )
-                    elif compression == 'zip':
-                        self._stream.create_dataset(
-                            path, data=data, compression='gzip'
-                        )
-                    else:
-                        raise ValueError(
-                            'Unknown compression filter "%s"' % compression
-                        )
-
+                    self._stream.create_dataset(path, data=data)
 
     def write_subset(self, path, data,
                      index=None, row_index=None, column_index=None):

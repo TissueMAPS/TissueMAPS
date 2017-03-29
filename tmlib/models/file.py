@@ -325,7 +325,7 @@ class ChannelImageFile(FileModel, DateMixIn):
             pixels data that should be stored in the image file
         '''
         with DatasetWriter(self.location, truncate=True) as f:
-            f.write('array', image.array)
+            f.write('array', image.array, compression=True)
 
     @hybrid_property
     def location(self):
