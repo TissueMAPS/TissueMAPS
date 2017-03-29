@@ -1644,7 +1644,7 @@ class TmClient(HttpClient):
             ),
             params
         )
-        res = self._session.get(url)
+        res = self._session.get(url, stream=True)
         res.raise_for_status()
         return res
 
@@ -1737,6 +1737,11 @@ class TmClient(HttpClient):
         --------
         :func:`tmserver.api.feature.get_feature_values`
         :class:`tmlib.models.feature.FeatureValues`
+
+        Warning
+        -------
+        This will try to load all data into memory, which may be problematic
+        for large datasets.
         '''
         res = self._download_object_feature_values(
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
@@ -1779,16 +1784,38 @@ class TmClient(HttpClient):
             tpoint
         )
         filename = self._extract_filename_from_headers(res.headers)
-        data = res.content
-        self._write_file(directory, filename, data)
+        filepath = os.path.join(directory, filename)
+        logger.info('write feature values to file: %s', filepath)
+        chunks = res.iter_content()
+        first_line = next(chunks)
+
+        with open(filepath, 'w') as f:
+            logger.debug('write first line')
+            f.write(first_line)
+
+        with open(filepath, 'a') as f:
+            for i, c in enumerate(chunks):
+                logger.debug('write chunk #%d', i)
+                f.write(c)
 
         res = self._download_object_metadata(
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
             tpoint
         )
         filename = self._extract_filename_from_headers(res.headers)
-        data = res.content
-        self._write_file(directory, filename, data)
+        filepath = os.path.join(directory, filename)
+        logger.info('write metadata to file: %s', filepath)
+        chunks = res.iter_content()
+        first_line = next(chunks)
+
+        with open(filepath, 'w') as f:
+            logger.debug('write first line')
+            f.write(first_line)
+
+        with open(filepath, 'a') as f:
+            for i, c in enumerate(chunks):
+                logger.debug('write chunk #%d', i)
+                f.write(c)
 
     def _download_object_metadata(self, mapobject_type_name, plate_name, well_name,
             well_pos_y, well_pos_x, tpoint):
@@ -1815,7 +1842,7 @@ class TmClient(HttpClient):
             ),
             params
         )
-        res = self._session.get(url)
+        res = self._session.get(url, stream=True)
         res.raise_for_status()
         return res
 
