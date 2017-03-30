@@ -119,7 +119,6 @@ setuptools.setup(
     scripts=find_scripts(),
     packages=setuptools.find_packages(),
     include_package_data=True,
-    data_files=find_data_files(),
     install_requires=[
        'ansible>=2.2.1',
        'ansible-container>=0.3.0',
