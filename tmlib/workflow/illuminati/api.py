@@ -621,10 +621,10 @@ class PyramidBuilder(ClusterRoutines):
                     # defines the exact boundary of the objects. This is
                     # crucial for testing whether other objects intersect with
                     # the border.
-                    ul = (obj.offset[1] - 1, -1 * obj.offset[0] + 1)
-                    ll = (ul[0] + obj.image_size[1] - 1, ul[1] + 1)
-                    ur = (ul[0] - 1, ul[1] - obj.image_size[0] + 1)
-                    lr = (ll[0] - 1, ul[1] - obj.image_size[0] + 1)
+                    ul = (obj.offset[1] + 1, -1 * (obj.offset[0] + 1))
+                    ll = (ul[0], ul[1] - (obj.image_size[0] - 3))
+                    ur = (ul[0] + obj.image_size[1] - 3, ul[1])
+                    lr = (ll[0] + obj.image_size[1] - 3, ll[1])
                     # Closed circle with coordinates sorted counter-clockwise
                     contour = np.array([ur, ul, ll, lr, ur])
                     polygon = shapely.geometry.Polygon(contour)
