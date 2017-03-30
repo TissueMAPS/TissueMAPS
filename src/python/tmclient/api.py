@@ -1793,11 +1793,11 @@ class TmClient(HttpClient):
         chunks = res.iter_content()
         first_line = next(chunks)
 
-        with open(filepath, 'w') as f:
+        with open(filepath, 'wb') as f:
             logger.debug('write first line')
             f.write(first_line)
 
-        with open(filepath, 'a') as f:
+        with open(filepath, 'ab') as f:
             for i, c in enumerate(chunks):
                 logger.debug('write chunk #%d', i)
                 f.write(c)
@@ -1812,11 +1812,11 @@ class TmClient(HttpClient):
         chunks = res.iter_content()
         first_line = next(chunks)
 
-        with open(filepath, 'w') as f:
+        with open(filepath, 'wb') as f:
             logger.debug('write first line')
             f.write(first_line)
 
-        with open(filepath, 'a') as f:
+        with open(filepath, 'ab') as f:
             for i, c in enumerate(chunks):
                 logger.debug('write chunk #%d', i)
                 f.write(c)
