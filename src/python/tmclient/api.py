@@ -24,8 +24,12 @@ import cv2
 import glob
 import pandas as pd
 import numpy as np
-from cStringIO import StringIO
 from prettytable import PrettyTable
+try:
+    # NOTE: Python3 no longer has the cStringIO module
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from tmclient.base import HttpClient
 from tmclient.log import configure_logging
@@ -91,7 +95,7 @@ class TmClient(HttpClient):
         method = getattr(self, method_name)
         kwargs = dict()
         valid_arg_names = inspect.getargspec(method).args
-        for arg_name, arg_value in args.iteritems():
+        for arg_name, arg_value in args.items():
             if arg_name in valid_arg_names:
                 kwargs[arg_name] = arg_value
         method(**kwargs)

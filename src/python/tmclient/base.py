@@ -14,9 +14,12 @@
 import os
 import yaml
 import logging
-import urllib
 import requests
 from abc import ABCMeta
+try:
+    from urllib import urlencode
+except ImportError:
+    from urllib.parse import urlencode
 
 
 logger = logging.getLogger(__name__)
@@ -70,7 +73,7 @@ class HttpClient(object):
         if not params:
             logger.debug('url: %s', url)
             return url
-        url = '{url}?{params}'.format(url=url, params=urllib.urlencode(params))
+        url = '{url}?{params}'.format(url=url, params=urlencode(params))
         logger.debug('url: %s', url)
         return url
 
