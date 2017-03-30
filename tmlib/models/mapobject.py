@@ -401,6 +401,8 @@ class Mapobject(ExperimentModel):
             'mapobject_type_id': mapobject_type_id,
             'ref_id': ref_id
         })
+        # TODO: Apparently, this doesn't insert in some cases???
+        # INSERT INTO teams VALUES (...) RETURNING id INTO mapobject_id;
         return mapobject_id
 
     @classmethod
@@ -782,6 +784,14 @@ class SegmentationLayer(ExperimentModel):
         session = Session.object_session(self)
 
         maxzoom = self.mapobject_type.experiment.pyramid_depth - 1
+        minx, miny, maxx, maxy = self.get_tile_bounding_box(x, y, z, maxzoom)
+        tile = (
+            'POLYGON(('
+                '{maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, '
+                '{maxx} {maxy}'
+            '))'.format(minx=minx, maxx=maxx, miny=miny, maxy=maxy)
+        )
+
         do_simplify = self.centroid_thresh <= z < self.polygon_thresh
         do_nothing = z < self.centroid_thresh
         if do_nothing:
@@ -793,6 +803,11 @@ class SegmentationLayer(ExperimentModel):
                 MapobjectSegmentation.mapobject_id,
                 MapobjectSegmentation.geom_centroid.ST_AsGeoJSON()
             )
+            outlines = query.filter(
+                MapobjectSegmentation.segmentation_layer_id == self.id,
+                MapobjectSegmentation.geom_centroid.ST_Intersects(tile)
+            ).\
+            all()
         else:
             logger.debug('represent objects by polygons')
             tolerance = (maxzoom - z) ** 2 + 1
@@ -802,20 +817,11 @@ class SegmentationLayer(ExperimentModel):
                 MapobjectSegmentation.geom_polygon.
                 ST_SimplifyPreserveTopology(tolerance).ST_AsGeoJSON()
             )
-
-        minx, miny, maxx, maxy = self.get_tile_bounding_box(x, y, z, maxzoom)
-        tile = (
-            'POLYGON(('
-                '{maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, '
-                '{maxx} {maxy}'
-            '))'.format(minx=minx, maxx=maxx, miny=miny, maxy=maxy)
-        )
-
-        outlines = query.filter(
-            MapobjectSegmentation.segmentation_layer_id == self.id,
-            MapobjectSegmentation.geom_centroid.ST_Intersects(tile)
-        ).\
-        all()
+            outlines = query.filter(
+                MapobjectSegmentation.segmentation_layer_id == self.id,
+                MapobjectSegmentation.geom_polygon.ST_Intersects(tile)
+            ).\
+            all()
 
         if len(outlines) == 0:
             logger.warn(
