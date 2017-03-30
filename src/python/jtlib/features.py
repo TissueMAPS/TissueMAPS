@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import mahotas as mh
 import logging
+import collections
 from abc import ABCMeta
 from abc import abstractproperty
 from abc import abstractmethod
@@ -160,7 +161,7 @@ class Features(object):
             *p* is the number of features times the number of aggregate
             statistics computed for each feature
         '''
-        values = dict()
+        values = collections.defaultdict(list)
         features = self.extract()
         ref_object_ids = np.unique(ref_label_image)[1:]
         for ref_label in ref_object_ids:
@@ -170,15 +171,17 @@ class Features(object):
             if len(labels) == 0:
                 for name in features.columns:
                     for stat in self._aggregate_statistics.keys():
-                        values['%s_%s' % (stat, name)] = np.nan
+                        values['%s_%s' % (stat, name)].append(np.nan)
             else:
                 for name, vals in features.loc[labels, :].iteritems():
                     if vals.empty:
                         for stat in self._aggregate_statistics.keys:
-                            values['%s_%s' % (stat, name)] = np.nan
+                            values['%s_%s' % (stat, name)].append(np.nan)
                     else:
                         for stat, func in self._aggregate_statistics.iteritems():
-                            values['%s_%s' % (stat, name)] = float(func(vals))
+                            values['%s_%s' % (stat, name)].append(
+                                float(func(vals))
+                            )
         return pd.DataFrame(values, index=ref_object_ids)
 
     @abstractmethod
