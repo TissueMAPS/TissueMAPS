@@ -186,11 +186,11 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
 
         # We need to run elasticluster playbooks only in case groups
         # are provided that are not supported by tmsetup.
-        run_elasticluster = False
+        use_elasticluster = False
         for group in groups_to_deploy.keys():
             if group not in SUPPORTED_TM_GROUPS:
-                run_elasticluster = True
-        if run_elasticluster:
+                use_elasticluster = True
+        if use_elasticluster:
             # NOTE: This playbook also configures SSH host-based authentication,
             # so it's a bad idea to run this only on a subset of groups!
             elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
@@ -199,7 +199,6 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
             cmd = _build_ansible_vm_command(
                 verbosity, playbook, variables, set(groups_to_deploy.keys())
             )
-            cmd.extend(['-e', 'ansible_become=yes'])
             commands.append(cmd)
 
         # Run the TissueMAPS-specific playbooks implemented in tmsetup
@@ -209,7 +208,6 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
         cmd = _build_ansible_vm_command(
             verbosity, playbook, variables, set(groups_to_deploy.keys())
         )
-        cmd.extend(['-e', 'ansible_become=yes'])
         commands.append(cmd)
 
         for group, plays in groups_to_deploy.iteritems():
@@ -236,11 +234,11 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict(), hosts=set()
         verbosity -= 1
         if verbosity > 0:
             cmd.append('-%s' % (verbosity * 'v'))
-    # It's important that these strings get quoted for security reasons.
     if variables:
         cmd.extend(['-e', '%s' % ','.join(var_strings)])
     if hosts:
         cmd.extend(['--limit', '%s' % ','.join(hosts)])
+    cmd.extend(['-e', 'ansible_become=yes'])
     return cmd
 
 
