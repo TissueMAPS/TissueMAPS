@@ -122,7 +122,7 @@ setuptools.setup(
     data_files=find_data_files(),
     install_requires=[
        'ansible>=2.2.1',
-       'container>=0.3.0',
+       'ansible-container>=0.3.0',
        'apache-libcloud>=1.3.0',
        'boto3>=1.4.1',
        'docker-py>=1.10.6',
