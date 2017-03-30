@@ -32,7 +32,7 @@ SETUP_FILE = os.path.join(CONFIG_DIR, 'setup.yml')
 logger = logging.getLogger(__name__)
 
 
-class SetupSection(object):
+class _SetupSection(object):
 
     '''Abstract base class for a section of the `TissueMAPS` setup description.
     '''
@@ -138,7 +138,7 @@ class SetupSection(object):
         )
 
 
-class CloudSection(SetupSection):
+class CloudSection(_SetupSection):
 
     '''Class for the section of the `TissueMAPS` setup description that provides
     information about the cloud infrastructure where the application should be
@@ -321,7 +321,7 @@ class CloudSection(SetupSection):
         self._region = value
 
 
-class ArchitectureSection(SetupSection):
+class ArchitectureSection(_SetupSection):
 
     '''Class for the section of the `TissueMAPS` setup description that provides
     information about the cluster architecture, i.e. the layout of computational
@@ -360,7 +360,7 @@ class ArchitectureSection(SetupSection):
             self._clusters.append(ClusterSection(item))
 
 
-class ClusterSection(SetupSection):
+class ClusterSection(_SetupSection):
 
     '''Class for the section of the `TissueMAPS` setup description that provides
     information about an individual cluster of virtual machine instances.
@@ -399,7 +399,7 @@ class ClusterSection(SetupSection):
             self._node_types.append(ClusterNodeTypeSection(item))
 
 
-class ClusterNodeTypeSection(SetupSection):
+class ClusterNodeTypeSection(_SetupSection):
 
     '''Class for the section of the `TissueMAPS` setup description that provides
     information about a particular set of virtual machine instances belonging
@@ -462,7 +462,7 @@ class ClusterNodeTypeSection(SetupSection):
             self._groups.append(AnsibleGroupSection(item))
 
 
-class AnsibleGroupSection(SetupSection):
+class AnsibleGroupSection(_SetupSection):
 
     _OPTIONAL_ATTRS = {'playbook', 'vars'}
 
@@ -516,7 +516,7 @@ class AnsibleGroupSection(SetupSection):
             self._vars = value
 
 
-class AnsibleHostVariableSection(SetupSection):
+class AnsibleHostVariableSection(_SetupSection):
 
     '''Class for the section of the `TissueMAPS` setup description that provides
     variables that determine how virtual machine instances belonging to the
