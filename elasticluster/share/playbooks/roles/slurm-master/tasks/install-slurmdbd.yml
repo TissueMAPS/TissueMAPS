@@ -1,0 +1,35 @@
+---
+
+# deploy config file before we install the daemon, so it will already
+# start with the correct config
+- name: Deploy SLURMDBD configuration
+  template:
+    src=slurmdbd.conf.j2
+    dest=/etc/slurm/slurmdbd.conf
+    owner=root
+    group=root
+    mode=0444
+  notify: restart slurmdbd
+  tags:
+    - slurm
+    - slurmdbd
+    - config
+
+
+- name: Install SLURM DBD packages
+  package:
+    pkg='{{item}}'
+    state=latest
+  with_items: '{{ slurmdbd_packages }}'
+
+
+- name: Ensure `slurmdbd` is running
+  tags: 
+    - slurm
+    - slurmdbd
+  service:
+    name='{{item}}'
+    enabled=yes
+    state=started
+  with_items:
+    - '{{slurmdbd_service_name}}'

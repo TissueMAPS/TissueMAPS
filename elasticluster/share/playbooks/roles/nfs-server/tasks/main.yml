@@ -1,0 +1,66 @@
+---
+#
+# Install an NFSv4 server
+#
+
+- name: Load distribution-specific parameters
+  include: 'init-{{ansible_os_family}}.yml'
+  tags:
+    - nfs
+    - nfs-server
+
+- name: install NFS server software
+  tags:
+    - nfs
+    - nfs-server
+  package:
+    pkg='{{item}}'
+    state=present
+  with_items: '{{nfs_server_packages}}'
+
+
+# exports need to be there before attempting to install/start the
+# server, otherwise the service startup script might refuse to start
+# the NFS server
+- name: Export directories
+  tags:
+    - nfs
+    - nfs-server
+  nfsexport:
+    path: '{{item.path}}'
+    clients: '{{item.clients}}'
+    options: '{{item.options|default("rw,no_root_squash,async,no_subtree_check,crossmnt")}}'
+    dest: '/etc/exports'
+    state: exported
+  with_items: '{{NFS_EXPORTS}}'
+
+
+- name: Ensure NFS server is running (Debian 8 "jessie")
+  tags:
+    - nfs
+    - nfs-server
+  command: |
+     env PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin _SYSTEMCTL_SKIP_REDIRECT=true /etc/init.d/nfs-kernel-server start
+  args:
+    chdir: '/'
+  when: 'is_debian_8'
+
+
+- name: Ensure NFS server is running
+  tags:
+    - nfs
+    - nfs-server
+  service:
+    name: '{{item}}'
+    enabled: yes
+    state: '{{_nfs_server_started_state}}'
+  with_items: '{{nfs_server_services}}'
+  when: 'not {{is_debian_8}}'
+
+
+- name: Reload NFS exports file
+  tags:
+    - nfs
+    - nfs-server
+  command:
+    exportfs -r

@@ -1,0 +1,83 @@
+---
+# This task is used to set very simple firewall rules, allowing
+# everything from a set of hosts and denying everything but ssh
+# connections from any other host.
+#
+# Mandatory variables:
+#
+#
+# Optional variables:
+#
+# trusted_hosts:  list of ip addresses. By default, all the hosts in
+#                 the group `all`.
+#
+# default_accept: if equal to `1` or `true`, all connection *from
+#                 internet* are accepted (but not from the internal
+#
+
+- name: Load distribution-specific data
+  include: 'init-{{ansible_os_family}}.yml'
+  tags: iptables
+
+
+- name: Temporarily disable SELinux (RHEL-family)
+  when: is_rhel_compatible
+  selinux:
+    policy=targeted
+    state=permissive
+
+
+- name: Install iptables packages
+  tags: iptables
+  package:
+    name={{item}}
+    state=present
+  with_items: '{{ packages }}'
+
+
+- name: Deploy netfilter rules
+  tags:
+    - iptables
+  template:
+    dest: "{{configfile[item]}}"
+    src: "{{item}}.j2"
+    owner: root
+    group: root
+    mode: 0444
+  become: yes
+  become_user: root
+  notify: '{{reload}}'
+  with_items:
+    - 'etc/iptables/rules.v4'
+    - 'etc/iptables/rules.v6'
+
+
+- name: Ensure netfilter rules are loaded at boot
+  tags:
+    - iptables
+  service:
+    name: '{{service[item]}}'
+    enabled: yes
+    state: started
+  become: yes
+  become_user: root
+  with_items:
+    - 'iptables'
+    - 'ip6tables'
+
+
+- name: Possibly reload iptables
+  meta: flush_handlers
+
+
+- name: Enable SELinux (RHEL-family)
+  when: is_rhel_compatible
+  selinux:
+    policy=targeted
+    state=enforcing
+
+
+- name: Restore SELinux labels on `/` (RHEL-family)
+  command: |
+    restorecon -r /
+  when: 'is_rhel_compatible'
