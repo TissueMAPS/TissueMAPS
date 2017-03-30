@@ -1,4 +1,3 @@
 recursive-include etc *
 recursive-include tmsetup/share *
-recursive-include elasticluster/share/playbooks *
 include tmsetup
