@@ -135,12 +135,12 @@ def _build_ansible_container_command(action, verbosity,
                 # ansible-container.
                 cmd.append('%s' % var_string)
     elif action == 'push':
-        # TODO: argument user or organization
+        # TODO: pass user/organization and tag as arguments
         logger.info('pushing container images to Docker Hub')
         # NOTE: This works only with write access to the "tissuemaps"
         # organization on Docker Hub.
         cmd.extend([
-            'push', '--push-to', 'tissuemaps',
+            'push', '--push-to', 'tissuemaps', '--tag', 'latest',
             '--roles-path', os.path.abspath(roles_dir)
         ])
     else:

@@ -149,6 +149,16 @@
     - web-server
     - nginx
 
+- name: Change nginx keep alive timeout
+  lineinfile:
+    dest: /etc/nginx/nginx.conf
+    state: present
+    regexp: 'keepalive_timeout\s+.*;'
+    line: 'keepalive_timeout 300s;'
+  tags:
+    - web-server
+    - nginx
+
 # We may want to run nginx as a non-root user, e.g. within a container.
 - name: Give user permission to nginx directories
   file:

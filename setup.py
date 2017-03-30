@@ -3,11 +3,8 @@
 ''' distribute- and pip-enabled setup.py '''
 from __future__ import print_function
 import os
-import re
 import sys
-import glob
 import logging
-import shutil
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +64,21 @@ def find_scripts():
     return scripts
 
 
+def find_data_files():
+    elasticluster_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'elasticluster'
+    )
+    elasticluster_playbooks_path = os.path.join(
+        elasticluster_path, 'elasticluster', 'share', 'playbooks'
+    )
+    root_path = os.path.join('tmsetup', 'share', 'playbooks', 'elasticluster')
+    files = list()
+    for d, _, f in os.walk(elasticluster_playbooks_path):
+        path = os.path.relpath(d, elasticluster_playbooks_path)
+        files.append((os.path.join(root_path, path), os.path.join(d, f)))
+    return files
+
+
 def get_version():
     logger.info('get package version')
     src_path = os.path.join(
@@ -106,9 +118,10 @@ setuptools.setup(
     scripts=find_scripts(),
     packages=setuptools.find_packages(),
     include_package_data=True,
+    data_files=find_data_files(),
     install_requires=[
        'ansible>=2.2.1',
-       'ansible-container==0.3.0rc0',
+       'container>=0.3.0',
        'apache-libcloud>=1.3.0',
        'boto3>=1.4.1',
        'docker-py>=1.10.6',
@@ -120,15 +133,6 @@ setuptools.setup(
        'requests >= 2.6.1, != 2.11.0, < 2.12',
        'shade>=1.12.1',
        'whichcraft>=0.4.0'
-    ],
-    extras_require={
-        'cluster': [
-            'elasticluster>=1.3dev'
-        ]
-    },
-    dependency_links=[
-        'https://github.com/gc3-uzh-ch/elasticluster/tarball/master#egg=elasticluster-1.3.dev',
-        'https://github.com/ansible/ansible-container/tarball/develop#egg=container-0.3.0-pre'
     ]
 )
 

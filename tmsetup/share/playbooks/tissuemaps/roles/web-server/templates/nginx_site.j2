@@ -19,5 +19,8 @@ server {
     location @proxy {
         include uwsgi_params;
         uwsgi_pass {{ app_host }}:{{ app_port }};
+        # uwsgi may take more time to process requests
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
     }
 }
