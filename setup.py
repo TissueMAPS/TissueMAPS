@@ -72,11 +72,12 @@ def find_data_files():
         elasticluster_path, 'elasticluster', 'share', 'playbooks'
     )
     root_path = os.path.join('tmsetup', 'share', 'playbooks', 'elasticluster')
-    files = list()
-    for d, _, f in os.walk(elasticluster_playbooks_path):
-        path = os.path.relpath(d, elasticluster_playbooks_path)
-        files.append((os.path.join(root_path, path), os.path.join(d, f)))
-    return files
+    data_files = list()
+    for d, _, files in os.walk(elasticluster_playbooks_path):
+        rel_path = os.path.relpath(d, elasticluster_playbooks_path)
+        path = os.path.join(root_path, rel_path)
+        data_files.append((path, [os.path.join(d, f) for f in files]))
+    return data_files
 
 
 def get_version():
