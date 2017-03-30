@@ -64,22 +64,6 @@ def find_scripts():
     return scripts
 
 
-def find_data_files():
-    elasticluster_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'elasticluster'
-    )
-    elasticluster_playbooks_path = os.path.join(
-        elasticluster_path, 'elasticluster', 'share', 'playbooks'
-    )
-    root_path = os.path.join('tmsetup', 'share', 'playbooks', 'elasticluster')
-    data_files = list()
-    for d, _, files in os.walk(elasticluster_playbooks_path):
-        rel_path = os.path.relpath(d, elasticluster_playbooks_path)
-        path = os.path.join(root_path, rel_path)
-        data_files.append((path, [os.path.join(d, f) for f in files]))
-    return data_files
-
-
 def get_version():
     logger.info('get package version')
     src_path = os.path.join(
