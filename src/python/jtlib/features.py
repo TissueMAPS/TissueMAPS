@@ -167,7 +167,7 @@ class Features(object):
         for ref_label in ref_object_ids:
             labels = np.unique(self.label_image[ref_label_image == ref_label])
             labels = labels[labels > 0]
-            values['Count'] = len(labels)
+            values['Count'].append(len(labels))
             if len(labels) == 0:
                 for name in features.columns:
                     for stat in self._aggregate_statistics.keys():
