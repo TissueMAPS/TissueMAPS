@@ -72,7 +72,9 @@ def _build_container_commands(action, verbosity):
     playbooks_dir = _get_playbooks_dir('tissuemaps')
     roles_dir = os.path.join(playbooks_dir, 'roles')
     vars_dir = os.path.join(playbooks_dir, 'group_vars')
-    project_dir = os.path.join(playbooks_dir, '../container/projects/tissuemaps')
+    project_dir = os.path.join(
+        playbooks_dir, '../../container/projects/tissuemaps'
+    )
     cmd = _build_ansible_container_command(
         action, verbosity, project_dir, roles_dir, vars_dir
     )
