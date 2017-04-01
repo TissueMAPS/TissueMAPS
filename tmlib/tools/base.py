@@ -148,7 +148,8 @@ class Tool(object):
         df.rename(columns=column_map, inplace=True)
         null_indices = self.get_features_with_null_values(df)
         for name, count in null_indices:
-            logger.warn('feature "%s" contains %d null values', name, count)
+            if count > 0:
+                logger.warn('feature "%s" contains %d null values', name, count)
         return df
 
     def get_features_with_null_values(self, feature_data):
