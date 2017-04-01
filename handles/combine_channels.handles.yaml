@@ -31,7 +31,7 @@ input:
 output:
 
     - name: combined_image
-      type: IntensityMask
+      type: IntensityImage
       key: combine_channels.combined_image
       help: Combined grayscale image.
 
