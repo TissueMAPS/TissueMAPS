@@ -118,8 +118,8 @@ Distributed tables must therefore be modified using
 :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`.
 There are additional *SQL* features that are not supported for distributed
 tables. Please refer to the *Citus* documentation for more information on how to
-`query <https://docs.citusdata.com/en/latest/dist_tables/querying.html>`
-and `modify <https://docs.citusdata.com/en/latest/dist_tables/dml.html>` them.
+`query <https://docs.citusdata.com/en/latest/dist_tables/querying.html>`_
+and `modify <https://docs.citusdata.com/en/latest/dist_tables/dml.html>`_ them.
 '''
 
 # NOTE: At the moment we use a separate schema for each experiment and then
@@ -131,6 +131,8 @@ and `modify <https://docs.citusdata.com/en/latest/dist_tables/dml.html>` them.
 # https://docs.citusdata.com/en/latest/sharding/data_modeling.html#determining-the-data-model
 # https://docs.citusdata.com/en/latest/migration/transitioning.html#transitioning-mt
 # https://docs.citusdata.com/en/latest/sharding/colocation.html#table-co-location
+# This would, however, result in poorer performance for processing a single
+# experiment on the cluster.
 
 from tmlib.models.base import MainModel, ExperimentModel
 from tmlib.models.utils import MainSession, ExperimentSession
