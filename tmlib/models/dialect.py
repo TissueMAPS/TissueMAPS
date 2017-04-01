@@ -55,9 +55,16 @@ def _compile_create_table(element, compiler, **kwargs):
             sql = 'SET citus.shard_replication_factor = 1;\n'
             sql += compiler.visit_create_table(element)
             # More aggressive autovacuum for large tables
-            sql += ';\nSELECT create_distributed_table(\'%s.%s\', \'%s\');' % (
-                table.schema, table.name, distribution_column
-            )
+            if table.info['colocated_table']:
+                distributed_sql = "'{s}.{t}','{c}',colocate_with=>'{s}.{t2}'".format(
+                    s=table.schema, t=table.name, c=distribution_column,
+                    t2=table.info['colocated_table']
+                )
+            else:
+                distributed_sql = "'{s}.{t}', '{c}'".format(
+                    s=table.schema, t=table.name, c=distribution_column
+                )
+            sql += ';\nSELECT create_distributed_table(%s);' % (distributed_sql)
         elif distribute_by_replication:
             # The first column will be used as partition column and must be
             # included in UNIQUE and PRIMARY KEY constraints.

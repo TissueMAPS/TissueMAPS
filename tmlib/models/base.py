@@ -54,6 +54,9 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
         distribute_by_replication = (
             d.pop('__distribute_by_replication__', False)
         )
+        colocated_table = (
+            d.pop('__colocate_with__', None)
+        )
         DeclarativeMeta.__init__(self, name, bases, d)
         if hasattr(self, '__table__'):
             if distribution_column is not None:
@@ -65,6 +68,7 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
                         % (distribution_column, self.__table__.name)
                     )
                 self.__table__.info['distribute_by_hash'] = distribution_column
+                self.__table__.info['colocated_table'] = colocated_table
                 self.is_distributed = True
             elif distribute_by_replication:
                 self.__table__.info['distribute_by_replication'] = True
