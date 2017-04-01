@@ -2122,7 +2122,7 @@ class TmClient(HttpClient):
             add_row_recursively(status, t, 0)
         print(t)
 
-    def _get_job_id(self, step_name, name):
+    def _get_workflow_job_id(self, step_name, name):
         logger.debug(
             'get job ID for experiment "%s" and job "%s"',
             self.experiment_name, name
@@ -2153,11 +2153,11 @@ class TmClient(HttpClient):
             sys.exit(1)
         return data[0]['id']
 
-    def _show_job_log(self, step_name, name):
+    def _show_workflow_job_log(self, step_name, name):
         logger.info(
-            'get log output for job "%s" of step "%s"', name, step_name
+            'get log output for job "%s" of workflow step "%s"', name, step_name
         )
-        job_id = self._get_job_id(step_name, name)
+        job_id = self._get_workflow_job_id(step_name, name)
         url = self._build_api_url(
             '/experiments/{experiment_id}/workflow/jobs/{job_id}/log'.format(
                 experiment_id=self._experiment_id, job_id=job_id
@@ -2171,8 +2171,8 @@ class TmClient(HttpClient):
         print('\nSTANDARD ERROR\n==============')
         print(data['stderr'])
 
-    def download_jterator_project_description(self):
-        '''Downloads the *jterator* project description.
+    def download_jterator_project(self):
+        '''Downloads the *jterator* project.
 
         Returns
         -------
@@ -2198,9 +2198,8 @@ class TmClient(HttpClient):
         res.raise_for_status()
         return res.json()['data']
 
-    def upload_jterator_project_description(self, pipeline_description,
-            handles_descriptions):
-        '''Uploads a *jterator* project description.
+    def upload_jterator_project(self, pipeline_description, handles_descriptions):
+        '''Uploads a *jterator* project.
 
         Parameters
         ----------
@@ -2228,8 +2227,8 @@ class TmClient(HttpClient):
         res = self._session.put(url, json=content)
         res.raise_for_status()
 
-    def download_jterator_project_description_files(self, directory):
-        '''Downloads the *jterator* project decription and stores it
+    def download_jterator_project_files(self, directory):
+        '''Downloads the *jterator* project and stores it
         on disk in YAML format. The pipeline description will be stored
         in a ``pipeline.yaml`` file in `directory` and each handle description
         will be stored in a ``*handles.yaml`` file and placed into a ``handles``
@@ -2280,7 +2279,7 @@ class TmClient(HttpClient):
                 )
                 f.write(content)
 
-    def upload_jterator_project_description_files(self, directory):
+    def upload_jterator_project_description(self, directory):
         '''Uploads the *jterator* project description from files on disk in
         YAML format. It expects a ``pipeline.yaml`` file in `directory` and
         optionally ``*handles.yaml`` files in a ``handles`` subfolder of
@@ -2332,3 +2331,176 @@ class TmClient(HttpClient):
         self.upload_jterator_project_description(
             pipeline_description, handles_descriptions
         )
+
+    def _get_tool_job_id(self, name):
+        logger.debug(
+            'get tool result ID for experiment "%s" and result "%s"',
+            self.experiment_name, name
+        )
+        params = {'name': name}
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/tools/results'.format(
+                experiment_id=self._experiment_id
+            ),
+            params
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        data = res.json()['data']
+        if len(data) > 1:
+            logger.error(
+                'more than one tool result found with name "{0}"'.format(name)
+            )
+            sys.exit(1)
+        elif len(data) == 0:
+            logger.error(
+                'no tool results found with name "{0}"'.format(name)
+            )
+            sys.exit(1)
+        return data[0]['id']
+
+    def get_tool_results(self):
+        '''Gets tool results.
+
+        Returns
+        -------
+        List[Dict[str, str]]
+            information about each tool result
+
+        See also
+        --------
+        :func:`tmserver.api.tools.get_tool_results`
+        :class:`tmlib.models.result.ToolResult`
+        '''
+        logger.info('get tool results of experiment "%s"', self.experiment_name)
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/tools/results'.format(
+                experiment_id=self._experiment_id
+            )
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        return res.json()['data']
+
+    def _list_tool_results(self):
+        results = self.get_tool_results()
+        t = PrettyTable(['ID', 'Name'])
+        t.align['Name'] = 'l'
+        t.padding_width = 1
+        for r in results:
+            t.add_row([r['id'], r['name']])
+        print(t)
+
+    def get_tools_status(self, tool_name=None):
+        '''Gets the status of tool jobs.
+
+        Parameters
+        ----------
+        tool_name: str, optional
+            filter jobs by tool name
+
+        Returns
+        -------
+        dict
+            status information about tool jobs
+
+        See also
+        --------
+        :func:`tmserver.api.tools.get_tools_status`
+        :func:`tmlib.workflow.utils.get_task_status`
+        :class:`tmlib.models.submission.Task`
+        '''
+        logger.info(
+            'get status for tools of experiment "%s"', self.experiment_name
+        )
+        params = dict()
+        if tool_name is not None:
+            params['tool_name'] = tool_name
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/tools/jobs'.format(
+                experiment_id=self._experiment_id
+            ),
+            params
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        return res.json()['data']
+
+    def _get_tool_job_id(self, name, submission_id):
+        logger.debug(
+            'get job ID for experiment "%s", job "%s" and submission %d',
+            self.experiment_name, name, submission_id
+        )
+        params = {'name': name, 'submission_id': submission_id}
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/tools/jobs'.format(
+                experiment_id=self._experiment_id
+            ),
+            params
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        data = res.json()['data']
+        if len(data) > 1:
+            logger.error(
+                'more than one job found with name "{0}" for submission {1}'.format(
+                    name, submission_id
+                )
+            )
+            sys.exit(1)
+        elif len(data) == 0:
+            logger.error(
+                'no job found with name "{0}" for submission {1}'.format(
+                    name, submission_id
+                )
+            )
+            sys.exit(1)
+        return data[0]['id']
+
+    def _show_tools_status(self, tool_name):
+        status = self.get_tools_status(tool_name)
+
+        t = PrettyTable([
+            'ID', 'Name', 'Submission Number', 'Submission Date',
+            'State', 'ExitCode',
+            'Time (HH:MM:SS)', 'CPU Time (HH:MM:SS)', 'Memory (MB)'
+        ])
+        t.align['ID'] = 'l'
+        t.align['Name'] = 'l'
+        t.align['Submission Number'] = 'r'
+        t.align['Submission Date'] = 'l'
+        t.align['State'] = 'l'
+        t.align['Done (%)'] = 'r'
+        t.align['Memory (MB)'] = 'r'
+        t.padding_width = 1
+        for data in status:
+            t.add_row([
+                data['id'],
+                data['name'],
+                data['submission_id'],
+                data['submitted_at'],
+                data['state'],
+                data['exitcode'] if data['exitcode'] is not None else '',
+                data['time'] if data['time'] is not None else '',
+                data['cpu_time'] if data['cpu_time'] is not None else '',
+                data['memory'] if data['memory'] is not None else ''
+            ])
+        print(t)
+
+    def _show_tool_job_log(self, submission_id, name):
+        logger.info(
+            'get log output for job "%s" of submission %d', name, submission_id
+        )
+        job_id = self._get_tool_job_id(name, submission_id)
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/tools/jobs/{job_id}/log'.format(
+                experiment_id=self._experiment_id, job_id=job_id
+            )
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        data = res.json()['data']
+        print('\nSTANDARD OUTPUT\n===============')
+        print(data['stdout'])
+        print('\nSTANDARD ERROR\n==============')
+        print(data['stderr'])

@@ -185,6 +185,47 @@ abstract_download_directory_parser.add_argument(
     )
 )
 
+###########
+## Tools ##
+###########
+
+tools_parser = subparsers.add_parser(
+    'tools', help='tools resources',
+    description='Access tools resources of the experiment.'
+)
+tools_subparsers = tools_parser.add_subparsers(
+    dest='tools_methods', help='access methods'
+)
+tools_subparsers.required = True
+
+tools_list_parser = tools_subparsers.add_parser(
+    'ls', help='list available tool results',
+    description='List available tool results.'
+)
+tools_list_parser.set_defaults(method='_list_tool_results')
+
+tools_job_status_parser = tools_subparsers.add_parser(
+    'status', help='show the status of tool jobs',
+    description='Show the status of tool jobs.'
+)
+tools_job_status_parser.add_argument(
+    '--tool', dest='tool_name',
+    help='filter jobs by tool name'
+)
+tools_job_status_parser.set_defaults(method='_show_tools_status')
+
+tools_job_log_parser = tools_subparsers.add_parser(
+    'log', help='show the log output of a tool job',
+    description='Show the log output of tool job.'
+)
+tools_job_log_parser.add_argument(
+    '--name', help='name of the job'
+)
+tools_job_log_parser.add_argument(
+    '--submission', type=int, dest='submission_id',
+    help='number of the submission'
+)
+tools_job_log_parser.set_defaults(method='_show_tool_job_log')
 
 ##############
 ## Workflow ##
@@ -199,40 +240,19 @@ workflow_subparsers = workflow_parser.add_subparsers(
 )
 workflow_subparsers.required = True
 
-###############
-# Description #
-###############
-
-workflow_description_parser = workflow_subparsers.add_parser(
-    'description', help='workflow description resources',
-    description=(
-        'Access workflow description resources. A description provides '
-        'information on individual workflow stages and steps and is '
-        'represented on disk as a file in YAML format. A description doesn\'t '
-        'need to be build from scratch. Upon first download the server '
-        'will respond with a template that can be modified locally and '
-        're-uploaded. The uploaded description will be used for any subsequent '
-        'job submission.'
-    )
-)
-workflow_description_subparsers = workflow_description_parser.add_subparsers(
-    dest='workflow_description_methods', help='access methods'
-)
-workflow_description_subparsers.required = True
-
-workflow_description_download_parser = workflow_description_subparsers.add_parser(
+workflow_description_download_parser = workflow_subparsers.add_parser(
     'download', help='download the workflow description',
     description='Download the workflow description.'
 )
 workflow_description_download_parser.add_argument(
     '--file', dest='filename', required=True,
-    help='path to file to which workflow description should be written'
+    help='path to YAML file to which workflow description should be written'
 )
 workflow_description_download_parser.set_defaults(
     method='download_workflow_description_file'
 )
 
-workflow_description_upload_parser = workflow_description_subparsers.add_parser(
+workflow_description_upload_parser = workflow_subparsers.add_parser(
     'upload', help='upload a workflow description',
     description=(
         'Upload a workflow description, updating any potentially existing '
@@ -241,36 +261,19 @@ workflow_description_upload_parser = workflow_description_subparsers.add_parser(
 )
 workflow_description_upload_parser.add_argument(
     '--file', dest='filename', required=True,
-    help='path to file from which workflow description should be read'
+    help='path to YAML file from which workflow description should be read'
 )
 workflow_description_upload_parser.set_defaults(
     method='upload_workflow_description_file'
 )
 
-#######
-# Job #
-#######
-
-workflow_job_parser = workflow_subparsers.add_parser(
-    'job', help='workflow job resources',
-    description=(
-        'Access workflow job resources. Before first submission of a workflow '
-        'a custom description should to be uploaded. Otherwise, the default '
-        'description will be used, which may lead to unexpected results. '
-    )
-)
-workflow_job_subparsers = workflow_job_parser.add_subparsers(
-    dest='workflow_job_methods', help='access methods'
-)
-workflow_job_subparsers.required = True
-
-workflow_job_submit_parser = workflow_job_subparsers.add_parser(
+workflow_job_submit_parser = workflow_subparsers.add_parser(
     'submit', help='submit the workflow',
     description='Submit the workflow using a previously uploaded description. '
 )
 workflow_job_submit_parser.set_defaults(method='submit_workflow')
 
-workflow_job_resubmit_parser = workflow_job_subparsers.add_parser(
+workflow_job_resubmit_parser = workflow_subparsers.add_parser(
     'resubmit', help='resubmit the workflow',
     description=(
         'Resubmit the workflow at the given stage using a previoulsy '
@@ -283,13 +286,13 @@ workflow_job_resubmit_parser.add_argument(
 )
 workflow_job_resubmit_parser.set_defaults(method='resubmit_workflow')
 
-workflow_job_kill_parser = workflow_job_subparsers.add_parser(
+workflow_job_kill_parser = workflow_subparsers.add_parser(
     'kill', help='kill the workflow',
     description='Kill the workflow.'
 )
 workflow_job_kill_parser.set_defaults(method='kill_workflow')
 
-workflow_job_status_parser = workflow_job_subparsers.add_parser(
+workflow_job_status_parser = workflow_subparsers.add_parser(
     'status', help='show the status of the workflow',
     description='Show the status of the workflow.'
 )
@@ -298,7 +301,7 @@ workflow_job_status_parser.add_argument(
 )
 workflow_job_status_parser.set_defaults(method='_show_workflow_status')
 
-workflow_job_log_parser = workflow_job_subparsers.add_parser(
+workflow_job_log_parser = workflow_subparsers.add_parser(
     'log', help='show the log of an individual job',
     description='Show the log output of an individual job.'
 )
@@ -309,14 +312,14 @@ workflow_job_log_parser.add_argument(
 workflow_job_log_parser.add_argument(
     '-n', '--name', required=True, help='name of the job'
 )
-workflow_job_log_parser.set_defaults(method='_show_job_log')
+workflow_job_log_parser.set_defaults(method='_show_workflow_job_log')
 
 
-####################
-# Jterator project #
-####################
+######################
+## Jterator project ##
+######################
 
-project_description_parser = workflow_subparsers.add_parser(
+jterator_project_parser = subparsers.add_parser(
     'jtproject', help='jterator project resources',
     description=(
         'Access jterator project resources. A jterator project consists of '
@@ -326,30 +329,30 @@ project_description_parser = workflow_subparsers.add_parser(
         'and a "handles" subfolder containing any "*.handles.yaml" files.'
     )
 )
-project_description_subparsers = project_description_parser.add_subparsers(
+jterator_project_subparsers = jterator_project_parser.add_subparsers(
     dest='jtproject_methods', help='access methods'
 )
-project_description_subparsers.required = True
+jterator_project_subparsers.required = True
 
-project_description_download_parser = project_description_subparsers.add_parser(
+jterator_project_download_parser = jterator_project_subparsers.add_parser(
     'download', help='download the project description',
     description='Download the project description.',
     parents=[abstract_download_directory_parser]
 )
-project_description_download_parser.set_defaults(
-    method='download_jterator_project_description_files'
+jterator_project_download_parser.set_defaults(
+    method='download_jterator_project_files'
 )
 
-project_description_upload_parser = project_description_subparsers.add_parser(
+jterator_project_upload_parser = jterator_project_subparsers.add_parser(
     'upload', help='upload a project from',
     description='Upload a project, updating any potentially existing project.'
 )
-project_description_upload_parser.add_argument(
+jterator_project_upload_parser.add_argument(
     '--directory', default=tempfile.gettempdir(),
     help='path to directory from which project should be read'
 )
-project_description_upload_parser.set_defaults(
-    method='upload_jterator_project_description_files'
+jterator_project_upload_parser.set_defaults(
+    method='upload_jterator_project_files'
 )
 
 ##########
