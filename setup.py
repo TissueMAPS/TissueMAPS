@@ -109,7 +109,8 @@ setuptools.setup(
        'apache-libcloud>=1.3.0',
        'boto3>=1.4.1',
        'docker-py>=1.10.6',
-       'docker-compose>=1.9',
+       # Ansible container wants a specific version of Docker compose
+       'docker-compose==1.9.0',
        'PyYAML>=3.11',
        'psycopg2>=2.6.1',
        # Docker compose requires a specific version of requests. Hereby, we
