@@ -31,6 +31,7 @@ from tmlib.tools.jobs import ToolJob
 from tmlib.log import LEVELS_TO_VERBOSITY
 from tmlib.tools import get_available_tools, get_tool_class
 from tmlib.tools.manager import ToolRequestManager
+from tmlib.workflow.utils import format_task_data
 
 from tmserver.api import api
 from tmserver.error import (
@@ -402,15 +403,16 @@ def delete_tool_result(experiment_id, tool_result_id):
 
 
 @api.route(
-    '/experiments/<experiment_id>/tools/status', methods=['GET']
+    '/experiments/<experiment_id>/tools/jobs', methods=['GET']
 )
 @jwt_required()
 @decode_query_ids('read')
-def get_tool_job_status(experiment_id):
+def get_tool_jobs(experiment_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/tools/status
+    .. http:get:: /api/experiments/(string:experiment_id)/tools/jobs
 
-        Get the status of one or multiple jobs processing a tool request.
+        Get the status of each :class:`ToolJob <tmlib.models.jobs.ToolJob>`
+        processing a tool request.
 
         **Example response**:
 
@@ -422,15 +424,22 @@ def get_tool_job_status(experiment_id):
             {
                 "data": [
                     {
-                        "state": string,
-                        "submission_id": number,
-                        "exitcode": number
+                        "id": "dG1hcHM3NzYxOA==",
+                        "name": "tool_Heatmap",
+                        "submission_id": 4,
+                        "submitted_at": "2017-04-01 10:42:10",
+                        "state": "RUNNING",
+                        "exitcode": null,
+                        "memory": 1024,
+                        "time": "1:21:33",
+                        "cpu_time": "1:14:12"
                     },
                     ...
                 ]
             }
 
         :query submission_id: numeric ID of the submission for which the job status should be retrieved (optional)
+        :query tool_name: name of a tool for which job status should be retrieved (optional)
         :query state: state jobs should have, e.g. RUNNING (optional)
         :statuscode 400: malformed request
         :statuscode 200: no error
@@ -438,10 +447,15 @@ def get_tool_job_status(experiment_id):
     """
     logger.info('get status of tool jobs for experiment %d', experiment_id)
     submission_id = request.args.get('submission_id', type=int)
+    tool_name = request.args.get('tool_name')
     state = request.args.get('state')
 
+    # TODO: batch_size, index - see workflow.get_jobs_status()
     with tm.utils.MainSession() as session:
         tool_jobs = session.query(
+                tm.Task.created_at,
+                tm.Task.id, tm.Task.name, tm.Task.type, tm.Task.time,
+                tm.Task.cpu_time, tm.Task.memory,
                 tm.Task.state, tm.Task.submission_id, tm.Task.exitcode
             ).\
             join(tm.Submission).\
@@ -452,21 +466,25 @@ def get_tool_job_status(experiment_id):
             )
         if state is not None:
             logger.info('filter tool jobs for state "%s"', state)
-            tool_jobs = tool_jobs.\
-                filter(tm.Task.state == state)
+            tool_jobs = tool_jobs.filter(tm.Task.state == state)
+        if tool_name is not None:
+            logger.info('filter tool jobs for tool name "%s"', tool_name)
+            tool_jobs = tool_jobs.filter(tm.Task.name == 'tool_%s' % tool_name)
         if submission_id is not None:
             logger.info('filter tool jobs for submission %d', submission_id)
             tool_jobs = tool_jobs.\
                 filter(tm.Task.submission_id == submission_id)
         tool_jobs = tool_jobs.all()
-        tool_job_status = [
-            {
-                'state': j.state,
-                'submission_id': j.submission_id,
-                'exitcode': j.exitcode
-            }
-            for j in tool_jobs
-        ]
+        tool_job_status = list()
+        for j in tool_jobs:
+            status = format_task_data(
+                j.name, j.type, j.state, j.exitcode,
+                j.memory, j.time, j.cpu_time
+            )
+            status['id'] = encode_pk(j.id)
+            status['submission_id'] = j.submission_id
+            status['submitted_at'] = str(j.created_at)
+            tool_job_status.append(status)
         return jsonify(data=tool_job_status)
 
 
@@ -476,7 +494,7 @@ def get_tool_job_status(experiment_id):
 )
 @jwt_required()
 @decode_query_ids('read')
-def get_tool_log(experiment_id, job_id):
+def get_tool_job_log(experiment_id, job_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/tools/jobs/(string:job_id)/log
 

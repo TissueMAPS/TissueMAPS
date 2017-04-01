@@ -280,7 +280,7 @@ def get_job_log(experiment_id, job_id):
 @api.route('/experiments/<experiment_id>/workflow/jobs', methods=['GET'])
 @jwt_required()
 @decode_query_ids('read')
-def get_jobs_status(experiment_id):
+def get_workflow_jobs(experiment_id):
     """
     .. http:get:: /api/experiments/(string:experiment_id)/workflow/jobs
 
@@ -297,11 +297,13 @@ def get_jobs_status(experiment_id):
             {
                 "data": [
                     {
-                        "name": "Job X1",
+                        "id": "dG1hcHM3NzYxOA==",
+                        "name": "metaconfig_run_000001",
                         "state": "RUNNING",
-                        "exitcode": null,
+                        "exitcode": 0,
                         "memory": 1024,
                         "time": "1:21:33"
+                        "cpu_time": "1:14:12"
                     },
                     ...
                 ]
