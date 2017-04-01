@@ -111,6 +111,13 @@ class Site(ExperimentModel):
         return (self.height, self.width)
 
     @property
+    def aligned_image_size(self):
+        '''Tuple[int]: number of pixels along the vertical (*y*) and horizontal
+        (*x*) axis, i.e. height and width of the aligned site
+        '''
+        return (self.aligned_height, self.aligned_width)
+
+    @property
     def offset(self):
         '''Tuple[int]: *y*, *x* coordinate of the top, left corner of the site
         relative to the layer overview at the maximum zoom level
@@ -144,9 +151,9 @@ class Site(ExperimentModel):
         '''
         if self.intersection is not None:
             return self.height - (
-                    self.intersection.lower_overhang +
-                    self.intersection.upper_overhang
-                )
+                self.intersection.lower_overhang +
+                self.intersection.upper_overhang
+            )
         else:
             return self.height
 
@@ -157,9 +164,9 @@ class Site(ExperimentModel):
         '''
         if self.intersection is not None:
             return self.width - (
-                    self.intersection.left_overhang +
-                    self.intersection.right_overhang
-                )
+                self.intersection.left_overhang +
+                self.intersection.right_overhang
+            )
         else:
             return self.width
 

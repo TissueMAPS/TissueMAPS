@@ -615,16 +615,22 @@ class PyramidBuilder(ClusterRoutines):
                     logger.debug(
                         'create mapobject for reference object #%d', obj.id
                     )
+                    if name == 'Sites':
+                        # We need to account for the "multiplexing" edge case.
+                        offset = obj.aligned_offset
+                    else:
+                        offset = obj.offset
+                    image_size = obj.image_size
                     # First element: x axis
                     # Second element: inverted (!) y axis
                     # We further subtract one pixel such that the polygon
                     # defines the exact boundary of the objects. This is
                     # crucial for testing whether other objects intersect with
                     # the border.
-                    ul = (obj.offset[1] + 1, -1 * (obj.offset[0] + 1))
-                    ll = (ul[0], ul[1] - (obj.image_size[0] - 3))
-                    ur = (ul[0] + obj.image_size[1] - 3, ul[1])
-                    lr = (ll[0] + obj.image_size[1] - 3, ll[1])
+                    ul = (offset[1] + 1, -1 * (offset[0] + 1))
+                    ll = (ul[0], ul[1] - (image_size[0] - 3))
+                    ur = (ul[0] + image_size[1] - 3, ul[1])
+                    lr = (ll[0] + image_size[1] - 3, ll[1])
                     # Closed circle with coordinates sorted counter-clockwise
                     contour = np.array([ur, ul, ll, lr, ur])
                     polygon = shapely.geometry.Polygon(contour)
