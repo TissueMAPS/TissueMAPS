@@ -20,7 +20,7 @@ from tmlib.workflow.jterator.project import HANDLES_SUFFIX
 @pytest.fixture(scope='session')
 def handles():
     '''A `pytest` fixture that provides the name and absolute path to
-    each available handles file.
+    each available *.handles.yaml* file.
 
     Returns
     -------
@@ -38,7 +38,8 @@ def handles():
 @pytest.fixture(scope='session')
 def modules():
     '''A `pytest` fixture that provides the name and absolute path to
-    each available module file in the `jtmodules` package.
+    each available module file (Python: *.py*, Matlab: *.m* and R: *.r*)
+    in the language-specific *jtmodules* packages.
 
     Returns
     -------

@@ -40,7 +40,7 @@ def test_handles_yaml_syntax(handles):
                 raise
 
 
-def check_handles_structure(description, filename):
+def test_handles_structure(description, filename):
     required_keys = {'input', 'output'}
     for k in required_keys:
         assert k in description, (
@@ -52,6 +52,7 @@ def check_handles_structure(description, filename):
             % (k.capitalize(), filename)
         )
 
+
 def _check_handle(index, description, filename, group):
     assert hasattr(handles_types, description['type']), (
         'Type "%s" of %s handle #%d in file "%s" is not valid.'
@@ -59,7 +60,9 @@ def _check_handle(index, description, filename, group):
     )
     Handle = getattr(handles_types, description['type'])
     parameters = inspect.getargspec(Handle.__init__)
-    index_defaults = len(parameters.args[1:]) - len(parameters.defaults)
+    index_defaults = len(parameters.args[1:])
+    if parameters.defaults is not None:
+         index_defaults -= len(parameters.defaults)
     for i, arg in enumerate(parameters.args[1:]):
         if i >= index_defaults:
             continue
@@ -76,7 +79,7 @@ def _check_handle(index, description, filename, group):
         )
 
 
-def check_handles_input_output(description, filename):
+def test_handles_input_output(description, filename):
     for i, h in enumerate(description['input']):
         _check_handle(i, h, filename, 'input')
     for i, h in enumerate(description['output']):
@@ -88,6 +91,6 @@ def test_handles_content(handles):
         print 'test handles "%s"' % name
         with open(filename, 'r') as f:
             description = yaml.load(f)
-        check_handles_structure(description, filename)
-        check_handles_input_output(description, filename)
+        test_handles_structure(description, filename)
+        test_handles_input_output(description, filename)
 
