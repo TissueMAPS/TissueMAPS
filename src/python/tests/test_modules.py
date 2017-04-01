@@ -17,7 +17,7 @@ import inspect
 import importlib
 
 
-def test_module_structure(name):
+def _check_module_structure(name):
     module = importlib.import_module('jtmodules.%s' % name)
     functions = inspect.getmembers(module, predicate=inspect.isfunction)
     function_names = [f[0] for f in functions]
@@ -27,7 +27,7 @@ def test_module_structure(name):
     # TODO: VERSION
 
 
-def test_existence_of_docs(name):
+def _check_existence_of_docs(name):
     module = importlib.import_module('jtmodules.%s' % name)
     assert module.__doc__ is not None, (
         'Documentation for module "%s" missing' % name
@@ -40,7 +40,7 @@ def test_existence_of_docs(name):
     )
 
 
-def test_module_parameters(name, handles_filename):
+def _check_module_parameters(name, handles_filename):
     module = importlib.import_module('jtmodules.%s' % name)
     functions = inspect.getmembers(module, predicate=inspect.isfunction)
     with open(handles_filename, 'r') as f:
@@ -68,6 +68,6 @@ def test_modules_content(modules, handles):
         if not filename.endswith('.py'):
             continue
         print 'test module "%s"' % name
-        test_module_structure(name)
-        test_existence_of_docs(name)
-        test_module_parameters(name, handles[name])
+        _check_module_structure(name)
+        _check_existence_of_docs(name)
+        _check_module_parameters(name, handles[name])

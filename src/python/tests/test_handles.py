@@ -40,7 +40,7 @@ def test_handles_yaml_syntax(handles):
                 raise
 
 
-def test_handles_structure(description, filename):
+def _check_handles_structure(description, filename):
     required_keys = {'input', 'output'}
     for k in required_keys:
         assert k in description, (
@@ -51,6 +51,13 @@ def test_handles_structure(description, filename):
             '%s in handles file "%s" must be an array.'
             % (k.capitalize(), filename)
         )
+
+
+def _check_handles_input_output(description, filename):
+    for i, h in enumerate(description['input']):
+        _check_handle(i, h, filename, 'input')
+    for i, h in enumerate(description['output']):
+        _check_handle(i, h, filename, 'output')
 
 
 def _check_handle(index, description, filename, group):
@@ -79,18 +86,11 @@ def _check_handle(index, description, filename, group):
         )
 
 
-def test_handles_input_output(description, filename):
-    for i, h in enumerate(description['input']):
-        _check_handle(i, h, filename, 'input')
-    for i, h in enumerate(description['output']):
-        _check_handle(i, h, filename, 'output')
-
-
 def test_handles_content(handles):
     for name, filename in handles.iteritems():
         print 'test handles "%s"' % name
         with open(filename, 'r') as f:
             description = yaml.load(f)
-        test_handles_structure(description, filename)
-        test_handles_input_output(description, filename)
+        _check_handles_structure(description, filename)
+        _check_handles_input_output(description, filename)
 
