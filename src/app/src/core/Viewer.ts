@@ -274,7 +274,7 @@ class Viewer {
         });
 
         // Query the server for running jobs and start monitoring their status
-        this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status?state=RUNNING')
+        this._$http.get('/api/experiments/' + this.experiment.id + '/tools/jobs?state=RUNNING')
         .then((resp: any) => {
             var jobStati = resp.data.data;
             _(jobStati).each((st) => {
@@ -291,7 +291,7 @@ class Viewer {
     private _startMonitoringForToolResult(submissionId: number) {
         var subscription;
         var monitor = () => {
-            this._$http.get('/api/experiments/' + this.experiment.id + '/tools/status?submission_id=' + submissionId)
+            this._$http.get('/api/experiments/' + this.experiment.id + '/tools/jobs?submission_id=' + submissionId)
             .then((resp: any) => {
                 var results = resp.data.data;
                 if (results.length === 0) {
