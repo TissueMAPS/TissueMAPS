@@ -170,8 +170,7 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
             logger.error('stopping VMs is not yet supported')
             sys.exit(1)
         # First refresh inventory
-        if args.refresh_cache:
-            commands.append(['tm_inventory', '--refresh'])
+        commands.append(['tm_inventory', '--refresh'])
         tmsetup_playbooks_dir = _get_playbooks_dir('tissuemaps')
         playbook = os.path.join(tmsetup_playbooks_dir, 'instance.yml')
         cmd = _build_ansible_vm_command(
@@ -183,8 +182,7 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
         # This playbook must be called after the individual components have
         # been built.
         # First refresh inventory
-        if args.refresh_cache:
-            commands.append(['tm_inventory', '--refresh'])
+        commands.append(['tm_inventory', '--refresh'])
 
         # We need to run elasticluster playbooks only in case groups
         # are provided that are not supported by tmsetup.
@@ -201,6 +199,7 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
             cmd = _build_ansible_vm_command(
                 verbosity, playbook, variables, set(groups_to_deploy.keys())
             )
+            cmd.extend(['-e', 'ansible_become=yes'])
             commands.append(cmd)
 
         # Run the TissueMAPS-specific playbooks implemented in tmsetup
@@ -210,13 +209,8 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
         cmd = _build_ansible_vm_command(
             verbosity, playbook, variables, set(groups_to_deploy.keys())
         )
+        cmd.extend(['-e', 'ansible_become=yes'])
         commands.append(cmd)
-
-        for group, plays in groups_to_deploy.items():
-            for playbook in plays:
-                if playbook is not None:
-                    cmd = _build_ansible_vm_command(verbosity, playbook)
-                    commands.append(cmd)
 
     else:
         logger.error('unsupported action for VMs: %s', action)
@@ -240,17 +234,15 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict(), hosts=set()
         cmd.extend(['-e', '{0}'.format(','.join(var_strings))])
     if hosts:
         cmd.extend(['--limit', ','.join(hosts)])
-    cmd.extend(['-e', 'ansible_become=yes'])
     return cmd
 
 
 def _run(command):
     logger.debug('command: %s', ' '.join(command))
     # Workaround for ansible-container commands
-    env = {
-        'DOCKER_CLIENT_TIMEOUT': str(600),
-        'COMPOSE_HTTP_TIMEOUT': str(600)
-    }
+    env = dict(os.environ)
+    env['DOCKER_CLIENT_TIMEOUT'] = str(600)
+    env['COMPOSE_HTTP_TIMEOUT'] = str(600)
     process = subprocess.Popen(command, stdout=subprocess.PIPE, env=env)
     for c in iter(lambda: process.stdout.read(1), ''):
         sys.stdout.write(c)
