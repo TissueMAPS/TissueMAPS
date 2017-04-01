@@ -349,7 +349,7 @@ def get_feature_values(experiment_id, mapobject_type_id):
                             mapobject_id
                         )
                         w.writerow(tuple(
-                            ['' for x in xrange(len(feature_names))]
+                            [str(np.nan) for x in xrange(len(feature_names))]
                         ))
                         yield data.getvalue()
                         data.seek(0)
@@ -458,11 +458,12 @@ def get_metadata(experiment_id, mapobject_type_id):
                 'plate_name', 'well_name', 'well_pos_y', 'well_pos_x',
                 'tpoint', 'zplane', 'label', 'is_border'
             ]
-            tool_results = session.query(tm.ToolResult.name).\
+            tool_results = session.query(tm.ToolResult.id, tm.ToolResult.name).\
                 filter_by(mapobject_type_id=mapobject_type_id).\
                 order_by(tm.ToolResult.id).\
                 all()
             tool_result_names = [t.name for t in tool_results]
+            tool_result_ids = [t.id for t in tool_results]
 
             site_mapobject_type = session.query(tm.MapobjectType.id).\
                 filter_by(ref_type=tm.Site.__name__).\
@@ -521,11 +522,19 @@ def get_metadata(experiment_id, mapobject_type_id):
                                 'no label values found for mapobject %d',
                                 mapobject_id
                             )
+                        metadata_values += [
+                            str(np.nan) for x in xrange(len(tool_result_names))
+                        ]
                     else:
                         vals = label_values_lut[mapobject_id]
-                        metadata_values += [
-                            vals[k] for k in sorted(vals, key=lambda k: int(k))
-                        ]
+                        tool_result_values = list()
+                        for tid in tool_result_ids:
+                            try:
+                                v = vals[str(tid)]
+                            except KeyError:
+                                v = str(np.nan)
+                            tool_result_values.append(v)
+                        metadata_values += tool_result_values
                     w.writerow(tuple(metadata_values))
                 yield data.getvalue()
                 data.seek(0)
