@@ -246,7 +246,12 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict(), hosts=set()
 
 def _run(command):
     logger.debug('command: %s' % ' '.join(command))
-    process = subprocess.Popen(command, stdout=subprocess.PIPE)
+    # Workaround for ansible-container commands
+    env = {
+        'DOCKER_CLIENT_TIMEOUT': str(600),
+        'COMPOSE_HTTP_TIMEOUT': str(600)
+    }
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, env=env)
     for c in iter(lambda: process.stdout.read(1), ''):
         sys.stdout.write(c)
 
