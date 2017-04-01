@@ -18,7 +18,7 @@ import logging
 
 #: dict[int, int]: Mapping of logging verbosity to logging level
 VERBOSITY_TO_LEVELS = {
-    0: logging.NOTSET,  # Equivalent to no filtering. Everything is logged.
+    0: logging.NOTSET,  # Nothing gets logged
     1: logging.WARN,  # For simplicity. Includes ERROR, CRITICAL
     2: logging.INFO,
     3: logging.DEBUG,
