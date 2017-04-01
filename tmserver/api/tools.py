@@ -311,30 +311,35 @@ def get_tool_results(experiment_id):
             Content-Type: application/json
 
             {
-                "data": {
-                    "id": "MQ==",
-                    "name": "Cluster Result 1",
-                    "submission_id": 117,
-                    "layer": {
+                "data": [
+                    {
                         "id": "MQ==",
-                        "type": "HeatmapLayer",
-                        "attributes": {
-                            "min": 0,
-                            "max": 2414
-                        }
+                        "name": "Cluster Result 1",
+                        "submission_id": 117,
+                        "layer": {
+                            "id": "MQ==",
+                            "type": "HeatmapLayer",
+                            "attributes": {
+                                "min": 0,
+                                "max": 2414
+                            }
+                        },
+                        "plots": []
                     },
-                    "plots": []
-                }
+                    ...
+                ]
             }
 
         :query submission_id: ID of the corresponding submission (optional)
+        :query name: name of the tool result (optional)
 
         :statuscode 400: malformed request
         :statuscode 200: no error
 
     """
-    submission_id = request.args.get('submission_id', type=int)
     logger.info('get tool results')
+    submission_id = request.args.get('submission_id', type=int)
+    name = request.args.get('name')
 
     if submission_id is not None:
         logger.info(
@@ -349,7 +354,11 @@ def get_tool_results(experiment_id):
                 all()
             submission_ids = [s.id for s in submissions]
     with tm.utils.ExperimentSession(experiment_id) as session:
-        tool_results = session.query(tm.ToolResult).\
+        tool_results = session.query(tm.ToolResult)
+        if name is not None:
+            logger.info('filter tool results for name "%s"', name)
+            tool_results = tool_results.filter_by(name=name)
+        tool_results = tool_results.\
             filter(tm.ToolResult.submission_id.in_(submission_ids)).\
             order_by(tm.ToolResult.submission_id).\
             distinct(tm.ToolResult.submission_id).\
@@ -459,3 +468,48 @@ def get_tool_job_status(experiment_id):
             for j in tool_jobs
         ]
         return jsonify(data=tool_job_status)
+
+
+@api.route(
+    '/experiments/<experiment_id>/tools/jobs/<job_id>/log',
+    methods=['GET']
+)
+@jwt_required()
+@decode_query_ids('read')
+def get_tool_log(experiment_id, job_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/tools/jobs/(string:job_id)/log
+
+        Get the log output of a :class:`ToolJob <tmlib.tools.jobs.ToolJob>`
+        for a given :class:`ToolResult <tmlib.models.result.ToolResult>`.
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "stdout": "bla bla bla",
+                    "stderr": ""
+                }
+            }
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+
+    """
+    logger.info(
+        'get log of tool job %d for experiment %d',
+        job_id, experiment_id
+    )
+    job = gc3pie.retrieve_task(job_id)
+    stdout_file = os.path.join(job.output_dir, job.stdout)
+    with open(stdout_file, 'r') as f:
+        out = f.read()
+    stderr_file = os.path.join(job.output_dir, job.stderr)
+    with open(stderr_file, 'r') as f:
+        err = f.read()
+    return jsonify(data={'stdout': out, 'stderr': err})
