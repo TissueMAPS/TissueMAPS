@@ -36,14 +36,14 @@ def from_yaml(description):
 
 def read_json_file(filename):
     if not os.path.exists(filename):
-        raise OSError('File does not exist: %s', filename)
+        raise OSError('File does not exist: {0}'.format(filename))
     with open(filename) as f:
         return json.load(f)
 
 
 def read_yaml_file(filename):
     if not os.path.exists(filename):
-        raise OSError('File does not exist: %s', filename)
+        raise OSError('File does not exist: {0}'.format(filename))
     with open(filename) as f:
         return yaml.load(f)
 

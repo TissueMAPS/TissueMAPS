@@ -27,7 +27,7 @@ SUPPORTED_TM_GROUPS = REQUIRED_TM_GROUPS.union({'tissuemaps_compute'})
 
 SUPPORTED_EC_GROUPS = {
     'ganglia_server', 'ganglia_client',
-    'glusterfs_server',
+    'glusterfs_server', 'glusterfs_client',
     'slurm_master', 'slurm_workers'
 }
 
@@ -110,7 +110,7 @@ def _build_ansible_container_command(action, verbosity,
             if verbosity > 0:
                 verbosity -= 1
                 if verbosity > 0:
-                    cmd.append('-%s' % (verbosity * 'v'))
+                    cmd.append('-{0}'.format(verbosity * 'v'))
             variables = collections.OrderedDict()
             for group in group_dirs:
                 filename = os.path.abspath(
@@ -121,15 +121,15 @@ def _build_ansible_container_command(action, verbosity,
                         var_mapping = yaml.load(line)
                         if var_mapping is None:
                             continue
-                        for k, v in var_mapping.iteritems():
+                        for k, v in var_mapping.items():
                             variables[k] = v
-            for k, v in variables.iteritems():
+            for k, v in variables.items():
                 cmd.append('-e')
                 var_string = '='.join([k, str(v)])
                 # Values should not get quoted because this breaks
                 # the docker-compose.yml Jinja templating approach of
                 # ansible-container.
-                cmd.append('%s' % var_string)
+                cmd.append(var_string)
     elif action == 'push':
         # TODO: pass user/organization and tag as arguments
         logger.info('pushing container images to Docker Hub')
@@ -212,7 +212,7 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
         )
         commands.append(cmd)
 
-        for group, plays in groups_to_deploy.iteritems():
+        for group, plays in groups_to_deploy.items():
             for playbook in plays:
                 if playbook is not None:
                     cmd = _build_ansible_vm_command(verbosity, playbook)
@@ -227,7 +227,7 @@ def _build_vm_commands(action, verbosity, groups_to_deploy):
 
 def _build_ansible_vm_command(verbosity, playbook, variables=dict(), hosts=set()):
     var_strings = list()
-    for k, v in variables.iteritems():
+    for k, v in variables.items():
         var_strings.append('='.join([k, v]))
     # The "tm_inventory" script should be on the path upon installation.
     inventory_file = which('tm_inventory')
@@ -235,17 +235,17 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict(), hosts=set()
     if verbosity > 0:
         verbosity -= 1
         if verbosity > 0:
-            cmd.append('-%s' % (verbosity * 'v'))
+            cmd.append('-{0}'.format(verbosity * 'v'))
     if variables:
-        cmd.extend(['-e', '%s' % ','.join(var_strings)])
+        cmd.extend(['-e', '{0}'.format(','.join(var_strings))])
     if hosts:
-        cmd.extend(['--limit', '%s' % ','.join(hosts)])
+        cmd.extend(['--limit', ','.join(hosts)])
     cmd.extend(['-e', 'ansible_become=yes'])
     return cmd
 
 
 def _run(command):
-    logger.debug('command: %s' % ' '.join(command))
+    logger.debug('command: %s', ' '.join(command))
     # Workaround for ansible-container commands
     env = {
         'DOCKER_CLIENT_TIMEOUT': str(600),
@@ -275,7 +275,7 @@ def vm_show(args):
     groups = get_host_groups()
     setup = Setup()
     inventory_info = build_inventory_information(setup)
-    print to_yaml(inventory_info)
+    print(to_yaml(inventory_info))
 
 
 def main(args):

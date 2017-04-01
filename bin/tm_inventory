@@ -36,18 +36,18 @@ def _get_host_ip_os(region, network, host_name, host_vars):
     )
     if len(instances) > 1:
         raise MultipleInstancesFoundError(
-            'More than one instance found with name "%s"' % host_name
+            'More than one instance found with name "{0}"'.format(host_name)
         )
     elif len(instances) == 0:
         raise NoInstanceFoundError(
-            'No instance found with name "%s"' % host_name
+            'No instance found with name "{0}"'.format(host_name)
         )
 
     try:
         addresses = instances[0].addresses[network]
     except KeyError:
         raise CloudError(
-            'No addresses found for network "%s"' % network
+            'No addresses found for network "{0}"'.format(network)
         )
     if len(addresses) > 1:
         # Which one to choose? OS-EXT-IPS:type?
@@ -67,9 +67,7 @@ def _get_host_ip_os(region, network, host_name, host_vars):
             logger.info('no floating address found')
             address = addresses[0]['addr']
     elif len(addresses) == 0:
-        raise CloudError(
-            'no address found for network "%s"' % network
-        )
+        raise CloudError('No address found for network "{0}"'.format(network))
     else:
         address = addresses[0]['addr']
     return address
@@ -88,7 +86,9 @@ def _get_host_ip_ec2(region, host_name, host_vars):
         )
     except:
         raise CloudError(
-            'Could not connect to cloud provider in region "%s".' % region
+            'Could not connect to cloud provider in region "{0}".'.format(
+                region
+            )
         )
     instances = cloud_client.instances.filter(
         Filters=[{'Name':'tag:Name', 'Values':[host_name]}]
@@ -97,12 +97,10 @@ def _get_host_ip_ec2(region, host_name, host_vars):
     for inst in instances:
         addresses.append(inst.public_ip_address)
     if len(addresses) > 1:
-        logger.warn(
-            'more than one instance found with name "%s"', host_name
-        )
+        logger.warn('more than one instance found with name "%s"', host_name)
     elif len(addresses) == 0:
         raise NoInstanceFoundError(
-            'No instance found with name "%s"' % host_name
+            'No instance found with name "{0}"'.format(host_name)
         )
     return addresses[0]
 
@@ -118,30 +116,28 @@ def _get_host_ip_gce(region, network, host_name, host_vars):
     )
     try:
         instances = cloud_client.instances().list(
-            project=project, zone=region, filter='name eq %s' % host_name
+            project=project, zone=region, filter='name eq {0}'.format(host_name)
         ).execute()
     except:
         raise CloudError(
             'Could not connect to cloud provider for '
-            'project "%s" in region "%s".' % (project, region)
+            'project "{0}" in region "{1}".'.format(project, region)
         )
     instances = instances['items']
     if len(instances) > 1:
         raise MultipleInstancesFoundError(
-            'More than one instance found with name "%s"' % host_name
+            'More than one instance found with name "{0}"'.format(host_name)
         )
     elif len(instances) == 0:
         raise NoInstanceFoundError(
-            'No instance found with name "%s"' % host_name
+            'No instance found with name "{0}"'.format(host_name)
         )
     networks = [
         net for net in instances[0]['networkInterfaces']
         if net['name'] == network
     ]
     if len(networks) == 0:
-        raise CloudError(
-            'No network with name "%s".' % network
-        )
+        raise CloudError('No network with name "{0}".'.format(network))
     elif len(networks) > 1:
         logger.warn(
             'more than one address found for host "%s" and network "%s"',
@@ -154,9 +150,7 @@ def _get_host_ip_gce(region, network, host_name, host_vars):
             host_name, network
         )
     elif len(addresses) == 0:
-        raise CloudError(
-            'No address found for network "%s"' % network
-        )
+        raise CloudError('No address found for network "{0}"'.format(network))
     return addresses[0]
 
 
@@ -176,7 +170,7 @@ def get_host_ip(provider, region, network, host_name, host_vars):
 def update_static_inventory(inventory_info, setup):
     # Create the main ansible inventory file
     persistent_inventory = load_inventory()
-    for group, group_content in inventory_info.iteritems():
+    for group, group_content in inventory_info.items():
         if group == '_meta':
             continue
 
@@ -305,7 +299,9 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Dynamic Ansible inventory.')
+    parser = argparse.ArgumentParser(
+        description='Dynamic Ansible inventory for TissueMAPS cloud instances.'
+    )
     # parser.add_argument(
     #     '--private', action='store_true',
     #     help='use private address for ansible host'

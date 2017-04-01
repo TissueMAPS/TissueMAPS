@@ -16,7 +16,11 @@
 import os
 import collections
 import logging
-from ConfigParser import SafeConfigParser
+try:
+    from ConfigParser import SafeConfigParser
+except ModuleNotFoundError:
+    import configparser
+    SafeConfigParser = configparser.ConfigParser
 
 from tmsetup.utils import read_yaml_file, to_json
 from tmsetup.config import CONFIG_DIR, Setup
@@ -77,8 +81,9 @@ def build_inventory_information(setup):
 
     if not isinstance(setup, Setup):
         raise TypeError(
-            'Argument "setup" must have type %s.' %
-            '.'.join([Setup.__module__, Setup.__name__])
+            'Argument "setup" must have type {0}.'.format(
+                '.'.join([Setup.__module__, Setup.__name__])
+            )
         )
     for cluster in setup.architecture.clusters:
         for node_type in cluster.node_types:
@@ -88,7 +93,7 @@ def build_inventory_information(setup):
                     node_type=node_type.name, index=i+1
                 )
                 host_vars = dict()
-                for k, v in node_type.instance.to_dict().iteritems():
+                for k, v in node_type.instance.to_dict().items():
                     if k == 'tags':
                         security_groups = ''
                         if 'compute' in v or 'storage' in v:
@@ -150,7 +155,7 @@ def load_inventory(hosts_file=HOSTS_FILE):
     if os.path.exists(hosts_file):
         inventory.read(hosts_file)
     else:
-        logger.warn('Inventory file doesn not exist: %s' % hosts_file)
+        logger.warn('Inventory file doesn not exist: %s', hosts_file)
     return inventory
 
 

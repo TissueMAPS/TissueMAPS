@@ -18,7 +18,11 @@ import re
 import logging
 from abc import ABCMeta
 from abc import abstractproperty
-from ConfigParser import SafeConfigParser
+try:
+    from ConfigParser import SafeConfigParser
+except ModuleNotFoundError:
+    import configparser
+    SafeConfigParser = configparser.ConfigParser
 from Crypto.PublicKey import RSA
 
 from tmsetup.errors import SetupDescriptionError, SetupEnvironmentError
@@ -41,10 +45,10 @@ class _SetupSection(object):
 
     def __init__(self, description):
         if not isinstance(description, dict):
-            print self.__class__.__name__
             raise SetupDescriptionError(
-                'Section "%s" of setup description must be a mapping.' %
-                self._section_name
+                'Section "{0}" of setup description must be a mapping.'.format(
+                    self._section_name
+                )
             )
         possible_attrs = set([
             attr for attr in dir(self)
@@ -55,10 +59,10 @@ class _SetupSection(object):
             required_attrs = possible_attrs - self.__class__._OPTIONAL_ATTRS
         else:
             required_attrs = possible_attrs
-        for k, v in description.iteritems():
+        for k, v in description.items():
             if k not in possible_attrs:
                 raise SetupDescriptionError(
-                    'Key "%s" is not supported for section "%s".' % (
+                    'Key "{0}" is not supported for section "{1}".'.format(
                         k, self._section_name
                     )
                 )
@@ -66,7 +70,7 @@ class _SetupSection(object):
         for k in required_attrs:
             if k not in description:
                 raise SetupDescriptionError(
-                    'Key "%s" is required for section "%s".' % (
+                    'Key "{0}" is required for section "{1}".'.format(
                         k, self._section_name
                     )
                 )
@@ -76,30 +80,30 @@ class _SetupSection(object):
         pass
 
     def _check_value_type(self, value, name, required_type):
-        if required_type == str:
-            required_type = basestring
         type_translation = {
-            int: 'a number', basestring: 'a string',
+            int: 'a number', str: 'a string',
             dict: 'a mapping', list: 'an array'
         }
         if not isinstance(value, required_type):
             raise SetupDescriptionError(
-                'Value of "%s" in section "%s" must be %s.' % (
+                'Value of "{0}" in section "{1}" must be {2}.'.format(
                     name, self._section_name, type_translation[required_type]
                 )
             )
 
     def _check_subsection_type(self, value, name, required_type, index=None):
         if index is None:
-            message = 'Subsection "%s" in setup' % name
+            message = 'Subsection "{0}" in setup'.format(name)
             mapping = value
         else:
-            message = 'Item #%d of subsection "%s" in setup' % (index, name)
+            message = 'Item #{0} of subsection "{1}" in setup'.format(
+                index, name
+            )
             mapping = value[index]
         type_translation = {dict: 'a mapping', list: 'an array'}
         if not isinstance(mapping, required_type):
             raise SetupDescriptionError(
-                '%s configuration must be %s.' % (
+                '{0} configuration must be {1}.'.format(
                     message, type_translation[required_type]
                 )
             )
@@ -124,8 +128,8 @@ class _SetupSection(object):
                     continue
                 else:
                     raise AttributeError(
-                        'Required attribute "%s" does not exist on '
-                        'instance of type "%s".' % (
+                        'Required attribute "{0}" does not exist on '
+                        'instance of type "{1}.'.format(
                             attr, self.__class__.__name__
                         )
                     )
@@ -133,7 +137,7 @@ class _SetupSection(object):
         return mapping
 
     def __repr__(self):
-        return '%s setup section:\n%s' % (
+        return '{0} setup section:\n{1}'.format(
             self._section_name, to_json(self.to_dict())
         )
 
@@ -172,8 +176,9 @@ class CloudSection(_SetupSection):
         options = {'os', 'gce', 'ec2'}
         if value not in options:
             raise SetupDescriptionError(
-                'Cloud provider must be one of the following: "%s"' %
-                '", "'.join(options)
+                'Cloud provider must be one of the following: "{0}"'.format(
+                    '", "'.join(options)
+                )
             )
         if value == 'os':
             required_env_vars = {
@@ -196,8 +201,8 @@ class CloudSection(_SetupSection):
         for var in required_env_vars:
             if var not in os.environ:
                 raise SetupEnvironmentError(
-                    'Environment variable "%s" must be set for "%s" provider.'
-                    % (var, value)
+                    'Environment variable "{0}" must be set '
+                    'for "{1}" provider.'.format(var, value)
                 )
         self._provider = value
 
@@ -217,7 +222,9 @@ class CloudSection(_SetupSection):
         '''str: name or the subnetwork that should be used
         (defaults to ``"{network}-subnet"``)
         '''
-        return getattr(self, '_subnetwork', '%s-subnet' % self.network)
+        return getattr(
+            self, '_subnetwork', '{network}-subnet'.format(network=self.network)
+        )
 
     @subnetwork.setter
     def subnetwork(self, value):
@@ -261,7 +268,7 @@ class CloudSection(_SetupSection):
         directory)
         '''
         if not hasattr(self, '_key_file_private'):
-            self.key_file_private = '~/.ssh/%s' % self.key_name
+            self.key_file_private = '~/.ssh/{key}'.format(key=self.key_name)
         return self._key_file_private
 
     @key_file_private.setter
@@ -270,16 +277,16 @@ class CloudSection(_SetupSection):
         value = os.path.expandvars(os.path.expanduser(value))
         if value.endswith('.pub'):
             raise SetupDescriptionError(
-                'Value of "key_file_private" must point to a private key: %s' %
-                value
+                'Value of "key_file_private" must point to a '
+                'private key: {0}'.format(value)
             )
         if not os.path.exists(value):
-            logger.warn('private key file "%s" does not exist.' % value)
+            logger.warn('private key file "%s" does not exist.', value)
             key_file_public = self.key_file_public
             logger.info('create SSH key pair')
             key = RSA.generate(2048)
             with open(value, 'w') as f:
-                os.chmod(value, 0400)
+                os.chmod(value, 0o400)
                 f.write(key.exportKey('PEM'))
             pubkey = key.publickey()
             with open(key_file_public, 'w') as f:
@@ -294,7 +301,7 @@ class CloudSection(_SetupSection):
         directory)
         '''
         if not hasattr(self, '_key_file_public'):
-            self.key_file_public = '~/.ssh/%s.pub' % self.key_name
+            self.key_file_public = '~/.ssh/{key}.pub'.format(key=self.key_name)
         return self._key_file_public
 
     @key_file_public.setter
@@ -303,11 +310,11 @@ class CloudSection(_SetupSection):
         value = os.path.expandvars(os.path.expanduser(value))
         if not value.endswith('.pub'):
             raise SetupDescriptionError(
-                'Value of "key_file_public" must point to a public key: %s' %
-                value
+                'Value of "key_file_public" must point to a '
+                'public key: {0}'.format(value)
             )
         if not os.path.exists(value):
-            logger.warn('public key file "%s" does not exist.' % value)
+            logger.warn('public key file "%s" does not exist.', value)
         self._key_file_public = value
 
     @property
@@ -499,7 +506,7 @@ class AnsibleGroupSection(_SetupSection):
         self._playbook = os.path.expandvars(os.path.expanduser(value))
         if not os.path.exists(self._playbook):
             raise SetupDescriptionError(
-                'Playbook does not exist: %s' % self._playbook
+                'Playbook does not exist: {0}'.format(self._playbook)
             )
 
     @property
@@ -566,7 +573,7 @@ class AnsibleHostVariableSection(_SetupSection):
 
     @volume_mountpoint.setter
     def volume_mountpoint(self, value):
-        self._check_value_type(value, 'volume_mountpoint', basestring)
+        self._check_value_type(value, 'volume_mountpoint', str)
         self._volume_mountpoint = str(value)
 
     @property
@@ -628,7 +635,7 @@ class AnsibleHostVariableSection(_SetupSection):
         for t in value:
             if t not in supported_tags:
                 raise ValueError(
-                    'Tag "%s" is not supported! Supported are: "%s"' %(
+                    'Tag "{0}" is not supported! Supported are: "{1}"'.format(
                         t, '", "'.join(supported_tags)
                     )
                 )
@@ -642,20 +649,22 @@ class Setup(object):
     def __init__(self, description_file=SETUP_FILE):
         if not os.path.exists(description_file):
             raise OSError(
-                'Setup description file "%s" does not exist!' % description_file
+                'Setup description file "{0}" does not exist!'.format(
+                    description_file
+                )
             )
         self.description_file = description_file
         description = self._load_description()
-        for k, v in description.iteritems():
+        for k, v in description.items():
             if k not in dir(self):
                 raise SetupDescriptionError(
-                    'Key "%s" is not supported for setup description.' % k
+                    'Key "{0}" is not supported for setup description.'.format(k)
                 )
             setattr(self, k, v)
         for k in {'cloud', 'architecture'}:
             if k not in description:
                 raise SetupDescriptionError(
-                    'Setup description requires key "%s"' % k
+                    'Setup description requires key "{0}"'.format(k)
                  )
 
     def _load_description(self):
