@@ -76,8 +76,7 @@ class Tool(object):
     `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/generated/pandas.DataFrame.html>`_ data container.
     This is compatible with standard machine learning libries,
     such as `Scikit-Learn <http://scikit-learn.org/stable/>`_
-    `Caffe <http://caffe.berkeleyvision.org/>`_,
-    `Keras <https://keras.io/>`_ or `TensorFlow <https://www.tensorflow.org/>`_.
+    `Caffe <http://caffe.berkeleyvision.org/>`_ or `Keras <https://keras.io/>`_.
     '''
 
     __metaclass__ = _ToolMeta
@@ -147,7 +146,28 @@ class Tool(object):
         # thus pose a potential security risk in form of SQL injection.
         column_map = {'v%d' % i: name for i, name in feature_map.iteritems()}
         df.rename(columns=column_map, inplace=True)
+        null_indices = self.get_features_with_null_values(df)
+        for name, count in null_indices:
+            logger.warn('feature "%s" contains %d null values', name, count)
         return df
+
+    def get_features_with_null_values(self, feature_data):
+        '''Gets names of features with NULL values.
+
+        Parameters
+        ----------
+        feature_data: pandas.DataFrame
+            data frame where columns are feature names and rows and objects
+
+        Returns
+        -------
+        Tuple[Union[str, int]]
+            name of the feature and the number of objects with NULL values
+        '''
+        null_indices = list()
+        for name, values in feature_data.isnull().iteritems():
+            null_indices.append((name, np.sum(values)))
+        return null_indices
 
     def save_result_values(self, result_id, data):
         '''Saves the computed label values.
@@ -295,7 +315,6 @@ class Classifier(Tool):
             subset of `feature_data` for selected mapobjects with additional
             "label" column
         '''
-        import ipdb; ipdb.set_trace()
         labeled_mapobjects = dict(labeled_mapobjects)
         ids = labeled_mapobjects.keys()
         labels = labeled_mapobjects.values()
@@ -386,6 +405,7 @@ class Classifier(Tool):
             y.append(labels[i])
         X_test = feature_data
         scaler = models[method]['scaler']
+        # TODO: identify NaN and infinite values
         if scaler:
             # Fit scaler on the entire dataset.
             scaler.fit(feature_data)
