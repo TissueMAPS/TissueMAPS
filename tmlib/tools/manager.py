@@ -1,8 +1,10 @@
 import os
+import glob
 import argparse
 import socket
 import logging
 from whichcraft import which
+from natsort import natsorted
 from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
@@ -130,6 +132,37 @@ class ToolRequestManager(SubmissionManager):
             )
         job.requested_cores = cores
         return job
+
+    def get_log_output(self, submission_id):
+        '''Gets log output (standard output and error).
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the tool job
+            :class:`Submission <tmlib.models.submission.Submission>`
+
+        Returns
+        -------
+        Dict[str, str]
+            "stdout" and "stderr" for the given job
+
+        '''
+        stdout_files = glob.glob(
+            os.path.join(self._log_location, '*_%d_*.out' % submission_id)
+        )
+        stderr_files = glob.glob(
+            os.path.join(self._log_location, '*_%d_*.err' % submission_id)
+        )
+        if not stdout_files or not stderr_files:
+            raise IOError('No log files found for tool job #%d' % submission_id)
+        # Take the most recent log files
+        log = dict()
+        with open(natsorted(stdout_files)[-1], 'r') as f:
+            log['stdout'] = f.read()
+        with open(natsorted(stderr_files)[-1], 'r') as f:
+            log['stderr'] = f.read()
+        return log
 
     def get_payload(self, submission_id):
         '''Get payload for tool request.

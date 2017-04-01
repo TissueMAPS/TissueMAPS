@@ -449,7 +449,7 @@ class CommandLineInterface(WorkflowSubmissionManager):
                 'when "phase" is set to "run".'
             )
         api = self.api_instance
-        log = api.get_log_output_from_files(phase, job_id)
+        log = api.get_log_output(phase, job_id)
         print('\nOUTPUT\n======\n\n%s\n\nERROR\n=====\n\n%s'
               % (log['stdout'], log['stderr']))
 

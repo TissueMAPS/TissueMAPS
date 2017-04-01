@@ -213,8 +213,8 @@ class ClusterRoutines(BasicClusterRoutines):
 
         return job_ids
 
-    def get_log_output_from_files(self, phase, job_id=None):
-        '''Gets log outputs (standard output and error) from files.
+    def get_log_output(self, phase, job_id=None):
+        '''Gets log outputs (standard output and error).
 
         Parameters
         ----------
@@ -248,7 +248,7 @@ class ClusterRoutines(BasicClusterRoutines):
                 raise IOError('No log files found for run job # %d' % job_id)
         else:
             stdout_files = glob.glob(
-                os.path.join(self.log_location, '*_%s*.out' % phase)
+                os.path.join(self.log_location, '*_%s_*.out' % phase)
             )
             stderr_files = glob.glob(
                 os.path.join(self.log_location, '*_%s_*.err' % phase)

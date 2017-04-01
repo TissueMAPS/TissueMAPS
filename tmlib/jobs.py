@@ -37,8 +37,8 @@ class Job(gc3libs.Application):
             jobname=self.name,
             arguments=arguments,
             output_dir=output_dir,
-            stdout='%s_%s.out' % (self.name, t),
-            stderr='%s_%s.err' % (self.name, t),
+            stdout='%s_%d_%s.out' % (self.name, self.submission_id, t),
+            stderr='%s_%d_%s.err' % (self.name, self.submission_id, t),
             # Assumes that nodes have access to a shared file system.
             inputs=[],
             outputs=[],
