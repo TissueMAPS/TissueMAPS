@@ -70,20 +70,23 @@ def get_version():
 setuptools.setup(
     name='tmclient',
     version=get_version(),
-    description='TissueMAPS RESTful API client.',
+    description='RESTful API client for TissueMAPS.',
     author='Markus D. Herrmann',
-    author_email='markusdherrmann@gmail.com',
     license='Apache-2.0',
     url='https://github.com/tissuemaps/tmclient',
-    platforms=['Linux', 'OS-X'],
+    platforms=['Linux', 'MacOS', 'Windows'],
     classifiers=[
-        'Topic :: Scientific/Engineering :: Information Analysis',
-        'Topic :: System :: Emulators',
-        'Programming Language :: Python',
-        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: Apache Software License',
+        'Operating System :: MacOS',
+        'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX :: Linux',
-        'Operating System :: POSIX :: Other',
-        'Operating System :: MacOS'
+        'Intended Audience :: Science/Research',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+        'Topic :: Scientific/Engineering :: Bio-Informatics',
+        'Topic :: Internet :: WWW/HTTP',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 3',
+        'Development Status :: 4 - Beta'
     ],
     entry_points={'console_scripts': build_console_scripts()},
     packages=setuptools.find_packages(os.path.join('src', 'python')),
@@ -95,7 +98,7 @@ setuptools.setup(
         'pandas>=0.19.1',
         'prettytable>=0.7.2',
         'PyYAML>=3.11',
-        'requests>=2.10.0'
+        'requests>=2.11.0'
     ]
 )
 
