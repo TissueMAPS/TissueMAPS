@@ -20,7 +20,7 @@ from abc import ABCMeta
 from abc import abstractproperty
 try:
     from ConfigParser import SafeConfigParser
-except ModuleNotFoundError:
+except ImportError:
     import configparser
     SafeConfigParser = configparser.ConfigParser
 from Crypto.PublicKey import RSA

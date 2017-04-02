@@ -18,7 +18,7 @@ import collections
 import logging
 try:
     from ConfigParser import SafeConfigParser
-except ModuleNotFoundError:
+except ImportError:
     import configparser
     SafeConfigParser = configparser.ConfigParser
 
