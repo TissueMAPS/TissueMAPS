@@ -75,6 +75,7 @@ def _get_ansible_roles_and_variables_directories():
 
 
 def _build_ansible_container_command(verbosity, action_command):
+    playbooks_dir = _get_playbooks_dir('tissuemaps')
     project_dir = os.path.join(
         playbooks_dir, '../../container/projects/tissuemaps'
     )
