@@ -88,7 +88,7 @@ def _build_ansible_container_command(verbosity, action_command):
         cmd.extend(['--var-file', filename])
     if verbosity > 3:
         cmd.append('--debug')
-    cmd.append(action_command)
+    cmd.extend(action_command)
     return cmd
 
 
