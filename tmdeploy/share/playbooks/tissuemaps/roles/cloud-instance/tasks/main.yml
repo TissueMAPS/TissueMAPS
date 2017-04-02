@@ -17,15 +17,9 @@
 ---
 - include: "{{provider}}.yml"
 
-- name: Wait for instance
-  local_action: wait_for
-  args:
-    host: "{{ hostvars[instance_name].ansible_host }}"
-    port: 22
-    delay: 30
-    timeout: 240
-    state: started
-  when: instance_state == "present"
+- pause:
+    minutes: 1
+    prompt: "Wait 1 minute for instance."
 
 - include: format.yml
   delegate_to: "{{ instance_name }}"
