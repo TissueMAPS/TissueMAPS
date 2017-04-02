@@ -281,7 +281,7 @@ class CloudSection(_SetupSection):
                 'private key: {0}'.format(value)
             )
         if not os.path.exists(value):
-            logger.warn('private key file "%s" does not exist.', value)
+            logger.warn('private key file "%s" does not exist', value)
             key_file_public = self.key_file_public
             logger.info('create SSH key pair')
             key = RSA.generate(2048)
@@ -314,7 +314,7 @@ class CloudSection(_SetupSection):
                 'public key: {0}'.format(value)
             )
         if not os.path.exists(value):
-            logger.warn('public key file "%s" does not exist.', value)
+            logger.warn('public key file "%s" does not exist', value)
         self._key_file_public = value
 
     @property

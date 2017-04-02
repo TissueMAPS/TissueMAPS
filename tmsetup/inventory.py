@@ -76,6 +76,19 @@ def build_inventory_information(setup):
     '''
     inventory = dict()
     inventory['all'] = dict()
+    inventory['all']['vars'] = {
+        'provider': setup.cloud.provider,
+        'region': setup.cloud.region,
+        'key_name': setup.cloud.key_name,
+        'key_file': os.path.expandvars(
+            os.path.expanduser(
+                setup.cloud.key_file_public
+            )
+        ),
+        'network': setup.cloud.network,
+        'subnetwork': setup.cloud.subnetwork,
+        'ip_range': setup.cloud.ip_range,
+    }
     inventory['_meta'] = dict()
     inventory['_meta']['hostvars'] = dict()
 
@@ -86,7 +99,9 @@ def build_inventory_information(setup):
             )
         )
     for cluster in setup.architecture.clusters:
+        logger.info('configure cluster "%s"', cluster.name)
         for node_type in cluster.node_types:
+            logger.info('configure node type "%s"', node_type.name)
             for i in range(node_type.count):
                 host_name = HOSTNAME_FORMAT.format(
                     name=setup.architecture.name, cluster=cluster.name,
@@ -113,27 +128,12 @@ def build_inventory_information(setup):
                     host_vars[k] = v
                 inventory['_meta']['hostvars'][host_name] = host_vars
                 for group in node_type.groups:
+                    logger.info('add group "%s"', group.name)
                     if group.name not in inventory:
                         inventory[group.name] = {'hosts': list()}
                     inventory[group.name]['hosts'].append(host_name)
                     if group.vars is not None:
                         inventory[group.name]['vars'] = group.vars
-                    inventory['all']['vars'] = {
-                        'provider': setup.cloud.provider,
-                        'region': setup.cloud.region,
-                        'key_name': setup.cloud.key_name,
-                        'key_file': os.path.expandvars(
-                            os.path.expanduser(
-                                setup.cloud.key_file_public
-                            )
-                        ),
-                        'network': setup.cloud.network,
-                        'subnetwork': setup.cloud.subnetwork,
-                        'ip_range': setup.cloud.ip_range,
-                        # Ansible sproadically fails to connect to hosts.
-                        # Attempt to work around this issue by trying to
-                        # reconnect repeatedly.
-                    }
 
     return inventory
 
@@ -155,7 +155,7 @@ def load_inventory(hosts_file=HOSTS_FILE):
     if os.path.exists(hosts_file):
         inventory.read(hosts_file)
     else:
-        logger.warn('Inventory file doesn not exist: %s', hosts_file)
+        logger.warn('inventory file doesn\'t exist: %s', hosts_file)
     return inventory
 
 

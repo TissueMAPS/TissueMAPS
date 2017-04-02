@@ -16,6 +16,9 @@
 import os
 import yaml
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def to_json(description):
@@ -27,14 +30,17 @@ def from_json(description):
 
 
 def to_yaml(description):
-    return yaml.dump(description, explicit_start=True, default_flow_style=False)
+    return yaml.safe_dump(
+        description, explicit_start=True, default_flow_style=False
+    )
 
 
 def from_yaml(description):
-    return yaml.load(description)
+    return yaml.safe_load(description)
 
 
 def read_json_file(filename):
+    logger.debug('read JSON file: %s', filename)
     if not os.path.exists(filename):
         raise OSError('File does not exist: {0}'.format(filename))
     with open(filename) as f:
@@ -42,6 +48,7 @@ def read_json_file(filename):
 
 
 def read_yaml_file(filename):
+    logger.debug('read YAML file: %s', filename)
     if not os.path.exists(filename):
         raise OSError('File does not exist: {0}'.format(filename))
     with open(filename) as f:
@@ -49,5 +56,6 @@ def read_yaml_file(filename):
 
 
 def write_yaml_file(filename, content):
+    logger.debug('write YAML file: %s', filename)
     with open(filename, 'w') as f:
         f.write(to_yaml(content))
