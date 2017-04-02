@@ -23,7 +23,7 @@
     host: "{{ hostvars[instance_name].ansible_host }}"
     port: 22
     delay: 30
-    timeout: 60
+    timeout: 240
     state: started
   when: instance_state == "present"
 
