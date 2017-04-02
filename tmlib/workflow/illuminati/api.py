@@ -618,9 +618,10 @@ class PyramidBuilder(ClusterRoutines):
                     if name == 'Sites':
                         # We need to account for the "multiplexing" edge case.
                         offset = obj.aligned_offset
+                        image_size = obj.aligned_image_size
                     else:
                         offset = obj.offset
-                    image_size = obj.image_size
+                        image_size = obj.image_size
                     # First element: x axis
                     # Second element: inverted (!) y axis
                     # We further subtract one pixel such that the polygon
