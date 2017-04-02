@@ -647,14 +647,7 @@ class Setup(object):
     '''Description of the `TissueMAPS` setup.'''
 
     def __init__(self, description_file=SETUP_FILE):
-        if not os.path.exists(description_file):
-            raise OSError(
-                'Setup description file "{0}" does not exist!'.format(
-                    description_file
-                )
-            )
-        self.description_file = description_file
-        description = self._load_description()
+        description = self._load_description(description_file)
         for k, v in description.items():
             if k not in dir(self):
                 raise SetupDescriptionError(
@@ -667,8 +660,12 @@ class Setup(object):
                     'Setup description requires key "{0}"'.format(k)
                  )
 
-    def _load_description(self):
-        description = read_yaml_file(SETUP_FILE)
+    def _load_description(self, description_file):
+        if not os.path.exists(description_file):
+            raise OSError(
+                'Setup file "{0}" does not exist!'.format(description_file)
+            )
+        description = read_yaml_file(description_file)
         if not isinstance(description, dict):
             raise SetupDescriptionError(
                 'Setup description must be a mapping.'
