@@ -67,7 +67,7 @@ def _get_host_groups():
     return groups_to_deploy
 
 
-def _get_ansible_roles_and_variables_directories():
+def _get_roles_and_variables_directories():
     playbooks_dir = _get_playbooks_dir('tissuemaps')
     roles_dir = os.path.join(playbooks_dir, 'roles')
     vars_dir = os.path.join(playbooks_dir, 'group_vars')
@@ -76,6 +76,7 @@ def _get_ansible_roles_and_variables_directories():
 
 def _build_ansible_container_command(verbosity, action_command):
     playbooks_dir = _get_playbooks_dir('tissuemaps')
+    roles_dir, vars_dir = _get_roles_and_variables_directories()
     project_dir = os.path.join(
         playbooks_dir, '../../container/projects/tissuemaps'
     )
@@ -202,7 +203,7 @@ def show_vm_setup(args):
 
 def build_container(args):
     logger.info('build container images')
-    roles_dir, vars_dir = _get_ansible_roles_and_variables_directories()
+    roles_dir, vars_dir = _get_roles_and_variables_directories()
     cmd = [
         'build', '--from-scratch',
         '--roles-path', os.path.abspath(roles_dir)
@@ -240,7 +241,7 @@ def build_container(args):
 
 def start_container(args):
     logger.info('start containers')
-    roles_dir, vars_dir = _get_ansible_roles_and_variables_directories()
+    roles_dir, vars_dir = _get_roles_and_variables_directories()
     cmd = ['run']
     if not args.dev:
         cmd.append('--production')
@@ -259,7 +260,7 @@ def stop_container(args):
 
 
 def push_container(args):
-    roles_dir, vars_dir = _get_ansible_roles_and_variables_directories()
+    roles_dir, vars_dir = _get_roles_and_variables_directories()
     logger.info('push container images to Docker Hub')
     cmd = [
         'push', '--push-to', args.account, '--tag', args.tag,
