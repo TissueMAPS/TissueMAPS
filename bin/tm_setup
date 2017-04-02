@@ -124,7 +124,7 @@ def _run_container_commands(commands):
     env['DOCKER_CLIENT_TIMEOUT'] = str(600)
     env['COMPOSE_HTTP_TIMEOUT'] = str(600)
     for cmd in commands:
-        logger.debug('command: %s', ' '.join(command))
+        logger.debug('command: %s', ' '.join(cmd))
         _run_command(cmd, env)
 
 
