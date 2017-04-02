@@ -4,7 +4,11 @@ import collections
 import argparse
 import sys
 import logging
-from ConfigParser import SafeConfigParser
+try:
+    from ConfigParser import SafeConfigParser
+except ModuleNotFoundError:
+    import configparser
+    SafeConfigParser = configparser.ConfigParser
 
 from tmsetup.utils import write_yaml_file, read_yaml_file, to_json
 from tmsetup.log import configure_logging, map_logging_verbosity
