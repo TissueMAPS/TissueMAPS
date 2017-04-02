@@ -78,11 +78,10 @@ setuptools.setup(
     name='tmsetup',
     version=get_version(),
     description='TissueMAPS setup and deployment in virtual environments.',
-    author='Markus D. Herrmann',
-    author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/tmsetup',
+    author='Markus D. Herrmann',
     license='GPL-3.0+',
-    platforms=['Linux', 'OS-X'],
+    platforms=['Linux', 'MacOSX'],
     classifiers=[
         'Intended Audience :: Developers',
         'Intended Audience :: Science/Research',
