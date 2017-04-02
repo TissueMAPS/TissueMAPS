@@ -237,7 +237,7 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict(), hosts=set()
     return cmd
 
 
-def _run(command):
+def _run_container_command(command):
     logger.debug('command: %s', ' '.join(command))
     # Workaround for ansible-container commands
     env = dict(os.environ)
@@ -248,11 +248,23 @@ def _run(command):
         sys.stdout.write(c)
 
 
+def _run_vm_command(command):
+    logger.debug('command: %s', ' '.join(command))
+    # Workaround for ansible-container commands
+    env = dict(os.environ)
+    env['ANSIBLE_CONFIG'] = os.path.join(
+        _get_playbooks_dir('tissuemaps'), 'ansible.cfg'
+    )
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, env=env)
+    for c in iter(lambda: process.stdout.read(1), ''):
+        sys.stdout.write(c)
+
+
 def container_manage(args):
     commands = _build_container_commands(args.action, args.verbosity)
     logger.info('run Ansible commands')
     for cmd in commands:
-        _run(cmd)
+        _run_container_command(cmd)
 
 
 def vm_manage(args):
@@ -260,7 +272,7 @@ def vm_manage(args):
     commands = _build_vm_commands(args.action, args.verbosity, groups)
     logger.info('run Ansible commands')
     for cmd in commands:
-        _run(cmd)
+        _run_vm_command(cmd)
 
 
 def vm_show(args):
