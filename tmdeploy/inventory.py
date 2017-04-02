@@ -1,4 +1,4 @@
-# TmSetup - Automated setup and deployment of TissueMAPS in the cloud.
+# TmDeploy - Automated deployment of TissueMAPS in the cloud.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
@@ -22,8 +22,8 @@ except ImportError:
     import configparser
     SafeConfigParser = configparser.ConfigParser
 
-from tmsetup.utils import read_yaml_file, to_json
-from tmsetup.config import CONFIG_DIR, Setup
+from tmdeploy.utils import read_yaml_file, to_json
+from tmdeploy.config import CONFIG_DIR, Setup
 
 
 GROUP_VARS_DIR = os.path.join(CONFIG_DIR, 'group_vars')
@@ -66,7 +66,7 @@ def build_inventory_information(setup):
 
     Parameters
     ----------
-    setup: tmsetup.config.Setup
+    setup: tmdeploy.config.Setup
         setup configuration
 
     Returns

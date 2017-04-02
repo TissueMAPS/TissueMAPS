@@ -1,4 +1,4 @@
-# TmSetup - Automated setup and deployment of TissueMAPS in the cloud.
+# TmDeploy - Automated deployment of TissueMAPS in the cloud.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
@@ -13,4 +13,4 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from tmsetup.version import __version__
+from tmdeploy.version import __version__

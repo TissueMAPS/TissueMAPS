@@ -1,4 +1,4 @@
-# TmSetup - Automated setup and deployment of TissueMAPS in the cloud.
+# TmDeploy - Automated deployment of TissueMAPS in the cloud.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich
 
 # This program is free software: you can redistribute it and/or modify

@@ -1,4 +1,4 @@
-# TmSetup - Automated setup and deployment of TissueMAPS in the cloud.
+# TmDeploy - Automated deployment of TissueMAPS in the cloud.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
@@ -25,8 +25,8 @@ except ImportError:
     SafeConfigParser = configparser.ConfigParser
 from Crypto.PublicKey import RSA
 
-from tmsetup.errors import SetupDescriptionError, SetupEnvironmentError
-from tmsetup.utils import read_yaml_file
+from tmdeploy.errors import SetupDescriptionError, SetupEnvironmentError
+from tmdeploy.utils import read_yaml_file
 
 
 CONFIG_DIR = os.path.expanduser('~/.tmaps/setup')
@@ -264,7 +264,7 @@ class CloudSection(_SetupSection):
     def key_file_private(self):
         '''str: path to the private key used by Ansible to connect to virtual
         machines (by default looks for a file with name
-        :attr:`key_name <tmsetup.config.CloudSection.key_name>` in ``~/.ssh``
+        :attr:`key_name <tmdeploy.config.CloudSection.key_name>` in ``~/.ssh``
         directory)
         '''
         if not hasattr(self, '_key_file_private'):
@@ -297,7 +297,7 @@ class CloudSection(_SetupSection):
     def key_file_public(self):
         '''str: path to the public key that will be uploaded to the cloud
         provider (by default looks for a ``.pub`` file with name
-        :attr:`key_name <tmsetup.config.CloudSection.key_name>` in ``~/.ssh``
+        :attr:`key_name <tmdeploy.config.CloudSection.key_name>` in ``~/.ssh``
         directory)
         '''
         if not hasattr(self, '_key_file_public'):
@@ -354,7 +354,7 @@ class ArchitectureSection(_SetupSection):
 
     @property
     def clusters(self):
-        '''List[tmsetup.config.ClusterSection]: clusters that should be set up
+        '''List[tmdeploy.config.ClusterSection]: clusters that should be set up
         '''
         return self._clusters
 
@@ -392,7 +392,7 @@ class ClusterSection(_SetupSection):
 
     @property
     def node_types(self):
-        '''List[tmsetup.config.ClusterNodeTypeSection]: different types of
+        '''List[tmdeploy.config.ClusterNodeTypeSection]: different types of
         virtual machines the cluster is comprised of
         '''
         return self._node_types
@@ -454,7 +454,7 @@ class ClusterNodeTypeSection(_SetupSection):
 
     @property
     def groups(self):
-        '''List[tmsetup.config.AnsibleGroupSection]: Ansible host groups
+        '''List[tmdeploy.config.AnsibleGroupSection]: Ansible host groups
         that should be used for deployment of virtual machines beloning
         to the cluster node types
         '''
@@ -674,7 +674,7 @@ class Setup(object):
 
     @property
     def cloud(self):
-        '''tmsetup.config.CloudSection: cloud configuration'''
+        '''tmdeploy.config.CloudSection: cloud configuration'''
         return self._cloud
 
     @cloud.setter
@@ -683,7 +683,7 @@ class Setup(object):
 
     @property
     def architecture(self):
-        '''tmsetup.config.ArchitectureSection: cluster architecture'''
+        '''tmdeploy.config.ArchitectureSection: cluster architecture'''
         return self._architecture
 
     @architecture.setter

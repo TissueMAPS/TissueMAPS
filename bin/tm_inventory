@@ -10,13 +10,13 @@ except ImportError:
     import configparser
     SafeConfigParser = configparser.ConfigParser
 
-from tmsetup.utils import write_yaml_file, read_yaml_file, to_json
-from tmsetup.log import configure_logging, map_logging_verbosity
-from tmsetup.config import Setup
-from tmsetup.errors import (
+from tmdeploy.utils import write_yaml_file, read_yaml_file, to_json
+from tmdeploy.log import configure_logging, map_logging_verbosity
+from tmdeploy.config import Setup
+from tmdeploy.errors import (
     CloudError, NoInstanceFoundError, MultipleInstancesFoundError
 )
-from tmsetup.inventory import (
+from tmdeploy.inventory import (
     CONFIG_DIR, GROUP_VARS_DIR, HOST_VARS_DIR,
     build_inventory_information, load_inventory, save_inventory
 )
@@ -362,7 +362,7 @@ if __name__ == "__main__":
         verbosity = 0
     log_level = map_logging_verbosity(verbosity)
     logger.setLevel(log_level)
-    tmsetup_logger = logging.getLogger('tmsetup')
-    tmsetup_logger.setLevel(log_level)
+    tmdeploy_logger = logging.getLogger('tmdeploy')
+    tmdeploy_logger.setLevel(log_level)
 
     main(args)

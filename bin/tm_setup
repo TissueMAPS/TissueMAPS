@@ -9,13 +9,13 @@ import collections
 from whichcraft import which
 from pkg_resources import resource_filename, resource_exists
 
-import tmsetup
-from tmsetup.config import Setup
-from tmsetup.inventory import build_inventory_information
-from tmsetup.log import configure_logging, map_logging_verbosity
-from tmsetup.inventory import HOSTNAME_FORMAT
-from tmsetup.errors import SetupDescriptionError
-from tmsetup.utils import to_yaml, to_json
+import tmdeploy
+from tmdeploy.config import Setup
+from tmdeploy.inventory import build_inventory_information
+from tmdeploy.log import configure_logging, map_logging_verbosity
+from tmdeploy.inventory import HOSTNAME_FORMAT
+from tmdeploy.errors import SetupDescriptionError
+from tmdeploy.utils import to_yaml, to_json
 
 logger = logging.getLogger(os.path.basename(__file__))
 
@@ -37,7 +37,7 @@ SUPPORTED_GROUPS = SUPPORTED_TM_GROUPS.union(SUPPORTED_EC_GROUPS)
 def _get_playbooks_dir(name):
     logger.debug('get playbooks directory for "%s"', name)
     rel_path = os.path.join('share', 'playbooks', name)
-    path = os.path.abspath(resource_filename('tmsetup', rel_path))
+    path = os.path.abspath(resource_filename('tmdeploy', rel_path))
     if not os.path.exists(path):
         logger.error('playbooks directory does not exist: %s', path)
         sys.exit(1)
@@ -145,7 +145,7 @@ def deploy_vm(args):
     commands.append(['tm_inventory', '--refresh'])
 
     # Run playbooks implemented in elasticluster, but only in case groups
-    # are provided that are not supported by tmsetup.
+    # are provided that are not supported by tmdeploy.
     use_elasticluster = False
     groups_to_deploy = _get_host_groups()
     for group in groups_to_deploy.keys():
@@ -160,9 +160,9 @@ def deploy_vm(args):
         cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
         commands.append(cmd)
 
-    # Run the TissueMAPS-specific playbooks implemented in tmsetup
-    tmsetup_playbooks_dir = _get_playbooks_dir('tissuemaps')
-    playbook = os.path.join(tmsetup_playbooks_dir, 'site.yml')
+    # Run the TissueMAPS-specific playbooks implemented in tmdeploy
+    tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
+    playbook = os.path.join(tmdeploy_playbooks_dir, 'site.yml')
     logger.debug('build command for playbook: %s', playbook)
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
     commands.append(cmd)
@@ -175,8 +175,8 @@ def launch_vm(args):
     variables = {'instance_state': 'present'}
     commands = list()
     commands.append(['tm_inventory', '--refresh'])
-    tmsetup_playbooks_dir = _get_playbooks_dir('tissuemaps')
-    playbook = os.path.join(tmsetup_playbooks_dir, 'instance.yml')
+    tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
+    playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
     commands.append(cmd)
     _run_vm_commands(commands)
@@ -187,8 +187,8 @@ def terminate_vm(args):
     variables = {'instance_state': 'absent'}
     commands = list()
     commands.append(['tm_inventory', '--refresh'])
-    tmsetup_playbooks_dir = _get_playbooks_dir('tissuemaps')
-    playbook = os.path.join(tmsetup_playbooks_dir, 'instance.yml')
+    tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
+    playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
     commands.append(cmd)
     _run_vm_commands(commands)
@@ -387,7 +387,7 @@ if __name__ == '__main__':
     configure_logging()
     log_level = map_logging_verbosity(args.verbosity)
     logger.setLevel(log_level)
-    tmsetup_logger = logging.getLogger('tmsetup')
-    tmsetup_logger.setLevel(log_level)
+    tmdeploy_logger = logging.getLogger('tmdeploy')
+    tmdeploy_logger.setLevel(log_level)
 
     main(args)

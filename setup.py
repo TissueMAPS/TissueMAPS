@@ -67,7 +67,7 @@ def find_scripts():
 def get_version():
     logger.info('get package version')
     src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'tmsetup'
+        os.path.abspath(os.path.dirname(__file__)), 'tmdeploy'
     )
     sys.path = [src_path] + sys.path
     import version
@@ -75,10 +75,10 @@ def get_version():
 
 
 setuptools.setup(
-    name='tmsetup',
+    name='tmdeploy',
     version=get_version(),
-    description='TissueMAPS setup and deployment in virtual environments.',
-    url='https://github.com/tissuemaps/tmsetup',
+    description='TissueMAPS deployment in virtual environments.',
+    url='https://github.com/tissuemaps/tmdeploy',
     author='Markus D. Herrmann',
     license='GPL-3.0+',
     platforms=['Linux', 'MacOSX'],
