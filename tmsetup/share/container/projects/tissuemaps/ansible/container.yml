@@ -35,6 +35,12 @@ services:
       - 'nginx'
       - '-g'
       - 'daemon off;'
+    dev_overrides:
+      command:
+        - 'dumb-init'
+        - '/usr/bin/gulp'
+        - '--gulpfile'
+        - '/home/tissuemaps/tmui/src/gulpfile.js'
 
   app:
     image: tissuemaps/base
@@ -47,6 +53,11 @@ services:
     command:
       - 'dumb-init'
       - '/home/tissuemaps/.tmaps/uwsgi.sh'
+    dev_overrides:
+      command:
+        - 'dumb-init'
+        - '/home/tissuemaps/.tmaps/tm_server.sh'
+        - '-vv'
 
   db_master:
     image: tissuemaps/base
