@@ -208,6 +208,7 @@ def build_container(args):
     ]
     # The following options are parsed to the "ansible-playbooks" command.
     cmd.append('--')
+    verbosity = args.verbosity
     if verbosity > 0:
         verbosity -= 1
         if verbosity > 0:
