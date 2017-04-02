@@ -279,7 +279,7 @@ def main(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-        description='Setup TissueMAPS on virtual machines or containers.'
+        description='Deploy TissueMAPS on virtual machines or containers.'
     )
     parser.add_argument(
         '--verbosity', '-v', action='count', default=0,
