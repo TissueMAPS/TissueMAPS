@@ -36,6 +36,7 @@ from tmserver.util import (
     decode_query_ids, decode_form_ids, is_true, is_false,
     assert_query_params, assert_form_params
 )
+from tmserver.model import encode_pk
 from tmserver.api import api
 from tmserver.error import *
 
@@ -321,7 +322,7 @@ def create_experiment():
 
     return jsonify({
         'data': {
-            'id': experiment_id,
+            'id': encode_pk(experiment_id),
             'name': name,
             'description': description,
             'user': current_identity.name
