@@ -28,7 +28,7 @@ SUPPORTED_TM_GROUPS = REQUIRED_TM_GROUPS.union({'tissuemaps_compute'})
 SUPPORTED_EC_GROUPS = {
     'ganglia_server', 'ganglia_client',
     'glusterfs_server', 'glusterfs_client',
-    'slurm_master', 'slurm_workers'
+    'slurm_master', 'slurm_worker'
 }
 
 SUPPORTED_GROUPS = SUPPORTED_TM_GROUPS.union(SUPPORTED_EC_GROUPS)
