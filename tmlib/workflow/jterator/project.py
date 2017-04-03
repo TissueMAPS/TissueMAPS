@@ -471,6 +471,12 @@ class AvailableModules(object):
         }
         modules = list()
         for languange, d in dirs.iteritems():
+            if not os.path.exists(d):
+                logger.warn(
+                    'modules directory for language "%s" does not exist: %s' %
+                    (language, d)
+                )
+                continue
             r = re.compile(search_strings[languange])
             modules.extend([
                 os.path.join(d, f)
