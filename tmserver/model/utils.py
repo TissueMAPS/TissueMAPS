@@ -13,28 +13,28 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""Utility functions for dealing with moodels."""
+"""Utility functions for dealing with data models."""
 import base64
 
 
 def decode_pk(pk_str):
-    """Decode a hashed database id so that it can be used
+    """Decode a hashed database ID so that it can be used
     when formulating SQL queries.
 
     Parameters
     ----------
     pk_str : str
-        Hashed database id.
+        hashed database ID
 
     Returns
     ------
     int
-        The original database id.
+        original database ID
 
     Raises
     ------
     ValueError
-        The hashed id can't be decoded.
+        when the hashed ID can't be decoded.
 
     """
     try:
@@ -54,12 +54,12 @@ def encode_pk(pk):
     Parameters
     ----------
     pk : int
-        Database id
+        original database ID
 
     Returns
     ------
     str
-        Hashed database string
+        hashed database ID
 
     """
     return base64.urlsafe_b64encode('tmaps' + str(pk))
