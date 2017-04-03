@@ -115,90 +115,77 @@ def _assert_db_exists(engine):
         raise ValueError('Cannot connect to database "%s".' % db_name)
 
 
-def _set_db_shard_count(engine, n):
+def _set_db_shard_count(connection, n):
     if n > 0:
-        db_url = make_url(engine.url)
-        db_name = db_url.database
-        logger.debug('set shard_count for database %s to %d', db_name, n)
-        with Connection(db_url) as conn:
-            conn.execute('SET citus.shard_count = %(n)s;', {'n': n})
+        logger.debug('set shard_count to %d', n)
+        cursor = connection.connection.cursor()
+        cursor.execute('SET citus.shard_count = %(n)s;', {'n': n})
+        cursor.close()
 
 
-def _set_db_shard_replication_factor(engine, n):
+def _set_db_shard_replication_factor(connection, n):
     if n > 0:
-        db_url = make_url(engine.url)
-        db_name = db_url.database
-        logger.debug(
-            'set shard_replication_factor for database %s to %d', db_name, n
-        )
-        with Connection(db_url) as conn:
-            conn.execute('SET citus.shard_replication_factor = %(n)s;', {'n': n})
+        logger.debug('set shard_replication_factor to %d', n)
+        cursor = connection.connection.cursor()
+        cursor.execute('SET citus.shard_replication_factor = %(n)s;', {'n': n})
+        cursor.close()
 
 
-def _create_schema_if_not_exists(engine, experiment_id):
-    db_url = make_url(engine.url)
-    db_name = str(db_url.database)
-    schema_name = _SCHEMA_NAME_FORMAT_STRING.format(experiment_id=experiment_id)
-    with Connection(db_url) as conn:
-        conn.execute('''
-            SELECT EXISTS(
-                SELECT 1 FROM pg_namespace WHERE nspname = %(schema)s
-            );
-        ''', {
-            'schema': schema_name
-        })
-        schema = conn.fetchone()
-        if schema.exists:
-            return True
-        else:
-            logger.debug(
-                'create schema "%s" for database "%s"', schema_name, db_name
-            )
-            sql = 'CREATE SCHEMA IF NOT EXISTS %s;' % schema_name
-            conn.execute(sql)
-            return False
+def _create_schema_if_not_exists(connection, schema_name):
+    cursor = connection.connection.cursor()
+    cursor.execute('''
+        SELECT EXISTS(
+            SELECT 1 FROM pg_namespace WHERE nspname = %(schema)s
+        );
+    ''', {
+        'schema': schema_name
+    })
+    schema = cursor.fetchone()
+    if schema[0]:
+        cursor.close()
+        return True
+    else:
+        logger.debug('create schema "%s"', schema_name)
+        sql = 'CREATE SCHEMA IF NOT EXISTS %s;' % schema_name
+        cursor.execute(sql)
+        cursor.close()
+        return False
 
 
-def _drop_schema(engine, experiment_id):
-    db_url = make_url(engine.url)
-    db_name = str(db_url.database)
-    schema_name = _SCHEMA_NAME_FORMAT_STRING.format(experiment_id=experiment_id)
+def _drop_schema(connection, schema_name):
     logger.debug('drop all table in schema "%s"', schema_name)
-    with Connection(db_url) as conn:
-        # NOTE: The tables are dropped on the worker nodes, but the schemas
-        # persist. This is not a problem, however.
-        conn.execute('DROP SCHEMA %s CASCADE;' % schema_name)
+    # NOTE: The tables are dropped on the worker nodes, but the schemas
+    # persist. This is not a problem, however.
+    cursor = connection.connection.cursor()
+    cursor.execute('DROP SCHEMA %s CASCADE;' % schema_name)
+    cursor.close()
 
 
-def _create_db_tables(engine, experiment_id=None):
-    db_url = make_url(engine.url)
-    db_name = str(db_url.database)
-    if experiment_id is None:
+def _create_db_tables(connection, schema_name):
+    if schema_name is None:
         logger.debug(
-            'create tables of models derived from %s for "public" schema of '
-            'database "%s"', MainModel.__name__, db_name
+            'create tables of models derived from %s for schema "public"',
+            MainModel.__name__
         )
         for name, table in MainModel.metadata.tables.iteritems():
             table.schema = 'public'
-        MainModel.metadata.create_all(engine)
+        MainModel.metadata.create_all(connection)
     else:
-        schema_name = _SCHEMA_NAME_FORMAT_STRING.format(
-            experiment_id=experiment_id
-        )
         logger.debug(
-            'create tables of models derived from %s for schema "%s" of '
-            'database "%s"', ExperimentModel.__name__, schema_name, db_name
+            'create tables of models derived from %s for schema "%s"',
+            ExperimentModel.__name__, schema_name
         )
         for name, table in ExperimentModel.metadata.tables.iteritems():
             table.schema = schema_name
-        ExperimentModel.metadata.create_all(engine)
+        ExperimentModel.metadata.create_all(connection)
+        for name, table in ExperimentModel.metadata.tables.iteritems():
+            table.schema = None
         # logger.debug(
         #     'change storage of "pixels" column of "channel_layer_tiles" table'
         # )
-        # with Connection(db_url) as conn:
-        #     conn.execute(
-        #         'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
-        #     )
+        # connection.execute(
+        #     'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
+        # )
 
 
 @listens_for(sqlalchemy.pool.Pool, 'connect')
@@ -339,10 +326,13 @@ class Query(sqlalchemy.orm.query.Query):
                 )
             elif cls.__name__ == 'ExperimentReference':
                 experiments = self.from_self(cls.id).all()
-                engine = create_db_engine(cfg.db_uri)
+                connection = self.session.get_bind()
                 for exp in experiments:
                     logger.info('drop schema of experiment %d', exp.id)
-                    _drop_schema(engine, exp.id)
+                    schema = _SCHEMA_NAME_FORMAT_STRING.format(
+                        experiment_id=exp.id
+                    )
+                    _drop_schema(connection, schema)
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
         logger.debug(
@@ -400,8 +390,8 @@ class SQLAlchemy_Session(object):
             )
 
     @property
-    def engine(self):
-        '''sqlalchemy.engine.Engine: engine for the database connection'''
+    def connection(self):
+        '''database connection'''
         return self._session.get_bind()
 
     def get_or_create(self, model, **kwargs):
@@ -624,21 +614,22 @@ class ExperimentSession(_Session):
         self.experiment_id = experiment_id
         logger.debug('create session for experiment %d', self.experiment_id)
         self._engine = create_db_engine(db_uri)
-        exists = _create_schema_if_not_exists(self._engine, experiment_id)
-        if not exists:
-            _set_db_shard_replication_factor(self._engine, 1)
-            _set_db_shard_count(self._engine, 20 * cfg.db_nodes)
-            _create_db_tables(self._engine, experiment_id)
-        self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
+        schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=self.experiment_id
         )
-        logger.debug('schema: "%s"', self._schema)
-        super(ExperimentSession, self).__init__(db_uri, self._schema)
+        logger.debug('schema: "%s"', schema)
+        super(ExperimentSession, self).__init__(db_uri, schema)
 
     def __enter__(self):
         connection = self._engine.connect()
         self._set_search_path(connection)
+        exists = _create_schema_if_not_exists(connection, self._schema)
+        if not exists:
+            _set_db_shard_replication_factor(connection, 1)
+            _set_db_shard_count(connection, 20 * cfg.db_nodes)
+            _create_db_tables(connection, self._schema)
         self._session_factory.configure(bind=connection)
+        logger.debug('schema: "%s"', self._schema)
         self._session = SQLAlchemy_Session(
             self._session_factory(), self._schema
         )
