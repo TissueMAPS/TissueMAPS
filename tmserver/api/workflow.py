@@ -605,8 +605,7 @@ def get_jterator_project(experiment_id):
     """
     logger.info('get jterator project of experiment %d', experiment_id)
     jt = ImageAnalysisPipelineEngine(experiment_id)
-    pipe = jt.project.pipe.to_dict()
-    pipeline_description = pipe['description']
+    pipeline_description = jt.project.pipe.description.to_dict()
     handles_descriptions = {}
     for h in jt.project.handles:
         handles = h.to_dict()
