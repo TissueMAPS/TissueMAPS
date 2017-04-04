@@ -48,7 +48,7 @@ parser.add_argument(
     help='number of the port to which the server listens (default: 80)'
 )
 parser.add_argument(
-    '-u', '--user', dest='user_name', required=True,
+    '-u', '--user', dest='username', required=True,
     help='name of TissueMAPS user'
 )
 parser.add_argument(
@@ -59,23 +59,23 @@ parser.add_argument(
     '-v', '--verbosity', action='count', default=0,
     help='increase logging verbosity'
 )
-parser.add_argument(
-    '-e', '--experiment', dest='experiment_name', required=True,
-    help='name of the experiment that should be accessed'
-)
 
-subparsers = parser.add_subparsers(
-    dest='resources', help='resources'
-)
+subparsers = parser.add_subparsers(dest='resources', help='resources')
 subparsers.required = True
 
 ###################
 # Abstract parser #
 ###################
 
+abstract_experiment_parser = argparse.ArgumentParser(add_help=False)
+abstract_experiment_parser.add_argument(
+    '-e', '--experiment', metavar='EXPERIMENT', dest='experiment_name', required=True,
+    help='name of the experiment'
+)
+
 abstract_plate_parser = argparse.ArgumentParser(add_help=False)
 abstract_plate_parser.add_argument(
-    '-p', '--plate', dest='plate_name', required=True,
+    '-p', '--plate', metavar='PLATE', dest='plate_name', required=True,
     help='name of the plate'
 )
 
@@ -83,7 +83,7 @@ abstract_well_parser = argparse.ArgumentParser(
     add_help=False, parents=[abstract_plate_parser]
 )
 abstract_well_parser.add_argument(
-    '-w', '--well', dest='well_name', required=True,
+    '-w', '--well', metavar='WELL', dest='well_name', required=True,
     help='name of the well'
 )
 
@@ -91,11 +91,13 @@ abstract_site_parser = argparse.ArgumentParser(
     add_help=False, parents=[abstract_well_parser]
 )
 abstract_site_parser.add_argument(
-    '-x', dest='well_pos_x', type=int, required=True,
+    '-x', '--well-pos-x', metavar='X', dest='well_pos_x',
+    type=int, required=True,
     help='zero-based x cooridinate of acquisition site within the well'
 )
 abstract_site_parser.add_argument(
-    '-y', dest='well_pos_y', type=int, required=True,
+    '-y', '--well-pos-y', metavar='Y', dest='well_pos_y',
+    type=int, required=True,
     help='zero-based y cooridinate of acquisition site within the well'
 )
 
@@ -103,34 +105,17 @@ abstract_acquisition_parser = argparse.ArgumentParser(
     add_help=False, parents=[abstract_plate_parser]
 )
 abstract_acquisition_parser.add_argument(
-    '-a', '--acquisition', dest='acquisition_name', required=True,
+    '-a', '--acquisition', metavar='ACQUISITION', dest='acquisition_name', required=True,
     help='name of the acquisition'
 )
 
-abstract_site_parser = argparse.ArgumentParser(add_help=False)
-abstract_site_parser.add_argument(
-    '-p', '--plate', dest='plate_name', required=True,
-    help='name of the plate'
-)
-abstract_site_parser.add_argument(
-    '-w', '--well', dest='well_name', required=True,
-    help='name of the well'
-)
-abstract_site_parser.add_argument(
-    '-x', '--well-pos-x', dest='well_pos_x', type=int, required=True,
-    help='zero-based x cooridinate of acquisition site within the well'
-)
-abstract_site_parser.add_argument(
-    '-y', '--well-pos-y', dest='well_pos_y', type=int, required=True,
-    help='zero-based y cooridinate of acquisition site within the well'
-)
 
 abstract_tpoint_parser = argparse.ArgumentParser(
     add_help=False,
     formatter_class=argparse.ArgumentDefaultsHelpFormatter
 )
 abstract_tpoint_parser.add_argument(
-    '-t', '--tpoint', type=int, default=0,
+    '-t', '--tpoint', metavar='T', type=int, default=0,
     help='zero-based time point index'
 )
 
@@ -139,25 +124,25 @@ abstract_zplane_parser = argparse.ArgumentParser(
     formatter_class=argparse.ArgumentDefaultsHelpFormatter
 )
 abstract_zplane_parser.add_argument(
-    '-z', '--zplane', type=int, default=0,
+    '-z', '--zplane', metavar='Z', type=int, default=0,
     help='zero-based z-plane index'
 )
 
 abstract_object_parser = argparse.ArgumentParser(add_help=False)
 abstract_object_parser.add_argument(
-    '-o', '--object-type', dest='mapobject_type_name', required=True,
-    help='name of the objects type'
+    '-o', '--object-type', metavar='OBJECT-TYPE', dest='mapobject_type_name',
+    required=True, help='name of the objects type'
 )
 
 abstract_feature_parser = argparse.ArgumentParser(add_help=False)
 abstract_feature_parser.add_argument(
-    '-f', '--feature', dest='feature_name', required=True,
+    '-f', '--feature', metavar='FEATURE', dest='feature_name', required=True,
     help='name of the feature'
 )
 
 abstract_channel_parser = argparse.ArgumentParser(add_help=False)
 abstract_channel_parser.add_argument(
-    '-c', '--channel', dest='channel_name', required=True,
+    '-c', '--channel', metavar='C', dest='channel_name', required=True,
     help='name of the channel'
 )
 
@@ -168,7 +153,7 @@ abstract_name_parser.add_argument(
 
 abstract_new_name_parser = argparse.ArgumentParser(add_help=False)
 abstract_new_name_parser.add_argument(
-    '--new-name', dest='new_name', required=True, help='new name'
+    '--new-name', metavar='NAME', dest='new_name', required=True, help='new name'
 )
 
 abstract_description_parser = argparse.ArgumentParser(add_help=False)
@@ -191,7 +176,8 @@ abstract_download_directory_parser.add_argument(
 
 tools_parser = subparsers.add_parser(
     'tools', help='tools resources',
-    description='Access tools resources of the experiment.'
+    description='Access tools resources of the experiment.',
+    parents=[abstract_experiment_parser]
 )
 tools_subparsers = tools_parser.add_subparsers(
     dest='tools_methods', help='access methods'
@@ -233,7 +219,8 @@ tools_job_log_parser.set_defaults(method='_show_tool_job_log')
 
 workflow_parser = subparsers.add_parser(
     'workflow', help='workflow resources',
-    description='Access workflow resources of the experiment.'
+    description='Access workflow resources of the experiment.',
+    parents=[abstract_experiment_parser]
 )
 workflow_subparsers = workflow_parser.add_subparsers(
     dest='workflow_methods', help='access methods'
@@ -327,7 +314,8 @@ jterator_project_parser = subparsers.add_parser(
         'module descriptor files (handles) in YAML format. A project is '
         'represented on disk as a folder containing a "pipeline.yaml" file '
         'and a "handles" subfolder containing any "*.handles.yaml" files.'
-    )
+    ),
+    parents=[abstract_experiment_parser]
 )
 jterator_project_subparsers = jterator_project_parser.add_subparsers(
     dest='jtproject_methods', help='access methods'
@@ -355,25 +343,12 @@ jterator_project_upload_parser.set_defaults(
     method='upload_jterator_project_files'
 )
 
-##########
-## Data ##
-##########
-
-data_parser = subparsers.add_parser(
-    'data', help='data resources',
-    description='Access data resources of the experiment.'
-)
-data_subparsers = data_parser.add_subparsers(
-    dest='data_models', help='data resource type'
-)
-data_subparsers.required = True
-
 
 ##############
 # Experiment #
 ##############
 
-experiment_parser = data_subparsers.add_parser(
+experiment_parser = subparsers.add_parser(
     'experiment', help='experiment resources',
     description='Access experiment resources.',
 )
@@ -382,16 +357,30 @@ experiment_subparsers = experiment_parser.add_subparsers(
 )
 experiment_subparsers.required = True
 
+experiment_list_parser = experiment_subparsers.add_parser(
+    'ls', help='list experiments',
+    description='List experiments.'
+)
+experiment_list_parser.set_defaults(method='_list_experiments')
+
 experiment_rename_parser = experiment_subparsers.add_parser(
     'rename', help='rename the experiment',
     description='Rename the experiment.',
     parents=[abstract_new_name_parser]
 )
+experiment_rename_parser.add_argument(
+    '-n', '--name', metavar='NAME', dest='experiment_name', required=True,
+    help='name'
+)
 experiment_rename_parser.set_defaults(method='rename_experiment')
 
 experiment_create_parser = experiment_subparsers.add_parser(
     'create', help='create the experiment',
-    description='Create the experiment.',
+    description='Create the experiment.'
+)
+experiment_create_parser.add_argument(
+    '-n', '--name', metavar='NAME', dest='experiment_name', required=True,
+    help='name'
 )
 experiment_create_parser.add_argument(
     '--workflow-type', dest='workflow_type',
@@ -419,7 +408,11 @@ experiment_create_parser.set_defaults(method='create_experiment')
 
 experiment_delete_parser = experiment_subparsers.add_parser(
     'rm', help='delete the experiment',
-    description='Delete the experiment.',
+    description='Delete the experiment.'
+)
+experiment_delete_parser.add_argument(
+    '-n', '--name', metavar='NAME', dest='experiment_name', required=True,
+    help='name'
 )
 experiment_delete_parser.set_defaults(method='delete_experiment')
 
@@ -428,9 +421,10 @@ experiment_delete_parser.set_defaults(method='delete_experiment')
 # Plates #
 ##########
 
-plate_parser = data_subparsers.add_parser(
+plate_parser = subparsers.add_parser(
     'plate', help='plate resources',
     description='Access plate resources.',
+    parents=[abstract_experiment_parser]
 )
 plate_subparsers = plate_parser.add_subparsers(
     dest='plate_methods', help='access methods'
@@ -469,9 +463,10 @@ plate_delete_parser.set_defaults(method='delete_plate')
 # Wells #
 #########
 
-well_parser = data_subparsers.add_parser(
+well_parser = subparsers.add_parser(
     'well', help='well resources',
     description='Access well resources.',
+    parents=[abstract_experiment_parser]
 )
 well_subparsers = well_parser.add_subparsers(
     dest='well_methods', help='access methods'
@@ -492,9 +487,10 @@ well_list_parser.set_defaults(method='_list_wells')
 # Sites #
 #########
 
-site_parser = data_subparsers.add_parser(
+site_parser = subparsers.add_parser(
     'site', help='site resources',
     description='Access site resources.',
+    parents=[abstract_experiment_parser]
 )
 site_subparsers = site_parser.add_subparsers(
     dest='site_methods', help='access methods'
@@ -512,9 +508,10 @@ site_list_parser.set_defaults(method='_list_sites')
 # Acquistions #
 ###############
 
-acquisition_parser = data_subparsers.add_parser(
+acquisition_parser = subparsers.add_parser(
     'acquisition', help='acquisition resources',
     description='Access acquisition resources.',
+    parents=[abstract_experiment_parser]
 )
 acquisition_subparsers = acquisition_parser.add_subparsers(
     dest='acquisition_methods', help='access methods'
@@ -562,9 +559,10 @@ acquisition_rename_parser.set_defaults(method='rename_acquisition')
 # Microscope files #
 ####################
 
-microscope_file_parser = data_subparsers.add_parser(
+microscope_file_parser = subparsers.add_parser(
     'microscope-file', help='microscope file resources',
     description='Access microscope file resources.',
+    parents=[abstract_experiment_parser]
 )
 microscope_file_subparsers = microscope_file_parser.add_subparsers(
     dest='microscope_file_methods', help='access methods'
@@ -597,9 +595,10 @@ microscope_file_upload_parser.set_defaults(
 # Channels #
 ############
 
-channel_parser = data_subparsers.add_parser(
+channel_parser = subparsers.add_parser(
     'channel', help='channel resources',
     description='Access channel resources.',
+    parents=[abstract_experiment_parser]
 )
 channel_subparsers = channel_parser.add_subparsers(
     dest='channel_methods', help='access methods'
@@ -624,9 +623,10 @@ channel_rename_parser.set_defaults(method='rename_channel')
 # Mapobject types #
 ###################
 
-object_type_parser = data_subparsers.add_parser(
+object_type_parser = subparsers.add_parser(
     'object-type', help='object type resources',
     description='Access object type resources.',
+    parents=[abstract_experiment_parser]
 )
 object_type_subparsers = object_type_parser.add_subparsers(
     dest='object_type_methods', help='access methods'
@@ -658,9 +658,10 @@ object_type_delete_parser.set_defaults(method='delete_mapobjects_type')
 # Features #
 ############
 
-feature_parser = data_subparsers.add_parser(
+feature_parser = subparsers.add_parser(
     'feature', help='feature resources',
     description='Access feature resources.',
+    parents=[abstract_experiment_parser]
 )
 feature_subparsers = feature_parser.add_subparsers(
     dest='feature_methods', help='access methods'
@@ -696,9 +697,10 @@ feature_delete_parser.set_defaults(method='delete_feature')
 # Feature values #
 ##################
 
-feature_values_parser = data_subparsers.add_parser(
+feature_values_parser = subparsers.add_parser(
     'feature-values', help='feature values resources',
     description='Access feature values resources.',
+    parents=[abstract_experiment_parser]
 )
 feature_values_subparsers = feature_values_parser.add_subparsers(
     dest='feature_values_methods', help='access methods'
@@ -722,9 +724,10 @@ feature_value_download_parser.set_defaults(
 # Mapobject segmentations #
 ###########################
 
-segmentation_parser = data_subparsers.add_parser(
+segmentation_parser = subparsers.add_parser(
     'segmentation', help='segmentation resources',
     description='Access segmentation resources.',
+    parents=[abstract_experiment_parser]
 )
 segmentation_subparsers = segmentation_parser.add_subparsers(
     dest='segmentation_methods', help='access methods'
@@ -775,9 +778,10 @@ segmentation_download_parser.set_defaults(
 # Channel image files #
 #######################
 
-channel_image_parser = data_subparsers.add_parser(
+channel_image_parser = subparsers.add_parser(
     'channel-image', help='channel image resources',
     description='Access channel image resources.',
+    parents=[abstract_experiment_parser]
 )
 channel_image_subparsers = channel_image_parser.add_subparsers(
     dest='channel_image_methods', help='access methods'

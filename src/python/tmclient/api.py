@@ -34,7 +34,7 @@ except ImportError:
 from tmclient.base import HttpClient
 from tmclient.log import configure_logging
 from tmclient.log import map_logging_verbosity
-from tmclient.errors import QueryError
+from tmclient.errors import ResourceError
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +44,7 @@ class TmClient(HttpClient):
 
     '''*TissueMAPS* RESTful API client.'''
 
-    def __init__(self, host, port, experiment_name, user_name, password=None):
+    def __init__(self, host, port, username, password=None, experiment_name=None):
         '''
         Parameters
         ----------
@@ -54,16 +54,73 @@ class TmClient(HttpClient):
         port: int
             number of the port to which *TissueMAPS* server listens
             (e.g. ``8002``)
-        experiment_name: str
-            name of the experiment that should be queried
-        user_name: str
-            name of the *TissueMAPS* user
+        username: str
+            name of the user
         password: str
-            password for `user_name` (may alternatively provided via the
+            password for the user (can also be provided via the
             *tm_pass* file)
+        experiment_name: str, optional
+            name of the experiment that should be accessed
+
+        Examples
+        --------
+        # Access general resources
+        >>>client = TmClient('localhost', 8002, 'devuser', '123456')
+        >>>client.get_experiments()
+
+        # Access experiment-specific resources, exemplied for an experiment
+        # called "test".
+        # The name of the experiment can be provided via the constructor:
+        >>>client = TmClient('localhost', 8002, 'devuser', '123456', 'test')
+        >>>client.get_plates()
+        # Alternatively, it can be set separately:
+        >>>client = TmClient('localhost', 8002, 'devuser', '123456')
+        >>>client.experiment_name = 'test'
+        >>>client.get_plates()
         '''
-        super(TmClient, self).__init__(host, port, user_name, password)
+        super(TmClient, self).__init__(host, port, username, password)
         self.experiment_name = experiment_name
+
+    @property
+    def experiment_name(self):
+        '''str: name of the currently accessed experiment'''
+        if self._experiment_name is None:
+            logger.warn('experiment name is not set')
+            raise AttributeError('Attribute experiment_name is not set.')
+        return self._experiment_name
+
+    @experiment_name.setter
+    def experiment_name(self, value):
+        self._experiment_name = value
+
+    def get_experiments(self):
+        '''Gets information for all experiments.
+
+        Returns
+        -------
+        List[Dict[str, str]]
+            id, name and description for each experiment
+
+        See also
+        --------
+        :func:`tmserver.api.experiment.get_experiments`
+        :class:`tmlib.models.experiment.Experiment`
+        '''
+        logger.info('get experiments')
+        url = self._build_api_url('/experiments')
+        res = self._session.get(url)
+        res.raise_for_status()
+        return res.json()['data']
+
+    def _list_experiments(self):
+        experiments = self.get_experiments()
+        t = PrettyTable(['ID', 'Name', 'Description'])
+        t.align['Name'] = 'l'
+        t.align['Description'] = 'l'
+        t.padding_width = 1
+        for e in experiments:
+            t.add_row([e['id'], e['name'], e['description']])
+        print(t)
 
     def __call__(self, cli_args):
         '''Calls a method with the provided arguments.
@@ -87,7 +144,7 @@ class TmClient(HttpClient):
         logger.debug('call method "%s"', method_name)
         if not hasattr(self, method_name):
             raise AttributeError(
-                'Object of type "{0}" doesn\'t have a method "{0}"'.format(
+                'Object of type "{0}" doesn\'t have a method "{1}"'.format(
                     self.__class__.__name__, method_name
                 )
             )
@@ -112,12 +169,16 @@ class TmClient(HttpClient):
         logger.setLevel(logging_level)
 
         client = cls(
-            args.host, args.port, args.experiment_name,
-            args.user_name, args.password
+            args.host, args.port, args.username, args.password
         )
+        if hasattr(args, 'experiment_name'):
+            client.experiment_name = args.experiment_name
         try:
             client(args)
         except requests.exceptions.HTTPError as err:
+            logger.error(str(err))
+            sys.exit(1)
+        except ResourceError as err:
             logger.error(str(err))
             sys.exit(1)
         except:
@@ -140,19 +201,17 @@ class TmClient(HttpClient):
             res.raise_for_status()
             data = res.json()['data']
             if len(data) > 1:
-                logger.error(
-                    'more than one experiment found with name "{0}"'.format(
+                raise ResourceError(
+                    'More than one experiment found with name "{0}"'.format(
                         self.experiment_name
                     )
                 )
-                sys.exit(1)
             if len(data) == 0:
-                logger.error(
-                    'no experiment found with name "{0}"'.format(
+                raise ResourceError(
+                    'No experiment found with name "{0}"'.format(
                         self.experiment_name
                     )
                 )
-                sys.exit(1)
             self.__experiment_id = data[0]['id']
         return self.__experiment_id
 
@@ -178,6 +237,11 @@ class TmClient(HttpClient):
             or as multiplexing cycles as part of a serial multiplexing
             experiment
 
+        Returns
+        -------
+        dict
+            experiment resource representation
+
         See also
         --------
         :func:`tmserver.api.experiment.create_experiment`
@@ -197,9 +261,13 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         self._experiment_id = data['id']
+        return data
 
     def rename_experiment(self, new_name):
         '''Renames the experiment.
+
+        Parameters
+        ----------
 
         See also
         --------
@@ -254,18 +322,16 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one plate found with name "{0}"'.format(name)
+            raise ResourceError(
+                'More than one plate found with name "{0}"'.format(name)
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no plate found with name "{0}"'.format(name)
+            raise ResourceError(
+                'No plate found with name "{0}"'.format(name)
             )
-            sys.exit(1)
         return data[0]['id']
 
-    def create_plate(self, name, description):
+    def create_plate(self, name, description=''):
         '''Creates a new plate.
 
         Parameters
@@ -274,6 +340,11 @@ class TmClient(HttpClient):
             name that should be given to the plate
         description: str, optional
             description of the plate
+
+        Returns
+        -------
+        dict
+            plate resource representation
 
         See also
         --------
@@ -295,6 +366,7 @@ class TmClient(HttpClient):
         )
         res = self._session.post(url, json=content)
         res.raise_for_status()
+        return res.json()['data']
 
     def delete_plate(self, name):
         '''Deletes a plate.
@@ -404,17 +476,15 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one acquisition found with name "{0}" for '
+            raise ResourceError(
+                'More than one acquisition found with name "{0}" for '
                 'plate "{1}"'.format(name, plate_name)
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no acquisition found with name "{0}" for '
+            raise ResourceError(
+                'No acquisition found with name "{0}" for '
                 'plate "{1}"'.format(name, plate_name)
             )
-            sys.exit(1)
         return data[0]['id']
 
     def create_acquisition(self, plate_name, name, description=''):
@@ -428,6 +498,11 @@ class TmClient(HttpClient):
             name that should be given to the acquisition
         description: str, optional
             description of the acquisition
+
+        Returns
+        -------
+        dict
+            acquisition resource representation
 
         See also
         --------
@@ -450,6 +525,7 @@ class TmClient(HttpClient):
         )
         res = self._session.post(url, json=content)
         res.raise_for_status()
+        return res.json()['data']
 
     def rename_acquisition(self, plate_name, name, new_name):
         '''Renames an acquisition.
@@ -521,7 +597,7 @@ class TmClient(HttpClient):
         Returns
         -------
         List[Dict[str, str]]
-            id, name, status and description for each acquisition
+            id, name, status, description and plate_name for each acquisition
 
         See also
         --------
@@ -545,10 +621,13 @@ class TmClient(HttpClient):
 
     def _list_acquisitions(self, plate_name=None):
         acquisitions = self.get_acquisitions(plate_name)
-        t = PrettyTable(['ID', 'Status', 'Name', 'Description'])
+        t = PrettyTable(['ID', 'Status', 'Name', 'Description', 'Plate'])
         t.padding_width = 1
         for a in acquisitions:
-            t.add_row([a['id'], a['status'], a['name'], a['description']])
+            t.add_row([
+                a['id'], a['status'], a['name'], a['description'], 
+                a['plate_name']
+        ])
         print(t)
 
     def _get_well_id(self, plate_name, name):
@@ -570,18 +649,16 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one well found with name "{0}" for '
+            raise ResourceError(
+                'More than one well found with name "{0}" for '
                 'plate "{1}"'.format(name, plate_name)
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no well found with name "{0}" for plate "{1}"'.format(
+            raise ResourceError(
+                'No well found with name "{0}" for plate "{1}"'.format(
                     name, plate_name
                 )
             )
-            sys.exit(1)
         return data[0]['id']
 
     def get_wells(self, plate_name=None):
@@ -619,11 +696,11 @@ class TmClient(HttpClient):
 
     def _list_wells(self, plate_name=None):
         wells = self.get_wells(plate_name)
-        t = PrettyTable(['ID', 'Name', 'Description'])
+        t = PrettyTable(['ID', 'Name', 'Description', 'Plate'])
         t.align['Description'] = 'l'
         t.padding_width = 1
         for w in wells:
-            t.add_row([w['id'], w['name'], w['description']])
+            t.add_row([w['id'], w['name'], w['description'], w['plate']])
         print(t)
 
     def _get_site_id(self, plate_name, well_name, well_pos_y, well_pos_x):
@@ -647,21 +724,19 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one site found at y %d, x %d for well "{0}" and '
+            raise ResourceError(
+                'More than one site found at y %d, x %d for well "{0}" and '
                 'plate "{1}"'.format(
                     well_pos_y, well_pos_x, well_name, plate_name
                 )
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no site found at y %d, x %d for well "{0}" and '
+            raise ResourceError(
+                'No site found at y %d, x %d for well "{0}" and '
                 'plate "{1}"'.format(
                     well_pos_y, well_pos_x, well_name, plate_name
                 )
             )
-            sys.exit(1)
         return data[0]['id']
 
     def get_sites(self, plate_name=None, well_name=None):
@@ -693,7 +768,7 @@ class TmClient(HttpClient):
             logger.info('filter sites for well "%s"', well_name)
             params['well_name'] = well_name
         url = self._build_api_url(
-            '/experiments/{experiment_id}/wells'.format(
+            '/experiments/{experiment_id}/sites'.format(
                 experiment_id=self._experiment_id
             ),
             params
@@ -726,17 +801,15 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-               'more than one mapobject type found with name "{0}"'.format(
+            raise ResourceError(
+               'More than one mapobject type found with name "{0}"'.format(
                     name
                 )
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-               'no mapobject type found with name "{0}"'.format(name)
+            raise ResourceError(
+               'No mapobject type found with name "{0}"'.format(name)
             )
-            sys.exit(1)
         return data[0]['id']
 
     def _get_feature_id(self, mapobject_type_name, name):
@@ -757,15 +830,13 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one feature found with name "{0}"'.format(name)
+            raise ResourceError(
+                'More than one feature found with name "{0}"'.format(name)
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no feature found with name "{0}"'.format(name)
+            raise ResourceError(
+                'No feature found with name "{0}"'.format(name)
             )
-            sys.exit(1)
         return data[0]['id']
 
     def _get_cycle_id(self, plate_name, index):
@@ -787,19 +858,17 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one cycle found for index {0} and plate "{1}"'.format(
+            raise ResourceError(
+                'More than one cycle found for index {0} and plate "{1}"'.format(
                     index, plate_name
                 )
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no cycle found for index {0} and plate "{1}"'.format(
+            raise ResourceError(
+                'No cycle found for index {0} and plate "{1}"'.format(
                     cycle_index, plate_name
                 )
             )
-            sys.exit(1)
         return data[0]['id']
 
     def _get_channel_id(self, name):
@@ -818,15 +887,13 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one channel found with name "{0}"'.format(name)
+            raise ResourceError(
+                'More than one channel found with name "{0}"'.format(name)
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no channel found with name "{0}"'.format(name)
+            raise ResourceError(
+                'No channel found with name "{0}"'.format(name)
             )
-            sys.exit(1)
         return data[0]['id']
 
     def _get_channel_layer_id(self, channel_name, tpoint, zplane):
@@ -849,21 +916,19 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one channel layer found for experiment "{0}", '
+            raise ResourceError(
+                'More than one channel layer found for experiment "{0}", '
                 'channel "{1}", tpoint {2} and zplane {3}'.format(
                     self.experiment_name, channel_name, tpoint, zplane
                 )
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no channel layer found for experiment "{0}", channel "{1}", '
+            raise ResourceError(
+                'No channel layer found for experiment "{0}", channel "{1}", '
                 'tpoint {2} and zplane {3}'.format(
                     experiment_name, channel_name, tpoint, zplane
                 )
             )
-            sys.exit(1)
         return data[0]['id']
 
     def get_microscope_files(self, plate_name, acquisition_name):
@@ -946,6 +1011,11 @@ class TmClient(HttpClient):
             path to a directory on disk where the files that should be uploaded
             are located
 
+        Returns
+        -------
+        List[str]
+            names of registered files
+
         See also
         --------
         :func:`tmserver.api.acquisition.add_microscope_file`
@@ -960,7 +1030,10 @@ class TmClient(HttpClient):
         )
         directory = os.path.expanduser(directory)
         directory = os.path.expandvars(directory)
-        filenames = os.listdir(directory)
+        filenames = [
+            f for f in os.listdir(directory)
+            if not os.path.isdir(f) and not f.startswith('.')
+        ]
         acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
         registered_filenames = self._register_files_for_upload(
             acquisition_id, filenames
@@ -970,6 +1043,7 @@ class TmClient(HttpClient):
             logger.info('upload file: %s', name)
             filepath = os.path.join(directory, name)
             self._upload_file(acquisition_id, filepath)
+        return registered_filenames
 
     def _register_files_for_upload(self, acquisition_id, filenames):
         logger.debug('register files for upload')
@@ -1071,6 +1145,29 @@ class TmClient(HttpClient):
         )
         res = self._session.put(url, json=content)
         res.raise_for_status()
+
+    def get_cycles(self):
+        '''Gets cycles.
+
+        Returns
+        -------
+        List[Dict[str, str]]
+            information about each cycle
+
+        See also
+        --------
+        :func:`tmserver.api.cycle.get_cycles`
+        :class:`tmlib.models.cycles.Cycle`
+        '''
+        logger.info('get cycles of experiment "%s"', self.experiment_name)
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/cycles'.format(
+                experiment_id=self._experiment_id
+            )
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        return res.json()['data']
 
     def get_channels(self):
         '''Gets channels.
@@ -1973,7 +2070,7 @@ class TmClient(HttpClient):
         :meth:`tmclient.api.TmClient.upload_workflow_description`
         '''
         if not filename.endswith('yml') and not filename.endswith('yaml'):
-            logger.error('filename must have "yaml" or "yml" extension')
+            raise ResourceError('filename must have "yaml" or "yml" extension')
         with open(filename) as f:
             logger.info('load workflow description from file: %s', filename)
             description = yaml.safe_load(f.read())
@@ -2138,19 +2235,17 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one job found with name "{0}" for step "{1}"'.format(
+            raise ResourceError(
+                'More than one job found with name "{0}" for step "{1}"'.format(
                     name, step_name
                 )
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no job found with name "{0}" for step "{1}"'.format(
+            raise ResourceError(
+                'No job found with name "{0}" for step "{1}"'.format(
                     name, step_name
                 )
             )
-            sys.exit(1)
         return data[0]['id']
 
     def _show_workflow_job_log(self, step_name, name):
@@ -2177,8 +2272,8 @@ class TmClient(HttpClient):
         Returns
         -------
         dict
-            "pipeline" description and "handles" descriptions for each module
-            of the pipeline
+            "pipeline" description and a "handles" descriptions for each module
+            in the pipeline
 
         See also
         --------
@@ -2198,13 +2293,15 @@ class TmClient(HttpClient):
         res.raise_for_status()
         return res.json()['data']
 
-    def upload_jterator_project(self, pipeline_description, handles_descriptions):
+    def upload_jterator_project(self, pipeline, handles):
         '''Uploads a *jterator* project.
 
         Parameters
         ----------
-        pipeline_description: dict
-        handles_descriptions: dict, optional
+        pipeline: dict
+            description of the jterator pipeline
+        handles: dict, optional
+            description of each module in the jterator pipeline
 
         See also
         --------
@@ -2216,8 +2313,8 @@ class TmClient(HttpClient):
             'upload jterator project for experiment "%s"', self.experiment_name
         )
         content = {
-            'pipeline': pipeline_description,
-            'handles': handles_descriptions
+            'pipeline': pipeline,
+            'handles': handles
         }
         url = self._build_api_url(
             '/experiments/{experiment_id}/workflow/jtproject'.format(
@@ -2241,9 +2338,9 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :meth:`tmclient.api.TmClient.download_jterator_project_description`
+        :meth:`tmclient.api.TmClient.download_jterator_project`
         '''
-        descriptions = self.download_jterator_project_description()
+        descriptions = self.download_jterator_project()
         directory = os.path.expanduser(os.path.expandvars(directory))
 
         logger.info(
@@ -2279,7 +2376,7 @@ class TmClient(HttpClient):
                 )
                 f.write(content)
 
-    def upload_jterator_project_description(self, directory):
+    def upload_jterator_project_files(self, directory):
         '''Uploads the *jterator* project description from files on disk in
         YAML format. It expects a ``pipeline.yaml`` file in `directory` and
         optionally ``*handles.yaml`` files in a ``handles`` subfolder of
@@ -2292,7 +2389,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :meth:`tmclient.api.TmClient.upload_jterator_project_description`
+        :meth:`tmclient.api.TmClient.upload_jterator_project`
         '''
         logger.info(
             'load jterator project description from directory: %s', directory
@@ -2328,7 +2425,7 @@ class TmClient(HttpClient):
             with open(handles_filename) as f:
                 handles_descriptions[name] = yaml.safe_load(f.read())
 
-        self.upload_jterator_project_description(
+        self.upload_jterator_project(
             pipeline_description, handles_descriptions
         )
 
@@ -2348,15 +2445,13 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one tool result found with name "{0}"'.format(name)
+            raise ResourceError(
+                'More than one tool result found with name "{0}"'.format(name)
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no tool results found with name "{0}"'.format(name)
+            raise ResourceError(
+                'No tool results found with name "{0}"'.format(name)
             )
-            sys.exit(1)
         return data[0]['id']
 
     def get_tool_results(self):
@@ -2442,19 +2537,16 @@ class TmClient(HttpClient):
         res.raise_for_status()
         data = res.json()['data']
         if len(data) > 1:
-            logger.error(
-                'more than one job found with name "{0}" for submission {1}'.format(
-                    name, submission_id
-                )
+            raise ResourceError(
+                'More than one job found with name "{0}" for '
+                'submission {1}'.format(name, submission_id)
             )
-            sys.exit(1)
         elif len(data) == 0:
-            logger.error(
-                'no job found with name "{0}" for submission {1}'.format(
+            raise ResourceError(
+                'No job found with name "{0}" for submission {1}'.format(
                     name, submission_id
                 )
             )
-            sys.exit(1)
         return data[0]['id']
 
     def _show_tools_status(self, tool_name):
