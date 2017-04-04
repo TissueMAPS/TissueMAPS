@@ -288,7 +288,7 @@ class ClusterRoutines(BasicClusterRoutines):
         Dict[str, Union[int, str, list, dict]]
             job description
         '''
-        logger.info('get batch for run job #%d', job_id)
+        logger.debug('get batch for run job #%d', job_id)
         batch_filename = self._build_batch_filename_for_run_job(job_id)
         return self._read_batch_file(batch_filename)
 
@@ -301,7 +301,7 @@ class ClusterRoutines(BasicClusterRoutines):
         Dict[str, Union[int, str, list, dict]]
             job description
         '''
-        logger.info('get batch for collect job')
+        logger.debug('get batch for collect job')
         batch_filename = self._build_batch_filename_for_collect_job()
         return self._read_batch_file(batch_filename)
 
