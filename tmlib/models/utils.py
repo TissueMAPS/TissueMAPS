@@ -115,6 +115,18 @@ def _assert_db_exists(engine):
         raise ValueError('Cannot connect to database "%s".' % db_name)
 
 
+def _set_search_path(connection, schema_name):
+    if schema_name is not None:
+        logger.debug('set search path to schema "%s"', schema_name)
+        cursor = connection.connection.cursor()
+        cursor.execute('''
+            SET search_path TO 'public', %(schema)s;
+        ''', {
+            'schema': schema_name
+        })
+        cursor.close()
+
+
 def _set_db_shard_count(connection, n):
     if n > 0:
         logger.debug('set shard_count to %d', n)
@@ -161,31 +173,25 @@ def _drop_schema(connection, schema_name):
     cursor.close()
 
 
-def _create_db_tables(connection, schema_name):
-    if schema_name is None:
-        logger.debug(
-            'create tables of models derived from %s for schema "public"',
-            MainModel.__name__
-        )
-        for name, table in MainModel.metadata.tables.iteritems():
-            table.schema = 'public'
-        MainModel.metadata.create_all(connection)
-    else:
-        logger.debug(
-            'create tables of models derived from %s for schema "%s"',
-            ExperimentModel.__name__, schema_name
-        )
-        for name, table in ExperimentModel.metadata.tables.iteritems():
-            table.schema = schema_name
-        ExperimentModel.metadata.create_all(connection)
-        for name, table in ExperimentModel.metadata.tables.iteritems():
-            table.schema = None
-        # logger.debug(
-        #     'change storage of "pixels" column of "channel_layer_tiles" table'
-        # )
-        # connection.execute(
-        #     'ALTER TABLE channel_layer_tiles ALTER COLUMN pixels SET STORAGE MAIN;'
-        # )
+def _create_main_db_tables(connection):
+    logger.debug(
+        'create tables of models derived from %s for schema "public"',
+        MainModel.__name__
+    )
+    MainModel.metadata.create_all(connection)
+
+
+def _create_experiment_db_tables(connection, schema_name):
+    logger.debug(
+        'create tables of models derived from %s for schema "%s"',
+        ExperimentModel.__name__, schema_name
+    )
+    # NOTE: We need to set the schema on copies of the tables otherwise
+    # this messes up queries in a multi-tenancy use case.
+    experiment_specific_metadata = sqlalchemy.MetaData(schema=schema_name)
+    for name, table in ExperimentModel.metadata.tables.iteritems():
+        table_copy = table.tometadata(experiment_specific_metadata)
+    experiment_specific_metadata.create_all(connection)
 
 
 @listens_for(sqlalchemy.pool.Pool, 'connect')
@@ -622,29 +628,17 @@ class ExperimentSession(_Session):
 
     def __enter__(self):
         connection = self._engine.connect()
-        self._set_search_path(connection)
         exists = _create_schema_if_not_exists(connection, self._schema)
         if not exists:
             _set_db_shard_replication_factor(connection, 1)
             _set_db_shard_count(connection, 20 * cfg.db_nodes)
-            _create_db_tables(connection, self._schema)
+            _create_experiment_db_tables(connection, self._schema)
+        _set_search_path(connection, self._schema)
         self._session_factory.configure(bind=connection)
-        logger.debug('schema: "%s"', self._schema)
         self._session = SQLAlchemy_Session(
             self._session_factory(), self._schema
         )
         return self._session
-
-    def _set_search_path(self, connection):
-        if self._schema is not None:
-            logger.debug('set search path to schema "%s"', self._schema)
-            cursor = connection.connection.cursor()
-            cursor.execute('''
-                SET search_path TO 'public', %(schema)s;
-            ''', {
-                'schema': self._schema
-            })
-            cursor.close()
 
 
 class Connection(object):
@@ -742,8 +736,13 @@ class ExperimentConnection(Connection):
         # autocommit mode.
         self._connection = self._engine.raw_connection()
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        exists = _create_schema_if_not_exists(self._connection, self._schema)
+        if not exists:
+            _set_db_shard_replication_factor(self._connection, 1)
+            _set_db_shard_count(self._connection, 20 * cfg.db_nodes)
+            _create_experiment_db_tables(self._connection)
+        _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
-        self._set_search_path()
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
         # need to perform queries in parallel under the assumption that
         # order of records is not important (i.e. that they are commutative).
@@ -754,14 +753,6 @@ class ExperimentConnection(Connection):
             SET citus.all_modifications_commutative TO on;
         ''')
         return self._cursor
-
-    def _set_search_path(self):
-        logger.debug('set search path to schema "%s"', self._schema)
-        self._cursor.execute('''
-            SET search_path TO 'public', %(schema)s;
-        ''', {
-            'schema': self._schema
-        })
 
 
 class MainConnection(Connection):
