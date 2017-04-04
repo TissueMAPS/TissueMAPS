@@ -1,6 +1,7 @@
 ---
 - name: Common setup for all hosts
   hosts: all
+  any_errors_fatal: true
   gather_facts: yes
   roles:
     - role: common

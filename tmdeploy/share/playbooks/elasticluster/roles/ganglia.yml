@@ -1,1 +1,22 @@
-../../../../../elasticluster/elasticluster/share/playbooks/roles/ganglia.yml
+---
+- name: Ganglia frontend/collector Playbook
+  any_errors_fatal: true
+  hosts: ganglia_master
+  tasks:
+    - include: 'common/tasks/init-{{ansible_os_family}}.yml'
+    - include: ganglia/tasks/server.yml
+  tags:
+    - ganglia
+  handlers:
+    - include: ganglia/handlers/main.yml
+
+- name: Ganglia monitor Playbook
+  any_errors_fatal: true
+  hosts: ganglia_monitor
+  tasks:
+    - include: 'common/tasks/init-{{ansible_os_family}}.yml'
+    - include: ganglia/tasks/client.yml
+  handlers:
+    - include: ganglia/handlers/main.yml
+  tags:
+    - ganglia
