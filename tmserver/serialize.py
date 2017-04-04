@@ -154,7 +154,9 @@ def encode_well(obj, encoder):
     return {
         'id': encode_pk(obj.id),
         'name': obj.name,
-        'description': obj.description
+        'description': obj.description,
+        'plate_name': obj.plate.name,
+        'dimensions': list(obj.dimensions)
     }
 
 
