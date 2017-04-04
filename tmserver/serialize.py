@@ -120,6 +120,7 @@ def encode_acquisition(obj, encoder):
         'name': obj.name,
         'description': obj.description,
         'status': obj.status,
+        'plate_name': obj.plate.name
     }
 
 
