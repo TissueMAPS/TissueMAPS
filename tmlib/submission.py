@@ -52,7 +52,7 @@ class SubmissionManager(object):
                 user_id=user_id
             )
             session.add(submission)
-            session.flush()
+            session.commit()
             return (submission.id, submission.user.name)
 
 
