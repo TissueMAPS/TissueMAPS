@@ -370,15 +370,15 @@ def register_upload(experiment_id, acquisition_id):
         acquisition.microscope_metadata_location
 
     with tm.utils.ExperimentSession(experiment_id) as session:
-        image_file_names = session.query(tm.MicroscopeImageFile.name).\
+        image_filenames = session.query(tm.MicroscopeImageFile.name).\
             filter(tm.MicroscopeImageFile.status != FileUploadStatus.COMPLETE).\
             all()
-        metadata_file_names = session.query(tm.MicroscopeMetadataFile.name).\
+        metadata_filenames = session.query(tm.MicroscopeMetadataFile.name).\
             filter(tm.MicroscopeMetadataFile.status != FileUploadStatus.COMPLETE).\
             all()
-        all_file_names = image_file_names + metadata_file_names
-        logger.info('registered %d files', len(all_file_names))
-        return jsonify(data=[f.name for f in all_file_names])
+        all_filenames = image_filenames + metadata_filenames
+        logger.info('registered %d files', len(all_filenames))
+        return jsonify(data=[f.name for f in all_filenames])
 
 
 @api.route(

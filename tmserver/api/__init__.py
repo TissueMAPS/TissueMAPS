@@ -28,6 +28,7 @@ import tmserver.api.experiment
 import tmserver.api.plate
 import tmserver.api.acquisition
 import tmserver.api.channel
+import tmserver.api.cycles
 import tmserver.api.well
 import tmserver.api.site
 import tmserver.api.file
