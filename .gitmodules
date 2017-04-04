@@ -18,3 +18,7 @@
 	path = src/jtmodules
 	url = https://github.com/TissueMAPS/jtmodules
 	branch = master
+[submodule "src/tmdeploy"]
+	path = src/tmdeploy
+	url = https://github.com/TissueMAPS/tmdeploy
+	branch = master
