@@ -253,11 +253,12 @@ def update_static_inventory(inventory_info, setup):
                     inventory_info['all']['vars']['ansible_ssh_pipelining'] = \
                         True
                     inventory_info['all']['vars']['ansible_ssh_common_args'] = (
-                        '-o ProxyCommand="ssh -i {f} -W %h:%p -q {u}@{h}" '
-                        '-o StrictHostKeyChecking=no'.format(
-                            f=host_vars['ansible_ssh_private_key_file'],
-                            u=host_vars['ansible_user'],
-                            h=host_vars['ansible_host']
+                        '-o UserKnownHostsFile=/dev/null '
+                        '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -i '
+                        '{key_file} -W %h:%p -q {user}@{host}"'.format(
+                            key_file=host_vars['ansible_ssh_private_key_file'],
+                            user=host_vars['ansible_user'],
+                            host=host_vars['ansible_host']
                         )
                     )
                     all_group_vars_file = os.path.join(GROUP_VARS_DIR, 'all')
