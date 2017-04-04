@@ -60,9 +60,9 @@ def map_logging_verbosity(verbosity):
 
     if not verbosity >= 0:
         raise ValueError('Argument "verbosity" must be a positive number.')
-    if verbosity > len(VERBOSITY_TO_LEVELS):
+    if verbosity >= len(VERBOSITY_TO_LEVELS):
         verbosity = len(VERBOSITY_TO_LEVELS) - 1
-    return VERBOSITY_TO_LEVELS.get(verbosity, logging.NOTSET)
+    return VERBOSITY_TO_LEVELS[verbosity]
 
 
 def configure_logging():
