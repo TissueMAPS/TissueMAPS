@@ -4,6 +4,7 @@ import logging
 import argparse
 import subprocess
 import sys
+import json
 import yaml
 import collections
 from whichcraft import which
@@ -57,7 +58,7 @@ def _get_host_groups():
                     )
                     sys.exit(1)
                 logger.info('include Ansible host group: %s', group.name)
-                groups_to_deploy[group.name].append(group.playbook)
+                groups_to_deploy[group.name].append(group.vars)
 
     for group_name in REQUIRED_TM_GROUPS:
         if group_name not in groups_to_deploy.keys():
@@ -94,8 +95,12 @@ def _build_ansible_container_command(verbosity, action_command):
 
 def _build_ansible_vm_command(verbosity, playbook, variables=dict()):
     var_strings = list()
+    var_mappings = list()
     for k, v in variables.items():
-        var_strings.append('='.join([k, v]))
+        if type(v) in {list, dict}:
+            var_mappings.append(json.dumps({k: v}))
+        else:
+            var_strings.append('='.join([k, v]))
     # The "tm_inventory" script should be on the path upon installation.
     inventory_file = which('tm_inventory')
     cmd = ['ansible-playbook', '-i', inventory_file, playbook]
@@ -105,6 +110,8 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict()):
             cmd.append('-{0}'.format(verbosity * 'v'))
     if variables:
         cmd.extend(['-e', '{0}'.format(','.join(var_strings))])
+        for var_map in var_mappings:
+            cmd.extend(['-e', var_map])
     return cmd
 
 
@@ -228,6 +235,10 @@ def build_container(args):
                 if var_mapping is None:
                     continue
                 for k, v in var_mapping.items():
+                    if type(v) in {list, dict}:
+                        raise TypeError(
+                            'Only simply key=value variables are supported.'
+                        )
                     variables[k] = v
     for k, v in variables.items():
         cmd.append('-e')
