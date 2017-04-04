@@ -17,7 +17,7 @@ This section demonstrates different ways of interacting with a *TissueMAPS* serv
 
 .. tip:: Here, we connect to the server using *URL* ``http://localhost:8002``. The actual IP address of ``localhost`` is ``127.0.0.1`` (by convention). It's possible to use the name ``localhost``, because this host is specified in ``/etc/hosts``. So when you are running the *TissueMAPS* server on a remote host in the cloud instead of your local machine, you can use the same trick and assign a hostname to the public IP address of that virtual machine. To this end, add a line to ``/etc/hosts``, e.g. ``130.211.160.207   tmaps``. You will then be able to connect to the server via ``http://tmaps``. This can be convenient, because you don't have to remember the exact IP address (which may also be subject to change in case you don't use a static IP address). Note that you don't need to provide the port for the production server, because it will listen to port 80 by default (unlike the development server, who listens to port 8002).
 
-.. _user-interace:
+.. _user-interface:
 
 User interface
 --------------
@@ -573,23 +573,18 @@ To perform the classification, select an object type (e.g. ``Cells``) and one or
 
 
 
-.. _rest-api:
-
-REST API
---------
-
-Clients send requests to the server via *RESTful API*. In case of the user interface this is handled by the browser, but the same can be achieved in more programmatic, browser-independent way.
-
-.. _rest-api-restful-programming:
+.. _restful-programming:
 
 RESTful programming
-^^^^^^^^^^^^^^^^^^^
+-------------------
+
+Clients use the :mod:`REST API <tmserver.api>` to access server side resources. In case of the user interface this is handled by the browser, but the same can be achieved in more programmatic, browser-independent way.
 
 A request is composed of a resource specification provided in form of a `Uniform Resource Locator (*URL*) <https://en.wikipedia.org/wiki/Uniform_Resource_Locator>`_ and one of the following verbs: ``GET``, ``PUT``, ``POST`` or ``DELETE``.
-The server listens to *routes* that catch request messages, handles them and returns a defined response message to the client. This response includes a `status code <https://en.wikipedia.org/wiki/List_of_HTTP_status_codes>`_ (e.g. ``200`` or ``404``) and the actual content. In addition, requests and responses have `headers <https://en.wikipedia.org/wiki/List_of_HTTP_header_fields>`_ that hold information about their content, such as the `media type <https://en.wikipedia.org/wiki/Media_type>`_ (e.g. ``application/json`` or ``image/png``).
+The server listens to *routes* that catch request messages, handles them and returns a defined response message to the client. This response includes a `status code <https://en.wikipedia.org/wiki/List_of_HTTP_status_codes>`_ (e.g. ``200``) and the actual content. In addition, requests and responses have `headers <https://en.wikipedia.org/wiki/List_of_HTTP_header_fields>`_ that hold information about their content, such as the `media type <https://en.wikipedia.org/wiki/Media_type>`_ (e.g. ``application/json`` or ``image/png``).
 
 Consider the following example:
-Let's say you want to *GET* a list your existing *TissueMAPS* experiments. To this end, you can send the following request to the *TissueMAPS* server:
+Let's say you want to *GET* a list of your experiments. To this end, you can send the following request to the *TissueMAPS* server:
 
 .. code-block:: http
 
@@ -615,13 +610,13 @@ The server would handle this response via the :func:`get_experiments() <tmserver
 
 The response has status code ``200``, meaning there were no errors, and the content of type ``application/json`` with the list of existing experiments. In this case, there is only one experiment named ``test`` that belongs to the ``demo`` user.
 
-The same logic also applies to more complex requests that require additional parameters.
+The same logic also applies to more complex `query strings <https://en.wikipedia.org/wiki/Query_string>`_ with additional parameters.
 
-To download an image for channel ``wavelength-1`` you could send a request like this:
+To download an image for a specific channel you could send a request like this:
 
 .. code-block:: http
 
-    GET /experiments/MQ==/channels/wavelength-1/image-files?plate_name=plate01,cycle_index=0,well_name=D03,x=0,y=0,tpoint=0,zplane=0
+    GET /experiments/MQ==/channels/dG1hcHM0/image-file?plate_name=plate01,cycle_index=0,well_name=D03,x=0,y=0,tpoint=0,zplane=0
 
 The server would respond with a message that contains the requested image as *PNG*-compressed binary data, which can be written to a file client-side using the provided filename:
 
@@ -633,11 +628,11 @@ The server would respond with a message that contains the requested image as *PN
 
     ...
 
-Similarly, you can download all feature values extracted for objects of type ``Cells``:
+Similarly, you can download all feature values extracted for a particular type of objects:
 
 .. code-block:: http
 
-    GET /api/experiments/MQ==/mapobjects/Cells/feature-values
+    GET /api/experiments/MQ==/mapobjects/dG1hcHMx/feature-values
 
 In this case, the server would respond with a message containing the requested feature values as *CSV*-encoded binary data, which can be written to a file using the provided filename:
 
@@ -652,31 +647,29 @@ In this case, the server would respond with a message containing the requested f
 
 For more information about available resources and verbs, please refer to :mod:`tmserver.api`.
 
-In principle, ``GET`` requests could be sent via the browser. You can try it by entering a *URL* into the browser address bar, e.g.::
+.. _restful-programming-implementation:
 
-    http://localhost:8002/api/experiments/dG1hcHMxMg==/mapobjects/Cells/feature-values
+Implementation
+^^^^^^^^^^^^^^
 
-The browser will show you the following response message:
+In principle, ``GET`` requests could be handled via the browser. You can try it by entering a *URL* into the browser address bar, e.g.::
 
-.. figure:: ./_static/api_request_example.png
-   :width: 75%
-   :align: center
+    http://localhost:8002/api/experiments
 
-   REST API *GET* request.
+The server will responds with an error message with status code ``401`` (not authorized) because no access token was provided along with the request, which is required for `JWT authentication <https://jwt.io/introduction/>`_.
 
-   The server responds with an error message with status code ``401`` (not authorized) because no access token was provided along with the request, which is required for `JWT authentication <https://jwt.io/introduction/>`_.
+So to make requests in practice, we need a client interface that is able to handle authentication. This can be achieved via the command line using `cURL <https://curl.haxx.se/>`_ or through any other *HTTP* interface. In the following, we will demonstrate how requests can be handled in Python and Matlab:
 
-So to make such requests in practice, we need another client interface. A *REST API* wrapper can be easily implemented in Python or Matlab or any other language that provides an *HTTP* interface:
+.. _restful-programming-implementation-python-example:
 
-
-Python example:
+Python example
+++++++++++++++
 
 .. code-block:: python
 
     import os
     import requests
     import json
-    import cgi
     import cv2
     from StringIO import StringIO
     import pandas as pd
@@ -719,6 +712,7 @@ Python example:
         data = StringIO(response.content)
         return pd.from_csv(data)
 
+
     if __name__ = '__main__':
 
         url = 'http://localhost:8002'
@@ -729,20 +723,24 @@ Python example:
         # GET list of existing experiments
         experiments = get_data(url, '/api/experiments', token)
 
-        # GET image for channel "wavelength-1"
+        # GET image for a specific channel
         image = get_image(
-            url, '/api/experiments/MQ==/channels/wavelength-1/image-files', token,
-            plate_name='plate01', cycle_index=0, well_name='D03', x=0, y=0,
-            tpoint=0, zplane=0
+            url, '/api/experiments/MQ==/channels/dG1hcHM0/image-files?
+            plate_name=plate01,cycle_index=0,well_name=D03,well_pos_x=0,well_pos_y=0,
+            tpoint=0,zplane=0',
+            token
         )
 
-        # GET feature values for objects of type "Cells"
+        # GET feature values for a specific objects type
         data = get_feature_values(
-            url, '/api/experiments/MQ==/mapobjects/Cells/feature-values', token,
+            url, '/api/experiments/MQ==/mapobjects/dG1hcHMx/feature-values',
+            token
         )
 
+.. _restful-programming-implementation-matlab-example:
 
-Matlab example:
+Matlab example
+++++++++++++++
 
 .. code-block:: matlab
 
@@ -756,11 +754,11 @@ Matlab example:
         % GET list of existing experiments
         experiments = get_data(url, '/api/experiments', token);
 
-        % GET image for channel "wavelength-1"
-        image = get_image(url, '/api/experiments/MQ==/channels/wavelength-1/image-files?plate_name=plate01,cycle_index=0,well_name=D03,x=0,y=0,tpoint=0,zplane=0', token);
+        % GET image for a specific channel
+        image = get_image(url, '/api/experiments/MQ==/channels/dG1hcHM0/image-files?plate_name=plate01,cycle_index=0,well_name=D03,well_pos_x=0,well_pos_y=0,tpoint=0,zplane=0', token);
 
-        % GET feature values for objects of type "Cells"
-        data = get_feature_values(url, '/api/experiments/MQ==/mapobjects/Cells/feature-values', token);
+        % GET feature values for a specific objects type
+        data = get_feature_values(url, '/api/experiments/MQ==/mapobjects/dG1hcHMx/feature-values', token);
 
     end
 
@@ -794,19 +792,19 @@ Matlab example:
         data = http_get(url, api_uri, token, varargin);
     end
 
-.. _rest-api-tmclient:
+.. _python-client:
 
-TmClient package
-^^^^^^^^^^^^^^^^
+Python client
+^^^^^^^^^^^^^
 
-The :mod:`tmclient` package is a *REST API* wrapper that provides users the possibility to interact with the *TissueMAPS* server in a programmatic way. It abstracts the *REST API* implementation and exposes high-level objects and methods that don't require any knowledge of *RESTful* programming.
+The :mod:`tmclient` package is a *REST API* wrapper that provides users the possibility to interact with the *TissueMAPS* server in a programmatic way. It abstracts the *REST* implementation and exposes objects and methods that don't require any knowledge of *RESTful* programming.
 
-.. _rest-api-tmclient-api:
+.. _python-client-api:
 
 Active programming interface
 ++++++++++++++++++++++++++++
 
-The :class:`TmClient <tmclient.api.TmClient>` class implements methods for data upload and download. This is demonstrated below for the Python package, but applies similarle to the Matlab and R packages.
+The :class:`TmClient <tmclient.api.TmClient>` class implements high-level methods for accessing resources without having to provide the actual resource indentifiers.
 
 First, a *TmClient* object must be instantiated by providing the server address and login credentials:
 
@@ -818,16 +816,16 @@ First, a *TmClient* object must be instantiated by providing the server address 
         host='localhost', port=8002, experiment_name='test', user_name='demo', password='XXX'
     )
 
-The object can then be used, for example, to download a pixel plane of a :class:`ChannelImageFile <tmlib.models.file.ChannelImageFile>`:
+The instantiated object can then be used, for example, to download the pixels of a :class:`ChannelImageFile <tmlib.models.file.ChannelImageFile>`:
 
 .. code-block:: python
 
     image = client.download_channel_image(
-        channel_name='wavelength-1', plate_name='plate01', well_name='D03', x=0, y=0,
+        channel_name='wavelength-1', plate_name='plate01', well_name='D03', well_pos_x=0, well_pos_y=0,
         cycle_index=0, tpoint=0, zplane=0, correct=True
     )
 
-The ``image`` object has type `NumPy ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_:
+The returned ``image`` object is an instance of `NumPy ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_:
 
 .. code-block:: python
 
@@ -837,13 +835,13 @@ The ``image`` object has type `NumPy ndarray <https://docs.scipy.org/doc/numpy/r
     # Show first row of pixels
     print image[0, :]
 
-Similarly, feature values (:class:`FeatureValue <tmlib.models.feature.FeatureValue>`) for a particular :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` can be downloaded as follows:
+Similarly, :class:`FeatureValues <tmlib.models.feature.FeatureValue>` for a particular :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` can be downloaded as follows:
 
 .. code-block:: python
 
-    data = client.download_object_feature_values('Cells')
+    data = client.download_object_feature_values(mapobject_type='Cells')
 
-In this case, the ``data`` object has type `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/dsintro.html#dataframe>`_:
+In this case, the returned ``data`` object is an instance of `Pandas DataFrame <http://pandas.pydata.org/pandas-docs/stable/dsintro.html#dataframe>`_:
 
 .. code-block:: python
 
@@ -852,62 +850,38 @@ In this case, the ``data`` object has type `Pandas DataFrame <http://pandas.pyda
 
     # Iterate over objects
     for index, values in data.iterrows():
-        # Show value of first feature for each object
-        print '{index}: {value}'.format(index=index, value=values[0])
+        print index, values
 
     # Iterate over features
     for name, values in data.iteritems():
-        # Show value of first object for each feature
-        print '{name}: {value}'.format(name=name, value=values[0])
+        print name, values
 
 
-.. _rest-api-tmclient-cli:
+.. _python-client-cli:
 
 Command line interface
 ++++++++++++++++++++++
 
-The *tmclient* Python package further provides the ``tm_client`` progam for uploading and downloading files via the command line.
+The :mod:`tmclient` Python package further provides the :mod:`tm_client <tmclient.cli>` progam.
 
-You can, for example, download an image for channel ``wavelength-1``:
+You can upload images and manage workflows entirely via the command line:
+
+The base command for experiment ``test`` looks as follows:
 
 .. code-block:: none
 
-    tm_client -vv --host localhost --port 8002 --user_name demo --password XXX --experiment_name test download channel_image --channel_name wavelength-1 --plate_name plate01 --well_name D03 -x 0 -y 0 --cycle_index 0 --correct
+    tm_client -vv --host localhost --port 8002 --user demo --password XXX --experiment test --help
 
 or shorthand:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test download channel_image -c wavelength-1 -p plate01 -w D03 -x 0 -y 0 -i 0 --correct
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test -h
 
-Similarly, you can download feature values for objects of type ``Cells``:
+The command line interface is structured according to the type of available resources. At the highest level, one can differentiate between:
 
-.. code-block:: none
-
-    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test download feature_values -o Cells
-
-.. note:: By default, files will be downloaded to your temporary directory, e.g. ``/tmp`` (the exact location depends on your operating system). The program will print the location of the file to the console (when called with ``-vv`` or higher logging verbosity). You can specify an alternative download location for ``download`` using the ``--directory`` or ``-d`` argument.
-
-In the same way, microsopce files can be uploaded from a directory on your local machine:
-
-.. code-block:: none
-
-    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test upload -d /data/myacquisition microscope_file -p plate01 -a acquisition01
-
-In addition, you can create new database entries.
-For example, you can create :class:`Experiment <tmlib.models.experiment.Experiment>` ``test``:
-
-.. code-block:: none
-
-    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test create experiment -m cellvoyager -f 384
-
-And then create :class:`Plate <tmlib.models.plate.Plate>` ``plate01`` for experiment ``test``:
-
-.. code-block:: none
-
-    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test create plate -p plate01
-
-.. note:: The names of command line arguments are the same as those of the corresponding *API* methods of :class:`TmClient <tmclient.api.TmClient>`.
+    - ``data``: storage resources represented by data models defined in :mod:`tmlib.models`
+    - ``workflow``: computational resources defined in :mod:`tmlib.workflow`
 
 .. tip:: You can store passwords in a ``~/.tm_pass`` file as key-value pairs (username: password) in `YAML <http://yaml.org/>`_ format:
 
@@ -915,7 +889,96 @@ And then create :class:`Plate <tmlib.models.plate.Plate>` ``plate01`` for experi
 
         demo: XXX
 
-    This will allow you to omit the password argument in command line calls. This is also not totally save of course, but at least your password won't show up in the ``history``.
+    This will allow you to omit the password argument in command line calls. This is not totally save either, but at least your password won't show up in the ``history`` and you don't have to remember it.
+
+To begin with, you may need to create the :class:`Experiment <tmlib.models.experiment.Experiment>` (in case it doesn't yet exist):
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test experiment create
+
+.. note:: You may want to override default values of parameters, such as ``microscope-type`` or ``workflow-type``, depending on your use case.
+
+Create a new :class:`Plate <tmlib.models.plate.Plate>` ``plate01``:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test plate create --name plate01
+
+Create a new :class:`Acquisition <tmlib.models.acquisition.Acquisition>` ``acquisition01`` for plate ``plate01``:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test acquisition create -p plate01 --name acquisition01
+
+Upload each :class:`MicroscopeImageFile <tmlib.models.file.MicroscopeImageFile>` and :class:`MicroscopeMetadataFile <tmlib.models.file.MicroscopeMetadataFile>` for plate ``plate01`` and acquisition ``acquisition01`` from a local directory:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test microscope-file upload -p plate01 -a acquisition01 --directory ...
+
+Check whether all files have been uploaded correctly:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test microscope-file ls
+
+Process uploaded images. To this end, request a :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>` and store it in a `YAML <http://yaml.org/>`_ file with either ``.yaml`` or ``.yml`` extension:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test workflow download --file /tmp/workflow.yml
+
+Modify the workflow description acoording to your needs (as you would do in the workflow manager user interface) and upload it:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test workflow upload --file /tmp/workflow.yml
+
+In case your workflow contains the :class:`jterator <tmlib.workflow.jterator>` step, you will also have to provide a *jterator* project, i.e. a directory containing:
+
+    - a :class:`PipelineDescription <tmlib.workflow.jterator.description.PipelineDescription>` in form of a ``pipeline.yaml`` YAML file
+    - one :class:`HandleDescriptions <tmlib.workflow.jterator.description.HandleDescriptions>` in form of a ``*.handles.yaml`` YAML file for each module in the pipeline (in a ``handles`` subdirectory)
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test jtproject upload --directory ...
+
+.. note:: Handles file templates are available for each module in the `JtModules <https://github.com/TissueMAPS/JtModules/tree/master/handles>`_ repository. For additional information, please refer to :mod:`tmlib.workflow.jterator.handles`.
+
+After workflow *description* and *jtproject* have been uploaded, you can submit the workflow for processing:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test workflow submit
+
+You can subsequently monitor the workflow status:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -e test workflow status
+
+.. tip:: You can use the program ``watch`` to periodically check the status:
+
+    .. code-block:: none
+
+        watch -n 10 tm_client -H localhost -P 8002 -u demo -e test workflow status
+
+Once the workflow is completed, you can download generated data:
+
+Download the pixels content of a :class:`ChannelImageFile <tmlib.models.file.ChannelImageFile>`:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test channel-image download -c wavelength-1 -p plate01 -w D03 -x 0 -y 0 -i 0 --correct
+
+Download feature values for all objects of type ``Cells``:
+
+.. code-block:: none
+
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test feature-values download -o Cells
+
+.. note:: By default, files will be downloaded to your temporary directory, e.g. ``/tmp`` (the exact location depends on your operating system settings). The program will print the location of the file to the console when called with ``-vv`` or higher logging verbosity. You can specify an alternative download location for the ``download`` command using the ``--directory`` argument.
 
 
 .. _using-the-library:
@@ -923,7 +986,7 @@ And then create :class:`Plate <tmlib.models.plate.Plate>` ``plate01`` for experi
 Using the library
 =================
 
-The :mod:`tmlibrary` package implements an active programming interface (*API*) that specifyies an interface between the web application (implemented in the :mod:`tmserver` package) and storage and compute resources. The *API* provides routines for distributed computing and models for interacting with data stored on disk. The server uses the library and exposes (part of) its functionality to users via the *REST API*. Users can, however, also use the library directly in a programmatic, server-independent way. The library further exposes command line interfaces (*CLI*), which provide users the possibility to interact with implemented programs via the console.
+The :mod:`tmlibrary` package implements an active programming interface (*API*) that represents an interface between the web application (implemented in the :mod:`tmserver` package) and storage and compute resources. The *API* provides routines for distributed computing and models for interacting with data stored on disk. The server uses the library and exposes part of its functionality to users via the *RESTful API*. Users with access to the server can also use the library directly. It further exposes command line interfaces (*CLI*), which provide users the possibility to interact with implemented programs via the console, which can be convenient for development, testing, and debugging.
 
 .. _library-api:
 
@@ -935,7 +998,7 @@ Active programming interface (API)
 Accessing data
 ^^^^^^^^^^^^^^
 
-Data can be accessed via models classes implemented in :mod:`tmlib.models`. Since the data is stored (or referenced) in a database, a database connection must be established. This is achieved via the :class:`MainSession <tmlib.models.utils.MainSession>` or :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, depending on whether you need to access models derived from :class:`MainModel <tmlib.models.base.MainModel>` or :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`, respectively.
+Data can be accessed via models classes implemented in :mod:`tmlib.models`. Since data is stored (or referenced) in a database, a database connection must be established. This is achieved via the :class:`MainSession <tmlib.models.utils.MainSession>` or :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, depending on whether you need to access models derived from :class:`MainModel <tmlib.models.base.MainModel>` or :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`, respectively.
 
 Model classes are implemented in form of `SQLAlchemy Object Relational Mapper (ORM) <http://docs.sqlalchemy.org/en/rel_1_1/orm/index.html>`_. For more information please refer to the `ORM tuturial <http://docs.sqlalchemy.org/en/latest/orm/tutorial.html>`_.
 
@@ -969,13 +1032,15 @@ For example, a :class:`ChannelImage <tmlib.image.ChannelImage>` can be retrived 
                 tm.Cycle.index == 0,
                 tm.Channel.name == 'wavelength-1',
                 tm.ChannelImageFile.site_id == site.id,
-                tm.ChannelImageFile.tpoint == 0
+                tm.ChannelImageFile.tpoint == 0,
+                tm.ChannelImageFile.zplane == 0
             ).\
             one()
-        image = image_file.get(z=0)
+        image = image_file.get()
 
+.. warning:: Some experiment-specific database tables are distributed, i.e. small fractions (so called "shards") are spread across different database servers for improved performance. Rows of these tables can still be selected via the :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, but they can not be modified within a session (see :class:`ExperimentConnecion <tmlib.models.utils.ExperimentConnection>`). In addition, distributed tables do not support sub-queries and cannot be joined with standard, non-distributed tables.
 
-.. warning:: Content of files should only be accessed via the :meth:`get <tmlib.models.base.FileModel.get>` and :meth:`put <tmlib.models.base.FileModel.put>` methods of the respective model class implemented in :mod:`tmlib.models.file`, since the particular storage backend (e.g. filesystem or object storage) may be subject to change.
+.. warning:: Content of files should only be accessed via the provided :meth:`get <tmlib.models.base.FileModel.get>` and :meth:`put <tmlib.models.base.FileModel.put>` methods of the respective model class implemented in :mod:`tmlib.models.file`, since the particular storage backend (e.g. filesystem or object storage) may be subject to change.
 
 
 .. _library-cli:
@@ -984,6 +1049,63 @@ Command line interface (CLI)
 ----------------------------
 
 A :class:`Workflow <tmlib.workflow.workflow.Workflow>` and each individual :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>` can also be controlled via the command line.
+
+
+.. _library-cli-managing-workflow-steps:
+
+Managing workflow steps
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Each :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>` represents a separate program that exposes its own command line interface. These interfaces have are a very similar structure and provide sub-commands for methods defined in either the :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>` base class or the step-specific implementation.
+
+The name of the step is also automatically the name of the command line progroam. For example, the :mod:`jterator <tmlib.workflow.jterator.cli.Jterator>` program can be controlled via the ``jterator`` command.
+
+You can initialize the step via the ``init`` sub-command:
+
+.. code-block:: none
+
+    jterator -vv 1 init --batch_size 5
+
+or shorthand:
+
+.. code-block:: none
+
+    jterator -vv 1 init -b 5
+
+And then run jobs either invidicually on the local machine via the ``run`` sub-command:
+
+.. code-block:: none
+
+    jterator -vv 1 run -j 1
+
+Or submit them for parallel processing on remote machines via the ``submit`` sub-command:
+
+.. code-block:: none
+
+    jterator -vv 1 submit
+
+.. note:: The ``submit`` command internally calls the program with ``run --job <job_id>`` on different CPUs of the same machine or on other remote machines for each of the batch jobs defined via ``init``.
+
+To print the description of an individual job to the console call the ``info`` sub-command:
+
+.. code-block:: none
+
+    jterator -vv 1 info --phase run --job 1
+
+You can further print the standard output of error of a job via the ``log`` sub-command:
+
+.. code-block:: none
+
+    jterator -vv 1 log --phase run --job 1
+
+.. note:: The detail of log messages depends on the logging level, which is specified via the ``--verbosity`` or ``-v`` argument. The more ``v``\s the more detailed the log output becomes.
+
+
+The full documentation of each command line interface is available online along with the documentation of the respective *cli* module, e.g. :mod:`tmlib.workflow.jterator.cli`, or via the console by calling the program with ``--help`` or ``-h``:
+
+.. code-block:: none
+
+    jterator -h
 
 .. _library-cli-managing-workflows:
 
@@ -1006,62 +1128,3 @@ The workflow can also be resubmitted at a given stage:
 
 
 .. note:: Names of workflow stages may contain underscores. They are stripped for display in the user interface, but are required in the command line interface.
-
-Each :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>` further represents a separate program that exposes its own command line interface. These interfaces have are a very similar structure and provide sub-commands for methods defined in either the :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>` base class or the step-specific implementation.
-
-The name of the step is also automatically the name of the command line progroam. For example, the :mod:`jterator command line interface <tmlib.workflow.jterator.cli.Jterator>` can be controlled via the ``jterator`` command.
-
-You can initialize the step for the ``test-pipe`` pipeline via the ``init`` sub-command:
-
-.. code-block:: none
-
-    jterator -vv 1 --pipeline test-pipe init --batch_size 5
-
-or shorthand:
-
-.. code-block:: none
-
-    jterator -vv 1 -p test-pipe init -b 5
-
-And then run jobs either invidicually via the ``run`` sub-command:
-
-.. code-block:: none
-
-    jterator -vv 1 -p test-pipe run -j 1
-
-Or submit them for parallel processing via the ``submit`` sub-command:
-
-.. code-block:: none
-
-    jterator -vv 1 -p test-pipe submit
-
-.. note:: The ``submit`` command internally calls the program with ``run --job <job_id>`` on remote machines (or on different CPUs of the same machine) for each of the jobs defined via ``init``.
-
-To print the description of an individual job to the console call the ``info`` sub-command:
-
-.. code-block:: none
-
-    jterator -vv 1 -p test-pipe info --phase run --job 1
-
-You can further print the standard output of error of a job via the ``log`` sub-command:
-
-.. code-block:: none
-
-    jterator -vv 1 -p test-pipe log --phase run --job 1
-
-.. note:: The detail of log messages depends on the logging level, which is specified via the ``--verbosity`` or ``-v`` argument. The more ``v``\s the more detailed the log output becomes.
-
-
-The sub-commands described above are available for each step. The *jterator* step provides additional sub-commands for managing image analysis pipelines:
-
-For example, the pipeline and module descriptor files can be checked using the ``check`` sub-command:
-
-.. code-block:: none
-
-    jterator -vv 1 -p test-pipe check
-
-The full documentation of each command line interface is available online along with the documentation of the respective ``cli`` module, e.g. :mod:`tmlib.workflow.jterator.cli`, or via the console by calling the program with ``--help`` or ``-h``:
-
-.. code-block:: none
-
-    jterator -h

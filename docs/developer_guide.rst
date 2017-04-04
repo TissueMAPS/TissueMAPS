@@ -98,9 +98,9 @@ The code is distributed accross different repositories, each of them hosting a P
 
 - `Tmserver <https://github.com/TissueMAPS/TmServer>`_ (:mod:`tmserver` Python package): *TissueMAPS* server - `Flask <http://flask.pocoo.org/>`_-based web application
 
-  * :mod:`tmserver.api`: `blueprint <http://flask.pocoo.org/docs/0.11/blueprints/>`_ with `view functions <http://flask.pocoo.org/docs/0.11/tutorial/views/>`_ for the *RESTful API* listening on ``/api`` route
+  * :mod:`tmserver.api`: `blueprint <http://flask.pocoo.org/docs/0.11/blueprints/>`_ with `view functions <http://flask.pocoo.org/docs/0.11/tutorial/views/>`_ for the *RESTful API* listening on ``/api`` route.
   * :mod:`tmserver.jtui`: blueprint with view functions specific to the *Jterator* user interface listening on ``/jtui`` route
-  * :mod:`tmserver.extensions`: extensions for user authentication and job management
+  * :mod:`tmserver.extensions`: extensions for user authentication and computational job management
 
 - `TmLibary <https://github.com/TissueMAPS/TmLibrary>`_ (:mod:`tmlibrary <tmlib>` Python package): *TissueMAPS* library - code for interacting with compute and storage backends with *API* and *CLI*
 
@@ -254,19 +254,13 @@ Main ideas
 - **Cross-language compatibility**: Restriction of module input/output to `NumPy` arrays and build-in Python types to facilitate interfaces to other languages.
 
 
-.. _jterator-pipeline:
-
-Pipeline
-^^^^^^^^
-
-A *pipeline* is a sequence of connected *modules* that collectively represents a computational task (somewhat similar to a UNIX-world pipeline), i.e. a unit of execution that runs in memory on a single compute unit.
-Order of *modules* and pipeline input are defined in a *.pipe* YAML :ref:`pipeline descriptor file <jterator-pipeline-descriptor-file>`. Input/output settings for each module are provided by additional *.handles* YAML :ref:`module I/O descriptor files <jterator-module-descriptor-files>`.
-
-
 .. _jterator-pipeline-descriptor-file:
 
 Pipeline descriptor file
-************************
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+A *pipeline* is a sequence of connected *modules* that collectively represents a computational task (somewhat similar to a UNIX-world pipeline), i.e. a unit of execution that runs in memory on a single compute unit.
+Order of *modules* and pipeline input are defined in a *.pipe* YAML :ref:`pipeline descriptor file <jterator-pipeline-descriptor-file>`. Input/output settings for each module are provided by additional *.handles* YAML :ref:`module I/O descriptor files <jterator-module-descriptor-files>`.
 
 Here is an example of a *.pipe.yaml* YAML descriptor file:
 
@@ -320,7 +314,7 @@ Shown here are minimalistic examples of modules in different languages. They don
 .. _jterator-module-python-example:
 
 Python example
-**************
+++++++++++++++
 
 .. code-block:: python
 
@@ -356,7 +350,7 @@ The module named ``python_module`` (residing in a file called ``python_module.py
 .. _jterator-module-matlab-example:
 
 Matlab example
-**************
+++++++++++++++
 
 To get the same interface and namespace in *Matlab*, we need to implement the ``main()`` function as a static method of class ``matlab_module``.
 
@@ -411,7 +405,7 @@ Thereby, the module named ``matlab_module`` (residing in a file called ``matlab_
 .. _jterator-module-r-example:
 
 R example
-*********
++++++++++
 
 To implement the same interface in *R*, we have to get a bit more creative, since *R* is not a proper programming language (Ups! Did I just say that?).
 

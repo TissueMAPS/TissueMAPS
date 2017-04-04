@@ -20,7 +20,7 @@ tmclient.api module
     :undoc-members:
     :show-inheritance:
 
-.. autoprogram:: tmclient.api:TmClient._get_parser()
+.. autoprogram:: tmclient.cli:parser
     :prog: tm_client
 
 tmclient.log module

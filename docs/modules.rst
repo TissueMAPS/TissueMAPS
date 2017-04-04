@@ -7,6 +7,6 @@ Packages
     tmlib
     tmserver
     tmclient
-    tmsetup
+    tmdeploy
     jtlib
     jtmodules
