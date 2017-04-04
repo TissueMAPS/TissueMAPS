@@ -1849,7 +1849,7 @@ class TmClient(HttpClient):
             tpoint
         )
         logger.debug('decode CSV data')
-        file_obj = StringIO(res.content)
+        file_obj = StringIO(res.content.decode('utf-8'))
         return pd.read_csv(file_obj)
 
     def download_feature_values_and_metadata_files(self, mapobject_type_name,
@@ -1981,7 +1981,7 @@ class TmClient(HttpClient):
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
             tpoint
         )
-        file_obj = StringIO(res.content)
+        file_obj = StringIO(res.content.decode('utf-8'))
         return pd.read_csv(file_obj)
 
     def download_workflow_description(self):
