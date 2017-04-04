@@ -10,7 +10,7 @@ Installation
 
 For development and testing simply create and start the `Docker <https://www.docker.com/>`_ containers::
 
-    wget https://raw.githubusercontent.com/tissuemaps/tissuemaps/docker-compose.yml -q -P ~/tissuemaps
+    wget https://raw.githubusercontent.com/tissuemaps/tissuemaps/master/docker-compose.yml -q -P ~/tissuemaps
     cd ~/tissuemaps
     docker-compose up -d
 
