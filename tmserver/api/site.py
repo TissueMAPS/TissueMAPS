@@ -83,7 +83,7 @@ def get_sites(experiment_id):
         if well_name is not None:
             sites = sites.\
                 join(tm.Well).\
-                filter(tm.Well.name == name)
+                filter(tm.Well.name == well_name)
         if plate_name is not None:
             sites = sites.\
                 join(tm.Plate).\
