@@ -192,8 +192,9 @@ def test_feature_values(client, experiment_info):
                 expected.shape[1]
             )
         )
-        assert assert_array_almost_equal(response.values, expected.values), (
-            'Feature values for object type "{0}" are not correct.'.format(
+        assert assert_array_almost_equal(
+            response.values, expected.values,
+            err_msg='Feature values for object type "{0}" are incorrect.'.format(
                 mapobject_type['name']
             )
         )
@@ -215,8 +216,9 @@ def test_metadata(client, experiment_info):
                 mapobject_type['name'], response.shape[1], expected.shape[1]
             )
         )
-        assert assert_array_almost_equal(response.values, expected.values), (
-            'Metadata for object type "{0}" are not correct.'.format(
+        assert assert_array_almost_equal(
+            response.values, expected.values,
+            err_msg='Metadata for object type "{0}" are incorrect.'.format(
                 mapobject_type['name']
             )
         )
