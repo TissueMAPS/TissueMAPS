@@ -6,6 +6,7 @@ import yaml
 import requests
 import pytest
 import pandas as pd
+from natsort import natsorted
 from yaml import Loader, SafeLoader
 
 from tmclient.api import TmClient
@@ -237,7 +238,7 @@ class ExperimentInfo(object):
         if not isinstance(value, list):
             raise TypeError('Plates must be a list.')
         self._plates = list()
-        for v in value:
+        for v in natsorted(value):
             if not os.path.isdir(v):
                 continue
             p = PlateInfo(v)
@@ -279,7 +280,7 @@ class PlateInfo(object):
         if not isinstance(value, list):
             raise TypeError('Acquisitions must be a list.')
         self._acquisitions = list()
-        for v in value:
+        for v in natsorted(value):
             if not os.path.isdir(v):
                 continue
             a = AcquisitionInfo(v)
