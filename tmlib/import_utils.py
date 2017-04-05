@@ -22,7 +22,7 @@ import importlib
 def load_method_args(method_name):
     '''
     Load general arguments that can be parsed to a method of
-    an implemented subclass of a :class:`tmlib.cli.CommandLineInterface`
+    an implemented subclass of a :class:`tmlib.cli.WorkflowStepCLI`
     base class
 
     Parameters
@@ -53,7 +53,7 @@ def load_var_method_args(step_name, method_name):
     '''
     Load variable step-specific arguments that can be parsed to
     a method of an implemented subclass of a
-    :class:`tmlib.cli.CommandLineInterface` base class.
+    :class:`tmlib.cli.WorkflowStepCLI` base class.
 
     Parameters
     ----------

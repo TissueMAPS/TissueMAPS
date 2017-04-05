@@ -25,13 +25,13 @@ from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.errors import MetadataError
 from tmlib.errors import WorkflowError
-from tmlib.workflow.api import ClusterRoutines
+from tmlib.workflow.api import WorkflowStepAPI
 
 logger = logging.getLogger(__name__)
 
 
 @register_step_api('metaextract')
-class MetadataExtractor(ClusterRoutines):
+class MetadataExtractor(WorkflowStepAPI):
 
     '''Class for extraction of metadata from microscopic image files.
 
@@ -102,7 +102,7 @@ class MetadataExtractor(ClusterRoutines):
                         'microscope_image_file_ids': file_ids
                     }
 
-    @same_docstring_as(ClusterRoutines.delete_previous_job_output)
+    @same_docstring_as(WorkflowStepAPI.delete_previous_job_output)
     def delete_previous_job_output(self):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             logger.debug(

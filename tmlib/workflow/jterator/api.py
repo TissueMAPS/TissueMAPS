@@ -36,7 +36,7 @@ from tmlib.utils import flatten
 from tmlib.readers import TextReader
 from tmlib.readers import ImageReader
 from tmlib.writers import TextWriter
-from tmlib.workflow.api import ClusterRoutines
+from tmlib.workflow.api import WorkflowStepAPI
 from tmlib.errors import PipelineDescriptionError
 from tmlib.errors import JobDescriptionError
 from tmlib.workflow.jterator.project import Project
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 @register_step_api('jterator')
-class ImageAnalysisPipelineEngine(ClusterRoutines):
+class ImageAnalysisPipelineEngine(WorkflowStepAPI):
 
     '''Class for running image analysis pipelines.'''
 

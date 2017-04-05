@@ -33,7 +33,7 @@ from tmlib.image import Image
 from tmlib.errors import DataIntegrityError
 from tmlib.errors import WorkflowError
 from tmlib.models.utils import delete_location
-from tmlib.workflow.api import ClusterRoutines
+from tmlib.workflow.api import WorkflowStepAPI
 from tmlib.workflow.jobs import RunJob
 from tmlib.workflow.jobs import SingleRunJobCollection
 from tmlib.workflow.jobs import MultiRunJobCollection
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 @register_step_api('illuminati')
-class PyramidBuilder(ClusterRoutines):
+class PyramidBuilder(WorkflowStepAPI):
 
     def __init__(self, experiment_id):
         '''

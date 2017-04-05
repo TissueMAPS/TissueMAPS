@@ -16,12 +16,12 @@
 import logging
 
 from tmlib.utils import assert_type
-from tmlib.workflow.cli import CommandLineInterface
+from tmlib.workflow.cli import WorkflowStepCLI
 
 logger = logging.getLogger(__name__)
 
 
-class Illuminati(CommandLineInterface):
+class Illuminati(WorkflowStepCLI):
 
     @assert_type(api_instance='tmlib.workflow.illuminati.api.PyramidBuilder')
     def __init__(self, api_instance, verbosity):

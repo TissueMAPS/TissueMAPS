@@ -17,12 +17,12 @@ import logging
 
 from tmlib.utils import notimplemented
 from tmlib.utils import assert_type
-from tmlib.workflow.cli import CommandLineInterface
+from tmlib.workflow.cli import WorkflowStepCLI
 
 logger = logging.getLogger(__name__)
 
 
-class Metaextract(CommandLineInterface):
+class Metaextract(WorkflowStepCLI):
 
 
     @assert_type(api_instance='tmlib.workflow.metaextract.api.MetadataExtractor')

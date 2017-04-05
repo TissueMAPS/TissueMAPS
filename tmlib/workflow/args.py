@@ -314,7 +314,7 @@ class ArgumentCollection(object):
 
     '''Abstract base class for an argument collection. The collection serves
     as a container for arguments that can be parsed to methods of
-    :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`
+    :class:`WorkflowStepCLI <tmlib.workflow.cli.WorkflowStepCLI>`
     decorated with :func:`climethod <tmlib.workflow.climethod>`.
 
     Implementations of the class can be instantiated without having to
@@ -489,9 +489,9 @@ class BatchArguments(ArgumentCollection):
     for parallel processing on the cluster.
 
     These arguments can be passed to a step-specific implementation of the
-    :meth:`init <tmlib.workflow.cli.CommandLineInterface.init>` *CLI* method
+    :meth:`init <tmlib.workflow.cli.WorkflowStepCLI.init>` *CLI* method
     and will be parsed to the
-    :meth:`create_batches <tmlib.workflow.api.ClusterRoutines.create_batches>`
+    :meth:`create_batches <tmlib.workflow.api.WorkflowStepAPI.create_batches>`
     *API* method.
 
     Note
@@ -507,9 +507,9 @@ class SubmissionArguments(ArgumentCollection):
     jobs to the cluster.
 
     These arguments can be passed to a step-specific implementation of the
-    :meth:`submit <tmlib.workflow.cli.CommandLineInterface.submit>` *CLI* 
+    :meth:`submit <tmlib.workflow.cli.WorkflowStepCLI.submit>` *CLI* 
     method and are parse to the
-    :meth:`create_jobs <tmlib.workflow.api.ClusterRoutines.create_jobs>` *API*
+    :meth:`create_jobs <tmlib.workflow.api.WorkflowStepAPI.create_jobs>` *API*
     method.
 
     Note
@@ -552,7 +552,7 @@ class CliMethodArguments(ArgumentCollection):
 
     '''Collection of arguments that can be passed to a method of
     a step-specific implemenation of
-    :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`,
+    :class:`WorkflowStepCLI <tmlib.workflow.cli.WorkflowStepCLI>`,
     which are decoreated with :func:`climethod <tmlib.workflow.climethod>`.
     '''
 

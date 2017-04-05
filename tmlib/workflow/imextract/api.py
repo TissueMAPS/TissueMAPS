@@ -27,14 +27,14 @@ from tmlib.readers import ImageReader
 from tmlib.readers import JavaBridge
 from tmlib.image import ChannelImage
 from tmlib.metadata import ChannelImageMetadata
-from tmlib.workflow.api import ClusterRoutines
+from tmlib.workflow.api import WorkflowStepAPI
 from tmlib.workflow import register_step_api
 
 logger = logging.getLogger(__name__)
 
 
 @register_step_api('imextract')
-class ImageExtractor(ClusterRoutines):
+class ImageExtractor(WorkflowStepAPI):
 
     '''Class for extraction of pixel arrays (planes) stored in image files using
     `python-bioformats <https://github.com/CellProfiler/python-bioformats>`_.

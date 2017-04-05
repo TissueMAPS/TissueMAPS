@@ -23,14 +23,14 @@ from tmlib.errors import NotSupportedError
 from sqlalchemy.orm.exc import NoResultFound
 from tmlib.errors import JobDescriptionError
 from tmlib.workflow.align import registration as reg
-from tmlib.workflow.api import ClusterRoutines
+from tmlib.workflow.api import WorkflowStepAPI
 from tmlib.workflow import register_step_api
 
 logger = logging.getLogger(__name__)
 
 
 @register_step_api('align')
-class ImageRegistrator(ClusterRoutines):
+class ImageRegistrator(WorkflowStepAPI):
 
     '''Class for registeration and alignment of images between multiplexing
     cycles.
@@ -143,7 +143,7 @@ class ImageRegistrator(ClusterRoutines):
                     'illumcorr': args.illumcorr
                 }
 
-    @same_docstring_as(ClusterRoutines.delete_previous_job_output)
+    @same_docstring_as(WorkflowStepAPI.delete_previous_job_output)
     def delete_previous_job_output(self):
         logger.info('delete existing site shifts and intersections')
         with tm.utils.ExperimentSession(self.experiment_id) as session:

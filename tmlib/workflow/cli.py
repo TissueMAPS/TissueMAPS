@@ -164,7 +164,7 @@ class _CliMeta(ABCMeta):
         return store.load(job_id)
 
 
-class CommandLineInterface(WorkflowSubmissionManager):
+class WorkflowStepCLI(WorkflowSubmissionManager):
 
     '''Abstract base class for command line interfaces.
 
@@ -178,13 +178,13 @@ class CommandLineInterface(WorkflowSubmissionManager):
     provides descriptions of the method arguments, which are also added to the
     corresponding subparser.
 
-    The :meth:`init <tmlib.workflow.cli.CommandLineInterface.init>`
+    The :meth:`init <tmlib.workflow.cli.WorkflowStepCLI.init>`
     and :meth:`submit <tmlib.workflow.cli.CommandLineInterace.submit>` methods
     require additional step-specific arguments that are passed to the *API*
     methods
-    :meth:`create_run_batches <tmlib.workflow.api.ClusterRoutines.create_run_batches>`
+    :meth:`create_run_batches <tmlib.workflow.api.WorkflowStepAPI.create_run_batches>`
     and
-    :meth:`create_run_jobs <tmlib.workflow.api.ClusterRoutines.create_run_jobs>`,
+    :meth:`create_run_jobs <tmlib.workflow.api.WorkflowStepAPI.create_run_jobs>`,
     respectively. These arguments are handled separately, since they also need
     to be accessible outside the scope of the command line interace.
     They are provided by step-specific implementations of
@@ -201,14 +201,14 @@ class CommandLineInterface(WorkflowSubmissionManager):
         '''
         Parameters
         ----------
-        api_instance: tmlib.api.ClusterRoutines
+        api_instance: tmlib.api.WorkflowStepAPI
             instance of API class to which processing is delegated
         verbosity: int
             logging verbosity level
         '''
         self.api_instance = api_instance
         self.verbosity = verbosity
-        super(CommandLineInterface, self).__init__(
+        super(WorkflowStepCLI, self).__init__(
             api_instance.experiment_id, self.name
         )
 

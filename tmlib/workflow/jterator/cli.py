@@ -17,14 +17,14 @@ import logging
 
 from tmlib.utils import assert_type
 from tmlib.log import map_logging_verbosity
-from tmlib.workflow.cli import CommandLineInterface
+from tmlib.workflow.cli import WorkflowStepCLI
 from tmlib.workflow.cli import climethod
 from tmlib.workflow.args import Argument
 
 logger = logging.getLogger(__name__)
 
 
-class Jterator(CommandLineInterface):
+class Jterator(WorkflowStepCLI):
 
     @assert_type(api_instance='tmlib.workflow.jterator.api.ImageAnalysisPipelineEngine')
     def __init__(self, api_instance, verbosity):

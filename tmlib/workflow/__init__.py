@@ -41,19 +41,19 @@ three modules:
       and the amount of computational resources, which should get allocated
       to each batch job.
     * **api**: Must implement
-      :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>` and
+      :class:`WorkflowStepAPI <tmlib.workflow.api.WorkflowStepAPI>` and
       decorate it with
       :func:`register_step_api <tmlib.workflow.register_step_api>`. This class
       provides the active programming interface (API) with methods for
       creation and management of batch jobs. The methods
-      :meth:`create_batches <tmlib.workflow.api.ClusterRoutines.create_batches>`,
-      :meth:`run_job <tmlib.workflow.api.ClusterRoutines.run_job>` and
-      :meth:`collect_job_output <tmlib.workflow.api.ClusterRoutines.collect_job_output>`
+      :meth:`create_batches <tmlib.workflow.api.WorkflowStepAPI.create_batches>`,
+      :meth:`run_job <tmlib.workflow.api.WorkflowStepAPI.run_job>` and
+      :meth:`collect_job_output <tmlib.workflow.api.WorkflowStepAPI.collect_job_output>`
       implemented by derived classes are responsible for the *step*-specific
       processing behaviour and controlled via the *batch* and *submission*
       arguments described above.
     * **cli**: Must implement
-      :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`.
+      :class:`WorkflowStepCLI <tmlib.workflow.cli.WorkflowStepCLI>`.
       This class provides the command line interface (CLI) and main entry points
       for the program. It supplies high-level methods for the different
       *phases*, which delegate processing to the respective API methods.
@@ -101,7 +101,7 @@ _workflow_register = collections.defaultdict(dict)
 
 def register_step_api(name):
     '''Class decorator to register a derived class of
-    :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>` as a step API.
+    :class:`WorkflowStepAPI <tmlib.workflow.api.WorkflowStepAPI>` as a step API.
 
     Parameters
     ----------
@@ -116,14 +116,14 @@ def register_step_api(name):
     ------
     TypeError
         when decorated class is not derived from
-        :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>`
+        :class:`WorkflowStepAPI <tmlib.workflow.api.WorkflowStepAPI>`
     '''
-    from tmlib.workflow.api import ClusterRoutines
+    from tmlib.workflow.api import WorkflowStepAPI
     def decorator(cls):
-        if ClusterRoutines not in inspect.getmro(cls):
+        if WorkflowStepAPI not in inspect.getmro(cls):
             raise TypeError(
                 'Api class must be derived from '
-                '"tmlib.workflow.api.ClusterRoutines"'
+                '"tmlib.workflow.api.WorkflowStepAPI"'
             )
         _step_register[name]['api'] = cls
         return cls
@@ -186,7 +186,7 @@ def climethod(help, **kwargs):
         when registered function is not a method
     TypeError
         when the class of the registered method is not derived from
-        :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>`
+        :class:`WorkflowStepCLI <tmlib.workflow.cli.WorkflowStepCLI>`
     TypeError
         when the value specified by a keyword argument doesn't have type
         :class:`Argument <tmlib.workflow.args.Argument>`
@@ -200,10 +200,10 @@ def climethod(help, **kwargs):
     def decorator(func):
         if not isinstance(func, types.FunctionType):
             raise TypeError('Registered object must be a function.')
-        # if CommandLineInterface not in inspect.getmro(func.im_class):
+        # if WorkflowStepCLI not in inspect.getmro(func.im_class):
         #     raise TypeError(
         #         'Class of registered method must be derived from '
-        #         'tmlib.workflow.cli.CommandLineInterface'
+        #         'tmlib.workflow.cli.WorkflowStepCLI'
         #     )
         func.is_climethod = True
         func.help = help
@@ -342,7 +342,7 @@ def get_step_args(name):
 
 def get_step_api(name):
     '''Gets the step-specific implementation of the
-    :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>` *API* class.
+    :class:`WorkflowStepAPI <tmlib.workflow.api.WorkflowStepAPI>` *API* class.
 
     Parameters
     ----------

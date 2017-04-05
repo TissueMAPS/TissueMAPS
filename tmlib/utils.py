@@ -101,8 +101,8 @@ def regex_from_format_string(format_string):
 
     Examples
     --------
-    >>>r = regex_from_format_string("{directory}/{filename}")
-    >>>r.search("foo/bar.txt").groupdict()
+    >>> r = regex_from_format_string("{directory}/{filename}")
+    >>> r.search("foo/bar.txt").groupdict()
     {'directory': 'foo', 'filename': 'bar.txt'}
     '''
     # Extract the names of all placeholders from the format string
@@ -210,9 +210,9 @@ def is_number(s):
 
     Examples
     --------
-    >>>is_number('blabla')
+    >>> is_number('blabla')
     False
-    >>>is_number('007')
+    >>> is_number('007')
     True
     '''
     # NOTE: code taken from stackoverflow.com (question 354038)
@@ -238,7 +238,7 @@ def map_letter_to_number(letter):
 
     Examples
     --------
-    >>>map_letter_to_number("A")
+    >>> map_letter_to_number("A")
     1
     '''
     return ord(letter) - 64
@@ -259,7 +259,7 @@ def map_number_to_letter(number):
 
     Examples
     --------
-    >>>map_number_to_letter(1)
+    >>> map_number_to_letter(1)
     "A"
     '''
     return chr(number+64)
@@ -279,8 +279,8 @@ def missing_elements(data, start=None, end=None):
 
     Examples
     --------
-    >>>data = [10, 12, 13, 15, 16, 19, 20]
-    >>>list(missing_elements(data))
+    >>> data = [10, 12, 13, 15, 16, 19, 20]
+    >>> list(missing_elements(data))
     [11, 14, 17, 18]
     '''
     # NOTE: code adapted from stackoverflow.com (question 16974047)
@@ -335,22 +335,24 @@ def assert_type(**expected):
 
     Examples
     --------
-    from tmlib.utils import assert_type
+    .. code:: python
 
-    class TypeCheckExample(object):
+        from tmlib.utils import assert_type
 
-        @assert_type(value1='str', value2=['int', 'float', 'types.NoneType'])
-        def test(self, value1, value2=None):
-            print 'value1: "%s"' % value1
-            if value2:
-                print 'value2: %d' % value2
+        class TypeCheckExample(object):
 
-    example = TypeCheckExample()
-    example.test('blabla', 2)
-    example.test('blabla', 2.0)
-    example.test('blabla', None)
-    example.test('blabla')
-    example.test('blabla', '2')  # raises TypeError
+            @assert_type(value1='str', value2=['int', 'float', 'types.NoneType'])
+            def test(self, value1, value2=None):
+                print 'value1: "%s"' % value1
+                if value2:
+                    print 'value2: %d' % value2
+
+        example = TypeCheckExample()
+        example.test('blabla', 2)
+        example.test('blabla', 2.0)
+        example.test('blabla', None)
+        example.test('blabla')
+        example.test('blabla', '2')  # raises TypeError
 
     '''
 
@@ -478,16 +480,18 @@ class autocreate_directory_property(object):
 
     Examples
     --------
-    from tmlib.utils import autocreate_directory_property
+    .. code:: python
 
-    class Foo(object):
+        from tmlib.utils import autocreate_directory_property
 
-        @autocreate_directory_property
-        def my_new_directory(self):
-            return '/tmp/blabla'
+        class Foo(object):
 
-    foo = Foo()
-    foo.my_new_directory
+            @autocreate_directory_property
+            def my_new_directory(self):
+                return '/tmp/blabla'
+
+        foo = Foo()
+        foo.my_new_directory
     '''
     def __init__(self, func):
         self.__doc__ = func.__doc__
@@ -548,9 +552,10 @@ def notimplemented(func):
 
     Note
     ----
-    Derived classes of :class:`tmlib.workflow.api.ClusterRoutines`
-    must decorate the method `collect_job_output` in case the corresponding
-    step doesn't have a `collect` phase.
+    Derived classes of
+    :class:`WorkflowStepAPI <tmlib.workflow.api.WorkflowStepAPI>`
+    must decorate the implemented method `collect_job_output` in case the
+    corresponding step doesn't have a `collect` phase.
     '''
     func.__doc__ = 'Not implemented.'
 

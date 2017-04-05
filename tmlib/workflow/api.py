@@ -71,7 +71,7 @@ def _is_model_class_attr(obj):
     )
 
 
-class BasicClusterRoutines(object):
+class BasicWorkflowStepAPI(object):
 
     '''Abstract base class for cluster routines.'''
 
@@ -101,7 +101,7 @@ class BasicClusterRoutines(object):
 class _ApiMeta(ABCMeta):
 
     '''Metaclass for
-    :class:`ClusterRoutines <tmlib.workflow.api.ClusterRoutines>`.
+    :class:`WorkflowStepAPI <tmlib.workflow.api.WorkflowStepAPI>`.
 
     The metaclass inspects the method *collect_job_output* of derived classes
     to dynamically determine whether the given step has implemented the
@@ -123,7 +123,7 @@ class _ApiMeta(ABCMeta):
         setattr(cls, 'has_collect_phase', has_collect_phase)
 
 
-class ClusterRoutines(BasicClusterRoutines):
+class WorkflowStepAPI(BasicWorkflowStepAPI):
 
     '''Abstract base class for API classes, which provide methods for
     for large-scale image processing on a batch cluster.
@@ -158,7 +158,7 @@ class ClusterRoutines(BasicClusterRoutines):
             absolute path to location where workflow related data should be
             stored
         '''
-        super(ClusterRoutines, self).__init__()
+        super(WorkflowStepAPI, self).__init__()
         self.experiment_id = experiment_id
         with tm.utils.ExperimentSession(experiment_id) as session:
             experiment = session.query(tm.Experiment).get(self.experiment_id)
@@ -442,7 +442,7 @@ class ClusterRoutines(BasicClusterRoutines):
 
         This method returns an empty dictionary. In case the step implements
         the *collect* phase and arguments need to be parsed to
-        :meth:`collect_job_output <tmlib.workflow.api.ClusterRoutines.collect_job_output>`,
+        :meth:`collect_job_output <tmlib.workflow.api.WorkflowStepAPI.collect_job_output>`,
         the derived class can override this method.
 
         Parameters

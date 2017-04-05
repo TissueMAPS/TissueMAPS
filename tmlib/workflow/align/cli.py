@@ -16,14 +16,14 @@
 import logging
 
 from tmlib.utils import assert_type
-from tmlib.workflow.cli import CommandLineInterface
+from tmlib.workflow.cli import WorkflowStepCLI
 from tmlib.workflow.align.args import AlignBatchArguments
 from tmlib.workflow.align.args import AlignSubmissionArguments
 
 logger = logging.getLogger(__name__)
 
 
-class Align(CommandLineInterface):
+class Align(WorkflowStepCLI):
 
     @assert_type(api_instance='tmlib.workflow.align.api.ImageRegistrator')
     def __init__(self, api_instance, verbosity):

@@ -17,12 +17,12 @@ import logging
 
 from tmlib.utils import notimplemented
 from tmlib.utils import assert_type
-from tmlib.workflow.cli import CommandLineInterface
+from tmlib.workflow.cli import WorkflowStepCLI
 
 logger = logging.getLogger(__name__)
 
 
-class Corilla(CommandLineInterface):
+class Corilla(WorkflowStepCLI):
 
     @assert_type(api_instance='tmlib.workflow.corilla.api.IllumstatsCalculator')
     def __init__(self, api_instance, verbosity):
