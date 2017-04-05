@@ -168,21 +168,22 @@ class TmClient(HttpClient):
         logging.getLogger('tmclient').setLevel(logging_level)
         logger.setLevel(logging_level)
 
-        client = cls(
-            args.host, args.port, args.username, args.password
-        )
-        if hasattr(args, 'experiment_name'):
-            client.experiment_name = args.experiment_name
         try:
+            client = cls(
+                args.host, args.port, args.username, args.password
+            )
+            if hasattr(args, 'experiment_name'):
+                client.experiment_name = args.experiment_name
             client(args)
         except requests.exceptions.HTTPError as err:
             logger.error(str(err))
             sys.exit(1)
         except ResourceError as err:
-            logger.error(str(err))
+            logger.error(str(err).lower())
             sys.exit(1)
-        except:
-            raise
+        except Exception as err:
+            logger.error(str(err).lower())
+            sys.exit(1)
 
     def _build_api_url(self, route, params={}):
         if not route.startswith('/'):

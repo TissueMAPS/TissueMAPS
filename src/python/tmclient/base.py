@@ -106,25 +106,22 @@ class HttpClient(object):
         logger.debug('trying to obtain credentials from "~/.tm_pass" file')
         cred_filepath = os.path.expandvars(os.path.join('$HOME', '.tm_pass'))
         if not os.path.exists(cred_filepath):
-            logger.error(
-                'no credentials provided and no %s file found', cred_filepath
+            raise IOError(
+                'No credentials provided and tm_pass file not found: {0}'.format(
+                    cred_filepath
+                )
             )
-            sys.exit(1)
         try:
             with open(cred_filepath) as f:
                 credentials = yaml.load(f.read())
         except Exception as err:
-            logger.error(
-                'could not be read credentials from %s file: %s',
-                cred_file, str(err)
+            raise IOError(
+                'Could not be read credentials from file:\n{0}'.format(str(err))
             )
-            sys.exit(1)
         if username not in credentials:
-            logger.error(
-                'no credentials provided for user "%s" in %s file',
-                username, cred_filepath
+            raise ValueError(
+                'No credentials provided for user "{0}"'.format(username)
             )
-            sys.exit(1)
         return credentials[username]
 
     def _login(self, username, password):
