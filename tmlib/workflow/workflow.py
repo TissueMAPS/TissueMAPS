@@ -429,9 +429,11 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
             # Stop the entire collection in case the last task "failed".
             # We only stop the workflow, so that the workflow could in principle
             # be resumed later.
-            return gc3libs.Run.State.STOPPED
+            # return gc3libs.Run.State.STOPPED
+            return gc3libs.Run.State.TERMINATED
         if self.is_stopped:
-            return gc3libs.Run.State.STOPPED
+            # return gc3libs.Run.State.STOPPED
+            return gc3libs.Run.State.TERMINATED
         elif self.is_terminated:
             return gc3libs.Run.State.TERMINATED
         logger.info('step "%s" is done', self.description.steps[done].name)
@@ -461,7 +463,8 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
                 logger.info('stopping stage "%s"', self.jobname)
-                self.execution.state = gc3libs.Run.State.STOPPED
+                # self.execution.state = gc3libs.Run.State.STOPPED
+                self.execution.state = gc3libs.Run.State.TERMINATED
                 raise
         else:
             return gc3libs.Run.State.TERMINATED
@@ -702,9 +705,11 @@ class Workflow(SequentialTaskCollection, State):
         # to the state of the last processed task.
         self.execution.returncode = self.tasks[done].execution.returncode
         if self.execution.returncode != 0:
-            return gc3libs.Run.State.STOPPED
+            # return gc3libs.Run.State.STOPPED
+            return gc3libs.Run.State.TERMINATED
         if self.is_stopped:
-            return gc3libs.Run.State.STOPPED
+            # return gc3libs.Run.State.STOPPED
+            return gc3libs.Run.State.TERMINATED
         elif self.is_terminated:
             return gc3libs.Run.State.TERMINATED
         logger.info('stage "%s" is done', self.description.stages[done].name)
@@ -734,7 +739,8 @@ class Workflow(SequentialTaskCollection, State):
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
                 logger.info('stopping workflow "%s"', self.jobname)
-                self.execution.state = gc3libs.Run.State.STOPPED
+                # self.execution.state = gc3libs.Run.State.STOPPED
+                self.execution.state = gc3libs.Run.State.TERMINATED
                 raise
         else:
             return gc3libs.Run.State.TERMINATED
