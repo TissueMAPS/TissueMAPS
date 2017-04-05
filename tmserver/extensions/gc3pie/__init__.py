@@ -75,7 +75,7 @@ class GC3Pie(object):
         logger.info('initialize GC3Pie extension')
         logger.debug('create GC3Pie engine')
         store = create_gc3pie_sql_store()
-        engine = create_gc3pie_engine(store, forget=True)
+        engine = create_gc3pie_engine(store)
         bgengine = BgEngine('gevent', engine)
         logger.debug('start GC3Pie engine in the background')
         bgengine.start(10)
