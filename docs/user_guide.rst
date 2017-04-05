@@ -911,7 +911,7 @@ Check whether all files have been uploaded correctly:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo microscope-file -e test ls
+    tm_client -vv -H localhost -P 8002 -u demo microscope-file -e test ls -p plate01 -a acquisition01
 
 To be able to process the uploaded images, you have to provide a :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>`. You can request a template and store it in a `YAML <http://yaml.org/>`_ file with either ``.yaml`` or ``.yml`` extension:
 
