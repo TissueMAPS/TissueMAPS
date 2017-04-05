@@ -41,6 +41,48 @@ from tmserver.error import *
 logger = logging.getLogger(__name__)
 
 
+def _get_matching_plates(session, plate_name):
+    query = session.query(
+            tm.Plate.id,
+            tm.Plate.name.label('plate_name')
+        )
+    if plate_name is not None:
+        logger.debug('filter metadata by plate "%s"', plate_name)
+        results = session.query(tm.Plate.id).\
+            filter_by(name=plate_name).\
+            count()
+        if results == 0:
+            raise ResourceNotFoundError(tm.Plate, name=plate_name)
+        query = query.filter(tm.Plate.name == plate_name)
+    return query.order_by(tm.Plate.id).all()
+
+
+def _get_matching_wells(session, plate_name, well_name):
+    query = session.query(
+            tm.Well.id,
+            tm.Well.name.label('well_name'),
+            tm.Plate.name.label('plate_name')
+        ).\
+        join(tm.Plate)
+    if plate_name is not None:
+        logger.debug('filter metadata by plate "%s"', plate_name)
+        results = session.query(tm.Plate.id).\
+            filter_by(name=plate_name).\
+            count()
+        if results == 0:
+            raise ResourceNotFoundError(tm.Plate, name=plate_name)
+        query = query.filter(tm.Plate.name == plate_name)
+    if well_name is not None:
+        logger.debug('filter metadata by well "%s"', well_name)
+        results = session.query(tm.Well.id).\
+            filter_by(name=well_name).\
+            count()
+        if results == 0:
+            raise ResourceNotFoundError(tm.Well, name=well_name)
+        query = query.filter(tm.Well.name == well_name)
+    return query.order_by(tm.Well.id).all()
+
+
 def _get_matching_sites(session, plate_name, well_name, well_pos_y, well_pos_x):
     query = session.query(
             tm.Site.id,
@@ -103,15 +145,15 @@ def _get_matching_layers(session, tpoint):
     return query.all()
 
 
-def _get_mapobjects_at_site(session, mapobject_type_id, site_mapobject_type_id,
-        site_id, segmentation_layer_ids):
-    site_segmentation = session.query(
+def _get_mapobjects_at_ref_position(session, mapobject_type_id,
+        ref_mapobject_type_id, ref_id, segmentation_layer_ids):
+    ref_segmentation = session.query(
             tm.MapobjectSegmentation.geom_polygon
         ).\
         join(tm.Mapobject).\
         filter(
-            tm.Mapobject.ref_id == site_id,
-            tm.Mapobject.mapobject_type_id == site_mapobject_type_id
+            tm.Mapobject.ref_id == ref_id,
+            tm.Mapobject.mapobject_type_id == ref_mapobject_type_id
         ).\
         one()
 
@@ -123,7 +165,7 @@ def _get_mapobjects_at_site(session, mapobject_type_id, site_mapobject_type_id,
         filter(
             tm.Mapobject.mapobject_type_id == mapobject_type_id,
             tm.MapobjectSegmentation.geom_centroid.ST_Intersects(
-                site_segmentation.geom_polygon
+                ref_segmentation.geom_polygon
             ),
             tm.MapobjectSegmentation.segmentation_layer_id.in_(
                 segmentation_layer_ids
@@ -133,15 +175,15 @@ def _get_mapobjects_at_site(session, mapobject_type_id, site_mapobject_type_id,
         all()
 
 
-def _get_border_mapobjects_at_site(session, mapobject_ids,
-        site_mapobject_type_id, site_id):
-    site_segmentation = session.query(
+def _get_border_mapobjects_at_ref_position(session, mapobject_ids,
+        ref_mapobject_type_id, ref_id):
+    ref_segmentation = session.query(
             tm.MapobjectSegmentation.geom_polygon
         ).\
         join(tm.Mapobject).\
         filter(
-            tm.Mapobject.ref_id == site_id,
-            tm.Mapobject.mapobject_type_id == site_mapobject_type_id
+            tm.Mapobject.ref_id == ref_id,
+            tm.Mapobject.mapobject_type_id == ref_mapobject_type_id
         ).\
         one()
 
@@ -149,7 +191,7 @@ def _get_border_mapobjects_at_site(session, mapobject_ids,
         filter(
             tm.MapobjectSegmentation.mapobject_id.in_(mapobject_ids),
             tm.MapobjectSegmentation.geom_polygon.ST_Intersects(
-                site_segmentation.geom_polygon.ST_Boundary()
+                ref_segmentation.geom_polygon.ST_Boundary()
             )
         ).\
         all()

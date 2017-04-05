@@ -35,8 +35,9 @@ from tmserver.util import (
 )
 from tmserver.error import *
 from tmserver.api.mapobject import (
-    _get_matching_sites, _get_matching_layers, _get_mapobjects_at_site,
-    _get_border_mapobjects_at_site
+    _get_matching_sites, _get_matching_plates, _get_matching_wells,
+    _get_matching_layers, _get_mapobjects_at_ref_position,
+    _get_border_mapobjects_at_ref_position
 )
 
 
@@ -284,8 +285,34 @@ def get_feature_values(experiment_id, mapobject_type_id):
         mapobject_type = session.query(tm.MapobjectType).\
             get(mapobject_type_id)
         mapobject_type_name = mapobject_type.name
+        mapobject_type_ref_type = mapobject_type.ref_type
 
-    def generate_feature_matrix(mapobject_type_id):
+    if mapobject_type_ref_type in {'Plate', 'Well'}:
+        if well_pos_y is not None:
+            raise MalformedRequestError(
+                'Invalid query parameter "well_pos_y" for mapobjects type '
+                '{0}'.format(mapobject_type_name)
+            )
+        if well_pos_x is not None:
+            raise MalformedRequestError(
+                'Invalid query parameter "well_pos_x" for mapobjects type '
+                '{0}'.format(mapobject_type_name)
+            )
+    if mapobject_type_ref_type == 'Plate':
+        ref_type = 'Plate'
+        if well_name is not None:
+            raise MalformedRequestError(
+                'Invalid query parameter "well_name" for mapobjects type '
+                '{0}'.format(mapobject_type_name)
+            )
+    elif mapobject_type_ref_type == 'Well':
+        ref_type = 'Plate'
+    elif mapobject_type_ref_type == 'Site':
+        ref_type = 'Well'
+    else:
+        ref_type = 'Site'
+
+    def generate_feature_matrix(mapobject_type_id, ref_type):
         data = StringIO()
         w = csv.writer(data)
 
@@ -293,15 +320,18 @@ def get_feature_values(experiment_id, mapobject_type_id):
 
             results = _get_matching_layers(session, tpoint)
             layer_lut = dict()
-            for record in results:
-                layer_lut[record.id] = {
-                    'tpoint': record.tpoint, 'zplane': record.zplane
-                }
+            for r in results:
+                layer_lut[r.id] = {'tpoint': r.tpoint, 'zplane': r.zplane}
 
-            results = _get_matching_sites(
-                session, plate_name, well_name, well_pos_y, well_pos_x
-            )
-            site_ids = [record.id for record in results]
+            if ref_type == 'Plate':
+                results = _get_matching_plates(session, plate_name)
+            elif ref_type == 'Well':
+                results = _get_matching_wells(session, plate_name, well_name)
+            elif ref_type == 'Site':
+                results = _get_matching_sites(
+                    session, plate_name, well_name, well_pos_y, well_pos_x
+                )
+            ref_ids = [r.id for r in results]
 
             features = session.query(tm.Feature.name).\
                 filter_by(mapobject_type_id=mapobject_type_id).\
@@ -309,8 +339,8 @@ def get_feature_values(experiment_id, mapobject_type_id):
                 all()
             feature_names = [f.name for f in features]
 
-            site_mapobject_type = session.query(tm.MapobjectType.id).\
-                filter_by(ref_type=tm.Site.__name__).\
+            ref_mapobject_type = session.query(tm.MapobjectType.id).\
+                filter_by(ref_type=ref_type).\
                 one()
 
         w.writerow(tuple(feature_names))
@@ -318,17 +348,19 @@ def get_feature_values(experiment_id, mapobject_type_id):
         data.seek(0)
         data.truncate(0)
 
-        for site_id in site_ids:
-            logger.debug('collect feature values at site %d', site_id)
+        for ref_id in ref_ids:
+            logger.debug('collect feature values for %s %d', ref_type, ref_id)
             with tm.utils.ExperimentSession(experiment_id) as session:
-                mapobjects = _get_mapobjects_at_site(
-                    session, mapobject_type_id, site_mapobject_type.id,
-                    site_id, layer_lut.keys()
+                mapobjects = _get_mapobjects_at_ref_position(
+                    session, mapobject_type_id, ref_mapobject_type.id,
+                    ref_id, layer_lut.keys()
                 )
                 mapobject_ids = [m.id for m in mapobjects]
 
                 if not mapobject_ids:
-                    logger.warn('no mapobjects found at site %d', site_id)
+                    logger.warn(
+                        'no mapobjects found for %s %d', ref_type, ref_id
+                    )
                     continue
 
                 feature_values = session.query(
@@ -339,7 +371,9 @@ def get_feature_values(experiment_id, mapobject_type_id):
                 feature_values_lut = dict(feature_values)
 
                 if not feature_values_lut:
-                    logger.warn('no feature values found at site %d', site_id)
+                    logger.warn(
+                        'no feature values found for %s %d', ref_type, ref_id
+                    )
                     continue
 
                 for mapobject_id, label, segmentation_layer_id in mapobjects:
@@ -370,7 +404,7 @@ def get_feature_values(experiment_id, mapobject_type_id):
                 data.truncate(0)
 
     return Response(
-        stream_with_context(generate_feature_matrix(mapobject_type_id)),
+        generate_feature_matrix(mapobject_type_id, ref_type),
         mimetype='text/csv',
         headers={
             'Content-Disposition': 'attachment; filename={filename}'.format(
@@ -428,8 +462,35 @@ def get_metadata(experiment_id, mapobject_type_id):
         mapobject_type = session.query(tm.MapobjectType).\
             get(mapobject_type_id)
         mapobject_type_name = mapobject_type.name
+        mapobject_type_ref_type = mapobject_type.ref_type
 
-    def generate_feature_matrix(mapobject_type_id):
+    if mapobject_type_ref_type in {'Plate', 'Well'}:
+        if well_pos_y is not None:
+            raise MalformedRequestError(
+                'Invalid query parameter "well_pos_y" for mapobjects type '
+                '{0}'.format(mapobject_type_name)
+            )
+        if well_pos_x is not None:
+            raise MalformedRequestError(
+                'Invalid query parameter "well_pos_x" for mapobjects type '
+                '{0}'.format(mapobject_type_name)
+            )
+
+    if mapobject_type_ref_type == 'Plate':
+        ref_type = 'Plate'
+        if well_name is not None:
+            raise MalformedRequestError(
+                'Invalid query parameter "well_name" for mapobjects type '
+                '{0}'.format(mapobject_type_name)
+            )
+    elif mapobject_type_ref_type == 'Well':
+        ref_type = 'Well'
+    elif mapobject_type_ref_type == 'Site':
+        ref_type = 'Site'
+    else:
+        ref_type = 'Site'
+
+    def generate_feature_matrix(mapobject_type_id, ref_type):
         data = StringIO()
         w = csv.writer(data)
 
@@ -437,27 +498,45 @@ def get_metadata(experiment_id, mapobject_type_id):
 
             results = _get_matching_layers(session, tpoint)
             layer_lut = dict()
-            for record in results:
-                layer_lut[record.id] = {
-                    'tpoint': record.tpoint, 'zplane': record.zplane
-                }
+            for r in results:
+                layer_lut[r.id] = {'tpoint': r.tpoint, 'zplane': r.zplane}
 
-            results = _get_matching_sites(
-                session, plate_name, well_name, well_pos_y, well_pos_x
-            )
-            site_lut = dict()
-            for record in results:
-                site_lut[record.id] = {
-                    'well_pos_y': record.well_pos_y,
-                    'well_pos_x': record.well_pos_x,
-                    'plate_name': record.plate_name,
-                    'well_name': record.well_name,
-                }
+            ref_position_lut = dict()
+            if ref_type == 'Plate':
+                results = _get_matching_plates(session, plate_name)
+                for r in results:
+                    ref_position_lut[r.id] = {
+                        'plate_name': r.plate_name,
+                    }
+                metadata_names = [
+                    'plate_name'
+                ]
+            elif ref_type == 'Well':
+                results = _get_matching_wells(session, plate_name, well_name)
+                for r in results:
+                    ref_position_lut[r.id] = {
+                        'plate_name': r.plate_name,
+                        'well_name': r.well_name,
+                    }
+                metadata_names = [
+                    'plate_name', 'well_name'
+                ]
+            elif ref_type == 'Site':
+                results = _get_matching_sites(
+                    session, plate_name, well_name, well_pos_y, well_pos_x
+                )
+                for r in results:
+                    ref_position_lut[r.id] = {
+                        'well_pos_y': r.well_pos_y,
+                        'well_pos_x': r.well_pos_x,
+                        'plate_name': r.plate_name,
+                        'well_name': r.well_name,
+                    }
+                metadata_names = [
+                    'plate_name', 'well_name', 'well_pos_y', 'well_pos_x',
+                    'tpoint', 'zplane', 'label', 'is_border'
+                ]
 
-            metadata_names = [
-                'plate_name', 'well_name', 'well_pos_y', 'well_pos_x',
-                'tpoint', 'zplane', 'label', 'is_border'
-            ]
             tool_results = session.query(tm.ToolResult.id, tm.ToolResult.name).\
                 filter_by(mapobject_type_id=mapobject_type_id).\
                 order_by(tm.ToolResult.id).\
@@ -465,8 +544,8 @@ def get_metadata(experiment_id, mapobject_type_id):
             tool_result_names = [t.name for t in tool_results]
             tool_result_ids = [t.id for t in tool_results]
 
-            site_mapobject_type = session.query(tm.MapobjectType.id).\
-                filter_by(ref_type=tm.Site.__name__).\
+            ref_mapobject_type = session.query(tm.MapobjectType.id).\
+                filter_by(ref_type=ref_type).\
                 one()
 
         w.writerow(tuple(metadata_names + tool_result_names))
@@ -474,25 +553,29 @@ def get_metadata(experiment_id, mapobject_type_id):
         data.seek(0)
         data.truncate(0)
 
-        for site_id in site_lut:
-            logger.debug('collect feature values at site %d', site_id)
+        for ref_id in ref_position_lut:
+            logger.debug('collect metadata for %s %d', ref_type, ref_id)
             with tm.utils.ExperimentSession(experiment_id) as session:
-                mapobjects = _get_mapobjects_at_site(
-                    session, mapobject_type_id, site_mapobject_type.id,
-                    site_id, layer_lut.keys()
+                mapobjects = _get_mapobjects_at_ref_position(
+                    session, mapobject_type_id, ref_mapobject_type.id,
+                    ref_id, layer_lut.keys()
                 )
                 mapobject_ids = [m.id for m in mapobjects]
 
                 if not mapobject_ids:
-                    logger.warn('no mapobjects found at site %d', site_id)
+                    logger.warn(
+                        'no mapobjects found for %s %d', ref_type, ref_id
+                    )
                     continue
 
-                border_segmentations = _get_border_mapobjects_at_site(
-                    session, mapobject_ids, site_mapobject_type.id, site_id
-                )
-                border_mapobject_ids = [
-                    s.mapobject_id for s in border_segmentations
-                ]
+                if ref_type == 'Site':
+                    border_segmentations = _get_border_mapobjects_at_ref_position(
+                        session, mapobject_ids, ref_mapobject_type.id, ref_id
+                    )
+                    border_mapobject_ids = [
+                        s.mapobject_id for s in border_segmentations
+                    ]
+
                 label_values = session.query(
                         tm.LabelValues.mapobject_id, tm.LabelValues.values
                     ).\
@@ -506,16 +589,27 @@ def get_metadata(experiment_id, mapobject_type_id):
 
                 rows = list()
                 for mapobject_id, label, segmenation_layer_id in mapobjects:
-                    metadata_values = [
-                        site_lut[site_id]['plate_name'],
-                        site_lut[site_id]['well_name'],
-                        str(site_lut[site_id]['well_pos_y']),
-                        str(site_lut[site_id]['well_pos_x']),
-                        str(layer_lut[segmenation_layer_id]['tpoint']),
-                        str(layer_lut[segmenation_layer_id]['zplane']),
-                        str(label),
-                        str(1 if mapobject_id in border_mapobject_ids else 0)
-                    ]
+                    metadata_values = [ref_position_lut[ref_id]['plate_name']]
+
+                    if 'well_name' in ref_position_lut[ref_id]:
+                        metadata_values.append(
+                            ref_position_lut[ref_id]['well_name']
+                        )
+
+                    if 'well_pos_y' in ref_position_lut[ref_id]:
+                        metadata_values.extend([
+                            str(ref_position_lut[ref_id]['well_pos_y']),
+                            str(ref_position_lut[ref_id]['well_pos_x']),
+                        ])
+
+                    if layer_lut[segmenation_layer_id]['tpoint'] is not None:
+                        metadata_values.extend([
+                            str(layer_lut[segmenation_layer_id]['tpoint']),
+                            str(layer_lut[segmenation_layer_id]['zplane']),
+                            str(label),
+                            str(1 if mapobject_id in border_mapobject_ids else 0)
+                        ])
+
                     if mapobject_id not in label_values_lut:
                         if warn:
                             logger.warn(
@@ -541,7 +635,7 @@ def get_metadata(experiment_id, mapobject_type_id):
                 data.truncate(0)
 
     return Response(
-        stream_with_context(generate_feature_matrix(mapobject_type_id)),
+        generate_feature_matrix(mapobject_type_id, ref_type),
         mimetype='text/csv',
         headers={
             'Content-Disposition': 'attachment; filename={filename}'.format(
