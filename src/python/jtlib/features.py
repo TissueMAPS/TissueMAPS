@@ -134,8 +134,10 @@ class Features(object):
         if not aggregate:
             if np.any((self.label_image - ref_label_image) > 0):
                 raise ValueError(
-                    'All objects must be contained by the corresponding '
-                    'objects in "ref_label_image".'
+                    'Should this be an aggregate measurement?'
+                    'Some assigned objects contain more than one of the objects'
+                    'that measurements are extracted for'
+                    '(e.g. multiple disconnected parts of the cytoplasm for one cell)'
                 )
         else:
             if np.any(self.label_image[ref_label_image == 0] > 0):
