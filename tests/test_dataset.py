@@ -182,8 +182,8 @@ def test_feature_values(client, experiment_info):
         assert response.shape[1] == expected_feature_values.shape[1], (
             'Different number of features (columns) for object type {0}: '
             'returned: {1} - expected: {2}'.format(
-                mapobject_type['name'], response.shape[0],
-                expected_feature_values.shape[0]
+                mapobject_type['name'], response.shape[1],
+                expected_feature_values.shape[1]
             )
         )
         assert response.equals(expected_feature_values), (
@@ -199,11 +199,11 @@ def test_metadata(client, experiment_info):
         expected_metadata = experiment_info.get_expected_metadata(
             mapobject_type['name']
         )
-        assert response.shape[1] == expected_metadata.shape[1], (
+        assert response.shape[0] == expected_metadata.shape[0], (
             'Different number of metadata values (rows) for object type {0}: '
             'returned: {1} - expected: {2}'.format(
-                mapobject_type['name'], response.shape[1],
-                expected_metadata.shape[1]
+                mapobject_type['name'], response.shape[0],
+                expected_metadata.shape[0]
             )
         )
         assert response.shape[1] == expected_metadata.shape[1], (
