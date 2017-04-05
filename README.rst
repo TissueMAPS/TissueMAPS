@@ -22,7 +22,7 @@ To install the server components for development and testing, you can use the pr
     docker-compose up -d
 
 
-For further details and alternative installation options, please refer to the `installation guide <>`_ of the online documentation.
+For further details and alternative installation options, please refer to the `installation guide <http://tissuemaps.org/installation.html>`_ of the online documentation.
 
 
 Client
@@ -85,4 +85,4 @@ License
 
 Client code is licensed under `Apache 2.0 <https://www.apache.org/licenses/LICENSE-2.0.html>`_ and server code under `GNU Affero General Public License 3.0 <https://www.gnu.org/licenses/agpl-3.0.html>`_.
 
-For more information please refer to the `license section <>`_ of the online documentation or the ``LICENSE.txt`` files in the individual Github repositories.
+For more information please refer to the `license section <http://tissuemaps.org/license.html>`_ of the online documentation or the ``LICENSE.txt`` files in the individual Github repositories.
