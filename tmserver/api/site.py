@@ -79,15 +79,13 @@ def get_sites(experiment_id):
     well_pos_y = request.args.get('well_pos_y', type=int)
     well_pos_x = request.args.get('well_pos_x', type=int)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        sites = session.query(tm.Site)
+        sites = session.query(tm.Site).\
+            join(tm.Well).\
+            join(tm.Plate)
         if well_name is not None:
-            sites = sites.\
-                join(tm.Well).\
-                filter(tm.Well.name == well_name)
+            sites = sites.filter(tm.Well.name == well_name)
         if plate_name is not None:
-            sites = sites.\
-                join(tm.Plate).\
-                filter(tm.Plate.name == plate_name)
+            sites = sites.filter(tm.Plate.name == plate_name)
         if well_pos_y is not None:
             sites = sites.filter(tm.Site.y == well_pos_y)
         if well_pos_x is not None:

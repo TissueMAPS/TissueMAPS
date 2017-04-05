@@ -167,7 +167,9 @@ def encode_site(obj, encoder):
         'y': obj.y,
         'x': obj.x,
         'height': obj.height,
-        'width': obj.width
+        'width': obj.width,
+        'well_name': obj.well.name,
+        'plate_name': obj.well.plate.name
         # shifts ?
     }
 
