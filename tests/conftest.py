@@ -33,6 +33,18 @@ class Expectations(object):
             setattr(self, k, description[k])
 
 
+class Settings(object):
+
+    def __init__(self, description):
+        required_keys = {
+            'workflow_timeout'
+        }
+        for k in required_keys:
+            if k not in description:
+                raise KeyError('Key "{0}" is required in settings file.')
+            setattr(self, k, description[k])
+
+
 class ExperimentInfo(object):
 
     def __init__(self, directory):
@@ -79,6 +91,11 @@ class ExperimentInfo(object):
     def expectations(self):
         filename = os.path.join(self.directory, 'expectations.yaml')
         return Expectations(self._load_yaml(filename))
+
+    @property
+    def settings(self):
+        filename = os.path.join(self.directory, 'settings.yaml')
+        return Settings(self._load_yaml(filename))
 
     def _get_feature_values_file(self, mapobject_type):
         return os.path.join(
