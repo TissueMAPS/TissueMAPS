@@ -107,16 +107,17 @@ def test_query_workflow_status(client, experiment_info):
     start = time.time()
     while True:
         response = client.get_workflow_status(depth=1)
-        if response['state'] in {'TERMINATED', 'STOPPED'}:
+        if response['state'] == 'TERMINATED':
             assert response['exitcode'] == 0, ('Workflow failed.')
             break
+        elif response['state'] == 'STOPPED':
+            raise AssertionError('Workflow failed.')
         else:
             time.sleep(10)
         passed = time.time() - start
         if passed > 30 and response['state'] == 'NEW':
             raise AssertionError('Workflow submission failed.')
-        elif passed > 1800:
-            # TODO: half an hour might not be enough for a larger experiment
+        elif passed > experiment_info.settings.workflow_timeout:
             raise AssertionError('Workflow didn\'t terminate in time.')
 
 
@@ -171,8 +172,24 @@ def test_feature_values(client, experiment_info):
         expected_feature_values = experiment_info.get_expected_feature_values(
             mapobject_type['name']
         )
+        assert response.shape[0] == expected_feature_values.shape[0], (
+            'Different number of feature values (rows) for object type {0}: '
+            'returned: {1} - expected: {2}'.format(
+                mapobject_type['name'], response.shape[0],
+                expected_feature_values.shape[0]
+            )
+        )
+        assert response.shape[1] == expected_feature_values.shape[1], (
+            'Different number of features (columns) for object type {0}: '
+            'returned: {1} - expected: {2}'.format(
+                mapobject_type['name'], response.shape[0],
+                expected_feature_values.shape[0]
+            )
+        )
         assert response.equals(expected_feature_values), (
-            'Feature values for object type "%s" are not correct.'
+            'Feature values for object type "{0}" are not correct.'.format(
+                mapobject_type['name']
+            )
         )
 
 
@@ -182,6 +199,22 @@ def test_metadata(client, experiment_info):
         expected_metadata = experiment_info.get_expected_metadata(
             mapobject_type['name']
         )
+        assert response.shape[1] == expected_metadata.shape[1], (
+            'Different number of metadata values (rows) for object type {0}: '
+            'returned: {1} - expected: {2}'.format(
+                mapobject_type['name'], response.shape[1],
+                expected_metadata.shape[1]
+            )
+        )
+        assert response.shape[1] == expected_metadata.shape[1], (
+            'Different number of metadata attributes (columns) for object type {0}: '
+            'returned: {1} - expected: {2}'.format(
+                mapobject_type['name'], response.shape[1],
+                expected_metadata.shape[1]
+            )
+        )
         assert response.equals(expected_metadata), (
-            'Metadata for object type "%s" are not correct.'
+            'Metadata for object type "{0}" are not correct.'.format(
+                mapobject_type['name']
+            )
         )
