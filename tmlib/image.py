@@ -745,7 +745,7 @@ class SegmentationImage(Image):
 
         Parameters
         ----------
-        polygons: Tuple[Union[int, shapely.geometry.polygon.Polygon]]
+        polygons: Tuple[Union[int, geoalchemy2.elements.WKBElement]]
             label and geometry for each segmented object
         y_offset: int
             global vertical offset that needs to be subtracted from
@@ -813,12 +813,15 @@ class SegmentationImage(Image):
             # correct number of objects and that coordinates are in the
             # correct order, i.e. sorted according to their label.
             mask = obj_im == label
+            # We need to remove single pixel extensions on the border of objects
+            # because they can lead to polygon self-intersections.
+            mask = mh.open(mask)
             # NOTE: OpenCV return x, y coordinates. That means that
             # for numpy indexing one would need to flip the axes.
             _, contours, hierarchy = cv2.findContours(
                 (mask).astype(np.uint8) * 255,
-                cv2.RETR_CCOMP,  # two-level  hierarchy (holes)
-                cv2.CHAIN_APPROX_SIMPLE  # TODO: how to add offset?
+                cv2.RETR_CCOMP,  # two-level hierarchy (holes)
+                cv2.CHAIN_APPROX_NONE
             )
             if len(contours) == 0:
                 logger.warn(
