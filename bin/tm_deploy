@@ -68,16 +68,38 @@ def _get_host_groups():
     return groups_to_deploy
 
 
-def _get_roles_and_variables_directories():
-    playbooks_dir = _get_playbooks_dir('tissuemaps')
+def _get_roles_and_variables_directories(name):
+    logger.debug('get roles and group_vars directory for "%s"', name)
+    playbooks_dir = _get_playbooks_dir(name)
     roles_dir = os.path.join(playbooks_dir, 'roles')
     vars_dir = os.path.join(playbooks_dir, 'group_vars')
     return (roles_dir, vars_dir)
 
 
+def _get_group_variables(vars_dir):
+    variables = collections.OrderedDict()
+    group_dirs = os.listdir(vars_dir)
+    for group in group_dirs:
+        filename = os.path.abspath(
+            os.path.join(vars_dir, group, 'vars.yml')
+        )
+        with open(filename) as f:
+            for line in f.readlines():
+                var_mapping = yaml.load(line)
+                if var_mapping is None:
+                    continue
+                for k, v in var_mapping.items():
+                    if type(v) in {list, dict}:
+                        raise TypeError(
+                            'Only simply key=value variables are supported.'
+                        )
+                    variables[k] = v
+    return variables
+
+
 def _build_ansible_container_command(verbosity, action_command):
     playbooks_dir = _get_playbooks_dir('tissuemaps')
-    roles_dir, vars_dir = _get_roles_and_variables_directories()
+    roles_dir, vars_dir = _get_roles_and_variables_directories('tissuemaps')
     project_dir = os.path.join(
         playbooks_dir, '../../container/projects/tissuemaps'
     )
@@ -210,7 +232,7 @@ def show_vm_setup(args):
 
 def build_container(args):
     logger.info('build container images')
-    roles_dir, vars_dir = _get_roles_and_variables_directories()
+    roles_dir, vars_dir = _get_roles_and_variables_directories('tissuemaps')
     cmd = [
         'build', '--from-scratch',
         '--roles-path', os.path.abspath(roles_dir)
@@ -223,23 +245,7 @@ def build_container(args):
         if verbosity > 0:
             cmd.append('-{0}'.format(verbosity * 'v'))
 
-    variables = collections.OrderedDict()
-    group_dirs = os.listdir(vars_dir)
-    for group in group_dirs:
-        filename = os.path.abspath(
-            os.path.join(vars_dir, group, 'vars.yml')
-        )
-        with open(filename) as f:
-            for line in f.readlines():
-                var_mapping = yaml.load(line)
-                if var_mapping is None:
-                    continue
-                for k, v in var_mapping.items():
-                    if type(v) in {list, dict}:
-                        raise TypeError(
-                            'Only simply key=value variables are supported.'
-                        )
-                    variables[k] = v
+    variables = _get_group_variables(vars_dir)
     for k, v in variables.items():
         cmd.append('-e')
         var_string = '='.join([k, str(v)])
@@ -252,7 +258,7 @@ def build_container(args):
 
 def start_container(args):
     logger.info('start containers')
-    roles_dir, vars_dir = _get_roles_and_variables_directories()
+    roles_dir, vars_dir = _get_roles_and_variables_directories('tissuemaps')
     cmd = ['run']
     if not args.dev:
         cmd.append('--production')
@@ -271,7 +277,7 @@ def stop_container(args):
 
 
 def push_container(args):
-    roles_dir, vars_dir = _get_roles_and_variables_directories()
+    roles_dir, vars_dir = _get_roles_and_variables_directories('tissuemaps')
     logger.info('push container images to Docker Hub')
     cmd = [
         'push', '--push-to', args.account, '--tag', args.tag,
