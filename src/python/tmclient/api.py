@@ -778,11 +778,14 @@ class TmClient(HttpClient):
         return res.json()['data']
 
     def _list_sites(self, plate_name=None, well_name=None):
-        wells = self.get_wells(plate_name)
-        t = PrettyTable(['ID', 'Name', 'Description'])
+        sites = self.get_sites(plate_name)
+        t = PrettyTable(['ID', 'Y', 'X', 'Height', 'Width', 'Well', 'Plate'])
         t.padding_width = 1
-        for w in wells:
-            t.add_row([w['id'], w['name'], w['description']])
+        for s in sites:
+            t.add_row([
+                s['id'], s['y'], s['x'], s['height'], s['width'],
+                s['well_name'], s['plate_name']
+            ])
         print(t)
 
     def _get_mapobject_type_id(self, name):
