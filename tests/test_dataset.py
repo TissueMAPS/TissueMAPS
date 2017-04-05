@@ -1,5 +1,8 @@
 import time
 import pytest
+import pandas as pd
+from pandas.io.common import EmptyDataError
+from numpy.testing import assert_array_almost_equal
 
 
 def _assert_resource_attribute(response_value, expected_value, resource, attr):
@@ -169,24 +172,27 @@ def test_site_count(client, experiment_info):
 def test_feature_values(client, experiment_info):
     for mapobject_type in client.get_mapobject_types():
         response = client.download_object_feature_values(mapobject_type['name'])
-        expected_feature_values = experiment_info.get_expected_feature_values(
-            mapobject_type['name']
-        )
-        assert response.shape[0] == expected_feature_values.shape[0], (
+        try:
+            expected = experiment_info.get_expected(mapobject_type['name'])
+        except EmptyDataError:
+            # In this case the CSV file is empty
+            expected = pd.DataFrame()
+
+        assert response.shape[0] == expected.shape[0], (
             'Different number of feature values (rows) for object type {0}: '
             'returned: {1} - expected: {2}'.format(
                 mapobject_type['name'], response.shape[0],
-                expected_feature_values.shape[0]
+                expected.shape[0]
             )
         )
-        assert response.shape[1] == expected_feature_values.shape[1], (
+        assert response.shape[1] == expected.shape[1], (
             'Different number of features (columns) for object type {0}: '
             'returned: {1} - expected: {2}'.format(
                 mapobject_type['name'], response.shape[1],
-                expected_feature_values.shape[1]
+                expected.shape[1]
             )
         )
-        assert response.equals(expected_feature_values), (
+        assert assert_array_almost_equal(response.values, expected.values), (
             'Feature values for object type "{0}" are not correct.'.format(
                 mapobject_type['name']
             )
@@ -196,24 +202,20 @@ def test_feature_values(client, experiment_info):
 def test_metadata(client, experiment_info):
     for mapobject_type in client.get_mapobject_types():
         response = client.download_object_metadata(mapobject_type['name'])
-        expected_metadata = experiment_info.get_expected_metadata(
-            mapobject_type['name']
-        )
-        assert response.shape[0] == expected_metadata.shape[0], (
+        expected = experiment_info.get_expected(mapobject_type['name'])
+        assert response.shape[0] == expected.shape[0], (
             'Different number of metadata values (rows) for object type {0}: '
             'returned: {1} - expected: {2}'.format(
-                mapobject_type['name'], response.shape[0],
-                expected_metadata.shape[0]
+                mapobject_type['name'], response.shape[0], expected.shape[0]
             )
         )
-        assert response.shape[1] == expected_metadata.shape[1], (
+        assert response.shape[1] == expected.shape[1], (
             'Different number of metadata attributes (columns) for object type {0}: '
             'returned: {1} - expected: {2}'.format(
-                mapobject_type['name'], response.shape[1],
-                expected_metadata.shape[1]
+                mapobject_type['name'], response.shape[1], expected.shape[1]
             )
         )
-        assert response.equals(expected_metadata), (
+        assert assert_array_almost_equal(response.values, expected.values), (
             'Metadata for object type "{0}" are not correct.'.format(
                 mapobject_type['name']
             )
