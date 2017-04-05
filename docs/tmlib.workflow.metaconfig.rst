@@ -28,14 +28,6 @@ tmlib.workflow.metaconfig.args module
     :undoc-members:
     :show-inheritance:
 
-tmlib.workflow.metaconfig.axio module
--------------------------------------
-
-.. automodule:: tmlib.workflow.metaconfig.axio
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmlib.workflow.metaconfig.base module
 -------------------------------------
 
@@ -63,22 +55,6 @@ tmlib.workflow.metaconfig.cli module
 .. autoprogram:: tmlib.workflow.metaconfig.cli:Metaconfig._parser
     :prog: metaconfig
 
-tmlib.workflow.metaconfig.imc module
-------------------------------------
-
-.. automodule:: tmlib.workflow.metaconfig.imc
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.workflow.metaconfig.incell module
----------------------------------------
-
-.. automodule:: tmlib.workflow.metaconfig.incell
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmlib.workflow.metaconfig.metamorph module
 ------------------------------------------
 
@@ -87,26 +63,10 @@ tmlib.workflow.metaconfig.metamorph module
     :undoc-members:
     :show-inheritance:
 
-tmlib.workflow.metaconfig.niselements module
---------------------------------------------
-
-.. automodule:: tmlib.workflow.metaconfig.niselements
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmlib.workflow.metaconfig.omexml module
 ---------------------------------------
 
 .. automodule:: tmlib.workflow.metaconfig.omexml
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-tmlib.workflow.metaconfig.position module
------------------------------------------
-
-.. automodule:: tmlib.workflow.metaconfig.position
     :members:
     :undoc-members:
     :show-inheritance:

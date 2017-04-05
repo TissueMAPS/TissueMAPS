@@ -41,14 +41,6 @@ tmlib.workflow.args module
     :undoc-members:
     :show-inheritance:
 
-tmlib.workflow.canonical module
--------------------------------
-
-.. automodule:: tmlib.workflow.canonical
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmlib.workflow.cli module
 -------------------------
 
@@ -91,14 +83,6 @@ tmlib.workflow.manager module
 
 .. autoprogram:: tmlib.workflow.manager:WorkflowManager._get_parser()
     :prog: tm_workflow
-
-tmlib.workflow.multiplexing module
-----------------------------------
-
-.. automodule:: tmlib.workflow.multiplexing
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 tmlib.workflow.submission module
 --------------------------------

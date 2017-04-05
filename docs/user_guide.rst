@@ -813,7 +813,8 @@ First, a *TmClient* object must be instantiated by providing the server address 
     from tmclient import TmClient
 
     client = TmClient(
-        host='localhost', port=8002, experiment_name='test', user_name='demo', password='XXX'
+        host='localhost', port=8002, username='demo', password='XXX',
+        experiment_name='test'
     )
 
 The instantiated object can then be used, for example, to download the pixels of a :class:`ChannelImageFile <tmlib.models.file.ChannelImageFile>`:
@@ -866,22 +867,9 @@ The :mod:`tmclient` Python package further provides the :mod:`tm_client <tmclien
 
 You can upload images and manage workflows entirely via the command line:
 
-The base command for experiment ``test`` looks as follows:
-
 .. code-block:: none
 
-    tm_client -vv --host localhost --port 8002 --user demo --password XXX --experiment test --help
-
-or shorthand:
-
-.. code-block:: none
-
-    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test -h
-
-The command line interface is structured according to the type of available resources. At the highest level, one can differentiate between:
-
-    - ``data``: storage resources represented by data models defined in :mod:`tmlib.models`
-    - ``workflow``: computational resources defined in :mod:`tmlib.workflow`
+    tm_client --help
 
 .. tip:: You can store passwords in a ``~/.tm_pass`` file as key-value pairs (username: password) in `YAML <http://yaml.org/>`_ format:
 
@@ -891,11 +879,13 @@ The command line interface is structured according to the type of available reso
 
     This will allow you to omit the password argument in command line calls. This is not totally save either, but at least your password won't show up in the ``history`` and you don't have to remember it.
 
-To begin with, you may need to create the :class:`Experiment <tmlib.models.experiment.Experiment>` (in case it doesn't yet exist):
+The command line interface is structured according to the type of available resources, defined in :mod:`tmserver.api`.
+
+To begin with, create the :class:`Experiment <tmlib.models.experiment.Experiment>`:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test experiment create
+    tm_client -vv -H localhost -P 8002 -u demo experiment create -n test
 
 .. note:: You may want to override default values of parameters, such as ``microscope-type`` or ``workflow-type``, depending on your use case.
 
@@ -903,37 +893,37 @@ Create a new :class:`Plate <tmlib.models.plate.Plate>` ``plate01``:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test plate create --name plate01
+    tm_client -vv -H localhost -P 8002 -u demo plate -e test create --name plate01
 
 Create a new :class:`Acquisition <tmlib.models.acquisition.Acquisition>` ``acquisition01`` for plate ``plate01``:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test acquisition create -p plate01 --name acquisition01
+    tm_client -vv -H localhost -P 8002 -u demo acquisition -e test create -p plate01 --name acquisition01
 
 Upload each :class:`MicroscopeImageFile <tmlib.models.file.MicroscopeImageFile>` and :class:`MicroscopeMetadataFile <tmlib.models.file.MicroscopeMetadataFile>` for plate ``plate01`` and acquisition ``acquisition01`` from a local directory:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test microscope-file upload -p plate01 -a acquisition01 --directory ...
+    tm_client -vv -H localhost -P 8002 -u demo microscope-file -e test upload -p plate01 -a acquisition01 --directory ...
 
 Check whether all files have been uploaded correctly:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test microscope-file ls
+    tm_client -vv -H localhost -P 8002 -u demo microscope-file -e test ls
 
-Process uploaded images. To this end, request a :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>` and store it in a `YAML <http://yaml.org/>`_ file with either ``.yaml`` or ``.yml`` extension:
+To be able to process the uploaded images, you have to provide a :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>`. You can request a template and store it in a `YAML <http://yaml.org/>`_ file with either ``.yaml`` or ``.yml`` extension:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test workflow download --file /tmp/workflow.yml
+    tm_client -vv -H localhost -P 8002 -u demo workflow -e test download --file /tmp/workflow.yml
 
 Modify the workflow description acoording to your needs (as you would do in the workflow manager user interface) and upload it:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test workflow upload --file /tmp/workflow.yml
+    tm_client -vv -H localhost -P 8002 -u demo workflow -e test upload --file /tmp/workflow.yml
 
 In case your workflow contains the :class:`jterator <tmlib.workflow.jterator>` step, you will also have to provide a *jterator* project, i.e. a directory containing:
 
@@ -942,7 +932,7 @@ In case your workflow contains the :class:`jterator <tmlib.workflow.jterator>` s
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test jtproject upload --directory ...
+    tm_client -vv -H localhost -P 8002 -u demo jtproject -e test upload --directory ...
 
 .. note:: Handles file templates are available for each module in the `JtModules <https://github.com/TissueMAPS/JtModules/tree/master/handles>`_ repository. For additional information, please refer to :mod:`tmlib.workflow.jterator.handles`.
 
@@ -950,19 +940,19 @@ After workflow *description* and *jtproject* have been uploaded, you can submit 
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test workflow submit
+    tm_client -vv -H localhost -P 8002 -u demo workflow -e test submit
 
 You can subsequently monitor the workflow status:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -e test workflow status
+    tm_client -vv -H localhost -P 8002 -u demo workflow -e test status
 
 .. tip:: You can use the program ``watch`` to periodically check the status:
 
     .. code-block:: none
 
-        watch -n 10 tm_client -H localhost -P 8002 -u demo -e test workflow status
+        watch -n 10 tm_client -H localhost -P 8002 -u demo workflow -e test status
 
 Once the workflow is completed, you can download generated data:
 
@@ -970,13 +960,13 @@ Download the pixels content of a :class:`ChannelImageFile <tmlib.models.file.Cha
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test channel-image download -c wavelength-1 -p plate01 -w D03 -x 0 -y 0 -i 0 --correct
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX channel-image -e test download -c wavelength-1 -p plate01 -w D03 -x 0 -y 0 -i 0 --correct
 
 Download feature values for all objects of type ``Cells``:
 
 .. code-block:: none
 
-    tm_client -vv -H localhost -P 8002 -u demo -p XXX -e test feature-values download -o Cells
+    tm_client -vv -H localhost -P 8002 -u demo -p XXX feature-values -e test download -o Cells
 
 .. note:: By default, files will be downloaded to your temporary directory, e.g. ``/tmp`` (the exact location depends on your operating system settings). The program will print the location of the file to the console when called with ``-vv`` or higher logging verbosity. You can specify an alternative download location for the ``download`` command using the ``--directory`` argument.
 

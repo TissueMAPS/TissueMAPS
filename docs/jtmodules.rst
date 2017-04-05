@@ -12,10 +12,10 @@ Module contents
 Submodules
 ----------
 
-jtmodules.clip_objects module
------------------------------
+jtmodules.clip module
+---------------------
 
-.. automodule:: jtmodules.clip_objects
+.. automodule:: jtmodules.clip
     :members:
     :undoc-members:
     :show-inheritance:
@@ -28,26 +28,42 @@ jtmodules.combine_channels module
     :undoc-members:
     :show-inheritance:
 
-jtmodules.combine_objects module
---------------------------------
+jtmodules.combine_masks module
+------------------------------
 
-.. automodule:: jtmodules.combine_objects
+.. automodule:: jtmodules.combine_masks
     :members:
     :undoc-members:
     :show-inheritance:
 
-jtmodules.expand_objects module
--------------------------------
+jtmodules.expand module
+-----------------------
 
-.. automodule:: jtmodules.expand_objects
+.. automodule:: jtmodules.expand
     :members:
     :undoc-members:
     :show-inheritance:
 
-jtmodules.filter_objects module
--------------------------------
+jtmodules.fill module
+---------------------
 
-.. automodule:: jtmodules.filter_objects
+.. automodule:: jtmodules.fill
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+jtmodules.filter module
+-----------------------
+
+.. automodule:: jtmodules.filter
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+jtmodules.invert module
+-----------------------
+
+.. automodule:: jtmodules.invert
     :members:
     :undoc-members:
     :show-inheritance:
@@ -60,26 +76,10 @@ jtmodules.label module
     :undoc-members:
     :show-inheritance:
 
-jtmodules.measure_gabor module
-------------------------------
+jtmodules.measure_texture module
+--------------------------------
 
-.. automodule:: jtmodules.measure_gabor
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-jtmodules.measure_haralick module
----------------------------------
-
-.. automodule:: jtmodules.measure_haralick
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-jtmodules.measure_hu module
----------------------------
-
-.. automodule:: jtmodules.measure_hu
+.. automodule:: jtmodules.measure_texture
     :members:
     :undoc-members:
     :show-inheritance:
@@ -100,26 +100,18 @@ jtmodules.measure_morphology module
     :undoc-members:
     :show-inheritance:
 
-jtmodules.measure_tas module
-----------------------------
-
-.. automodule:: jtmodules.measure_tas
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-jtmodules.measure_zernike module
---------------------------------
-
-.. automodule:: jtmodules.measure_zernike
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 jtmodules.register_objects module
 ---------------------------------
 
 .. automodule:: jtmodules.register_objects
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+jtmodules.relabel module
+------------------------
+
+.. automodule:: jtmodules.relabel
     :members:
     :undoc-members:
     :show-inheritance:
@@ -156,10 +148,18 @@ jtmodules.threshold_adaptive module
     :undoc-members:
     :show-inheritance:
 
-jtmodules.threshold_fixed module
+jtmodules.threshold_manual module
+---------------------------------
+
+.. automodule:: jtmodules.threshold_manual
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+jtmodules.threshold_otsu module
 --------------------------------
 
-.. automodule:: jtmodules.threshold_fixed
+.. automodule:: jtmodules.threshold_otsu
     :members:
     :undoc-members:
     :show-inheritance:

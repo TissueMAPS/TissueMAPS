@@ -14,7 +14,6 @@ Contents:
 
    introduction
    installation
-   setup_and_deployment
    user_guide
    developer_guide
    support

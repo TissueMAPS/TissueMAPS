@@ -13,7 +13,7 @@ tmclient.base module
     :show-inheritance:
 
 tmclient.api module
-------------------------
+-------------------
 
 .. automodule:: tmclient.api
     :members:
@@ -24,7 +24,7 @@ tmclient.api module
     :prog: tm_client
 
 tmclient.log module
------------------------------
+-------------------
 
 .. automodule:: tmclient.log
     :members:

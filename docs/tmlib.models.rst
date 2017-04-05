@@ -84,14 +84,6 @@ tmlib.models.file module
     :undoc-members:
     :show-inheritance:
 
-tmlib.models.layer module
--------------------------
-
-.. automodule:: tmlib.models.layer
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmlib.models.mapobject module
 -----------------------------
 

@@ -28,10 +28,10 @@ tmlib.workflow.jterator.args module
     :undoc-members:
     :show-inheritance:
 
-tmlib.workflow.jterator.checkers module
----------------------------------------
+tmlib.workflow.jterator.description module
+------------------------------------------
 
-.. automodule:: tmlib.workflow.jterator.checkers
+.. automodule:: tmlib.workflow.jterator.description
     :members:
     :undoc-members:
     :show-inheritance:

@@ -53,14 +53,6 @@ tmlib.image module
     :undoc-members:
     :show-inheritance:
 
-tmlib.image_utils module
-------------------------
-
-.. automodule:: tmlib.image_utils
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 tmlib.import_utils module
 -------------------------
 

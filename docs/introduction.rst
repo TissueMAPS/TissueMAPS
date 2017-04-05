@@ -93,7 +93,7 @@ Serveral interdependent processing steps are usually required to get from the ra
 
 .. TODO: screenshot
 
-For more information, please refer to the :ref:`user interface section of the user guide <user-interface>`_.
+For more information, please refer to the :ref:`user interface section of the user guide <user-interface>`.
 
 .. TODO: screenshot
 
@@ -104,7 +104,7 @@ RESTful active programming interface
 
 Under the hood, the user interface issues *HTTP* requests to access server side resources via a `Uniform Resource Identifier (*URI*) <https://en.wikipedia.org/wiki/Uniform_Resource_Identifier>`_, or more specifically a `Uniform Resource Locator (*URL*) <https://en.wikipedia.org/wiki/Uniform_Resource_Locator>`_. Some resources are specific to the user interface, such as *HTML* templates that should be rendered in the browser. Other more general resources, such as image or feature data, are accessible through the `REST API <http://www.restapitutorial.com/>`_. These resources begin with ``/api`` and can be accessed via any *HTTP* client interface. This allows a programmatic, browser-independent interaction with the server, for example to upload and download data or submit workflows for processing and monitor their status.
 
-The :mod:`tmclient` Python package serves as an example of how such an interface can be implemented. For more information, please refer to the :ref:`RESTful programming section of the user guide <restful-programming>`_.
+The :mod:`tmclient` Python package serves as an example of how such an interface can be implemented. For more information, please refer to the :ref:`RESTful programming section of the user guide <restful-programming>`.
 
 .. _distributed-image-processing:
 

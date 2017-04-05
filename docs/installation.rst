@@ -65,7 +65,7 @@ Installation
 
 .. code-block:: none
 
-    pip install https://github.com/tissuemaps/tmclient/tarball/master#egg=tmclient
+    pip install tmclient
 
 
 .. _server-installation:
@@ -112,25 +112,27 @@ Requirements
 Installation
 ^^^^^^^^^^^^
 
+You simply need to download the ``docker-compose.yml`` file and start the containers:
+
 .. code-block:: none
 
     wget https://raw.githubusercontent.com/tissuemaps/tissuemaps/master/docker-compose.yml -q -P ~/tissuemaps
     cd ~/tissuemaps
     docker-compose up -d
 
-This will create containers based on pre-built images available on `Docker hub <https://hub.docker.com/u/tissuemaps/dashboard/>`_.
+This will create containers based on pre-built images available on `Docker hub <https://hub.docker.com/u/tissuemaps/dashboard/>`_. The first call will take a while because container images need to be downloaded. Subsequent calls will be highly responsive.
 
 .. _server-installation-tmdeploy:
 
 TmDeploy
--------
+--------
 
 The :mod:`tmdeploy` Python package provides the ``tm_deploy`` program, which uses `Ansible <https://www.ansible.com/>`_ for
 
 * setup and deployment of remote virtual machines (VMs) in the cloud
 * building, running and shiping Docker containers
 
-The program calls `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_ to install and configure server components in virtual `Ubuntu <https://www.ubuntu.com/>`_ environments (tested with `14.04 Trusty <http://releases.ubuntu.com/14.04/>`_ and `16.04 Xenial <http://releases.ubuntu.com/16.04/>`_ distributions). The same `Ansible roles <https://docs.ansible.com/ansible/playbooks_roles.html#roles>`_ are used for setting up cloud virtual machines (VMs) and `Docker <https://www.docker.com/>`_ containers.
+The program calls `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_ to install and configure server components in virtual `Ubuntu <https://www.ubuntu.com/>`_ environments (tested with `14.04 Trusty <http://releases.ubuntu.com/14.04/>`_ and `16.04 Xenial <http://releases.ubuntu.com/16.04/>`_ distributions). The same `Ansible roles <https://docs.ansible.com/ansible/playbooks_roles.html#roles>`_ are used for setting up cloud VM and `Docker <https://www.docker.com/>`_ containers.
 
 For more information on invididual roles, please refer to the `TmDeploy <https://github.com/TissueMAPS/TmDeploy/tree/master/tmdeploy/share/playbooks/roles>`_ repository.
 
@@ -139,15 +141,15 @@ Requirements
 
 * `Python <https://www.python.org/>`_: Many platforms are shipped with Python already pre-installed. If not, it can be downloaded from `python.org <https://www.python.org/downloads/>`_. Using version 2.7.9 or higher is recommended.
 * `Pip <https://pip.pypa.io/en/stable/>`_: The Python package manager is automatically installed with Python distributions obtained from python.org. Otherwise, it can be installed with the `get-pip.py <https://bootstrap.pypa.io/get-pip.py>`_ script.
-* `OpenSSL <https://www.openssl.org/>`_:
-* `Docker CE <https://www.docker.com/community-edition>`_ (optional, required for building containers): Download the community edition for your operating system from the `Docker Store <https://store.docker.com/search?type=edition&offering=community>`_. Also make sure that your operating system (OS) user has permissions to run the docker daemon. This can be achieved by adding the user to the *docker* group: ``sudo usermod -aG docker $USER``, where ``$USER`` is the name of the OS user.
+* `OpenSSL <https://www.openssl.org/>`_
+* `Docker CE <https://www.docker.com/community-edition>`_ (optional, required for building containers): Download the community edition for your operating system from the `Docker Store <https://store.docker.com/search?type=edition&offering=community>`_. Also make sure that your operating system (OS) user has permissions to run the docker daemon. This can be achieved by adding the user to the *docker* group: ``sudo usermod -aG docker $(whoami)``.
 
 Installation
 ^^^^^^^^^^^^
 
 .. code-block:: none
 
-    pip install https://github.com/tissuemaps/tmdeploy/tarball/master#egg=tmdeploy
+    pip install tmdeploy
 
 .. _server-installation-tmdeploy-container:
 
@@ -291,7 +293,14 @@ The ``launch`` command calls the `instance.yml <https://github.com/TissueMAPS/Tm
 
 .. note:: An *SSH* key pair will be automatically created on the local machine and uploaded to the cloud. The generated key files will be placed into ``~/.ssh``. The name of the key pair is determined by :attr:`key_name <tmdeploy.config.CloudSection.key_name>`.
 
-.. note:: A private :attr:`network <tmdeploy.config.CloudSection.network>`, :attr:`subnetwork <tmdeploy.config.CloudSection.subnetwork>` and security group (firewall) rules will automatically be created based on the provided setup description. Only machines tagged with "web" will get a public IP and can be directly accessed via *SSH*. The other machines are only accessible from within the private network. ``tm_deploy`` uses an *SSH* ``ProxyCommand`` to connect to machines within the private network using a "web" tagged machine as a *bastion host*.
+.. note:: A private :attr:`network <tmdeploy.config.CloudSection.network>` and :attr:`subnetwork <tmdeploy.config.CloudSection.subnetwork>` will get automatically created. In addition, each node gets assigned to one or more security groups (firewall) rules based on the configured :attr:`tags <tmdeploy.config.AnsibleHostVariableSection.tags>`. Only machines tagged with ``web`` will get a public IP and can be directly accessed via *SSH*. The other machines are only accessible from within the private network. ``tm_deploy`` uses an *SSH* ``ProxyCommand`` to connect to machines within the private network using a ``web`` tagged machine as a *bastion host*. In case you encouter problems with host authentication, you may need to add the following lines to your ``~/.ssh/config`` file:
+
+        .. code:: none
+
+            Hosts *
+
+              StrictHostKeyChecking no
+
 
 Deploy *TissueMAPS* on virtual machine instances:
 
@@ -301,7 +310,7 @@ Deploy *TissueMAPS* on virtual machine instances:
 
 The ``deploy`` command runs the following playbooks:
 
-    - `site.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/elasticluster/site.yml>`_ of the `elasticluster` package in case additional, non-core groups are specified in the ``setup.yml`` file
+    - `site.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/elasticluster/site.yml>`_ of the `elasticluster <https://elasticluster.readthedocs.io/en/latest/>`_ package in case additional, non-core groups are specified in ``setup.yml``
     - `site.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/tissuemaps/site.yml>`_ of the :mod:`tmdeploy` package
 
 .. note:: *TissueMAPS* uses `GC3Pie <http://gc3pie.readthedocs.io/en/latest/programmers/index.html>`_ for computational job management. When setting up a compute cluster, the configuration in ``~/.gc3/gc3pie.conf`` needs to be modified according to available computational resources. For more information please refer to the `GC3Pie documentation <http://gc3pie.readthedocs.org/en/latest/users/configuration.html>`_:
