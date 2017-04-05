@@ -183,7 +183,7 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
         pass
 
     def to_dict(self):
-        '''Return attributes "id", "name" and "status" as key-value pairs.
+        '''Returns attributes "id", "name" and "status" as key-value pairs.
 
         Returns
         -------

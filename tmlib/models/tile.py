@@ -140,8 +140,8 @@ class ChannelLayerTile(ExperimentModel):
         tile: tmlib.image.PyramidTile
             tile encoding pixel values
 
-        Return
-        ------
+        Returns
+        -------
         int
             ID of the added record
         '''

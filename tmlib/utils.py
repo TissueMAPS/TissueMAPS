@@ -351,6 +351,7 @@ def assert_type(**expected):
     example.test('blabla', None)
     example.test('blabla')
     example.test('blabla', '2')  # raises TypeError
+
     '''
 
     @decorator

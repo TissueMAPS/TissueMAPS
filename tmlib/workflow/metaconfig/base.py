@@ -409,6 +409,7 @@ class MetadataHandler(object):
     def configure_from_filenames(self, plate_dimensions, regex):
         '''Configures metadata based on information encoded in image filenames
         using a regular expression with the followsing fields:
+
             - *w*: well
             - *t*: time point
             - *s*: acquisition site
