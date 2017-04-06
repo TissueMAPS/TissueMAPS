@@ -216,9 +216,24 @@ def test_metadata(client, experiment_info):
                 mapobject_type['name'], response.shape[1], expected.shape[1]
             )
         )
-        assert assert_array_almost_equal(
-            response.values, expected.values,
-            err_msg='Metadata for object type "{0}" are incorrect.'.format(
+        
+        # Check whether all the strings in the metadata are equal
+        response_strings = response.select_dtypes(include=['object'])
+        expected_strings = expected.select_dtypes(include=['object'])
+        assert (response_strings == expected_strings).all().all(), (
+            'Metadata for object type "{0}" are incorrect. '
+            'The string entries are different (e.g. well names)'.format(
                 mapobject_type['name']
             )
+        )
+
+        # Check whether all other entries in the metadata are equal
+        response_values = response.select_dtypes(exclude=['object'])
+        expected_values = expected.select_dtypes(exclude=['object'])
+
+        assert np.allclose(expected_values.values,response_values.values), (
+            'Metadata for object type "{0}" are incorrect. '
+            'Some of the values are wrong'.format(
+                mapobject_type['name']
+             )
         )
