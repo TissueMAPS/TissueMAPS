@@ -173,7 +173,7 @@ def test_feature_values(client, experiment_info):
     for mapobject_type in client.get_mapobject_types():
         response = client.download_object_feature_values(mapobject_type['name'])
         try:
-            expected = experiment_info.get_expected(mapobject_type['name'])
+            expected = experiment_info.get_expected_feature_values(mapobject_type['name'])
         except EmptyDataError:
             # In this case the CSV file is empty
             expected = pd.DataFrame()
@@ -203,7 +203,7 @@ def test_feature_values(client, experiment_info):
 def test_metadata(client, experiment_info):
     for mapobject_type in client.get_mapobject_types():
         response = client.download_object_metadata(mapobject_type['name'])
-        expected = experiment_info.get_expected(mapobject_type['name'])
+        expected = experiment_info.get_expected_metadata(mapobject_type['name'])
         assert response.shape[0] == expected.shape[0], (
             'Different number of metadata values (rows) for object type {0}: '
             'returned: {1} - expected: {2}'.format(
