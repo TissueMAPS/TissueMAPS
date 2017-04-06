@@ -1,0 +1,16 @@
+---
+version: '2'
+
+services:
+
+  web:
+    image: tissuemaps-web
+
+  app:
+    image: tissuemaps-app
+
+  db_master:
+    image: tissuemaps-db_master
+
+  db_worker:
+    image: tissuemaps-db_worker
