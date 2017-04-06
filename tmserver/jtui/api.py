@@ -34,7 +34,7 @@ from tmlib import cfg as libcfg
 from tmlib.utils import flatten
 from tmlib.workflow import get_step_args
 from tmlib.workflow.jobs import RunJob
-from tmlib.workflow.jobs import RunJobCollection
+from tmlib.workflow.jobs import RunPhase
 import tmlib.workflow.utils as cluster_utils
 from tmlib.log import configure_logging
 from tmlib.workflow.jterator.api import ImageAnalysisPipelineEngine
@@ -303,7 +303,7 @@ def _get_output(jobs, modules, fig_location):
     if jobs is None:
         return output
     for task in jobs.iter_workflow():
-        if not isinstance(task, RunJobCollection):
+        if not isinstance(task, RunPhase):
             continue
         for subtask in task.iter_tasks():
             if not isinstance(subtask, RunJob):
@@ -343,12 +343,12 @@ def _get_output(jobs, modules, fig_location):
 @decode_query_ids()
 def get_job_status(experiment_id):
     '''Gets the status of submitted jobs.'''
-    jobs = gc3pie.retrieve_most_recent_task(experiment_id, 'jtui')
-    if jobs is None:
-        status_result = {}
+    job_collection_id = gc3pie.get_id_of_most_recent_task(experiment_id, 'jtui')
+    if job_collection_id is None:
+        status = {}
     else:
-        status_result = gc3pie.get_task_status(jobs)
-    return jsonify(status=status_result)
+        status = gc3pie.get_task_status(job_collection_id)
+    return jsonify(status=status)
 
 
 @jtui.route('/experiments/<experiment_id>/jobs/output', methods=['POST'])
@@ -436,9 +436,8 @@ def run_jobs(experiment_id):
 
         SubmitArgs = get_step_args('jterator')[1]
         submit_args = SubmitArgs()
-        job_collection = jt.create_run_job_collection(submission.id)
+        job_collection = jt.create_debug_run_phase(submission.id)
         jobs = jt.create_debug_run_jobs(
-            submission_id=submission.id,
             user_name=current_identity.name,
             batches=job_descriptions,
             job_collection=job_collection,

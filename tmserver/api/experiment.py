@@ -403,6 +403,9 @@ def delete_experiment(experiment_id):
 
     """
     logger.info('delete experiment %d', experiment_id)
+    workflow = gc3pie.retrieve_most_recent_task(experiment_id, 'workflow')
+    if workflow is not None:
+        gc3pie.kill_task(workflow)
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         session.query(tm.ExperimentReference).\

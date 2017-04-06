@@ -484,7 +484,7 @@ def get_segmentations(experiment_id, mapobject_type_id):
 
         Get segmentations for each
         :class:`Mapobject <tmlib.model.mapobject.Mapobject>` contained within
-        the specified :class:`Site <tmlib.models.site.Site>. Segmentations are
+        the specified :class:`Site <tmlib.models.site.Site>`. Segmentations are
         provided in form of a 2D labeled array, where pixel values encode
         object identity with unsigned integer values and background pixels are
         zero.

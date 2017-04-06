@@ -108,11 +108,9 @@ class GC3Pie(object):
         logger.debug('insert task into tasks table')
         persistent_id = self._store.save(task)
         logger.debug('update submissions table')
-        if hasattr(task, 'submission_id'):
-            with tm.utils.MainSession() as session:
-                submission = session.query(tm.Submission).\
-                    get(task.submission_id)
-                submission.top_task_id = persistent_id
+        with tm.utils.MainSession() as session:
+            submission = session.query(tm.Submission).get(task.submission_id)
+            submission.top_task_id = persistent_id
 
     def get_id_of_most_recent_submission(self, experiment_id, program):
         """Gets the ID of the most recent
@@ -142,6 +140,33 @@ class GC3Pie(object):
             else:
                 return None
 
+    def get_id_of_most_recent_task(self, experiment_id, program):
+        """Gets the ID of the top level task for the given `experiment`
+        that was most recently submitted by `program`.
+
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the processed
+            :class:`Experiment <tmlib.models.experiment.Experiment>`
+        program: str
+            name of the program that submitted the task, e.g. ``"workflow"``
+
+        Returns
+        -------
+        int
+        """
+        submission_id = self.get_id_of_most_recent_submission(
+            experiment_id, program
+        )
+        if submission_id is not None:
+            with tm.utils.MainSession() as session:
+                submission = session.query(tm.Submission).get(submission_id)
+                task_id = submission.top_task_id
+        else:
+            task_id = None
+        return task_id
+
     def retrieve_most_recent_task(self, experiment_id, program):
         """Retrieves the top level task for the given `experiment`
         from the store that was most recently submitted by `program`.
@@ -158,17 +183,9 @@ class GC3Pie(object):
         -------
         gc3libs.Task
         """
-        submission_id = self.get_id_of_most_recent_submission(
-            experiment_id, program
-        )
-        if submission_id is not None:
-            with tm.utils.MainSession() as session:
-                submission = session.query(tm.Submission).get(submission_id)
-                job_id = submission.top_task_id
-            if job_id is not None:
-                return self._store.load(job_id)
-            else:
-                return None
+        task_id = self.get_id_of_most_recent_task(experiment_id, program)
+        if task_id is not None:
+            return self._store.load(task_id)
         else:
             return None
 
@@ -209,7 +226,15 @@ class GC3Pie(object):
         """
         logger.info('kill task "%s"', task.jobname)
         logger.debug('kill task %d', task.persistent_id)
-        task = self._engine.find_task_by_id(task.persistent_id)
+        # NOTE: The engine requires the exact same task (same Python ID)!
+        try:
+            task = self._engine.find_task_by_id(task.persistent_id)
+        except KeyError:
+            logger.error(
+                'task "%s" cannot be killed because it is not '
+                'actively being processed', task.jobname
+            )
+            return
         self._engine.kill(task)
 
     def continue_task(self, task):
@@ -261,13 +286,13 @@ class GC3Pie(object):
 
     #     stop_recursively(jobs)
 
-    def get_task_status(self, task, recursion_depth=None):
+    def get_task_status(self, task_id, recursion_depth=None):
         '''Gets the status of submitted task.
 
         Parameters
         ----------
-        task: gc3libs.Task
-            computational task
+        task_id: int
+            ID of the :class:`Task <tmlib.models.submission.Task>`
         recursion_depth: int, optional
            recursion depth for querying subtasks
 
@@ -278,6 +303,8 @@ class GC3Pie(object):
 
         See also
         --------
-        :func:`tmlib.workflow.utils.get_task_data_from_sql_store`
+        :func:`tmlib.workflow.utils.get_task_status_recursively`
         '''
-        return get_task_status_recursively(task, recursion_depth, encode_pk)
+        return get_task_status_recursively(
+            task_id, recursion_depth, encode_pk
+        )

@@ -17,6 +17,7 @@
 resources.
 """
 import json
+import collections
 import os
 from cStringIO import StringIO
 import logging
@@ -24,6 +25,7 @@ import numpy as np
 from flask import jsonify, send_file, current_app, request
 from flask_jwt import jwt_required
 from flask_jwt import current_identity
+from sqlalchemy import func
 
 import tmlib.models as tm
 from tmlib.workflow.workflow import Workflow
@@ -227,8 +229,11 @@ def get_workflow_status(experiment_id):
     """
     logger.info('get workflow status for experiment %d', experiment_id)
     depth = request.args.get('depth', 2, type=int)
-    workflow = gc3pie.retrieve_most_recent_task(experiment_id, 'workflow')
-    status = gc3pie.get_task_status(workflow, depth)
+    workflow_id = gc3pie.get_id_of_most_recent_task(experiment_id, 'workflow')
+    if workflow_id is not None:
+        status = gc3pie.get_task_status(workflow_id, depth)
+    else:
+        status = None
     return jsonify(data=status)
 
 
@@ -382,38 +387,45 @@ def get_workflow_jobs(experiment_id):
         if step_task_id is None:
             status = []
         else:
-            step = gc3pie.retrieve_task(step_task_id)
-            if len(step.tasks) == 0:
+            phase_tasks = session.query(tm.Task.id, tm.Task.name).\
+                filter_by(parent_id=step_task_id).\
+                all()
+            if len(phase_tasks) == 0:
                 status = []
             else:
-                task_ids = []
-                for phase in step.tasks:
+                task_ids = collections.defaultdict(list)
+                for phase_id, phase_name in phase_tasks:
                     if step_phase is not None:
-                        if phase != step_phase:
+                        if not phase_name.endswith(step_phase):
                             continue
-                    if hasattr(phase, 'tasks'):
-                        if len(phase.tasks) == 0:
-                            continue
-                        if hasattr(phase.tasks[0], 'tasks'):
-                            for subphase in phase.tasks:
-                                task_ids.extend([
-                                    t.persistent_id for t in subphase.tasks
-                                ])
-                        else:
-                            task_ids.extend([
-                                t.persistent_id for t in phase.tasks
-                            ])
+                    subtasks = session.query(
+                            tm.Task.id, tm.Task.is_collection, tm.Task.name
+                        ).\
+                        filter_by(parent_id=phase_id).\
+                        all()
+                    if len(subtasks) == 0:
+                        continue
                     else:
-                        task_ids.append(phase.persistent_id)
+                        for st in subtasks:
+                            if st.is_collection:
+                                subsubtasks = session.query(
+                                        tm.Task.id, tm.Task.name
+                                    ).\
+                                    filter_by(parent_id=st.id).\
+                                    all()
+                                for sst in subsubtasks:
+                                    task_ids[sst.name].append(sst.id)
+                            else:
+                                task_ids[st.name].append(st.id)
+
+                task_ids = [v[0] for v in task_ids.values()]
                 if task_ids:
                     tasks = session.query(
                             tm.Task.id, tm.Task.name, tm.Task.type,
                             tm.Task.state, tm.Task.exitcode, tm.Task.memory,
                             tm.Task.time, tm.Task.cpu_time
                         ).\
-                        filter(
-                            tm.Task.id.in_(task_ids), ~tm.Task.is_collection
-                        ).\
+                        filter(tm.Task.id.in_(task_ids)).\
                         order_by(tm.Task.name)
                     if index is not None and batch_size is not None:
                         logger.debug(
