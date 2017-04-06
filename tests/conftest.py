@@ -100,7 +100,7 @@ class ExperimentInfo(object):
 
     def _get_feature_values_file(self, mapobject_type):
         return os.path.join(
-            self.directory, 'feature_values_{0}.csv'.format(mapobject_type)
+            self.directory, 'feature-values_{0}.csv'.format(mapobject_type)
         )
 
     def _get_metadata_file(self, mapobject_type):
