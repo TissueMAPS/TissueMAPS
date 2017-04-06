@@ -402,6 +402,7 @@ def get_workflow_jobs(experiment_id):
                             tm.Task.id, tm.Task.is_collection, tm.Task.name
                         ).\
                         filter_by(parent_id=phase_id).\
+                        order_by(tm.Task.id).\
                         all()
                     if len(subtasks) == 0:
                         continue
@@ -412,6 +413,7 @@ def get_workflow_jobs(experiment_id):
                                         tm.Task.id, tm.Task.name
                                     ).\
                                     filter_by(parent_id=st.id).\
+                                    order_by(tm.Task.id).\
                                     all()
                                 for sst in subsubtasks:
                                     task_ids[sst.name].append(sst.id)
