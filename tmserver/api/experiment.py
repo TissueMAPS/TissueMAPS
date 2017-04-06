@@ -37,6 +37,7 @@ from tmserver.util import (
     assert_query_params, assert_form_params
 )
 from tmserver.model import encode_pk
+from tmserver.extensions import gc3pie
 from tmserver.api import api
 from tmserver.error import *
 
