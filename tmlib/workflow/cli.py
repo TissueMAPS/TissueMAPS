@@ -44,7 +44,7 @@ from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.submission import WorkflowSubmissionManager
 from tmlib.workflow.description import WorkflowStepDescription
 from tmlib.workflow.workflow import WorkflowStep
-from tmlib.workflow.jobs import CliJobCollection
+from tmlib.workflow.jobs import IndependentJobCollection
 from tmlib.log import configure_logging
 from tmlib.log import map_logging_verbosity
 from tmlib.errors import WorkflowError
@@ -473,19 +473,19 @@ class WorkflowStepCLI(WorkflowSubmissionManager):
         submission_id, user_name = self.register_submission()
         api = self.api_instance
 
-        jobs = CliJobCollection(api.step_name, submission_id)
-        run_job_collection = api.create_run_job_collection(submission_id)
+        jobs = IndependentJobCollection(api.step_name, submission_id)
+        run_job_collection = api.create_run_phase(submission_id)
         run_jobs = api.create_run_jobs(
-            submission_id, user_name, run_job_collection,
-            self.verbosity,
+            user_name, run_job_collection, self.verbosity,
             duration=self._submission_args.duration,
             memory=self._submission_args.memory,
             cores=self._submission_args.cores
         )
         jobs.add(run_jobs)
         if api.has_collect_phase:
+            collect_job_collection = api.create_collect_phase(submission_id)
             collect_job = api.create_collect_job(
-                submission_id, user_name, self.verbosity
+                user_name, collect_job_collection, self.verbosity
             )
             jobs.add(collect_job)
 

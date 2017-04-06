@@ -99,17 +99,14 @@ class MetadataConfigurator(WorkflowStepAPI):
             tm.ChannelLayer.delete_cascade(connection)
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            logger.info('delete existing channel image files')
-            session.drop_and_recreate(tm.ChannelImageFile)
             logger.info('delete existing channels')
-            session.drop_and_recreate(tm.Channel)
+            session.query(tm.Channel).delete()
             logger.info('delete existing cycles')
-            session.drop_and_recreate(tm.Cycle)
+            session.query(tm.Cycle).delete()
             logger.info('delete existing wells')
-            session.drop_and_recreate(tm.Site)
-            session.drop_and_recreate(tm.Well)
+            session.query(tm.Well).delete()
             logger.debug('delete existing image file mappings')
-            session.drop_and_recreate(tm.ImageFileMapping)
+            session.query(tm.ImageFileMapping).delete()
 
     def run_job(self, batch):
         '''Configures OMEXML metadata extracted from microscope image files and

@@ -195,7 +195,7 @@ class ImageExtractor(WorkflowStepAPI):
         '''
         logger.info('delete existing channel image files')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.drop_and_recreate(tm.ChannelImageFile)
+            session.query(tm.ChannelImageFile).delete()
 
     def collect_job_output(self, batch):
         '''Deletes all instances of

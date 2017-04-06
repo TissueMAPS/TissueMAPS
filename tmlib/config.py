@@ -252,6 +252,7 @@ class LibraryConfig(TmapsConfig):
     def cpu_memory(self):
         '''int: amount of memory in Megabyte per CPU core that should be
         allocated for a single job (default: ``2000``)
+
         '''
         return self._config.getint(self._section, 'cpu_memory')
 

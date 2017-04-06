@@ -42,7 +42,8 @@ from tmlib.errors import (
     JobDescriptionError, CliArgError
 )
 from tmlib.workflow.jobs import (
-    InitJob, RunJob, CollectJob, SingleRunJobCollection
+    InitJob, RunJob, CollectJob,
+    SingleRunPhase, InitPhase, RunPhase, CollectPhase
 )
 
 logger = logging.getLogger(__name__)
@@ -491,7 +492,29 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             description=description
         )
 
-    def create_run_job_collection(self, submission_id):
+    def create_init_phase(self, submission_id, parent_id):
+        '''Creates a job collection for the "init" phase of the step.
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding
+            :class:`Submission <tmlib.models.submission.Submission>`
+        parent_id: int
+            ID of the parent
+            :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>`
+
+        Returns
+        -------
+        tmlib.workflow.job.InitPhase
+            collection of "init" jobs
+        '''
+        return InitPhase(
+            step_name=self.step_name, submission_id=submission_id,
+            parent_id=parent_id
+        )
+
+    def create_run_phase(self, submission_id, parent_id):
         '''Creates a job collection for the "run" phase of the step.
 
         Parameters
@@ -499,27 +522,51 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         submission_id: int
             ID of the corresponding
             :class:`Submission <tmlib.models.submission.Submission>`
+        parent_id: int
+            ID of the parent
+            :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>`
 
         Returns
         -------
-        tmlib.workflow.job.SingleRunJobCollection
+        tmlib.workflow.job.SingleRunPhase
             collection of "run" jobs
         '''
-        return SingleRunJobCollection(
-            step_name=self.step_name, submission_id=submission_id
+        return SingleRunPhase(
+            step_name=self.step_name, submission_id=submission_id,
+            parent_id=parent_id
         )
 
-    def create_run_jobs(self, submission_id, user_name, job_collection,
+    def create_collect_phase(self, submission_id, parent_id):
+        '''Creates a job collection for the "collect" phase of the step.
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding
+            :class:`Submission <tmlib.models.submission.Submission>`
+        parent_id: int
+            ID of the parent
+            :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>`
+
+        Returns
+        -------
+        tmlib.workflow.job.CollectPhase
+            collection of "collect" jobs
+        '''
+        return CollectPhase(
+            step_name=self.step_name, submission_id=submission_id,
+            parent_id=parent_id
+        )
+
+    def create_run_jobs(self, user_name, job_collection,
             verbosity, duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
 
         Parameters
         ----------
-        submission_id: int
-            ID of the corresponding submission
         user_name: str
             name of the submitting user
-        job_collection: tmlib.workflow.job.SingleRunJobCollection
+        job_collection: tmlib.workflow.job.RunPhase
             empty collection of *run* jobs that should be populated
         verbosity: int
             logging verbosity for jobs
@@ -534,10 +581,12 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
 
         Returns
         -------
-        tmlib.workflow.jobs.SingleRunJobCollection
-            run jobs
+        tmlib.workflow.jobs.RunPhase
+            collection of jobs
         '''
-        logger.info('create "run" jobs for submission %d', submission_id)
+        logger.info(
+            'create "run" jobs for submission %d', job_collection.submission_id
+        )
         logger.debug('allocated time for run jobs: %s', duration)
         logger.debug('allocated memory for run jobs: %d MB', memory)
         logger.debug('allocated cores for run jobs: %d', cores)
@@ -549,8 +598,9 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
                 arguments=self._build_run_command(j, verbosity),
                 output_dir=self.log_location,
                 job_id=j,
-                submission_id=submission_id,
-                user_name=user_name
+                submission_id=job_collection.submission_id,
+                user_name=user_name,
+                parent_id=job_collection.persistent_id
             )
             job.requested_walltime = Duration(duration)
             job.requested_memory = Memory(memory, Memory.MB)
@@ -558,16 +608,16 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             job_collection.add(job)
         return job_collection
 
-    def create_init_job(self, submission_id, user_name, batch_args, verbosity,
-            duration='12:00:00'):
+    def create_init_job(self, user_name, job_collection,
+            batch_args, verbosity, duration='12:00:00'):
         '''Creates job for the "init" phase of the step.
 
         Parameters
         ----------
-        submission_id: int
-            ID of the corresponding submission
         user_name: str
             name of the submitting user
+        job_collection: tmlib.workflow.job.InitPhase
+            empty collection of *init* jobs that should be populated
         batch_args: tmlib.workflow.args.BatchArguments
             step-specific implementation of
             :class:`BatchArguments <tmlib.workflow.args.BatchArguments>`
@@ -579,11 +629,13 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
 
         Returns
         -------
-        tmlib.workflow.jobs.InitJob
+        tmlib.workflow.jobs.InitPhase
             init job
 
         '''
-        logger.info('create "init" job for submission %d', submission_id)
+        logger.info(
+            'create "init" job for submission %d', job_collection.submission_id
+        )
         logger.debug('allocated time for "init" job: %s', duration)
         logger.debug('allocated memory for "init" job: %d MB', cfg.cpu_memory)
         logger.debug('allocated cores for "init" job: %d', cfg.cpu_cores)
@@ -591,24 +643,26 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             step_name=self.step_name,
             arguments=self._build_init_command(batch_args, verbosity),
             output_dir=self.log_location,
-            submission_id=submission_id,
-            user_name=user_name
+            submission_id=job_collection.submission_id,
+            user_name=user_name,
+            parent_id=job_collection.persistent_id
         )
         job.requested_walltime = Duration(duration)
         job.requested_memory = Memory(cfg.cpu_memory, Memory.MB)
         job.requested_cores = cfg.cpu_cores
-        return job
+        job_collection.add(job)
+        return job_collection
 
-    def create_collect_job(self, submission_id, user_name, verbosity,
-            duration='06:00:00'):
+    def create_collect_job(self, user_name, job_collection,
+            verbosity, duration='06:00:00'):
         '''Creates job for the "collect" phase of the step.
 
         Parameters
         ----------
-        submission_id: int
-            ID of the corresponding submission
         user_name: str
             name of the submitting user
+        job_collection: tmlib.workflow.job.CollectPhase
+            empty collection of *collect* jobs that should be populated
         verbosity: int
             logging verbosity for jobs
         duration: str, optional
@@ -621,7 +675,9 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             collect job
 
         '''
-        logger.info('create "collect" job for submission %d', submission_id)
+        logger.info(
+            'create "collect" job for submission %d', job_collection.submission_id
+        )
         logger.debug('allocated time for "collect" job: %s', duration)
         logger.debug('allocated memory for "collect" job: %d MB', cfg.cpu_memory)
         logger.debug('allocated cores for "collect" job: %d', cfg.cpu_cores)
@@ -629,11 +685,13 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             step_name=self.step_name,
             arguments=self._build_collect_command(verbosity),
             output_dir=self.log_location,
-            submission_id=submission_id,
-            user_name=user_name
+            submission_id=job_collection.submission_id,
+            user_name=user_name,
+            parent_id=job_collection.persistent_id
         )
         job.requested_walltime = Duration(duration)
         job.requested_memory = Memory(cfg.cpu_memory, Memory.MB)
         job.requested_cores = cfg.cpu_cores
-        return job
+        job_collection.add(job)
+        return job_collection
 

@@ -93,6 +93,8 @@ def create_gc3pie_sql_store():
                 lambda task: _get_task_time(task, 'used_cpu_time'),
             table_columns['submission_id']:
                 lambda task: task.submission_id,
+            table_columns['parent_id']:
+                lambda task: task.parent_id,
             table_columns['is_collection']:
                 lambda task: hasattr(task, 'tasks'),
             table_columns['type']:
@@ -256,7 +258,7 @@ def format_task_data(name, type, state, exitcode, memory, time, cpu_time):
     return data
 
 
-def get_task_status_recursively(task, recursion_depth=None, id_encoder=None):
+def get_task_status_recursively(task_id, recursion_depth=None, id_encoder=None):
     '''Provides status information for each task and recursively for subtasks.
 
     Parameters
@@ -279,53 +281,69 @@ def get_task_status_recursively(task, recursion_depth=None, id_encoder=None):
     :func:`tmlib.workflow.utils.format_task_data`
     '''
     logger.debug('get task status recursively')
-    def get_info(task_, i):
+    def get_info(task_id_, i):
+
         data = dict()
         if recursion_depth is not None:
             if i > recursion_depth:
                 return
-        data = format_task_data(
-            task_.jobname, type(task_).__name__, task_.execution.state,
-            task_.execution.exitcode,
-            _get_task_memory(task_, 'max_used_memory'),
-            str(_get_task_time(task_, 'duration')),
-            str(_get_task_time(task_, 'used_cpu_time'))
-        )
-        if hasattr(task_, 'persistent_id'):
-            data['id'] = str(task_.persistent_id)
-        else:
-            data['id'] = str(id(task_))
+
+        with tm.utils.MainSession() as session:
+            task = session.query(
+                tm.Task.name, tm.Task.type, tm.Task.state, tm.Task.exitcode,
+                tm.Task.memory, tm.Task.time, tm.Task.cpu_time,
+                tm.Task.is_collection
+            ).\
+            filter_by(id=task_id_).\
+            one()
+
+            data = format_task_data(
+                task.name, task.type, task.state, task.exitcode,
+                task.memory, task.time, task.cpu_time
+            )
+
+        data['id'] = task_id_
         if id_encoder is not None:
             data['id'] = id_encoder(data['id'])
-        if hasattr(task_, 'tasks'):
+
+        if task.is_collection:
             done = 0.0
-            for t in task_.tasks:
-                if hasattr(t, 'persistent_id'):
-                    if t.execution.state == gc3libs.Run.State.TERMINATED:
+            with tm.utils.MainSession() as session:
+                subtasks = session.query(
+                    tm.Task.id,
+                    tm.Task.name, tm.Task.type, tm.Task.state, tm.Task.exitcode,
+                    tm.Task.memory, tm.Task.time, tm.Task.cpu_time,
+                    tm.Task.is_collection
+                ).\
+                filter_by(parent_id=task_id_).\
+                order_by(tm.Task.id).\
+                all()
+
+                subtask_ids = []
+                for t in subtasks:
+                    subtask_ids.append(t.id)
+                    if t.state == gc3libs.Run.State.TERMINATED:
                         done += 1
-            if len(task_.tasks) > 0:
-                data['percent_done'] = done / len(task_.tasks) * 100
-            else:
-                data['percent_done'] = 0
+                if len(subtasks) > 0:
+                    data['percent_done'] = done / len(subtasks) * 100
+                else:
+                    data['percent_done'] = 0
+
+            data['n_subtasks'] = len(subtasks)
+            data['subtasks'] = [get_info(tid, i+1) for tid in subtask_ids]
+
         else:
-            if task_.execution.state == gc3libs.Run.State.TERMINATED:
+            if task.state == gc3libs.Run.State.TERMINATED:
                 data['percent_done'] = 100
             else:
                 data['percent_done'] = 0
 
-        if hasattr(task_, 'tasks'):
-            data['n_subtasks'] = len(task_.tasks)
-            data['subtasks'] = [get_info(t, i+1) for t in task_.tasks]
-        else:
             data['n_subtasks'] = 0
             data['subtasks'] = []
 
         return data
 
-    if task is None:
-        return None
-    else:
-        return get_info(task, 0)
+    return get_info(task_id, 0)
 
 
 def print_task_status(task_info):
@@ -339,7 +357,7 @@ def print_task_status(task_info):
 
     See also
     --------
-    :func:`tmlib.workflow.utils.get_task_data_from_sql_store`
+    :func:`tmlib.workflow.utils.get_task_status_recursively`
     '''
     def add_row_recursively(data, table, i):
         table.add_row([

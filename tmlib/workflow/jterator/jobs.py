@@ -25,7 +25,7 @@ class DebugRunJob(RunJob):
     '''Class for TissueMAPS debug jobs, which can be processed in parallel.'''
 
     def __init__(self, step_name, arguments, output_dir, job_id,
-                 submission_id, user_name):
+                 submission_id, user_name, parent_id):
         '''
         Parameters
         ----------
@@ -40,6 +40,10 @@ class DebugRunJob(RunJob):
             one-based job identifier number
         submission_id: int
             ID of the corresponding submission
+        user_name: str
+            name of the user that submits the job
+        parent_id: int
+            ID of the parent :class:`RunPhase <tmlib.workflow.jobs.RunPhase>`
         '''
         super(DebugRunJob, self).__init__(
             step_name=step_name,
@@ -47,7 +51,8 @@ class DebugRunJob(RunJob):
             output_dir=output_dir,
             job_id=job_id,
             submission_id=submission_id,
-            user_name=user_name
+            user_name=user_name,
+            parent_id=parent_id
         )
 
     @property

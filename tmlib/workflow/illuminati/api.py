@@ -35,8 +35,8 @@ from tmlib.errors import WorkflowError
 from tmlib.models.utils import delete_location
 from tmlib.workflow.api import WorkflowStepAPI
 from tmlib.workflow.jobs import RunJob
-from tmlib.workflow.jobs import SingleRunJobCollection
-from tmlib.workflow.jobs import MultiRunJobCollection
+from tmlib.workflow.jobs import SingleRunPhase
+from tmlib.workflow.jobs import MultiRunPhase
 from tmlib.workflow.jobs import CollectJob
 from tmlib.workflow import register_step_api
 
@@ -251,7 +251,7 @@ class PyramidBuilder(WorkflowStepAPI):
                 connection, ref_type=tm.Site.__name__
             )
 
-    def create_run_job_collection(self, submission_id):
+    def create_run_phase(self, submission_id, parent_id):
         '''Creates a job collection for the "run" phase of the step.
 
         Parameters
@@ -259,17 +259,21 @@ class PyramidBuilder(WorkflowStepAPI):
         submission_id: int
             ID of the corresponding
             :class:`Submission <tmlib.models.submission.Submission>`
+        parent_id: int
+            ID of the parent
+            :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>`
 
         Returns
         -------
-        tmlib.workflow.job.MultiRunJobCollection
+        tmlib.workflow.job.MultiRunPhase
             collection of "run" jobs
         '''
-        return MultiRunJobCollection(
-            step_name=self.step_name, submission_id=submission_id
+        return MultiRunPhase(
+            step_name=self.step_name, submission_id=submission_id,
+            parent_id=parent_id
         )
 
-    def create_run_jobs(self, submission_id, user_name, job_collection,
+    def create_run_jobs(self, user_name, job_collection,
             verbosity, duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
         The `illuminati` step is special in the sense that it implements
@@ -278,11 +282,9 @@ class PyramidBuilder(WorkflowStepAPI):
 
         Parameters
         ----------
-        submission_id: int
-            ID of the corresponding submission
         user_name: str
             name of the submitting user
-        job_collection: tmlib.workflow.jobs.MultiRunJobCollection
+        job_collection: tmlib.workflow.jobs.RunPhase
             emtpy collection for "run" jobs
         verbosity: int
             logging verbosity for jobs
@@ -296,10 +298,12 @@ class PyramidBuilder(WorkflowStepAPI):
 
         Returns
         -------
-        tmlib.workflow.jobs.MultipleRunJobCollection
-            run jobs
+        tmlib.workflow.jobs.RunPhase
+            collection of jobs
         '''
-        logger.info('create "run" jobs for submission %d', submission_id)
+        logger.info(
+            'create "run" jobs for submission %d', job_collection.submission_id
+        )
         logger.debug('allocated time for "run" jobs: %s', duration)
         logger.debug('allocated memory for "run" jobs: %d MB', memory)
         logger.debug('allocated cores for "run" jobs: %d', cores)
@@ -308,40 +312,43 @@ class PyramidBuilder(WorkflowStepAPI):
         job_ids = self.get_run_job_ids()
         for j in job_ids:
             batch = self.get_run_batch(j)
-            job = RunJob(
-                step_name=self.step_name,
-                arguments=self._build_run_command(j, verbosity),
-                output_dir=self.log_location,
-                job_id=j,
-                index=batch['index'],
-                submission_id=submission_id,
-                user_name=user_name
-            )
-            if duration:
-                job.requested_walltime = Duration(duration)
-            if memory:
-                job.requested_memory = Memory(memory, Memory.MB)
-            if cores:
-                if not isinstance(cores, int):
-                    raise TypeError(
-                        'Argument "cores" must have type int.'
-                    )
-                if not cores > 0:
-                    raise ValueError(
-                        'The value of "cores" must be positive.'
-                    )
-                job.requested_cores = cores
-            multi_run_jobs[batch['index']].append(job)
+            multi_run_jobs[batch['index']].append(j)
 
-        for index, jobs in multi_run_jobs.iteritems():
-            job_collection.add(
-                SingleRunJobCollection(
-                    step_name=self.step_name,
-                    jobs=jobs,
-                    index=index,
-                    submission_id=submission_id
-                )
+        for index, job_ids in multi_run_jobs.iteritems():
+            subjob_collection = SingleRunPhase(
+                step_name=self.step_name,
+                index=index,
+                submission_id=job_collection.submission_id,
+                parent_id=job_collection.persistent_id
             )
+
+            for j in job_ids:
+                job = RunJob(
+                    step_name=self.step_name,
+                    arguments=self._build_run_command(j, verbosity),
+                    output_dir=self.log_location,
+                    job_id=j,
+                    index=index,
+                    submission_id=subjob_collection.submission_id,
+                    parent_id=subjob_collection.persistent_id,
+                    user_name=user_name
+                )
+                if duration:
+                    job.requested_walltime = Duration(duration)
+                if memory:
+                    job.requested_memory = Memory(memory, Memory.MB)
+                if cores:
+                    if not isinstance(cores, int):
+                        raise TypeError(
+                            'Argument "cores" must have type int.'
+                        )
+                    if not cores > 0:
+                        raise ValueError(
+                            'The value of "cores" must be positive.'
+                        )
+                    job.requested_cores = cores
+                subjob_collection.add(job)
+            job_collection.add(subjob_collection)
 
         return job_collection
 

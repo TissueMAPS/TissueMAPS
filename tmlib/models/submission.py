@@ -156,9 +156,14 @@ class Submission(MainModel, DateMixIn):
 
 class Task(MainModel, DateMixIn):
 
-    '''A *task* represents a computational job that can be submitted to a
-    cluster for processing. Its state will be monitored while being processed.
+    '''A *task* represents a computational job that can be submitted to
+    computational resources for processing.
+    Its state will be monitored while being processed and statistics will be
+    collected.
 
+    Warning
+    -------
+    This table is managed by GC3Pie. Don't modify it manually!
     '''
 
     __tablename__ = 'tasks'
@@ -172,17 +177,14 @@ class Task(MainModel, DateMixIn):
     #: int: exitcode
     exitcode = Column(Integer, index=True)
 
-    #: datetime.timedelta: total time of task (sum of all subtasks in case
-    #: of a task collection)
-    time = Column(Interval, index=True)
+    #: datetime.timedelta: total time of task
+    time = Column(Interval)
 
-    #: int: total memory in MG of task (sum of all subtasks in case
-    #: of a task collection)
-    memory = Column(Integer, index=True)
+    #: int: total memory in MG of task
+    memory = Column(Integer)
 
-    #: datetime.timedelta: total CPU time of task (sum of all subtasks in case
-    #: of a task collection)
-    cpu_time = Column(Interval, index=True)
+    #: datetime.timedelta: total CPU time of task
+    cpu_time = Column(Interval)
 
     #: str: name of the corresponding Python object
     type = Column(String, index=True)
@@ -190,21 +192,14 @@ class Task(MainModel, DateMixIn):
     #: bool: whether the task is a collection of tasks
     is_collection = Column(Boolean, index=True)
 
-    #: Pickeled Python `gc3libs.Task` or `gc3libs.workflow.TaskCollection` object
+    #: int: ID of the parent task
+    parent_id = Column(Integer, index=True)
+
+    #: Pickeled Python `gc3libs.Task` object
     data = Column(LargeBinary)
 
     #: int: ID of parent submission
-    submission_id = Column(
-        Integer,
-        ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: tmlib.models.submission.Submission: parent submission
-    submission = relationship(
-        'Submission',
-        backref=backref('tasks', cascade='all, delete-orphan')
-    )
+    submission_id = Column(Integer, index=True)
 
     def __repr__(self):
         return (

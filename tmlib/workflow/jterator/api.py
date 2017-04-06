@@ -501,17 +501,34 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                             conn, values, mapobject_ids[label], t
                         )
 
-    def create_debug_run_jobs(self, submission_id, user_name, job_collection,
+    def create_debug_run_phase(self, submission_id):
+        '''Creates a job collection for the debug "run" phase of the step.
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding
+            :class:`Submission <tmlib.models.submission.Submission>`
+
+        Returns
+        -------
+        tmlib.workflow.job.RunPhase
+            collection of debug "run" jobs
+        '''
+        return SingleRunPhase(
+            step_name=self.step_name, submission_id=submission_id,
+            parent_id=None
+        )
+
+    def create_debug_run_jobs(self, user_name, job_collection,
             batches, verbosity, duration, memory, cores):
         '''Creates debug jobs for the parallel "run" phase of the step.
 
         Parameters
         ----------
-        submission_id: int
-            ID of the corresponding submission
         user_name: str
             name of the submitting user
-        job_collection: tmlib.workflow.job.SingleRunJobCollection
+        job_collection: tmlib.workflow.job.RunPhase
             empty collection of *run* jobs that should be populated
         batches: List[dict]
             job descriptions
@@ -527,10 +544,13 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
 
         Returns
         -------
-        tmlib.workflow.jobs.SingleRunJobCollection
+        tmlib.workflow.jobs.RunPhase
             run jobs
         '''
-        logger.info('create "debug" run jobs for submission %d', submission_id)
+        logger.info(
+            'create "debug" run jobs for submission %d',
+            job_collection.submission_id
+        )
         logger.debug('allocated time for debug run jobs: %s', duration)
         logger.debug('allocated memory for debug run jobs: %d MB', memory)
         logger.debug('allocated cores for debug run jobs: %d', cores)
@@ -541,7 +561,8 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 arguments=self._build_debug_run_command(b['site_id'], verbosity),
                 output_dir=self.log_location,
                 job_id=b['site_id'],
-                submission_id=submission_id,
+                submission_id=job_collection.submission_id,
+                parent_id=job_collection.persistent_id,
                 user_name=user_name
             )
             job.requested_walltime = Duration(duration)

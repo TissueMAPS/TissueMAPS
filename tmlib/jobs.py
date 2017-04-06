@@ -16,7 +16,8 @@ class Job(gc3libs.Application):
 
     __meta__ = ABCMeta
 
-    def __init__(self, arguments, output_dir, submission_id, user_name):
+    def __init__(self, arguments, output_dir, submission_id, user_name,
+            parent_id=None):
         '''
         Parameters
         ----------
@@ -29,10 +30,13 @@ class Job(gc3libs.Application):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        parent_id: int, optional
+            ID of the parent job collection
         '''
         t = create_datetimestamp()
         self.user_name = user_name
         self.submission_id = submission_id
+        self.parent_id = parent_id
         super(Job, self).__init__(
             jobname=self.name,
             arguments=arguments,

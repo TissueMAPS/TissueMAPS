@@ -147,8 +147,8 @@ class ImageRegistrator(WorkflowStepAPI):
     def delete_previous_job_output(self):
         logger.info('delete existing site shifts and intersections')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            session.drop_and_recreate(tm.SiteShift)
-            session.drop_and_recreate(tm.SiteIntersection)
+            session.query(tm.SiteShift).delete()
+            session.query(tm.SiteIntersection).delete()
 
     def run_job(self, batch):
         '''Calculates shift and overhang values for the given sites.

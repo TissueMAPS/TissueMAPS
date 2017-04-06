@@ -22,9 +22,10 @@ import sys
 import traceback
 import gc3libs
 from cached_property import cached_property
-from gc3libs.workflow import SequentialTaskCollection
-from gc3libs.workflow import ParallelTaskCollection
-from gc3libs.workflow import AbortOnError
+from gc3libs.workflow import (
+    AbortOnError, SequentialTaskCollection, ParallelTaskCollection
+)
+from gc3libs.persistence.sql import IdFactory, IntId
 
 import tmlib.models
 from tmlib.utils import assert_type
@@ -33,11 +34,13 @@ from tmlib.workflow.description import WorkflowDescription
 from tmlib.workflow.description import WorkflowStageDescription
 from tmlib.errors import WorkflowTransitionError
 from tmlib.readers import YamlReader
-from tmlib.workflow.jobs import InitJob
-from tmlib.workflow.jobs import CollectJob
-from tmlib.workflow.jobs import RunJobCollection
+from tmlib.workflow.jobs import (
+    InitJob, CollectJob, RunPhase, InitPhase, CollectPhase
+)
 
 logger = logging.getLogger(__name__)
+
+_idfactory = IdFactory(id_class=IntId)
 
 
 class State(object):
@@ -79,7 +82,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
     '''
 
     def __init__(self, name, experiment_id, verbosity, submission_id, user_name,
-            description):
+            parent_id, description):
         '''
         Parameters
         ----------
@@ -93,6 +96,9 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        parent_id: int
+            ID of the parent
+            :class:`WorkflowStage <tmlib.workflow.workflow.WorkflowPhase>`
         description: tmlib.tmaps.description.WorkflowStepDescription
             description of the step
 
@@ -100,12 +106,15 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         --------
         :class:`tmlib.workflow.description.WorkflowStepDescription`
         '''
+        logger.debug('instantiate step "%s"', name)
         super(WorkflowStep, self).__init__(tasks=[], jobname=name)
         self.name = name
         self.experiment_id = experiment_id
         self.verbosity = verbosity
         self.submission_id = submission_id
         self.user_name = user_name
+        self.parent_id = parent_id
+        self.persistent_id = _idfactory.new(self)
         self.description = description
         self._current_task = 0
 
@@ -113,27 +122,32 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         '''Initializes the step, i.e. generates the jobs for the different
         phases.
         '''
-        self.create_init_job()
-        self.create_run_job_collection()
+        logger.info('initialize step "%s"', self.name)
+        self.tasks = []
+        self._create_init_phase()
+        self._update_init_phase()
+        self._create_run_phase()
         if self._api_instance.has_collect_phase:
-            self.create_collect_job()
+            self._create_collect_phase()
+            self._update_collect_phase()
 
     @property
-    def init_job(self):
-        '''tmlib.workflow.jobs.InitJob: job for the "init" phase'''
+    def init_phase(self):
+        '''tmlib.workflow.jobs.InitJob: collection of job for the "init" phase
+        '''
         try:
             return self.tasks[0]
         except IndexError:
             raise WorkflowTransitionError(
-                'Workflow step "%s" doesn\'t have an "init" job.' % self.name
+                'Workflow step "%s" doesn\'t have an "init" phase.' % self.name
             )
 
-    @init_job.setter
-    def init_job(self, value):
-        if not isinstance(value, InitJob):
+    @init_phase.setter
+    def init_phase(self, value):
+        if not isinstance(value, InitPhase):
             raise TypeError(
-                'Attribute "init_job" must have type '
-                'tmlib.workflow.jobs.InitJob'
+                'Attribute "init_phase" must have type '
+                'tmlib.workflow.jobs.InitPhase'
             )
         if len(self.tasks) == 0:
             self.tasks.append(value)
@@ -141,27 +155,27 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             self.tasks[0] = value
 
     @property
-    def run_jobs(self):
-        '''tmlib.workflow.jobs.RunJobCollection: collection of jobs for the
+    def run_phase(self):
+        '''tmlib.workflow.jobs.RunPhase: collection of jobs for the
         "run" phase
         '''
         try:
             return self.tasks[1]
         except IndexError:
             raise WorkflowTransitionError(
-                'Workflow step "%s" doesn\'t have any "run" jobs.' % self.name
+                'Workflow step "%s" doesn\'t have a "run" phase.' % self.name
             )
 
-    @run_jobs.setter
-    def run_jobs(self, value):
-        if not isinstance(value, RunJobCollection):
+    @run_phase.setter
+    def run_phase(self, value):
+        if not isinstance(value, RunPhase):
             raise TypeError(
                 'Attribute "run_jobs" must have type '
-                'tmlib.workflow.jobs.RunJobCollection'
+                'tmlib.workflow.jobs.RunPhase'
             )
         if len(self.tasks) == 0:
             raise WorkflowTransitionError(
-                'Attempt to set "run" jobs before "init" phase.'
+                'Attempt to set "run" phase before "init" phase.'
             )
         elif len(self.tasks) == 1:
             self.tasks.append(value)
@@ -169,25 +183,27 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             self.tasks[1] = value
 
     @property
-    def collect_job(self):
-        '''tmlib.workflow.jobs.CollectJob: job for the "collect" phase'''
+    def collect_phase(self):
+        '''tmlib.workflow.jobs.CollectPhase: collection of jobs for "collect"
+        phase
+        '''
         try:
             return self.tasks[2]
         except IndexError:
             raise WorkflowTransitionError(
-                'Workflow step "%s" doesn\'t have a "collect" job.' % self.name
+                'Workflow step "%s" doesn\'t have a "collect" phase.' % self.name
             )
 
-    @collect_job.setter
-    def collect_job(self, value):
-        if not isinstance(value, CollectJob):
+    @collect_phase.setter
+    def collect_phase(self, value):
+        if not isinstance(value, CollectPhase):
             raise TypeError(
-                'Attribute "collect_job" must have type '
-                'tmlib.workflow.jobs.CollectJob'
+                'Attribute "collect_phase" must have type '
+                'tmlib.workflow.jobs.CollectPhase'
             )
         if len(self.tasks) == 0 or len(self.tasks) == 1:
             raise WorkflowTransitionError(
-                'Attempt to set "collect" job before "run" phase.'
+                'Attempt to set "collect" phase before "run" phase.'
             )
         elif len(self.tasks) == 2:
             self.tasks.append(value)
@@ -196,25 +212,37 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
 
     @cached_property
     def _api_instance(self):
-        logger.debug('load step interface "%s"', self.name)
+        logger.debug('load API for step "%s"', self.name)
         API = get_step_api(self.name)
         return API(self.experiment_id)
 
-    def create_init_job(self):
+    def _create_init_phase(self):
+        '''Creates the job collection for "init" phase.'''
+        logger.debug(
+            'create job collection for "init" phase of step "%s"', self.name
+        )
+        self.init_phase = self._api_instance.create_init_phase(
+            self.submission_id, self.persistent_id
+        )
+
+    def _update_init_phase(self):
         '''Creates the job for "init" phase.'''
         logger.info('create job for "init" phase of step "%s"', self.name)
-        self.init_job = self._api_instance.create_init_job(
-            self.submission_id, self.user_name, self.description.batch_args,
+        self.init_phase = self._api_instance.create_init_job(
+            self.user_name, self.init_phase, self.description.batch_args,
             self.verbosity
         )
 
-    def create_run_job_collection(self):
+    def _create_run_phase(self):
         '''Creates the job collection for "run" phase.'''
-        self.run_jobs = self._api_instance.create_run_job_collection(
-            self.submission_id
+        logger.debug(
+            'create job collection for "run" phase of step "%s"', self.name
+        )
+        self.run_phase = self._api_instance.create_run_phase(
+            self.submission_id, self.persistent_id
         )
 
-    def create_run_jobs(self):
+    def _update_run_phase(self):
         '''Creates the individual jobs for the "run" phase based on descriptions
         created during the "init" phase.
         '''
@@ -231,20 +259,29 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             'allocated cores for "run" jobs: %d',
             self.description.submission_args.cores
         )
-        self.run_jobs = self._api_instance.create_run_jobs(
-            self.submission_id, self.user_name, self.run_jobs,
-            self.verbosity,
+        self.run_phase = self._api_instance.create_run_jobs(
+            self.user_name, self.run_phase, self.verbosity,
             duration=self.description.submission_args.duration,
             memory=self.description.submission_args.memory,
             cores=self.description.submission_args.cores
         )
 
-    def create_collect_job(self):
+    def _create_collect_phase(self):
+        '''Creates the job collection for "collect" phase.'''
+        logger.debug(
+            'create job collection for "collect" phase of step "%s"', self.name
+        )
+        self.collect_phase = self._api_instance.create_collect_phase(
+            self.submission_id, self.persistent_id
+        )
+
+    def _update_collect_phase(self):
         '''Creates the job for "collect" phase based on descriptions
         created during the "init" phase.
         '''
-        self.collect_job = self._api_instance.create_collect_job(
-            self.submission_id, self.user_name, self.verbosity
+        logger.info('create job for "collect" phase of step "%s"', self.name)
+        self.collect_phase = self._api_instance.create_collect_job(
+            self.user_name, self.collect_phase, self.verbosity
         )
 
     def next(self, done):
@@ -259,6 +296,10 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         -------
         gc3libs.Run.State
         '''
+        logger.debug(
+            'state of %s: %s',
+            self.__class__.__name__, self.execution.state
+        )
         self.execution.returncode = self.tasks[done].execution.returncode
         if self.execution.returncode != 0:
             return gc3libs.Run.State.TERMINATED
@@ -269,7 +310,8 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             # created, but it must now be populated with the individual jobs.
             # The knowledge required to create the jobs was not available
             # prior to the "init" phase.
-            self.create_run_jobs()
+            self._update_run_phase()
+        logger.info('tranition to next phase of step "%s"', self.name)
         return super(WorkflowStep, self).next(done)
 
 
@@ -281,7 +323,7 @@ class WorkflowStage(State):
     '''
 
     def __init__(self, name, experiment_id, verbosity, submission_id, user_name,
-                 description):
+                 parent_id, description):
         '''
         Parameters
         ----------
@@ -295,6 +337,9 @@ class WorkflowStage(State):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        parent_id: int
+            ID of the parent
+            :class:`Workflow <tmlib.workflow.workflow.Workflow>`
         description: tmlib.tmaps.description.WorkflowStageDescription
             description of the stage
 
@@ -307,45 +352,41 @@ class WorkflowStage(State):
         --------
         :class:`tmlib.workflow.description.WorkflowStageDescription`
         '''
+        logger.debug('instantiate workflow stage "%s"', name)
         self.name = name
         self.experiment_id = experiment_id
         self.verbosity = verbosity
         self.submission_id = submission_id
         self.user_name = user_name
+        self.parent_id = parent_id
         if not isinstance(description, WorkflowStageDescription):
             raise TypeError(
                 'Argument "description" must have type '
                 'tmlib.tmaps.description.WorkflowStageDescription'
             )
         self.description = description
-        self.tasks = self._create_steps()
+        self.persistent_id = _idfactory.new(self)
+        self._add_steps()
 
-    def _create_steps(self):
-        '''Creates all steps for this stage.
-
-        Returns
-        -------
-        List[tmlib.workflow.WorkflowStep]
-            workflow steps
-
-        Note
-        ----
-        The steps don't have any jobs yet. They will later be added
-        dynamically at runtime.
-        '''
-        workflow_steps = list()
+    def _add_steps(self):
+        logger.debug('create steps of stage "%s"', self.name)
         for step_description in self.description.steps:
-            workflow_steps.append(
-                WorkflowStep(
-                    name=step_description.name,
-                    experiment_id=self.experiment_id,
-                    verbosity=self.verbosity,
-                    submission_id=self.submission_id,
-                    user_name=self.user_name,
-                    description=step_description
-                )
-            )
-        return workflow_steps
+            step = self._create_step(step_description)
+            self.tasks.append(step)
+
+    def _create_step(self, description):
+        logger.debug(
+            'create step "%s" of stage "%s"', description.name, self.name
+        )
+        return WorkflowStep(
+            name=description.name,
+            experiment_id=self.experiment_id,
+            verbosity=self.verbosity,
+            submission_id=self.submission_id,
+            user_name=self.user_name,
+            parent_id=self.persistent_id,
+            description=description
+        )
 
     @property
     def n_steps(self):
@@ -363,7 +404,8 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
     '''
 
     def __init__(self, name, experiment_id, verbosity,
-                 submission_id, user_name, description=None, waiting_time=0):
+                 submission_id, user_name, parent_id, description=None,
+                 waiting_time=0):
         '''
         Parameters
         ----------
@@ -377,6 +419,9 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        parent_id: int
+            ID of the parent
+            :class:`Workflow <tmlib.workflow.workflow.Workflow>`
         description: tmlib.tmaps.description.WorkflowStageDescription, optional
             description of the stage (default: ``None``)
         waiting_time: int, optional
@@ -390,7 +435,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
         WorkflowStage.__init__(
             self, name=name, experiment_id=experiment_id, verbosity=verbosity,
             submission_id=submission_id, description=description,
-            user_name=user_name
+            user_name=user_name, parent_id=parent_id
         )
         self.waiting_time = waiting_time
 
@@ -422,21 +467,19 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
             'state of %s: %s',
             self.__class__.__name__, self.execution.state
         )
-        # Implement StopOnError behavior: set the state of the task collection
-        # to the state of the last processed task.
+        # Implement TerminateOnError behavior: set the state of the task
+        # collection to the state of the last processed task.
         self.execution.returncode = self.tasks[done].execution.returncode
         if self.execution.returncode != 0:
-            # Stop the entire collection in case the last task "failed".
-            # We only stop the workflow, so that the workflow could in principle
-            # be resumed later.
-            # return gc3libs.Run.State.STOPPED
             return gc3libs.Run.State.TERMINATED
         if self.is_stopped:
-            # return gc3libs.Run.State.STOPPED
             return gc3libs.Run.State.TERMINATED
         elif self.is_terminated:
             return gc3libs.Run.State.TERMINATED
-        logger.info('step "%s" is done', self.description.steps[done].name)
+        logger.info(
+            'step "%s" of stage "%s" is done',
+            self.description.steps[done].name, self.name
+        )
         if done+1 < self.n_steps:
             if self.waiting_time > 0:
                 logger.info('waiting ...')
@@ -445,15 +488,15 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
             try:
                 next_step_name = self.description.steps[done+1].name
                 logger.info(
-                    'transit to next step ({0} of {1}): "{2}"'.format(
-                        done+2, self.n_steps, next_step_name
+                    'transit to step "{0}" of stage "{1}" ({2} of {3})'.format(
+                        next_step_name, self.name, done+2, self.n_steps
                     )
                 )
                 self.update_step(done+1)
                 return gc3libs.Run.State.RUNNING
             except Exception as error:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                logger.error('transition to next stage failed: %s', error)
+                logger.error('transition to stage "%s" failed', error)
                 tb = traceback.extract_tb(exc_traceback)[-1]
                 logger.error('error in "%s" line %d', tb[0], tb[1])
                 tb_string = ''
@@ -462,8 +505,7 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
                     tb_string += tb
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
-                logger.info('stopping stage "%s"', self.jobname)
-                # self.execution.state = gc3libs.Run.State.STOPPED
+                logger.info('terminating stage "%s" due to error', self.name)
                 self.execution.state = gc3libs.Run.State.TERMINATED
                 raise
         else:
@@ -477,7 +519,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
     '''
 
     def __init__(self, name, experiment_id, verbosity, submission_id, user_name,
-                 description=None):
+                 parent_id, description=None):
         '''
         Parameters
         ----------
@@ -491,6 +533,9 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        parent_id: int
+            ID of the parent
+            :class:`Workflow <tmlib.workflow.workflow.Workflow>`
         description: tmlib.tmaps.description.WorkflowStageDescription, optional
             description of the stage (default: ``None``)
         '''
@@ -500,7 +545,7 @@ class ParallelWorkflowStage(WorkflowStage, ParallelTaskCollection, State):
         WorkflowStage.__init__(
             self, name=name, experiment_id=experiment_id, verbosity=verbosity,
             submission_id=submission_id, user_name=user_name,
-            description=description
+            parent_id=parent_id, description=description
         )
 
     def add(self, step):
@@ -568,13 +613,16 @@ class Workflow(SequentialTaskCollection, State):
         self.waiting_time = waiting_time
         self.submission_id = submission_id
         self.user_name = user_name
-        self.update_description(description)
         with tmlib.models.utils.MainSession() as session:
             experiment = session.query(tmlib.models.ExperimentReference).\
                 get(self.experiment_id)
-            super(Workflow, self).__init__(tasks=None, jobname=experiment.name)
+            self.name = experiment.name
+            super(Workflow, self).__init__(tasks=None, jobname=self.name)
+        self.update_description(description)
+        self.parent_id = None
+        self.persistent_id = _idfactory.new(self)
         self._current_task = 0
-        self.tasks = self._create_stages()
+        self._add_stages()
         # Update the first stage and its first step to start the workflow
         self.update_stage(0)
 
@@ -596,7 +644,7 @@ class Workflow(SequentialTaskCollection, State):
             :class:`WorkflowDescription <tmlib.workflow.description.WorkflowDescription>`
 
         '''
-        logger.info('update workflow description')
+        logger.info('update description of workflow "%s"', self.name)
         self.description = copy.deepcopy(description)
         self.description.stages = list()
         for stage in description.stages:
@@ -606,59 +654,55 @@ class Workflow(SequentialTaskCollection, State):
                     if step.active:
                         steps_to_process.append(step)
                     else:
-                        logger.debug('ignore inactive step "%s"', step.name)
+                        logger.debug(
+                            'ignore inactive step "%s" of workflow "%s"',
+                            step.name, self.name
+                        )
                 stage.steps = steps_to_process
                 self.description.stages.append(stage)
             else:
-                logger.debug('ignore inactive stage "%s"', stage.name)
+                logger.debug(
+                    'ignore inactive stage "%s" of workflow "%s"',
+                    stage.name, self.name
+                )
 
-    def _create_stages(self):
-        '''Creates all stages for this workflow.
-
-        Returns
-        -------
-        List[tmlib.workflow.WorkflowStage]
-            workflow stages
-        '''
-        workflow_stages = list()
+    def _add_stages(self):
+        logger.debug('create stages of workflow "%s"', self.name)
         for stage_description in self.description.stages:
-            stage = self._add_stage(stage_description)
-            workflow_stages.append(stage)
-        return workflow_stages
+            stage = self._create_stage(stage_description)
+            self.tasks.append(stage)
 
-    def _add_stage(self, description):
-        '''Adds a new stage to the tasks list.
-
-        Parameters
-        ----------
-        description: tmlib.workflow.description.WorkflowStageDescription
-            description of the stage
-
-        Returns
-        -------
-        tmlib.workflow.WorkflowStage
-        '''
+    def _create_stage(self, description):
         if description.mode == 'sequential':
-            logger.debug('build sequential workflow stage')
-            return SequentialWorkflowStage(
+            logger.debug(
+                'create sequential stage "%s" of workflow "%s"',
+                description.name, self.name
+            )
+            stage = SequentialWorkflowStage(
                 name=description.name,
                 experiment_id=self.experiment_id,
                 verbosity=self.verbosity,
                 submission_id=self.submission_id,
                 user_name=self.user_name,
+                parent_id=self.persistent_id,
                 description=description,
                 waiting_time=self.waiting_time
             )
         elif description.mode == 'parallel':
-            logger.debug('build parallel workflow stage')
-            return ParallelWorkflowStage(
+            logger.debug(
+                'create parallel stage "%s" of workflow "%s"',
+                description.name, self.name
+            )
+            stage = ParallelWorkflowStage(
                 name=description.name,
                 experiment_id=self.experiment_id,
                 verbosity=self.verbosity,
                 submission_id=self.submission_id,
                 user_name=self.user_name,
+                parent_id=self.parent_id,
                 description=description
             )
+        return stage
 
     @property
     def n_stages(self):
@@ -675,9 +719,12 @@ class Workflow(SequentialTaskCollection, State):
             index for the list of `tasks` (stages)
         '''
         stage_description = self.description.stages[index]
-        logger.info('update stage #%d: %s', index, stage_description.name)
+        logger.info(
+            'update stage "%s" (#%d) of workflow "%s"',
+            stage_description.name, index, self.name
+        )
         if index > len(self.tasks) - 1:
-            stage = self._add_stage(stage_description)
+            stage = self._create_stage(stage_description)
             self.tasks.append(stage)
         self.tasks[index].description = stage_description
         if stage_description.mode == 'sequential':
@@ -701,18 +748,19 @@ class Workflow(SequentialTaskCollection, State):
             'state of %s: %s',
             self.__class__.__name__, self.execution.state
         )
-        # Implement StopOnError behavior: set the state of the task collection
-        # to the state of the last processed task.
+        # Implement TerminateOnError behavior: set the state of the task
+        # collection to the state of the last processed task.
         self.execution.returncode = self.tasks[done].execution.returncode
         if self.execution.returncode != 0:
-            # return gc3libs.Run.State.STOPPED
             return gc3libs.Run.State.TERMINATED
         if self.is_stopped:
-            # return gc3libs.Run.State.STOPPED
             return gc3libs.Run.State.TERMINATED
         elif self.is_terminated:
             return gc3libs.Run.State.TERMINATED
-        logger.info('stage "%s" is done', self.description.stages[done].name)
+        logger.info(
+            'stage "%s" of workflow "%s" is done',
+            self.description.stages[done].name, self.name
+        )
         if done+1 < self.n_stages:
             if self.waiting_time > 0:
                 logger.info('waiting ...')
@@ -721,8 +769,8 @@ class Workflow(SequentialTaskCollection, State):
             try:
                 next_stage_name = self.description.stages[done+1].name
                 logger.info(
-                    'transit to next stage ({0} of {1}): "{2}"'.format(
-                        done+2, self.n_stages, next_stage_name
+                    'transit to stage "{0}" of workflow "{1}" ({2} of {3})'.format(
+                        next_stage_name, self.name, done+2, self.n_stages 
                     )
                 )
                 self.update_stage(done+1)
@@ -738,8 +786,9 @@ class Workflow(SequentialTaskCollection, State):
                     tb_string += tb
                 tb_string += '\n'
                 logger.debug('error traceback: %s', tb_string)
-                logger.info('stopping workflow "%s"', self.jobname)
-                # self.execution.state = gc3libs.Run.State.STOPPED
+                logger.info(
+                    'terminating workflow "%s" due to error', self.name
+                )
                 self.execution.state = gc3libs.Run.State.TERMINATED
                 raise
         else:
