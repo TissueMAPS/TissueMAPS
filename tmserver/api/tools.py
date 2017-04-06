@@ -458,7 +458,7 @@ def get_tool_jobs(experiment_id):
                 tm.Task.cpu_time, tm.Task.memory,
                 tm.Task.state, tm.Task.submission_id, tm.Task.exitcode
             ).\
-            join(tm.Submission).\
+            join(tm.Submission, tm.Task.submission_id == tm.Submission.id).\
             filter(
                 tm.Submission.program == 'tool',
                 tm.Submission.experiment_id == experiment_id,
