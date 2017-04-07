@@ -122,6 +122,7 @@ You simply need to download the ``docker-compose.yml`` file and start the contai
 
 This will create containers based on pre-built images available on `Docker hub <https://hub.docker.com/u/tissuemaps/dashboard/>`_. The first call will take a while because container images need to be downloaded. Subsequent calls will be highly responsive.
 
+
 .. _server-installation-tmdeploy:
 
 TmDeploy
@@ -205,7 +206,7 @@ The following `Ansible groups <http://docs.ansible.com/ansible/intro_inventory.h
 
 Example ``setup.yml`` template for the `Google Compute Engine (GCE) <https://cloud.google.com/compute/>`_ provider:
 
-.. literalinclude:: ./../src/tmdeploy/etc/singlenode_setup_gce.yml
+.. literalinclude:: ../src/tmdeploy/etc/singlenode_setup_gce.yml
    :language: yaml
    :lines: 3-
 
@@ -295,11 +296,13 @@ The ``launch`` command calls the `instance.yml <https://github.com/TissueMAPS/Tm
 
 .. note:: A private :attr:`network <tmdeploy.config.CloudSection.network>` and :attr:`subnetwork <tmdeploy.config.CloudSection.subnetwork>` will get automatically created. In addition, each node gets assigned to one or more security groups (firewall) rules based on the configured :attr:`tags <tmdeploy.config.AnsibleHostVariableSection.tags>`. Only machines tagged with ``web`` will get a public IP and can be directly accessed via *SSH*. The other machines are only accessible from within the private network. ``tm_deploy`` uses an *SSH* ``ProxyCommand`` to connect to machines within the private network using a ``web`` tagged machine as a *bastion host*. In case you encouter problems with host authentication, you may need to add the following lines to your ``~/.ssh/config`` file:
 
-        .. code:: none
+        .. code-block:: none
 
             Hosts *
 
               StrictHostKeyChecking no
+              UserKnownHostsFile /dev/null
+
 
 
 Deploy *TissueMAPS* on virtual machine instances:
