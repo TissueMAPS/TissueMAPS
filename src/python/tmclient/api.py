@@ -2373,7 +2373,7 @@ class TmClient(HttpClient):
         if not os.path.exists(handles_subdirectory):
             logger.debug('create "handles" directory')
             os.mkdir(handles_subdirectory)
-        for name, description in descriptions['handles'].iteritems():
+        for name, description in descriptions['handles'].items():
             handles_filename = os.path.join(
                 handles_subdirectory, '{name}.handles.yaml'.format(name=name)
             )
