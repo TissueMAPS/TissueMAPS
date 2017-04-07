@@ -4,6 +4,8 @@ import os
 import glob
 import yaml
 import requests
+import traceback
+import subprocess
 import pytest
 import pandas as pd
 from natsort import natsorted
@@ -307,6 +309,7 @@ class AcquisitionInfo(object):
         self._name = value
 
 
+
 def pytest_runtest_makereport(item, call):
     if "incremental" in item.keywords:
         if call.excinfo is not None:
@@ -321,34 +324,56 @@ def pytest_runtest_setup(item):
             pytest.xfail("previous test failed (%s)" %previousfailed.name)
 
 
+def _execute(command):
+    subprocess.check_output(command)
+
+
+def _docker_up(root_dir):
+    _execute([
+        'docker-compose',
+        '-f', os.path.join(root_dir, 'docker-compose.yml'),
+        '-f', os.path.join(root_dir, 'docker-compose.local_override.yml'),
+        'up', '-d', '--force-recreate'
+    ])
+
+
+def _docker_down(root_dir):
+    _execute([
+        'docker-compose',
+        '-f', os.path.join(root_dir, 'docker-compose.yml'),
+        '-f', os.path.join(root_dir, 'docker-compose.local_override.yml'),
+        'down', '-v'
+    ])
+
+
 @pytest.fixture(scope='session')
 def experiment_info():
-    directory = os.environ.get('TMTEST_DATASET_DIR', None)
-    if directory is None:
-        raise OSError('Environment variable "TMTEST_DATASET_DIR" not set.')
+    directory = os.environ['TMTEST_DATA_DIR']
     return ExperimentInfo(directory)
 
 
 @pytest.fixture(scope='session')
-def client(experiment_info):
+def root_dir():
+    return os.path.dirname(str(pytest.config.rootdir))
+
+
+@pytest.fixture(scope='session')
+def client(root_dir, experiment_info):
     host = 'localhost'
     port = 8002
-    user = 'devuser'
+    username = 'devuser'
     password = '123456'
+
+    _docker_up(root_dir)
     try:
-        client = TmClient(host, port, user, password, experiment_info.name)
-        try:
-            # Deletes the experiment in case it already exists, for example from
-            # a previous test run.
-            client.delete_experiment()
-        except ResourceError:
-            pass
-        return client
+        client = TmClient(host, port, username, password, experiment_info.name)
+        yield client
     except requests.ConnectionError:
         raise OSError(
             'Client could not connect to host "{0}" on port {1}.'.format(
                 host, port
             )
         )
+    _docker_down(root_dir)
 
 

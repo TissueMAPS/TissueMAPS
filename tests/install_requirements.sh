@@ -1,6 +1,8 @@
 #!/bin/sh -e
 
-# Install requirements
+# Quick n dirty installation script for Linux Ubuntu distributions
+# TODO: Put this into an Ansible playbook
+
 echo "Install required apt packages..."
 sudo add-apt-repository \
        "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
@@ -26,9 +28,9 @@ sudo apt-get -y --allow-unauthenticated install \
 echo "Install required pip packages..."
 sudo pip install --upgrade \
     pip \
-    setuptools \
-    virtualenvwrapper \
-    pytest
+    setuptools
 
+# Add current user to docker group, such that Docker daemon can be started
+# without sudo.
 sudo usermod -aG docker $(whoami)
 
