@@ -23,6 +23,7 @@ import yaml
 import cv2
 import glob
 import pandas as pd
+from pandas.io.common import EmptyDataError
 import numpy as np
 from prettytable import PrettyTable
 try:
@@ -1854,7 +1855,10 @@ class TmClient(HttpClient):
         )
         logger.debug('decode CSV data')
         file_obj = StringIO(res.content.decode('utf-8'))
-        return pd.read_csv(file_obj)
+        try:
+            return pd.read_csv(file_obj)
+        except EmptyDataError:
+            return pd.DataFrame()
 
     def download_feature_values_and_metadata_files(self, mapobject_type_name,
             directory, plate_name=None, well_name=None, well_pos_y=None,
@@ -1986,7 +1990,10 @@ class TmClient(HttpClient):
             tpoint
         )
         file_obj = StringIO(res.content.decode('utf-8'))
-        return pd.read_csv(file_obj)
+        try:
+            return pd.read_csv(file_obj)
+        except EmptyDataError:
+            return pd.DataFrame()
 
     def download_workflow_description(self):
         '''Downloads the workflow description. In case no description has been
