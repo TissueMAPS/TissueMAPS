@@ -28,12 +28,12 @@ For further details and alternative installation options, please refer to the `i
 Client
 ------
 
-Once you have access to running server instance, you can interact with it via `HTTP <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_ protocol.
+Once you have access to a running server instance, you can interact with it via `HTTP <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_ protocol.
 
 Browser
 ^^^^^^^
 
-The easiest way is to your the web-based user interface. To this end, point your web browser to ``http://localhost:8002``. This will redirect you to the login page. Once you have authenticated yourself using your credentials, you will see a list of your existing experiments.
+The easiest way is to interact with the server is via the web-based user interface. To this end, point your web browser to ``http://localhost:8002``. This will redirect you to the login page. Once you have authenticated yourself using your credentials, you will see a list of your existing experiments.
 
 cURL
 ^^^^
@@ -55,7 +55,7 @@ List your existing experiments using the received `JSON web token <https://jwt.i
 TmClient
 ^^^^^^^^
 
-*TissueMAPS* provides a Python client that abstracts the *HTTP* interface and facilitas interaction with the server. You can install it via the `pip <https://pip.pypa.io/en/stable/>`_ Python package manager:
+*TissueMAPS* also provides a Python client that abstracts the *HTTP* interface and facilitas interaction with the server. You can install it via the `pip <https://pip.pypa.io/en/stable/>`_ Python package manager:
 
 .. code:: none
 
@@ -74,10 +74,9 @@ Or using the ``tmclient`` Python package:
 
     from tmclient import TmClient
 
-    client = TmClient(
-        host='localhost', port=8002, username='devuser', password='123456'
-    )
-    print(client.get_experiments())
+    client = TmClient(host='localhost', port=8002, username='devuser', password='123456')
+    experiments = client.get_experiments()
+    print(experiments)
 
 
 License
