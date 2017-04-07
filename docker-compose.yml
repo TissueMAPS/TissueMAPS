@@ -16,6 +16,8 @@ services:
     image: tissuemaps/tissuemaps-web
     container_name: tissuemaps-web
     hostname: web
+    depends_on:
+      - app
     volumes:
       - storage-fs:/storage/tissuemaps/log
     # By default, the web container publishes port 8002 on your host machine.
@@ -29,6 +31,8 @@ services:
     image: tissuemaps/tissuemaps-app
     container_name: tissuemaps-app
     hostname: app
+    depends_on:
+      - db_master
     volumes:
       - storage-fs:/storage/tissuemaps/data
       - storage-fs:/storage/tissuemaps/log
