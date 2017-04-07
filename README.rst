@@ -4,7 +4,7 @@ TissueMAPS
 
 *TissueMAPS* is a software framework for distributed analysis and interactive visualization of large-scale, high-dimensional microscopy image datasets.
 
-Online documentation is available at `tissuemaps.org <http://tissuemaps.org/>`_.
+Online documentation is available at `docs.tissuemaps.org <http://docs.tissuemaps.org/>`_.
 
 
 Quickstart
