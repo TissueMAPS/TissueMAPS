@@ -138,7 +138,9 @@ class WorkflowSubmissionManager(SubmissionManager):
             logger.info('progress...')
             engine.progress()
 
-            status_data = get_task_status_recursively(jobs, monitoring_depth)
+            status_data = get_task_status_recursively(
+                jobs.persistent_id, monitoring_depth
+            )
             print_task_status(status_data)
 
             if break_next:
@@ -149,7 +151,7 @@ class WorkflowSubmissionManager(SubmissionManager):
                 break_next = True
                 engine.progress()  # one more iteration to update status_data
 
-        status_data = get_task_status_recursively(jobs)
+        status_data = get_task_status_recursively(jobs.persistent_id)
         log_task_failure(status_data, logger)
 
         return status_data
