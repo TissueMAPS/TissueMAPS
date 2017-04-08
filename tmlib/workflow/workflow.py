@@ -311,7 +311,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
             # The knowledge required to create the jobs was not available
             # prior to the "init" phase.
             self._update_run_phase()
-        logger.info('tranition to next phase of step "%s"', self.name)
+        logger.info('transition to next phase of step "%s"', self.name)
         return super(WorkflowStep, self).next(done)
 
 
