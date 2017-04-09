@@ -39,11 +39,13 @@ implemented module) to
 import re
 import importlib
 import inspect
+import logging
 
 from tmlib import __version__
 from tmlib.workflow.metaconfig.base import MetadataReader
 from tmlib.workflow.metaconfig.base import MetadataHandler
 
+logger = logging.getLogger(__name__)
 
 __dependencies__ = {'metaextract'}
 
