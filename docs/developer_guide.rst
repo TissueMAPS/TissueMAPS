@@ -169,11 +169,10 @@ Data models
 
 *TissueMAPS* uses `PostgreSQL <https://www.postgresql.org/>`_ via the `SQLAlchemy Object Relational Mapper (ORM) <http://docs.sqlalchemy.org/en/latest/orm/tutorial.html>`_. The respective model classes are implemented in the :mod:`tmlib.models` package.
 
-The main ``tissuemaps`` database manages user credentials and permissions and holds a references for each :class:`Experiment <tmlib.models.experiment.Experiment>`.
-Experiment related data reside in separate databases. These experiment-specific databases are called ``tissuemaps_experiment_<id>``, where ``id`` is the ID of the respective experiment assigned by :class:`ExperimentReference <tmlib.models.experiment.ExperimentReference>` in the main database.
+The main ``tissuemaps`` database schema manages user credentials and permissions and holds a references for each :class:`Experiment <tmlib.models.experiment.Experiment>`.
+Experiment related data reside in separate schemas. These experiment-specific schemas are called ``tissuemaps_experiment_<id>``, where ``id`` is the ID of the respective experiment assigned by :class:`ExperimentReference <tmlib.models.experiment.ExperimentReference>` in the main database.
 Therefore, models mapping to data that belongs to an experiment must implement :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`, while models representing global data must implement :class:`MainModel <tmlib.models.base.MainModels>`. All derived model classes should be imported such that they are available at the level of the :mod:`tmlib.models` package namespace.
 
-.. note:: Using separte databases per experiment improves performance and scalability. Tables are smaller and are generally only modified by a single user at a time, thereby facilitating index updates and circumventing table locks by other queries. It further improves portablity, since an experiment can be simply backed up by `dumping <https://www.postgresql.org/docs/current/static/backup-dump.html>`_ the entire database without affecting other pontentially simulatenously processed experiments. In principle, these databases could also be hosted on different servers.
 
 .. _developing-microscope-types:
 
