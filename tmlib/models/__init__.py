@@ -54,9 +54,9 @@ return instances of data model classes derived from
 
     with tm.utils.ExperimentSession(experiment_id=1) as session:
         plates = session.query(tm.Plates).all()
-        print plates
-        print plates[0].name
-        print plates[0].acquisitions
+        print(plates)
+        print(plates[0].name)
+        print(plates[0].acquisitions)
 
 Some *SQL* statements cannot be performed within a transaction. In addition,
 the *ORM* comes with a performance overhead and is not optimal for inserting
@@ -82,11 +82,9 @@ objects:
     with tm.utils.ExperimentConnection(experiment_id=1) as connection:
         connection.execute('SELECT * FROM plates;')
         plates = connection.fetchall()
-        print plates
-        print plates[0].name
+        print(plates)
+        print(plates[0].name)
 
-Note
-----
 The *session* and *connection* contexts automatically add the
 experiment-specific schema to the
 `search path <https://www.postgresql.org/docs/current/static/ddl-schemas.html#DDL-SCHEMAS-PATH>`_
@@ -94,8 +92,6 @@ at runtime. To access data models outside the scope of a *session* or
 *connection*, you either need to set the search path manually or specify the
 schema explicitly, e.g. ``SELECT * FROM experiment_1.plates``.
 
-Note
-----
 Some of the data models represent distributed table, which are sharded accross
 different servers to scale out the database backend over a cluster. To this end,
 *TissueMAPS* uses `Citus <https://docs.citusdata.com/en/stable/index.html>`_.
@@ -108,8 +104,6 @@ registered on the main database server (*master* node).
 For more details on how to set up a database cluster, please refer to
 :doc:`setup_and_deployment` section of the documentation.
 
-Warning
--------
 Distributed tables can be accessed via the *ORM* for reading (``SELECT``) using
 :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`. However,
 they cannot be modified (``INSERT``, ``UPDATE`` or ``DELETE``) via the *ORM*,

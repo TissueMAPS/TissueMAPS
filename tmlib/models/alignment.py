@@ -25,8 +25,10 @@ logger = logging.getLogger(__name__)
 
 class SiteShift(ExperimentModel):
 
-    '''Translation of a given *site* acquired at a given *cycle*
-    relative to the corresponding *site* of the reference *cycle*.'''
+    '''Translation of a given :class:`Site <tmlib.models.site.Site>` acquired
+    at a given :class:`Cycle <tmlib.models.cycle.Cycle>`
+    relative to the corresponding :class:`Site <tmlib.models.site.Site>` of
+    the reference :class:`Cycle <tmlib.models.cycle.Cycle>`.'''
 
     __tablename__ = 'site_shifts'
 
@@ -79,9 +81,9 @@ class SiteShift(ExperimentModel):
             site of the reference cycle
             (positive value -> down, negative value -> up)
         site_id: int
-            ID of the parent site
+            ID of the parent :class:`Site <tmlib.models.site.Site>`
         cycle_id: int
-            ID of the parent cycle
+            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
         '''
         self.x = x
         self.y = y
@@ -150,7 +152,7 @@ class SiteIntersection(ExperimentModel):
         left_overhang: int
             overhanging pixels at the left side
         site_id: int
-            ID of the parent site
+            ID of the parent :class:`Site <tmlib.models.site.Site>`
         '''
         self.upper_overhang = upper_overhang
         self.lower_overhang = lower_overhang

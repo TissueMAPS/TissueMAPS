@@ -308,7 +308,6 @@ class Experiment(DirectoryModel):
 
         See also
         --------
-        :func:`tmlib.workflow.get_workflow_type_information`
         :attr:`tmlib.workflow.metaconfig.SUPPORTED_MICROSCOPE_TYPES`
         :attr:`tmlib.models.plate.SUPPORTED_PLATE_AQUISITION_MODES`
         :attr:`tmlib.models.plate.SUPPORTED_PLATE_FORMATS`

@@ -151,8 +151,8 @@ class Channel(DirectoryModel, DateMixIn):
 class ChannelLayer(ExperimentModel):
 
     '''A *channel layer* represents a multi-resolution overview of all images
-    belonging to a given *channel*, *z-plane* and *time point*.
-    as a pyramid in `Zoomify <http://www.zoomify.com/>`_ format.
+    belonging to a given :class:`Channel <tmlib.models.channel.Channel>`,
+    *z-plane* and *time point* in form of an image pyramid.
 
     '''
 
@@ -192,7 +192,7 @@ class ChannelLayer(ExperimentModel):
         Parameters
         ----------
         channel_id: int
-            ID of the parent channel
+            ID of the parent :class:`Channel <tmlib.models.channel.Channel>`
         tpoint: int
             zero-based time series index
         zplane: int

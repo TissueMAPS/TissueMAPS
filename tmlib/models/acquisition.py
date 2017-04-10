@@ -84,7 +84,7 @@ class Acquisition(DirectoryModel, DateMixIn):
         name: str
             name of the acquisition
         plate_id: int
-            ID of the parent plate
+            ID of the parent :class:`Plate <tmlib.models.plate.Plate>`
         description: str, optional
             description of the acquisition
         '''
@@ -266,13 +266,14 @@ class ImageFileMapping(ExperimentModel):
             maps an individual pixels plane to location(s) within microscope
             image files
         site_id: int
-            ID of the parent site
+            ID of the parent :class:`Site <tmlib.models.site.Site>`
         acquisition_id: int
-            ID of the parent acquisition
+            ID of the parent
+            :class:`Acquisition <tmlib.models.acquisition.Acquisition>`
         cycle_id: int, optional
-            ID of the parent cycle (default: ``None``)
+            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
         channel_id: int, optional
-            ID of the parent channel (default: ``None``)
+            ID of the parent :class:`Channel <tmlib.models.channel.Channel>`
         '''
         self.tpoint = tpoint
         self.wavelength = wavelength

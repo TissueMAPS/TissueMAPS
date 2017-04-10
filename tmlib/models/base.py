@@ -15,8 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''Abstract base and mixin classes for database models.
 
-Note
-----
 Mixin classes must implement additional table columns using the
 `declared_attr <http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/api.html#sqlalchemy.ext.declarative.declared_attr>`_
 decorator.
