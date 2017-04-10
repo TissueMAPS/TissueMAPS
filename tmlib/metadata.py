@@ -447,15 +447,16 @@ class ImageFileMapping(object):
 
         Examples
         --------
-        >>>ifm = ImageFileMapping()
-        >>>ifm.series = [0, 0]
-        >>>ifm.planes = [0, 1]
-        >>>ifm.files = ["a", "b"]
-        >>>ifm.zlevels = [0, 1]
-        >>>ifm.to_dict()
+
+        >>> ifm = ImageFileMapping()
+        >>> ifm.series = [0, 0]
+        >>> ifm.planes = [0, 1]
+        >>> ifm.files = ["a", "b"]
+        >>> ifm.zlevels = [0, 1]
+        >>> ifm.to_dict()
         {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b'], 'zlevels': [0, 1]}
 
-        >>>ifm = ImageFileMapping(
+        >>> ifm = ImageFileMapping(
         ...    series=[0, 0],
         ...    planes=[0, 1],
         ...    files=["a", "b"],
