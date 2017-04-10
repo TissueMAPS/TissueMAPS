@@ -130,7 +130,7 @@ class ChannelLayerTile(ExperimentModel):
             experiment-specific database connection created via
         channel_layer_id: int
             ID of the parent
-            :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>`
+            :class:`ChannelLayer <tmlib.models.channel.ChannelLayer>`
         z: int
             zero-based *z*-coordinate
         y: int

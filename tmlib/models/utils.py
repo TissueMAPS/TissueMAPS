@@ -365,10 +365,8 @@ class SQLAlchemy_Session(object):
     Examples
     --------
     >>> import tmlib.models as tm
-
     >>> with tm.utils.MainSession() as session:
-    >>>     # session has type SQLAlchemy_Session
-    >>>     session.drop_and_recreate(tm.Submission)
+    >>>     print(session.drop_and_recreate(tm.Submission))
 
     '''
 
@@ -554,9 +552,8 @@ class MainSession(_Session):
     Examples
     --------
     >>> import tmlib.models as tm
-
     >>> with tm.utils.MainSession() as session:
-    >>>    print session.query(tm.ExperimentReference).all()
+    >>>    print(session.query(tm.ExperimentReference).all())
 
     See also
     --------
@@ -596,9 +593,8 @@ class ExperimentSession(_Session):
     Examples
     --------
     >>> import tmlib.models as tm
-
     >>> with tm.utils.ExperimentSession(experiment_id=1) as session:
-    >>>     print session.query(tm.Plate).all()
+    >>>     print(session.query(tm.Plate).all())
 
     See also
     --------
@@ -697,10 +693,9 @@ class ExperimentConnection(Connection):
     Examples
     --------
     >>> import tmlib.models as tm
-
     >>> with tm.utils.ExperimentConnection(experiment_id=1) as connection:
     >>>     connection.execute('SELECT mapobject_id, value FROM feature_values;')
-    >>>     print connection.fetchall()
+    >>>     print(connection.fetchall())
 
     Warning
     -------
@@ -763,10 +758,9 @@ class MainConnection(Connection):
     Examples
     --------
     >>> import tmlib.models as tm
-
     >>> with tm.utils.MainConnection() as connection:
     >>>     connection.execute('SELECT name FROM plates;')
-    >>>     connection.fetchall()
+    >>>     print(connection.fetchall())
 
     Warning
     -------

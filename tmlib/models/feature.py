@@ -69,7 +69,8 @@ class Feature(ExperimentModel):
         name: str
             name of the feature
         mapobject_type_id: int
-            ID of parent mapobject type
+            ID of parent
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
         is_aggregate: bool, optional
             whether the feature is an aggregate calculated based on another
             feature

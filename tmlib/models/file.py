@@ -80,7 +80,8 @@ class MicroscopeImageFile(FileModel, DateMixIn):
         name: str
             name of the microscope image file
         acquisition_id: int
-            ID of the parent acquisition
+            ID of the parent
+            :class:`Acquisition <tmlib.models.acquisition.Acquisition>`
         '''
         self.name = name
         self.acquisition_id = acquisition_id
@@ -159,7 +160,8 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
         name: str
             name of the file
         acquisition_id: int
-            ID of the parent acquisition
+            ID of the parent
+            :class:`Acquisition <tmlib.models.acquisition.Acquisition>`
         '''
         self.name = name
         self.acquisition_id = acquisition_id
@@ -273,11 +275,11 @@ class ChannelImageFile(FileModel, DateMixIn):
         zplane: int
             zero-based z-level index in the 3D stack
         site_id: int
-            ID of the parent site
+            ID of the parent :class:`Site <tmlib.models.site.Site>`
         cycle_id: int
-            ID of the parent cycle
+            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
         channel_id: int
-            ID of the parent channel
+            ID of the parent :class:`Channel <tmlib.models.channel.Channel>`
         '''
         self.tpoint = tpoint
         self.zplane = zplane

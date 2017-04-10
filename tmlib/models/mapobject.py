@@ -101,11 +101,11 @@ class MapobjectType(ExperimentModel):
     def delete_cascade(cls, connection, ref_type=None, id=None):
         '''Deletes all instances as well as "children"
         instances of :class:`Mapobject <tmlib.models.mapobject.Mapobject>`,
-        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`,
         :class:`Feature <tmlib.models.feature.Feature>`,
-        :class:`FeatureValues <tmlib.models.feature.FeatureValues>` and
+        :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
         :class:`ToolResult <tmlib.models.result.ToolResult>`,
-        :class:`LabelLayer <tmlib.models.layer.LabelLayer>`,
+        :class:`LabelLayer <tmlib.models.layer.LabelLayer>` and
         :class:`LabelValues <tmlib.models.feature.LabelValues>`.
 
         Parameters
@@ -279,7 +279,8 @@ class Mapobject(ExperimentModel):
         Parameters
         ----------
         mapobject_type_id: int
-            ID of the parent mapobject type
+            ID of parent
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
         ref_id: int, optional
             ID of the referenced record
 

@@ -91,7 +91,8 @@ class ExperimentReference(MainModel, DateMixIn):
         plate_acquisition_mode: str
             the way plates were acquired with the microscope
         user_id: int
-            ID of the owner
+            ID of the :class:`User <tmlib.models.user.User>` that owns the
+            experiment
         root_directory: str
             absolute path to root directory on disk where experiment should
             be created in
@@ -141,7 +142,8 @@ class ExperimentReference(MainModel, DateMixIn):
         Parameters
         ----------
         user_id: int
-            ID of user for which permissions should be checked
+            ID of :class:`User <tmlib.models.user.User>` for which permissions
+            should be checked
         permission: str, optional
             whether user must have ``"read"`` or ``"write"`` permission
             (default: ``"write"``)
@@ -205,9 +207,11 @@ class ExperimentShare(MainModel):
         Parameters
         ----------
         experiment_id: int
-            ID of the experiment that should be shared
+            ID of the :class:`Experiment <tmlib.models.experiment.Experiment>`
+            that should be shared
         user_id: int
-            ID of the user with whom the experiment should be shared
+            ID of the :class:`User <tmlib.models.user.User>` with whom the
+            experiment should be shared
         write_access: bool, optional
             whether the user will have write access to the shared experiment
             (default: ``False``)
