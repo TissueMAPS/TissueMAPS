@@ -167,7 +167,7 @@ class Well(ExperimentModel, DateMixIn):
 
         Examples
         --------
-        >>>Well.map_name_to_coordinate("A02")
+        >>> Well.map_name_to_coordinate("A02")
         (0, 1)
         '''
         row_name, col_name = re.match(r'([A-Z])(\d+)', name).group(1, 2)
@@ -191,7 +191,7 @@ class Well(ExperimentModel, DateMixIn):
 
         Examples
         --------
-        >>>Well.map_coordinate_to_name((0, 1))
+        >>> Well.map_coordinate_to_name((0, 1))
         "A02"
         '''
         row_index, col_index = coordinate[0], coordinate[1]
