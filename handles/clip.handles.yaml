@@ -1,10 +1,10 @@
 ---
-version: 0.0.1
+version: 0.1.0
 
 input:
 
     - name: image
-      type: Image
+      type: MaskImage
       key:
       help: Image that should be clipped.
 
@@ -21,7 +21,7 @@ input:
 output:
 
     - name: clipped_image
-      type: Image
+      type: MaskImage
       key: clip.clipped_image
       help: Clipped mask.
 

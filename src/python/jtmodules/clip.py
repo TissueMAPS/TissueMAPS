@@ -18,7 +18,7 @@ import numpy as np
 import mahotas as mh
 import collections
 
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 
 Output = collections.namedtuple('Output', ['clipped_image', 'figure'])
 
