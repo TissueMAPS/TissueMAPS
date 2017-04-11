@@ -23,7 +23,7 @@ import collections
 import jtlib.utils
 from jtlib.features import Morphology, create_feature_image
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 
 logger = logging.getLogger(__name__)
 PAD = 1
@@ -101,10 +101,10 @@ def main(mask, intensity_image, min_area, max_area,
 
     Parameters
     ----------
-    mask: numpy.ndarray[numpy.bool]
-        2D binary array encoding potential clumps
+    mask: numpy.ndarray[Union[numpy.int32, numpy.bool]]
+        2D binary or labele image encoding potential clumps
     intensity_image: numpy.ndarray[numpy.uint8 or numpy.uint16]
-        2D grayscale array with intensity values of the objects that should
+        2D grayscale image with intensity values of the objects that should
         be detected
     min_area: int
         minimal area an object must have to be considered a clump
@@ -132,6 +132,7 @@ def main(mask, intensity_image, min_area, max_area,
     -------
     jtmodules.separate_clumps.Output
     '''
+    mask = mask > 0
     separated_mask = mask.copy()
     cut_mask = np.zeros(separated_mask.shape, bool)
     clumps_mask = np.zeros(separated_mask.shape, bool)

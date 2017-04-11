@@ -1,12 +1,12 @@
 ---
-version: 0.1.0
+version: 0.1.1
 
 input:
 
   - name: mask
-    type: BinaryImage
+    type: MaskImage
     key:
-    help: Binary image in which clumps should be separated.
+    help: Image in which clumps should be separated.
 
   - name: intensity_image
     type: IntensityImage
