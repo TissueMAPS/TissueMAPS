@@ -706,3 +706,31 @@ class PointPattern(Features):
                 ]
                 features.append(values)
         return pd.DataFrame(features, columns=self.names, index=self.object_ids)
+
+
+
+def create_feature_image(feature_values, label_image):
+    '''Creates an image, where pixels belonging to an object 
+    (connected component) encode a given feature value.
+
+    Parameters
+    ----------
+    feature_values: numpy.ndarray[numpy.float64]
+        vector of feature values of length *n*, where *n* is the
+        number of labeled connected component in `label_image`
+    label_image: numpy.ndarray[numpy.int32]
+        labeled image with *n* unique label values
+
+    Returns
+    -------
+    numpy.ndarray[numpy.float64]
+        feature image
+    '''
+    object_ids = np.unique(label_image)[1:]
+    if len(object_ids) != len(feature_values):
+        raise ValueError(
+            'Number of feature values doesn\'t match number of objects in the '
+            'labeled image.'
+        )
+    preprented_feature_values = np.insert(feature_values, 0, 0)
+    return preprented_feature_values[label_image].astype(np.float64)
