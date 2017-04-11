@@ -21,8 +21,9 @@ import skimage.morphology
 import logging
 import collections
 import jtlib.utils
+from jtlib.features import Morphology, create_feature_image
 
-VERSION = '0.0.5'
+VERSION = '0.1.0'
 
 logger = logging.getLogger(__name__)
 PAD = 1
@@ -61,8 +62,8 @@ def find_concave_regions(mask, max_dist):
     return mh.label(concave_img)
 
 
-def calc_features(mask):
-    '''Calcuates *area*, *form factor* and *convexity* for the given object.
+def _calc_features(mask):
+    '''Calcuates *area*, *circularity* and *convexity* for the given object.
 
     Parameters
     ----------
@@ -71,8 +72,8 @@ def calc_features(mask):
 
     Returns
     -------
-    numpy.ndarray[numpy.float64]
-        area, form factor and convexity
+    Tuple[numpy.float64]
+        area, circularity and convexity
     '''
     mask = mask > 0
     area = np.float64(np.count_nonzero(mask))
@@ -88,35 +89,7 @@ def calc_features(mask):
     # roundness = mh.features.roundness(mask)
     # major_axis, minor_axis = mh.features.ellipse_axes(mask)
     # elongation = (major_axis - minor_axis) / major_axis
-    return np.array([area, circularity, convexity])
-
-
-def create_feature_images(label_image):
-    '''Creates label images, where each object is color coded according to
-    area/shape features.
-
-    Parameters
-    ----------
-    label_image: numpy.ndarray[numpy.int32]
-        labeled image
-
-    Returns
-    -------
-    Tuple[numpy.ndarray[numpy.float64]]
-        heatmap images for each feature
-    '''
-    label_image = mh.label(label_image > 0)[0]
-    bboxes = mh.labeled.bbox(label_image)
-    object_ids = np.unique(label_image)[1:]
-    images = [np.zeros(label_image.shape, np.float64) for x in range(3)]
-    # TODO: might be faster by mapping the image through a lookup table
-    for i in object_ids:
-        mask = jtlib.utils.extract_bbox_image(label_image, bboxes[i], pad=PAD)
-        mask = mask == i
-        shape_features = calc_features(mask)
-        for j, f in enumerate(shape_features):
-            images[j][label_image == i] = f
-    return tuple(images)
+    return (area, circularity, convexity)
 
 
 def main(mask, intensity_image, min_area, max_area,
@@ -150,11 +123,10 @@ def main(mask, intensity_image, min_area, max_area,
     plot: bool, optional
         whether a plot should be generated
     selection_test_mode: bool, optional
-        whether, instead the normal plot, heatmaps should be generated that
-        display values of the selection criteria *area*, *form factor* and
+        whether, instead of the normal plot, heatmaps should be generated that
+        display values of the selection criteria *area*, *circularity* and
         *convexity* for each individual object in `mask` as well as
-        the final selection of "clumps" based on the selection
-        criteria provided by the user
+        the selected "clumps" based on the criteria provided by the user
 
     Returns
     -------
@@ -182,7 +154,7 @@ def main(mask, intensity_image, min_area, max_area,
                 intensity_image, bboxes[oid], pad=PAD
             )
 
-            area, circularity, convexity = calc_features(obj_mask)
+            area, circularity, convexity = _calc_features(obj_mask)
             if area < min_area or area > max_area:
                 logger.debug('not a clump - outside area range')
                 continue
@@ -245,7 +217,7 @@ def main(mask, intensity_image, min_area, max_area,
             sizes = mh.labeled.labeled_size(subobjects)
             smaller_id = np.where(sizes == np.min(sizes))[0][0]
             smaller_object = subobjects == smaller_id
-            area, circularity, convexity = calc_features(smaller_object)
+            area, circularity, convexity = _calc_features(smaller_object)
 
             # TODO: We may want to prevent cuts that go through areas with
             # high distance intensity values.
@@ -254,18 +226,6 @@ def main(mask, intensity_image, min_area, max_area,
                     'object %d not cut - resulting object too small', oid
                 )
                 continue
-            # if circularity < max_circularity:
-            #     logger.debug(
-            #         'object %d not cut - resulting object not round enough',
-            #         oid
-            #     )
-            #     continue
-            # if convexity < max_convexity:
-            #     logger.debug(
-            #         'object %d not cut - resulting object not convex enough',
-            #         oid
-            #     )
-            #     continue
 
             # Update cut mask
             logger.debug('cut object %d', oid)
@@ -281,10 +241,18 @@ def main(mask, intensity_image, min_area, max_area,
         from jtlib import plotting
         if selection_test_mode:
             logger.info('create plot for selection test mode')
-            labeled_separated_mask, n_objects = mh.label(
-                mask, np.ones((3, 3), bool)
+            labeled_mask, n_objects = mh.label(mask, np.ones((3, 3), bool))
+            f = Morphology(labeled_mask)
+            values = f.extract()
+            area_img = create_feature_image(
+                values['Morphology_Area'].values, labeled_mask
             )
-            area_img, circularity_img, convexity_img = create_feature_images(mask)
+            convexity_img = create_feature_image(
+                values['Morphology_Convexity'].values, labeled_mask
+            )
+            circularity_img = create_feature_image(
+                values['Morphology_Circularity'].values, labeled_mask
+            )
             area_colorscale = plotting.create_colorscale(
                 'Greens', n_objects,
                 add_background=True, background_color='white'
@@ -312,7 +280,11 @@ def main(mask, intensity_image, min_area, max_area,
                 ),
             ]
             figure = plotting.create_figure(
-                plots, title='selection test mode'
+                plots,
+                title=(
+                    'Selection criteria: "area" (green), "convexity" (red) '
+                    'and "circularity" (blue)'
+                )
             )
         else:
             logger.info('create plot')
