@@ -1,12 +1,12 @@
 ---
-version: 0.1.0
+version: 0.1.1
 
 input:
 
     - name: mask
-      type: BinaryImage
+      type: MaskImage
       key:
-      help: Binary image in which objects should be filtered.
+      help: Image in which objects should be filtered.
 
     - name: feature
       type: Character
@@ -42,7 +42,7 @@ input:
 output:
 
     - name: filtered_mask
-      type: BinaryImage
+      type: MaskImage
       key: filter.filtered_mask
       help: Filtered mask image.
 

@@ -21,7 +21,7 @@ from jtlib import utils
 from jtlib.features import Morphology, create_feature_image
 
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +30,14 @@ Output = collections.namedtuple('Output', ['filtered_mask', 'figure'])
 SUPPORTED_FEATURES = {'area', 'eccentricity', 'circularity', 'convexity'}
 
 
-def main(mask, feature, lower_threshold=None, upper_threshold=None,
-        plot=False):
-    '''Filters objects (labeled connected components) based on the specified
+def main(mask, feature, lower_threshold=None, upper_threshold=None, plot=False):
+    '''Filters objects (connected components) based on the specified
     value range for a given `feature`.
 
     Parameters
     ----------
-    mask: numpy.ndarray[numpy.bool]
-        binary image that should be filtered
+    mask: numpy.ndarray[Union[numpy.bool, numpy.int32]]
+        image that should be filtered
     feature: str
         name of the feature based on which the image should be filtered
         (options: ``{"area", "eccentricity", "circularity", "convecity"}``)
