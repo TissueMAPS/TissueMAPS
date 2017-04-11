@@ -56,7 +56,7 @@ def main(image, clipping_mask, plot=False):
 
     if plot:
         from jtlib import plotting
-        if image.dtype.startswith('uint'):
+        if str(image.dtype).startswith('uint'):
             plots = [
                 plotting.create_intensity_image_plot(
                     image, 'ul', clip=True
