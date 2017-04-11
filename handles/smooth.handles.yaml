@@ -15,8 +15,6 @@ input:
         - average
         - gaussian
         - median
-        - gaussian-bilateral
-        - median-bilateral
       help: >
           Name of the filter kernel that should be applied to the image.
 
