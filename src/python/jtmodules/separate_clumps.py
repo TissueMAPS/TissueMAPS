@@ -167,8 +167,8 @@ def main(mask, intensity_image, min_area, max_area,
                 continue
 
             y, x = np.where(obj_mask)
-            y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
-            y += (y_offset - 1)
+            y_offset, x_offset = bboxes[oid][[0, 2]] - PAD - 1
+            y += y_offset
             x += x_offset
             clumps_mask[y, x] = True
 
@@ -233,8 +233,8 @@ def main(mask, intensity_image, min_area, max_area,
             # Update cut mask
             logger.debug('cut object %d', oid)
             y, x = np.where(mh.morph.dilate(line))
-            y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
-            y += (y_offset - 1)
+            y_offset, x_offset = bboxes[oid][[0, 2]] - PAD - 1
+            y += y_offset
             x += x_offset
             cut_mask[y, x] = True
 
