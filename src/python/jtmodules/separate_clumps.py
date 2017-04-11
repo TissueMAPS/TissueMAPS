@@ -168,7 +168,7 @@ def main(mask, intensity_image, min_area, max_area,
 
             y, x = np.where(obj_mask)
             y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
-            y += y_offset
+            y += (y_offset - 1)
             x += x_offset
             clumps_mask[y, x] = True
 
@@ -207,7 +207,9 @@ def main(mask, intensity_image, min_area, max_area,
 
             # Use the line separating the watershed regions to make the cut
             line = mh.labeled.borders(regions)
-            outer_lines = mh.labeled.borders(obj_mask)
+            # NOTE: Using mh.labeled.borders(obj_mask) doesn't work in cases
+            # where two neighbouring ojbects touch only at one pixel.
+            outer_lines = mh.bwperim(obj_mask, n=8)
             line[outer_lines] = 0
 
             # Ensure that cut is reasonable given user-defined criteria
@@ -232,7 +234,7 @@ def main(mask, intensity_image, min_area, max_area,
             logger.debug('cut object %d', oid)
             y, x = np.where(mh.morph.dilate(line))
             y_offset, x_offset = bboxes[oid][[0, 2]] - PAD
-            y += y_offset
+            y += (y_offset - 1)
             x += x_offset
             cut_mask[y, x] = True
 
