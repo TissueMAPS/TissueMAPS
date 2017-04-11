@@ -42,6 +42,7 @@ from tmlib.errors import JobDescriptionError
 from tmlib.workflow.jterator.project import Project
 from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.handles import SegmentedObjects
+from tmlib.workflow.jobs import SingleRunPhase
 from tmlib.workflow.jterator.jobs import DebugRunJob
 from tmlib.workflow import register_step_api
 from tmlib import cfg
