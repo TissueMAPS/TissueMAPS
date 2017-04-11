@@ -338,6 +338,8 @@ def create_mask_image_plot(mask, position, colorscale=None):
     if colorscale is None:
         if n_objects == 1:
             colorscale = [[0, 'rgb(0,0,0)'], [1, OBJECT_COLOR]]
+        elif n_objects == 0:
+            colorscale = [[0, 'rgb(0,0,0)']]
         else:
             colorscale = create_colorscale('summer', n_objects)
             colorscale[0] = [0, 'rgb(0,0,0)']
