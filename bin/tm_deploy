@@ -27,7 +27,7 @@ REQUIRED_TM_GROUPS = {
 SUPPORTED_TM_GROUPS = REQUIRED_TM_GROUPS.union({'tissuemaps_compute'})
 
 SUPPORTED_EC_GROUPS = {
-    'ganglia_server', 'ganglia_client',
+    'ganglia_master', 'ganglia_monitor',
     'glusterfs_server', 'glusterfs_client',
     'slurm_master', 'slurm_worker'
 }
@@ -159,10 +159,12 @@ def _run_container_commands(commands):
 
 def _run_vm_commands(commands):
     logger.info('run Ansible commands')
-    env = dict(os.environ)
-    env['ANSIBLE_CONFIG'] = os.path.join(
+    config_file = os.path.join(
         _get_playbooks_dir('tissuemaps'), 'ansible.cfg'
     )
+    logger.debug('using Ansible config file: %s', config_file)
+    env = dict(os.environ)
+    env['ANSIBLE_CONFIG'] = config_file
     for cmd in commands:
         logger.debug('command: %s', ' '.join(cmd))
         _run_command(cmd, env)

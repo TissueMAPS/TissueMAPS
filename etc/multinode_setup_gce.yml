@@ -18,7 +18,7 @@ architecture:
                 pg_max_worker_processes: 16
                 pg_shared_buffer: 20GB
                 pg_effective_cache_size: 40GB
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             volume_size: 7000
             disk_size: 30
@@ -34,7 +34,7 @@ architecture:
                 pg_max_worker_processes: 4
                 pg_shared_buffer: 5GB
                 pg_effective_cache_size: 10GB
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             volume_size: 7000
             disk_size: 30
@@ -48,7 +48,7 @@ architecture:
           count: 5
           groups:
             - name: glusterfs_server
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             volume_size: 7000
             disk_size: 30
@@ -67,7 +67,7 @@ architecture:
                 tm_log_directory: /glusterfs/log
             - name: slurm_master
             - name: glusterfs_client
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             disk_size: 100
             image: ubuntu-1404-trusty-v20161020
@@ -81,9 +81,9 @@ architecture:
             - name: tissuemaps_compute
               vars:
                 tm_data_directory: /glusterfs/data
-            - name: slurm_workers
+            - name: slurm_worker
             - name: glusterfs_client
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             disk_size: 100
             image: ubuntu-1404-trusty-v20161020
@@ -95,7 +95,8 @@ architecture:
         - name: server
           count: 1
           groups:
-            - name: ganglia_client
+            - name: ganglia_master
+            - name: ganglia_monitor
           instance:
             disk_size: 30
             image: ubuntu-1404-trusty-v20161020

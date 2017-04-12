@@ -22,7 +22,7 @@ architecture:
                 pg_max_worker_processes: 16
                 pg_shared_buffer: 20GB
                 pg_effective_cache_size: 40GB
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             volume_size: 7000
             image: Ubuntu Server 14.04.04 LTS (2016-05-19)
@@ -37,7 +37,7 @@ architecture:
                 pg_max_worker_processes: 4
                 pg_shared_buffer: 5GB
                 pg_effective_cache_size: 10GB
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             volume_size: 7000
             image: Ubuntu Server 14.04.04 LTS (2016-05-19)
@@ -51,7 +51,7 @@ architecture:
           count: 5
           groups:
             - name: glusterfs_server
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             volume_size: 10000
             volume_mountpoint: /srv
@@ -71,7 +71,7 @@ architecture:
                 tm_log_directory: /glusterfs/log
             - name: slurm_master
             - name: glusterfs_client
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             image: Matlab-R2016b - ubuntu 16.04.1 (2016-11-02)
             flavor: 16cpu-64ram-hpc
@@ -86,7 +86,7 @@ architecture:
                 tm_data_directory: /glusterfs/data
             - name: slurm_worker
             - name: glusterfs_client
-            - name: ganglia_client
+            - name: ganglia_monitor
           instance:
             image: Matlab-R2016b - ubuntu 16.04.1 (2016-11-02)
             flavor: 4cpu-16ram-hpc
@@ -98,8 +98,8 @@ architecture:
         - name: server
           count: 1
           groups:
-            - name: ganglia_server
-            - name: ganglia_client
+            - name: ganglia_master
+            - name: ganglia_monitor
           instance:
             image: Ubuntu Server 14.04.04 LTS (2016-05-19)
             flavor: 1cpu-4ram-hpc
