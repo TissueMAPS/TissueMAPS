@@ -55,20 +55,20 @@ def _get_host_ip_os(region, network, host_name, host_vars):
         )
     if len(addresses) > 1:
         # Which one to choose? OS-EXT-IPS:type?
-        logger.warn(
+        logger.debug(
             'more than one address found for host "%s" and network "%s"',
             host_name, network
         )
-        logger.info('try to use floating address (if existing)')
+        logger.debug('try to use floating address (if existing)')
         floating_addresses = [
             addr['addr'] for addr in addresses
             if addr['OS-EXT-IPS:type'] == 'floating'
         ]
         try:
             address = floating_addresses[0]
-            logger.info('floating address found')
+            logger.debug('floating address found')
         except IndexError:
-            logger.info('no floating address found')
+            logger.debug('no floating address found')
             address = addresses[0]['addr']
     elif len(addresses) == 0:
         raise CloudError('No address found for network "{0}"'.format(network))
@@ -101,7 +101,7 @@ def _get_host_ip_ec2(region, host_name, host_vars):
     for inst in instances:
         addresses.append(inst.public_ip_address)
     if len(addresses) > 1:
-        logger.warn('more than one instance found with name "%s"', host_name)
+        logger.debug('more than one instance found with name "%s"', host_name)
     elif len(addresses) == 0:
         raise NoInstanceFoundError(
             'No instance found with name "{0}"'.format(host_name)
@@ -143,13 +143,13 @@ def _get_host_ip_gce(region, network, host_name, host_vars):
     if len(networks) == 0:
         raise CloudError('No network with name "{0}".'.format(network))
     elif len(networks) > 1:
-        logger.warn(
+        logger.debug(
             'more than one address found for host "%s" and network "%s"',
             host_name, network
         )
     addresses = [addr['natIP'] for addr in networks[0]['accessConfigs']]
     if len(addresses) > 1:
-        logger.warn(
+        logger.debug(
             'more than one address found for host "%s" and network "%s"',
             host_name, network
         )
@@ -201,8 +201,7 @@ def update_static_inventory(inventory_info, setup):
             host_vars.update(inventory_info['_meta']['hostvars'][host])
             host_vars.update({
                 'ansible_user': 'ubuntu',
-                'ansible_ssh_private_key_file': private_key_file,
-                'timeout': 60
+                'ansible_ssh_private_key_file': private_key_file
             })
 
             # NOTE: --refresh is supposed to be triggered by ansible via
@@ -250,17 +249,13 @@ def update_static_inventory(inventory_info, setup):
                     logger.info(
                         'use "%s" as bastion host', host_vars['ansible_host']
                     )
-                    inventory_info['all']['vars']['ansible_ssh_pipelining'] = \
-                        True
-                    inventory_info['all']['vars']['ansible_ssh_common_args'] = (
-                        '-o UserKnownHostsFile=/dev/null '
-                        '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -i '
-                        '{key_file} -W %h:%p -q {user}@{host}"'.format(
-                            key_file=host_vars['ansible_ssh_private_key_file'],
-                            user=host_vars['ansible_user'],
-                            host=host_vars['ansible_host']
+                    inventory_info['all']['vars']['ansible_ssh_common_args'] = \
+                        '-o ProxyCommand="ssh {o} -i {f} -W %h:%p -q {u}@{h}"'.format(
+                            o='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no',
+                            f=private_key_file,
+                            u='ubuntu', h=host_vars['ansible_host']
                         )
-                    )
+                    })
                     all_group_vars_file = os.path.join(GROUP_VARS_DIR, 'all')
                     logger.debug('update variables for group "all"')
                     write_yaml_file(
