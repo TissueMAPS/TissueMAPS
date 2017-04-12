@@ -831,7 +831,7 @@ class SegmentationImage(Image):
                 # beyond the line of border pixels.
                 # To ensure a correct number of objects we represent
                 # it by a small polygon.
-                coords = np.array(np.where(self.value == label)).T
+                coords = np.array(np.where(plane == label)).T
                 y, x = np.mean(coords, axis=0).astype(int)
                 shell = np.array([
                     [x-1, x+1, x+1, x-1, x-1],
