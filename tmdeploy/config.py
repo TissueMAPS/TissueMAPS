@@ -471,7 +471,7 @@ class ClusterNodeTypeSection(_SetupSection):
 
 class AnsibleGroupSection(_SetupSection):
 
-    _OPTIONAL_ATTRS = {'playbook', 'vars'}
+    _OPTIONAL_ATTRS = {'vars'}
 
     '''Class for the section of the `TissueMAPS` setup description that provides
     information about an Ansible host group, corresponding to a set of
@@ -494,20 +494,6 @@ class AnsibleGroupSection(_SetupSection):
     def name(self, value):
         self._check_value_type(value, 'name', str)
         self._name = value
-
-    @property
-    def playbook(self):
-        '''str: path to a playbook file'''
-        return getattr(self, '_playbook', None)
-
-    @playbook.setter
-    def playbook(self, value):
-        self._check_value_type(value, 'playbook', str)
-        self._playbook = os.path.expandvars(os.path.expanduser(value))
-        if not os.path.exists(self._playbook):
-            raise SetupDescriptionError(
-                'Playbook does not exist: {0}'.format(self._playbook)
-            )
 
     @property
     def vars(self):
