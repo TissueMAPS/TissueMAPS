@@ -171,7 +171,7 @@ def _run_vm_commands(commands):
 
 
 def deploy_vm(args):
-    variables = {'ansible_become': 'yes'}
+    variables = dict()
     commands = list()
     commands.append(['tm_inventory', '--refresh'])
 
@@ -189,6 +189,7 @@ def deploy_vm(args):
         playbook = os.path.join(elasticluster_playbooks_dir, 'site.yml')
         logger.debug('build command for playbook: %s', playbook)
         cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
+        cmd.append('--become')
         commands.append(cmd)
 
     # Run the TissueMAPS-specific playbooks implemented in tmdeploy
@@ -196,6 +197,7 @@ def deploy_vm(args):
     playbook = os.path.join(tmdeploy_playbooks_dir, 'site.yml')
     logger.debug('build command for playbook: %s', playbook)
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
+    cmd.append('--become')
     commands.append(cmd)
 
     _run_vm_commands(commands)
