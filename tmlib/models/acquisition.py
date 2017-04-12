@@ -128,8 +128,14 @@ class Acquisition(DirectoryModel, DateMixIn):
     def status(self):
         '''str: upload status based on the status of microscope files'''
         session = Session.object_session(self)
-        img_files = session.query(MicroscopeImageFile.status).distinct()
-        meta_files = session.query(MicroscopeMetadataFile.status).distinct()
+        img_files = session.query(MicroscopeImageFile.status).\
+            filter_by(acquisition_id=self.id).\
+            group_by(MicroscopeImageFile.status).\
+            all()
+        meta_files = session.query(MicroscopeMetadataFile.status).\
+            filter_by(acquisition_id=self.id).\
+            group_by(MicroscopeMetadataFile.status).\
+            all()
         child_status = set([f.status for f in img_files]).\
             union([f.status for f in meta_files])
         if fus.UPLOADING in child_status:
