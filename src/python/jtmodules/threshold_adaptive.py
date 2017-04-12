@@ -25,12 +25,12 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.2'
+VERSION = '0.1.0'
 
 Output = collections.namedtuple('Output', ['mask', 'figure'])
 
 
-def main(image, kernel_size, plot=False):
+def main(image, kernel_size, offset=0, plot=False):
     '''Thresholds an image with a locally adaptive threshold, where locality
     is defined by `kernel_size`.
 
@@ -41,6 +41,9 @@ def main(image, kernel_size, plot=False):
     kernel_size: int
         size of the neighbourhood region that's used to calculate the threshold
         value at each pixel position (must be an odd number)
+    offset: int, optional
+        offset that is added to the mean calculated per neighbourhood region
+        (may be positive or negative)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -64,7 +67,7 @@ def main(image, kernel_size, plot=False):
     thresh_image = cv2.adaptiveThreshold(
         image_8bit, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
-        kernel_size, 0
+        kernel_size, offset
     )
     # OpenCV treats masks as unsigned integer and not as boolean
     thresh_image = thresh_image > 0
