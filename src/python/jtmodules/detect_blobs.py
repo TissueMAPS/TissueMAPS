@@ -18,7 +18,7 @@ import mahotas as mh
 import collections
 import logging
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,8 @@ sep.set_extract_pixstack(10**7)
 Output = collections.namedtuple('Output', ['mask', 'label_image', 'figure'])
 
 
-def main(image, threshold_factor=5, back_size=3, back_filtersize=2, plot=False):
+def main(image, threshold=5, min_area=5, back_size=5, back_filtersize=2,
+        plot=False):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
 
@@ -35,13 +36,16 @@ def main(image, threshold_factor=5, back_size=3, back_filtersize=2, plot=False):
     ----------
     image: numpy.ndarray[numpy.uint8 or numpy.uint16]
         grayscale image in which blobs should be detected
-    threshold_factor: int, optional
-        factor by which pixel values must be above background RMS noise
+    threshold: int, optional
+        factor by which pixel values must be above background
         to be considered part of a blob (default: ``5``)
+    min_area: int, optional
+        minimal size of a blob (default: ``5``)
     back_size: int, optional
-        size of the mesh to estimate backround (default: ``3``)
+        size of the mesh to estimate backround map (default: ``5``)
     back_filtersize: int, optional
-        size of the background filtering mask (default: ``2``)
+        size of the median filter kernel that should be applied to the image
+        before estimation of the background map (default: ``2``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -56,8 +60,12 @@ def main(image, threshold_factor=5, back_size=3, back_filtersize=2, plot=False):
 
     img = image.astype('float')
 
-    logger.info('estimate background')
-    # TODO: use mask?
+    logger.info(
+        'estimate background using mesh size {0} and filter size {1}'.format(
+            back_size, back_filtersize
+        )
+    )
+    # TODO: use mask to prevent?
     bkg = sep.Background(
         img,
         bw=back_size, bh=back_size,
@@ -66,12 +74,14 @@ def main(image, threshold_factor=5, back_size=3, back_filtersize=2, plot=False):
 
     logger.info('subtract background')
     img_sub = img - bkg
+    img_sub[img_sub < 0] = 0
 
-    logger.info('detect blobs')
-
+    logger.info('detect blobs using threshold {0}'.format(threshold))
     out, blobs_img = sep.extract(
-        img_sub, threshold_factor, err=bkg.globalrms, # err=bkg.rms(),
-        minarea=3, segmentation_map=True
+        img_sub, threshold, err=bkg.globalrms,
+        minarea=min_area, segmentation_map=True,
+        deblend_nthresh=100, deblend_cont=0.0001,
+        filter_kernel=None  # TODO
     )
 
     centroids_img = np.zeros(img.shape, dtype=bool)

@@ -1,5 +1,5 @@
 ---
-version: 0.2.0
+version: 0.3.0
 
 input:
 
@@ -8,12 +8,17 @@ input:
       key:
       help: Image in which blobs should be detected.
 
-    - name: threshold_factor
+    - name: threshold
       type: Scalar
       value: 5
       help: >
-          Factor by which pixel values in "image" must be above background RMS
-          noise to be considered part of a blob.
+          Factor by which pixel values in "image" must be above background
+          to be considered part of a blob.
+
+    - name: min_area
+      type: Scalar
+      value: 5
+      help: Mininum size of an blob in pixels.
 
     - name: back_size
       type: Scalar
