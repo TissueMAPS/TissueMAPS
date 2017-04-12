@@ -71,9 +71,10 @@ def configure_logging():
     Two stream handlers will be added to the logger:
 
         * "out" that will direct INFO & DEBUG messages to the standard output
-        stream
+          stream
         * "err" that will direct WARN, WARNING, ERROR, & CRITICAL messages to
-        the standard error stream
+          the standard error stream
+
 
     Warning
     -------
