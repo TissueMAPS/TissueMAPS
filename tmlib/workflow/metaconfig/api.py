@@ -75,11 +75,12 @@ class MetadataConfigurator(WorkflowStepAPI):
             experiment = session.query(tm.Experiment).one()
             for acq in session.query(tm.Acquisition):
                 job_count += 1
+                image_files = session.query(tm.MicroscopeImageFile.id).\
+                    filter_by(acquisition_id=acq.id).\
+                    all()
                 yield {
                     'id': job_count,
-                    'microscope_image_file_ids': [
-                        f.id for f in acq.microscope_image_files
-                    ],
+                    'microscope_image_file_ids': [f.id for f in image_files],
                     'microscope_type': experiment.microscope_type,
                     'regex': args.regex,
                     'acquisition_id': acq.id,
@@ -135,12 +136,17 @@ class MetadataConfigurator(WorkflowStepAPI):
             plate_dimensions = experiment.plates[0].dimensions
             acquisition = session.query(tm.Acquisition).\
                 get(batch['acquisition_id'])
-            metadata_filenames = [
-                f.location for f in acquisition.microscope_metadata_files
-            ]
+            metadata_files = session.query(tm.MicroscopeMetadataFile.location).\
+                filter_by(acquisition_id=batch['acquisition_id']).\
+                all()
+            metadata_filenames = [f.location for f in metadata_files]
+            image_files = session.query(
+                    tm.MicroscopeImageFile.name, tm.MicroscopeImageFile.omexml
+                ).\
+                filter_by(acquisition_id=batch['acquisition_id']).\
+                all()
             omexml_images = {
-                f.name: bioformats.OMEXML(f.omexml)
-                for f in acquisition.microscope_image_files
+                f.name: bioformats.OMEXML(f.omexml) for f in image_files
             }
 
         MetadataReader = metadata_reader_factory(batch['microscope_type'])

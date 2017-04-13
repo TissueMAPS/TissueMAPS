@@ -184,15 +184,15 @@ class VisiviewMetadataReader(MetadataReader):
     we can use regular expressions to map image files to wells.
     '''
 
-    def read(self, microscope_metadata_files, microscope_image_files):
+    def read(self, microscope_metadata_files, microscope_image_filenames):
         '''Read metadata from "nd" metadata file.
 
         Parameters
         ----------
         microscope_metadata_files: List[str]
             absolute path to the microscope metadata files
-        microscope_image_files: List[str]
-            absolute path to the microscope image files
+        microscope_image_filenames: List[str]
+            names of the corresponding microscope image files
 
         Returns
         -------
@@ -204,7 +204,7 @@ class VisiviewMetadataReader(MetadataReader):
         ValueError
             when `microscope_metadata_files` doesn't have length one
         '''
-        microscope_image_files = natsorted(microscope_image_files)
+        microscope_image_filenames = natsorted(microscope_image_filenames)
         if len(microscope_metadata_files) != 1:
             raise ValueError('Expected one microscope metadata file.')
         nd_filename = microscope_metadata_files[0]
@@ -257,9 +257,9 @@ class VisiviewMetadataReader(MetadataReader):
             for i in xrange(len(sites))
         ]
         lut = defaultdict(list)
-        for i, f in enumerate(natsorted(microscope_image_files)):
+        for i, filename in enumerate(natsorted(microscope_image_filenames)):
             fields = MetadataHandler.extract_fields_from_filename(
-                IMAGE_FILE_REGEX_PATTERN, f, defaults=False
+                IMAGE_FILE_REGEX_PATTERN, filename, defaults=False
             )
             # NOTE: We assume that the "site" id is global per plate
             field_index = sites.index(int(fields.s))

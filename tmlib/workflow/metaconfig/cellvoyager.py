@@ -83,7 +83,7 @@ class CellvoyagerMetadataReader(MetadataReader):
     the Bio-Formats convention.
     '''
 
-    def read(self, microscope_metadata_files, microscope_image_files):
+    def read(self, microscope_metadata_files, microscope_image_filenames):
         '''Reads metadata from "mlf" and "mrf" metadata files in case they
         are provided.
 
@@ -91,8 +91,8 @@ class CellvoyagerMetadataReader(MetadataReader):
         ----------
         microscope_metadata_files: List[str]
             absolute path to microscope metadata files
-        microscope_image_files: List[str]
-            absolute path to microscope image files
+        microscope_image_filenames: List[str]
+            names of the corresponding microscope image files
 
         Returns
         -------
@@ -100,7 +100,7 @@ class CellvoyagerMetadataReader(MetadataReader):
             OMEXML image metadata
 
         '''
-        microscope_image_files = natsorted(microscope_image_files)
+        microscope_image_filenames = natsorted(microscope_image_filenames)
         metadata = bioformats.OMEXML(XML_DECLARATION)
         if len(microscope_metadata_files) == 0:
             logger.warn('no microscope metadata files found')
@@ -145,7 +145,7 @@ class CellvoyagerMetadataReader(MetadataReader):
             # This microscope stores each plane in a separate file. Therefore,
             # we can use the filename to match images.
             name = e.text
-            index = microscope_image_files.index(name)
+            index = microscope_image_filenames.index(name)
             img = metadata.image(index)
             img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
             # Image files always contain only a single plane
@@ -163,7 +163,7 @@ class CellvoyagerMetadataReader(MetadataReader):
             img.Pixels.Plane(0).TheZ = int(e.attrib['{%s}ZIndex' % mlf_ns])
             img.Pixels.Plane(0).TheT = int(e.attrib['{%s}TimelineIndex' % mlf_ns])
 
-            idx = microscope_image_files.index(img.Name)
+            idx = microscope_image_filenames.index(img.Name)
             lookup[well_id].append(idx)
 
         # Obtain the general experiment information and well plate format

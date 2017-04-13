@@ -60,31 +60,3 @@ class MetamorphMetadataHandler(MetadataHandler):
             omexml_images, omexml_metadata
         )
 
-
-class MetamorphMetadataReader(MetadataReader):
-
-    '''Class for reading metadata from files formats specific to microscopes
-    equipped with MetaMorph software.
-
-    Note
-    ----
-    The microscope doens't provide any metadata files, when images are saved
-    in `.tif` files.
-    '''
-
-    def read(self, microscope_metadata_files, microscope_image_files):
-        '''Read metadata from "nd" metadata file.
-
-        Parameters
-        ----------
-        microscope_metadata_files: List[str]
-            absolute path to the microscope metadata files
-        microscope_image_files: List[str]
-            absolute path to the microscope image files
-
-        Returns
-        -------
-        bioformats.omexml.OMEXML
-            OMEXML image metadata
-        '''
-        return bioformats.OMEXML(XML_DECLARATION)
