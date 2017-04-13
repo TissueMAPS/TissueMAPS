@@ -519,4 +519,5 @@ class IndependentJobCollection(SequentialTaskCollection, JobCollection):
                     'First job must have type '
                     'tmlib.workflow.jobs.RunPhase.'
                 )
+        self.persistent_id = _idfactory.new(self)
         super(self.__class__, self).__init__(jobname=step_name, tasks=jobs)

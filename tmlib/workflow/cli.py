@@ -474,7 +474,9 @@ class WorkflowStepCLI(WorkflowSubmissionManager):
         api = self.api_instance
 
         jobs = IndependentJobCollection(api.step_name, submission_id)
-        run_job_collection = api.create_run_phase(submission_id)
+        run_job_collection = api.create_run_phase(
+            submission_id, jobs.persistent_id
+        )
         run_jobs = api.create_run_jobs(
             user_name, run_job_collection, self.verbosity,
             duration=self._submission_args.duration,
@@ -483,7 +485,9 @@ class WorkflowStepCLI(WorkflowSubmissionManager):
         )
         jobs.add(run_jobs)
         if api.has_collect_phase:
-            collect_job_collection = api.create_collect_phase(submission_id)
+            collect_job_collection = api.create_collect_phase(
+                submission_id, jobs.persistent_id
+            )
             collect_job = api.create_collect_job(
                 user_name, collect_job_collection, self.verbosity
             )
