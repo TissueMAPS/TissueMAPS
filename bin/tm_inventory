@@ -255,7 +255,6 @@ def update_static_inventory(inventory_info, setup):
                             f=private_key_file,
                             u='ubuntu', h=host_vars['ansible_host']
                         )
-                    })
                     all_group_vars_file = os.path.join(GROUP_VARS_DIR, 'all')
                     logger.debug('update variables for group "all"')
                     write_yaml_file(
