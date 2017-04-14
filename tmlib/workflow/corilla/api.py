@@ -15,8 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from sqlalchemy import tablesample
-from sqlalchemy.orm import aliased
+from sqlalchemy import func
 
 import tmlib.models as tm
 from tmlib.utils import notimplemented
@@ -72,15 +71,15 @@ class IllumstatsCalculator(WorkflowStepAPI):
                     filter_by(channel_id=ch.id).\
                     count()
                 if n > limit:
-                    percent = limit / float(n) * 100
                     logger.info(
                         'using a subset of image files (n=%d) to calculate '
                         'illumination statistics', limit
                     )
-                    model = aliased(
-                        tm.ChannelImageFile,
-                        tablesample(tm.ChannelImageFile, percent)
-                    )
+                    file_ids = session.query(tm.ChannelImageFile.id).\
+                        filter_by(channel_id=ch.id).\
+                        order_by(func.random()).\
+                        limit(limit).\
+                        all()
                 else:
                     if n < 100:
                         logger.warn(
@@ -88,10 +87,9 @@ class IllumstatsCalculator(WorkflowStepAPI):
                             '"%s" on only %d images - this may introduce '
                             'artifacts upon illumination correction', n
                         )
-                    model = tm.ChannelImageFile
-                file_ids = session.query(model.id).\
-                    filter_by(channel_id=ch.id).\
-                    all()
+                    file_ids = session.query(tm.ChannelImageFile.id).\
+                        filter_by(channel_id=ch.id).\
+                        all()
                 if not file_ids:
                     logger.warning(
                         'no image files found for channel "%s"', ch.name
