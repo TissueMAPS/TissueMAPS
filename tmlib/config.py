@@ -209,7 +209,7 @@ class LibraryConfig(TmapsConfig):
         self.modules_home = '~/jtmodules'
         self.storage_home = '/storage/experiments'
         self.cpu_cores = 1
-        self.cpu_memory = 2000
+        self.cpu_memory = 3000
         self.read()
 
     @property
@@ -251,7 +251,7 @@ class LibraryConfig(TmapsConfig):
     @property
     def cpu_memory(self):
         '''int: amount of memory in Megabyte per CPU core that should be
-        allocated for a single job (default: ``2000``)
+        allocated for a single job (default: ``3000``)
 
         '''
         return self._config.getint(self._section, 'cpu_memory')
