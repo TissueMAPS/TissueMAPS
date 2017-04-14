@@ -216,6 +216,48 @@
   run_once: yes
   when: instance_state == "present"
 
+- name: Create ingress UDP (8649) rule for storage security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: compute-storage
+    protocol: udp
+    direction: ingress
+    port_range_min: 8649
+    port_range_max: 8649
+    remote_group: web
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress UDP (8649) rule for web security group (remote compute-storage)
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: udp
+    direction: ingress
+    port_range_min: 8649
+    port_range_max: 8649
+    remote_group: compute-storage
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress UDP (8649) rule for web security group (remote web)
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: udp
+    direction: ingress
+    port_range_min: 8649
+    port_range_max: 8649
+    remote_group: web
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
 - name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
   local_action: os_server
   args:
@@ -237,21 +279,11 @@
     region_name: "{{ region }}"
   register: instance_facts
 
-- name: Get host IP public address
-  set_fact:
-    instance_ip_address: "{{ instance_facts.openstack.public_v4 }}"
-  when: assign_public_ip|bool and instance_state == 'present'
-  
-- name: Get host IP private address
-  set_fact:
-    instance_ip_address: "{{ instance_facts.openstack.private_v4 if instance_facts.openstack.private_v4 else instance_facts.openstack.accessIPv4 }}"
-  when: not assign_public_ip|bool and instance_state == 'present'
-  
 - name: Add new host to inventory
   add_host:
     groups: tmp
     hostname: "{{ instance_name }}"
-    ansible_host: "{{ instance_ip_address }}"
+    ansible_host: "{{ instance_facts.openstack.public_v4 if assign_public_ip|bool else (instance_facts.openstack.private_v4 if instance_facts.openstack.private_v4 else instance_facts.openstack.accessIPv4) }}"
     ansible_user: "{{ ansible_user }}"
     ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
   when: instance_state == 'present'

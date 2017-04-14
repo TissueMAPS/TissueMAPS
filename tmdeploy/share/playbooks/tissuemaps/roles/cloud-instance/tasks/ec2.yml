@@ -97,6 +97,14 @@
         from_port: -1
         to_port:  -1
         cidr_ip: 0.0.0.0/0
+      - proto: udp
+        from_port: 8649
+        to_port: 8649
+        group_name: compute-storage
+      - proto: udp
+        from_port: 8649
+        to_port: 8649
+        group_name: web
   run_once: yes
 
 - name: Create compute-storage security group
@@ -124,6 +132,10 @@
         from_port: -1
         to_port:  -1
         group_name: compute-storage
+      - proto: udp
+        from_port: 8649
+        to_port: 8649
+        group_name: web
   run_once: yes
 
 - name: Upload public SSH key
