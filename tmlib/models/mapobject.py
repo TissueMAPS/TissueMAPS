@@ -467,7 +467,7 @@ class Mapobject(ExperimentModel):
                 sql += '''
                 JOIN mapobject_segmentations s ON s.mapobject_id = m.id
                 WHERE m.mapobject_type_id = %(mapobject_type_id)s
-                AND ST_Intersects(s.geom_polygon, %(ref_polygon)s)
+                AND ST_Intersects(s.geom_centroid, %(ref_polygon)s)
                 '''
                 connection.execute(sql, {
                     'ref_polygon': ref_polygon,
@@ -490,7 +490,7 @@ class Mapobject(ExperimentModel):
                 connection.execute('''
                     SELECT m.id FROM mapobjects m
                     JOIN mapobject_segmentations s ON s.mapobject_id = m.id
-                    WHERE ST_Intersects(s.geom_polygon, %(ref_polygon)s)
+                    WHERE ST_Intersects(s.geom_centroid, %(ref_polygon)s)
                 ''', {
                     'ref_polygon': ref_polygon
                 })
