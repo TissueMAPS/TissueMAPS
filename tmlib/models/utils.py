@@ -477,24 +477,31 @@ class SQLAlchemy_Session(object):
         to inconsistencies between database and file system representation of
         `model` instances when the process is interrupted.
         '''
-        table = model.__table__
-        engine = self._session.get_bind()
+        connection = self._session.get_bind()
         locations_to_remove = []
         # We need to update the schema on each data model, such that tables
         # will be created for the correct experiment-specific schema and not
         # created for the "public" schema.
-        logger.debug('update schema on data model classes')
-        for t in ExperimentModel.metadata.tables.values():
-            t.schema = self._schema
-        if table.exists(engine):
+        experiment_specific_metadata = sqlalchemy.MetaData(schema=self._schema)
+        for name, table in ExperimentModel.metadata.tables.iteritems():
+            table_copy = table.tometadata(experiment_specific_metadata)
+        table_name = '{schema}.{table}'.format(
+            schema=self._schema, table=model.__table__.name
+        )
+        table = experiment_specific_metadata.tables[table_name]
+
+        if table.exists(connection):
             if issubclass(model, FileSystemModel):
                 model_instances = self._session.query(model).all()
                 locations_to_remove = [m.location for m in model_instances]
             logger.info('drop table "%s"', table.name)
             self._session.commit()  # circumvent locking
-            table.drop(engine)
+            table.drop(connection)
+
         logger.info('create table "%s"', table.name)
-        table.create(engine)
+        _set_db_shard_replication_factor(connection, 1)
+        _set_db_shard_count(connection, 20 * cfg.db_nodes)
+        table.create(connection)
         logger.info('remove "%s" locations on disk', model.__name__)
         for loc in locations_to_remove:
             logger.debug('remove "%s"', loc)
