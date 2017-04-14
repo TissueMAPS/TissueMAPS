@@ -742,7 +742,7 @@ class ExperimentConnection(Connection):
         if not exists:
             _set_db_shard_replication_factor(self._connection, 1)
             _set_db_shard_count(self._connection, 20 * cfg.db_nodes)
-            _create_experiment_db_tables(self._connection)
+            _create_experiment_db_tables(self._connection, self._schema)
         _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
