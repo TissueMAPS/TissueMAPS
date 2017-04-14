@@ -778,7 +778,7 @@ class SegmentationImage(Image):
     def extract_polygons(self, y_offset, x_offset):
         '''Creates a polygon representation for each segmented object.
         The coordinates of the polygon contours are relative to the global map,
-        i.e. an offset is added to the image site specific coordinates.
+        i.e. an offset is added to the :class:`Site <tmlib.models.site.Site>`.
 
         Parameters
         ----------
@@ -808,16 +808,16 @@ class SegmentationImage(Image):
             bbox = bboxes[label]
             obj_im = self._get_bbox_image(plane, bbox)
             logger.debug('find contour for object #%d', label)
-            # We could do this for all objects at once, but doing it
-            # for each object individually ensures that we get the
-            # correct number of objects and that coordinates are in the
-            # correct order, i.e. sorted according to their label.
+            # We could do this for all objects at once, but doing it on the
+            # bounding box for each object individually ensures that we get the
+            # correct number of objects and that polygons are in the
+            # correct order, i.e. sorted according to their corresponding label.
             mask = obj_im == label
             # We need to remove single pixel extensions on the border of objects
             # because they can lead to polygon self-intersections.
             mask = mh.open(mask)
-            # NOTE: OpenCV return x, y coordinates. That means that
-            # for numpy indexing one would need to flip the axes.
+            # NOTE: OpenCV returns x, y coordinates. This means one would need
+            # to flip the axis for numpy-based indexing (y,x coordinates).
             _, contours, hierarchy = cv2.findContours(
                 (mask).astype(np.uint8) * 255,
                 cv2.RETR_CCOMP,  # two-level hierarchy (holes)
@@ -830,7 +830,7 @@ class SegmentationImage(Image):
                 # This is most likely an object that does not extend
                 # beyond the line of border pixels.
                 # To ensure a correct number of objects we represent
-                # it by a small polygon.
+                # it by the smallest possible valid polygon.
                 coords = np.array(np.where(plane == label)).T
                 y, x = np.mean(coords, axis=0).astype(int)
                 shell = np.array([
@@ -852,8 +852,6 @@ class SegmentationImage(Image):
                     parent_idx = hierarchy[0][i][3]
                     # There should only be two levels with one
                     # contour each.
-                    # TODO: prevent creation of holes for objects
-                    # that are not supposed to have holes.
                     if parent_idx >= 0:
                         shell = np.squeeze(contours[parent_idx])
                     elif child_idx >= 0:
