@@ -9,7 +9,7 @@ input:
       help: Image in which blobs should be detected.
 
     - name: mask
-      type: BinaryImage
+      type: MaskImage
       key:
       help: Mask for pixel regions in which blobs should be detected.
 
