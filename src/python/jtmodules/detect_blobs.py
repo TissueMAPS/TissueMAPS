@@ -18,34 +18,31 @@ import mahotas as mh
 import collections
 import logging
 
-VERSION = '0.3.0'
+VERSION = '0.4.0'
 
 logger = logging.getLogger(__name__)
 
 sep.set_extract_pixstack(10**7)
 
-Output = collections.namedtuple('Output', ['mask', 'label_image', 'figure'])
+Output = collections.namedtuple('Output', ['centroids', 'blobs', 'figure'])
 
 
-def main(image, threshold=5, min_area=5, back_size=5, back_filtersize=2,
-        plot=False):
+def main(image, mask, threshold=5, min_area=5, plot=False):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
 
     Parameters
     ----------
-    image: numpy.ndarray[numpy.uint8 or numpy.uint16]
+    image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
         grayscale image in which blobs should be detected
+    mask: numpy.ndarray[Union[numpy.int32, numpy.bool]]
+        binary or labeled image that masks pixel regions in which blobs
+        should be detected
     threshold: int, optional
         factor by which pixel values must be above background
         to be considered part of a blob (default: ``5``)
     min_area: int, optional
         minimal size of a blob (default: ``5``)
-    back_size: int, optional
-        size of the mesh to estimate backround map (default: ``5``)
-    back_filtersize: int, optional
-        size of the median filter kernel that should be applied to the image
-        before estimation of the background map (default: ``2``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -58,41 +55,23 @@ def main(image, threshold=5, min_area=5, back_size=5, back_filtersize=2,
     _[1] Bertin, E. & Arnouts, S. 1996: SExtractor: Software for source extraction, Astronomy & Astrophysics Supplement 317, 393
     '''
 
-    img = image.astype('float')
-
-    logger.info(
-        'estimate background using mesh size {0} and filter size {1}'.format(
-            back_size, back_filtersize
-        )
-    )
-    # TODO: use mask to prevent?
-    bkg = sep.Background(
-        img,
-        bw=back_size, bh=back_size,
-        fw=back_filtersize, fh=back_filtersize
-    )
-
-    logger.info('subtract background')
-    img_sub = img - bkg
-    img_sub[img_sub < 0] = 0
-
-    logger.info('detect blobs using threshold {0}'.format(threshold))
-    out, blobs_img = sep.extract(
-        img_sub, threshold, err=bkg.globalrms,
+    logger.info('detect blobs above threshold {0}'.format(threshold))
+    out, blobs = sep.extract(
+        image.astype('float'), threshold, mask=np.invert(mask>0),
         minarea=min_area, segmentation_map=True,
-        deblend_nthresh=100, deblend_cont=0.0001,
-        filter_kernel=None  # TODO
+        deblend_nthresh=500, deblend_cont=0,
+        filter_kernel=None, clean=False
     )
 
-    centroids_img = np.zeros(img.shape, dtype=bool)
-    y = out['y'].astype(int)
-    x = out['x'].astype(int)
-    centroids_img[y, x] = True
+    centroids = np.zeros(image.shape, dtype=bool)
+    y = out['y'].astype(int) - 1
+    x = out['x'].astype(int) - 1
+    centroids[y, x] = True
 
     if plot:
         logger.info('create plot')
         from jtlib import plotting
-        n_objects = len(np.unique(blobs_img[1:]))
+        n_objects = len(np.unique(blobs[1:]))
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
@@ -101,7 +80,7 @@ def main(image, threshold=5, min_area=5, back_size=5, back_filtersize=2,
                 image, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
-                blobs_img, 'ur', colorscale=colorscale
+                blobs, 'ur', colorscale=colorscale
             )
         ]
         figure = plotting.create_figure(
@@ -110,4 +89,4 @@ def main(image, threshold=5, min_area=5, back_size=5, back_filtersize=2,
     else:
         figure = str()
 
-    return Output(centroids_img, blobs_img, figure)
+    return Output(centroids, blobs, figure)

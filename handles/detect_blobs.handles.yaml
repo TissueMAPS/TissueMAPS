@@ -8,6 +8,11 @@ input:
       key:
       help: Image in which blobs should be detected.
 
+    - name: mask
+      type: BinaryImage
+      key:
+      help: Mask for pixel regions in which blobs should be detected.
+
     - name: threshold
       type: Scalar
       value: 5
@@ -20,16 +25,6 @@ input:
       value: 5
       help: Mininum size of an blob in pixels.
 
-    - name: back_size
-      type: Scalar
-      value: 3
-      help: Size of the mesh to estimate background.
-
-    - name: back_filtersize
-      type: Scalar
-      value: 2
-      help: Size of the background filtering mask.
-
     - name: plot
       type: Plot
       value: false
@@ -37,15 +32,15 @@ input:
 
 output:
 
-    - name: mask
+    - name: centroids
       type: BinaryImage
-      key: detect_blobs.mask
-      help: Mask with centroids of blobs detected in "image".
+      key: detect_blobs.centroids
+      help: Centroid positions of blobs.
 
-    - name: label_image
+    - name: blobs
       type: LabelImage
-      key: detect_blobs.label_image
-      help: Blobs detected in "image".
+      key: detect_blobs.blobs
+      help: Detected blobs.
 
     - name: figure
       type: Figure
