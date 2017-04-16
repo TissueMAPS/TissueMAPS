@@ -94,7 +94,7 @@ setuptools.setup(
         'cython>=0.24',
         'scikit-image>=0.11.3',
         'mahotas>=1.4.0',
-        'opencv-python>=3.2',
+        'opencv-contrib-python>=3.2',
         'pytest>=2.8.2',
         'scipy>=0.16.0',
         'sep>=1.0.0',
