@@ -194,7 +194,7 @@ def main(mask, intensity_image, min_area, max_area,
                         break
                     peaks = tmp
 
-            # Select the two biggest peaks, since want to have only two objects.
+            # Select the two biggest peaks, since we want only two objects.
             peaks = mh.label(peaks)[0]
             sizes = mh.labeled.labeled_size(peaks)
             index = np.argsort(sizes)[::-1][1:3]
@@ -206,11 +206,12 @@ def main(mask, intensity_image, min_area, max_area,
             regions[~obj_mask] = 0
 
             # Use the line separating the watershed regions to make the cut
-            line = mh.labeled.borders(regions)
-            # NOTE: Using mh.labeled.borders(obj_mask) doesn't work in cases
-            # where two neighbouring ojbects touch only at one pixel.
-            outer_lines = mh.bwperim(obj_mask, n=8)
-            line[outer_lines] = 0
+            if len(index) > 1:
+                se = np.ones((3,3), np.bool)
+                line = mh.labeled.border(regions, index[0], index[1], Bc=se)
+                line = mh.morph.dilate(line)
+            else:
+                line = np.zeros(regions.shape, np.bool)
 
             # Ensure that cut is reasonable given user-defined criteria
             test_cut_mask = obj_mask.copy()
@@ -232,13 +233,16 @@ def main(mask, intensity_image, min_area, max_area,
 
             # Update cut mask
             logger.debug('cut object %d', oid)
-            y, x = np.where(mh.morph.dilate(line))
+            y, x = np.where(line)
             y_offset, x_offset = bboxes[oid][[0, 2]] - PAD - 1
             y += y_offset
             x += x_offset
             cut_mask[y, x] = True
 
         separated_mask[cut_mask] = 0
+
+        # This becomse necessary, because lines don't properly cut in some cases.
+        separated_mask[mh.bwperim(separated_mask, n=8)] = 0
 
     if plot:
         from jtlib import plotting

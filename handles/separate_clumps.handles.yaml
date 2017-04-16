@@ -22,14 +22,14 @@ input:
     type: Numeric
     value: 2000
     help: >
-      Minimal area of a cut fragment, cuts that would
+      Minimal area of a fragment, cuts that would
       result in a smaller fragment will not be performed.
 
   - name: max_convexity
     type: Numeric
     value: 0.92
     help: >
-      Maximal convexity of an object (connected pixel component)
+      Maximal convexity of a connected pixel component
       to be considered a clump.
 
   - name: max_circularity
@@ -61,7 +61,7 @@ input:
     value: false
     help: >
       Should an alternative figure be created, which shows values for each
-      of the selection criteria (area, convexity, form factor)?
+      of the selection criteria (area, convexity, circularity)?
 
 output:
 
