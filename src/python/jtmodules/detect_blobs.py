@@ -52,7 +52,7 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
 
     References
     ----------
-    _[1] Bertin, E. & Arnouts, S. 1996: SExtractor: Software for source extraction, Astronomy & Astrophysics Supplement 317, 393
+    .. [1] Bertin, E. & Arnouts, S. 1996: SExtractor: Software for source extraction, Astronomy & Astrophysics Supplement 317, 393
     '''
 
     logger.info('detect blobs above threshold {0}'.format(threshold))
@@ -63,20 +63,22 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
         filter_kernel=None, clean=False
     )
 
+    n = len(detection)
+    logger.info('%d blobs detected', len(detection))
+
     centroids = np.zeros(image.shape, dtype=np.int32)
     y = detection['y'].astype(int)
     x = detection['x'].astype(int)
     # WTF? In rare cases object coorindates lie outside of the image.
     y[y > image.shape[0]] = image.shape[0]
     x[x > image.shape[1]] = image.shape[1]
-    centroids[y, x] = np.arange(1, len(detection) + 1)
+    centroids[y, x] = np.arange(1, n + 1)
 
     if plot:
         logger.info('create plot')
         from jtlib import plotting
-        n_objects = len(np.unique(blobs[1:]))
         colorscale = plotting.create_colorscale(
-            'Spectral', n=n_objects, permute=True, add_background=True
+            'Spectral', n=n, permute=True, add_background=True
         )
         plots = [
             plotting.create_intensity_image_plot(
@@ -87,7 +89,8 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
             )
         ]
         figure = plotting.create_figure(
-            plots, title='detected #%d blobs' % n_objects
+            plots,
+            title='detected #{0} blobs above threshold {1}'.format(n, threshold)
         )
     else:
         figure = str()
