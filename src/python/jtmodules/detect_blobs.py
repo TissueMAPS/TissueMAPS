@@ -56,17 +56,20 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
     '''
 
     logger.info('detect blobs above threshold {0}'.format(threshold))
-    out, blobs = sep.extract(
+    detection, blobs = sep.extract(
         image.astype('float'), threshold, mask=np.invert(mask>0),
         minarea=min_area, segmentation_map=True,
         deblend_nthresh=500, deblend_cont=0,
         filter_kernel=None, clean=False
     )
 
-    centroids = np.zeros(image.shape, dtype=bool)
-    y = out['y'].astype(int) - 1
-    x = out['x'].astype(int) - 1
-    centroids[y, x] = True
+    centroids = np.zeros(image.shape, dtype=np.int32)
+    y = detection['y'].astype(int)
+    x = detection['x'].astype(int)
+    # WTF? In rare cases object coorindates lie outside of the image.
+    y[y > image.shape[0]] = image.shape[0]
+    x[x > image.shape[1]] = image.shape[1]
+    centroids[y, x] = np.arange(1, len(detection) + 1)
 
     if plot:
         logger.info('create plot')
