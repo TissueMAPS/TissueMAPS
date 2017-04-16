@@ -152,7 +152,7 @@ setuptools.setup(
        'mock>=1.0.1',
        'natsort>=4.0.3',
        'nose>=1.3.7',
-       'opencv-python>=3.2',
+       'opencv-contrib-python>=3.2',
        'openslide-python>=1.1.0',
        'pandas>=0.19.2',
        'passlib>=1.6.5',
