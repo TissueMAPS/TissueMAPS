@@ -92,6 +92,7 @@ setuptools.setup(
         'pandas>=0.19.2',
         'scipy>=0.16.0',
         'cython>=0.24',
+        'opencv-contrib-python>=3.2',
         'scikit-image>=0.11.3',
         'mahotas>=1.4.0',
         'centrosome>=1.0.5',
