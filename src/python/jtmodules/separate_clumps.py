@@ -203,15 +203,11 @@ def main(mask, intensity_image, min_area, max_area,
                     peaks[peaks == label] = 0
             peaks = mh.labeled.relabel(peaks)[0]
             regions = mh.cwatershed(np.invert(dist), peaks)
-            regions[~obj_mask] = 0
 
             # Use the line separating the watershed regions to make the cut
-            if len(index) > 1:
-                se = np.ones((3,3), np.bool)
-                line = mh.labeled.border(regions, index[0], index[1], Bc=se)
-                line = mh.morph.dilate(line)
-            else:
-                line = np.zeros(regions.shape, np.bool)
+            se = np.ones((3,3), np.bool)
+            line = mh.labeled.borders(regions, Bc=se)
+            line[~obj_mask] = 0
 
             # Ensure that cut is reasonable given user-defined criteria
             test_cut_mask = obj_mask.copy()
@@ -239,10 +235,10 @@ def main(mask, intensity_image, min_area, max_area,
             x += x_offset
             cut_mask[y, x] = True
 
-        separated_mask[cut_mask] = 0
+        separated_mask[cut_mask] = False
+        # This is necessary, because lines sometimes don't properly cut.
+        separated_mask[mh.bwperim(separated_mask, n=8)] = False
 
-        # This becomse necessary, because lines don't properly cut in some cases.
-        separated_mask[mh.bwperim(separated_mask, n=8)] = 0
 
     if plot:
         from jtlib import plotting
