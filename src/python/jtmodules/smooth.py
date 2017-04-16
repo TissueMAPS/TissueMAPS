@@ -26,7 +26,7 @@ import skimage.morphology
 import skimage.filters.rank
 import numpy as np
 
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ def main(image, filter_name, filter_size, plot=False):
         grayscale image that should be smoothed
     filter_name: str
         name of the filter kernel that should be applied
-        (options: ``{"avarage", "gaussian", "median"}``)
+        (options: ``{"avarage", "gaussian", "median", "bilateral"}``)
     filter_size: int
         size of the kernel
     plot: bool, optional
@@ -56,7 +56,7 @@ def main(image, filter_name, filter_size, plot=False):
     ------
     ValueError
         when `filter_name` is not
-        ``"avarage"``, ``"gaussian"`` or ``"median"``
+        ``"avarage"``, ``"gaussian"``, ``"median"`` or ``"bilateral"``
     '''
     se = np.ones((filter_size, filter_size))
     if filter_name == 'average':
@@ -68,10 +68,15 @@ def main(image, filter_name, filter_size, plot=False):
     elif filter_name == 'median':
         logger.info('apply "median" filter')
         smoothed_image = mh.median_filter(image, se)
+    elif filter_name == 'bilateral':
+        smoothed_image = cv2.bilateralFilter(
+            image.astype(np.float32), d=0,
+            sigmaColor=filter_size, sigmaSpace=filter_size
+        ).astype(image.dtype)
     else:
         raise ValueError(
             'Arugment "filter_name" can be one of the following:\n'
-            '"average", "gaussian" or "median"'
+            '"average", "gaussian", "median" or "bilateral"'
         )
     smoothed_image = smoothed_image.astype(image.dtype)
 
@@ -89,7 +94,7 @@ def main(image, filter_name, filter_size, plot=False):
         ]
         figure = plotting.create_figure(
             data,
-            title='smoothed with {0} filter (kernel size: {1})'.format(
+            title='Smoothed with "{0}" filter (kernel size: {1})'.format(
                 filter_name, filter_size
             )
         )

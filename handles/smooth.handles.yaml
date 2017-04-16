@@ -1,5 +1,5 @@
 ---
-version: 0.0.1
+version: 0.1.0
 
 input:
 
@@ -15,6 +15,7 @@ input:
         - average
         - gaussian
         - median
+        - bilateral
       help: >
           Name of the filter kernel that should be applied to the image.
 
