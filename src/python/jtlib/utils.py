@@ -18,28 +18,32 @@ import mahotas as mh
 from skimage import measure, morphology
 
 
-def create_outline_image(im):
-    '''Createe an image representing the outlines of objects
-    (connected components) in a binary mask image.
+def rescale_to_8bit(im, lower=0, upper=100):
+    '''Maps pixel values of an image from the range between a lower and an
+    upper quantile to the range [0,255].
 
     Parameters
     ----------
-    im: numpy.ndarray
-        binary image
+    im: numpy.ndarray[numpy.uint16]
+        16-bit grayscale image
+    lower: float, optional
+        quantile to define lower bound of range (default: ``0``)
+    upper: float, optional
+        quantile to define upper bound of range (default: ``100``)
 
     Returns
     -------
-    numpy.ndarray
-        outlines of the objects in `im`
+    numpy.ndarray[numpy.uint8]
+        rescaled 8-bit grayscale image
     '''
-    eroded_image = morphology.binary_erosion(im > 0)
-    contours = measure.find_contours(eroded_image, False)
-    contours = np.concatenate(contours).astype(int)
-
-    outlines = np.zeros(im.shape)
-    outlines[contours[:, 0], contours[:, 1]] = 1
-
-    return outlines
+    lower_bound = int(np.percentile(im, lower))
+    upper_bound = int(np.percentile(im, upper))
+    lut = np.concatenate([
+        np.zeros(lower_bound, dtype=np.uint16),
+        np.linspace(0, 255, upper_bound - lower_bound).astype(np.uint16),
+        np.ones(2**16 - upper_bound, dtype=np.uint16) * 255
+    ])
+    return lut[im].astype(np.uint8)
 
 
 def extract_bbox_image(im, bbox, pad=0):
