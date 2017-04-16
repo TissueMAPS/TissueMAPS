@@ -1,5 +1,5 @@
 ---
-version: 0.1.0
+version: 0.2.0
 
 input:
 
@@ -8,6 +8,14 @@ input:
       key: 
       help: Grayscale image that should be thresholded.
 
+    - name: method
+      type: Character
+      value: niblack
+      options:
+        - crosscorr
+        - niblack
+      help: Thresholding method.
+
     - name: kernel_size
       type: Scalar
       value: 111
@@ -15,12 +23,20 @@ input:
         Size of the neighbourhood region used to calculate the threshold for
         each pixel (odd number).
 
-    - name: offset
+    - name: constant
       type: Scalar
       value: 0
-      help: >
-        Constant that is added to the mean value calculated per neighbourhood
-        region (may be positive, zero or negative).
+      help: Correction of the threshold computed per neighbourhood region.
+
+    - name: min_threshold
+      type: Scalar
+      value:
+      help: Minimal threshold level.
+
+    - name: max_threshold
+      type: Scalar
+      value:
+      help: Maximal threshold level.
 
     - name: plot
       type: Plot
