@@ -17,22 +17,24 @@ on disk.
 '''
 import collections
 import logging
+from jtlib.utils import label
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 
 Output = collections.namedtuple('Output', ['objects'])
 
 
-def main(label_image):
-    '''Registeres segmented objects in a labeled image for use by other
-    (measurement) modules downstream in the pipeline.
+def main(mask):
+    '''Registers objects (connected pixel components) in an image for use by
+    other (measurement) modules downstream in the pipeline. In case a binary
+    mask is provided the image is automatically labeled.
 
     Parameters
     ----------
-    label_image: numpy.ndarray[int32]
-        labeled image where pixel values encode objects IDs
+    mask: numpy.ndarray[Union[numpy.bool, numpy.int32]]
+        binary or labeled mask
 
     Returns
     -------
@@ -42,4 +44,8 @@ def main(label_image):
     --------
     :class:`tmlib.workflow.jterator.handles.SegmentedObjects`
     '''
+    if mask.dtype == 'bool':
+        label_image = label(mask)
+    else:
+        label_image = mask
     return Output(label_image)
