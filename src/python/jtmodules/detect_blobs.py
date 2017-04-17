@@ -73,6 +73,16 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
     x[x > image.shape[1]] = image.shape[1]
     centroids[y, x] = np.arange(1, n + 1)
 
+    # Despite masking some objects are detected outside regions of interest.
+    # Let's make absolutely that no object lies outside.
+    centroids[mask == 0] = 0
+    mh.labeled.relabel(centroids, inplace=True)
+    blobs[mask == 0] = 0
+    mh.labeled.relabel(blobs, inplace=True)
+
+    n = np.max(blobs)
+    logger.info('%d blobs detected', len(detection))
+
     if plot:
         logger.info('create plot')
         from jtlib import plotting
