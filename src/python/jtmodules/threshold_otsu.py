@@ -92,7 +92,7 @@ def main(image, correction_factor=1, min_threshold=None, max_threshold=None,
             plotting.create_mask_image_plot(mask, 'ur')
         ]
         figure = plotting.create_figure(
-            plots, title='thresholded at %s' % threshold
+            plots, title='thresholded at %s' % corr_threshold
         )
     else:
         figure = str()
