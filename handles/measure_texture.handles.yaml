@@ -1,5 +1,5 @@
 ---
-version: 0.1.1
+version: 0.2.0
 
 input:
 
@@ -34,6 +34,11 @@ input:
         case "extract_objects" and "assign_objects" have a many-to-one
         relationship aggregation must be performed.
 
+    - name: measure_haralick
+      type: Boolean
+      value: false
+      help: Should Haralick features be extracted?
+
     - name: plot
       type: Plot
       value: false
@@ -47,7 +52,7 @@ output:
       objects: assign_objects
       objects_ref: extract_objects
       channel_ref: intensity_image
-      help: Extracted Gabor features.
+      help: Extracted texture features.
 
     - name: figure
       type: Figure

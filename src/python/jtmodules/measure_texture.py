@@ -16,13 +16,13 @@ import collections
 import jtlib.features
 
 
-VERSION = '0.1.1'
+VERSION = '0.2.0'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
 
 def main(extract_objects, assign_objects, intensity_image, aggregate,
-        plot=False):
+        measure_haralick=False, plot=False):
     '''Measures texture features for objects in `extract_objects` based
     on grayscale values in `intensity_image` and assign them to `assign_objects`.
 
@@ -37,6 +37,8 @@ def main(extract_objects, assign_objects, intensity_image, aggregate,
     aggregate: bool, optional
         whether measurements should be aggregated in case `extract_objects`
         and `assign_objects` have a many-to-one relationship
+    measure_haralick: bool, optional
+        whether *Haralick* features should be extracted
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -49,7 +51,8 @@ def main(extract_objects, assign_objects, intensity_image, aggregate,
     :class:`jtlib.features.Texture`
     '''
     f = jtlib.features.Texture(
-        label_image=extract_objects, intensity_image=intensity_image
+        label_image=extract_objects, intensity_image=intensity_image,
+        compute_haralick=measure_haralick
     )
 
     f.check_assignment(assign_objects, aggregate)

@@ -15,12 +15,13 @@
 import collections
 import jtlib.features
 
-VERSION = '0.1.1'
+VERSION = '0.2.0'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
 
-def main(extract_objects, assign_objects, aggregate, plot=False):
+def main(extract_objects, assign_objects, aggregate, measure_zernike=False,
+        plot=False):
     '''Measures morphology features for objects in `extract_objects`
     and assign them to `assign_objects`.
 
@@ -33,6 +34,8 @@ def main(extract_objects, assign_objects, aggregate, plot=False):
     aggregate: bool, optional
         whether measurements should be aggregated in case `extract_objects`
         and `assign_objects` have a many-to-one relationship
+    measure_zernike: bool, optional
+        whether *Zernike* moments should be extracted
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -44,7 +47,9 @@ def main(extract_objects, assign_objects, aggregate, plot=False):
     --------
     :class:`jtlib.features.Morphology`
     '''
-    f = jtlib.features.Morphology(label_image=extract_objects)
+    f = jtlib.features.Morphology(
+        label_image=extract_objects, compute_zernike=measure_zernike
+    )
 
     f.check_assignment(assign_objects, aggregate)
 
