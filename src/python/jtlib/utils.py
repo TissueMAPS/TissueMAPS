@@ -46,7 +46,7 @@ def rescale_to_8bit(im, lower=0, upper=100):
     return lut[im].astype(np.uint8)
 
 
-def extract_bbox_image(im, bbox, pad=0):
+def extract_bbox(im, bbox, pad=0):
     '''Extracts a subset of pixels from a 2D image defined by a given
     bounding box.
 
@@ -101,10 +101,8 @@ def get_border_ids(im):
     return [i for i in object_ids if i in border_ids]
 
 
-def label_image(im, n=8):
+def label(im, n=8):
     '''Labels connected components in an image.
-    For more information see
-    `mahotas docs <http://mahotas.readthedocs.org/en/latest/labeled.html#labeling-images>`_.
 
     Parameters
     ----------
@@ -125,10 +123,6 @@ def label_image(im, n=8):
     ValueError
         when `n` is not ``4`` or ``8``
 
-    Note
-    ----
-    Be careful when selecting 4-neighbourhood when working with Matlab, which
-    uses a 8-neighbourhood by default.
     '''
     if not(all([e in {False, True, 0, 1} for e in np.unique(im)])):
         raise TypeError('Image must be binary.')
@@ -142,7 +136,7 @@ def label_image(im, n=8):
     return labeled_image
 
 
-def downsample_image(im, bins):
+def downsample(im, bins):
     '''
     Murphy et al. 2002
     "Robust Numerical Features for Description and Classification of

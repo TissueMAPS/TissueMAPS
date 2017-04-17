@@ -175,7 +175,11 @@ class Features(object):
                     for stat in self._aggregate_statistics.keys():
                         values['%s_%s' % (stat, name)].append(np.nan)
             else:
-                for name, vals in features.loc[labels, :].iteritems():
+                index = np.union1d(features.index, labels)
+                diff = len(labels) - len(index)
+                if diff > 0:
+                    logger.warn('%d objects got lost upon aggregation', diff)
+                for name, vals in features.loc[index, :].iteritems():
                     if vals.empty:
                         for stat in self._aggregate_statistics.keys:
                             values['%s_%s' % (stat, name)].append(np.nan)
@@ -230,7 +234,7 @@ class Features(object):
             mask image for given object
         '''
         bbox = self._bboxes[object_id]
-        img = utils.extract_bbox_image(self.label_image, bbox=bbox, pad=1)
+        img = utils.extract_bbox(self.label_image, bbox=bbox, pad=1)
         return img == object_id
 
     def get_object_intensity_image(self, object_id):
@@ -246,7 +250,7 @@ class Features(object):
         if self.intensity_image is None:
             raise ValueError('No intensity image available.')
         bbox = self._bboxes[object_id]
-        return utils.extract_bbox_image(self.intensity_image, bbox=bbox, pad=1)
+        return utils.extract_bbox(self.intensity_image, bbox=bbox, pad=1)
 
     @cached_property
     def _bboxes(self):
@@ -601,17 +605,11 @@ class PointPattern(Features):
             label image for all objects falling within the bounding box of the
             given parent object
 
-        Note
-        ----
-        Objects are relabeled such that they have continous labels within the
-        bounding box in the range [1, *n*], where *n* is the number of objects
-        within the parent object. Objects outside the prarent object are ignored.
         '''
         bbox = self._parent_bboxes[parent_object_id]
         parent_img = self.get_parent_object_mask_image(parent_object_id)
-        img = utils.extract_bbox_image(self.label_image, bbox=bbox, pad=1)
+        img = utils.extract_bbox(self.label_image, bbox=bbox, pad=1)
         img[~parent_img] = 0
-        mh.labeled.relabel(img, inplace=True)[0]
         return img
 
     def get_parent_object_mask_image(self, parent_object_id):
@@ -624,7 +622,7 @@ class PointPattern(Features):
             mask image for given object
         '''
         bbox = self._parent_bboxes[parent_object_id]
-        img = utils.extract_bbox_image(self.parent_label_image, bbox=bbox, pad=1)
+        img = utils.extract_bbox(self.parent_label_image, bbox=bbox, pad=1)
         return img == parent_object_id
 
     @cached_property
@@ -665,9 +663,11 @@ class PointPattern(Features):
         '''
         logger.info('extract point pattern features')
         features = list()
+        object_ids = list()
         for obj in self.parent_object_ids:
             parent_obj_img = self.get_parent_object_mask_image(obj)
             points_img = self.get_points_object_label_image(obj)
+            object_ids.extend(np.unique(points_img)[1:])
             size = np.sum(parent_obj_img)
             abs_border_dist_img = mh.distance(parent_obj_img).astype(float)
             rel_border_dist_img = abs_border_dist_img / size
@@ -712,7 +712,7 @@ class PointPattern(Features):
 
 
 def create_feature_image(feature_values, label_image):
-    '''Creates an image, where pixels belonging to an object 
+    '''Creates an image, where pixels belonging to an object
     (connected component) encode a given feature value.
 
     Parameters
@@ -729,6 +729,8 @@ def create_feature_image(feature_values, label_image):
         feature image
     '''
     object_ids = np.unique(label_image)[1:]
+    if len(object_ids) == 0:
+        return np.zeros(label_image.shape, np.float64)
     if len(object_ids) != len(feature_values):
         raise ValueError(
             'Number of feature values doesn\'t match number of objects in the '
