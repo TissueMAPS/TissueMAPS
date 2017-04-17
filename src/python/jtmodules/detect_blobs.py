@@ -74,10 +74,10 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
     centroids[y, x] = np.arange(1, n + 1)
 
     centroids[mask] = 0
-    mh.relabel(centroids, inplace=True)
+    mh.labeled.relabel(centroids, inplace=True)
 
     blobs[mask] = 0
-    mh.relabel(blobs, inplace=True)
+    mh.labeled.relabel(blobs, inplace=True)
 
     n = np.max(blobs)
     logger.info('%d blobs detected', len(detection))
