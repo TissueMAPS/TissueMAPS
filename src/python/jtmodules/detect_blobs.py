@@ -64,7 +64,6 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
     )
 
     n = len(detection)
-    logger.info('%d blobs detected', len(detection))
 
     centroids = np.zeros(image.shape, dtype=np.int32)
     y = detection['y'].astype(int)
@@ -74,6 +73,15 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
     x[x > image.shape[1]] = image.shape[1]
     centroids[y, x] = np.arange(1, n + 1)
 
+    centroids[mask] = 0
+    mh.relabel(centroids, inplace=True)
+
+    blobs[mask] = 0
+    mh.relabel(blobs, inplace=True)
+
+    n = np.max(blobs)
+    logger.info('%d blobs detected', len(detection))
+
     if plot:
         logger.info('create plot')
         from jtlib import plotting
@@ -81,8 +89,8 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
             'Spectral', n=n, permute=True, add_background=True
         )
         plots = [
-            plotting.create_intensity_image_plot(
-                image, 'ul', clip=True
+            plotting.create_intensity_overlay_image_plot(
+                image, mh.morph.dilate(centroids>0), 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
                 blobs, 'ur', colorscale=colorscale
