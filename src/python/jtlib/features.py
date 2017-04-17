@@ -668,6 +668,7 @@ class PointPattern(Features):
             parent_obj_img = self.get_parent_object_mask_image(obj)
             points_img = self.get_points_object_label_image(obj)
             point_ids = np.unique(points_img)[1:]
+            points_img = mh.relabel(points_img, inplace=True)
 
             size = np.sum(parent_obj_img)
             abs_border_dist_img = mh.distance(parent_obj_img).astype(float)
