@@ -287,6 +287,21 @@ def get_feature_values(experiment_id, mapobject_type_id):
         mapobject_type_name = mapobject_type.name
         mapobject_type_ref_type = mapobject_type.ref_type
 
+    filename_formatstring = '{experiment}'
+    if well_name is not None:
+        filename_formatstring += '_{well}'
+    if well_pos_y is not None:
+        filename_formatstring += '_y{y}'
+    if well_pos_x is not None:
+        filename_formatstring += '_x{x}'
+    if tpoint is not None:
+        filename_formatstring += '_t{t}'
+    filename_formatstring += '_{object_type}_feature-values.csv'
+    filename = filename_formatstring.format(
+        experiment=experiment_name, well=well_name, y=well_pos_y, x=well_pos_x,
+        t=tpoint, object_type=mapobject_type_name
+    )
+
     if mapobject_type_ref_type in {'Plate', 'Well'}:
         if well_pos_y is not None:
             raise MalformedRequestError(
@@ -408,10 +423,7 @@ def get_feature_values(experiment_id, mapobject_type_id):
         mimetype='text/csv',
         headers={
             'Content-Disposition': 'attachment; filename={filename}'.format(
-                filename='{experiment}_{object_type}_feature-values.csv'.format(
-                    experiment=experiment_name,
-                    object_type=mapobject_type_name
-                )
+                filename=filename
             )
         }
     )
@@ -463,6 +475,21 @@ def get_metadata(experiment_id, mapobject_type_id):
             get(mapobject_type_id)
         mapobject_type_name = mapobject_type.name
         mapobject_type_ref_type = mapobject_type.ref_type
+
+    filename_formatstring = '{experiment}'
+    if well_name is not None:
+        filename_formatstring += '_{well}'
+    if well_pos_y is not None:
+        filename_formatstring += '_y{y}'
+    if well_pos_x is not None:
+        filename_formatstring += '_x{x}'
+    if tpoint is not None:
+        filename_formatstring += '_t{t}'
+    filename_formatstring += '_{object_type}_metadata.csv'
+    filename = filename_formatstring.format(
+        experiment=experiment_name, well=well_name, y=well_pos_y, x=well_pos_x,
+        t=tpoint, object_type=mapobject_type_name
+    )
 
     if mapobject_type_ref_type in {'Plate', 'Well'}:
         if well_pos_y is not None:
@@ -639,10 +666,7 @@ def get_metadata(experiment_id, mapobject_type_id):
         mimetype='text/csv',
         headers={
             'Content-Disposition': 'attachment; filename={filename}'.format(
-                filename='{experiment}_{object_type}_metadata.csv'.format(
-                    experiment=experiment_name,
-                    object_type=mapobject_type_name
-                )
+                filename=filename
             )
         }
     )
