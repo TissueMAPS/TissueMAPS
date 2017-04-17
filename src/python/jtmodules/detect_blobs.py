@@ -89,8 +89,8 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
             'Spectral', n=n, permute=True, add_background=True
         )
         plots = [
-            plotting.create_intensity_overlay_image_plot(
-                image, mh.morph.dilate(centroids>0), 'ul', clip=True
+            plotting.create_intensity_image_plot(
+                image, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
                 blobs, 'ur', colorscale=colorscale
