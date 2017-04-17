@@ -147,11 +147,11 @@ def main(mask, intensity_image, min_area, max_area,
         bboxes = mh.labeled.bbox(label_image)
         for oid in object_ids:
             logger.debug('process object #%d', oid)
-            obj_mask = jtlib.utils.extract_bbox_image(
+            obj_mask = jtlib.utils.extract_bbox(
                 label_image, bboxes[oid], pad=PAD
             )
             obj_mask = obj_mask == oid
-            int_img = jtlib.utils.extract_bbox_image(
+            int_img = jtlib.utils.extract_bbox(
                 intensity_image, bboxes[oid], pad=PAD
             )
 
