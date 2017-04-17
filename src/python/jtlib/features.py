@@ -661,22 +661,22 @@ class PointPattern(Features):
             extracted feature values for each object in
             :attr:`label_image <jtlib.features.PointPattern.label_image>`
         '''
+
         logger.info('extract point pattern features')
-        features = list()
-        object_ids = list()
+        features = dict()
         for obj in self.parent_object_ids:
             parent_obj_img = self.get_parent_object_mask_image(obj)
             points_img = self.get_points_object_label_image(obj)
-            object_ids.extend(np.unique(points_img)[1:])
+            point_ids = np.unique(points_img)[1:]
+
             size = np.sum(parent_obj_img)
             abs_border_dist_img = mh.distance(parent_obj_img).astype(float)
             rel_border_dist_img = abs_border_dist_img / size
-            # NOTE: We calculate pattern based on centroids. Be careful with
-            # interpreting values for "points" larger than a single pixel.
             centroids = mh.center_of_mass(points_img, labels=points_img)
             centroids = centroids[1:, :].astype(int)
             abs_distance_matrix = squareform(pdist(centroids))
             rel_distance_matrix = abs_distance_matrix / size
+
             indexer = np.arange(centroids.shape[0])
             if len(indexer) == 0:
                 continue
@@ -692,7 +692,7 @@ class PointPattern(Features):
                     np.nan,
                     np.nan
                 ]
-                features.append(values)
+                features[point_ids[0]] = values
                 continue
             for i, (y, x) in enumerate(centroids):
                 idx = indexer != i
@@ -706,8 +706,17 @@ class PointPattern(Features):
                     np.nanmean(rel_distance_matrix[i, idx]),
                     np.nanstd(rel_distance_matrix[i, idx]),
                 ]
-                features.append(values)
-        return pd.DataFrame(features, columns=self.names, index=self.object_ids)
+                features[point_ids[i]] = values
+
+        ids = features.keys()
+        values = list()
+        nans = [np.nan for _ in range(len(self.names))]
+        for i in self.object_ids:
+            if i not in ids:
+                logger.warn('values missing for object #%d', i)
+                features[i] = nans
+            values.append(features[i])
+        return pd.DataFrame(values, columns=self.names, index=self.object_ids)
 
 
 
