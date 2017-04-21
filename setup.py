@@ -106,7 +106,7 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
        'ansible>=2.2.1',
-       'ansible-container>=0.3.0',
+       'ansible-container>=0.3.0,<=0.4',
        'apache-libcloud>=1.3.0',
        'boto3>=1.4.1',
        'docker-py>=1.10.6',
