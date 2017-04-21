@@ -208,6 +208,7 @@ def main(mask, intensity_image, min_area, max_area,
             se = np.ones((3,3), np.bool)
             line = mh.labeled.borders(regions, Bc=se)
             line[~obj_mask] = 0
+            line = mh.morph.dilate(line)
 
             # Ensure that cut is reasonable given user-defined criteria
             test_cut_mask = obj_mask.copy()
@@ -236,9 +237,6 @@ def main(mask, intensity_image, min_area, max_area,
             cut_mask[y, x] = True
 
         separated_mask[cut_mask] = False
-        # This is necessary, because lines sometimes don't properly cut.
-        separated_mask[mh.bwperim(separated_mask, n=8)] = False
-
 
     if plot:
         from jtlib import plotting
