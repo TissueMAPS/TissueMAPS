@@ -60,19 +60,18 @@ def get_version():
         'src', 'python'
     )
     sys.path = [src_path] + sys.path
-    import jtlib
-    return jtlib.__version__
+    import jtmodules
+    return jtmodules.__version__
 
 
 setuptools.setup(
     name='jtmodules',
     version=get_version(),
     description='Jterator modules.',
-    author='Markus D. Herrmann and Robin Hafen',
-    author_email='markusdherrmann@gmail.com',
+    author='Markus D. Herrmann',
     url='https://github.com/tissuemaps/jtmodules',
     license='Apache-2.0',
-    platforms=['Linux', 'OS-X'],
+    platforms=['Linux', 'MacOS'],
     classifiers=[
         'Topic :: Scientific/Engineering :: Image Recognition',
         'Topic :: Scientific/Engineering :: Information Analysis',
@@ -99,6 +98,6 @@ setuptools.setup(
         'scipy>=0.16.0',
         'sep>=1.0.0',
         'tox>=2.3.1',
-        'jtlibrary>=0.1.0'
+        'jtlibrary>=0.2.0'
     ]
 )
