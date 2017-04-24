@@ -56,8 +56,7 @@ def find_scripts():
 
 def get_version():
     src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)),
-        'src', 'python'
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'python'
     )
     sys.path = [src_path] + sys.path
     import jtlib
@@ -68,10 +67,9 @@ setuptools.setup(
     name='jtlibrary',
     version=get_version(),
     description='Jterator library.',
-    author='Markus D. Herrmann and Robin Hafen',
-    author_email='markusdherrmann@gmail.com',
+    author='Markus D. Herrmann',
     url='https://github.com/tissuemaps/jtlibrary',
-    platforms=['Linux', 'OS-X'],
+    platforms=['Linux', 'MacOS'],
     classifiers=[
         'Topic :: Scientific/Engineering :: Image Recognition',
         'Topic :: Scientific/Engineering :: Information Analysis',
