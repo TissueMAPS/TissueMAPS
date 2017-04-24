@@ -89,8 +89,8 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         'numpy>=1.10.1',
-        'centrosome>=1.0.5',
         'cython>=0.24',
+        'centrosome>=1.0.5',
         'scikit-image>=0.11.3',
         'mahotas>=1.4.0',
         'opencv-contrib-python>=3.2',
