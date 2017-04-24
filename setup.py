@@ -112,10 +112,9 @@ setuptools.setup(
     version=get_version(),
     description='TissueMAPS library for distibuted image analysis routines.',
     author='Markus D. Herrmann',
-    author_email='markusdherrmann@gmail.com',
     url='https://github.com/tissuemaps/tmlibrary',
     license='AGPL-3.0+',
-    platforms=['Linux', 'OS-X'],
+    platforms=['Linux', 'MacOS'],
     classifiers=[
         'Environment :: Console',
         'Environment :: Web Environment',
