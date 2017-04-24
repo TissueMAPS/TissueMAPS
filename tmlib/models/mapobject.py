@@ -499,7 +499,6 @@ class Mapobject(ExperimentModel):
                 if mapobject_ids:
                     cls._delete_cascade(connection, mapobject_ids)
             else:
-                # TODO: in this case we could drop all tables and recreate them
                 cls._delete_cascade(connection)
 
     def __repr__(self):
@@ -634,6 +633,10 @@ class MapobjectSegmentation(ExperimentModel):
 class SegmentationLayer(ExperimentModel):
 
     __tablename__ = 'segmentation_layers'
+
+    __table_args__ = (
+        UniqueConstraint('tpoint', 'zplane', 'mapobject_type_id'),
+    )
 
     #: int: zero-based index in time series
     tpoint = Column(Integer, index=True)
