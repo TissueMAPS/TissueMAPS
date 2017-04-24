@@ -24,6 +24,14 @@
   tags:
     - tissuemaps
 
+- name: Install tmserver package dependencies
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/tmserver/requirements.txt --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/tmserver"
+    executable: /bin/bash
+  tags:
+    - tissuemaps
+
 - name: Install tmserver package
   shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/tmserver --user --no-cache-dir
   args:

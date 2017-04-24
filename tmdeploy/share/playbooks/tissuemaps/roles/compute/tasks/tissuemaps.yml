@@ -78,6 +78,14 @@
   tags:
     - tissuemaps
 
+- name: Install jtlibrary package dependencies
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/jtlibrary/requirements.txt --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/jtlibrary/"
+    executable: /bin/bash
+  tags:
+    - tissuemaps
+
 - name: Install jtlibrary package
   shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/jtlibrary --user --no-cache-dir
   args:
@@ -92,6 +100,14 @@
     dest: "{{ tm_home }}/jtmodules"
     version: "{{ tm_version }}"
     force: yes
+  tags:
+    - tissuemaps
+
+- name: Install jtmodules package dependencies
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/jtmodules/requirements.txt --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/jtmodules/"
+    executable: /bin/bash
   tags:
     - tissuemaps
 
@@ -129,6 +145,14 @@
     dest: "{{ tm_home }}/tmlibrary"
     version: "{{ tm_version }}"
     force: yes
+  tags:
+    - tissuemaps
+
+- name: Install tmlibrary package dependencies
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/tmlibrary/requirements.txt --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/tmlibrary/"
+    executable: /bin/bash
   tags:
     - tissuemaps
 
