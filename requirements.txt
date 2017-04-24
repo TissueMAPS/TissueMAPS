@@ -65,5 +65,4 @@ SQLAlchemy==1.1.9
 SQLAlchemy-Utils==0.32.14
 subprocess32==3.2.7
 tables==3.4.2
-tmlibrary==0.1.0
 whichcraft==0.4.0
