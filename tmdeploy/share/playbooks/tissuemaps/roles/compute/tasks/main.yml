@@ -19,10 +19,10 @@
 
 - include: python.yml
 
+- include: r.yml
+
 - include: tissuemaps.yml
 
 - include: bioformats.yml
 
 - include: postgresql.yml
-
-- include: r.yml
