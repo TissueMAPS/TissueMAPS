@@ -74,26 +74,35 @@ def main(mask, feature, lower_threshold=None, upper_threshold=None, plot=False):
 
     name = 'Morphology_{0}'.format(feature.capitalize())
 
-    labeled_image = mh.label(mask > 0, np.ones((3, 3), bool))[0]
-    f = Morphology(labeled_image)
-    values = f.extract()[name].values
+    # ensure at least one object exists
+    if mask.max != 0: 
 
-    if lower_threshold is None:
-        lower_threshold = np.min(values)
-    if upper_threshold is None:
-        upper_threshold = np.max(values)
-    logger.info(
-        'keep objects with "%s" values in the range [%d, %d]',
-        feature, lower_threshold, upper_threshold
-    )
+        labeled_image = mh.label(mask > 0, np.ones((3, 3), bool))[0]
+        f = Morphology(labeled_image)
+        values = f.extract()[name].values
 
-    feature_image = create_feature_image(values, labeled_image)
-    condition_image = np.logical_or(
-        feature_image < lower_threshold, feature_image > upper_threshold
-    )
-    filtered_image = labeled_image.copy()
-    filtered_image[condition_image] = 0
-    filtered_mask = filtered_image > 0
+        if lower_threshold is None:
+            lower_threshold = np.min(values)
+            if upper_threshold is None:
+                upper_threshold = np.max(values)
+        logger.info(
+            'keep objects with "%s" values in the range [%d, %d]',
+            feature, lower_threshold, upper_threshold
+        )
+
+        feature_image = create_feature_image(values, labeled_image)
+        condition_image = np.logical_or(
+            feature_image < lower_threshold, feature_image > upper_threshold
+        )
+        filtered_image = labeled_image.copy()
+        filtered_image[condition_image] = 0
+        filtered_mask = filtered_image > 0
+
+    else:
+        logger.info(
+            'no objects in mask'
+        )
+        filtered_mask = mask
 
     if plot:
         from jtlib import plotting
