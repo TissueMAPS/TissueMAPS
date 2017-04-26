@@ -17,11 +17,11 @@ import collections
 import logging
 from jtmodules import project, detect_blobs
 
-VERSION = '0.1.0'
+logger = logging.getLogger(__name__)
+
+VERSION = '0.0.1'
 
 Output = collections.namedtuple('Output', ['volume_image', 'figure'])
-
-logger = logging.getLogger(__name__)
 
 def array_to_coordinate_list(array):
     '''Convert a 2D array representation of points in 3D
