@@ -23,7 +23,6 @@ Output = collections.namedtuple('Output', ['volume_image', 'figure'])
 
 logger = logging.getLogger(__name__)
 
-
 def array_to_coordinate_list(array):
     '''Convert a 2D array representation of points in 3D
     to a list of x,y,z coordinates'''
@@ -100,18 +99,44 @@ def locate_in_3D(image, mask, bin_size=1, surface_plane_params=[0, 0, 0]):
         for iy in range(image.shape[1]):
             if mask[ix, iy] > 0:
                 max_pos = np.argmax(
-                    image_binned[int(x / bin_size), int(y / bin_size), :]
+                    image_binned[int(ix / bin_size), int(iy / bin_size), :]
                 )
                 height = int(
                     max_pos - plane(ix, iy, surface_plane_params)
                 )
-            if height > 0:
-                x.append(ix)
-                y.append(iy)
-                z.append(height)
+                if height > 0:
+                    x.append(ix)
+                    y.append(iy)
+                    z.append(height)
 
     coords = collections.namedtuple("coords", ["x", "y", "z"])
     return coords(x=x, y=y, z=z)
+
+
+def interpolate_surface(coords, output_shape, method='linear'):
+    '''Given a set of coordinates (not necessarily on a grid), an
+    interpolation is returned as a numpy array'''
+    from scipy.interpolate import griddata
+
+    xy = np.column_stack((coords.x, coords.y))
+    xv, yv = np.meshgrid(
+        range(output_shape[0]),
+        range(output_shape[1])
+    )
+    if method == 'nearest':
+        interpolate = griddata(
+            xy, np.array(coords.z), (xv, yv), method='nearest', rescale=False
+        )
+    elif method == 'cubic':
+        interpolate = griddata(
+            xy, np.array(coords.z), (xv, yv), method='cubic', rescale=False
+        )
+    elif method == 'linear':
+        interpolate = griddata(
+            xy, np.array(coords.z), (xv, yv), method='linear', rescale=False
+        )
+
+    return interpolate.T
 
 
 def main(image, mask, threshold=150, bead_area=2, plot=False):
@@ -159,15 +184,18 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
     logger.info('found %d beads on cells', np.count_nonzero(beads.centroids))
 
     logger.debug('locate beads in 3D')
-    beads3D = locate_in_3D(
-        image=image, positions_2D=beads.centroids,
+    beads_coords_3D = locate_in_3D(
+        image=image, mask=beads.centroids,
         bin_size=2
     )
 
     logger.info('interpolate cell surface')
-    top_surface = interpolate_surface_linear(
-        beads3D
+    volume_image = interpolate_surface(
+        coords=beads_coords_3D,
+        output_shape=np.shape(image[:, :, 1]),
+        method='linear'
     )
+    volume_image[mask == 0] = 0
 
     if plot:
         logger.debug('convert bottom surface plane to image for plotting')
@@ -184,13 +212,16 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
                 mip, 'ul', clip=True
             ),
             plotting.create_intensity_image_plot(
-                bottom_surface_image, 'ul', clip=True
+                bottom_surface_image, 'll', clip=True
+            ),
+            plotting.create_intensity_image_plot(
+                volume_image, 'ur', clip=True
             )
         ]
-        figure = plotting.create_figure(plots, title='Convert to volume image')
+        figure = plotting.create_figure(
+            plots, title='Convert stack to volume image'
+        )
     else:
         figure = str()
-
-    volume_image = image
 
     return Output(volume_image, figure)
