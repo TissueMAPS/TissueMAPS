@@ -200,6 +200,7 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
         method='linear'
     )
     volume_image[mask == 0] = 0
+    volume_image = volume_image.astype(image.dtype)
 
     if plot:
         logger.debug('convert bottom surface plane to image for plotting')
