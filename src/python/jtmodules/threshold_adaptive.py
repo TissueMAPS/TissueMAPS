@@ -92,7 +92,7 @@ def main(image, method, kernel_size, constant=0,
 
     logger.info('threshold image')
     if method == 'crosscorr':
-        thresh_image = cv2.adaptiveThresholding(
+        thresh_image = cv2.adaptiveThreshold(
             image_8bit, maxValue=255,
             adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             type=cv2.THRESH_BINARY,
