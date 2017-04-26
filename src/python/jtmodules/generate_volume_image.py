@@ -185,26 +185,33 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
         image=mip.projected_image, mask=mask,
         threshold=threshold, min_area=bead_area
     )
-    logger.info('found %d beads on cells', np.count_nonzero(beads.centroids))
 
-    logger.debug('locate beads in 3D')
-    beads_coords_3D = locate_in_3D(
-        image=image, mask=beads.centroids,
-        bin_size=2
-    )
+    n_beads = np.count_nonzero(beads.centroids)
+    logger.info('found %d beads on cells', n_beads)
 
-    logger.info('interpolate cell surface')
-    volume_image = interpolate_surface(
-        coords=beads_coords_3D,
-        output_shape=np.shape(image[:, :, 1]),
-        method='linear'
-    )
-    volume_image[mask == 0] = 0
+    if n_beads == 0:
+        logger.warn('empty volume image')
+        volume_image = np.zeros(shape=mask.shape, dtype=image.dtype)
+    else:
+        logger.debug('locate beads in 3D')
+        beads_coords_3D = locate_in_3D(
+            image=image, mask=beads.centroids,
+            bin_size=2
+        )
+
+        logger.info('interpolate cell surface')
+        volume_image = interpolate_surface(
+            coords=beads_coords_3D,
+            output_shape=np.shape(image[:, :, 1]),
+            method='linear'
+        )
+        volume_image[mask == 0] = 0
+
     volume_image = volume_image.astype(image.dtype)
 
     if plot:
         logger.debug('convert bottom surface plane to image for plotting')
-        bottom_surface_image = np.zeros(slide.shape)
+        bottom_surface_image = np.zeros(slide.shape, dtype=np.uint8)
         for ix in range(slide.shape[0]):
             for iy in range(slide.shape[1]):
                 bottom_surface_image[ix, iy] = plane(
@@ -214,7 +221,7 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
         from jtlib import plotting
         plots = [
             plotting.create_intensity_image_plot(
-                mip, 'ul', clip=True
+                mip.projected_image, 'ul', clip=True
             ),
             plotting.create_intensity_image_plot(
                 bottom_surface_image, 'll', clip=True
