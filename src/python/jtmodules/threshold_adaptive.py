@@ -46,9 +46,9 @@ def main(image, method, kernel_size, constant=0,
         size of the neighbourhood region that's used to calculate the threshold
         value at each pixel position (must be an odd number)
     constant: Union[float, int], optional
-        depends on `method`; in case of ``"crossvar"`` method the value
+        depends on `method`; in case of ``"crosscorr"`` method the constant
         is subtracted from the computed weighted sum per neighbourhood region
-        and in case of ``"niblack"`` the value is multiplied by the
+        and in case of ``"niblack"`` the constant is multiplied by the
         standard deviation and this term is then subtracted from the mean
         computed per neighbourhood region
     min_threshold: int, optional
