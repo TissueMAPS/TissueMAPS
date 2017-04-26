@@ -155,14 +155,18 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
         minimal size of bead (default: ``2``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
+
+    Returns
+    -------
+    jtmodules.generate_volume_image.Output
     '''
 
-    nz = image.shape[-1]
-    logger.debug('input image has size %d in last dimension', nz)
+    n_slices = image.shape[-1]
+    logger.debug('input image has size %d in last dimension', n_slices)
 
     logger.debug('mask beads inside cell')
     beads_outside_cell = np.copy(image)
-    for iz in range(nz):
+    for iz in range(n_slices):
         beads_outside_cell[mask > 0, iz] = 0
 
     logger.debug('search for 3D position of beads outside cell')
