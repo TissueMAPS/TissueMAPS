@@ -15,7 +15,7 @@ input:
     help: >
       Binary or labeled image of cell segmentation (2D).
 
-  - name: contrast_threshold
+  - name: threshold
     type: Numeric
     value: 150
     help: >
