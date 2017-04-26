@@ -76,23 +76,28 @@ def main(mask, feature, lower_threshold=None, upper_threshold=None, plot=False):
 
     labeled_image = mh.label(mask > 0, np.ones((3, 3), bool))[0]
     f = Morphology(labeled_image)
-    values = f.extract()[name].values
+    measurement = f.extract()[name]
+    values = measurement.values
 
-    if lower_threshold is None:
-        lower_threshold = np.min(values)
-    if upper_threshold is None:
-        upper_threshold = np.max(values)
-    logger.info(
-        'keep objects with "%s" values in the range [%d, %d]',
-        feature, lower_threshold, upper_threshold
-    )
+    if not measurement.empty:
+        if lower_threshold is None:
+            lower_threshold = np.min(values)
+        if upper_threshold is None:
+            upper_threshold = np.max(values)
+        logger.info(
+            'keep objects with "%s" values in the range [%d, %d]',
+            feature, lower_threshold, upper_threshold
+        )
 
-    feature_image = create_feature_image(values, labeled_image)
-    condition_image = np.logical_or(
-        feature_image < lower_threshold, feature_image > upper_threshold
-    )
-    filtered_image = labeled_image.copy()
-    filtered_image[condition_image] = 0
+        feature_image = create_feature_image(values, labeled_image)
+        condition_image = np.logical_or(
+            feature_image < lower_threshold, feature_image > upper_threshold
+        )
+        filtered_image = labeled_image.copy()
+        filtered_image[condition_image] = 0
+    else:
+        logger.warn('no objects detected in image')
+        filtered_image = labeled_image
     filtered_mask = filtered_image > 0
 
     if plot:
