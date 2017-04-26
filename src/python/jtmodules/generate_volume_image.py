@@ -146,7 +146,7 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
     Parameters
     ----------
     image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
-        grayscale image in which blobs should be detected (3D)
+        grayscale image in which beads should be detected (3D)
     mask: numpy.ndarray[Union[numpy.int32, numpy.bool]]
         binary or labeled image of cell segmentation (2D)
     threshold: int, optional
