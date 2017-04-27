@@ -1,5 +1,5 @@
 ---
-version: 0.0.1
+version: 0.1.0
 
 input:
 
@@ -7,6 +7,13 @@ input:
       type: MaskImage
       key:
       help: Image that should be labeled.
+
+    - name: connectivity
+      type: Numeric
+      value: 8
+      help: >
+        Number of neighborhood pixels considered to decide whether components
+        are connected.
 
     - name: plot
       type: Plot

@@ -16,23 +16,27 @@ import logging
 import numpy as np
 import collections
 import mahotas as mh
+from jtlib.utils import label
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.1'
+VERSION = '0.1.0'
 
 Output = collections.namedtuple('Output', ['label_image', 'figure'])
 
 
-def main(mask, plot=False):
+def main(mask, connectivity=8, plot=False):
     '''Labels objects in a binary image, i.e. assigns to all pixels of a
     connected component an identifier number that is unique for each object
     in the image.
 
     Parameters
     ----------
-    mask: numpy.ndarray[numpy.bool or numpy.int32]
+    mask: numpy.ndarray[Union[numpy.bool, numpy.int32]]
         binary image that should labeled
+    connectivity: int, optional
+        whether a diagonal (``4``) or square (``8``) neighborhood should be
+        considered (default: ``8``, options: ``{4, 8}``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -46,8 +50,9 @@ def main(mask, plot=False):
     ``True`` if values are greater than zero and ``False`` otherwise.
     '''
     mask = mask > 0
-    label_image, n = mh.label(mask, np.ones((3, 3), bool))
+    label_image = label(mask, connectivity)
 
+    n = len(np.unique(label_image)[1:])
     logger.info('identified %d objects', n)
 
     if plot:
