@@ -96,7 +96,7 @@ def main(image, method, kernel_size, constant=0,
             image_8bit, maxValue=255,
             adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             thresholdType=cv2.THRESH_BINARY,
-            blockSize=kernel_size, offset=int(constant)
+            blockSize=kernel_size, C=int(constant)
         )
     elif method == 'niblack':
         thresh_image = cv2.ximgproc.niBlackThreshold(
