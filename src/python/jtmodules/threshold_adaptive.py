@@ -95,7 +95,7 @@ def main(image, method, kernel_size, constant=0,
         thresh_image = cv2.adaptiveThreshold(
             image_8bit, maxValue=255,
             adaptiveMethod=cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            type=cv2.THRESH_BINARY,
+            thresholdType=cv2.THRESH_BINARY,
             blockSize=kernel_size, offset=int(constant)
         )
     elif method == 'niblack':

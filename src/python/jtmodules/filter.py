@@ -79,6 +79,7 @@ def main(mask, feature, lower_threshold=None, upper_threshold=None, plot=False):
     measurement = f.extract()[name]
     values = measurement.values
 
+    feature_image = create_feature_image(values, labeled_image)
     if not measurement.empty:
         if lower_threshold is None:
             lower_threshold = np.min(values)
@@ -89,7 +90,6 @@ def main(mask, feature, lower_threshold=None, upper_threshold=None, plot=False):
             feature, lower_threshold, upper_threshold
         )
 
-        feature_image = create_feature_image(values, labeled_image)
         condition_image = np.logical_or(
             feature_image < lower_threshold, feature_image > upper_threshold
         )
