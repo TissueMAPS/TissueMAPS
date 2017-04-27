@@ -181,10 +181,16 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
 
     logger.debug('detect_beads in 2D')
     mip = project.main(image, 'max')
-    beads = detect_blobs.main(
-        image=mip.projected_image, mask=mask,
-        threshold=threshold, min_area=bead_area
-    )
+    try:
+        beads = detect_blobs.main(
+            image=mip.projected_image, mask=mask,
+            threshold=threshold, min_area=bead_area
+        )
+    except:
+        logger.warn('detect_blobs failed, returning empty volume image')
+        volume_image = np.zeros(shape=mask.shape, dtype=image.dtype)
+        figure = str()
+        return Output(volume_image, figure)
 
     n_beads = np.count_nonzero(beads.centroids)
     logger.info('found %d beads on cells', n_beads)
