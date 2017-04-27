@@ -111,8 +111,6 @@ def main(extract_objects, assign_objects, intensity_image, channel,
     --------
     :class:`Morphology3D`
     '''
-    logger.debug('label_image has dimensions %s', extract_objects.shape)
-    logger.debug('intensity_image has dimensions %s', intensity_image.shape)
 
     f = Morphology3D(
         label_image=extract_objects,
