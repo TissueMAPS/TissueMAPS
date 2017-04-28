@@ -142,6 +142,7 @@ Requirements
 
 * `Python <https://www.python.org/>`_: Many platforms are shipped with Python already pre-installed. If not, it can be downloaded from `python.org <https://www.python.org/downloads/>`_. Using version 2.7.9 or higher is recommended.
 * `Pip <https://pip.pypa.io/en/stable/>`_: The Python package manager is automatically installed with Python distributions obtained from python.org. Otherwise, it can be installed with the `get-pip.py <https://bootstrap.pypa.io/get-pip.py>`_ script.
+* `OpenSSH <https://www.openssh.com/>`_: Using version 7.2 or higher is recommended.
 * `OpenSSL <https://www.openssl.org/>`_
 * `Docker CE <https://www.docker.com/community-edition>`_ (optional, required for building containers): Download the community edition for your operating system from the `Docker Store <https://store.docker.com/search?type=edition&offering=community>`_. Also make sure that your operating system (OS) user has permissions to run the docker daemon. This can be achieved by adding the user to the *docker* group: ``sudo usermod -aG docker $(whoami)``.
 
@@ -229,10 +230,10 @@ Additional components can be configured using playbooks provided by `Elasticlust
     * ``glusterfs_client``
 
     * ``slurm_master``
-    * ``slurm_workers``
+    * ``slurm_worker``
 
     * ``ganglia_master``
-    * ``ganglia_client``
+    * ``ganglia_monitor``
 
 Example ``setup.yml`` template for the `Google Compute Engine (GCE) <https://cloud.google.com/compute/>`_ provider:
 
