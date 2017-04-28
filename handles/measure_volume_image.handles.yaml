@@ -1,5 +1,5 @@
 ---
-version: 0.0.1
+version: 0.0.3
 
 input:
 
@@ -25,12 +25,6 @@ input:
         Greyscale image from which features should be extracted, i.e.
         whose pixel values should be used for the measurement.
 
-    - name: channel
-      type: IntensityImage
-      key:
-      help: >
-        Channel name associated with features.
-
     - name: pixel_size
       type: Scalar
       value: 0.1625
@@ -54,7 +48,7 @@ output:
       type: Measurement
       objects: assign_objects
       objects_ref: extract_objects
-      channel_ref: channel
+      channel_ref: intensity_image
       help: Extracted intensity features.
 
     - name: figure

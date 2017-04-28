@@ -18,7 +18,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-VERSION = '0.0.1'
+VERSION = '0.0.3'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
@@ -73,14 +73,14 @@ class Morphology3D(jtlib.features.Features):
                 region.max_intensity * self.z_step,
                 region.mean_intensity * self.z_step,
                 (np.nansum(img_nan) * self.pixel_size *
-                    self.pixel_size * self.z_step * 1000.0)
+                    self.pixel_size * self.z_step / 1000.0)
             ]
             features.append(values)
         return pd.DataFrame(
             features, columns=self.names, index=self.object_ids)
 
 
-def main(extract_objects, assign_objects, intensity_image, channel,
+def main(extract_objects, assign_objects, intensity_image,
          pixel_size=0.1625, z_step=0.25, plot=False):
     '''Measures 3D morphology features for objects in `extract_objects`
     based on grayscale values in `intensity_image` and assigns them to
