@@ -1,5 +1,4 @@
 https://github.com/tissuemaps/tmclient/tarball/master#egg=tmclient
-https://github.com/tissuemaps/tmdeploy/tarball/master#egg=tmdeploy
 pytest
 pyyaml
 natsort
