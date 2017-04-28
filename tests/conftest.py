@@ -369,6 +369,7 @@ def client(root_dir, experiment_info):
         client = TmClient(host, port, username, password, experiment_info.name)
         yield client
     except requests.ConnectionError:
+        _docker_down(root_dir)
         raise OSError(
             'Client could not connect to host "{0}" on port {1}.'.format(
                 host, port
