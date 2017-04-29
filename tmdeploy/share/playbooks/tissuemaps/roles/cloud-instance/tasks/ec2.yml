@@ -68,6 +68,17 @@
         gateway_id: "{{ gateway_facts.gateway_id }}"
   run_once: yes
 
+- name: Create compute-storage security group
+  local_action: ec2_group
+  args:
+    state: present
+    name: compute-storage
+    region: "{{ region }}"
+    vpc_id: "{{ network_facts.vpc.id }}"
+    description: Private access
+    rules: []
+  run_once: yes
+
 - name: Create web security group
   local_action: ec2_group
   args:
@@ -107,7 +118,7 @@
         group_name: web
   run_once: yes
 
-- name: Create compute-storage security group
+- name: Update compute-storage security group
   local_action: ec2_group
   args:
     state: present
@@ -212,16 +223,6 @@
     ansible_host: "{{ instance.instances[0].public_ip if assign_public_ip else instance.instances[0].private_ip }}"
     ansible_user: "{{ ansible_user }}"
     ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
-  when: instance_state == 'present' and (instance.instances|length) != 0 and not assign_public_ip
-
-- name: Get ID of existing instance
-  set_fact:
-    instance_id: "{{ instance.tagged_instances[0].id }}"
-  when: instance_state == 'present' and (instance.instances|length) == 0
-
-- name: Get ID of created instance
-  set_fact:
-    instance_id: "{{ instance.instances[0].id }}"
   when: instance_state == 'present' and (instance.instances|length) != 0
 
 - name: "Create storage volume and attach it to instance"
@@ -229,7 +230,7 @@
   args:
     state: "{{ instance_state }}"
     device_name: "{{ volume_device_mapping[provider] }}"
-    instance: "{{ instance_id }}"
+    instance: "{{ instance.tagged_instances[0].id if (instance.instances|length) == 0 else instance.instances[0].id }}"
     delete_on_termination: yes
     name: "{{ volume_name }}"
     region: "{{ region }}"

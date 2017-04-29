@@ -21,6 +21,13 @@
     minutes: 1
     prompt: "Wait 1 minute for instance."
 
+- name: Make sure Python is installed
+  become: yes
+  raw: apt-get -y install python-simplejson
+  delegate_to: "{{ instance_name }}"
+  delegate_facts: yes
+  when: instance_state == "present"
+
 - include: format.yml
   delegate_to: "{{ instance_name }}"
   delegate_facts: yes

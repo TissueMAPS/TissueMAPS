@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install apt packages required for Python
+- name: Install apt packages required for Python package
   apt:
     name: "{{ item }}"
     state: installed

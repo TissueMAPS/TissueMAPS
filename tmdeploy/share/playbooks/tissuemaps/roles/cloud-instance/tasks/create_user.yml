@@ -20,30 +20,12 @@
   group:
     name: "{{ tm_user }}"
 
-- name: Add tissuemaps user
-  become: yes
-  user:
-    name: "{{ tm_user }}"
-    shell: /bin/bash
-    group: "{{ tm_user }}"
-    groups: sudo
-    append: yes
-
 - name: Add user
   become: yes
   user:
     name: "{{ tm_user }}"
-    group: "{{ tm_user }}"
     shell: /bin/bash
-    createhome: yes
-    home: /home/{{ tm_user }}
-
-- name: Add user
-  become: yes
-  user:
-    name: "{{ tm_user }}"
     group: "{{ tm_user }}"
-    shell: /bin/bash
     groups: sudo
     append: yes
     createhome: yes
