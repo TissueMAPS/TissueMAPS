@@ -89,19 +89,23 @@ and the following optional components, which are only required for a larger mult
 
 All components are open-source and deployable on various public and private clouds.
 
-.. .. _server-installation-cloud-images:
+.. _server-installation-cloud-images:
 
-.. Shared cloud images
-.. -------------------
+Public cloud images
+-------------------
 
-.. *TissueMAPS* provides pre-build `Amazon Machine Images (AMIs) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharing-amis.html>`_ that can be launched via the `Elastic Compute Cloud (EC2) console <https://console.aws.amazon.com/ec2/>`_.
+*TissueMAPS* provides publically accessible images on `Amazon Web Services (AWS) <https://aws.amazon.com/>`_ in form of shared `Amazon Machine Images (AMIs) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharing-amis.html>`_.
+
+Based on the images one can simply launch a virtual machine in the cloud via the `Elastic Compute Cloud (EC2) console <https://console.aws.amazon.com/ec2/>`_. To find the images follow the `instructions on AWS <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/usingsharedamis-finding.html>`_. You can filter AMIs using the following criteria:
+
+    - Name: `TissueMAPS server`
 
 .. _server-installation-docker:
 
 Docker
 ------
 
-The easiest way to install the core components is via `Docker compose <https://docs.docker.com/compose/overview/>`_.
+*TissueMAPS* further provides pre-built container images, which are publicly available on `Docker hub <https://hub.docker.com/u/tissuemaps/dashboard/>`_. The easiest way to install the containerized application is via `Docker compose <https://docs.docker.com/compose/overview/>`_.
 
 Requirements
 ^^^^^^^^^^^^
@@ -112,7 +116,7 @@ Requirements
 Installation
 ^^^^^^^^^^^^
 
-You simply need to download the ``docker-compose.yml`` file and start the containers:
+Simply download the ``docker-compose.yml`` file and bring up the containers:
 
 .. code-block:: none
 
@@ -120,7 +124,7 @@ You simply need to download the ``docker-compose.yml`` file and start the contai
     cd ~/tissuemaps
     docker-compose up -d
 
-This will create containers based on pre-built images available on `Docker hub <https://hub.docker.com/u/tissuemaps/dashboard/>`_. The first call will take a while because container images need to be downloaded. Subsequent calls will be highly responsive.
+The first call will take a while because container images need to be downloaded. Subsequent calls will be highly responsive.
 
 
 .. _server-installation-tmdeploy:

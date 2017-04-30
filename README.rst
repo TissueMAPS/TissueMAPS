@@ -15,14 +15,18 @@ Quickstart
 Server
 ------
 
-To install the server components for development and testing, you can use the pre-build `Docker <https://www.docker.com/>`_ container images available on `Docker Hub <https://hub.docker.com/u/tissuemaps/dashboard/>`_::
+The easiest way to set up your own server for development and testing is to use either the pre-build container images available on `Docker Hub <https://hub.docker.com/u/tissuemaps/dashboard/>`_ or the pre-build virtual machines images for `Amazon Web Services (AWS) <https://aws.amazon.com/>`_:
 
-    wget https://raw.githubusercontent.com/tissuemaps/tissuemaps/master/docker-compose.yml -q -P ~/tissuemaps
+To run the containerized *TissueMAPS* server, clone the repository and bring up the containers using `Docker Compose <https://docs.docker.com/compose/>`_::
+
+    git clone https://github.com/tissuemaps/tissuemaps ~/tissuemaps
     cd ~/tissuemaps
     docker-compose up -d
 
 
-For further details and alternative installation options, please refer to the `installation guide <http://tissuemaps.org/installation.html>`_ of the online documentation.
+To run a *TissueMAPS* server in a cloud virtual machine, launch a new instance from one of the shared `Amazon Machine Images (AMIs) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharing-amis.html>`_ using the `Elastic Compute Cloud (EC2) console <https://console.aws.amazon.com/ec2/>`_. To find the *TissueMAPS* images, filter available AMIs for `Name: TissueMAPS server` (see `AWS documentation <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/usingsharedamis-finding.html>`_).
+
+For further details and alternative installation options, please refer to the `installation guide <http://docs.tissuemaps.org/installation.html>`_ of the online documentation.
 
 
 Client
@@ -33,7 +37,7 @@ Once you have access to a running server instance, you can interact with it via 
 Browser
 ^^^^^^^
 
-The easiest way is to interact with the server is via the web-based user interface. To this end, point your web browser to ``http://localhost:8002``. This will redirect you to the login page. Once you have authenticated yourself using your credentials, you will see a list of your existing experiments.
+The easiest way is to interact with the server is via the web-based user interface. To this end, point your web browser to ``http://localhost:8002`` when running the server within a container. Otherwise, just point the browser to the public IP address of your cloud virtual machine.  This will redirect you to the login page. Once you have authenticated yourself using your credentials, you will see a list of your existing experiments.
 
 cURL
 ^^^^
@@ -84,4 +88,4 @@ License
 
 Client code is licensed under `Apache 2.0 <https://www.apache.org/licenses/LICENSE-2.0.html>`_ and server code under `GNU Affero General Public License 3.0 <https://www.gnu.org/licenses/agpl-3.0.html>`_.
 
-For more information please refer to the `license section <http://tissuemaps.org/license.html>`_ of the online documentation or the ``LICENSE.txt`` files in the individual Github repositories.
+For more information please refer to the `license section <http://docs.tissuemaps.org/license.html>`_ of the online documentation or the ``LICENSE.txt`` files in the individual Github repositories.
