@@ -67,7 +67,7 @@ __logo__ = '''
 
 
 SUPPORTED_MICROSCOPE_TYPES = {
-    'visiview', 'cellvoyager'
+    'visiview', 'cellvoyager', 'metamorph'
 }
 
 
@@ -92,7 +92,9 @@ def import_microscope_type_module(microscope_type):
     if microscope_type not in SUPPORTED_MICROSCOPE_TYPES:
         raise ValueError(
             'Unknown microscope type "%s".\n'
-            'Supported are: "%s"' % '", "'.join(SUPPORTED_MICROSCOPE_TYPES)
+            'Supported are: "%s"' % (
+                microscope_type, '", "'.join(SUPPORTED_MICROSCOPE_TYPES)
+            )
         )
     module_name = '%s.%s' % (__name__, microscope_type)
     return importlib.import_module(module_name)
