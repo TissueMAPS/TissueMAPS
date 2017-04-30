@@ -699,7 +699,7 @@ class Workflow(SequentialTaskCollection, State):
                 verbosity=self.verbosity,
                 submission_id=self.submission_id,
                 user_name=self.user_name,
-                parent_id=self.parent_id,
+                parent_id=self.persistent_id,
                 description=description
             )
         return stage
