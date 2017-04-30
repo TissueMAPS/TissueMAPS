@@ -487,6 +487,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                     )
 
                 for t, data in enumerate(measurements):
+                    data = data.round(6)  # single
                     if data.empty:
                         logger.warn('empty measurement at time point %d', t)
                         continue
