@@ -19,7 +19,7 @@ import logging
 import random
 import collections
 import pandas as pd
-from sqlalchemy.sql import func
+from sqlalchemy import func, case
 from geoalchemy2 import Geometry
 from sqlalchemy.orm import Session
 from sqlalchemy import (
@@ -173,8 +173,36 @@ class MapobjectType(ExperimentModel):
             logger.debug('delete all mapobject types')
             connection.execute('DELETE FROM mapobject_types;')
 
-    def get_segmentations_per_site(self, site_id, tpoints=None, zplanes=None,
-            as_polygons=True):
+    def get_site_geometry(self, site_id):
+        '''Gets the geometric representation of a
+        :class:`Site <tmlib.models.site.Site>`.
+        in form of a
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`.
+
+        Parameters
+        ----------
+        site_id: int
+            ID of the :class:`Site <tmlib.models.site.Site>`
+
+        Returns
+        -------
+        geoalchemy2.elements.WKBElement
+        '''
+        session = Session.object_session(self)
+        mapobject_type = session.query(MapobjectType.id).\
+            filter_by(ref_type=Site.__name__).\
+            one()
+        segmentation = session.query(MapobjectSegmentation.geom_polygon).\
+            join(Mapobject).\
+            filter(
+                Mapobject.ref_id == site_id,
+                Mapobject.mapobject_type_id == mapobject_type.id
+            ).\
+            one()
+        return segmentation.geom_polygon
+
+    def get_segmentations_per_site(self, site_id, tpoint, zplane,
+             as_polygons=True):
         '''Gets each
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
         that intersects with the geometric representation of a given
@@ -184,70 +212,192 @@ class MapobjectType(ExperimentModel):
         ----------
         site_id: int
             ID of a :class:`Site <tmlib.models.site.Site>` for which
-            segmentations should be filtered
-        tpoints: List[int], optional
-            time points for which segmentations should be filtered
-            (default: ``None``)
-        zplanes: List[int], optional
-            z-planes for which segmentations should be filtered
-            (default: ``None``)
+            objects should be spatially filtered
+        tpoint: int
+            time point for which objects should be filtered
+        zplane: int
+            z-plane for which objects should be filtered
         as_polygons: bool, optional
             whether segmentations should be returned as polygons;
-            if ``False`` segmentations will be returned as points
+            if ``False`` segmentations will be returned as centroid points
             (default: ``True``)
 
         Returns
         -------
-        List[List[Tuple[Union[int, shapely.geometry.polygon.Polygon, shapely.geometry.point.Point]]]]
-            label and geometry of segmentated objects for each z-plane
-            and time point
+        Tuple[Union[int, geoalchemy2.elements.WKBElement]]
+            label and geometry for each segmented object
         '''
         session = Session.object_session(self)
-        site_mapobject_type = session.query(MapobjectType).\
-            filter_by(ref_type=Site.__name__).\
+        site_geometry = self.get_site_geometry(site_id)
+
+        layer = session.query(SegmentationLayer.id).\
+            filter_by(mapobject_type_id=self.id, tpoint=tpoint, zplane=zplane).\
             one()
-        site_segmentation = session.query(MapobjectSegmentation).\
-            join(Mapobject).\
+
+        if as_polygons:
+            segmentations = session.query(
+                MapobjectSegmentation.label,
+                MapobjectSegmentation.geom_polygon
+            )
+        else:
+            segmentations = session.query(
+                MapobjectSegmentation.label,
+                MapobjectSegmentation.geom_centroid
+            )
+        segmentations = segmentations.\
             filter(
-                Mapobject.ref_id == site_id,
-                Mapobject.mapobject_type_id == site_mapobject_type.id
+                MapobjectSegmentation.segmentation_layer_id == layer.id,
+                MapobjectSegmentation.geom_centroid.ST_Intersects(site_geometry)
             ).\
-            one()
+            all()
 
-        segmentation_layers = session.query(SegmentationLayer).\
-            filter_by(mapobject_type_id=self.id)
-        if tpoints:
-            segmentation_layers = segmentation_layers.\
-                filter(SegmentationLayer.tpoint.in_(tpoints))
-        if zplanes:
-            segmentation_layers = segmentation_layers.\
-                filter(SegmentationLayer.zplane.in_(zplanes))
+        return segmentations
 
-        t = SegmentationLayer.tpoint
-        z = SegmentationLayer.zplane
-        polygons = collections.defaultdict(list)
-        for layer in segmentation_layers.order_by(t, z):
-            if as_polygons:
-                segmentations = session.query(
-                    MapobjectSegmentation.label,
-                    MapobjectSegmentation.geom_polygon
-                )
-            else:
-                segmentations = session.query(
-                    MapobjectSegmentation.label,
-                    MapobjectSegmentation.geom_centroid
-                )
-            segmentations = segmentations.\
-                filter(
-                    MapobjectSegmentation.segmentation_layer_id == layer.id,
-                    MapobjectSegmentation.geom_centroid.ST_Intersects(
-                        site_segmentation.geom_polygon
+    def get_feature_values_per_site(self, site_id, tpoint):
+        '''Gets all
+        :class:`FeatureValues <tmlib.models.feature.FeatureValues>`
+        for each :class:`Mapobject <tmlib.models.MapobjectSegmentation>`
+        where the corresponding
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        intersects with the geometric representation of a given
+        :class:`Site <tmlib.models.site.Site>`.
+
+        Parameters
+        ----------
+        site_id: int
+            ID of a :class:`Site <tmlib.models.site.Site>` for which
+            objects should be spatially filtered
+        tpoint: int
+            time point for which objects should be filtered
+
+        Returns
+        -------
+        pandas.DataFrame[numpy.float]
+            feature values for each mapobject
+        '''
+        session = Session.object_session(self)
+        site_geometry = self.get_site_geometry(site_id)
+
+        features = session.query(Feature.id, Feature.name).\
+            filter_by(mapobject_type_id=self.id).\
+            all()
+        feature_map = {str(id): name for id, name in features}
+
+        results = session.query(
+                FeatureValues.mapobject_id, FeatureValues.values
+            ).\
+            join(Mapobject).\
+            join(MapobjectSegmentation).\
+            filter(
+                Mapobject.mapobject_type_id == self.id,
+                FeatureValues.tpoint == tpoint,
+                MapobjectSegmentation.geom_centroid.ST_Intersects(site_geometry)
+            ).\
+            order_by(Mapobject.id).\
+            all()
+        values = [r.values for r in results]
+        mapobject_ids = [r.mapobject_id for r in results]
+        df = pd.DataFrame(values, index=mapobject_ids)
+        df.rename(columns=feature_map, inplace=True)
+
+        return df
+
+    def get_label_values_per_site(self, site_id, tpoint):
+        '''Gets all :class:`LabelValues <tmlib.models.result.LabelValues>`
+        for each :class:`Mapobject <tmlib.models.MapobjectSegmentation>`
+        where the corresponding
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        intersects with the geometric representation of a given
+        :class:`Site <tmlib.models.site.Site>`.
+
+        Parameters
+        ----------
+        site_id: int
+            ID of a :class:`Site <tmlib.models.site.Site>` for which
+            objects should be spatially filtered
+        tpoint: int, optional
+            time point for which objects should be filtered
+
+        Returns
+        -------
+        pandas.DataFrame[numpy.float]
+            label values for each mapobject
+        '''
+        session = Session.object_session(self)
+        site_geometry = self.get_site_geometry(site_id)
+
+        labels = session.query(ToolResult.id, ToolResult.name).\
+            filter_by(mapobject_type_id=self.id).\
+            all()
+        label_map = {str(id): name for id, name in labels}
+
+        results = session.query(
+                LabelValues.mapobject_id, LabelValues.values
+            ).\
+            join(Mapobject).\
+            join(MapobjectSegmentation).\
+            filter(
+                Mapobject.mapobject_type_id == self.id,
+                LabelValues.tpoint == tpoint,
+                MapobjectSegmentation.geom_centroid.ST_Intersects(site_geometry)
+            ).\
+            order_by(Mapobject.id).\
+            all()
+        values = [r.values for r in results]
+        mapobject_ids = [r.mapobject_id for r in results]
+        df = pd.DataFrame(values, index=mapobject_ids)
+        df.rename(columns=label_map, inplace=True)
+
+        return df
+
+    def identify_border_objects_per_site(self, site_id, tpoint):
+        '''Determines for each :class:`Mapobject <tmlib.models.MapobjectSegmentation>`
+        where the corresponding
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        intersects with the geometric representation of a given
+        :class:`Site <tmlib.models.site.Site>`, whether the objects is touches
+        at the border of the site.
+
+        Parameters
+        ----------
+        site_id: int
+            ID of a :class:`Site <tmlib.models.site.Site>` for which
+            objects should be spatially filtered
+        tpoint: int
+            time point for which objects should be filtered
+
+        Returns
+        -------
+        pandas.Series[numpy.bool]
+            ``True`` if the mapobject touches the border of the site and
+            ``False`` otherwise
+        '''
+        session = Session.object_session(self)
+        site_geometry = self.get_site_geometry(site_id)
+
+        results = session.query(
+                FeatureValues.mapobject_id,
+                case([(
+                    MapobjectSegmentation.geom_polygon.ST_Intersects(
+                        site_geometry.ST_Boundary()
                     )
-                ).\
-                all()
-            polygons[layer.tpoint].append(segmentations)
+                    , True
+                )], else_=False).label('is_border')
+            ).\
+            join(Mapobject).\
+            join(MapobjectSegmentation).\
+            filter(
+                Mapobject.mapobject_type_id == self.id,
+                FeatureValues.tpoint == tpoint,
+                MapobjectSegmentation.geom_centroid.ST_Intersects(site_geometry)
+            ).\
+            order_by(Mapobject.id).\
+            all()
+        values = [r.is_border for r in results]
+        mapobject_ids = [r.mapobject_id for r in results]
+        s = pd.Series(values, index=mapobject_ids)
 
-        return [polygons[k] for k in sorted(polygons.keys())]
+        return s
 
     def __repr__(self):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)

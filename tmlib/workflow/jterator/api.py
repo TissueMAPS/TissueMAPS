@@ -243,14 +243,16 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             site = session.query(tm.Site).get(site_id)
 
-            n_tpoints = session.query(tm.ChannelImageFile.tpoint).\
+            results = session.query(tm.ChannelImageFile.tpoint).\
                 filter_by(site_id=site.id).\
-                distinct().\
-                count()
-            n_zplanes = session.query(tm.ChannelImageFile.zplane).\
+                distinct()
+            tpoints = [r.tpoint for r in results]
+            n_tpoints = len(tpoints)
+            results = session.query(tm.ChannelImageFile.zplane).\
                 filter_by(site_id=site.id).\
-                distinct().\
-                count()
+                distinct()
+            zplanes = [r.zplane for r in results]
+            n_zplanes = len(zplanes)
 
             y_offset, x_offset = site.aligned_offset
             height = site.aligned_height
@@ -306,7 +308,16 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 mapobject_type = session.query(tm.MapobjectType).\
                     filter_by(name=obj.name).\
                     one()
-                polygons = mapobject_type.get_segmentations_per_site(site.id)
+                polygons = list()
+                for t in tpoints:
+                    zpolys = list()
+                    for z in zplanes:
+                        zpolys.append(
+                            mapobject_type.get_segmentations_per_site(
+                                site_id=site.id, tpoint=t, zplane=z
+                            )
+                        )
+                    polygons.append(zpolys)
 
                 segm_obj = SegmentedObjects(obj.name, obj.name)
                 segm_obj.add_polygons(
