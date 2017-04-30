@@ -249,6 +249,7 @@ class MapobjectType(ExperimentModel):
                 MapobjectSegmentation.segmentation_layer_id == layer.id,
                 MapobjectSegmentation.geom_centroid.ST_Intersects(site_geometry)
             ).\
+            order_by(MapobjectSegmentation.mapobject_id).\
             all()
 
         return segmentations
@@ -350,7 +351,7 @@ class MapobjectType(ExperimentModel):
 
         return df
 
-    def identify_border_objects_per_site(self, site_id, tpoint):
+    def identify_border_objects_per_site(self, site_id, tpoint, zplane):
         '''Determines for each :class:`Mapobject <tmlib.models.MapobjectSegmentation>`
         where the corresponding
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
@@ -365,6 +366,8 @@ class MapobjectType(ExperimentModel):
             objects should be spatially filtered
         tpoint: int
             time point for which objects should be filtered
+        zplane: int
+            z-plane for which objects should be filtered
 
         Returns
         -------
@@ -375,8 +378,12 @@ class MapobjectType(ExperimentModel):
         session = Session.object_session(self)
         site_geometry = self.get_site_geometry(site_id)
 
+        layer = session.query(SegmentationLayer.id).\
+            filter_by(mapobject_type_id=self.id, tpoint=tpoint, zplane=zplane).\
+            one()
+
         results = session.query(
-                FeatureValues.mapobject_id,
+                MapobjectSegmentation.mapobject_id,
                 case([(
                     MapobjectSegmentation.geom_polygon.ST_Intersects(
                         site_geometry.ST_Boundary()
@@ -384,14 +391,11 @@ class MapobjectType(ExperimentModel):
                     , True
                 )], else_=False).label('is_border')
             ).\
-            join(Mapobject).\
-            join(MapobjectSegmentation).\
             filter(
-                Mapobject.mapobject_type_id == self.id,
-                FeatureValues.tpoint == tpoint,
+                MapobjectSegmentation.segmentation_layer_id == layer.id,
                 MapobjectSegmentation.geom_centroid.ST_Intersects(site_geometry)
             ).\
-            order_by(Mapobject.id).\
+            order_by(MapobjectSegmentation.mapobject_id).\
             all()
         values = [r.is_border for r in results]
         mapobject_ids = [r.mapobject_id for r in results]

@@ -309,9 +309,9 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                     filter_by(name=obj.name).\
                     one()
                 polygons = list()
-                for t in tpoints:
+                for t in sorted(tpoints):
                     zpolys = list()
-                    for z in zplanes:
+                    for z in sorted(zplanes):
                         zpolys.append(
                             mapobject_type.get_segmentations_per_site(
                                 site_id=site.id, tpoint=t, zplane=z
