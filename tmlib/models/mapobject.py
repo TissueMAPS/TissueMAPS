@@ -177,12 +177,14 @@ class MapobjectType(ExperimentModel):
             as_polygons=True):
         '''Gets each
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-        that intersects with a given site.
+        that intersects with the geometric representation of a given
+        :class:`Site <tmlib.models.site.Site>`.
 
         Parameters
         ----------
         site_id: int
-            ID of a given :class:`Site <tmlib.models.site.Site>`
+            ID of a :class:`Site <tmlib.models.site.Site>` for which
+            segmentations should be filtered
         tpoints: List[int], optional
             time points for which segmentations should be filtered
             (default: ``None``)
@@ -221,23 +223,22 @@ class MapobjectType(ExperimentModel):
             segmentation_layers = segmentation_layers.\
                 filter(SegmentationLayer.zplane.in_(zplanes))
 
+        t = SegmentationLayer.tpoint
+        z = SegmentationLayer.zplane
         polygons = collections.defaultdict(list)
-        for layer in segmentation_layers.\
-            order_by(SegmentationLayer.tpoint, SegmentationLayer.zplane):
+        for layer in segmentation_layers.order_by(t, z):
             if as_polygons:
                 segmentations = session.query(
-                        MapobjectSegmentation.label,
-                        MapobjectSegmentation.geom_polygon
-                    )
+                    MapobjectSegmentation.label,
+                    MapobjectSegmentation.geom_polygon
+                )
             else:
                 segmentations = session.query(
-                        MapobjectSegmentation.label,
-                        MapobjectSegmentation.geom_centroid
-                    )
+                    MapobjectSegmentation.label,
+                    MapobjectSegmentation.geom_centroid
+                )
             segmentations = segmentations.\
-                join(Mapobject).\
                 filter(
-                    Mapobject.mapobject_type_id == self.id,
                     MapobjectSegmentation.segmentation_layer_id == layer.id,
                     MapobjectSegmentation.geom_centroid.ST_Intersects(
                         site_segmentation.geom_polygon
