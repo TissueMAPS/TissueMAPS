@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import re
 import sys
 import shutil
 import logging
@@ -26,6 +27,7 @@ import shapely.ops
 from cached_property import cached_property
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import FLOAT
 from psycopg2 import ProgrammingError
 from psycopg2.extras import Json
 from gc3libs.quantity import Duration, Memory
@@ -36,6 +38,7 @@ from tmlib.utils import flatten
 from tmlib.readers import TextReader
 from tmlib.readers import ImageReader
 from tmlib.writers import TextWriter
+from tmlib.models.types import ST_GeomFromText
 from tmlib.workflow.api import WorkflowStepAPI
 from tmlib.errors import PipelineDescriptionError
 from tmlib.errors import JobDescriptionError
@@ -494,7 +497,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 for fname in measurements[0].columns:
                     logger.debug('add feature "%s"', fname)
                     feature_ids[fname] = self._add_feature(
-                        conn, fname, mapobject_type_ids[obj_name]
+                        conn, fname, mapobject_type_ids[obj_name], False
                     )
 
                 for t, data in enumerate(measurements):
@@ -621,6 +624,117 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             store = self._run_pipeline(store, site_id, batch['plot'])
             self._save_pipeline_outputs(store)
 
+    def _aggregate(self, feature_id, feature_name,
+            mapobject_type_id, mapobject_type_name,
+            ref_mapobject_type_id, ref_mapobject_id, ref_geometry):
+        with tm.utils.ExperimentConnection(self.experiment_id) as c:
+            c.execute('''
+                SELECT tpoint,
+                       min((v.values->%(feature_id)s)::float) AS Min,
+                       max((v.values->%(feature_id)s)::float) AS Max,
+                       sum((v.values->%(feature_id)s)::float) AS Sum,
+                       avg((v.values->%(feature_id)s)::float) AS Mean,
+                       count((v.values->%(feature_id)s)::float) AS Count
+                FROM feature_values AS v
+                JOIN mapobjects AS m
+                ON m.id = v.mapobject_id
+                JOIN mapobject_segmentations AS s
+                ON s.mapobject_id = v.mapobject_id
+                WHERE m.mapobject_type_id=%(mapobject_type_id)s
+                AND (v.values->%(feature_id)s)::float != 'NaN'::float
+                AND ST_Intersects(
+                    s.geom_polygon, ST_GeomFromText(%(ref_polygon)s)
+                )
+                GROUP BY tpoint;
+            ''', {
+                'feature_id': str(feature_id),
+                'mapobject_type_id': mapobject_type_id,
+                'ref_polygon': ref_geometry
+            })
+            results = c.fetchall()
+
+            values = dict()
+            agg_features = dict()
+            for record in results:
+                tpoint = record.tpoint
+                for name in record._fields:
+                    if name == 'tpoint':
+                        continue
+                    elif name == 'count':
+                        agg_feature_name = '{type}_{stat}'.format(
+                            type=mapobject_type_name,
+                            stat=name.capitalize()
+                        )
+                    else:
+                        agg_feature_name = '{name}_{type}_{stat}'.format(
+                            name=feature_name,
+                            type=mapobject_type_name,
+                            stat=name.capitalize()
+                        )
+                    agg_feature_id = self._add_feature(
+                        c, agg_feature_name, ref_mapobject_type_id, True
+                    )
+                    val = getattr(record, name)
+                    if val is None:
+                        val = np.nan
+                    val = np.round(val, 6)
+                    values[str(agg_feature_id)] = str(val)
+                    agg_features[agg_feature_id] = agg_feature_name
+                tm.FeatureValues.add(c, values, ref_mapobject_id, tpoint)
+
+            return agg_features
+
+    def _aggregate_aggregates(self, feature_id, feature_name,
+            mapobject_type_id, mapobject_type_name,
+            ref_mapobject_type_id, ref_mapobject_id, ref_geometry):
+        statistics = {
+            'Min': 'min', 'Max': 'max', 'Sum': 'sum',
+            'Mean': 'avg', 'Count': 'sum'
+        }
+        for name, func in statistics.iteritems():
+            if re.search(r'_%s$' % name, feature_name):
+                break
+
+        with tm.utils.ExperimentConnection(self.experiment_id) as c:
+            c.execute('''
+                SELECT tpoint,
+                       {0}((v.values->%(feature_id)s)::float) AS {1}
+                FROM feature_values AS v
+                JOIN mapobjects AS m
+                ON m.id = v.mapobject_id
+                JOIN mapobject_segmentations AS s
+                ON s.mapobject_id = v.mapobject_id
+                WHERE m.mapobject_type_id=%(mapobject_type_id)s
+                AND (v.values->%(feature_id)s)::float != 'NaN'::float
+                AND ST_Intersects(
+                    s.geom_polygon, ST_GeomFromText(%(ref_polygon)s)
+                )
+                GROUP BY tpoint;
+            '''.format(func, name), {
+                'feature_id': str(feature_id),
+                'mapobject_type_id': mapobject_type_id,
+                'ref_polygon': ref_geometry
+            })
+            results = c.fetchall()
+            values = dict()
+            agg_features = dict()
+            for record in results:
+                tpoint = record.tpoint
+                for name in record._fields:
+                    if name == 'tpoint':
+                        continue
+                    agg_feature_id = self._add_feature(
+                        c, feature_name, ref_mapobject_type_id, True
+                    )
+                    val = getattr(record, name)
+                    if val is None:
+                        val = np.nan
+                    values[str(agg_feature_id)] = str(val)
+                    agg_features[agg_feature_id] = feature_name
+                tm.FeatureValues.add(c, values, ref_mapobject_id, tpoint)
+
+        return agg_features
+
     def collect_job_output(self, batch):
         '''Computes the optimal representation of each
         :class:`SegmentationLayer <tmlib.models.layer.SegmentationLayer>` on the
@@ -645,11 +759,99 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 segm_layer.polygon_threshold = pt
                 segm_layer.centroid_threshold = ct
 
-                # TODO: population context and aggregate features
-                # tm.types.ST_Expand()
+        logger.info('compute aggregate features')
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            mapobject_types = session.query(
+                    tm.MapobjectType.id, tm.MapobjectType.name
+                ).\
+                filter(tm.MapobjectType.ref_type == None).\
+                all()
+            mapobject_type_id_lut = dict()
+            feature_lut = dict()
+            for mapobject_type_id, mapobject_type_name in mapobject_types:
+                mapobject_type_id_lut[mapobject_type_name] = mapobject_type_id
+                features = session.query(tm.Feature.id, tm.Feature.name).\
+                    filter_by(mapobject_type_id=mapobject_type_id).\
+                    all()
+                feature_lut[mapobject_type_name] = {
+                    str(id): name for id, name in features
+                }
+
+        parent_mapobject_ref_types = ['Site', 'Well', 'Plate']
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            ref_id_lut = dict()
+            ref_lut = dict()
+            for ref_type in parent_mapobject_ref_types:
+                ref_mapobject_type = session.query(tm.MapobjectType.id).\
+                    filter_by(ref_type=ref_type).\
+                    one()
+                ref_mapobject_type_id = ref_mapobject_type.id
+                ref_mapobjects = session.query(
+                        tm.MapobjectSegmentation.mapobject_id,
+                        tm.MapobjectSegmentation.geom_polygon.ST_AsText()
+                    ).\
+                    join(tm.Mapobject).\
+                    filter(
+                        tm.Mapobject.mapobject_type_id == ref_mapobject_type.id
+                    ).\
+                    all()
+                ref_id_lut[ref_type] = ref_mapobject_type.id
+                ref_lut[ref_type] = [(r[0], r[1]) for r in ref_mapobjects]
+
+        new_features = collections.defaultdict(dict)
+        for ref_type_name in parent_mapobject_ref_types:
+            ref_type_id = ref_id_lut[ref_type_name]
+            logger.info(
+                'compute aggregates for objects of type "%s"', ref_type_name
+            )
+            for ref_id, ref_geom in ref_lut[ref_type_name]:
+                logger.info('compute aggregates for object #%d', ref_id)
+                if ref_type_name == 'Site':
+                    for mapobject_type_name, features in feature_lut.iteritems():
+                        mapobject_type_id = mapobject_type_id_lut[
+                            mapobject_type_name
+                        ]
+                        for feature_id, feature_name in features.iteritems():
+                            logger.debug(
+                                'compute aggregates over values of feature "%s" '
+                                'for objects of type "%s"',
+                                feature_name, mapobject_type_name
+                            )
+                            f = self._aggregate(
+                                feature_id=feature_id,
+                                feature_name=feature_name,
+                                mapobject_type_id=mapobject_type_id,
+                                mapobject_type_name=mapobject_type_name,
+                                ref_mapobject_type_id=ref_type_id,
+                                ref_mapobject_id=ref_id,
+                                ref_geometry=ref_geom
+                            )
+                            new_features[ref_type_name].update(f)
+                else:
+                    # Now, we simply aggregate the statistics over the next
+                    # "lower" level reference mapobject type:
+                    # Aggregate sites per well and wells per plate.
+                    idx = parent_mapobject_ref_types.index(ref_type_name) - 1
+                    mapobject_type_name = parent_mapobject_ref_types[idx]
+                    mapobject_type_id = ref_id_lut[mapobject_type_name]
+                    pre_features = new_features[mapobject_type_name]
+                    for feature_id, feature_name in pre_features.iteritems():
+                        f = self._aggregate_aggregates(
+                            feature_id=feature_id,
+                            feature_name=feature_name,
+                            mapobject_type_id=mapobject_type_id,
+                            mapobject_type_name=mapobject_type_name,
+                            ref_mapobject_type_id=ref_type_id,
+                            ref_mapobject_id=ref_id,
+                            ref_geometry=ref_geom
+                        )
+                        new_features[ref_type_name].update(f)
+
+        # TODO: population context
+        # tm.types.ST_Expand()
 
     @staticmethod
-    def _add_feature(conn, name, mapobject_type_id):
+    def _add_feature(conn, name, mapobject_type_id, is_aggregate):
         conn.execute('''
             SELECT id FROM features
             WHERE name = %(name)s
@@ -666,14 +868,17 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             record = conn.fetchone()
             feature_id = record.nextval
             conn.execute('''
-                INSERT INTO features (id, name, mapobject_type_id)
-                VALUES (%(id)s, %(name)s, %(mapobject_type_id)s)
+                INSERT INTO features (id, name, is_aggregate, mapobject_type_id)
+                VALUES (
+                    %(id)s, %(name)s, %(is_aggregate)s, %(mapobject_type_id)s
+                )
                 ON CONFLICT
                 ON CONSTRAINT features_name_mapobject_type_id_key
                 DO NOTHING
             ''', {
                 'id': feature_id,
                 'name': name,
+                'is_aggregate': is_aggregate,
                 'mapobject_type_id': mapobject_type_id
             })
         else:

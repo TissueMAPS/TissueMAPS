@@ -13,6 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import re
 import numpy as np
 import pandas as pd
 import logging
@@ -84,11 +85,14 @@ class Heatmap(Tool):
         selected_feature = payload['selected_feature']
 
         logger.info('calculate min/max for rescaling of intensities')
-        feature_values = self.load_feature_values(
-            mapobject_type_name, [selected_feature]
+        lower, upper = self.calculate_extrema(
+            mapobject_type_name, selected_feature
         )
-        lower = np.min(feature_values[selected_feature])
-        upper = np.max(feature_values[selected_feature])
+
+        if np.isnan(lower):
+            raise ValueError('Minimum feature value is NaN.')
+        if np.isnan(upper):
+            raise ValueError('Maximum feature value is NaN.')
 
         feature_id = self._get_feature_id(mapobject_type_name, selected_feature)
         result_id = self.register_result(

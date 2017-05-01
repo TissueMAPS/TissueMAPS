@@ -159,7 +159,7 @@ class FeatureValues(ExperimentModel):
     values = Column(HSTORE)
 
     #: int: zero-based time point index
-    tpoint = Column(Integer, index=True, nullable=False)
+    tpoint = Column(Integer, index=True)
 
     #: int: ID of the parent mapobject (FOREIGN KEY)
     mapobject_id = Column(

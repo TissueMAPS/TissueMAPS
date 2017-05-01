@@ -25,6 +25,8 @@ import collections
 from abc import ABCMeta
 from abc import abstractmethod
 from abc import abstractproperty
+from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import FLOAT
 
 from tmlib import cfg
 import tmlib.models as tm
@@ -93,24 +95,23 @@ class Tool(object):
         self.experiment_id = experiment_id
 
     def load_feature_values(self, mapobject_type_name, feature_names):
-        '''Selects all values for each given
-        :class:`tmlib.models.Feature` and the mapobjects with the given
-        :class:`tmlib.models.MapobjectType`.
+        '''Selects all values for the each given features and
+        mapobject types.
 
         Parameters
         ----------
         mapobject_type_name: str
-            name of the selected mapobject type
-            (:class:`tmlib.models.mapobject.MapobjectType`)
+            name of the selected
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
         feature_names: List[str]
-            names of selected features
-            (:class:`tmlib.models.feature.Feature`)
+            name of each selected
+            :class:`Feature <tmlib.models.feature.Feature>`
 
         Returns
         -------
         pandas.DataFrame
             dataframe where columns are features and rows are mapobjects
-            indexable by `mapobject_id`
+            indexable by their ID
         '''
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             conn.execute('''
@@ -151,6 +152,52 @@ class Tool(object):
             if count > 0:
                 logger.warn('feature "%s" contains %d null values', name, count)
         return df
+
+    def calculate_extrema(self, mapobject_type_name, feature_name):
+        '''Calcultes the minimum and maximum over values of a given
+        feature and mapobject type.
+
+        Parameters
+        ----------
+        mapobject_type_name: str
+            name of the selected
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        feature_names: List[str]
+            name of each selected
+            :class:`Feature <tmlib.models.feature.Feature>`
+
+        Returns
+        -------
+        Tuple[float]
+            min and max
+        '''
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            mapobject_type = session.query(tm.MapobjectType.id).\
+                filter_by(name=mapobject_type_name).\
+                one()
+            feature = session.query(tm.Feature.id).\
+                filter_by(
+                    name=feature_name, mapobject_type_id=mapobject_type.id
+                ).\
+                one()
+
+            lower, upper = session.query(
+                    func.min(
+                        tm.FeatureValues.values[str(feature.id)].cast(FLOAT)
+                    ),
+                    func.max(
+                        tm.FeatureValues.values[str(feature.id)].cast(FLOAT)
+                    )
+                ).\
+                join(tm.Mapobject).\
+                filter(
+                    tm.Mapobject.mapobject_type_id == mapobject_type.id,
+                    tm.FeatureValues.values[str(feature.id)] != 'nan'
+                ).\
+                one()
+
+        return (lower, upper)
+
 
     def get_features_with_null_values(self, feature_data):
         '''Gets names of features with NULL values.
