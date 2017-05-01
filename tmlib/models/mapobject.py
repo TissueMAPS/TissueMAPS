@@ -254,7 +254,7 @@ class MapobjectType(ExperimentModel):
 
         return segmentations
 
-    def get_feature_values_per_site(self, site_id, tpoint):
+    def get_feature_values_per_site(self, site_id, tpoint, feature_ids=None):
         '''Gets all
         :class:`FeatureValues <tmlib.models.feature.FeatureValues>`
         for each :class:`Mapobject <tmlib.models.MapobjectSegmentation>`
@@ -270,6 +270,10 @@ class MapobjectType(ExperimentModel):
             objects should be spatially filtered
         tpoint: int
             time point for which objects should be filtered
+        feature_ids: List[int], optional
+            ID of each :class:`Feature <tmlib.models.feature.Feature>` for
+            which values should be selected; by default all features will be
+            selected
 
         Returns
         -------
@@ -280,13 +284,23 @@ class MapobjectType(ExperimentModel):
         site_geometry = self.get_site_geometry(site_id)
 
         features = session.query(Feature.id, Feature.name).\
-            filter_by(mapobject_type_id=self.id).\
-            all()
+            filter_by(mapobject_type_id=self.id)
+        if feature_ids is not None:
+            features = features.filter(Feature.id.in_(feature_ids))
+        features = features.all()
         feature_map = {str(id): name for id, name in features}
 
-        results = session.query(
-                FeatureValues.mapobject_id, FeatureValues.values
-            ).\
+        if feature_ids is not None:
+            results = session.query(
+                FeatureValues.mapobject_id,
+                FeatureValues.values.slice(feature_map.keys()).label('values')
+            )
+        else:
+            results = session.query(
+                FeatureValues.mapobject_id,
+                FeatureValues.values
+            )
+        results = results.\
             join(Mapobject).\
             join(MapobjectSegmentation).\
             filter(
