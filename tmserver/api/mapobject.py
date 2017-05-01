@@ -546,7 +546,7 @@ def get_segmentations(experiment_id, mapobject_type_id):
         mapobject_type = session.query(tm.MapobjectType).\
             get(mapobject_type_id)
         polygons = mapobject_type.get_segmentations_per_site(
-            site.id, tpoints=[tpoint], zplanes=[zplane]
+            site.id, tpoint=tpoint, zplane=zplane
         )
         if len(polygons) == 0:
             raise ResourceNotFoundError(tm.MapobjectSegmentation, request.args)
