@@ -19,7 +19,7 @@ from jtmodules import project, detect_blobs
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.2'
+VERSION = '0.1.0'
 
 Output = collections.namedtuple('Output', ['volume_image', 'figure'])
 
@@ -140,7 +140,8 @@ def interpolate_surface(coords, output_shape, method='linear'):
     return interpolate.T
 
 
-def main(image, mask, threshold=150, bead_area=2, plot=False):
+def main(image, mask, threshold=150, bead_size=2, superpixel_size=4,
+         close_surface=False, close_disc_size=8, plot=False):
     '''Converts an image stack with labelled cell surface to a cell
     `volume` image
 
@@ -152,8 +153,15 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
         binary or labeled image of cell segmentation (2D)
     threshold: int, optional
         intensity of bead (default: ``150``)
-    bead_area: int, optional
+    bead_size: int, optional
         minimal size of bead (default: ``2``)
+    superpixel_size: int, optional
+        size of superpixels for searching the 3D position of a bead
+    close_surface: bool, optional
+        whether the interpolated surface should be morphologically closed
+    close_disc_size: int, optional
+        size in pixels of the disc used to morphologically close the
+        interpolated surface
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -185,7 +193,7 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
     try:
         beads = detect_blobs.main(
             image=mip.projected_image, mask=mask,
-            threshold=threshold, min_area=bead_area
+            threshold=threshold, min_area=bead_size
         )
     except:
         logger.warn('detect_blobs failed, returning empty volume image')
@@ -203,7 +211,7 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
         logger.debug('locate beads in 3D')
         beads_coords_3D = locate_in_3D(
             image=image, mask=beads.centroids,
-            bin_size=2
+            bin_size=superpixel_size
         )
 
         logger.info('interpolate cell surface')
@@ -212,6 +220,13 @@ def main(image, mask, threshold=150, bead_area=2, plot=False):
             output_shape=np.shape(image[:, :, 1]),
             method='linear'
         )
+
+        if (close_surface is True):
+            import mahotas as mh
+            logger.info('morphological closing of cell surface')
+            volume_image = mh.close(volume_image,
+                                    Bc=mh.disk(close_disc_size))
+
         volume_image[mask == 0] = 0
 
     volume_image = volume_image.astype(image.dtype)

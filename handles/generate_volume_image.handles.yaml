@@ -1,5 +1,5 @@
 ---
-version: 0.0.2
+version: 0.1.0
 
 input:
 
@@ -21,11 +21,29 @@ input:
     help: >
       Threshold for detection of bead intensity.
 
-  - name: bead_area
+  - name: bead_size
     type: Numeric
     value: 2
     help: >
       Bead size in pixels (passed to detect_blobs)
+
+  - name: superpixel_size
+    type: Numeric
+    value: 4
+    help: >
+      Size of superpixels for searching the 3D position of a bead.
+
+  - name: close_surface
+    type: bool
+    value: false
+    help: >
+      Whether the interpolated surface should be morphologically closed.
+
+  - name: close_disc_size
+    type: Numeric
+    value: 8
+    help: >
+      Size in pixels of the disc used to morphologically close the interpolated surface
 
   - name: plot
     type: Plot
