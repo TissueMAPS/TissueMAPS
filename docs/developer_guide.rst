@@ -92,13 +92,13 @@ HTTP client interfaces
 Backend
 =======
 
-The *TissueMAPS* backend is implemented to large extend in `Python 2.7 <https://docs.python.org/2/>`_.
+The *TissueMAPS* backend is implemented to large extent in `Python 2.7 <https://docs.python.org/2/>`_.
 
-The code is distributed accross different repositories, each of them hosting a Python package:
+The code is distributed across different repositories, each of them hosting a Python package:
 
 - `Tmserver <https://github.com/TissueMAPS/TmServer>`_ (:mod:`tmserver` Python package): *TissueMAPS* server - `Flask <http://flask.pocoo.org/>`_-based web application
 
-  * :mod:`tmserver.api`: `blueprint <http://flask.pocoo.org/docs/0.11/blueprints/>`_ with `view functions <http://flask.pocoo.org/docs/0.11/tutorial/views/>`_ for the *RESTful API* listening on ``/api`` route.
+  * :mod:`tmserver.api`: `blueprint <http://flask.pocoo.org/docs/0.11/blueprints/>`_ with `view functions <http://flask.pocoo.org/docs/0.11/tutorial/views/>`_ for the *RESTful API* listening on the ``/api`` route.
   * :mod:`tmserver.jtui`: blueprint with view functions specific to the *Jterator* user interface listening on ``/jtui`` route
   * :mod:`tmserver.extensions`: extensions for user authentication and computational job management
 
@@ -186,8 +186,8 @@ Since *TissueMAPS* is written in Python, we cannot use the Java library directly
 Although *Bio-Formats* supports a large number of `file formats <http://www.openmicroscopy.org/site/support/bio-formats5.2/supported-formats.html>`_, many of the vendor-specific formats are not fully supported, in particular when it comes to reading additional microscope-specific metadata files, and crucial information is sometimes missing. Therefore, *TissueMAPS* does not fully rely on *Bio-Formats* in terms of reading and interpreting image metadata, but uses the following multi-step approach instead (implemented as the "image conversion" workflow stage):
 
 - The :mod:`metaextract <tmlib.workflow.metaextract>` step extracts metadata in form of `OMEXML <https://www.openmicroscopy.org/site/support/ome-model/ome-xml/>`_ from each image file using the `showinf <showinf>`_ *Bio-Formats* command line tool.
-- The :mod:`metaconfig <tmlib.workflow.metaconfig>` step then combines metadata extracted from each image with metadata provided by other sources, for example via custom microscope-type specific :class:`MetadataReader <tmlib.worklow.metaconfig.base.MetadataReader>` classes or, in the worst case, user interput, and saves the configured metadata in the database. The *TissueMAPS* database schema uses similar terminology as the `OME schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2016-06/ome.html>`_ (e.g. :class:`Plate <tmlib.models.plate.Plate>`, :class:`Well <tmlib.models.well.Well>`, :class:`Channel <tmlib.models.channel.Channel>`), but puts less emphasis on microscope details and more on multi-scale map representation of images and segmented objects (e.g. :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>`, :class:`LabelLayer <tmlib.models.layer.LabelLayer>` or :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`).
-- The :mod:`imextract <tmlib.workflow.imextract>` step finally extract the pixel data from image files and stores them in a standarized format. Currently we use `HDF5 <https://support.hdfgroup.org/HDF5/>`_, but this may be subject to change. Developers are therefore advised to access image data via the respective :class:`FileModel <tmlib.models.file.FileModel>`) classes.
+- The :mod:`metaconfig <tmlib.workflow.metaconfig>` step then combines metadata extracted from each image with metadata provided by other sources, for example via custom microscope-type specific :class:`MetadataReader <tmlib.worklow.metaconfig.base.MetadataReader>` classes or (in the worst case) user input, and saves the configured metadata in the database. The *TissueMAPS* database schema uses similar terminology as the `OME schema <http://www.openmicroscopy.org/Schemas/Documentation/Generated/OME-2016-06/ome.html>`_ (e.g. :class:`Plate <tmlib.models.plate.Plate>`, :class:`Well <tmlib.models.well.Well>`, :class:`Channel <tmlib.models.channel.Channel>`), but puts less emphasis on microscope details and more on multi-scale map representation of images and segmented objects (e.g. :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>`, :class:`LabelLayer <tmlib.models.layer.LabelLayer>` or :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`).
+- The :mod:`imextract <tmlib.workflow.imextract>` step finally extract the pixel data from image files and stores them in a standarized format. Currently we use `HDF5 <https://support.hdfgroup.org/HDF5/>`_, but this may be subject to change. Developers are therefore advised to access image data via the respective :class:`FileModel <tmlib.models.file.FileModel>` classes.
 
 The most critical step in this stage is :mod:`metaconfig <tmlib.workflow.metaconfig>`. In fact, it is crucial for the entire subsequent workflow. Because it is so important that images are handled correctly, *TissueMAPS* requires users to specify the :attr:`microscope_type <tmlib.models.experiment.Experiment.microscope_type>` for each experiment. To register a new microscope, developers must implement a microscope-specific :class:`MetadataHandler <tmlib.workflow.metaconfig.base.MetadataHandler>` and :class:`MetadataReader <tmlib.workflow.metaconfig.base.MetadataReader>`. Please refer to the docuementation of the :mod:`metaconfig` step for more details.
 
@@ -198,7 +198,7 @@ Workflows
 
 Workflows can be dynamically assembled from *steps*, which are implemented as subpackages of :mod:`tmlib.workflow`. To this end, *TissueMAPS* builds on top of `GC3Pie <http://gc3pie.readthedocs.io/en/latest/index.html>`_ - a high-level *API* for building and managing large, inter-dependent task collections with support for different cluster backends.
 
-Steps get automatically equipped with an active programming interface for distributed computing (by implementing :class:`WorkflowStepAPI <tmlib.workflow.api.WorkflowStepAPI>`) as well as a command line interface (by implementing :class:`WorkflowStepCLI <tmlib.workflow.cli.WorkflowStepCLI>`). By subclasses these two base classes, you basically have a new step. This design makes it easy to develop a new step and plug it into an existing workflow. Workflows can further be easily customized by subclassing :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>` or any other already implemented workflow *type*, such as :class:`CanonicalWorkflowDependencies <tmlib.workflow.dependencies.CanonicalWorkflowDependencies>`.
+Steps get automatically equipped with an active programming interface for distributed computing (by implementing :class:`WorkflowStepAPI <tmlib.workflow.api.WorkflowStepAPI>`) as well as a command line interface (by implementing :class:`WorkflowStepCLI <tmlib.workflow.cli.WorkflowStepCLI>`). By subclassing these two base classes, you basically create a new step. This design makes it easy to develop a new step and plug it into an existing workflow. Workflows can further be easily customized by subclassing :class:`WorkflowDependencies <tmlib.workflow.dependencies.WorkflowDependencies>` or any other already implemented workflow *type*, such as :class:`CanonicalWorkflowDependencies <tmlib.workflow.dependencies.CanonicalWorkflowDependencies>`.
 
 The main entry point for a step is the ``__main__()`` method of :class:`WorkflowStepCLI <tmlib.workflow.cli.WorkflowStepCLI>`, which is accessed by a :class:`WorkflowStepJob <tmlib.workflow.jobs.WorkflowStepJob>` via the step-specific command line interface autogenerated from the *CLI* class derived from :class:`WorkflowStepCLI <tmlib.workflow.cli.WorkflowStepCLI>`.
 
@@ -212,7 +212,7 @@ For more information on how to develop new steps and combine them into workflows
 Data analysis tools
 ^^^^^^^^^^^^^^^^^^^
 
-Data anlysis tools allow users to interactively analyse image data in a visually asisted way in the :ref:`viewer <viewer>`. They are implemented in the :mod:`tmlib.tools` package and make use of the `Pandas <http://pandas.pydata.org/>`_ library. The server submits client tool requests to the available computational resources for asynchronous processing. This is done on the one hand to remove load from the web server.
+Data analysis tools allow users to interactively analyse image data in a visually asisted way in the :ref:`viewer <viewer>`. They are implemented in the :mod:`tmlib.tools` package and make use of the `Pandas <http://pandas.pydata.org/>`_ library. The server submits client tool requests to the available computational resources for asynchronous processing. This is done on the one hand to remove load from the web server.
 
 The main entry point for tool functionliaty is ``__main__()`` method of :class:`ToolRequestManger <tmlib.tools.manager.ToolRequestManager>`. It is accessed by a :class:`ToolJob <tmlib.tools.jobs.ToolJob>` via the command line using the ``tm_tool`` script, which gets autogenerated from the parser provided by :class:`ToolRequestManager <tmlib.tools.manger.ToolRequestManager>`.
 
@@ -301,14 +301,14 @@ All ``channels`` specified in the **input** section will be loaded by the progra
 Modules
 ^^^^^^^
 
-Modules are the actual executable code in the pipeline. A module is file that defines a ``main()`` function, which serves as the main entry point for the program. Modules must be free of side effects, in particular they don't read from or write to disk. This will be enforced by `jtertor` by calling the module function in a `sandbox <http://stackoverflow.com/questions/2126174/what-is-sandboxing>`_.
+Modules are the actual executable code in the pipeline. A module is a file that defines a ``main()`` function, which serves as the main entry point for the program. Modules must be free of side effects, in particular they don't read from or write to disk. This will be enforced by `jterator` by calling the module function in a `sandbox <http://stackoverflow.com/questions/2126174/what-is-sandboxing>`_.
 Special modules are available for storing data generated within a pipeline, such as segmentation results and features extracted for the segmented objects.
 
 Python `modules <https://docs.python.org/2/tutorial/modules.html>`_ encapsulate code and provide a separate scope and namespace. Conceptually they are classes with attributes (constants) and static methods (functions). For compatibility we use a similar implementation for non-Python languages to provide the user a similar interface across different languages (Matlab, R, ...).
 
 To this end, each *module* must define a ``VERSION`` constant and a ``main()`` function. The `main` function serves as the main entry point and will be called by `jterator` when executed as part of a pipeline. You can add additional "private" functions/methods to the module. Note, however, that code, which is intended for reuse across modules, should be rather imported from a separate library, such as `jtlibrary <https://github.com/TissueMAPS/JtLibrary>`_ or any other installable package.
 
-Shown here are minimalistic examples of modules in different languages. They don't do much, execpt returning one of the input arguments.
+Shown here are minimalistic examples of modules in different languages. They don't do much, except returning one of the input arguments.
 
 .. _jterator-module-python-example:
 
@@ -406,7 +406,7 @@ Thereby, the module named ``matlab_module`` (residing in a file called ``matlab_
 R example
 +++++++++
 
-To implement the same interface in *R*, we have to get a bit more creative, since *R* is not a proper programming language (Ups! Did I just say that?).
+To implement the same interface in *R*, we have to get a bit more creative, since *R* is not a proper programming language (Oops! Did I just say that?).
 
 .. code-block:: r
 
@@ -498,7 +498,7 @@ Input and output of modules is described in module-specific *handles* files:
 
 Each :class:`handle <tmlib.workflow.jterator.handles.Handle>` item in the **input** section describes an argument that is passed to the ``main()`` function of the module. Each item in the **output** section describes an argument of the module-specifig output object (return value), which should be returned by the ``main()`` function.
 
-The *handle* ``type`` descriped in the YAML file is mirrored by a Python class, which asserts data types and handles input/output. Constant input arguments have a ``value`` key, which represents the actual argument. Images can be piped between modules and the corresponding input arguments have a ``key`` key. It serves as a lookup for the actual value, i.e. the pixels array, which is stored an an in-memory key-value store. The value of ``key`` in the YAML description must be a hashable and therefore unique across the entire pipeline. Since names of *.handles* files are unique, best practice is to use the handle filename as a namespace and combine them with the name of the output *handle* to create a unique hashable identifier (for the above Python example the key would resolve to `"my_py_module.output_image"`).
+The *handle* ``type`` descriped in the YAML file is mirrored by a Python class, which asserts data types and handles input/output. Constant input arguments have a ``value`` key, which represents the actual argument. Images can be piped between modules and the corresponding input arguments have a ``key`` key. It serves as a lookup for the actual value, i.e. the pixels array, which is stored an an in-memory key-value store. The value of ``key`` in the YAML description must be unique across the entire pipeline. Since names of *.handles* files are unique, best practice is to use the handle filename as a namespace and combine them with the name of the output *handle* to create a unique hashable identifier (for the above Python example the key would resolve to `"my_py_module.output_image"`).
 
 The following *handle* types are implemented:
 
@@ -545,7 +545,7 @@ Modules should be light weight wrappers and mainly concerned with handling input
 Naming conventions
 ^^^^^^^^^^^^^^^^^^
 
-Since Jterator is written in Python, we recommend following `PEP 0008 <https://www.python.org/dev/peps/pep-0008/>`_ style guide for module and function names.
+Since Jterator is written in Python, we recommend following `PEP 8 <https://www.python.org/dev/peps/pep-0008/>`_ style guide for module and function names.
 Therefore, we use short *all-lowercase* names for modules with *underscores* separating words if necessary, e.g. ``modulename`` or ``long_module_name``. See `naming conventions <https://www.python.org/dev/peps/pep-0008/#prescriptive-naming-conventions>`_.
 
 .. _jterator-coding-style:
@@ -553,7 +553,7 @@ Therefore, we use short *all-lowercase* names for modules with *underscores* sep
 Coding style
 ^^^^^^^^^^^^
 
-For Python, we encourage following `PEP 0008 <https://www.python.org/dev/peps/pep-0008/>`_ style guide. For Matlab and R we recommend following Google's style guidelines, see `Matlab style guide <https://sites.google.com/site/matlabstyleguidelines/>`_ (based on Richard Johnson's `MATLAB Programming Style Guidelines <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_) and `R style guide <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_.
+For Python, we encourage following `PEP 8 <https://www.python.org/dev/peps/pep-0008/>`_ style guide. For Matlab and R we recommend following Google's style guidelines, see `Matlab style guide <https://sites.google.com/site/matlabstyleguidelines/>`_ (based on Richard Johnson's `MATLAB Programming Style Guidelines <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_) and `R style guide <http://www.datatool.com/downloads/matlab_style_guidelines.pdf>`_.
 
 
 .. _jterator-figures:
