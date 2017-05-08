@@ -65,19 +65,19 @@ class Morphology3D(jtlib.features.Features):
                 # Find vertices
                 v0 = np.array([self.pixel_size * ix,
                                self.pixel_size * iy,
-                               obj(ix, iy)])
+                               obj[ix, iy]], np.double)
                 v1 = np.array([self.pixel_size * (ix + 1),
                                self.pixel_size * iy,
-                               obj(ix + 1, iy)]) - v0
+                               obj[ix + 1, iy]], np.double) - v0
                 v2 = np.array([self.pixel_size * ix,
                                self.pixel_size * (iy + 1),
-                               obj(ix, iy + 1)]) - v0
+                               obj[ix, iy + 1]], np.double) - v0
                 v3 = np.array([self.pixel_size * (ix + 1),
                                self.pixel_size * (iy + 1),
-                               obj(ix + 1, iy + 1)]) - v0
+                               obj[ix + 1, iy + 1]], np.double) - v0
 
                 # Check all vertices are inside the object
-                if not (v1.isnan()[2] or v2.isnan()[2] or v3.isnan()[2]):
+                if not (np.isnan(v1)[2] or np.isnan(v2)[2] or np.isnan(v3)[2]):
                     # Add area of triangles to total
                     area += (np.linalg.norm(np.cross(v1, v3)) +
                              np.linalg.norm(np.cross(v2, v3))) / 2.0
@@ -105,15 +105,16 @@ class Morphology3D(jtlib.features.Features):
 
             # Calculate region properties and upper surface area
             region = self.object_properties[obj]
+            lower_surface_area = region.area * self.pixel_size * self.pixel_size
             upper_surface_area = self.upper_surface_area(img_nan)
             values = [
                 region.max_intensity * self.z_step,
                 region.mean_intensity * self.z_step,
                 (np.nansum(img_nan) * self.pixel_size *
                     self.pixel_size * self.z_step / 1000.0),
-                region.area,
+                lower_surface_area,
                 upper_surface_area,
-                region.area + upper_surface_area
+                lower_surface_area + upper_surface_area
             ]
             features.append(values)
         return pd.DataFrame(
