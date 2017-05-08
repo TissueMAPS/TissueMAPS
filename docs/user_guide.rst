@@ -2,7 +2,7 @@
 User guide
 **********
 
-`TissueMAPS` uses the `client-server model <https://en.wikipedia.org/wiki/Client%E2%80%93server_model>`_, where clients can make requests to the server via a `REST API <http://rest.elkstein.org/2008/02/what-is-rest.html>`_ using the `Hyperstate Transfer Protocol (HTTP) <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_.
+`TissueMAPS` uses the `client-server model <https://en.wikipedia.org/wiki/Client%E2%80%93server_model>`_, where clients can make requests to the server via a `REST API <http://rest.elkstein.org/2008/02/what-is-rest.html>`_ using the `Hypertext Transfer Protocol (HTTP) <https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol>`_.
 
 Most users will interact with the server via the browser-based interface. However, additional `HTTP` client implementations are provided via the :mod:`tmclient` package, which allows users to interact more programmatically with the server. These use cases are covered in the section `interacting with the server <interacting-with-the-server>`_.
 
@@ -159,9 +159,9 @@ Select the created acquisition, by clicking on the link |acq_link|.
 
    You can monitor the upload status of individual files.
 
-.. note:: File upload via the user interface works reliable for serveral thousand images. When uploading tens or hundreds of thousands of images, we recomment uploading files via the command line instead. To this end, you can use the ``tm_upload`` tool provided by the :mod:`tmclient` package.
+.. note:: File upload via the user interface works reliable for several thousand images. When uploading tens or hundreds of thousands of images, we recomment uploading files via the command line instead. To this end, you can use the ``tm_upload`` tool provided by the :mod:`tmclient` package.
 
-.. note:: The upload process will be interrupted when the page gets reloaded. However, you can simply add the files afterwards again and restart uploading. The server keeps track which files have already been uploaded and won't upload them again.
+.. note:: The upload process will be interrupted when the page is reloaded. However, you can simply add the files afterwards again and restart uploading. The server keeps track of which files have already been uploaded and won't upload them again.
 
 .. figure:: ./_static/ui_plate_list_one_ready.png
    :width: 75%
@@ -180,7 +180,7 @@ Processing images
 
 Once you have uploaded all files, you can proceed to the subsequent processing stages.
 
-.. note:: You are prevented from proceeding until upload is completed. Requesting this information from the server may take a few seconds for large experiments.
+.. note:: You are prevented from proceeding until upload is complete. Requesting this information from the server may take a few seconds for large experiments.
 
 .. figure:: ./_static/ui_workflow_stage_one.png
    :width: 75%
@@ -212,7 +212,7 @@ For now, let's submit the workflow from the first stage "image conversion".
 
    Workflow submission in progress.
 
-   After submitting the workflow from stage "image conversion", the state of step "metaconfig" switched to "RUNNING" and individual jobs are listed. Some of the jobs are already "TERMINATED", while some are still "RUNNING". Note the cogs on the tabs of the other steps indicating that they have also been submitted for processing.
+   After submitting the workflow from stage "image conversion", the state of step "metaconfig" switches to "RUNNING" and individual jobs are listed. Some of the jobs are already "TERMINATED", while some are still "RUNNING". Note the cogs on the tabs of the other steps indicating that they have also been submitted for processing.
 
 .. figure:: ./_static/ui_workflow_stage_one_done.png
    :width: 75%
@@ -240,7 +240,7 @@ For the purpose of this demo, we will proceed to stage "pyramid creation" and re
 
 You can further |resubmit_button| the workflow with modified arguments from any stage afterwards.
 
-The image analysis stage is a bit more complex, therefore we will cover it in a separte section.
+The image analysis stage is a bit more complex, therefore we will cover it in a separate section.
 
 .. _workflow-interface-image-analysis-pipeline:
 
@@ -256,7 +256,7 @@ Setting up image analysis pipelines
    Notice the "extra arguments" section, which hasn't been present in any of the other previous stages. You are required to select a "pipeline", which should be processed by the "jterator" step. Since no pipeline has been created so far, the drop-down menue is empty.
 
 To begin with, you need to create a pipeline. To this end, click on |create_pipe_button|. Give the pipeline a descriptive name, here we call it ``test-pipe``.
-This will direct you to a separte interface for defining the pipeline.
+This will direct you to a separate interface for defining the pipeline.
 
 
 .. figure:: ./_static/ui_jterator.png
@@ -877,7 +877,7 @@ You can upload images and manage workflows entirely via the command line:
 
         demo: XXX
 
-    This will allow you to omit the password argument in command line calls. This is not totally save either, but at least your password won't show up in the ``history`` and you don't have to remember it.
+    This will allow you to omit the password argument in command line calls. This is not totally safe either, but at least your password won't show up in the ``history`` and you don't have to remember it.
 
 The command line interface is structured according to the type of available resources, defined in :mod:`tmserver.api`.
 
@@ -976,23 +976,23 @@ Download feature values for all objects of type ``Cells``:
 Using the library
 =================
 
-The :mod:`tmlibrary` package implements an active programming interface (*API*) that represents an interface between the web application (implemented in the :mod:`tmserver` package) and storage and compute resources. The *API* provides routines for distributed computing and models for interacting with data stored on disk. The server uses the library and exposes part of its functionality to users via the *RESTful API*. Users with access to the server can also use the library directly. It further exposes command line interfaces (*CLI*), which provide users the possibility to interact with implemented programs via the console, which can be convenient for development, testing, and debugging.
+The :mod:`tmlibrary` package implements an application programming interface (*API*) that represents an interface between the web application (implemented in the :mod:`tmserver` package) and storage and compute resources. The *API* provides routines for distributed computing and models for interacting with data stored on disk. The server uses the library and exposes part of its functionality to users via the *RESTful API*. Users with access to the server can also use the library directly. It further exposes command line interfaces (*CLI*), which provide users the possibility to interact with implemented programs via the console, which can be convenient for development, testing, and debugging.
 
 .. _library-api:
 
-Active programming interface (API)
-----------------------------------
+Application programming interface (API)
+---------------------------------------
 
 .. _library-api-accessing-data:
 
 Accessing data
 ^^^^^^^^^^^^^^
 
-Data can be accessed via models classes implemented in :mod:`tmlib.models`. Since data is stored (or referenced) in a database, a database connection must be established. This is achieved via the :class:`MainSession <tmlib.models.utils.MainSession>` or :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, depending on whether you need to access models derived from :class:`MainModel <tmlib.models.base.MainModel>` or :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`, respectively.
+Data can be accessed via model classes implemented in :mod:`tmlib.models`. Since data is stored (or referenced) in a database, a database connection must be established. This is achieved via the :class:`MainSession <tmlib.models.utils.MainSession>` or :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, depending on whether you need to access models derived from :class:`MainModel <tmlib.models.base.MainModel>` or :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`, respectively.
 
 Model classes are implemented in form of `SQLAlchemy Object Relational Mapper (ORM) <http://docs.sqlalchemy.org/en/rel_1_1/orm/index.html>`_. For more information please refer to the `ORM tuturial <http://docs.sqlalchemy.org/en/latest/orm/tutorial.html>`_.
 
-For example, a :class:`ChannelImage <tmlib.image.ChannelImage>` can be retrived from a :class:`ChannelImageFile <tmlib.models.file.ChannelImageFile>` as follows (using the same parameters as in the examples above):
+For example, a :class:`ChannelImage <tmlib.image.ChannelImage>` can be retrieved from a :class:`ChannelImageFile <tmlib.models.file.ChannelImageFile>` as follows (using the same parameters as in the examples above):
 
 .. code-block:: python
 
@@ -1028,7 +1028,7 @@ For example, a :class:`ChannelImage <tmlib.image.ChannelImage>` can be retrived 
             one()
         image = image_file.get()
 
-.. warning:: Some experiment-specific database tables are distributed, i.e. small fractions (so called "shards") are spread across different database servers for improved performance. Rows of these tables can still be selected via the :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, but they can not be modified within a session (see :class:`ExperimentConnecion <tmlib.models.utils.ExperimentConnection>`). In addition, distributed tables do not support sub-queries and cannot be joined with standard, non-distributed tables.
+.. warning:: Some experiment-specific database tables are distributed, i.e. small fractions (so called "shards") are spread across different database servers for improved performance. Rows of these tables can still be selected via the :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`, but they can not be modified within a session (see :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`). In addition, distributed tables do not support sub-queries and cannot be joined with standard, non-distributed tables.
 
 .. warning:: Content of files should only be accessed via the provided :meth:`get <tmlib.models.base.FileModel.get>` and :meth:`put <tmlib.models.base.FileModel.put>` methods of the respective model class implemented in :mod:`tmlib.models.file`, since the particular storage backend (e.g. filesystem or object storage) may be subject to change.
 
@@ -1048,7 +1048,7 @@ Managing workflow steps
 
 Each :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>` represents a separate program that exposes its own command line interface. These interfaces have are a very similar structure and provide sub-commands for methods defined in either the :class:`CommandLineInterface <tmlib.workflow.cli.CommandLineInterface>` base class or the step-specific implementation.
 
-The name of the step is also automatically the name of the command line progroam. For example, the :mod:`jterator <tmlib.workflow.jterator.cli.Jterator>` program can be controlled via the ``jterator`` command.
+The name of the step is also automatically the name of the command line program. For example, the :mod:`jterator <tmlib.workflow.jterator.cli.Jterator>` program can be controlled via the ``jterator`` command.
 
 You can initialize the step via the ``init`` sub-command:
 
@@ -1062,15 +1062,17 @@ or shorthand:
 
     jterator -vv 1 init -b 5
 
-And then run jobs either invidicually on the local machine via the ``run`` sub-command:
+And then run jobs:
 
-.. code-block:: none
+- either individually on the local machine via the ``run`` sub-command:
+
+  .. code-block:: none
 
     jterator -vv 1 run -j 1
 
-Or submit them for parallel processing on remote machines via the ``submit`` sub-command:
+- or submit them for parallel processing on remote machines via the ``submit`` sub-command:
 
-.. code-block:: none
+  .. code-block:: none
 
     jterator -vv 1 submit
 
@@ -1082,7 +1084,7 @@ To print the description of an individual job to the console call the ``info`` s
 
     jterator -vv 1 info --phase run --job 1
 
-You can further print the standard output of error of a job via the ``log`` sub-command:
+You can further print the standard output or error of a job via the ``log`` sub-command:
 
 .. code-block:: none
 
@@ -1102,7 +1104,7 @@ The full documentation of each command line interface is available online along 
 Managing workflows
 ^^^^^^^^^^^^^^^^^^
 
-Distributed image processing workflows can be set up and submitted via `workflow manager`_ user interface. The same can be achieved via the command line through the ``tm_workflow`` program.
+Distributed image processing workflows can be set up and submitted via the `workflow manager`_ user interface. The same can be achieved via the command line through the ``tm_workflow`` program.
 
 Submitting the workflow for experiment with ID ``1`` is as simple as:
 
