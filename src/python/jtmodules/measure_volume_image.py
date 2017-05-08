@@ -18,7 +18,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-VERSION = '0.0.3'
+VERSION = '0.0.4'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
@@ -47,8 +47,41 @@ class Morphology3D(jtlib.features.Features):
 
     @property
     def _feature_names(self):
-        return ['max_height', 'mean_height', 'volume_pL']
-        # TODO add , 'surface_area'
+        return ['max_height', 'mean_height', 'volume_pL',
+                'lower_surface_area', 'upper_surface_area',
+                'total_surface_area']
+
+    def upper_surface_area(self, obj):
+        '''Calculates the upper surface area of each object from the
+        `volume_image`, using linear algebraic methods.
+        '''
+        # Transform z-coordinates using z-step size
+        obj = obj.astype(np.float) * self.z_step
+        area = 0
+
+        # Iterate over all pixels
+        for ix in range(obj.shape[0] - 1):
+            for iy in range(obj.shape[1] - 1):
+                # Find vertices
+                v0 = np.array([self.pixel_size * ix,
+                               self.pixel_size * iy,
+                               obj(ix, iy)])
+                v1 = np.array([self.pixel_size * (ix + 1),
+                               self.pixel_size * iy,
+                               obj(ix + 1, iy)]) - v0
+                v2 = np.array([self.pixel_size * ix,
+                               self.pixel_size * (iy + 1),
+                               obj(ix, iy + 1)]) - v0
+                v3 = np.array([self.pixel_size * (ix + 1),
+                               self.pixel_size * (iy + 1),
+                               obj(ix + 1, iy + 1)]) - v0
+
+                # Check all vertices are inside the object
+                if not (v1.isnan()[2] or v2.isnan()[2] or v3.isnan()[2]):
+                    # Add area of triangles to total
+                    area += (np.linalg.norm(np.cross(v1, v3)) +
+                             np.linalg.norm(np.cross(v2, v3))) / 2.0
+        return area
 
     def extract(self):
         '''Extracts 3D morphology features by measuring pixel values
@@ -65,15 +98,22 @@ class Morphology3D(jtlib.features.Features):
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
             img = self.get_object_intensity_image(obj)
+
             # Set all non-object pixels to NaN
             img_nan = img.astype(np.float)
             img_nan[~mask] = np.nan
+
+            # Calculate region properties and upper surface area
             region = self.object_properties[obj]
+            upper_surface_area = self.upper_surface_area(img_nan)
             values = [
                 region.max_intensity * self.z_step,
                 region.mean_intensity * self.z_step,
                 (np.nansum(img_nan) * self.pixel_size *
-                    self.pixel_size * self.z_step / 1000.0)
+                    self.pixel_size * self.z_step / 1000.0),
+                region.area,
+                upper_surface_area,
+                region.area + upper_surface_area
             ]
             features.append(values)
         return pd.DataFrame(
