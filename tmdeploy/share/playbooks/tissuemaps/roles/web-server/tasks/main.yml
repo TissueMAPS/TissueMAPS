@@ -16,6 +16,8 @@
 ---
 - include: install-{{ ansible_os_family }}.yml
 
+- include: tissuemaps.yml
+
 - include: nginx.yml
 
 - name: Stop nginx web server
@@ -24,5 +26,3 @@
   tags:
     - web-server
     - nginx
-
-- include: tissuemaps.yml

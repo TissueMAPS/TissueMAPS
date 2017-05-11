@@ -45,7 +45,7 @@
     # lxml:
     - libxml2-dev
     - libxslt1-dev
-    # matplotlib:
+    # matplotlib: TODO: are the GUI dependencies really necessary?
     - pyqt4-dev-tools
     - libfreetype6-dev
     - python-tk
