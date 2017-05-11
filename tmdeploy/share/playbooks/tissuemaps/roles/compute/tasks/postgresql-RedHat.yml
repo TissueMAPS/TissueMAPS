@@ -13,20 +13,22 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ---
-- include: install-{{ ansible_os_family }}.yml
-
-- include: create_dirs.yml
-
-- include: create_cluster.yml
-
-- include: configure.yml
-
-- name: Start database cluster
-  command: pg_ctl restart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+- name: Add PostgreSQL yum repository
+  yum:
+    name: https://yum.postgresql.org/9.6/redhat/rhel-7-x86_64/pgdg-redhat96-9.6-3.noarch.rpm
+    state: present
+  when: ansible_os_family == 'RedHat'
   tags:
     - database
 
-- include: create_database.yml
-
-- include: create_users.yml
+- name: Install yum packages for PostgreSQL client
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - postgresql{{ postgresql_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - database

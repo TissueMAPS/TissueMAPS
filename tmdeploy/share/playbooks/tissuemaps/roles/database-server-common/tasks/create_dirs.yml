@@ -14,19 +14,42 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include: install-{{ ansible_os_family }}.yml
 
-- include: create_dirs.yml
-
-- include: create_cluster.yml
-
-- include: configure.yml
-
-- name: Start database cluster
-  command: pg_ctl restart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+- name: Create root directory for data and log files
+  file:
+    path: "{{ db_data_directory | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0777
   tags:
     - database
 
-- include: create_database.yml
+- name: Create data directory
+  file:
+    path: "{{ db_data_directory }}"
+    state: directory
+    recurse: yes
+    owner: postgres
+    group: postgres
+    mode: 0700
+  tags:
+    - database
 
-- include: create_users.yml
+- name: Remove version-specific data subdirectory
+  file:
+    path: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}"
+    state: absent
+  tags:
+    - database
+
+- name: Create log directory
+  file:
+    path: "{{ db_log_directory }}"
+    state: directory
+    recurse: yes
+    owner: postgres
+    group: postgres
+    mode: 0700
+  tags:
+    - database

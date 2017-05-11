@@ -14,20 +14,48 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Install SSL certificate
-#
 ---
-- name: Install apt package for creating certificates
-  apt:
-    name: ssl-cert
+# Make sure to have verison 3.2.1+ of R
+- name: Add apt key for R repo
+  apt_key:
+    id: E084DAB9
+    keyserver: keyserver.ubuntu.com
     state: present
   when: ansible_os_family == 'Debian'
   tags:
-    - app-server
+    - r
 
-# TODO: Use openssl to generate certificate in a platform acnostic way
-
-- name: Create self-signed certificate in default location
-  command: make-ssl-cert generate-default-snakeoil
+- name: Add R repo
+  apt_repository:
+    repo: "deb http://cran.rstudio.com/bin/linux/ubuntu {{ ansible_distribution_release|lower }}/"
+  when: ansible_os_family == 'Debian'
   tags:
-    - app-server
+    - r
+
+- name: Update all packages to the latest version
+  apt:
+    upgrade: safe
+    update_cache: yes
+    cache_valid_time: 3600
+  when: ansible_os_family == 'Debian'
+  tags:
+    - update
+    - r
+
+- name: Install latest R
+  apt:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - r-base
+    - r-base-dev
+  when: ansible_os_family == 'Debian'
+  tags:
+    - r
+
+# - name: Install rpy2 Python package
+#   pip:
+#     name: rpy2
+#     editable: false
+#   tags:
+#     - r

@@ -14,43 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Install apt packages required by Python packages
-  apt:
-    name: "{{ item }}"
-    state: installed
-  with_items:
-    - libopenblas-dev
-    # gc3pie:
-    - time
-    # h5py:
-    - libhdf5-dev
-    - hdf5-tools
-    # lxml:
-    - libxml2-dev
-    - libxslt1-dev
-    # matplotlib:
-    - pyqt4-dev-tools
-    - libfreetype6-dev
-    - python-tk
-    # shapely:
-    - libgeos-dev
-  tags:
-    - tissuemaps
-
-- name: Install version-specific apt packages required by Python packages
-  apt:
-    name: openjdk-7-jdk
-  when: ansible_distribution_version|int <= 14.10
-  tags:
-    - tissuemaps
-
-- name: Install version-specific apt packages required by Python packages
-  apt:
-    name: openjdk-8-jdk
-  when: ansible_distribution_version|int >= 14.10
-  tags:
-    - tissuemaps
-
 # NOTE: We install all TissueMAPS python packages into the home folder because
 # we export this folder on the cluster. This is convenient, because packages
 # can then be updated on the frontend only and these changes become immediatly

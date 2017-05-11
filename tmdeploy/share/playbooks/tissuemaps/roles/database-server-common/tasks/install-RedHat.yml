@@ -15,43 +15,53 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Get Citus repository
-  command: wget https://install.citusdata.com/community/deb.sh -O {{ tm_home }}/citus_dep.sh
+  command: wget https://install.citusdata.com/community/rpm.sh -O {{ tm_home }}/citus_rpm.sh
   args:
     executable=/bin/bash
     chdir={{ tm_home }}
   # get_url:
-  #   url: https://install.citusdata.com/community/deb.sh
-  #   dest: "{{ tm_home}}/citus_deb.sh"
+  #   url: https://install.citusdata.com/community/rpm.sh
+  #   dest: "{{ tm_home}}/citus_rpm.sh"
   #   validate_certs: no
   #   unsafe_writes: yes
   #   timeout: 60
   #   mode: 0770
+  when: ansible_os_family == 'RedHat'
   tags:
     - database
 
 - name: Make Citus install script executable
   file:
-    path={{ tm_home }}/citus_dep.sh
+    path={{ tm_home }}/citus_rpm.sh
     mode=0770
+  when: ansible_os_family == 'RedHat'
   tags:
     - database
 
 - name: Add Citus repository
-  command: "{{ tm_home }}/citus_dep.sh"
+  command: "{{ tm_home }}/citus_rpm.sh"
   args:
+    # FIXME
     creates: /etc/apt/sources.list.d/citusdata_community.list
+  when: ansible_os_family == 'RedHat'
   tags:
     - database
 
 - name: Install Citus PostgreSQL
-  apt:
+  yum:
     state: installed
     name: "{{ item }}"
+  when: ansible_os_family == 'RedHat'
   with_items:
-    - postgresql-{{ postgresql_version }}-citus-{{ citus_version }}
-    - postgis
-    - postgresql-contrib-{{ postgresql_version }}
-    - postgresql-server-dev-all
+    - citus{{ citus_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}_{{ postgresql_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}
+    - postgis{{ postgis_version | regex_replace('^(\\d).(\\d)$', '\\1') }}_{{ postgresql_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}
     - python-psycopg2
+  tags:
+    - database
+
+- name: Install setfacl support
+  yum:
+    name: acl
+  when: ansible_os_family == 'RedHat'
   tags:
     - database

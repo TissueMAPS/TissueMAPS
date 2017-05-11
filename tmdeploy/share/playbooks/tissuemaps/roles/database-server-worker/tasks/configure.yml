@@ -14,43 +14,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Configure shared_buffers
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set shared_buffers {{ pg_shared_buffers }}
+
+# Aggressive, performance orientated settings on the workers.
+- name: Turn off synchronization
+  lineinfile:
+    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/postgresql.conf
+    state: present
+    regexp: 'fsync.*'
+    line: 'fsync = off'
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
   tags:
     - database
 
-- name: Configure effective_cache_size
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set effective_cache_size {{ pg_effective_cache_size }}
-  tags:
-    - database
-
-- name: Configure max_worker_processes
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_worker_processes {{ pg_max_worker_processes }}
-  tags:
-    - database
-
-- name: Configure max_parallel_workers_per_gather
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_parallel_workers_per_gather {{ pg_max_worker_processes }}
-  tags:
-    - database
-
-- name: Configure checkpoint_timeout
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set checkpoint_timeout {{ pg_checkpoint_timeout }}
-  tags:
-    - database
-
-- name: Configure max_wal_size
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_wal_size {{ pg_max_wal_size }}
-  tags:
-    - database
-
-# NOTE: Aggressive, performance orientated settings on the workers.
-- name: Turn fsync off
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set fsync off
-  tags:
-    - database
-
-- name: Turn synchronous_commit off
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set synchronous_commit off
+- name: Turn off synchronous commit
+  lineinfile:
+    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/postgresql.conf
+    state: present
+    regexp: 'synchronous_commit.*'
+    line: 'synchronous_commit = off'
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
   tags:
     - database

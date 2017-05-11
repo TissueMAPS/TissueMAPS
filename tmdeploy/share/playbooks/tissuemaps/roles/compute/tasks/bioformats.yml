@@ -15,13 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install apt packages for Bioformats commond line tools
-  apt:
-    name: unzip
-    state: installed
-  tags:
-    - bioformats
-
 - name: Get bftools
   get_url:
     url: https://downloads.openmicroscopy.org/bio-formats/{{ bf_version }}/artifacts/bftools.zip
