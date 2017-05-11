@@ -15,6 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+- name: Get the latest tmui code
+  git:
+    repo: "{{ tm_github_url }}/tmui"
+    version: "{{ tm_version }}"
+    recursive: yes
+    dest: "{{ tm_home }}/tmui"
+    force: yes
+  tags:
+    - web-server
+    - tissuemaps
+
 - name: Install bower and gulp node packages
   npm:
     name: "{{ item }}"
@@ -27,13 +38,28 @@
     - web-server
     - tissuemaps
 
-- name: Get the latest tmui code
-  git:
-    repo: "{{ tm_github_url }}/tmui"
-    version: "{{ tm_version }}"
-    recursive: yes
-    dest: "{{ tm_home }}/tmui"
-    force: yes
+- name: Update npm package manager
+  command: npm install -g npm
+  tags:
+    - web-server
+    - tissuemaps
+
+- name: Install node dependencies
+  # shell: npm install app --unsafe-perm
+  # args:
+  #   executable: /bin/bash
+  #   chdir: "{{ tm_home }}/tmui/src"
+  npm:
+    path: "{{ tm_home }}/tmui/src/app"
+    state: present
+  tags:
+    - web-server
+    - tissuemaps
+
+- name: Install bower dependencies
+  bower:
+    path: "{{ tm_home }}/tmui/src"
+    state: present
   tags:
     - web-server
     - tissuemaps
@@ -54,32 +80,6 @@
     regexp: 'changeOrigin:\s.*$'
     replace: "xfwd: true"
   when: app_host != 'unix'
-  tags:
-    - web-server
-    - tissuemaps
-
-- name: Update npm package manager
-  command: npm install -g npm
-  tags:
-    - web-server
-    - tissuemaps
-
-- name: Install node dependencies
-  shell: npm install app --unsafe-perm
-  args:
-    executable: /bin/bash
-    chdir: "{{ tm_home }}/tmui/src"
-  # npm:
-  #   path: "{{ tm_home }}/tmui/src/app"
-  #   state: present
-  tags:
-    - web-server
-    - tissuemaps
-
-- name: Install bower dependencies
-  bower:
-    path: "{{ tm_home }}/tmui/src"
-    state: present
   tags:
     - web-server
     - tissuemaps

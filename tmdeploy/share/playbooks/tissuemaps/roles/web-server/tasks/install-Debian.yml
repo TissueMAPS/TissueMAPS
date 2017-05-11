@@ -29,9 +29,10 @@
     - web-server
     - tissuemaps
 
-- name: Install apt package for NodeJS
+- name: Install apt package for NodeJS and NPM
   apt:
     name: nodejs
+    state: present
   tags:
     - web-server
     - tissuemaps
