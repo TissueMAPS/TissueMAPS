@@ -14,15 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Install nginx
-  apt:
-    name: nginx
-    state: installed
-  tags:
-    - web-server
-    - nginx
-
-- name: Create nginx site
+- name: Create NGINX site
   template:
     src: nginx_site.j2
     dest: /etc/nginx/sites-available/tissuemaps
@@ -33,7 +25,7 @@
     - web-server
     - nginx
 
-- name: Place site specific nginx conf.d
+- name: Place site specific NGINX conf.d
   template:
     src: nginx_conf.j2
     dest: /etc/nginx/conf.d/tissuemaps.conf
@@ -44,7 +36,7 @@
     - web-server
     - nginx
 
-- name: Create log directory
+- name: Create directory for NGINX log files
   file:
     path: "{{ tm_log_directory }}"
     state: directory
@@ -56,7 +48,7 @@
     - web-server
     - nginx
 
-- name: Create nginx log files with correct permissions
+- name: Create NGINX log files with correct permissions
   file:
     path: "{{ tm_log_directory }}/{{ item }}"
     state: touch
@@ -70,7 +62,7 @@
     - web-server
     - nginx
 
-- name: Set path to nginx pid file
+- name: Set path to NGINX pid file
   set_fact:
     nginx_pid_file: /var/run/nginx/nginx.pid
   when: ansible_env.ANSIBLE_CONTAINER is defined
@@ -78,7 +70,7 @@
     - web-server
     - nginx
 
-- name: Set path to nginx pid file
+- name: Set path to NGINX pid file
   set_fact:
     nginx_pid_file: /var/run/nginx.pid
   when: ansible_env.ANSIBLE_CONTAINER is undefined
@@ -86,19 +78,22 @@
     - web-server
     - nginx
 
-- name: Place nginx init config file for update-rc.d
+- name: Place NGINX init config file for update-rc.d
   template:
     src: nginx.conf.j2
     dest: /etc/init/nxing.conf
     owner: "{{ tm_user }}"
     group: "{{ tm_user }}"
     mode: 0700
-  when: ansible_env.ANSIBLE_CONTAINER is undefined and (ansible_distribution_version|int) < 16
+  when:
+    - ansible_env.ANSIBLE_CONTAINER is undefined
+    - ansible_os_family == 'Debian'
+    - ansible_distribution_version|int < 16
   tags:
     - web-server
     - nginx
 
-- name: Create directory for nginx pid file
+- name: Create directory for NGINX pid file
   file:
     path: "{{ nginx_pid_file | dirname }}"
     state: directory
@@ -111,7 +106,7 @@
     - web-server
     - nginx
 
-- name: Change nginx pid in config
+- name: Change NGINX pid in config
   lineinfile:
     dest: /etc/nginx/nginx.conf
     state: present
@@ -121,25 +116,33 @@
     - web-server
     - nginx
 
-- name: Change nginx pid for serviced
+# TODO: chkconfig for CentOS
+
+- name: Change NGINX pid for serviced
   template:
     src: nginx.service.j2
     dest: /lib/systemd/system/nginx.service
     owner: "{{ tm_user }}"
     group: "{{ tm_user }}"
-  when: (ansible_env.ANSIBLE_CONTAINER is undefined) and (ansible_distribution_version|int > 16)
+  when:
+    - ansible_env.ANSIBLE_CONTAINER is undefined
+    - ansible_os_family == 'Debian'
+    - ansible_distribution_version|int > 16
   tags:
     - web-server
     - nginx
 
 - name: Reload systemctl for serviced
   command: systemctl daemon-reload
-  when: (ansible_env.ANSIBLE_CONTAINER is undefined) and (ansible_distribution_version|int >= 16)
+  when:
+    - ansible_env.ANSIBLE_CONTAINER is undefined
+    - ansible_os_family == 'Debian'
+    - ansible_distribution_version|int > 16
   tags:
     - web-server
     - nginx
 
-- name: Change nginx user for worker processes
+- name: Change NGINX user for worker processes
   lineinfile:
     dest: /etc/nginx/nginx.conf
     state: present
@@ -149,7 +152,7 @@
     - web-server
     - nginx
 
-- name: Change nginx keep alive timeout
+- name: Change NGINX keep alive timeout
   lineinfile:
     dest: /etc/nginx/nginx.conf
     state: present
@@ -160,7 +163,7 @@
     - nginx
 
 # We may want to run nginx as a non-root user, e.g. within a container.
-- name: Give user permission to nginx directories
+- name: Give user permission to NGINX directories
   file:
     path: "{{ item }}"
     state: directory
@@ -176,7 +179,7 @@
     - web-server
     - nginx
 
-- name: Enable nginx site
+- name: Enable NGINX site
   shell: |
     if [ ! -s /etc/nginx/sites-enabled/tissuemaps ]; then
       ln -s /etc/nginx/sites-available/tissuemaps /etc/nginx/sites-enabled/tissuemaps

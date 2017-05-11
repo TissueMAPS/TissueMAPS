@@ -14,33 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-# - name: Change log_directory
-#   command: pg_conftool {{ postgresql_version }} {{ db_node }} set log_directory {{ db_log_directory }}
-#   tags:
-#     - database
 
-- name: Preload Citus extension
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set shared_preload_libraries citus
-  tags:
-    - database
-
-- name: Configure connection
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set listen_addresses '*'
-  tags:
-    - database
-
-- name: Configure max_connections
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_connections {{ pg_max_connections }}
-  tags:
-    - database
-
-- name: Configure max_files_per_process
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_files_per_process {{ pg_max_files_per_process }}
-  tags:
-    - database
-
-- name: Configure autovacuum_max_workers
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set autovacuum_max_workers {{ pg_autovacuum_max_workers }}
+- name: Drop postgresql.conf file
+  template:
+    src: postgresql.conf.j2
+    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/postgresql.conf
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
+    mode: 0666
   tags:
     - database
 
@@ -50,8 +31,8 @@
     state: present
     regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
     line: 'host    all             all             {{ ip_range }}          trust'
-    owner: postgres
-    group: postgres
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
   when: ip_range is defined
   tags:
     - database
@@ -62,8 +43,8 @@
     state: present
     regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
     line: 'host    all             all             127.0.0.1/32            trust'
-    owner: postgres
-    group: postgres
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
   tags:
     - database
 
@@ -73,8 +54,8 @@
     state: present
     regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
     line: 'host    all             all             ::1/128                 trust'
-    owner: postgres
-    group: postgres
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
   tags:
     - database
 
@@ -83,8 +64,8 @@
     dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
     state: present
     line: 'host    all             all              10.0.0.0/8             trust'
-    owner: postgres
-    group: postgres
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
@@ -94,8 +75,8 @@
     dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
     state: present
     line: 'host    all             all              172.16.0.0/12          trust'
-    owner: postgres
-    group: postgres
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
@@ -105,8 +86,8 @@
     dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
     state: present
     line: 'host    all             all              192.168.0.0/16         trust'
-    owner: postgres
-    group: postgres
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database

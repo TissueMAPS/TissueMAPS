@@ -13,20 +13,42 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ---
-- include: install-{{ ansible_os_family }}.yml
-
-- include: create_dirs.yml
-
-- include: create_cluster.yml
-
-- include: configure.yml
-
-- name: Start database cluster
-  command: pg_ctl restart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+- name: Install yum packages required for Python
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - gcc
+    - python-devel
+    - python-pip
+    - python-setuptools
+    - libffi-devel
+  when: ansible_os_family == 'RedHat'
   tags:
-    - database
+    - python
 
-- include: create_database.yml
+- name: Install apt packages required by Python packages
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - openblas-devel
+    # gc3pie:
+    - time
+    # h5py:
+    - hdf5-devel
+    # lxml:
+    - libxml2-devel
+    - libxslt-devel
+    # # matplotlib:
+    # - pyqt4-dev-tools
+    # - libfreetype6-dev
+    # - python-tk
+    # shapely:
+    - geos-devel
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - python
 
-- include: create_users.yml

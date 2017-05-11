@@ -15,19 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Download latest node
-  shell: wget -qO- https://deb.nodesource.com/setup_6.x | bash -
-  tags:
-    - web-server
-    - tissuemaps
-
-- name: Install node
-  apt:
-    name: nodejs
-  tags:
-    - web-server
-    - tissuemaps
-
 - name: Install bower and gulp node packages
   npm:
     name: "{{ item }}"
@@ -78,9 +65,13 @@
     - tissuemaps
 
 - name: Install node dependencies
-  npm:
-    path: "{{ tm_home }}/tmui/src/app"
-    state: present
+  shell: npm install app --unsafe-perm
+  args:
+    executable: /bin/bash
+    chdir: "{{ tm_home }}/tmui/src"
+  # npm:
+  #   path: "{{ tm_home }}/tmui/src/app"
+  #   state: present
   tags:
     - web-server
     - tissuemaps

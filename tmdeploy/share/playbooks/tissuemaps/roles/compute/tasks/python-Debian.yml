@@ -13,20 +13,45 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ---
-- include: install-{{ ansible_os_family }}.yml
 
-- include: create_dirs.yml
-
-- include: create_cluster.yml
-
-- include: configure.yml
-
-- name: Start database cluster
-  command: pg_ctl restart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+- name: Install apt packages required for Python
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - build-essential
+    - python-dev
+    - python-pip
+    - python-setuptools
+    - libssl-dev
+    - libffi-dev
+  when: ansible_os_family == 'Debian'
   tags:
-    - database
+    - python
 
-- include: create_database.yml
+- name: Install apt packages required by Python packages
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - libopenblas-dev
+    # gc3pie:
+    - time
+    # h5py:
+    - libhdf5-dev
+    - hdf5-tools
+    # lxml:
+    - libxml2-dev
+    - libxslt1-dev
+    # matplotlib:
+    - pyqt4-dev-tools
+    - libfreetype6-dev
+    - python-tk
+    # shapely:
+    - libgeos-dev
+  when: ansible_os_family == 'Debian'
+  tags:
+    - python
 
-- include: create_users.yml

@@ -15,20 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install generally required packages
-  apt:
-    name: "{{ item }}"
-  with_items:
-    - cmake
-    - wget
-    - git
-    - vim
-
-- name: Install goodies
-  apt:
-    name: "{{ item }}"
-  with_items:
-    - zlib1g-dev
-    - cifs-utils
-    - parallel
-  when: ansible_env.ANSIBLE_CONTAINER is undefined
+- name: Install yum package for JDK 8
+  yum:
+    name: java-1.8.0-openjdk
+    status: installed
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - tissuemaps

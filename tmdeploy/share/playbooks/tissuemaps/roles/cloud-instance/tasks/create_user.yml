@@ -42,6 +42,7 @@
   become: yes
   lineinfile:
     dest: /etc/sudoers.d/{{ tm_user }}
+    # TODO: Make sudo rights more restrictions
     regexp: "{{ tm_user }} ALL=(ALL) NOPASSWD:ALL"
     line: "{{ tm_user }} ALL=(ALL) NOPASSWD:ALL"
     state: present

@@ -14,27 +14,3 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Configure PostgreSQL shared_buffers
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set shared_buffers {{ pg_shared_buffers }}
-  tags:
-    - database
-
-- name: Configure PostgreSQL effective_cache_size
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set effective_cache_size {{ pg_effective_cache_size }}
-  tags:
-    - database
-
-- name: Configure PostgreSQL max_worker_processes
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_worker_processes {{ pg_max_worker_processes }}
-  tags:
-    - database
-
-- name: Configure PostgreSQL max_parallel_workers_per_gather
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set max_parallel_workers_per_gather {{ pg_max_worker_processes }}
-  tags:
-    - database
-
-- name: Configure PostgreSQL maintenance_work_mem
-  command: pg_conftool {{ postgresql_version }} {{ db_node }} set maintenance_work_mem {{ pg_maintenance_work_mem  }}
-  tags:
-    - database

@@ -15,24 +15,28 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Ensure Ubuntu distribution
+- name: Ensure Ubuntu distribution in case of Debian OS family
   fail:
     msg: Requires Ubuntu distribution!
-  when: ansible_distribution != 'Ubuntu'
+  when: ansible_os_family == 'Debian' and ansible_distribution != 'Ubuntu'
 
-- name: Ensure Ubuntu distribution version
+- name: Ensure correct Ubuntu distribution version in case of Debian OS family
   fail:
     msg: Requires Ubuntu distribution version >= 14.04!
-  when: (ansible_distribution_version|int) < 14
+  when: ansible_distribution == 'Ubuntu' and (ansible_distribution_version|int) < 14
 
-- name: Install aptitude
-  raw: apt-get update && apt-get install -y aptitude
+- name: Ensure CentOS distribution in case of RedHat OS family
+  fail:
+    msg: Requires CentOS distribution!
+  when: ansible_os_family == 'RedHat' and ansible_distribution != 'CentOS'
 
-- name: Update apt packages
-  apt:
-    upgrade: safe
-    update_cache: yes
+- name: Ensure correct CentOS distribution version in case of RedHat OS family
+  fail:
+    msg: Requires CentOS distribution version >= 7!
+  when: ansible_distribution == 'CentOS' and (ansible_distribution_version|int) < 7
 
-- include: utils.yml
+- include: init-{{ ansible_os_family }}.yml
+
+- include: utils-{{ ansible_os_family }}.yml
 
 - include: ssh.yml

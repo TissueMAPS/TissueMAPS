@@ -17,12 +17,17 @@
 ---
 - include: env.yml
 
-- include: python.yml
+- include: postgresql-{{ ansible_os_family }}.yml
 
-- include: r.yml
+- include: python-{{ ansible_os_family }}.yml
+
+- include: pip.yml
+
+- include: r-{{ ansible_os_family }}.yml
+
+- include: java-{{ ansible_os_family }}.yml
 
 - include: tissuemaps.yml
 
 - include: bioformats.yml
 
-- include: postgresql.yml

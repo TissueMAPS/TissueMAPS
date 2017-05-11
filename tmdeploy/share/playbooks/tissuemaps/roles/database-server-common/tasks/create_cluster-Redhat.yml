@@ -13,46 +13,29 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 ---
-# Make sure to have verison 3.2.1+ of R
-- name: Add apt key for R repo
-  apt_key:
-    id: E084DAB9
-    keyserver: keyserver.ubuntu.com
-    state: present
-  tags:
-    - r
 
-- name: Add R repo
-  apt_repository:
-    repo: "deb http://cran.rstudio.com/bin/linux/ubuntu {{ ansible_distribution_release|lower }}/"
+- name: Install setfacl support
+  yum:
+    name: acl
+  when: ansible_os_family == 'RedHat'
   tags:
-    - r
+    - database
 
-- name: Update all packages to the latest version
-  apt:
-    upgrade: safe
-    update_cache: yes
-    cache_valid_time: 3600
+- name: Remove empty default database cluster
+  command: pg_dropcluster {{ postgresql_version }} main --stop
+  ignore_errors: yes
   tags:
-    - update
-    - r
+    - database
 
-- name: Install latest R
-  apt:
-    name: "{{ item }}"
-    state: latest
-  with_items:
-    - r-base
-    - r-base-dev
+- name: Remove database directory
+  command: pg_dropcluster {{ postgresql_version }} {{ db_node }} --stop
+  ignore_errors: yes
   tags:
-    - r
+    - database
 
-- name: Install rpy2 Python package
-  pip:
-    name: rpy2
-    editable: false
+- name: Initialize database cluster
+  command: pg_createcluster {{ postgresql_version }} {{ db_node }} -p {{ db_port }} -d {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
   tags:
-    - r
-    - python
+    - database
+
