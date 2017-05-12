@@ -21,7 +21,7 @@
     minutes: 1
     prompt: "Wait 1 minute for instance."
 
-- include: python-{{ ansible_os_family }}.yml
+- include: python.yml
   delegate_to: "{{ instance_name }}"
   delegate_facts: yes
   when: instance_state == "present"
