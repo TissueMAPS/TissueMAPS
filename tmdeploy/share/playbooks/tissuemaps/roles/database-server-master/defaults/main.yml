@@ -20,5 +20,8 @@ pg_maintenance_work_mem: 64MB          # total memory * 3/(8*autovacuum_max_work
 pg_max_connections: 500                # at least: number of nodes x pool size
 pg_max_worker_processes: 4             # number of CPU cores
 pg_max_parallel_workers_per_gather: "{{ pg_max_worker_processes }}"
+
+pg_max_wal_size: 30GB
+
 pg_fsync: on
 pg_synchronous_commit: on
