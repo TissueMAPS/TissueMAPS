@@ -33,7 +33,7 @@
 - name: Ensure correct CentOS distribution version in case of RedHat OS family
   fail:
     msg: Requires CentOS distribution version >= 7!
-  when: ansible_distribution == 'CentOS' and (ansible_distribution_version|int) < 7
+  when: ansible_distribution == 'CentOS' and (ansible_distribution_version[0]|int) < 7
 
 - include: init-{{ ansible_os_family }}.yml
 

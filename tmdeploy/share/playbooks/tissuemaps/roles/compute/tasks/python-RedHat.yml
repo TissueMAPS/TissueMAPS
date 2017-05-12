@@ -25,6 +25,8 @@
     - python-pip
     - python-setuptools
     - libffi-devel
+    - openssl-devel
+    - readline-devel
   when: ansible_os_family == 'RedHat'
   tags:
     - python
