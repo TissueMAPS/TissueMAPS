@@ -25,7 +25,6 @@
     - vim
     - unzip
     - openssl
-  when: ansible_os_family == 'Debian'
 
 - name: Install useful apt packages
   apt:

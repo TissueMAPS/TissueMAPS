@@ -29,5 +29,6 @@
 
 - name: Create self-signed certificate in default location
   command: make-ssl-cert generate-default-snakeoil
+  when: ansible_os_family == 'Debian'
   tags:
     - app-server

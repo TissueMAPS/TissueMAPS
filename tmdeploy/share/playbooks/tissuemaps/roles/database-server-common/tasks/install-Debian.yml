@@ -49,7 +49,7 @@
     name: "{{ item }}"
   with_items:
     - postgresql-{{ postgresql_version }}-citus-{{ citus_version }}
-    - postgis-{{ postgis_version }}
+    - postgis
     - postgresql-contrib-{{ postgresql_version }}
     - postgresql-server-dev-all
     - python-psycopg2
@@ -59,7 +59,13 @@
 - name: Install setfacl support
   apt:
     name: acl
-  when: ansible_os_family == 'Debian'
   tags:
     - database
+
+- name: Set directory for PostgreSQL executables
+  set_fact:
+    db_executable_dir: /usr/lib/postgresql/{{ postgresql_version }}/bin
+  tags:
+    - database
+
 

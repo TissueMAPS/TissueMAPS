@@ -26,7 +26,6 @@
   #   unsafe_writes: yes
   #   timeout: 60
   #   mode: 0770
-  when: ansible_os_family == 'RedHat'
   tags:
     - database
 
@@ -34,7 +33,6 @@
   file:
     path={{ tm_home }}/citus_rpm.sh
     mode=0770
-  when: ansible_os_family == 'RedHat'
   tags:
     - database
 
@@ -43,7 +41,6 @@
   args:
     # FIXME
     creates: /etc/apt/sources.list.d/citusdata_community.list
-  when: ansible_os_family == 'RedHat'
   tags:
     - database
 
@@ -51,7 +48,6 @@
   yum:
     state: installed
     name: "{{ item }}"
-  when: ansible_os_family == 'RedHat'
   with_items:
     - citus{{ citus_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}_{{ postgresql_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}
     - postgis{{ postgis_version | regex_replace('^(\\d).(\\d)$', '\\1') }}_{{ postgresql_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}
@@ -62,6 +58,12 @@
 - name: Install setfacl support
   yum:
     name: acl
-  when: ansible_os_family == 'RedHat'
   tags:
     - database
+
+- name: Set directory for PostgreSQL executables
+  set_fact:
+    db_executable_dir: /usr/pgsql-{{ postgresql_version }}/bin
+  tags:
+    - database
+

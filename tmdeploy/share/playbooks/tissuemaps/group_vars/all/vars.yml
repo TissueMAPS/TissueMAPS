@@ -26,6 +26,7 @@ tm_data_directory: /storage/tissuemaps/data
 tm_log_directory: /storage/tissuemaps/log
 postgresql_version: 9.6
 
+db_superuser: postgres
 db_user: tissuemaps
 db_name: tissuemaps
 db_port_master: 5432
