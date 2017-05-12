@@ -40,7 +40,7 @@
   command: "{{ tm_home }}/citus_rpm.sh"
   args:
     # FIXME
-    creates: /etc/apt/sources.list.d/citusdata_community.list
+    creates: /etc/rpm/sources.list.d/citusdata_community.list
   tags:
     - database
 
@@ -63,7 +63,7 @@
 
 - name: Set directory for PostgreSQL executables
   set_fact:
-    db_executable_dir: /usr/pgsql-{{ postgresql_version }}/bin
+    db_executable_directory: /usr/pgsql-{{ postgresql_version }}/bin
   tags:
     - database
 

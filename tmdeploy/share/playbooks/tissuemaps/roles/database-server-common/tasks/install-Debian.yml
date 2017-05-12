@@ -64,7 +64,7 @@
 
 - name: Set directory for PostgreSQL executables
   set_fact:
-    db_executable_dir: /usr/lib/postgresql/{{ postgresql_version }}/bin
+    db_executable_directory: /usr/lib/postgresql/{{ postgresql_version }}/bin
   tags:
     - database
 
