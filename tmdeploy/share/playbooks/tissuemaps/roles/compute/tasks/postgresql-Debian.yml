@@ -25,7 +25,6 @@
     regexp: '^deb http\\:\\/\\/apt.postgresql'
     line: 'deb http://apt.postgresql.org/pub/repos/apt/ {{ ansible_distribution_release }}-pgdg main'
   register: pgs_aptrepo
-  when: ansible_os_family == 'Debian'
   tags:
     - database
 
@@ -35,7 +34,6 @@
     state: present
     validate_certs: no
   register: pgs_aptkey
-  when: ansible_os_family == 'Debian'
   tags:
     - database
 
@@ -44,7 +42,6 @@
     - update
     - database
   shell: aptitude update
-  when: ansible_os_family == 'Debian'
   when: pgs_aptkey.changed or pgs_aptrepo.changed
 
 - name: Install apt packages for PostgreSQL client
@@ -54,7 +51,6 @@
   with_items:
     - postgresql-client-{{ postgresql_version }}
     - libpq-dev
-  when: ansible_os_family == 'Debian'
   tags:
     - database
 

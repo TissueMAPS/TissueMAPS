@@ -13,8 +13,25 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ---
+# We need to remove an existing database cluster, otherwise initdb will fail.
+- name: Stop running database server
+  become_user: "{{ db_superuser }}"
+  command: "{{ db_executable_dir }}/pg_ctl stop -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}"
+  ignore_errors: yes
+  tags:
+    - database
+
+- name: Remove existing data directory
+  file:
+    path: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}"
+    state: absent
+  tags:
+    - database
+
 - name: Initialize database cluster
-  command: pg_ctl init -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+  become_user: "{{ db_superuser }}"
+  command: "{{ db_executable_dir }}/pg_ctl init -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log"
   tags:
     - database

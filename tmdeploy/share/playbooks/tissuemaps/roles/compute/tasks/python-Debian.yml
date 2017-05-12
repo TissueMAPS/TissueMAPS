@@ -27,7 +27,6 @@
     - python-setuptools
     - libssl-dev
     - libffi-dev
-  when: ansible_os_family == 'Debian'
   tags:
     - python
 
@@ -51,7 +50,6 @@
     - python-tk
     # shapely:
     - libgeos-dev
-  when: ansible_os_family == 'Debian'
   tags:
     - python
 

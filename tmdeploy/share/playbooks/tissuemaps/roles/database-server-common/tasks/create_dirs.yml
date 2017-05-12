@@ -30,16 +30,20 @@
     path: "{{ db_data_directory }}"
     state: directory
     recurse: yes
-    owner: postgres
-    group: postgres
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
     mode: 0700
   tags:
     - database
 
-- name: Remove version-specific data subdirectory
+- name: Create version-specific data subdirectory
   file:
-    path: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}"
-    state: absent
+    path: "{{ db_data_directory }}/{{ postgresql_version }}"
+    state: directory
+    recurse: yes
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
+    mode: 0700
   tags:
     - database
 
@@ -48,8 +52,8 @@
     path: "{{ db_log_directory }}"
     state: directory
     recurse: yes
-    owner: postgres
-    group: postgres
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
     mode: 0700
   tags:
     - database

@@ -23,7 +23,10 @@
 - include: configure.yml
 
 - name: Start database cluster
-  command: pg_ctl restart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+  become: "{{ db_superuser }}"
+  command: ./pg_ctl restart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+  args:
+    chdir: /usr/lib/postgresql/{{ postgresql_version }}/bin if ansible_os_family == 'Debian' else /usr/pgsql-{{ postgresql_version }}/bin
   tags:
     - database
 
