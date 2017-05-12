@@ -49,8 +49,8 @@
     state: installed
     name: "{{ item }}"
   with_items:
-    - citus{{ citus_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}_{{ postgresql_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}
-    - postgis{{ postgis_version | regex_replace('^(\\d).(\\d)$', '\\1') }}_{{ postgresql_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}
+    - citus{{ citus_version | regex_replace('(\.)', '') }}_{{ postgresql_version | regex_replace('(\.)', '') }}
+    - postgis{{ postgis_version | regex_replace('(\.)', '') }}_{{ postgresql_version | regex_replace('(\.)', '') }}
     - python-psycopg2
   tags:
     - database

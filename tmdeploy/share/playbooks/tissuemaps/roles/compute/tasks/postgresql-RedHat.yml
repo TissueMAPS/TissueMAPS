@@ -28,7 +28,7 @@
     name: "{{ item }}"
     state: installed
   with_items:
-    - postgresql{{ postgresql_version | regex_replace('^(\\d).(\\d)$', '\\1\\2') }}
+    - postgresql{{ postgresql_version | regex_replace('(\.)', '') }}
   when: ansible_os_family == 'RedHat'
   tags:
     - database
