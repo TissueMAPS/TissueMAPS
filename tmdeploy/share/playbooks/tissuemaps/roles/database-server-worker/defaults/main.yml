@@ -18,6 +18,7 @@
 # Override them according to node flavor used for server
 pg_shared_buffers: 128MB               # 20-40% of total memory
 pg_effective_cache_size: 4GB           # 50-75% of total memory
+pg_maintenance_work_mem: 64MB          # total memory * 3/(8*autovacuum_max_workers)
 pg_max_connections: 500                # at least: number of nodes x pool size
 pg_max_worker_processes: 4
 pg_max_parallel_workers_per_gather: "{{ pg_max_worker_processes }}"
