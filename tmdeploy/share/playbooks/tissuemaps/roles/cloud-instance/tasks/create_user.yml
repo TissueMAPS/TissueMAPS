@@ -26,7 +26,6 @@
     name: "{{ tm_user }}"
     shell: /bin/bash
     group: "{{ tm_user }}"
-    groups: sudo
     append: yes
     createhome: yes
     home: /home/{{ tm_user }}
