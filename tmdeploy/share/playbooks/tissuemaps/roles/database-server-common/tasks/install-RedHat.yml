@@ -67,3 +67,8 @@
   tags:
     - database
 
+- name: Set directory for default PostgreSQL cluster
+  set_fact:
+    db_default_cluster_directory: /var/lib/pgsql-{{ postgresql_version }}/data
+  tags:
+    - database

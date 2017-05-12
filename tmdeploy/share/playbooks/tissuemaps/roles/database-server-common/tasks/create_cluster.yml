@@ -16,6 +16,20 @@
 
 ---
 # We need to remove an existing database cluster, otherwise initdb will fail.
+- name: Stop running default database server
+  become_user: "{{ db_superuser }}"
+  command: "{{ db_executable_directory }}/pg_ctl stop -D {{ db_default_cluster_directory }}"
+  ignore_errors: yes
+  tags:
+    - database
+
+- name: Remove existing default data directory
+  file:
+    path: "{{ db_default_cluster_directory }}"
+    state: absent
+  tags:
+    - database
+
 - name: Stop running database server
   become_user: "{{ db_superuser }}"
   command: "{{ db_executable_directory }}/pg_ctl stop -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}"

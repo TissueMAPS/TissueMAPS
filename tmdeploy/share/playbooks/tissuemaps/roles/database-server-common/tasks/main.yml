@@ -24,7 +24,7 @@
 
 - name: Start database cluster
   become_user: "{{ db_superuser }}"
-  command: '{{ db_executable_directory }}/pg_ctl restart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log'
+  command: '{{ db_executable_directory }}/pg_ctl restart -o "-p {{ db_port }} -c config_file={{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/postgres.conf hba_file={{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log'
   tags:
     - database
 
