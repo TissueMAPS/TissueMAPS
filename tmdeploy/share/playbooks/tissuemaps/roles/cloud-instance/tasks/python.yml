@@ -15,3 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+- name: Make sure Python is installed
+  become: yes
+  when: ansible_os_family == 'Debian'
+  ignore_errors: yes # Ansible doesn't detect OS correctly
+  raw: apt-get -y install python-simplejson
