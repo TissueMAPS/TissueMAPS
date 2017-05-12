@@ -14,6 +14,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
+- name: Create directory for available NGINX sites
+  file:
+    path: /etc/nginx/sites-available
+    state: directory
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  tags:
+    - web-server
+    - nginx
+
+- name: Create directory for enabled NGINX sites
+  file:
+    path: /etc/nginx/sites-enabled
+    state: directory
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
+  tags:
+    - web-server
+    - nginx
+
 - name: Create NGINX site
   template:
     src: nginx_site.j2
@@ -81,7 +103,7 @@
 - name: Place NGINX init config file for update-rc.d
   template:
     src: nginx.conf.j2
-    dest: /etc/init/nxing.conf
+    dest: /etc/init/nginx.conf
     owner: "{{ tm_user }}"
     group: "{{ tm_user }}"
     mode: 0700
