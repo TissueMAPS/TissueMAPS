@@ -97,8 +97,6 @@
     - app-server
     - uwsgi
 
-# TODO: chkconfig for CentOS
-
 - name: Place UWSGI init config file for update-rc.d
   template:
     src: uwsgi.conf.j2
@@ -117,8 +115,7 @@
     dest: /lib/systemd/system/uwsgi.service
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'Debian'
-    - ansible_distribution_version|int >= 16
+    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int > 16)
   tags:
     - app-server
     - uwsgi
@@ -127,8 +124,7 @@
   command: systemctl daemon-reload
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'Debian'
-    - ansible_distribution_version|int >= 16
+    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int > 16)
   tags:
     - app-server
     - uwsgi
