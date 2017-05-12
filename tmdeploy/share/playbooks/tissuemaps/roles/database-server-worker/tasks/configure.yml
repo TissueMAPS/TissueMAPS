@@ -15,25 +15,3 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 
-# Aggressive, performance orientated settings on the workers.
-- name: Turn off synchronization
-  lineinfile:
-    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/postgresql.conf
-    state: present
-    regexp: 'fsync.*'
-    line: 'fsync = off'
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
-  tags:
-    - database
-
-- name: Turn off synchronous commit
-  lineinfile:
-    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/postgresql.conf
-    state: present
-    regexp: 'synchronous_commit.*'
-    line: 'synchronous_commit = off'
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
-  tags:
-    - database
