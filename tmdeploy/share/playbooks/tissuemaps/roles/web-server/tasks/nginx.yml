@@ -118,7 +118,7 @@
 
 # TODO: chkconfig for CentOS
 
-- name: Change NGINX pid for serviced
+- name: Change NGINX pid for systemd
   template:
     src: nginx.service.j2
     dest: /lib/systemd/system/nginx.service
@@ -126,18 +126,16 @@
     group: "{{ tm_user }}"
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'Debian'
-    - ansible_distribution_version|int > 16
+    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int > 16)
   tags:
     - web-server
     - nginx
 
-- name: Reload systemctl for serviced
+- name: Reload systemctl for systemd
   command: systemctl daemon-reload
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'Debian'
-    - ansible_distribution_version|int > 16
+    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int > 16)
   tags:
     - web-server
     - nginx
