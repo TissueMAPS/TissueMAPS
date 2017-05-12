@@ -117,7 +117,11 @@ setuptools.setup(
        # Ansible container requires a specific version of requests.
        'requests==2.11.1',
        'shade>=1.12.1',
-       'whichcraft>=0.4.0'
+       'whichcraft>=0.4.0',
+       # OpenStack's `osc-lib` has stricter requirements that are not picked up
+       # because of pip's issue #988.  The only workaround for now is to manually
+       # add the complete requirement expression as a top-level dependency
+       'Babel>=2.3.4,!=2.4.0',
     ]
 )
 
