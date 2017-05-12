@@ -19,8 +19,8 @@
   template:
     src: postgresql.conf.j2
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/postgresql.conf"
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
     mode: 0666
   tags:
     - database
@@ -31,8 +31,8 @@
     state: present
     regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
     line: 'host    all             all             {{ ip_range }}          trust'
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
   when: ip_range is defined
   tags:
     - database
@@ -43,8 +43,8 @@
     state: present
     regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
     line: 'host    all             all             127.0.0.1/32            trust'
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
   tags:
     - database
 
@@ -54,8 +54,8 @@
     state: present
     regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
     line: 'host    all             all             ::1/128                 trust'
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
   tags:
     - database
 
@@ -64,8 +64,8 @@
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     line: 'host    all             all              10.0.0.0/8             trust'
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
@@ -75,8 +75,8 @@
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     line: 'host    all             all              172.16.0.0/12          trust'
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
@@ -86,8 +86,8 @@
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     line: 'host    all             all              192.168.0.0/16         trust'
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
