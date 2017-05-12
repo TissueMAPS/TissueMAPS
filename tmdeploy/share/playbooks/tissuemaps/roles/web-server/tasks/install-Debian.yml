@@ -23,7 +23,7 @@
     - web-server
     - nginx
 
-- name: Download latest node
+- name: Download NodeJS
   shell: wget -qO- https://deb.nodesource.com/setup_6.x | bash -
   tags:
     - web-server

@@ -18,7 +18,7 @@
 - name: Drop postgresql.conf file
   template:
     src: postgresql.conf.j2
-    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/postgresql.conf
+    dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/postgresql.conf"
     owner: "{{ db_user }}"
     group: "{{ db_user }}"
     mode: 0666
@@ -27,7 +27,7 @@
 
 - name: Allow unrestricted access from private IP range
   lineinfile:
-    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
     line: 'host    all             all             {{ ip_range }}          trust'
@@ -39,7 +39,7 @@
 
 - name: Allow host unrestricted access to connect to itself I
   lineinfile:
-    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
     line: 'host    all             all             127.0.0.1/32            trust'
@@ -50,7 +50,7 @@
 
 - name: Allow host unrestricted access to connect to itself II
   lineinfile:
-    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
     line: 'host    all             all             ::1/128                 trust'
@@ -61,7 +61,7 @@
 
 - name: Allow unrestricted host access from local private network (10.0.0.0/8)
   lineinfile:
-    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     line: 'host    all             all              10.0.0.0/8             trust'
     owner: "{{ db_user }}"
@@ -72,7 +72,7 @@
 
 - name: Allow unrestricted host access from local private network (172.16.0.0/12)
   lineinfile:
-    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     line: 'host    all             all              172.16.0.0/12          trust'
     owner: "{{ db_user }}"
@@ -83,7 +83,7 @@
 
 - name: Allow unrestricted host access from local private network (192.168.0.0/16)
   lineinfile:
-    dest: /etc/postgresql/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf
+    dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     line: 'host    all             all              192.168.0.0/16         trust'
     owner: "{{ db_user }}"
@@ -100,6 +100,6 @@
 - name: Increaese limit for number of open files
   lineinfile:
     dest: /etc/security/limits.conf
-    line: postgres soft nofile {{ pg_max_files_per_process }}
+    line: "{{ db_superuser }} soft nofile {{ pg_max_files_per_process }}"
   tags:
     - database
