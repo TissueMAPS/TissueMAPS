@@ -416,12 +416,11 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                     segmentation_layer.centroid_threshold = \
                         0 if centroid_thresh < 0 else centroid_thresh
 
-
             site = session.query(tm.Site).get(store['site_id'])
             y_offset, x_offset = site.aligned_offset
 
         mapobject_ids = dict()
-        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+        with tm.utils.ExperimentConnection(self.experiment_id, master=False) as conn:
             for obj_name, segm_objs in objects_to_save.iteritems():
                 # Delete existing mapobjects for this site when they were
                 # generated in a previous run of the same pipeline. In case
@@ -798,6 +797,8 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 ref_id_lut[ref_type] = ref_mapobject_type.id
                 ref_lut[ref_type] = [(r[0], r[1]) for r in ref_mapobjects]
 
+        # TODO: Load all feature values for each site into memory as DataFrame
+        # and aggregate in memory.
         new_features = collections.defaultdict(dict)
         for ref_type_name in parent_mapobject_ref_types:
             ref_type_id = ref_id_lut[ref_type_name]
