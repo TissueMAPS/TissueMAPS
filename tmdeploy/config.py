@@ -30,6 +30,8 @@ from tmdeploy.utils import read_yaml_file
 
 
 CONFIG_DIR = os.path.expanduser('~/.tmaps/setup')
+
+# TODO: allow overriding by environment variable TM_SETUP_FILE
 SETUP_FILE = os.path.join(CONFIG_DIR, 'setup.yml')
 
 
@@ -518,11 +520,12 @@ class AnsibleHostVariableSection(_SetupSection):
 
     _OPTIONAL_ATTRS = {
         'disk_size', 'volume_size', 'volume_mountpoint',
-        'assign_public_ip', 'tags'
+        'assign_public_ip', 'tags', 'ssh_user'
     }
 
     def __init__(self, description):
         self.volume_mountpoint = '/storage'
+        self.ssh_user = 'ubuntu'
         super(AnsibleHostVariableSection, self).__init__(description)
 
     @property
@@ -561,6 +564,18 @@ class AnsibleHostVariableSection(_SetupSection):
     def volume_mountpoint(self, value):
         self._check_value_type(value, 'volume_mountpoint', str)
         self._volume_mountpoint = str(value)
+
+    @property
+    def ssh_user(self):
+        '''str: user for establishing SSH connection to remote host
+        (default: ``"ubuntu"``)
+        '''
+        return self._ssh_user
+
+    @ssh_user.setter
+    def ssh_user(self, value):
+        self._check_value_type(value, 'ssh_user', str)
+        self._ssh_user = str(value)
 
     @property
     def image(self):
