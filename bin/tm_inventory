@@ -14,7 +14,8 @@ from tmdeploy.utils import write_yaml_file, read_yaml_file, to_json
 from tmdeploy.log import configure_logging, map_logging_verbosity
 from tmdeploy.config import Setup
 from tmdeploy.errors import (
-    CloudError, NoInstanceFoundError, MultipleInstancesFoundError
+    CloudError, NoInstanceFoundError, MultipleInstancesFoundError,
+    SetupDescriptionError, SetupEnvironmentError
 )
 from tmdeploy.inventory import (
     CONFIG_DIR, GROUP_VARS_DIR, HOST_VARS_DIR,
@@ -203,7 +204,7 @@ def update_static_inventory(inventory_info, setup):
             host_vars = dict()
             host_vars.update(inventory_info['_meta']['hostvars'][host])
             host_vars.update({
-                'ansible_user': 'ubuntu',
+                'ansible_user': host_vars['ssh_user'],
                 'ansible_ssh_private_key_file': private_key_file
             })
 
@@ -256,7 +257,8 @@ def update_static_inventory(inventory_info, setup):
                         '-o ProxyCommand="ssh {o} -i {f} -W %h:%p -q {u}@{h}"'.format(
                             o='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no',
                             f=private_key_file,
-                            u='ubuntu', h=host_vars['ansible_host']
+                            u=host_vars['ansible_user'],
+                            h=host_vars['ansible_host']
                         )
                     all_group_vars_file = os.path.join(GROUP_VARS_DIR, 'all')
                     logger.debug('update variables for group "all"')
@@ -363,4 +365,11 @@ if __name__ == "__main__":
     tmdeploy_logger = logging.getLogger('tmdeploy')
     tmdeploy_logger.setLevel(log_level)
 
-    main(args)
+    try:
+        main(args)
+    except SetupDescriptionError as err:
+        logger.error(str(err))
+        sys.exit(1)
+    except SetupEnvironmentError as err:
+        logger.error(str(err))
+        sys.exit(1)
