@@ -30,13 +30,3 @@
     - database-server-master
   tags:
     - database
-
-- name: Set startup for PostgreSQL databases
-  hosts:
-    - tissuemaps_db_master
-    - tissuemaps_db_worker
-  tasks:
-    - name: Enable PostgreSQL service
-      service:
-        name: postgresql
-        enabled: yes

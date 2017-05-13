@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 
-- name: Drop postgresql.conf file
+- name: Place postgresql.conf file
   template:
     src: postgresql.conf.j2
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/postgresql.conf"
@@ -104,15 +104,15 @@
   tags:
     - database
 
-- name: Drop PostgreSQL systemd config file
+- name: Place PostgreSQL systemd config file
   template:
     src: postgresql.service.j2
-    dest: /lib/systemd/system/postgresql@{{ postgresql_version }}-{{ db_node }}.service
+    dest: /lib/systemd/system/postgresql@{{ db_node }}.service
     owner: "{{ tm_user }}"
     group: "{{ tm_user }}"
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int > 16)
+    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int >= 16)
   tags:
     - database
 
@@ -120,6 +120,6 @@
   command: systemctl daemon-reload
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int > 16)
+    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int >= 16)
   tags:
     - database

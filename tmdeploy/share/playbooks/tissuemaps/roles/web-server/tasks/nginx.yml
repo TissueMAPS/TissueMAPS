@@ -89,7 +89,7 @@
     - web-server
     - nginx
 
-- name: Change NGINX pid for systemd
+- name: Place NGINX systemd service file
   template:
     src: nginx.service.j2
     dest: /lib/systemd/system/nginx.service
