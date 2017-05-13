@@ -18,8 +18,8 @@
 - name: Add remote worker nodes
   command: psql -h {{ db_host_master }} -p {{ db_port_master }} -U postgres tissuemaps -c "SELECT master_add_node('{{ item }}', {{ db_port_worker }});"
   with_items: "{{ db_hosts_workers }}"
-  when: "{{ db_host_master != db_hosts_workers[0] }}"
+  when: db_host_master != db_hosts_workers[0]
 
 - name: Add local worker node
   command: psql -h localhost -p {{ db_port_master }} -U postgres tissuemaps -c "SELECT master_add_node('localhost', {{ db_port_worker }});"
-  when: "{{ db_host_master == db_hosts_workers[0] }}"
+  when: db_host_master == db_hosts_workers[0]
