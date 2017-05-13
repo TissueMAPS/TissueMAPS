@@ -1,24 +1,55 @@
-# nginx
+user {{ tm_user }};
+worker_processes auto;
+pid /var/run/nginx/nginx.pid;
 
-description "nginx http daemon"
-author "George Shammas <georgyo@gmail.com>"
+events {
+    worker_connections 768;
+    # multi_accept on;
+}
 
-start on (filesystem and net-device-up IFACE!=lo)
-stop on runlevel [!2345]
+http {
 
-env DAEMON=/usr/sbin/nginx
-env PID={{ nginx_pid_file }}
+    ##
+    # Basic Settings
+    ##
 
-expect fork
-respawn
-respawn limit 10 5
-#oom never
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 300s;
+    types_hash_max_size 2048;
+    # server_tokens off;
 
-pre-start script
-        $DAEMON -t
-        if [ $? -ne 0 ]
-                then exit $?
-        fi
-end script
+    # server_names_hash_bucket_size 64;
+    # server_name_in_redirect off;
 
-exec $DAEMON
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    ##
+    # SSL Settings
+    ##
+
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # Dropping SSLv3, ref: POODLE
+    ssl_prefer_server_ciphers on;
+
+    ##
+    # Gzip Settings
+    ##
+
+    gzip on;
+    gzip_disable "msie6";
+
+    # gzip_vary on;
+    # gzip_proxied any;
+    # gzip_comp_level 6;
+    # gzip_buffers 16 8k;
+    # gzip_http_version 1.1;
+    # gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+    ##
+    # Virtual Host Configs
+    ##
+
+    include /etc/nginx/conf.d/*.conf;
+}
