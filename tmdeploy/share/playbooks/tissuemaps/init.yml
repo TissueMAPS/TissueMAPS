@@ -18,14 +18,23 @@
 # started upon system startup.
 # We don't do this within the respective roles for compatibility with
 # Docker compose.
-- name: Restart database servers
+- name: Restart database master server
   hosts:
-    - tissuemaps_db_worker
     - tissuemaps_db_master
   tasks:
     - name: Restart and enable postgresql service
       service:
-        name: postgresql
+        name: postgresql@master
+        state: restarted
+        enabled: yes
+
+- name: Restart database worker servers
+  hosts:
+    - tissuemaps_db_worker
+  tasks:
+    - name: Restart and enable postgresql service
+      service:
+        name: postgresql@worker
         state: restarted
         enabled: yes
 

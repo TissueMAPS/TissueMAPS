@@ -16,3 +16,4 @@
 
 ---
 web_port: 80
+enable_https: no

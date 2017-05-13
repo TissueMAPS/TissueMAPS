@@ -1,11 +1,8 @@
 # systemd service for PostgreSQL clusters
 
 [Unit]
-Description=PostgreSQL Cluster {{ postgresql_version }}-{{ db_node }}
+Description=Citus PostgreSQL Cluster {{ postgresql_version }}-{{ db_node }}
 ConditionPathExists={{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/postgresql.conf
-PartOf=postgresql.service
-ReloadPropagatedFrom=postgresql.service
-Before=postgresql.service
 
 [Service]
 Type=forking
@@ -19,6 +16,9 @@ SyslogIdentifier=postgresql@{{ postgresql_version }}-{{ db_node }}
 # prevent OOM killer from choosing the postmaster (individual backends will
 # reset the score to 0)
 OOMScoreAdjust=-900
+KillMode=mixed
+KillSignal=SIGINT
+TimeoutSec=0
 
 [Install]
 WantedBy=multi-user.target
