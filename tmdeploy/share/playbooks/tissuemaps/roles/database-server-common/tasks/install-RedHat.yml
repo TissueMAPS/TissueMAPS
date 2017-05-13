@@ -50,6 +50,7 @@
     name: "{{ item }}"
   with_items:
     - citus{{ citus_version | regex_replace('(\.)', '') }}_{{ postgresql_version | regex_replace('(\.)', '') }}
+    - postgresql{{ postgresql_version | regex_replace('(\.)', '') }}-contrib
     - postgis{{ postgis_version[0] }}_{{ postgresql_version | regex_replace('(\.)', '') }}
     - python-psycopg2
   tags:
