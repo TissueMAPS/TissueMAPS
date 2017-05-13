@@ -434,7 +434,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             y_offset, x_offset = site.aligned_offset
 
         mapobject_ids = dict()
-        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+        with tm.utils.ExperimentConnection(self.experiment_id, master=False) as conn:
             for obj_name, segm_objs in objects_to_save.iteritems():
                 # Delete existing mapobjects for this site when they were
                 # generated in a previous run of the same pipeline. In case

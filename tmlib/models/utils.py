@@ -979,6 +979,36 @@ class ExperimentConnection(_Connection):
 
         return shard_metadata
 
+    def _get_id(self, sequence_name):
+        self._cursor.execute(
+            'SELECT nextval FROM nextval(%(sequence)s);',
+            {'sequence': sequence_name}
+        )
+        record = connection.fetchone()
+        return record.nextval
+
+    def add(self, model_object):
+        # TODO: only if value for hash distributed column is not provided
+        self._cursor.execute()
+
+    def add_multiple(self, model_objects):
+        distribution = collection.defaultdict(list)
+        for i, obj in enumerate(model_objects):
+            row_id = self._get_id()
+            self._cursor.execute('''
+                SELECT nodename, nodeport, shardid FROM pg_dist_shard_placement
+                WHERE shardid = (
+                    SELECT get_shard_id_for_distribution_column(
+                        %(table)s, %(id)s
+                    )
+                )
+            ''', {
+                'table': model_objects.__table__.name,
+                'id': row_id
+            })
+            node, port, shard_id = self._cursor.fetchall()[0]
+            distribution[(node, port, shard_id)].append(row_id)
+
 
 class MainConnection(_Connection):
 
@@ -1041,54 +1071,6 @@ class ExperimentWorkerConnection(_Connection):
         self._port = port
         self.experiment_id = experiment_id
 
-    def get_shard_id(self, model_class):
-        '''Selects a single shard at random from all available shards on the
-        worker server to which the connection was established. The ID of the
-        selected shard gets cached, such that subsequent calls will return
-        the same identifier.
-
-        Parameters
-        ----------
-        model_class: str
-            class dervired from
-            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
-            for which a shard should be selected
-
-        Returns
-        -------
-        int
-            ID of the selected shard
-
-        Raise
-        -----
-        ValueError
-            when the `model_class` does not represent a distributed table
-        '''
-        if not model_class.is_distributed:
-            raise ValueError(
-                'Shard selection not possible, since provided model class does '
-                'not represent a distributed database table.'
-            )
-        if model_class.__name__ in self._shard_lut:
-            return self._shard_lut[model_class.__name__]
-        with MainConnection() as connection:
-            connection.execute('''
-                SELECT s.shardid FROM pg_dist_shard AS s
-                JOIN pg_dist_shard_placement AS p ON s.shardid = p.shardid
-                WHERE s.logicalrelid = %(table)s::regclass
-                AND p.nodename = %(host)s
-                AND p.nodeport = %(port)s
-                ORDER BY random()
-                LIMIT 1
-            ''', {
-                'table': model_class.__table__.name,
-                'host': self._host,
-                'port': self._port
-            })
-            shard_id = connection.fetchone()[0]
-            self._shard_lut[model_class.__name__] = shard_id
-            return shard_id
-
     def __enter__(self):
         self._connection = self._engine.raw_connection()
         _set_search_path(self._connection, self._schema)
@@ -1150,9 +1132,3 @@ def parallelize_query(func, args):
 
     return list(chain(*output))
     # return [item for sublist in output for item in sublist]
-
-
-
-
-
-
