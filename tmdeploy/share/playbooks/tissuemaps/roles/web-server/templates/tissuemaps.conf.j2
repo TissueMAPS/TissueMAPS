@@ -1,3 +1,8 @@
+uwsgi_read_timeout 3600;
+uwsgi_buffering off;
+client_max_body_size 10000M;
+lingering_timeout 300s;
+
 server {
     listen {{ web_port }};
 
@@ -22,5 +27,7 @@ server {
         # uwsgi may take more time to process requests
         proxy_read_timeout 300s;
         proxy_send_timeout 300s;
+        uwsgi_read_timeout 300s;
+        uwsgi_send_timeout 300s;
     }
 }
