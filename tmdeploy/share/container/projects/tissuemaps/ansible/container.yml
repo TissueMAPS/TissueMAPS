@@ -27,7 +27,7 @@ services:
     user: tissuemaps
     working_dir: /home/tissuemaps
     ports:
-      - '8080:8080'
+      - '8002:8002'
     depends_on:
       - app
     command:
