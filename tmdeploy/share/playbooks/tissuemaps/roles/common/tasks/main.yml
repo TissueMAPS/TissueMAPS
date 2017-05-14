@@ -24,7 +24,7 @@
 
 - name: Ensure correct Ubuntu distribution version in case of Debian OS family
   fail:
-    msg: Requires Ubuntu distribution version >= 16.06!
+    msg: Requires Ubuntu distribution version >= 16.04!
   when:
     - ansible_distribution == 'Ubuntu'
     - ansible_distribution_version|int < 16
