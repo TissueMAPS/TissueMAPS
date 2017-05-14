@@ -25,3 +25,8 @@
   yum:
     name: epel-release
     state: installed
+
+- name: Put SELinux in permissive mode
+  selinux:
+    policy: targeted
+    state: permissive
