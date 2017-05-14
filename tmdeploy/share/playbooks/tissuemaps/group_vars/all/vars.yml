@@ -17,11 +17,8 @@
 # NOTE: Don't use Ansible variables here, since this is not
 # compatible with ansible-container.
 volume_mountpoint: /storage
-
 tm_user: tissuemaps
-
 postgresql_version: '9.6'
-
 db_superuser: postgres
 db_user: tissuemaps
 db_name: tissuemaps
