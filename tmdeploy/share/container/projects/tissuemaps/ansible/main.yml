@@ -17,7 +17,7 @@
 - name: Setup web container
   hosts: web
   vars:
-    web_port: 8002
+    web_port: 8080
     app_host: app
     app_port: 5002
   roles:
