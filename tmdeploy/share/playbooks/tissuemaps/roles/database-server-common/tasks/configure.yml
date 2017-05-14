@@ -112,14 +112,5 @@
     group: "{{ tm_user }}"
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int >= 16)
-  tags:
-    - database
-
-- name: Reload systemctl for systemd
-  command: systemctl daemon-reload
-  when:
-    - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int >= 16)
   tags:
     - database

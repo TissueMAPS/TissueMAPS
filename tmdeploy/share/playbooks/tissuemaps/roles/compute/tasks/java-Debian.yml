@@ -15,16 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install apt packages for JDK 7
-  apt:
-    name: openjdk-7-jdk
-  when: ansible_distribution_version|int <= 14.10
-  tags:
-    - tissuemaps
-
-- name: Install apt packages for JDK 8
+- name: Install apt packages for JDK
   apt:
     name: openjdk-8-jdk
-  when: ansible_distribution_version|int >= 14.10
   tags:
     - tissuemaps

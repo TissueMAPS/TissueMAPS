@@ -17,14 +17,15 @@
 # (Re)start services and enable them such that they will be automatically
 # started upon system startup.
 # We don't do this within the respective roles for compatibility with
-# Docker compose.
+# Ansible-container.
 - name: Restart database master server
   hosts:
     - tissuemaps_db_master
   tasks:
     - name: Restart and enable postgresql service
-      service:
+      systemd:
         name: postgresql@master
+        daemon_reload: yes
         state: restarted
         enabled: yes
 
@@ -33,8 +34,9 @@
     - tissuemaps_db_worker
   tasks:
     - name: Restart and enable postgresql service
-      service:
+      systemd:
         name: postgresql@worker
+        daemon_reload: yes
         state: restarted
         enabled: yes
 
@@ -43,13 +45,15 @@
     - tissuemaps_server
   tasks:
     - name: Restart and enable nginx service
-      service:
+      systemd:
         name: nginx
         state: restarted
+        daemon_reload: yes
         enabled: yes
     - name: Restart and enable uwsgi service
-      service:
+      systemd:
         name: uwsgi
         state: restarted
+        daemon_reload: yes
         enabled: yes
 

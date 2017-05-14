@@ -35,3 +35,7 @@
     - web-server
     - tissuemaps
 
+- name: Set SELinux to permission for httpd_t domain
+  selinux_permissive:
+    name: httpd_t
+    permissive: true
