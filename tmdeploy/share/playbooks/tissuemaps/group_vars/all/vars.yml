@@ -19,11 +19,7 @@
 volume_mountpoint: /storage
 
 tm_user: tissuemaps
-tm_home: /home/tissuemaps
-tm_config_file: /home/tissuemaps/.tmaps/tissuemaps.cfg
 
-tm_data_directory: /storage/tissuemaps/data
-tm_log_directory: /storage/tissuemaps/log
 postgresql_version: '9.6'
 
 db_superuser: postgres
@@ -31,5 +27,3 @@ db_user: tissuemaps
 db_name: tissuemaps
 db_port_master: 5432
 db_port_worker: 9700
-db_data_directory: /storage/postgresql/data
-db_log_directory: /storage/postgresql/log
