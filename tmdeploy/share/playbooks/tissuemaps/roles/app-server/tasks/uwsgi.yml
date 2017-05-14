@@ -97,13 +97,14 @@
     - app-server
     - uwsgi
 
-- name: Place UWSGI init config file for update-rc.d
-  template:
-    src: uwsgi.conf.j2
-    dest: /etc/init/uwsgi.conf
-  when:
-    - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'Debian'
+- name: Create directory for uWSGI pid file
+  file:
+    path: /var/run/uwsgi
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+    mode: 0700
   tags:
     - app-server
     - uwsgi
