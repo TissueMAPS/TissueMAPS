@@ -60,7 +60,7 @@
   hosts: db_worker
   vars:
     db_host: worker
-    postgresql_version: 9.6
+    postgresql_version: '9.6'
   tasks:
     - name: Stop database cluster
       command: pg_ctlcluster {{ postgresql_version }} {{ db_host }} stop -- -m smart
@@ -69,7 +69,7 @@
   hosts: db_master
   vars:
     db_host: master
-    postgresql_version: 9.6
+    postgresql_version: '9.6'
   tasks:
     - name: Stop database cluster
       command: pg_ctlcluster {{ postgresql_version }} {{ db_host }} stop -- -m smart
