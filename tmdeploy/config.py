@@ -526,6 +526,7 @@ class AnsibleHostVariableSection(_SetupSection):
     def __init__(self, description):
         self.volume_mountpoint = '/storage'
         self.ssh_user = 'ubuntu'
+        self.tm_user = 'tissuemaps'
         super(AnsibleHostVariableSection, self).__init__(description)
 
     @property
@@ -576,6 +577,17 @@ class AnsibleHostVariableSection(_SetupSection):
     def ssh_user(self, value):
         self._check_value_type(value, 'ssh_user', str)
         self._ssh_user = str(value)
+
+    @property
+    def tm_user(self):
+        '''str: TissueMAPS system user (default: ``"tissuemaps"``)
+        '''
+        return self._tm_user
+
+    @tm_user.setter
+    def tm_user(self, value):
+        self._check_value_type(value, 'tm_user', str)
+        self._tm_user = str(value)
 
     @property
     def image(self):

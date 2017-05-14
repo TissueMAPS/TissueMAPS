@@ -23,3 +23,5 @@ volume_device_mapping:
   os: /dev/vdb
   ec2: /dev/sdf
   gce: /dev/disk/by-id/google-{{ volume_name }}
+tm_home: /home/{{ tm_user }}
+tm_config_file: "{{ tm_home }}/.tmaps/tissuemaps.cfg"
