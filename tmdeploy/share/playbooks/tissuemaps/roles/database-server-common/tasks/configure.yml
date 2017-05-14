@@ -181,3 +181,14 @@
     - ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - database
+
+- name: Create directory for PostgreSQL lock file
+  file:
+    path: /var/run/postgresql
+    state: directory
+    recurse: yes
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
+    mode: 0700
+  tags:
+    - database
