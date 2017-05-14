@@ -49,7 +49,9 @@
   run_once: yes
   # TODO: There seems to be a bug in Ansible with already existing firewalls
   # and subnetworks
-  when: instance_state == "present" and network_facts.changed
+  when:
+    - instance_state == "present"
+    - network_facts.changed
 
 - name: Create compute-storage firewall
   local_action: gce_net
@@ -66,7 +68,9 @@
       - compute
       - storage
   run_once: yes
-  when: instance_state == "present" and network_facts.changed
+  when:
+    - instance_state == "present"
+    - network_facts.changed
 
 - name: Create boot disk
   local_action: gce_pd

@@ -104,7 +104,6 @@
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
     - ansible_os_family == 'Debian'
-    - ansible_distribution_version|int < 16
   tags:
     - app-server
     - uwsgi
@@ -117,16 +116,6 @@
     group: "{{ tm_user }}"
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int >= 16)
-  tags:
-    - app-server
-    - uwsgi
-
-- name: Reload systemctl for serviced
-  command: systemctl daemon-reload
-  when:
-    - ansible_env.ANSIBLE_CONTAINER is undefined
-    - ansible_os_family == 'RedHat' or (ansible_os_family == 'Debian' and ansible_distribution_version|int >= 16)
   tags:
     - app-server
     - uwsgi

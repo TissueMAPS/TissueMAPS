@@ -57,7 +57,9 @@
       - "{{ subnetwork }}"
     wait: yes
   run_once: yes
-  when: instance_state == "present" and network != "uzh-only"
+  when:
+    - instance_state == "present"
+    - network != "uzh-only"
 
 - name: Upload public SSH key
   local_action: os_keypair
@@ -310,4 +312,6 @@
     device: "{{ volume_device_mapping[provider] }}"
     wait: yes
     timeout: 300
-  when: (volume_size is defined) and (instance_state == 'present')
+  when:
+    - instance_state == 'present'
+    - volume_size is defined

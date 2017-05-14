@@ -25,7 +25,7 @@
   tags:
     - gc3pie
 
-- name: Drop GC3Pie configuration file
+- name: Place GC3Pie configuration file
   template:
     src: gc3pie.conf.j2
     dest: "{{ tm_home }}/.gc3/gc3pie.conf"

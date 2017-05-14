@@ -18,22 +18,30 @@
 - name: Ensure Ubuntu distribution in case of Debian OS family
   fail:
     msg: Requires Ubuntu distribution!
-  when: ansible_os_family == 'Debian' and ansible_distribution != 'Ubuntu'
+  when:
+    - ansible_os_family == 'Debian'
+    - ansible_distribution != 'Ubuntu'
 
 - name: Ensure correct Ubuntu distribution version in case of Debian OS family
   fail:
-    msg: Requires Ubuntu distribution version >= 14.04!
-  when: ansible_distribution == 'Ubuntu' and (ansible_distribution_version|int) < 14
+    msg: Requires Ubuntu distribution version >= 16.06!
+  when:
+    - ansible_distribution == 'Ubuntu'
+    - ansible_distribution_version|int < 16
 
 - name: Ensure CentOS distribution in case of RedHat OS family
   fail:
     msg: Requires CentOS distribution!
-  when: ansible_os_family == 'RedHat' and ansible_distribution != 'CentOS'
+  when:
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution != 'CentOS'
 
 - name: Ensure correct CentOS distribution version in case of RedHat OS family
   fail:
     msg: Requires CentOS distribution version >= 7!
-  when: ansible_distribution == 'CentOS' and (ansible_distribution_version[0]|int) < 7
+  when:
+    - ansible_distribution == 'CentOS'
+    - ansible_distribution_version[0]|int < 7
 
 - include: init-{{ ansible_os_family }}.yml
 

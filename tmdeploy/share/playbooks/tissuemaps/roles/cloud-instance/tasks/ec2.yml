@@ -214,7 +214,9 @@
     ansible_host: "{{ instance.tagged_instances[0].public_ip if assign_public_ip else instance.tagged_instances[0].private_ip }}"
     ansible_user: "{{ ansible_user }}"
     ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
-  when: instance_state == 'present' and (instance.instances|length) == 0
+  when:
+    - instance_state == 'present'
+    - instance.instances|length == 0
 
 - name: Add new host to inventory
   add_host:
@@ -223,7 +225,9 @@
     ansible_host: "{{ instance.instances[0].public_ip if assign_public_ip else instance.instances[0].private_ip }}"
     ansible_user: "{{ ansible_user }}"
     ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
-  when: instance_state == 'present' and (instance.instances|length) != 0
+  when:
+    - instance_state == 'present'
+    - instance.instances|length != 0
 
 - name: "Create storage volume and attach it to instance"
   local_action: ec2_vol
@@ -237,4 +241,6 @@
     volume_type: standard
     volume_size: "{{ volume_size }}"
   register: volume
-  when: instance_state == 'present' and volume_size is defined
+  when:
+    - instance_state == 'present'
+    - volume_size is defined

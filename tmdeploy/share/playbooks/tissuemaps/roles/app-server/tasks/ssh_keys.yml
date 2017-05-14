@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Drop sysadmin SSH keys and ensure they are authorized for `root` user
+- name: Place sysadmin SSH keys and ensure they are authorized for `root` user
   authorized_key:
     user: root
     key: https://github.com/{{ item }}.keys
@@ -24,7 +24,7 @@
   tags:
     - ssh
 
-- name: Drop SSH keys of authorized users
+- name: Place SSH keys of authorized users
   authorized_key:
     user: "{{ tm_user }}"
     key: https://github.com/{{ item }}.keys

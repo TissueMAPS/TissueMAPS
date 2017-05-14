@@ -52,20 +52,28 @@
 - name: Determine device name
   shell: ls /dev/*{{ volume_device_mapping[provider][-1] }}
   register: volume_device_list
-  when: (provider == 'ec2') and (device.rc|int == 1)
+  when:
+    - provider == 'ec2'
+    - device.rc|int == 1
   tags:
     - volume
 
 - fail:
     msg: Volume device name could not be determined.
-  when: (provider == 'ec2') and (device.rc|int == 1) and (volume_device_list.stdout_lines|length != 1)
+  when:
+    - provider == 'ec2'
+    - device.rc|int == 1
+    - volume_device_list.stdout_lines|length != 1
   tags:
     - volume
 
 - name: Override default volume device name
   set_fact:
     volume_device_name: "{{ volume_device_list.stdout_lines[0] }}"
-  when: (provider == 'ec2') and (device.rc|int == 1) and (volume_device_list.stdout_lines|length != 0)
+  when:
+    - provider == 'ec2'
+    - device.rc|int == 1
+    - volume_device_list.stdout_lines|length != 0
   tags:
     - volume
 
@@ -74,6 +82,6 @@
   filesystem:
     fstype: "{{ volume_fstype }}"
     dev: "{{ volume_device_name }}"
-  when: (mountpoint.rc|int) == 1
+  when: mountpoint.rc|int == 1
   tags:
     - volume
