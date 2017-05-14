@@ -17,10 +17,19 @@
 ---
 cluster_mode: no
 
-opencv_version: 3.1.0
+matlab_version: '2016b'
+python_version: '2.7.12'
 
-matlab_version: 2016a
-python_version: 2.7.12
+postgresql_version: '9.6'
 
 tm_github_url: https://github.com/TissueMAPS
 tm_version: master
+tm_user: tissuemaps
+
+volume_mountpoint: /storage
+
+db_superuser: postgres
+db_user: tissuemaps
+db_name: tissuemaps
+db_port_master: 5432
+db_port_worker: 9700
