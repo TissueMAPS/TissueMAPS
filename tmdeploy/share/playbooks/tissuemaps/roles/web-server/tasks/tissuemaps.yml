@@ -30,6 +30,7 @@
   npm:
     name: "{{ item }}"
     state: present
+    path: "{{ tm_home }}/tmui/src"
     global: yes
   with_items:
     - bower
@@ -45,13 +46,13 @@
     - tissuemaps
 
 - name: Install node dependencies
-  shell: npm install app --unsafe-perm
-  args:
-    executable: /bin/bash
-    chdir: "{{ tm_home }}/tmui/src"
-  # npm:
-  #   path: "{{ tm_home }}/tmui/src/app"
-  #   state: present
+  # shell: npm install app --unsafe-perm
+  # args:
+  #   executable: /bin/bash
+  #   chdir: "{{ tm_home }}/tmui/src"
+  npm:
+    path: "{{ tm_home }}/tmui/src/app"
+    state: present
   tags:
     - web-server
     - tissuemaps
