@@ -3,12 +3,14 @@ Description=uWSGI application server
 After=syslog.target
 
 [Service]
+Type=notify
+User={{ tm_user }}
+Group={{ tm_user }}
 Environment="HOME={{ tm_home }}"
 ExecStart=/home/{{ tm_user }}/.tmaps/uwsgi.sh
-RuntimeDirectory=uwsgi
+PIDFile=/var/run/uwsgi/tissuemaps.pid
 Restart=always
 KillSignal=SIGTERM + "die-on-term" UWSGI
-Type=notify
 StandardError=syslog
 NotifyAccess=all
 
