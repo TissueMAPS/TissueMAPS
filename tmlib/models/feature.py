@@ -14,6 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
+import csv
+from cStringIO import StringIO
 from sqlalchemy import (
     Column, String, Integer, ForeignKey, Boolean, Index,
     PrimaryKeyConstraint, UniqueConstraint
@@ -168,7 +170,7 @@ class FeatureValues(ExperimentModel):
         index=True
     )
 
-    def __init__(self, mapobject_id, feature_id, value, tpoint):
+    def __init__(self, mapobject_id, values, tpoint=None):
         '''
         Parameters
         ----------
@@ -176,15 +178,15 @@ class FeatureValues(ExperimentModel):
             ID of the mapobject to which values should be assigned
         values: Dict[str, float]
             mapping of feature ID to value
-        tpoint: int
+        tpoint: int, optional
             zero-based time point index
         '''
+        self.mapobject_id = mapobject_id
         self.tpoint = tpoint
         self.values = values
-        self.mapobject_id = mapobject_id
 
     @classmethod
-    def add(cls, connection, values, mapobject_id, tpoint=None):
+    def add(cls, connection, feature_values):
         '''Adds a new record.
 
         Parameters
@@ -192,12 +194,7 @@ class FeatureValues(ExperimentModel):
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        values: Dict[str, str]
-            actual values
-        mapobject_id: int
-            ID of parent :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
-        tpoint: int, optional
-            zero-based time point index
+        feature_values: tmlib.models.feature.FeatureValues
         '''
         connection.execute('''
             INSERT INTO feature_values AS v (values, mapobject_id, tpoint)
@@ -209,11 +206,40 @@ class FeatureValues(ExperimentModel):
             WHERE v.mapobject_id = %(mapobject_id)s
             AND v.tpoint = %(tpoint)s
         ''', {
-            'values': values, 'mapobject_id': mapobject_id, 'tpoint': tpoint
+            'values': feature_values.values,
+            'mapobject_id': feature_values.mapobject_id,
+            'tpoint': feature_values.tpoint
         })
+
+    @classmethod
+    def add_multiple(cls, connection, feature_values):
+        '''Adds multiple new records at once.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        feature_values: List[tmlib.models.feature.FeatureValues]
+        '''
+        f = StringIO()
+        w = csv.writer(f, delimiter=';')
+        for obj in feature_values:
+            w.writerow((
+                obj.mapobject_id, obj.tpoint,
+                ','.join([
+                    '=>'.join([k, str(v)]) for k, v in obj.values.iteritems()
+                ])
+            ))
+        columns = ('mapobject_id', 'tpoint', 'values')
+        f.seek(0)
+        connection.copy_from(
+            f, cls.__table__.name, sep=';', columns=columns, null=''
+        )
+        f.close()
 
     def __repr__(self):
         return (
-            '<FeatureValues(tpoint=%d, mapobject_id=%r)>'
-            % (self.tpoint, self.mapobject_id)
+            '<FeatureValues(id=%r, tpoint=%r, mapobject_id=%r)>'
+            % (self.id, self.tpoint, self.mapobject_id)
         )

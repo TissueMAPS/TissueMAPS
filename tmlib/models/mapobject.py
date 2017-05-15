@@ -15,10 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import json
 import os
+import csv
 import logging
 import random
 import collections
 import pandas as pd
+from cStringIO import StringIO
 from sqlalchemy import func, case
 from geoalchemy2 import Geometry
 from sqlalchemy.orm import Session
@@ -33,13 +35,28 @@ from tmlib import cfg
 from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.dialect import compile_distributed_query
 from tmlib.models.result import ToolResult, LabelValues
-from tmlib.models.utils import ExperimentConnection, ExperimentSession
+from tmlib.models.utils import (
+    ExperimentConnection, ExperimentSession
+)
 from tmlib.models.feature import Feature, FeatureValues
 from tmlib.models.types import ST_SimplifyPreserveTopology
 from tmlib.models.site import Site
 from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
+
+
+def _select_random_shard(connection, table_name):
+    connection.execute('''
+        SELECT shardid FROM pg_dist_shard
+        WHERE logicalrelid = %(table)s::regclass
+        ORDER BY random()
+        LIMIT 1
+    ''', {
+        'table': table_name
+    })
+    record = connection.fetchone()
+    return record.shardid
 
 
 class MapobjectType(ExperimentModel):
@@ -539,41 +556,83 @@ class Mapobject(ExperimentModel):
             cls._delete_cascade(connection, mapobject_ids)
 
     @classmethod
-    def add(cls, connection, mapobject_type_id, ref_id=None):
-        '''Adds a new record.
+    def add(cls, connection, mapobject):
+        '''Adds the record to the database table.
 
         Parameters
         ----------
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_type_id: int
-            ID of parent
-            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-        ref_id: int, optional
-            ID of reference mapobject
+        mapobject: tmlib.models.mapobject.Mapobject
 
         Returns
         -------
         int
             ID of added record
         '''
+        shard_id = _select_random_shard(connection, mapobject.__table__.name)
         connection.execute('''
-            SELECT nextval FROM nextval('mapobjects_id_seq');
-        ''')
+            SELECT nextval FROM nextval(%(sequence)s);
+        ''', {
+            'sequence': 'mapobjects_id_seq_{shard}'.format(shard=shard_id)
+        })
         record = connection.fetchone()
-        mapobject_id = record.nextval
+        mapobject.id = record.nextval
         connection.execute('''
             INSERT INTO mapobjects (id, mapobject_type_id, ref_id)
-            VALUES (%(mapobject_id)s, %(mapobject_type_id)s, %(ref_id)s);
+            VALUES (%(id)s, %(mapobject_type_id)s, %(ref_id)s);
         ''', {
-            'mapobject_id': mapobject_id,
-            'mapobject_type_id': mapobject_type_id,
-            'ref_id': ref_id
+            'id': mapobject.id,
+            'mapobject_type_id': mapobject.mapobject_type_id,
+            'ref_id': mapobject.ref_id
         })
-        # TODO: Apparently, this doesn't insert in some cases???
-        # INSERT INTO teams VALUES (...) RETURNING id INTO mapobject_id;
-        return mapobject_id
+        # TODO: INSERT INTO teams VALUES (...) RETURNING id INTO mapobject_id;
+        return mapobject.id
+
+    @classmethod
+    def add_multiple(cls, connection, mapobjects):
+        '''Adds multiple new records at once.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        mapobjects: List[tmlib.models.mapobject.Mapobject]
+
+        Returns
+        -------
+        List[int]
+            IDs of added records
+        '''
+        # Select a random shard, get all values for mapobject_id from
+        # the same shard-specific sequence and COPY the data from STDIN.
+        # This will target exactly only one shard, which allows adding data
+        # in a highly efficient manner.
+        shard_id = _select_random_shard(
+            connection, mapobjects[0].__table__.name
+        )
+        f = StringIO()
+        w = csv.writer(f, delimiter=';')
+        ids = list()
+        for obj in mapobjects:
+            connection.execute('''
+                SELECT nextval FROM nextval(%(sequence)s);
+            ''', {
+                'sequence': 'mapobjects_id_seq_{shard}'.format(shard=shard_id)
+            })
+            record = connection.fetchone()
+            obj.id = record.nextval
+            w.writerow((obj.id, obj.mapobject_type_id, obj.ref_id))
+            ids.append(obj.id)
+        columns = ('id', 'mapobject_type_id', 'ref_id')
+        f.seek(0)
+        connection.copy_from(
+            f, cls.__table__.name, sep=';', columns=columns, null=''
+        )
+        f.close()
+        return ids
 
     @classmethod
     def delete_cascade(cls, connection, mapobject_type_id=None,
@@ -671,8 +730,8 @@ class Mapobject(ExperimentModel):
                 cls._delete_cascade(connection)
 
     def __repr__(self):
-        return '<Mapobject(id=%d, mapobject_type_id=%s)>' % (
-            self.id, self.mapobject_type_id
+        return '<%s(id=%r, mapobject_type_id=%r)>' % (
+            self.__class__.__name__, self.id, self.mapobject_type_id
         )
 
 
@@ -737,8 +796,7 @@ class MapobjectSegmentation(ExperimentModel):
         self.label = label
 
     @classmethod
-    def add(cls, connection, mapobject_id, segmentation_layer_id,
-            polygon=None, centroid=None, label=None):
+    def add(cls, connection, mapobject_segmentation):
         '''Adds a new record.
 
         Parameters
@@ -746,36 +804,9 @@ class MapobjectSegmentation(ExperimentModel):
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_id: int
-            ID of parent
-            :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
-        segmentation_layer_id: int
-            ID of parent
-            :class:`SegmentationLayer <tmlib.models.layer.SegmentationLayer>`
-        polygon: shapely.geometry.polygon, optional
-            outline of the segmented object
-        centroid: shapely.geometry.point, optional
-            centroid of the segmented object
-        label: int, optional
-            label assigned to the segmented object
+        mapobject_segmentation: tmlib.modeles.mapobject.MapobjectSegmentation
 
-        Raises
-        ------
-        ValueError
-            when neither `polygon` nor `centroid` is provided
-
-        Note
-        ----
-        The `centroid` is required, but it can be caluculate from the `polygon`.
         '''
-        if polygon is None and centroid is None:
-            raise ValueError('A mapobject segmentation must have a "centroid".')
-        if centroid is None:
-            geom_centroid = polygon.centroid.wkt
-            geom_polygon = polygon.wkt
-        else:
-            geom_centroid = centroid.wkt
-            geom_polygon = None
         connection.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id, segmentation_layer_id,
@@ -784,16 +815,46 @@ class MapobjectSegmentation(ExperimentModel):
             VALUES (
                 %(mapobject_id)s, %(segmentation_layer_id)s,
                 %(geom_polygon)s, %(geom_centroid)s, %(label)s
-            );
+            )
         ''', {
-            'mapobject_id': mapobject_id,
-            'segmentation_layer_id': segmentation_layer_id,
-            'geom_polygon': geom_polygon, 'geom_centroid': geom_centroid,
-            'label': label
+            'mapobject_id': mapobject_segmentation.mapobject_id,
+            'segmentation_layer_id': mapobject_segmentation.segmentation_layer_id,
+            'geom_polygon': mapobject_segmentation.geom_polygon.wkt,
+            'geom_centroid': mapobject_segmentation.geom_centroid.wkt,
+            'label': mapobject_segmentation.label
         })
 
+    @classmethod
+    def add_multiple(cls, connection, mapobject_segmentations):
+        '''Adds multiple new records at once.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        mapobject_segmentations: List[tmlib.modeles.mapobject.MapobjectSegmentation]
+
+        '''
+        f = StringIO()
+        w = csv.writer(f, delimiter=';')
+        for obj in mapobject_segmentations:
+            w.writerow((
+                obj.geom_polygon.wkt, obj.geom_centroid.wkt,
+                obj.mapobject_id, obj.segmentation_layer_id, obj.label
+            ))
+        columns = (
+            'geom_polygon', 'geom_centroid', 'mapobject_id',
+            'segmentation_layer_id', 'label'
+        )
+        f.seek(0)
+        connection.copy_from(
+            f, cls.__table__.name, sep=';', columns=columns, null=''
+        )
+        f.close()
+
     def __repr__(self):
-        return '<%s(id=%d, mapobject_id=%r, segmentation_layer_id=%s)>' % (
+        return '<%s(id=%r, mapobject_id=%r, segmentation_layer_id=%r)>' % (
             self.__class__.__name__, self.id, self.mapobject_id,
             self.segmentation_layer_id
         )
