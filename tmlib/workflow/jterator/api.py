@@ -420,7 +420,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             y_offset, x_offset = site.aligned_offset
 
         mapobject_ids = dict()
-        with tm.utils.ExperimentConnection(self.experiment_id, master=False) as conn:
+        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             for obj_name, segm_objs in objects_to_save.iteritems():
                 # Delete existing mapobjects for this site when they were
                 # generated in a previous run of the same pipeline. In case
@@ -441,12 +441,15 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 # created by a previous pipeline or create new mapobjects in
                 # case they didn't exist (or got just deleted).
                 logger.info('add objects of type "%s"', obj_name)
-                mapobject_ids = dict()
-                for label in segm_objs.labels:
-                    logger.debug('add object #%d', label)
-                    mapobject_ids[label] = tm.Mapobject.add(
-                        conn, mapobject_type_ids[obj_name]
-                    )
+                mapobjects = [
+                    tm.Mapobject(mapobject_type_ids[obj_name])
+                    for _ in segm_objs.labels
+                ]
+                mapobject_ids = tm.Mapobject.add_multiple(conn, mapobjects)
+                mapobject_ids = {
+                    label: mapobject_ids[i]
+                    for i, label in enumerate(segm_objs.labels)
+                }
 
                 # Save segmentations, i.e. create a polygon and/or point for
                 # each segmented object based on the cooridinates of their
@@ -454,6 +457,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 logger.info(
                     'add segmentations for objects of type "%s"', obj_name
                 )
+                mapobject_segmentations = list()
                 if segm_objs.represent_as_polygons:
                     logger.debug('represent segmented objects as polygons')
                     iterator = segm_objs.iter_polygons(y_offset, x_offset)
@@ -471,10 +475,16 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                             # At the moment we remove the corresponding
                             # mapobjects in the collect phase.
                             continue
-                        tm.MapobjectSegmentation.add(
-                            conn, mapobject_ids[label],
-                            segmentation_layer_ids[(obj_name, t, z)],
-                            polygon=polygon, label=label
+                        mapobject_segmentations.append(
+                            tm.MapobjectSegmentation(
+                                geom_polygon=polygon,
+                                geom_centroid=polygon.centroid,
+                                mapobject_id=mapobject_ids[label],
+                                segmentation_layer_id=segmentation_layer_ids[
+                                    (obj_name, t, z)
+                                ],
+                                label=label
+                            )
                         )
                 else:
                     logger.debug('represent segmented objects only as points')
@@ -484,11 +494,20 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                             'add segmentation for object #%d at '
                             'tpoint %d and zplane %d', label, t, z
                         )
-                        tm.MapobjectSegmentation.add(
-                            conn, mapobject_ids[label],
-                            segmentation_layer_ids[(obj_name, t, z)],
-                            centroid=centroid, label=label
+                        mapobject_segmentations.append(
+                            tm.MapobjectSegmentation(
+                                geom_polygon=None,
+                                geom_centroid=centroid,
+                                mapobject_id=mapobject_ids[label],
+                                segmentation_layer_id=segmentation_layer_ids[
+                                    (obj_name, t, z)
+                                ],
+                                label=label
+                            )
                         )
+                tm.MapobjectSegmentation.add_multiple(
+                    conn, mapobject_segmentations
+                )
 
                 logger.info('add features for objects of type "%s"', obj_name)
                 measurements = segm_objs.measurements
@@ -499,6 +518,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                         conn, fname, mapobject_type_ids[obj_name], False
                     )
 
+                feature_values = list()
                 for t, data in enumerate(measurements):
                     data = data.round(6)  # single
                     if data.empty:
@@ -512,9 +532,14 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                         values = dict(
                             zip(d.index.astype(str), d.values.astype(str))
                         )
-                        tm.FeatureValues.add(
-                            conn, values, mapobject_ids[label], t
+                        feature_values.append(
+                            tm.FeatureValues(
+                                mapobject_id=mapobject_ids[label],
+                                tpoint=t,
+                                values=values
+                            )
                         )
+                tm.FeatureValues.add_multiple(conn, feature_values)
 
     def create_debug_run_phase(self, submission_id):
         '''Creates a job collection for the debug "run" phase of the step.
