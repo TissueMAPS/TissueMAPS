@@ -705,7 +705,11 @@ class ExperimentSession(_Session):
         exists = _create_schema_if_not_exists(connection, self._schema)
         if not exists:
             _create_experiment_db_tables(connection, self._schema)
+<<<<<<< HEAD
             _customize_distribution_method(connection, self._schema)
+=======
+            _customize_distributed_tables(connection, self._schema)
+>>>>>>> Enable single-shard copy for bulk data ingestion
         _set_search_path(connection, self._schema)
         self._session_factory.configure(bind=connection)
         self._session = _SQLAlchemy_Session(
@@ -815,7 +819,11 @@ class ExperimentConnection(_Connection):
         exists = _create_schema_if_not_exists(self._connection, self._schema)
         if not exists:
             _create_experiment_db_tables(self._connection, self._schema)
+<<<<<<< HEAD
             _customize_distribution_method(connection, self._schema)
+=======
+            _customize_distributed_tables(connection, self._schema)
+>>>>>>> Enable single-shard copy for bulk data ingestion
         _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
@@ -989,26 +997,10 @@ class ExperimentConnection(_Connection):
 
     def add(self, model_object):
         # TODO: only if value for hash distributed column is not provided
-        self._cursor.execute()
+        pass
 
     def add_multiple(self, model_objects):
-        distribution = collection.defaultdict(list)
-        for i, obj in enumerate(model_objects):
-            row_id = self._get_id()
-            self._cursor.execute('''
-                SELECT nodename, nodeport, shardid FROM pg_dist_shard_placement
-                WHERE shardid = (
-                    SELECT get_shard_id_for_distribution_column(
-                        %(table)s, %(id)s
-                    )
-                )
-            ''', {
-                'table': model_objects.__table__.name,
-                'id': row_id
-            })
-            node, port, shard_id = self._cursor.fetchall()[0]
-            distribution[(node, port, shard_id)].append(row_id)
-
+        pass
 
 class MainConnection(_Connection):
 

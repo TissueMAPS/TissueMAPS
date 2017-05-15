@@ -36,7 +36,7 @@ from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.dialect import compile_distributed_query
 from tmlib.models.result import ToolResult, LabelValues
 from tmlib.models.utils import (
-    ExperimentConnection, ExperimentSession, ExperimentWorkerConnection
+    ExperimentConnection, ExperimentSession
 )
 from tmlib.models.feature import Feature, FeatureValues
 from tmlib.models.types import ST_SimplifyPreserveTopology
@@ -44,6 +44,19 @@ from tmlib.models.site import Site
 from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
+
+
+def _select_random_shard(connection, table_name):
+    connection.execute('''
+        SELECT shardid FROM pg_dist_shard
+        WHERE logicalrelid = %(table)s::regclass
+        ORDER BY random()
+        LIMIT 1
+    ''', {
+        'table': table_name
+    })
+    record = connection.fetchone()
+    return record.shardid
 
 
 class MapobjectType(ExperimentModel):
@@ -810,38 +823,6 @@ class MapobjectSegmentation(ExperimentModel):
                 'Object must have type '
                 'tmlib.models.mapobject.MapobjectSegmentation'
             )
-        connection.execute('''
-            INSERT INTO mapobject_segmentations (
-                mapobject_id, segmentation_layer_id,
-                geom_polygon, geom_centroid, label
-            )
-            VALUES (
-                %(mapobject_id)s, %(segmentation_layer_id)s,
-                %(geom_polygon)s, %(geom_centroid)s, %(label)s
-            )
-        ''', {
-            'mapobject_id': mapobject_segmentation.mapobject_id,
-            'segmentation_layer_id': mapobject_segmentation.segmentation_layer_id,
-            'geom_polygon': mapobject_segmentation.geom_polygon.wkt,
-            'geom_centroid': mapobject_segmentation.geom_centroid.wkt,
-            'label': mapobject_segmentation.label
-        })
-
-    @classmethod
-    def add_multiple(cls, connection, mapobject_segmentations):
-        '''Adds multiple new records at once.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_segmentations: List[tmlib.modeles.mapobject.MapobjectSegmentation]
-
-        '''
-        f = StringIO()
-        w = csv.writer(f, delimiter=';')
-        for obj in mapobject_segmentations:
             if not isinstance(obj, cls):
                 raise TypeError(
                     'Object must have type '
