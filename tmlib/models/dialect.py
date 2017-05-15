@@ -22,6 +22,7 @@ from sqlalchemy.schema import UniqueConstraint, PrimaryKeyConstraint
 # from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
 
 from tmlib.errors import DataModelError
+from tmlib import cfg
 
 
 logger = logging.getLogger(__name__)
@@ -53,8 +54,9 @@ def _compile_create_table(element, compiler, **kwargs):
             )
             # No replication of tables.
             sql = 'SET citus.shard_replication_factor = 1;\n'
+            sql += 'SET citus.shard_count = {n};\n'.format(n=20*cfg.db_nodes)
             sql += compiler.visit_create_table(element)
-            # More aggressive autovacuum for large tables
+            # More aggressive autovacuum for large tables?
             if table.info['colocated_table']:
                 distributed_sql = "'{s}.{t}','{c}',colocate_with=>'{s}.{t2}'".format(
                     s=table.schema, t=table.name, c=distribution_column,
@@ -65,6 +67,7 @@ def _compile_create_table(element, compiler, **kwargs):
                     s=table.schema, t=table.name, c=distribution_column
                 )
             sql += ';\nSELECT create_distributed_table(%s);' % (distributed_sql)
+
         elif distribute_by_replication:
             # The first column will be used as partition column and must be
             # included in UNIQUE and PRIMARY KEY constraints.

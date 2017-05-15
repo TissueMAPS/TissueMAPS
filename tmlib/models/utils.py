@@ -127,28 +127,79 @@ def _set_search_path(connection, schema_name):
         cursor.close()
 
 
-def _set_db_shard_count(connection, n):
-    if n > 0:
-        logger.debug('set shard_count to %d', n)
-        cursor = connection.connection.cursor()
-        cursor.execute('SET citus.shard_count = %(n)s;', {'n': n})
-        cursor.close()
-
-
-def _set_db_shard_replication_factor(connection, n):
-    if n > 0:
-        logger.debug('set shard_replication_factor to %d', n)
-        cursor = connection.connection.cursor()
-        cursor.execute('SET citus.shard_replication_factor = %(n)s;', {'n': n})
-        cursor.close()
+def _customize_distributed_tables(connection, schema_name):
+    cursor = connection.connection.cursor()
+    tables_to_distribute_by_range = {
+        'mapobjects', 'mapobject_segmentations',
+        'feature_values', 'label_values'
+    }
+    # Change distribution method from "hash" to "range". This is important to
+    # be able to target individual shards from compute nodes for parallel
+    # bulk ingestion of data.
+    # NOTE: database user must be given permissions to update these tables!
+    for table_name in tables_to_distribute_by_range:
+        cursor.execute('''
+            UPDATE pg_dist_partition SET partmethod = 'r'
+            WHERE logicalrelid = %(table)s::regclass
+        ''', {
+            'table': '{schema}.{table}'.format(
+                schema=schema_name, table=table_name
+            )
+        })
+        cursor.execute('''
+            SELECT shardid FROM pg_dist_shard
+            WHERE logicalrelid = %(table)s::regclass
+            ORDER BY shardid;
+        ''', {
+            'table': '{schema}.{table}'.format(
+                schema=schema_name, table=table_name
+            )
+        })
+        shards = cursor.fetchall()
+        n = len(shards)
+        # FIXME: IDs should be BigInteger!
+        # TODO: determine range dynamically based on type of distribution column
+        total_max_value = 2147483647  # PostgreSQL positive integer range
+        batch_size = total_max_value / n
+        for i in range(n):
+            shard_id = shards[i][0]
+            min_value = i * batch_size + 1
+            max_value = (i+1) * batch_size
+            cursor.execute('''
+                UPDATE pg_dist_shard SET shardminvalue = %(min_value)s
+                WHERE logicalrelid = %(table)s::regclass
+                AND shardid = %(shard_id)s
+            ''', {
+                'table': '{schema}.{table}'.format(
+                    schema=schema_name, table=table_name
+                ),
+                'min_value': min_value,
+                'shard_id': shards[i][0]
+            })
+            cursor.execute('''
+                UPDATE pg_dist_shard SET shardmaxvalue = %(max_value)s
+                WHERE logicalrelid = %(table)s::regclass
+                AND shardid = %(shard_id)s
+            ''', {
+                'table': '{schema}.{table}'.format(
+                    schema=schema_name, table=table_name
+                ),
+                'max_value': max_value,
+                'shard_id': shard_id
+            })
+            cursor.execute('''
+                CREATE SEQUENCE {schema}.{table}_id_seq_{shard}
+                MINVALUE %(min_value)s MAXVALUE %(max_value)s
+            '''.format(schema=schema_name, table=table_name, shard=shard_id), {
+                'min_value': min_value,
+                'max_value': max_value
+            })
 
 
 def _create_schema_if_not_exists(connection, schema_name):
     cursor = connection.connection.cursor()
     cursor.execute('''
-        SELECT EXISTS(
-            SELECT 1 FROM pg_namespace WHERE nspname = %(schema)s
-        );
+        SELECT EXISTS(SELECT 1 FROM pg_namespace WHERE nspname = %(schema)s);
     ''', {
         'schema': schema_name
     })
@@ -192,6 +243,18 @@ def _create_experiment_db_tables(connection, schema_name):
     for name, table in ExperimentModel.metadata.tables.iteritems():
         table_copy = table.tometadata(experiment_specific_metadata)
     experiment_specific_metadata.create_all(connection)
+
+
+# def _create_distributed_experiment_db_tables(connection, schema_name):
+#     logger.debug(
+#         'create distributed tables of models derived from %s for schema "%s"',
+#         ExperimentModel.__name__, schema_name
+#     )
+#     experiment_specific_metadata = sqlalchemy.MetaData(schema=schema_name)
+#     for name, table in ExperimentModel.metadata.tables.iteritems():
+#         if table.is_distributed:
+#             table_copy = table.tometadata(experiment_specific_metadata)
+#     experiment_specific_metadata.create_all(connection)
 
 
 @listens_for(sqlalchemy.pool.Pool, 'connect')
@@ -499,8 +562,6 @@ class SQLAlchemy_Session(object):
             table.drop(connection)
 
         logger.info('create table "%s"', table.name)
-        _set_db_shard_replication_factor(connection, 1)
-        _set_db_shard_count(connection, 20 * cfg.db_nodes)
         table.create(connection)
         logger.info('remove "%s" locations on disk', model.__name__)
         for loc in locations_to_remove:
@@ -633,9 +694,8 @@ class ExperimentSession(_Session):
         connection = self._engine.connect()
         exists = _create_schema_if_not_exists(connection, self._schema)
         if not exists:
-            _set_db_shard_replication_factor(connection, 1)
-            _set_db_shard_count(connection, 20 * cfg.db_nodes)
             _create_experiment_db_tables(connection, self._schema)
+            _customize_distributed_tables(connection, self._schema)
         _set_search_path(connection, self._schema)
         self._session_factory.configure(bind=connection)
         self._session = SQLAlchemy_Session(
@@ -735,9 +795,8 @@ class ExperimentConnection(Connection):
         self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         exists = _create_schema_if_not_exists(self._connection, self._schema)
         if not exists:
-            _set_db_shard_replication_factor(self._connection, 1)
-            _set_db_shard_count(self._connection, 20 * cfg.db_nodes)
             _create_experiment_db_tables(self._connection, self._schema)
+            _customize_distributed_tables(connection, self._schema)
         _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
@@ -761,26 +820,10 @@ class ExperimentConnection(Connection):
 
     def add(self, model_object):
         # TODO: only if value for hash distributed column is not provided
-        self._cursor.execute()
+        pass
 
     def add_multiple(self, model_objects):
-        distribution = collection.defaultdict(list)
-        for i, obj in enumerate(model_objects):
-            row_id = self._get_id()
-            self._cursor.execute('''
-                SELECT nodename, nodeport, shardid FROM pg_dist_shard_placement
-                WHERE shardid = (
-                    SELECT get_shard_id_for_distribution_column(
-                        %(table)s, %(id)s
-                    )
-                )
-            ''', {
-                'table': model_objects.__table__.name,
-                'id': row_id
-            })
-            node, port, shard_id = self._cursor.fetchall()[0]
-            distribution[(node, port, shard_id)].append(row_id)
-
+        pass
 
 class MainConnection(Connection):
 

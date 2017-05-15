@@ -113,6 +113,11 @@ class Tool(object):
             dataframe where columns are features and rows are mapobjects
             indexable by their ID
         '''
+        logger.info(
+            'load feature values for objects of type "%s" and features: "%s"',
+            mapobject_type_name, '", "'.join(feature_names)
+        )
+        # FIXME: Use ExperimentSession
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             conn.execute('''
                 SELECT t.id AS mapobject_type_id, f.id AS feature_id, f.name
@@ -126,26 +131,23 @@ class Tool(object):
             })
             records = conn.fetchall()
             mapobject_type_id = records[0].mapobject_type_id
-            feature_map = {r.feature_id: r.name for r in records}
-            sql = '''
-                SELECT mapobject_id, tpoint'''
-            for i in feature_map.keys():
-                sql += ', (values->%%(id%d)s)::float8 AS v%d' % (i, i)
-            sql += '''
+            feature_map = {str(r.feature_id): r.name for r in records}
+            conn.execute('''
+                SELECT v.mapobject_id, v.tpoint, slice(v.values, %(feature_ids)s)
                 FROM feature_values AS v
                 JOIN mapobjects AS m ON m.id = v.mapobject_id
                 WHERE m.mapobject_type_id = %(mapobject_type_id)s
-            '''
-            parameters = {'id%d' % i: str(i) for i in feature_map.keys()}
-            parameters['mapobject_type_id'] = mapobject_type_id
-            conn.execute(sql, parameters)
+            ''', {
+                'feature_ids': feature_map.keys(),
+                'mapobject_type_id': mapobject_type_id
+            })
             feature_values = conn.fetchall()
         df = pd.DataFrame(feature_values)
         df.set_index(['mapobject_id', 'tpoint'], inplace=True)
         # NOTE: We map the column names here and not in the SQL expression to
         # avoid parsing feature names, which are provided by the user and
         # thus pose a potential security risk in form of SQL injection.
-        column_map = {'v%d' % i: name for i, name in feature_map.iteritems()}
+        column_map = {i: name for i, name in feature_map.iteritems()}
         df.rename(columns=column_map, inplace=True)
         null_indices = self.get_features_with_null_values(df)
         for name, count in null_indices:
@@ -171,6 +173,10 @@ class Tool(object):
         Tuple[float]
             min and max
         '''
+        logger.info(
+            'calculate min/max for objects of type "%s" and feature "%s"',
+            mapobject_type_name, feature_name
+        )
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             mapobject_type = session.query(tm.MapobjectType.id).\
                 filter_by(name=mapobject_type_name).\
@@ -197,7 +203,6 @@ class Tool(object):
                 one()
 
         return (lower, upper)
-
 
     def get_features_with_null_values(self, feature_data):
         '''Gets names of features with NULL values.
@@ -232,6 +237,7 @@ class Tool(object):
         --------
         :class:`tmlib.models.result.LabelValues`
         '''
+        logger.info('save label values for result %d', result_id)
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             # TODO: Use "mapobject_id" and "tpoint" as index
             for (mapobject_id, tpoint), value in data.iteritems():
