@@ -987,20 +987,6 @@ class ExperimentConnection(_Connection):
 
         return shard_metadata
 
-    def _get_id(self, sequence_name):
-        self._cursor.execute(
-            'SELECT nextval FROM nextval(%(sequence)s);',
-            {'sequence': sequence_name}
-        )
-        record = connection.fetchone()
-        return record.nextval
-
-    def add(self, model_object):
-        # TODO: only if value for hash distributed column is not provided
-        pass
-
-    def add_multiple(self, model_objects):
-        pass
 
 class MainConnection(_Connection):
 
