@@ -36,7 +36,7 @@ from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.dialect import compile_distributed_query
 from tmlib.models.result import ToolResult, LabelValues
 from tmlib.models.utils import (
-    ExperimentConnection, ExperimentSession
+    ExperimentConnection, ExperimentSession, ExperimentWorkerConnection
 )
 from tmlib.models.feature import Feature, FeatureValues
 from tmlib.models.types import ST_SimplifyPreserveTopology
@@ -44,19 +44,6 @@ from tmlib.models.site import Site
 from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
-
-
-def _select_random_shard(connection, table_name):
-    connection.execute('''
-        SELECT shardid FROM pg_dist_shard
-        WHERE logicalrelid = %(table)s::regclass
-        ORDER BY random()
-        LIMIT 1
-    ''', {
-        'table': table_name
-    })
-    record = connection.fetchone()
-    return record.shardid
 
 
 class MapobjectType(ExperimentModel):

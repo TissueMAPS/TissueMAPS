@@ -705,11 +705,7 @@ class ExperimentSession(_Session):
         exists = _create_schema_if_not_exists(connection, self._schema)
         if not exists:
             _create_experiment_db_tables(connection, self._schema)
-<<<<<<< HEAD
             _customize_distribution_method(connection, self._schema)
-=======
-            _customize_distributed_tables(connection, self._schema)
->>>>>>> Enable single-shard copy for bulk data ingestion
         _set_search_path(connection, self._schema)
         self._session_factory.configure(bind=connection)
         self._session = _SQLAlchemy_Session(
@@ -819,11 +815,7 @@ class ExperimentConnection(_Connection):
         exists = _create_schema_if_not_exists(self._connection, self._schema)
         if not exists:
             _create_experiment_db_tables(self._connection, self._schema)
-<<<<<<< HEAD
             _customize_distribution_method(connection, self._schema)
-=======
-            _customize_distributed_tables(connection, self._schema)
->>>>>>> Enable single-shard copy for bulk data ingestion
         _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
@@ -1109,4 +1101,3 @@ def parallelize_query(func, args):
         t.join()
 
     return list(chain(*output))
-    # return [item for sublist in output for item in sublist]
