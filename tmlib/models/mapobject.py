@@ -54,8 +54,8 @@ class MapobjectType(ExperimentModel):
 
     Attributes
     ----------
-    results: List[tmlib.models.result.ToolResult]
-        results belonging to the mapobject type
+    records: List[tmlib.models.result.ToolResult]
+        records belonging to the mapobject type
     features: List[tmlib.models.feature.Feature]
         features belonging to the mapobject type
     '''
@@ -102,7 +102,7 @@ class MapobjectType(ExperimentModel):
         self.experiment_id = experiment_id
 
     @classmethod
-    def delete_cascade(cls, connection, ref_type=None, id=None):
+    def delete_cascade(cls, connection, ref_type=None, ids=[]):
         '''Deletes all instances as well as "children"
         instances of :class:`Mapobject <tmlib.models.mapobject.Mapobject>`,
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`,
@@ -120,62 +120,51 @@ class MapobjectType(ExperimentModel):
         ref_type: str, optional
             name of reference type (if ``"NULL"`` all mapobject types without
             a `ref_type` will be deleted)
-        id: int, optional
-            ID of a specific mapobject type that should be deleted
+        ids: List[int], optional
+            IDs of mapobject types that should be deleted
 
         '''
+        delete = True
         if ref_type is 'NULL':
             logger.debug('delete non-static mapobjects')
             connection.execute('''
-                SELECT id, name FROM mapobject_types
+                SELECT id FROM mapobject_types
                 WHERE ref_type IS NULL;
             ''')
-            mapobject_type = connection.fetchone()
-            if mapobject_type:
-                logger.debug(
-                    'delete mapobjects of type "%s"', mapobject_type.name
-                )
-                Mapobject.delete_cascade(connection, mapobject_type.id)
-                logger.debug('delete mapobject type %s', mapobject_type.name)
-                connection.execute('''
-                    DELETE FROM mapobject_types WHERE id = %(id)s;
-                ''', {
-                    'id': mapobject_type.id
-                })
+            records = connection.fetchall()
+            if records:
+                ids = [r.id for r in records]
+            else:
+                delete = False
         elif ref_type is not None:
             logger.debug('delete static mapobjects referencing "%s"', ref_type)
             connection.execute('''
-                SELECT id, name FROM mapobject_types
+                SELECT id FROM mapobject_types
                 WHERE ref_type = %(ref_type)s
             ''', {
                 'ref_type': ref_type
             })
-            mapobject_type = connection.fetchone()
-            if mapobject_type:
-                logger.debug(
-                    'delete mapobjects of type "%s"', mapobject_type.name
-                )
-                Mapobject.delete_cascade(connection, mapobject_type.id)
-                logger.debug('delete mapobject type %s', mapobject_type.name)
-                connection.execute('''
-                    DELETE FROM mapobject_types WHERE id = %(id)s;
-                ''', {
-                    'id': mapobject_type.id
-                })
-        elif id is not None:
-            logger.debug('delete mapobjects of type %d', id)
-            Mapobject.delete_cascade(connection, id)
-            logger.debug('delete mapobject type %d', id)
-            connection.execute('''
-                DELETE FROM mapobject_types WHERE id = %(id)s;
-            ''', {
-                'id': id
-            })
-        else:
-            logger.debug('delete all mapobjects')
-            Mapobject.delete_cascade(connection)
-            logger.debug('delete all mapobject types')
-            connection.execute('DELETE FROM mapobject_types;')
+            records = connection.fetchall()
+            if records:
+                ids = [r.id for r in records]
+            else:
+                delete = False
+        if delete:
+            if ids:
+                for id in ids:
+                    logger.debug('delete mapobjects of type %d', id)
+                    Mapobject.delete_cascade(connection, id)
+                    logger.debug('delete mapobject type %d', id)
+                    connection.execute('''
+                        DELETE FROM mapobject_types WHERE id = %(id)s;
+                    ''', {
+                        'id': id
+                    })
+            else:
+                logger.debug('delete all mapobjects')
+                Mapobject.delete_cascade(connection)
+                logger.debug('delete all mapobject types')
+                connection.execute('DELETE FROM mapobject_types;')
 
     def get_site_geometry(self, site_id):
         '''Gets the geometric representation of a
@@ -295,16 +284,16 @@ class MapobjectType(ExperimentModel):
         feature_map = {str(id): name for id, name in features}
 
         if feature_ids is not None:
-            results = session.query(
+            records = session.query(
                 FeatureValues.mapobject_id,
                 FeatureValues.values.slice(feature_map.keys()).label('values')
             )
         else:
-            results = session.query(
+            records = session.query(
                 FeatureValues.mapobject_id,
                 FeatureValues.values
             )
-        results = results.\
+        records = records.\
             join(Mapobject).\
             join(MapobjectSegmentation).\
             filter(
@@ -314,8 +303,8 @@ class MapobjectType(ExperimentModel):
             ).\
             order_by(Mapobject.id).\
             all()
-        values = [r.values for r in results]
-        mapobject_ids = [r.mapobject_id for r in results]
+        values = [r.values for r in records]
+        mapobject_ids = [r.mapobject_id for r in records]
         df = pd.DataFrame(values, index=mapobject_ids)
         df.rename(columns=feature_map, inplace=True)
 
@@ -350,7 +339,7 @@ class MapobjectType(ExperimentModel):
             all()
         label_map = {str(id): name for id, name in labels}
 
-        results = session.query(
+        records = session.query(
                 LabelValues.mapobject_id, LabelValues.values
             ).\
             join(Mapobject).\
@@ -362,8 +351,8 @@ class MapobjectType(ExperimentModel):
             ).\
             order_by(Mapobject.id).\
             all()
-        values = [r.values for r in results]
-        mapobject_ids = [r.mapobject_id for r in results]
+        values = [r.values for r in records]
+        mapobject_ids = [r.mapobject_id for r in records]
         df = pd.DataFrame(values, index=mapobject_ids)
         df.rename(columns=label_map, inplace=True)
 
@@ -400,7 +389,7 @@ class MapobjectType(ExperimentModel):
             filter_by(mapobject_type_id=self.id, tpoint=tpoint, zplane=zplane).\
             one()
 
-        results = session.query(
+        records = session.query(
                 MapobjectSegmentation.mapobject_id,
                 case([(
                     MapobjectSegmentation.geom_polygon.ST_Intersects(
@@ -415,8 +404,8 @@ class MapobjectType(ExperimentModel):
             ).\
             order_by(MapobjectSegmentation.mapobject_id).\
             all()
-        values = [r.is_border for r in results]
-        mapobject_ids = [r.mapobject_id for r in results]
+        values = [r.is_border for r in records]
+        mapobject_ids = [r.mapobject_id for r in records]
         s = pd.Series(values, index=mapobject_ids)
 
         return s
