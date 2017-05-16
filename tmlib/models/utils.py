@@ -165,6 +165,10 @@ def _customize_distributed_tables(connection, schema_name):
             shard_id = shards[i][0]
             min_value = i * batch_size + 1
             max_value = (i+1) * batch_size
+            # TODO: What happens if the "shard_max_size" is exceeded?
+            # How does Citus handle the range paritioning?
+            # To prevent creation of new shards in the first place, we may need
+            # to further increase "shard_count" and/or "shard_max_size".
             cursor.execute('''
                 UPDATE pg_dist_shard SET shardminvalue = %(min_value)s
                 WHERE logicalrelid = %(table)s::regclass
@@ -416,7 +420,7 @@ class Query(sqlalchemy.orm.query.Query):
                     delete_location(loc[0])
 
 
-class SQLAlchemy_Session(object):
+class _SQLAlchemy_Session(object):
 
     '''A wrapper around an instance of an *SQLAlchemy* session
     that manages persistence of database model objects.
@@ -574,7 +578,7 @@ class _Session(object):
     '''Class that provides access to all methods and attributes of
     :class:`sqlalchemy.orm.session.Session` and additional
     custom methods implemented in
-    :class:`tmlib.models.utils.SQLAlchemy_Session`.
+    :class:`tmlib.models.utils._SQLAlchemy_Session`.
 
     Note
     ----
@@ -637,7 +641,7 @@ class MainSession(_Session):
             :attr:`db_uri <tmlib.config.DefaultConfig.db_uri>`
         '''
         if db_uri is None:
-            db_uri = cfg.db_uri
+            db_uri = cfg.db_master_uri
         super(MainSession, self).__init__(db_uri)
         self._schema = None
         self._engine = create_db_engine(db_uri)
@@ -646,7 +650,7 @@ class MainSession(_Session):
     def __enter__(self):
         connection = self._engine.connect()
         self._session_factory.configure(bind=connection)
-        self._session = SQLAlchemy_Session(
+        self._session = _SQLAlchemy_Session(
             self._session_factory(), self._schema
         )
         return self._session
@@ -680,7 +684,7 @@ class ExperimentSession(_Session):
             :attr:`db_uri <tmlib.config.LibraryConfig.db_uri>`
         '''
         if db_uri is None:
-            db_uri = cfg.db_uri
+            db_uri = cfg.db_master_uri
         self.experiment_id = experiment_id
         logger.debug('create session for experiment %d', self.experiment_id)
         self._engine = create_db_engine(db_uri)
@@ -698,13 +702,13 @@ class ExperimentSession(_Session):
             _customize_distributed_tables(connection, self._schema)
         _set_search_path(connection, self._schema)
         self._session_factory.configure(bind=connection)
-        self._session = SQLAlchemy_Session(
+        self._session = _SQLAlchemy_Session(
             self._session_factory(), self._schema
         )
         return self._session
 
 
-class Connection(object):
+class _Connection(object):
 
     '''A "raw" database connection which uses autocommit mode and is not
     part of a transaction.
@@ -743,7 +747,7 @@ class Connection(object):
             SET citus.shard_replication_factor = 1;
             SET citus.all_modifications_commutative TO on;
         ''')
-        return self._cursor
+        return self
 
     def __exit__(self, except_type, except_value, except_trace):
         # NOTE: The connection is not actually closed, but rather returned to
@@ -751,8 +755,19 @@ class Connection(object):
         self._cursor.close()
         self._connection.close()
 
+    def __getattr__(self, attr):
+        if hasattr(self._cursor, attr):
+            return getattr(self._cursor, attr)
+        elif hasattr(self, attr):
+            return getattr(self, attr)
+        else:
+            raise AttributeError(
+                'Object "%s" doens\'t have attribute "%s".'
+                % (self.__class__.__name__, attr)
+            )
 
-class ExperimentConnection(Connection):
+
+class ExperimentConnection(_Connection):
 
     '''Database connection for executing raw SQL statements for an
     experiment-specific database outside of a transaction context.
@@ -782,11 +797,12 @@ class ExperimentConnection(Connection):
         experiment_id: int
             ID of the experiment that should be queried
         '''
-        super(ExperimentConnection, self).__init__(cfg.db_uri)
+        super(ExperimentConnection, self).__init__(cfg.db_master_uri)
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=experiment_id
         )
         self.experiment_id = experiment_id
+        self._shard_lut = dict()
 
     def __enter__(self):
         # NOTE: We need to run queries outside of a transaction in Postgres
@@ -808,10 +824,92 @@ class ExperimentConnection(Connection):
             SET citus.shard_replication_factor = 1;
             SET citus.all_modifications_commutative TO on;
         ''')
-        return self._cursor
+        return self
+
+    def get_unique_id(self, model_class):
+        '''Gets a unique value for the distribution column.
+
+        Parameters
+        ----------
+        model_class: str
+            class dervired from
+            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
+            for which a shard should be selected
+        '''
+        self._cursor.execute('''
+            SELECT nextval FROM nextval(%(sequence)s);
+        ''', {
+            'sequence': '{table}_id_seq'.format(
+                table=model_class.__table__.name
+            )
+        })
+        return self._cursor.fetchone()[0]
+
+    def get_shard_id(self, model_class):
+        '''Selects a single shard at random from all available shards.
+        The ID of the selected shard gets cached, such that subsequent calls
+        will return the same identifier.
+
+        Parameters
+        ----------
+        model_class: str
+            class dervired from
+            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
+            for which a shard should be selected
+
+        Returns
+        -------
+        int
+            ID of the selected shard
+
+        Raise
+        -----
+        ValueError
+            when the `model_class` does not represent a distributed table
+        '''
+        if not model_class.is_distributed:
+            raise ValueError(
+                'Shard selection not possible, since provided model class does '
+                'not represent a distributed database table.'
+            )
+        if model_class.__name__ in self._shard_lut:
+            return self._shard_lut[model_class.__name__]
+        self._cursor.execute('''
+            SELECT shardid FROM pg_dist_shard
+            WHERE logicalrelid = %(table)s::regclass
+            ORDER BY random()
+            LIMIT 1
+        ''', {
+            'table': model_class.__table__.name,
+        })
+        shard_id = self._cursor.fetchone()[0]
+        self._shard_lut[model_class.__name__] = shard_id
+        return shard_id
+
+    def get_shard_specific_unique_id(self, model_class, shard_id):
+        '''Gets a unique, but shard-specific value for the distribution column.
+
+        Parameters
+        ----------
+        model_class: str
+            class dervired from
+            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
+            for which a shard should be selected
+        shard_id: int
+            ID of a shard that is located on the worker server to which the
+            connection was established
+        '''
+        self._cursor.execute('''
+            SELECT nextval FROM nextval(%(sequence)s);
+        ''', {
+            'sequence': '{table}_id_seq_{shard}'.format(
+                table=model_class.__table__.name, shard=shard_id
+            )
+        })
+        return self._cursor.fetchone()[0]
 
 
-class MainConnection(Connection):
+class MainConnection(_Connection):
 
     '''Database connection for executing raw SQL statements for the
     main ``tissuemaps`` database outside of a transaction context.
@@ -835,4 +933,134 @@ class MainConnection(Connection):
     '''
 
     def __init__(self):
-        super(MainConnection, self).__init__(cfg.db_uri)
+        super(MainConnection, self).__init__(cfg.db_master_uri)
+
+
+class ExperimentWorkerConnection(_Connection):
+
+    '''Database connection for executing raw SQL statements on a database
+    "worker" server to target individual shards of a distributed,
+    experiment-specific table. A random server will be chosen automatically
+    for load balancing.
+
+    Warning
+    -------
+    Use raw connections only if absolutely necessary, such as for inserting
+    into or updating distributed tables. Otherwise use
+    :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
+
+    See also
+    --------
+    :class:`tmlib.models.base.ExperimentModel`
+    '''
+
+    def __init__(self, experiment_id):
+        '''
+        Parameters
+        ----------
+        experiment_id: int
+            ID of the experiment that should be queried
+        '''
+        with MainConnection() as connection:
+            connection.execute('''
+                SELECT nodename, nodeport FROM pg_dist_shard_placement
+                ORDER BY random()
+                LIMIT 1
+            ''')
+            host, port = connection.fetchone()
+        db_uri = cfg.build_db_worker_uri(host, port)
+        super(ExperimentWorkerConnection, self).__init__(db_uri)
+        self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
+            experiment_id=experiment_id
+        )
+        self._host = host
+        self._port = port
+        self._shard_lut = dict()
+        self.experiment_id = experiment_id
+
+    def get_shard_id(self, model_class):
+        '''Selects a single shard at random from all available shards on the
+        worker server to which the connection was established. The ID of the
+        selected shard gets cached, such that subsequent calls will return
+        the same identifier.
+
+        Parameters
+        ----------
+        model_class: str
+            class dervired from
+            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
+            for which a shard should be selected
+
+        Returns
+        -------
+        int
+            ID of the selected shard
+
+        Raise
+        -----
+        ValueError
+            when the `model_class` does not represent a distributed table
+        '''
+        if not model_class.is_distributed:
+            raise ValueError(
+                'Shard selection not possible, since provided model class does '
+                'not represent a distributed database table.'
+            )
+        if model_class.__name__ in self._shard_lut:
+            return self._shard_lut[model_class.__name__]
+        with MainConnection() as connection:
+            connection.execute('''
+                SELECT s.shardid FROM pg_dist_shard AS s
+                JOIN pg_dist_shard_placement AS p ON s.shardid = p.shardid
+                WHERE s.logicalrelid = %(table)s::regclass
+                AND p.nodename = %(host)s
+                AND p.nodeport = %(port)s
+                ORDER BY random()
+                LIMIT 1
+            ''', {
+                'table': model_class.__table__.name,
+                'host': self._host,
+                'port': self._port
+            })
+            shard_id = connection.fetchone()[0]
+            self._shard_lut[model_class.__name__] = shard_id
+            return shard_id
+
+    def get_shard_specific_unique_id(self, model_class, shard_id):
+        '''Gets a unique, but shard-specific value for the distribution column.
+
+        Parameters
+        ----------
+        model_class: str
+            class dervired from
+            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
+            for which a shard should be selected
+        shard_id: int
+            ID of a shard that is located on the worker server to which the
+            connection was established
+        '''
+        with MainConnection() as connection:
+            connection.execute('''
+                SELECT nextval FROM nextval(%(sequence)s);
+            ''', {
+                'sequence': '{table}_id_seq_{shard}'.format(
+                    table=model_class.__table__.name, shard=shard_id
+                )
+            })
+            return connection.fetchone()[0]
+
+    def __enter__(self):
+        self._connection = self._engine.raw_connection()
+        # self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        _set_search_path(self._connection, self._schema)
+        self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
+        # NOTE: To achieve high throughput on UPDATE or DELETE, we
+        # need to perform queries in parallel under the assumption that
+        # order of records is not important (i.e. that they are commutative).
+        # https://docs.citusdata.com/en/v6.0/performance/scaling_data_ingestion.html#real-time-updates-0-50k-s
+        logger.debug('make modifications commutative')
+        self._cursor.execute('''
+            SET citus.shard_replication_factor = 1;
+            SET citus.all_modifications_commutative TO on;
+        ''')
+        return self
