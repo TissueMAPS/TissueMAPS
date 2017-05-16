@@ -654,21 +654,12 @@ class PyramidBuilder(WorkflowStepAPI):
                 logger.debug('add new mapobjects of type "%s"', name)
                 for key, value in segmentations.iteritems():
                     mapobject = tm.Mapobject(mapobject_type_id, ref_id=key)
-<<<<<<< HEAD
                     mapobject = tm.Mapobject.add(conn, mapobject)
                     logger.debug('add mapobject #%d', mapobject.id)
                     mapobject_segmentation = tm.MapobjectSegmentation(
                         geom_polygon=value['polygon'],
                         geom_centroid=value['polygon'].centroid,
                         mapobject_id=mapobject.id,
-=======
-                    mapobject_id = tm.Mapobject.add(conn, mapobject)
-                    logger.debug('add mapobject #%d', mapobject_id)
-                    mapobject_segmentation = tm.MapobjectSegmentation(
-                        geom_polygon=value['polygon'],
-                        geom_centroid=value['polygon'].centroid,
-                        mapobject_id=mapobject_id,
->>>>>>> Enable single-shard copy for bulk data ingestion
                         segmentation_layer_id=value['segmentation_layer_id'],
                     )
                     tm.MapobjectSegmentation.add(conn, mapobject_segmentation)
