@@ -157,9 +157,9 @@ def _customize_distributed_tables(connection, schema_name):
         })
         shards = cursor.fetchall()
         n = len(shards)
-        # FIXME: IDs should be BigInteger!
-        # TODO: determine range dynamically based on type of distribution column
-        total_max_value = 2147483647  # PostgreSQL positive integer range
+        # NOTE: distribution column of "range" partitioned tables must have type
+        # BigInteger
+        total_max_value = 9223372036854775807  # positive bigint range
         batch_size = total_max_value / n
         for i in range(n):
             shard_id = shards[i][0]

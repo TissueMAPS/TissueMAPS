@@ -55,8 +55,8 @@ class ChannelLayerTile(ExperimentModel):
     # auto-generated using SEQUENCE. Distribution by "channel_layer_id"
     # would balance data unequally over available shards, because
     # there are typically only a few layers. In this case, rows would
-    # accumulate in a small number of large shards
-    # which has a negative impact on query performance.
+    # accumulate in a small number of large shards with a negative impact
+    # on query performance.
     __distribute_by_hash__ = 'y'
 
     _pixels = Column('pixels', BYTEA)
