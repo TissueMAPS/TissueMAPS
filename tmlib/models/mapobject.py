@@ -483,7 +483,7 @@ class Mapobject(ExperimentModel):
 
     @classmethod
     def delete_invalid_cascade(cls, connection):
-        '''Deletes all instances with invalid geometries as well as all
+        '''Deletes all instances with invalid segmentations as well as all
         "children" instances of
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
         :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
@@ -507,8 +507,8 @@ class Mapobject(ExperimentModel):
 
     @classmethod
     def delete_missing_cascade(cls, connection):
-        '''Deletes all instances with missing geometries as well as all
-        "children" instances of
+        '''Deletes all instances with missing segmentations or feature values
+        as well as all "children" instances of
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
         :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
         :class:`LabelValues <tmlib.models.feature.LabelValues>`.
@@ -527,7 +527,37 @@ class Mapobject(ExperimentModel):
             WHERE s.id IS NULL;
         ''')
         mapobjects = connection.fetchall()
-        mapobject_ids = [s.id for s in mapobjects]
+        missing_segmentation_ids = [s.id for s in mapobjects]
+        if missing_segmentation_ids:
+            logger.info(
+                'delete %d mapobjects with missing segmentations',
+                len(missing_segmentation_ids)
+            )
+
+        connection.execute('''
+            SELECT count(id) FROM feature_values LIMIT 2
+        ''')
+        count = connection.fetchone()[0]
+        if count > 0:
+            # Make sure there are any feature values, otherwise all mapobjects
+            # would get deleted.
+            connection.execute('''
+                SELECT m.id FROM mapobjects AS m
+                LEFT OUTER JOIN feature_values AS v
+                ON m.id = v.mapobject_id
+                WHERE v.id IS NULL;
+            ''')
+            mapobjects = connection.fetchall()
+            missing_feature_values_ids = [s.id for s in mapobjects]
+            if missing_feature_values_ids:
+                logger.info(
+                    'delete %d mapobjects with missing feature values',
+                    len(missing_feature_values_ids)
+                )
+        else:
+            missing_feature_values_ids = []
+
+        mapobject_ids = missing_segmentation_ids + missing_feature_values_ids
         if mapobject_ids:
             cls._delete_cascade(connection, mapobject_ids)
 

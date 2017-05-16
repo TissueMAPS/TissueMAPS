@@ -524,17 +524,9 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                     conn, mapobject_segmentations
                 )
 
-                # # Create a feature values entry for each segmented object at
-                # # each time point.
-                # logger.info('add features for objects of type "%s"', obj_name)
-                # measurements = segm_objs.measurements
-                # feature_ids = dict()
-                # for fname in measurements[0].columns:
-                #     logger.debug('add feature "%s"', fname)
-                #     feature_ids[fname] = self._add_feature(
-                #         conn, fname, mapobject_type_ids[obj_name], False
-                #     )
-
+                logger.info(
+                    'add feature values for objects of type "%s"', obj_name
+                )
                 logger.debug('round feature values to 6 decimals')
                 feature_values = list()
                 for t, data in enumerate(measurements):
@@ -542,14 +534,20 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                     if data.empty:
                         logger.warn('empty measurement at time point %d', t)
                         continue
+                    elif data.shape[0] < len(mapobject_ids):
+                        # We clean up these objects in the collect phase.
+                        logger.error('missing feature values')
+                    elif data.shape[0] > len(mapobject_ids):
+                        # Not sure this could happen.
+                        logger.error('too many feature values')
                     column_lut = feature_ids[obj_name]
-                    for label, d in data.rename(columns=column_lut).iterrows():
+                    for label, c in data.rename(columns=column_lut).iterrows():
                         logger.debug(
                             'add values for mapobject #%d at time point %d',
                             label, t
                         )
                         values = dict(
-                            zip(d.index.astype(str), d.values.astype(str))
+                            zip(c.index.astype(str), c.values.astype(str))
                         )
                         feature_values.append(
                             tm.FeatureValues(

@@ -750,8 +750,6 @@ class _Connection(object):
         return self
 
     def __exit__(self, except_type, except_value, except_trace):
-        # NOTE: The connection is not actually closed, but rather returned to
-        # the pool.
         self._cursor.close()
         self._connection.close()
 
@@ -781,8 +779,7 @@ class ExperimentConnection(_Connection):
 
     Warning
     -------
-    Use raw connections only if absolutely necessary, such as for inserting
-    into or updating distributed tables. Otherwise use
+    Use raw connections only for modifying distributed tables. Otherwise use
     :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
 
     See also
@@ -923,9 +920,8 @@ class MainConnection(_Connection):
 
     Warning
     -------
-    Use raw connnections only if absolutely necessary, such as when inserting
-    into or updating distributed tables. Otherwise use
-    :class:`MainSession <tmlib.models.utils.MainSession>`.
+    Use raw connections only for modifying distributed tables. Otherwise use
+    :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
 
     See also
     --------
@@ -939,14 +935,11 @@ class MainConnection(_Connection):
 class ExperimentWorkerConnection(_Connection):
 
     '''Database connection for executing raw SQL statements on a database
-    "worker" server to target individual shards of a distributed,
-    experiment-specific table. A random server will be chosen automatically
-    for load balancing.
+    "worker" server to target individual shards of a distributed table.
 
     Warning
     -------
-    Use raw connections only if absolutely necessary, such as for inserting
-    into or updating distributed tables. Otherwise use
+    Use raw connections only for modifying distributed tables. Otherwise use
     :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
 
     See also
@@ -954,20 +947,17 @@ class ExperimentWorkerConnection(_Connection):
     :class:`tmlib.models.base.ExperimentModel`
     '''
 
-    def __init__(self, experiment_id):
+    def __init__(self, experiment_id, host, port):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the experiment that should be queried
+        host: str
+            IP address or name of database worker server
+        port: str
+            port to which database worker server listens
         '''
-        with MainConnection() as connection:
-            connection.execute('''
-                SELECT nodename, nodeport FROM pg_dist_shard_placement
-                ORDER BY random()
-                LIMIT 1
-            ''')
-            host, port = connection.fetchone()
         db_uri = cfg.build_db_worker_uri(host, port)
         super(ExperimentWorkerConnection, self).__init__(db_uri)
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
@@ -975,7 +965,6 @@ class ExperimentWorkerConnection(_Connection):
         )
         self._host = host
         self._port = port
-        self._shard_lut = dict()
         self.experiment_id = experiment_id
 
     def get_shard_id(self, model_class):
@@ -1026,41 +1015,17 @@ class ExperimentWorkerConnection(_Connection):
             self._shard_lut[model_class.__name__] = shard_id
             return shard_id
 
-    def get_shard_specific_unique_id(self, model_class, shard_id):
-        '''Gets a unique, but shard-specific value for the distribution column.
-
-        Parameters
-        ----------
-        model_class: str
-            class dervired from
-            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
-            for which a shard should be selected
-        shard_id: int
-            ID of a shard that is located on the worker server to which the
-            connection was established
-        '''
-        with MainConnection() as connection:
-            connection.execute('''
-                SELECT nextval FROM nextval(%(sequence)s);
-            ''', {
-                'sequence': '{table}_id_seq_{shard}'.format(
-                    table=model_class.__table__.name, shard=shard_id
-                )
-            })
-            return connection.fetchone()[0]
-
     def __enter__(self):
         self._connection = self._engine.raw_connection()
-        # self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
-        # NOTE: To achieve high throughput on UPDATE or DELETE, we
-        # need to perform queries in parallel under the assumption that
-        # order of records is not important (i.e. that they are commutative).
-        # https://docs.citusdata.com/en/v6.0/performance/scaling_data_ingestion.html#real-time-updates-0-50k-s
-        logger.debug('make modifications commutative')
-        self._cursor.execute('''
-            SET citus.shard_replication_factor = 1;
-            SET citus.all_modifications_commutative TO on;
-        ''')
         return self
+
+    def __exit__(self, except_type, except_value, except_trace):
+        if except_value:
+            logger.error('transaction rolled back due to error')
+            self._connection.rollback()
+        else:
+            self._connection.commit()
+        self._cursor.close()
+        self._connection.close()
