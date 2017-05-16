@@ -17,7 +17,7 @@ import logging
 import csv
 from cStringIO import StringIO
 from sqlalchemy import (
-    Column, String, Integer, ForeignKey, Boolean, Index,
+    Column, String, Integer, BigInteger, ForeignKey, Boolean, Index,
     PrimaryKeyConstraint, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import HSTORE
@@ -165,7 +165,7 @@ class FeatureValues(ExperimentModel):
 
     #: int: ID of the parent mapobject (FOREIGN KEY)
     mapobject_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('mapobjects.id', ondelete='CASCADE'),
         index=True
     )
