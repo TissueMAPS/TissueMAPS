@@ -17,7 +17,7 @@ import logging
 import numpy as np
 import pandas as pd
 from sqlalchemy import (
-    Integer, Column, String, ForeignKey, UniqueConstraint
+    Integer, BigInteger, Column, String, ForeignKey, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import HSTORE, JSON
 from sqlalchemy.orm import relationship, backref, Session
@@ -319,7 +319,7 @@ class LabelValues(ExperimentModel):
 
     #: int: ID of the parent mapobject
     mapobject_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('mapobjects.id', ondelete='CASCADE'),
         index=True
     )

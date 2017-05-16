@@ -25,7 +25,7 @@ from sqlalchemy import func, case
 from geoalchemy2 import Geometry
 from sqlalchemy.orm import Session
 from sqlalchemy import (
-    Column, String, Integer, Boolean, ForeignKey, not_, Index,
+    Column, String, Integer, BigInteger, Boolean, ForeignKey, not_, Index,
     UniqueConstraint, PrimaryKeyConstraint
 )
 from sqlalchemy.orm import relationship, backref
@@ -766,7 +766,7 @@ class MapobjectSegmentation(ExperimentModel):
 
     #: int: ID of parent mapobject
     mapobject_id = Column(
-        Integer, ForeignKey('mapobjects.id', ondelete='CASCADE')
+        BigInteger, ForeignKey('mapobjects.id', ondelete='CASCADE')
     )
 
     #: int: ID of parent segmentation layer
