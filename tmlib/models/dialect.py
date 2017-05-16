@@ -131,7 +131,7 @@ def compile_distributed_query(sql):
     # This is required for modification of distributed tables
     # TODO: compile UPDATE and DELETE queries in dialect
     return '''
-        SELECT master_modify_multiple_shards('
+        SELECT master_modify_multiple_shards($$
             {query}
-        ')
+        $$)
     '''.format(query=sql)

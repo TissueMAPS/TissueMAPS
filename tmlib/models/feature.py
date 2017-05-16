@@ -82,7 +82,7 @@ class Feature(ExperimentModel):
         self.is_aggregate = is_aggregate
 
     @classmethod
-    def delete_cascade(cls, connection, mapobject_type_ids=[], id=None):
+    def delete_cascade(cls, connection, mapobject_type_id=None, ids=[]):
         '''Deletes all instances for the given experiment as well as all
         referencing fields in
         :attr:`FeatureValues.values <tmlib.models.feature.FeatureValues.values>`.
@@ -92,49 +92,47 @@ class Feature(ExperimentModel):
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_type_ids: List[int], optional
-            IDs of parent
+        mapobject_type_id: int, optional
+            ID of parent
             :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` for
             which features should be deleted
-        id: int, optional
-            ID of a specific feature that should be deleted
+        ids: List[int], optional
+            IDs of features that should be deleted
         '''
         logger.info('delete feature values')
-        if mapobject_type_ids:
-            sql = '''
-                UPDATE feature_values AS v SET values = hstore()
-                FROM mapobjects AS m
-                WHERE m.id = v.mapobject_id
-                AND m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
-            '''
-            connection.execute(
-                compile_distributed_query(sql),
-                {'mapobject_type_ids': mapobject_type_ids}
-            )
-            connection.execute(
-                '''
-                DELETE FROM features
-                WHERE mapobject_type_id = ANY(%(mapobject_type_ids)s)
-            ''', {
-                'mapobject_type_ids': mapobject_type_ids
-            })
-        elif id is not None:
-            sql = '''
-                UPDATE feature_values SET values = delete(values, %(id)s);
-            '''
-            connection.execute(
-                compile_distributed_query(sql),
-                {'id': str(id)}
-            )
+        delete = True
+        if mapobject_type_id:
+            delete = False
             connection.execute('''
-                DELETE FROM features where id = %(id)s;
+                SELECT id FROM features
+                WHERE mapobject_type_id = %(mapobject_type_id)s
             ''', {
-                'id': id
+                'mapobject_type_id': mapobject_type_id
             })
-        else:
-            sql = 'UPDATE feature_values SET values = hstore();'
-            connection.execute(compile_distributed_query(sql))
-            connection.execute('DELETE FROM features;')
+            records = connection.fetchall()
+            if records:
+                delete = True
+                ids = [r.id for r in records]
+        if delete:
+            if ids:
+                # TODO: Would it be worth indexing the HSTORE column?
+                sql = '''
+                    UPDATE feature_values
+                    SET values = delete(values, %(feature_ids)s)
+                '''
+                connection.execute(
+                    compile_distributed_query(sql),
+                    {'feature_ids': map(str, ids)}
+                )
+                connection.execute('''
+                    DELETE FROM features where id = ANY(%(feature_ids)s);
+                ''', {
+                    'feature_ids': ids
+                })
+            else:
+                sql = "UPDATE feature_values SET values = ' ';"
+                connection.execute(compile_distributed_query(sql))
+                connection.execute('DELETE FROM features;')
 
     def __repr__(self):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
@@ -187,7 +185,7 @@ class FeatureValues(ExperimentModel):
 
     @classmethod
     def add(cls, connection, feature_values):
-        '''Adds a new record.
+        '''Adds object to the database table.
 
         Parameters
         ----------
@@ -195,7 +193,12 @@ class FeatureValues(ExperimentModel):
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
         feature_values: tmlib.models.feature.FeatureValues
+
         '''
+        if not isinstance(feature_values, FeatureValues):
+            raise TypeError(
+                'Object must have type tmlib.models.feature.FeatureValues'
+            )
         connection.execute('''
             INSERT INTO feature_values AS v (values, mapobject_id, tpoint)
             VALUES (%(values)s, %(mapobject_id)s, %(tpoint)s)
