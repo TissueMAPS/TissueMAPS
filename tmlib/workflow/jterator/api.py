@@ -437,23 +437,23 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                         ref_type=tm.Site.__name__, ref_id=store['site_id']
                     )
 
-                # Get existing mapobjects for this site in case they were
-                # created by a previous pipeline or create new mapobjects in
-                # case they didn't exist (or got just deleted).
+                # Create a mapobject for each segmented object, i.e. each
+                # pixel component having a unique label.
                 logger.info('add objects of type "%s"', obj_name)
                 mapobjects = [
                     tm.Mapobject(mapobject_type_ids[obj_name])
                     for _ in segm_objs.labels
                 ]
-                mapobject_ids = tm.Mapobject.add_multiple(conn, mapobjects)
+                logger.debug('insert mapobjects into db table')
+                mapobjects = tm.Mapobject.add_multiple(conn, mapobjects)
                 mapobject_ids = {
-                    label: mapobject_ids[i]
+                    label: mapobjects[i].id
                     for i, label in enumerate(segm_objs.labels)
                 }
 
-                # Save segmentations, i.e. create a polygon and/or point for
-                # each segmented object based on the cooridinates of their
-                # contours and centroids, respectively.
+                # Create a polygon and/or point for each segmented object
+                # based on the cooridinates of their contours and centroids,
+                # respectively.
                 logger.info(
                     'add segmentations for objects of type "%s"', obj_name
                 )
@@ -505,10 +505,13 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                                 label=label
                             )
                         )
+                logger.debug('insert mapobject segmentations into db table')
                 tm.MapobjectSegmentation.add_multiple(
                     conn, mapobject_segmentations
                 )
 
+                # Create a feature values entry for each segmented object at
+                # each time point.
                 logger.info('add features for objects of type "%s"', obj_name)
                 measurements = segm_objs.measurements
                 feature_ids = dict()
@@ -518,9 +521,10 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                         conn, fname, mapobject_type_ids[obj_name], False
                     )
 
+                logger.debug('round feature values to 6 decimals')
                 feature_values = list()
                 for t, data in enumerate(measurements):
-                    data = data.round(6)  # single
+                    data = data.round(6)  # single!
                     if data.empty:
                         logger.warn('empty measurement at time point %d', t)
                         continue
@@ -539,6 +543,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                                 values=values
                             )
                         )
+                logger.debug('insert feature values into db table')
                 tm.FeatureValues.add_multiple(conn, feature_values)
 
     def create_debug_run_phase(self, submission_id):

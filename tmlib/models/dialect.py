@@ -54,7 +54,7 @@ def _compile_create_table(element, compiler, **kwargs):
             )
             # No replication of tables.
             sql = 'SET citus.shard_replication_factor = 1;\n'
-            sql += 'SET citus.shard_count = {n};\n'.format(n=20*cfg.db_nodes)
+            sql += 'SET citus.shard_count = {n};\n'.format(n=30*cfg.db_nodes)
             sql += compiler.visit_create_table(element)
             # More aggressive autovacuum for large tables?
             if table.info['colocated_table']:

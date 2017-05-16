@@ -36,7 +36,7 @@ from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.dialect import compile_distributed_query
 from tmlib.models.result import ToolResult, LabelValues
 from tmlib.models.utils import (
-    ExperimentConnection, ExperimentSession
+    ExperimentConnection, ExperimentSession, ExperimentWorkerConnection
 )
 from tmlib.models.feature import Feature, FeatureValues
 from tmlib.models.types import ST_SimplifyPreserveTopology
@@ -44,19 +44,6 @@ from tmlib.models.site import Site
 from tmlib.utils import autocreate_directory_property, create_partitions
 
 logger = logging.getLogger(__name__)
-
-
-def _select_random_shard(connection, table_name):
-    connection.execute('''
-        SELECT shardid FROM pg_dist_shard
-        WHERE logicalrelid = %(table)s::regclass
-        ORDER BY random()
-        LIMIT 1
-    ''', {
-        'table': table_name
-    })
-    record = connection.fetchone()
-    return record.shardid
 
 
 class MapobjectType(ExperimentModel):
@@ -557,7 +544,7 @@ class Mapobject(ExperimentModel):
 
     @classmethod
     def add(cls, connection, mapobject):
-        '''Adds the record to the database table.
+        '''Adds the object to the database table.
 
         Parameters
         ----------
@@ -568,17 +555,15 @@ class Mapobject(ExperimentModel):
 
         Returns
         -------
-        int
-            ID of added record
+        tmlib.models.mapobject.Mapobject
+            object with assigned database ID
         '''
-        shard_id = _select_random_shard(connection, mapobject.__table__.name)
-        connection.execute('''
-            SELECT nextval FROM nextval(%(sequence)s);
-        ''', {
-            'sequence': 'mapobjects_id_seq_{shard}'.format(shard=shard_id)
-        })
-        record = connection.fetchone()
-        mapobject.id = record.nextval
+        if not isinstance(mapobject, cls):
+            raise TypeError(
+                'Object must have type tmlib.models.mapobject.Mapobject'
+            )
+        shard_id = connection.get_shard_id(cls)
+        mapobject.id = connection.get_unique_id(cls)
         connection.execute('''
             INSERT INTO mapobjects (id, mapobject_type_id, ref_id)
             VALUES (%(id)s, %(mapobject_type_id)s, %(ref_id)s);
@@ -588,11 +573,11 @@ class Mapobject(ExperimentModel):
             'ref_id': mapobject.ref_id
         })
         # TODO: INSERT INTO teams VALUES (...) RETURNING id INTO mapobject_id;
-        return mapobject.id
+        return mapobject
 
     @classmethod
     def add_multiple(cls, connection, mapobjects):
-        '''Adds multiple new records at once.
+        '''Adds multiple objects at once.
 
         Parameters
         ----------
@@ -603,27 +588,23 @@ class Mapobject(ExperimentModel):
 
         Returns
         -------
-        List[int]
-            IDs of added records
+        List[tmlib.models.mapobject.Mapobject]
+            objects with assigned database ID
         '''
         # Select a random shard, get all values for mapobject_id from
         # the same shard-specific sequence and COPY the data from STDIN.
         # This will target exactly only one shard, which allows adding data
         # in a highly efficient manner.
-        shard_id = _select_random_shard(
-            connection, mapobjects[0].__table__.name
-        )
+        shard_id = connection.get_shard_id(cls)
         f = StringIO()
         w = csv.writer(f, delimiter=';')
         ids = list()
         for obj in mapobjects:
-            connection.execute('''
-                SELECT nextval FROM nextval(%(sequence)s);
-            ''', {
-                'sequence': 'mapobjects_id_seq_{shard}'.format(shard=shard_id)
-            })
-            record = connection.fetchone()
-            obj.id = record.nextval
+            if not isinstance(obj, cls):
+                raise TypeError(
+                    'Object must have type tmlib.models.mapobject.Mapobject'
+                )
+            obj.id = connection.get_shard_specific_unique_id(cls, shard_id)
             w.writerow((obj.id, obj.mapobject_type_id, obj.ref_id))
             ids.append(obj.id)
         columns = ('id', 'mapobject_type_id', 'ref_id')
@@ -632,7 +613,7 @@ class Mapobject(ExperimentModel):
             f, cls.__table__.name, sep=';', columns=columns, null=''
         )
         f.close()
-        return ids
+        return mapobjects
 
     @classmethod
     def delete_cascade(cls, connection, mapobject_type_id=None,
@@ -807,6 +788,11 @@ class MapobjectSegmentation(ExperimentModel):
         mapobject_segmentation: tmlib.modeles.mapobject.MapobjectSegmentation
 
         '''
+        if not isinstance(mapobject_segmentation, cls):
+            raise TypeError(
+                'Object must have type '
+                'tmlib.models.mapobject.MapobjectSegmentation'
+            )
         connection.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id, segmentation_layer_id,
@@ -839,6 +825,11 @@ class MapobjectSegmentation(ExperimentModel):
         f = StringIO()
         w = csv.writer(f, delimiter=';')
         for obj in mapobject_segmentations:
+            if not isinstance(obj, cls):
+                raise TypeError(
+                    'Object must have type '
+                    'tmlib.models.mapobject.MapobjectSegmentation'
+                )
             w.writerow((
                 obj.geom_polygon.wkt, obj.geom_centroid.wkt,
                 obj.mapobject_id, obj.segmentation_layer_id, obj.label

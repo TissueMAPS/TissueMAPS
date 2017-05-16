@@ -178,8 +178,8 @@ class TmapsConfig(object):
         return database
 
     @property
-    def db_uri(self):
-        '''str: database URI in the format required by *SQLAlchemy*.'''
+    def db_master_uri(self):
+        '''str: URI for the "master" database server'''
         if self.db_password:
             return 'postgresql://{user}:{pw}@{host}:{port}/tissuemaps'.format(
                 user=self.db_user, pw=self.db_password,
@@ -188,6 +188,31 @@ class TmapsConfig(object):
         else:
             return 'postgresql://{user}@{host}:{port}/tissuemaps'.format(
                 user=self.db_user, host=self.db_host, port=self.db_port,
+            )
+
+    def build_db_worker_uri(self, host, port):
+        '''Builds URI for a "worker" database server.
+
+        Parameters
+        ----------
+        host: str
+            IP address or domain name of the server
+        port: int
+            port to which the server listens
+
+        Returns
+        -------
+        str
+            URI for the "worker" database server
+        '''
+        if self.db_password:
+            return 'postgresql://{user}:{pw}@{host}:{port}/tissuemaps'.format(
+                user=self.db_user, pw=self.db_password,
+                host=host, port=port,
+            )
+        else:
+            return 'postgresql://{user}@{host}:{port}/tissuemaps'.format(
+                user=self.db_user, host=host, port=port,
             )
 
     @property
