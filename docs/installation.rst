@@ -321,7 +321,7 @@ The ``deploy`` command runs the following playbooks:
     - `site.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/elasticluster/site.yml>`_ of the `elasticluster <https://elasticluster.readthedocs.io/en/latest/>`_ package in case additional, non-core groups are specified in ``setup.yml``
     - `site.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/tissuemaps/site.yml>`_ of the :mod:`tmdeploy` package
 
-.. note:: *TissueMAPS* uses `GC3Pie <http://gc3pie.readthedocs.io/en/latest/programmers/index.html>`_ for computational job management. When setting up a compute cluster, the configuration in ``~/.gc3/gc3pie.conf`` needs to be modified according to available computational resources. For more information please refer to the `GC3Pie documentation <http://gc3pie.readthedocs.org/en/latest/users/configuration.html>`_:
+.. note:: *TissueMAPS* uses `GC3Pie <http://gc3pie.readthedocs.io/en/latest/programmers/index.html>`_ for computational job management. When setting up a compute cluster, the configuration in ``~/.gc3/gc3pie.conf`` needs to be modified according to available computational resources. For more information please refer to the `GC3Pie documentation <http://gc3pie.readthedocs.org/en/latest/users/configuration.html>`_
 
 Terminate virtual machine instances:
 
