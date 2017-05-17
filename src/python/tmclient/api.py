@@ -1726,7 +1726,7 @@ class TmClient(HttpClient):
         print(t)
 
     def _download_object_feature_values(self, mapobject_type_name, plate_name,
-            well_name, well_pos_y, well_pos_x, tpoint):
+            well_name, well_pos_y, well_pos_x, tpoint=None):
         logger.info(
             'download features values for experiment "%s" and object type "%s"',
             self.experiment_name, mapobject_type_name
@@ -1861,8 +1861,7 @@ class TmClient(HttpClient):
             return pd.DataFrame()
 
     def download_feature_values_and_metadata_files(self, mapobject_type_name,
-            directory, plate_name=None, well_name=None, well_pos_y=None,
-            well_pos_x=None, tpoint=None):
+            directory):
         '''Downloads all feature values for the given object type and writes
         it into a *CSV* file on disk.
 
@@ -1872,62 +1871,59 @@ class TmClient(HttpClient):
             type of the segmented objects
         directory: str
             absolute path to the directory on disk where the file should be
-        plate_name: str, optional
-            name of the plate
-        well_name: str, optional
-            name of the well
-        well_pos_y: int, optional
-            y-position of the site relative to the well grid
-        well_pos_x: int, optional
-            x-position of the site relative to the well grid
-        tpoint: int, optional
-            zero-based time point index
 
         See also
         --------
         :meth:`tmclient.api.TmClient.download_object_feature_values`
         :meth:`tmclient.api.TmClient.download_object_metadata`
         '''
-        res = self._download_object_feature_values(
-            mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
-            tpoint
-        )
-        filename = self._extract_filename_from_headers(res.headers)
-        filepath = os.path.join(directory, filename)
-        logger.info('write feature values to file: %s', filepath)
-        chunks = res.iter_content()
-        first_line = next(chunks)
+        sites = self.get_sites()
 
-        with open(filepath, 'wb') as f:
-            logger.debug('write first line')
-            f.write(first_line)
+        def download_per_site(i, s):
+            logger.info('download feature values at site #%d', i)
+            res = self._download_object_feature_values(
+                mapobject_type_name,
+                s['plate_name'], s['well_name'], s['y'], s['x']
+            )
+            filename = self._extract_filename_from_headers(res.headers)
+            filepath = os.path.join(directory, filename)
+            chunks = res.iter_content()
+            first_line = next(chunks)
 
-        with open(filepath, 'ab') as f:
-            for i, c in enumerate(chunks):
-                logger.debug('write chunk #%d', i)
-                f.write(c)
+            if i == 0:
+                logger.info('write feature values to file: %s', filepath)
+                with open(filepath, 'wb') as f:
+                    logger.debug('write first line')
+                    f.write(first_line)
 
-        res = self._download_object_metadata(
-            mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
-            tpoint
-        )
-        filename = self._extract_filename_from_headers(res.headers)
-        filepath = os.path.join(directory, filename)
-        logger.info('write metadata to file: %s', filepath)
-        chunks = res.iter_content()
-        first_line = next(chunks)
+            with open(filepath, 'ab') as f:
+                for j, c in enumerate(chunks):
+                    logger.debug('write chunk #%d', j)
+                    f.write(c)
 
-        with open(filepath, 'wb') as f:
-            logger.debug('write first line')
-            f.write(first_line)
+            logger.info('download metadata at site #%d', i)
+            res = self._download_object_metadata(
+                mapobject_type_name,
+                s['plate_name'], s['well_name'], s['y'], s['x']
+            )
+            filename = self._extract_filename_from_headers(res.headers)
+            filepath = os.path.join(directory, filename)
+            chunks = res.iter_content()
+            first_line = next(chunks)
 
-        with open(filepath, 'ab') as f:
-            for i, c in enumerate(chunks):
-                logger.debug('write chunk #%d', i)
-                f.write(c)
+            if i == 0:
+                logger.info('write metadata to file: %s', filepath)
+                with open(filepath, 'wb') as f:
+                    logger.debug('write first line')
+                    f.write(first_line)
 
-    def _download_object_metadata(self, mapobject_type_name, plate_name, well_name,
-            well_pos_y, well_pos_x, tpoint):
+            with open(filepath, 'ab') as f:
+                for j, c in enumerate(chunks):
+                    logger.debug('write chunk #%d', j)
+                    f.write(c)
+
+    def _download_object_metadata(self, mapobject_type_name, plate_name,
+            well_name, well_pos_y, well_pos_x, tpoint=None):
         logger.info(
             'download metadata for experiment "%s" and object type "%s"',
             self.experiment_name, mapobject_type_name
