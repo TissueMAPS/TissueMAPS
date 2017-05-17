@@ -39,6 +39,7 @@ from tmlib import cfg as libcfg
 logger = logging.getLogger(__name__)
 
 
+
 def create_app(verbosity=None):
     """Creates a Flask application object that registers all the blueprints on
     which the actual routes are defined.

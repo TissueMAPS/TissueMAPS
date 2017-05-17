@@ -30,7 +30,6 @@ from flask_jwt import jwt_required
 from flask_jwt import current_identity
 
 import tmlib.models as tm
-from tmlib import cfg as libcfg
 from tmlib.utils import flatten
 from tmlib.workflow import get_step_args
 from tmlib.workflow.jobs import RunJob
@@ -136,25 +135,8 @@ def get_available_modules():
     `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
     '''
     logger.info('get list of available jterator modules')
-    repo_location = libcfg.modules_home
-    modules = AvailableModules(repo_location)
+    modules = AvailableModules()
     return jsonify(jtmodules=modules.to_dict())
-
-
-@jtui.route('/available_pipelines')
-@jwt_required()
-def get_available_pipelines():
-    '''Lists all available Jterator pipelines in the
-    `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
-    '''
-    logger.info('get list of available jterator pipelines')
-    pipes_location = os.path.join(libcfg.modules_home, 'pipes')
-    pipes = [
-        os.path.basename(p)
-        for p in list_projects(pipes_location)
-    ]
-    pipes = []
-    return jsonify(jtpipelines=pipes)
 
 
 @jtui.route('/experiments/<experiment_id>/available_channels')
@@ -177,7 +159,7 @@ def get_module_source_code():
     '''Gets the source code for a given module.'''
     module_filename = request.args.get('module_filename')
     logger.info('get source code of module file "%s"', module_filename)
-    modules = AvailableModules(libcfg.modules_home)
+    modules = AvailableModules()
     files = [
         f for i, f in enumerate(modules.module_files)
         if os.path.basename(f) == module_filename
