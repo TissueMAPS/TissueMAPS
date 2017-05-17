@@ -18,6 +18,8 @@ import shutil
 import random
 import logging
 import inspect
+import collections
+import pandas as pd
 from copy import copy
 import sqlalchemy
 import sqlalchemy.orm
@@ -29,9 +31,11 @@ from sqlalchemy.event import listens_for
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import NamedTupleCursor
 from cached_property import cached_property
+from threading import Thread
 
 from tmlib.models.base import MainModel, ExperimentModel, FileSystemModel
 from tmlib.models.dialect import *
+from tmlib.utils import create_partitions
 from tmlib import cfg
 
 logger = logging.getLogger(__name__)
@@ -833,6 +837,10 @@ class ExperimentConnection(_Connection):
             :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
             for which a shard should be selected
         '''
+        logger.debug(
+            'get unique identifier for table of class "%s"',
+            model_class.__name__
+        )
         self._cursor.execute('''
             SELECT nextval FROM nextval(%(sequence)s);
         ''', {
@@ -849,7 +857,7 @@ class ExperimentConnection(_Connection):
 
         Parameters
         ----------
-        model_class: str
+        model_class: class
             class dervired from
             :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
             for which a shard should be selected
@@ -859,15 +867,18 @@ class ExperimentConnection(_Connection):
         int
             ID of the selected shard
 
-        Raise
-        -----
+        Raises
+        ------
         ValueError
-            when the `model_class` does not represent a distributed table
+            when the table of `model_class` is not distributed
         '''
+        logger.debug(
+            'get ID of randomly selected shard for table of class "%s"',
+            model_class.__name__
+        )
         if not model_class.is_distributed:
             raise ValueError(
-                'Shard selection not possible, since provided model class does '
-                'not represent a distributed database table.'
+                'Table of class "%s" is not distributed.' % model_class.__name__
             )
         if model_class.__name__ in self._shard_lut:
             return self._shard_lut[model_class.__name__]
@@ -888,14 +899,32 @@ class ExperimentConnection(_Connection):
 
         Parameters
         ----------
-        model_class: str
+        model_class: class
             class dervired from
             :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
             for which a shard should be selected
         shard_id: int
             ID of a shard that is located on the worker server to which the
             connection was established
+
+        Returns
+        -------
+        int
+            unique, shard-specific ID
+
+        Raises
+        ------
+        ValueError
+            when the table of `model_class` is not distributed
         '''
+        logger.debug(
+            'get unique identifier for shard %d of table of class "%s"',
+            shard_id, model_class.__name__
+        )
+        if not model_class.is_distributed:
+            raise ValueError(
+                'Table of class "%s" is not distributed.' % model_class.__name__
+            )
         self._cursor.execute('''
             SELECT nextval FROM nextval(%(sequence)s);
         ''', {
@@ -904,6 +933,81 @@ class ExperimentConnection(_Connection):
             )
         })
         return self._cursor.fetchone()[0]
+
+    def group_ids_per_shard(self, model_class, ids):
+        '''Groups IDs (values of the partition key) of a distributed table
+        per shard.
+
+        Parameters
+        ----------
+        model_class: class
+            class dervired from
+            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
+            representing a distributed table for which IDs should be
+            grouped per shard
+        ids: List[int]
+            values of the distribution column that should be grouped
+
+        Returns
+        -------
+        Tuple[Union[int, str, List[int]]]
+            worker host IP address, worker port number, shard ID and row IDs
+
+        Raises
+        ------
+        ValueError
+            when the table of `model_class` is not distributed
+        '''
+        logger.debug(
+            'group distribution column values of table of class "%s" per shard',
+            model_class.__name__
+        )
+        if not model_class.is_distributed:
+            raise ValueError(
+                'Table of class "%s" is not distributed.' % model_class.__name__
+            )
+
+        ids = pd.Series(ids)
+        self._cursor.execute('''
+            SELECT s.shardid, s.shardminvalue::bigint, s.shardmaxvalue::bigint,
+                p.nodename, p.nodeport
+            FROM pg_dist_shard AS s
+            JOIN pg_dist_shard_placement AS p
+            ON p.shardid = s.shardid
+            WHERE s.logicalrelid = %(table)s::regclass
+        ''', {
+            'table': model_class.__table__.name
+        })
+        records = self._cursor.fetchall()
+        shard_metadata = list()
+        for shard_id, min_val, max_val, host, port in records:
+            row_ids = ids[(ids >= min_val) & (ids <= max_val)]
+            shard_metadata.append((host, port, shard_id, row_ids))
+
+        # shard_map = collections.defaultdict(list)
+        # for id in ids:
+        #     # TODO: When distributed by "range", we could simplify this lookup.
+        #     self._cursor.execute('''
+        #         SELECT get_shard_id_for_distribution_column(%(table)s, %(id)s)
+        #     ''', {
+        #         'table': model_class.__table__.name,
+        #         'id': id
+        #     })
+        #     shard_id = self._cursor.fetchone()[0]
+        #     shard_map[shard_id].append(id)
+
+        # shard_metadata = list()
+        # for shard_id in shard_map:
+        #     self._cursor.execute('''
+        #         SELECT nodename, nodeport FROM pg_dist_shard_placement
+        #         WHERE shardid = %(shard_id)s
+        #     ''', {
+        #         'shard_id': shard_id
+        #     })
+        #     host, port = self._cursor.fetchone()
+        #     shard_metadata.append((host, port, shard_id, shard_map[shard_id]))
+
+        return shard_metadata
 
 
 class MainConnection(_Connection):
@@ -1029,3 +1133,36 @@ class ExperimentWorkerConnection(_Connection):
             self._connection.commit()
         self._cursor.close()
         self._connection.close()
+
+
+def parallelize_query(func, args):
+    '''Parallelize database query. This can be useful for targeting different
+    shards of a distributed table. The number of parallel connections depends
+    on the value of :attr:`POOL_SIZE <tmlib.models.utils.POOL_SIZE>`.
+
+    Parameters
+    ----------
+    func: function
+        a function that establishes a database connection and executes a given
+        SQL query
+    args: list
+        arguments that should be parsed to the function
+
+    Warning
+    -------
+    Don't use this function for distributed processing on the cluster, since
+    this would establish too many simultaneous database connections.
+    '''
+    logger.debug('execute query in %d parallel threads', POOL_SIZE)
+    n = len(args) / POOL_SIZE
+    arg_batches = create_partitions(args, n)
+    threads = []
+    for i, batch in enumerate(arg_batches):
+        logger.debug('start thread #%d', i)
+        t = Thread(target=func, args=args)
+        t.setDaemon(True)
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
