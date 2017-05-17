@@ -246,15 +246,15 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             site = session.query(tm.Site).get(site_id)
 
-            results = session.query(tm.ChannelImageFile.tpoint).\
+            records = session.query(tm.ChannelImageFile.tpoint).\
                 filter_by(site_id=site.id).\
                 distinct()
-            tpoints = [r.tpoint for r in results]
+            tpoints = [r.tpoint for r in records]
             n_tpoints = len(tpoints)
-            results = session.query(tm.ChannelImageFile.zplane).\
+            records = session.query(tm.ChannelImageFile.zplane).\
                 filter_by(site_id=site.id).\
                 distinct()
-            zplanes = [r.zplane for r in results]
+            zplanes = [r.zplane for r in records]
             n_zplanes = len(zplanes)
 
             y_offset, x_offset = site.aligned_offset
@@ -385,6 +385,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             mapobject_type_ids = dict()
             segmentation_layer_ids = dict()
             objects_to_save = dict()
+            feature_ids = collections.defaultdict(dict)
             for obj_name, segm_objs in store['objects'].iteritems():
                 if segm_objs.save:
                     logger.info('objects of type "%s" are saved', obj_name)
@@ -398,6 +399,19 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                     name=obj_name
                 )
                 mapobject_type_ids[obj_name] = mapobject_type.id
+                # Create a feature values entry for each segmented object at
+                # each time point.
+                logger.info('add features for objects of type "%s"', obj_name)
+                measurements = segm_objs.measurements
+                for feature_name in measurements[0].columns:
+                    logger.debug('add feature "%s"', feature_name)
+                    feature = session.get_or_create(
+                        tm.Feature, name=feature_name,
+                        mapobject_type_id=mapobject_type_ids[obj_name],
+                        is_aggregate=False
+                    )
+                    feature_ids[obj_name][feature_name] = feature.id
+
                 for (t, z), plane in segm_objs.iter_planes():
                     segmentation_layer = session.get_or_create(
                         tm.SegmentationLayer,
@@ -415,7 +429,6 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                     centroid_thresh = segmentation_layer.polygon_threshold - 2
                     segmentation_layer.centroid_threshold = \
                         0 if centroid_thresh < 0 else centroid_thresh
-
 
             site = session.query(tm.Site).get(store['site_id'])
             y_offset, x_offset = site.aligned_offset
@@ -438,23 +451,27 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                         ref_type=tm.Site.__name__, ref_id=store['site_id']
                     )
 
-                # Get existing mapobjects for this site in case they were
-                # created by a previous pipeline or create new mapobjects in
-                # case they didn't exist (or got just deleted).
+                # Create a mapobject for each segmented object, i.e. each
+                # pixel component having a unique label.
                 logger.info('add objects of type "%s"', obj_name)
-                mapobject_ids = dict()
-                for label in segm_objs.labels:
-                    logger.debug('add object #%d', label)
-                    mapobject_ids[label] = tm.Mapobject.add(
-                        conn, mapobject_type_ids[obj_name]
-                    )
+                mapobjects = [
+                    tm.Mapobject(mapobject_type_ids[obj_name])
+                    for _ in segm_objs.labels
+                ]
+                logger.debug('insert mapobjects into db table')
+                mapobjects = tm.Mapobject.add_multiple(conn, mapobjects)
+                mapobject_ids = {
+                    label: mapobjects[i].id
+                    for i, label in enumerate(segm_objs.labels)
+                }
 
-                # Save segmentations, i.e. create a polygon and/or point for
-                # each segmented object based on the cooridinates of their
-                # contours and centroids, respectively.
+                # Create a polygon and/or point for each segmented object
+                # based on the cooridinates of their contours and centroids,
+                # respectively.
                 logger.info(
                     'add segmentations for objects of type "%s"', obj_name
                 )
+                mapobject_segmentations = list()
                 if segm_objs.represent_as_polygons:
                     logger.debug('represent segmented objects as polygons')
                     iterator = segm_objs.iter_polygons(y_offset, x_offset)
@@ -472,10 +489,16 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                             # At the moment we remove the corresponding
                             # mapobjects in the collect phase.
                             continue
-                        tm.MapobjectSegmentation.add(
-                            conn, mapobject_ids[label],
-                            segmentation_layer_ids[(obj_name, t, z)],
-                            polygon=polygon, label=label
+                        mapobject_segmentations.append(
+                            tm.MapobjectSegmentation(
+                                geom_polygon=polygon,
+                                geom_centroid=polygon.centroid,
+                                mapobject_id=mapobject_ids[label],
+                                segmentation_layer_id=segmentation_layer_ids[
+                                    (obj_name, t, z)
+                                ],
+                                label=label
+                            )
                         )
                 else:
                     logger.debug('represent segmented objects only as points')
@@ -485,37 +508,56 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                             'add segmentation for object #%d at '
                             'tpoint %d and zplane %d', label, t, z
                         )
-                        tm.MapobjectSegmentation.add(
-                            conn, mapobject_ids[label],
-                            segmentation_layer_ids[(obj_name, t, z)],
-                            centroid=centroid, label=label
+                        mapobject_segmentations.append(
+                            tm.MapobjectSegmentation(
+                                geom_polygon=None,
+                                geom_centroid=centroid,
+                                mapobject_id=mapobject_ids[label],
+                                segmentation_layer_id=segmentation_layer_ids[
+                                    (obj_name, t, z)
+                                ],
+                                label=label
+                            )
                         )
+                logger.debug('insert mapobject segmentations into db table')
+                tm.MapobjectSegmentation.add_multiple(
+                    conn, mapobject_segmentations
+                )
 
-                logger.info('add features for objects of type "%s"', obj_name)
-                measurements = segm_objs.measurements
-                feature_ids = dict()
-                for fname in measurements[0].columns:
-                    logger.debug('add feature "%s"', fname)
-                    feature_ids[fname] = self._add_feature(
-                        conn, fname, mapobject_type_ids[obj_name], False
-                    )
-
+                logger.info(
+                    'add feature values for objects of type "%s"', obj_name
+                )
+                logger.debug('round feature values to 6 decimals')
+                feature_values = list()
                 for t, data in enumerate(measurements):
-                    data = data.round(6)  # single
+                    data = data.round(6)  # single!
                     if data.empty:
                         logger.warn('empty measurement at time point %d', t)
                         continue
-                    for label, d in data.rename(columns=feature_ids).iterrows():
+                    elif data.shape[0] < len(mapobject_ids):
+                        # We clean up these objects in the collect phase.
+                        logger.error('missing feature values')
+                    elif data.shape[0] > len(mapobject_ids):
+                        # Not sure this could happen.
+                        logger.error('too many feature values')
+                    column_lut = feature_ids[obj_name]
+                    for label, c in data.rename(columns=column_lut).iterrows():
                         logger.debug(
                             'add values for mapobject #%d at time point %d',
                             label, t
                         )
                         values = dict(
-                            zip(d.index.astype(str), d.values.astype(str))
+                            zip(c.index.astype(str), c.values.astype(str))
                         )
-                        tm.FeatureValues.add(
-                            conn, values, mapobject_ids[label], t
+                        feature_values.append(
+                            tm.FeatureValues(
+                                mapobject_id=mapobject_ids[label],
+                                tpoint=t,
+                                values=values
+                            )
                         )
+                logger.debug('insert feature values into db table')
+                tm.FeatureValues.add_multiple(conn, feature_values)
 
     def create_debug_run_phase(self, submission_id):
         '''Creates a job collection for the debug "run" phase of the step.
@@ -624,116 +666,105 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             store = self._run_pipeline(store, site_id, batch['plot'])
             self._save_pipeline_outputs(store)
 
-    def _aggregate(self, feature_id, feature_name,
-            mapobject_type_id, mapobject_type_name,
+    def _aggregate(self, feature_map, mapobject_type_id, mapobject_type_name,
             ref_mapobject_type_id, ref_mapobject_id, ref_geometry):
         with tm.utils.ExperimentConnection(self.experiment_id) as c:
             c.execute('''
-                SELECT tpoint,
-                       min((v.values->%(feature_id)s)::float) AS Min,
-                       max((v.values->%(feature_id)s)::float) AS Max,
-                       sum((v.values->%(feature_id)s)::float) AS Sum,
-                       avg((v.values->%(feature_id)s)::float) AS Mean,
-                       count((v.values->%(feature_id)s)::float) AS Count
+                SELECT v.tpoint, array_agg(v.values) AS data
                 FROM feature_values AS v
                 JOIN mapobjects AS m
                 ON m.id = v.mapobject_id
                 JOIN mapobject_segmentations AS s
                 ON s.mapobject_id = v.mapobject_id
                 WHERE m.mapobject_type_id=%(mapobject_type_id)s
-                AND (v.values->%(feature_id)s)::float != 'NaN'::float
                 AND ST_Intersects(
                     s.geom_polygon, ST_GeomFromText(%(ref_polygon)s)
                 )
                 GROUP BY tpoint;
             ''', {
-                'feature_id': str(feature_id),
                 'mapobject_type_id': mapobject_type_id,
                 'ref_polygon': ref_geometry
             })
             results = c.fetchall()
 
-            values = dict()
+            statistics = {
+                'Min': np.nanmin, 'Max': np.nanmax, 'Sum': np.nansum,
+                'Mean': np.nanmean, 'Count': len
+            }
+            agg_values = dict()
             agg_features = dict()
             for record in results:
-                tpoint = record.tpoint
-                for name in record._fields:
-                    if name == 'tpoint':
-                        continue
-                    elif name == 'count':
-                        agg_feature_name = '{type}_{stat}'.format(
-                            type=mapobject_type_name,
-                            stat=name.capitalize()
+                t = record.tpoint
+                data = pd.DataFrame(record.data).astype(float)
+                data.rename(columns=feature_map, inplace=True)
+                for stat_name, func in statistics.iteritems():
+                    for feature_name, vals in data.iteritems():
+                        agg_value = np.round(func(vals.values), 6)
+                        if stat_name == 'count':
+                            agg_feature_name = '{type}_{stat}'.format(
+                                type=mapobject_type_name, stat=stat_name
+                            )
+                        else:
+                            agg_feature_name = '{name}_{type}_{stat}'.format(
+                                name=feature_name,
+                                type=mapobject_type_name, stat=stat_name
+                            )
+                        agg_id = self._add_feature(
+                            c, agg_feature_name, ref_mapobject_type_id, True
                         )
-                    else:
-                        agg_feature_name = '{name}_{type}_{stat}'.format(
-                            name=feature_name,
-                            type=mapobject_type_name,
-                            stat=name.capitalize()
-                        )
-                    agg_feature_id = self._add_feature(
-                        c, agg_feature_name, ref_mapobject_type_id, True
-                    )
-                    val = getattr(record, name)
-                    if val is None:
-                        val = np.nan
-                    val = np.round(val, 6)
-                    values[str(agg_feature_id)] = str(val)
-                    agg_features[agg_feature_id] = agg_feature_name
-                tm.FeatureValues.add(c, values, ref_mapobject_id, tpoint)
+                        agg_values[str(agg_id)] = str(agg_value)
+                        agg_features[str(agg_id)] = agg_feature_name
+                feature_values = tm.FeatureValues(ref_mapobject_id, agg_values, t)
+                tm.FeatureValues.add(c, feature_values)
 
             return agg_features
 
-    def _aggregate_aggregates(self, feature_id, feature_name,
+    def _aggregate_aggregates(self, feature_map,
             mapobject_type_id, mapobject_type_name,
             ref_mapobject_type_id, ref_mapobject_id, ref_geometry):
-        statistics = {
-            'Min': 'min', 'Max': 'max', 'Sum': 'sum',
-            'Mean': 'avg', 'Count': 'sum'
-        }
-        for name, func in statistics.iteritems():
-            if re.search(r'_%s$' % name, feature_name):
-                break
-
         with tm.utils.ExperimentConnection(self.experiment_id) as c:
             c.execute('''
-                SELECT tpoint,
-                       {0}((v.values->%(feature_id)s)::float) AS {1}
+                SELECT v.tpoint, array_agg(v.values) AS data
                 FROM feature_values AS v
                 JOIN mapobjects AS m
                 ON m.id = v.mapobject_id
                 JOIN mapobject_segmentations AS s
                 ON s.mapobject_id = v.mapobject_id
                 WHERE m.mapobject_type_id=%(mapobject_type_id)s
-                AND (v.values->%(feature_id)s)::float != 'NaN'::float
                 AND ST_Intersects(
                     s.geom_polygon, ST_GeomFromText(%(ref_polygon)s)
                 )
                 GROUP BY tpoint;
-            '''.format(func, name), {
-                'feature_id': str(feature_id),
+            ''', {
                 'mapobject_type_id': mapobject_type_id,
                 'ref_polygon': ref_geometry
             })
-            results = c.fetchall()
-            values = dict()
-            agg_features = dict()
-            for record in results:
-                tpoint = record.tpoint
-                for name in record._fields:
-                    if name == 'tpoint':
-                        continue
-                    agg_feature_id = self._add_feature(
-                        c, feature_name, ref_mapobject_type_id, True
-                    )
-                    val = getattr(record, name)
-                    if val is None:
-                        val = np.nan
-                    values[str(agg_feature_id)] = str(val)
-                    agg_features[agg_feature_id] = feature_name
-                tm.FeatureValues.add(c, values, ref_mapobject_id, tpoint)
+            records = c.fetchall()
 
-        return agg_features
+            statistics = {
+                'Min': np.nanmin, 'Max': np.nanmax, 'Sum': np.nansum,
+                'Mean': np.nanmean, 'Count': np.sum
+            }
+            agg_values = dict()
+            agg_features = dict()
+            for record in records:
+                t = record.tpoint
+                data = pd.DataFrame(record.data).astype(float)
+                data.rename(columns=feature_map, inplace=True)
+                for feature_name, vals in data.iteritems():
+                    stat_name = re.search(r'_([^_]+)$', feature_name).group(1)
+                    func = statistics[stat_name]
+                    agg_value = np.round(func(vals.values), 6)
+                    agg_feature_name = feature_name
+                    agg_id = self._add_feature(
+                        c, agg_feature_name, ref_mapobject_type_id, True
+                    )
+                    agg_values[str(agg_id)] = str(agg_value)
+                    agg_features[str(agg_id)] = agg_feature_name
+                feature_values = tm.FeatureValues(ref_mapobject_id, agg_values, t)
+                tm.FeatureValues.add(c, feature_values)
+
+            return agg_features
 
     def collect_job_output(self, batch):
         '''Computes the optimal representation of each
@@ -746,9 +777,6 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             job description
         '''
         logger.info('clean-up mapobjects with invalid or missing segmentations')
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            tm.Mapobject.delete_invalid_cascade(connection)
-            tm.Mapobject.delete_missing_cascade(connection)
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).first()
@@ -758,6 +786,19 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 pt, ct = segm_layer.calculate_zoom_thresholds(maxzoom)
                 segm_layer.polygon_threshold = pt
                 segm_layer.centroid_threshold = ct
+
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            ref_types = [tm.Plate.__name__, tm.Well.__name__, tm.Site.__name__]
+            mapobject_types = session.query(tm.MapobjectType.id).\
+                filter(tm.MapobjectType.ref_type.in_(ref_types)).\
+                all()
+            mapobject_type_ids = [m.id for m in mapobject_types]
+
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+            tm.Mapobject.delete_invalid_cascade(connection)
+            tm.Mapobject.delete_missing_cascade(connection)
+            for mid in mapobject_type_ids:
+                tm.Feature.delete_cascade(connection, mapobject_type_id=mid)
 
         logger.info('compute aggregate features')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
@@ -798,47 +839,26 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 ref_id_lut[ref_type] = ref_mapobject_type.id
                 ref_lut[ref_type] = [(r[0], r[1]) for r in ref_mapobjects]
 
+        # TODO: Load all feature values for each site into memory as DataFrame
+        # and aggregate in memory.
         new_features = collections.defaultdict(dict)
         for ref_type_name in parent_mapobject_ref_types:
             ref_type_id = ref_id_lut[ref_type_name]
-            logger.info(
-                'compute aggregates for objects of type "%s"', ref_type_name
-            )
+            logger.info('aggregate feature values per "%s"', ref_type_name)
             for ref_id, ref_geom in ref_lut[ref_type_name]:
-                logger.info('compute aggregates for object #%d', ref_id)
+                logger.debug('compute aggregates for object #%d', ref_id)
                 if ref_type_name == 'Site':
                     for mapobject_type_name, features in feature_lut.iteritems():
                         mapobject_type_id = mapobject_type_id_lut[
                             mapobject_type_name
                         ]
-                        for feature_id, feature_name in features.iteritems():
-                            logger.debug(
-                                'compute aggregates over values of feature "%s" '
-                                'for objects of type "%s"',
-                                feature_name, mapobject_type_name
-                            )
-                            f = self._aggregate(
-                                feature_id=feature_id,
-                                feature_name=feature_name,
-                                mapobject_type_id=mapobject_type_id,
-                                mapobject_type_name=mapobject_type_name,
-                                ref_mapobject_type_id=ref_type_id,
-                                ref_mapobject_id=ref_id,
-                                ref_geometry=ref_geom
-                            )
-                            new_features[ref_type_name].update(f)
-                else:
-                    # Now, we simply aggregate the statistics over the next
-                    # "lower" level reference mapobject type:
-                    # Aggregate sites per well and wells per plate.
-                    idx = parent_mapobject_ref_types.index(ref_type_name) - 1
-                    mapobject_type_name = parent_mapobject_ref_types[idx]
-                    mapobject_type_id = ref_id_lut[mapobject_type_name]
-                    pre_features = new_features[mapobject_type_name]
-                    for feature_id, feature_name in pre_features.iteritems():
-                        f = self._aggregate_aggregates(
-                            feature_id=feature_id,
-                            feature_name=feature_name,
+                        logger.debug(
+                            'compute aggregates over feature values'
+                            'for all child objects of type "%s"',
+                            mapobject_type_name
+                        )
+                        f = self._aggregate(
+                            feature_map=features,
                             mapobject_type_id=mapobject_type_id,
                             mapobject_type_name=mapobject_type_name,
                             ref_mapobject_type_id=ref_type_id,
@@ -846,6 +866,22 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                             ref_geometry=ref_geom
                         )
                         new_features[ref_type_name].update(f)
+                else:
+                    # Now, we simply aggregate the statistics over the next
+                    # "lower" level reference mapobject type:
+                    # sites per well and wells per plate.
+                    idx = parent_mapobject_ref_types.index(ref_type_name) - 1
+                    mapobject_type_name = parent_mapobject_ref_types[idx]
+                    mapobject_type_id = ref_id_lut[mapobject_type_name]
+                    f = self._aggregate_aggregates(
+                        feature_map=new_features[mapobject_type_name],
+                        mapobject_type_id=mapobject_type_id,
+                        mapobject_type_name=mapobject_type_name,
+                        ref_mapobject_type_id=ref_type_id,
+                        ref_mapobject_id=ref_id,
+                        ref_geometry=ref_geom
+                    )
+                    new_features[ref_type_name].update(f)
 
         # TODO: population context
         # tm.types.ST_Expand()
@@ -853,34 +889,26 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
     @staticmethod
     def _add_feature(conn, name, mapobject_type_id, is_aggregate):
         conn.execute('''
-            SELECT id FROM features
-            WHERE name = %(name)s
-            AND mapobject_type_id = %(mapobject_type_id)s;
+            INSERT INTO features (name, is_aggregate, mapobject_type_id)
+            VALUES (%(name)s, %(is_aggregate)s, %(mapobject_type_id)s)
+            ON CONFLICT
+            ON CONSTRAINT features_name_mapobject_type_id_key
+            DO NOTHING
+            RETURNING id
         ''', {
             'name': name,
+            'is_aggregate': is_aggregate,
             'mapobject_type_id': mapobject_type_id
         })
-        feature = conn.fetchone()
-        if feature is None:
+        record = conn.fetchone()
+        if record is None:
             conn.execute('''
-                SELECT * FROM nextval('features_id_seq');
-            ''')
-            record = conn.fetchone()
-            feature_id = record.nextval
-            conn.execute('''
-                INSERT INTO features (id, name, is_aggregate, mapobject_type_id)
-                VALUES (
-                    %(id)s, %(name)s, %(is_aggregate)s, %(mapobject_type_id)s
-                )
-                ON CONFLICT
-                ON CONSTRAINT features_name_mapobject_type_id_key
-                DO NOTHING
+                SELECT id FROM features
+                WHERE name = %(name)s
+                AND mapobject_type_id = %(mapobject_type_id)s
             ''', {
-                'id': feature_id,
                 'name': name,
-                'is_aggregate': is_aggregate,
                 'mapobject_type_id': mapobject_type_id
             })
-        else:
-            feature_id = feature.id
-        return feature_id
+            record = conn.fetchone()
+        return record.id

@@ -14,8 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
+import csv
+from cStringIO import StringIO
 from sqlalchemy import (
-    Column, String, Integer, ForeignKey, Boolean, Index,
+    Column, String, Integer, BigInteger, ForeignKey, Boolean, Index,
     PrimaryKeyConstraint, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import HSTORE
@@ -80,7 +82,7 @@ class Feature(ExperimentModel):
         self.is_aggregate = is_aggregate
 
     @classmethod
-    def delete_cascade(cls, connection, mapobject_type_ids=[], id=None):
+    def delete_cascade(cls, connection, mapobject_type_id=None, ids=[]):
         '''Deletes all instances for the given experiment as well as all
         referencing fields in
         :attr:`FeatureValues.values <tmlib.models.feature.FeatureValues.values>`.
@@ -90,49 +92,47 @@ class Feature(ExperimentModel):
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_type_ids: List[int], optional
-            IDs of parent
+        mapobject_type_id: int, optional
+            ID of parent
             :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` for
             which features should be deleted
-        id: int, optional
-            ID of a specific feature that should be deleted
+        ids: List[int], optional
+            IDs of features that should be deleted
         '''
         logger.info('delete feature values')
-        if mapobject_type_ids:
-            sql = '''
-                UPDATE feature_values AS v SET values = hstore()
-                FROM mapobjects AS m
-                WHERE m.id = v.mapobject_id
-                AND m.mapobject_type_id = ANY(%(mapobject_type_ids)s)
-            '''
-            connection.execute(
-                compile_distributed_query(sql),
-                {'mapobject_type_ids': mapobject_type_ids}
-            )
-            connection.execute(
-                '''
-                DELETE FROM features
-                WHERE mapobject_type_id = ANY(%(mapobject_type_ids)s)
-            ''', {
-                'mapobject_type_ids': mapobject_type_ids
-            })
-        elif id is not None:
-            sql = '''
-                UPDATE feature_values SET values = delete(values, %(id)s);
-            '''
-            connection.execute(
-                compile_distributed_query(sql),
-                {'id': str(id)}
-            )
+        delete = True
+        if mapobject_type_id:
+            delete = False
             connection.execute('''
-                DELETE FROM features where id = %(id)s;
+                SELECT id FROM features
+                WHERE mapobject_type_id = %(mapobject_type_id)s
             ''', {
-                'id': id
+                'mapobject_type_id': mapobject_type_id
             })
-        else:
-            sql = 'UPDATE feature_values SET values = hstore();'
-            connection.execute(compile_distributed_query(sql))
-            connection.execute('DELETE FROM features;')
+            records = connection.fetchall()
+            if records:
+                delete = True
+                ids = [r.id for r in records]
+        if delete:
+            if ids:
+                # TODO: Would it be worth indexing the HSTORE column?
+                sql = '''
+                    UPDATE feature_values
+                    SET values = delete(values, %(feature_ids)s)
+                '''
+                connection.execute(
+                    compile_distributed_query(sql),
+                    {'feature_ids': map(str, ids)}
+                )
+                connection.execute('''
+                    DELETE FROM features where id = ANY(%(feature_ids)s);
+                ''', {
+                    'feature_ids': ids
+                })
+            else:
+                sql = "UPDATE feature_values SET values = ' ';"
+                connection.execute(compile_distributed_query(sql))
+                connection.execute('DELETE FROM features;')
 
     def __repr__(self):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
@@ -163,12 +163,12 @@ class FeatureValues(ExperimentModel):
 
     #: int: ID of the parent mapobject (FOREIGN KEY)
     mapobject_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('mapobjects.id', ondelete='CASCADE'),
         index=True
     )
 
-    def __init__(self, mapobject_id, feature_id, value, tpoint):
+    def __init__(self, mapobject_id, values, tpoint=None):
         '''
         Parameters
         ----------
@@ -176,29 +176,29 @@ class FeatureValues(ExperimentModel):
             ID of the mapobject to which values should be assigned
         values: Dict[str, float]
             mapping of feature ID to value
-        tpoint: int
+        tpoint: int, optional
             zero-based time point index
         '''
+        self.mapobject_id = mapobject_id
         self.tpoint = tpoint
         self.values = values
-        self.mapobject_id = mapobject_id
 
     @classmethod
-    def add(cls, connection, values, mapobject_id, tpoint=None):
-        '''Adds a new record.
+    def add(cls, connection, feature_values):
+        '''Adds object to the database table.
 
         Parameters
         ----------
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        values: Dict[str, str]
-            actual values
-        mapobject_id: int
-            ID of parent :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
-        tpoint: int, optional
-            zero-based time point index
+        feature_values: tmlib.models.feature.FeatureValues
+
         '''
+        if not isinstance(feature_values, FeatureValues):
+            raise TypeError(
+                'Object must have type tmlib.models.feature.FeatureValues'
+            )
         connection.execute('''
             INSERT INTO feature_values AS v (values, mapobject_id, tpoint)
             VALUES (%(values)s, %(mapobject_id)s, %(tpoint)s)
@@ -209,11 +209,40 @@ class FeatureValues(ExperimentModel):
             WHERE v.mapobject_id = %(mapobject_id)s
             AND v.tpoint = %(tpoint)s
         ''', {
-            'values': values, 'mapobject_id': mapobject_id, 'tpoint': tpoint
+            'values': feature_values.values,
+            'mapobject_id': feature_values.mapobject_id,
+            'tpoint': feature_values.tpoint
         })
+
+    @classmethod
+    def add_multiple(cls, connection, feature_values):
+        '''Adds multiple new records at once.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        feature_values: List[tmlib.models.feature.FeatureValues]
+        '''
+        f = StringIO()
+        w = csv.writer(f, delimiter=';')
+        for obj in feature_values:
+            w.writerow((
+                obj.mapobject_id, obj.tpoint,
+                ','.join([
+                    '=>'.join([k, str(v)]) for k, v in obj.values.iteritems()
+                ])
+            ))
+        columns = ('mapobject_id', 'tpoint', 'values')
+        f.seek(0)
+        connection.copy_from(
+            f, cls.__table__.name, sep=';', columns=columns, null=''
+        )
+        f.close()
 
     def __repr__(self):
         return (
-            '<FeatureValues(tpoint=%d, mapobject_id=%r)>'
-            % (self.tpoint, self.mapobject_id)
+            '<FeatureValues(id=%r, tpoint=%r, mapobject_id=%r)>'
+            % (self.id, self.tpoint, self.mapobject_id)
         )

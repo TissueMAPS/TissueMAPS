@@ -15,15 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import json
 import os
+import csv
 import logging
 import random
 import collections
 import pandas as pd
+from cStringIO import StringIO
 from sqlalchemy import func, case
 from geoalchemy2 import Geometry
 from sqlalchemy.orm import Session
 from sqlalchemy import (
-    Column, String, Integer, Boolean, ForeignKey, not_, Index,
+    Column, String, Integer, BigInteger, Boolean, ForeignKey, not_, Index,
     UniqueConstraint, PrimaryKeyConstraint
 )
 from sqlalchemy.orm import relationship, backref
@@ -33,7 +35,9 @@ from tmlib import cfg
 from tmlib.models.base import ExperimentModel, DateMixIn
 from tmlib.models.dialect import compile_distributed_query
 from tmlib.models.result import ToolResult, LabelValues
-from tmlib.models.utils import ExperimentConnection, ExperimentSession
+from tmlib.models.utils import (
+    ExperimentConnection, ExperimentSession, ExperimentWorkerConnection
+)
 from tmlib.models.feature import Feature, FeatureValues
 from tmlib.models.types import ST_SimplifyPreserveTopology
 from tmlib.models.site import Site
@@ -50,8 +54,8 @@ class MapobjectType(ExperimentModel):
 
     Attributes
     ----------
-    results: List[tmlib.models.result.ToolResult]
-        results belonging to the mapobject type
+    records: List[tmlib.models.result.ToolResult]
+        records belonging to the mapobject type
     features: List[tmlib.models.feature.Feature]
         features belonging to the mapobject type
     '''
@@ -98,7 +102,7 @@ class MapobjectType(ExperimentModel):
         self.experiment_id = experiment_id
 
     @classmethod
-    def delete_cascade(cls, connection, ref_type=None, id=None):
+    def delete_cascade(cls, connection, ref_type=None, ids=[]):
         '''Deletes all instances as well as "children"
         instances of :class:`Mapobject <tmlib.models.mapobject.Mapobject>`,
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`,
@@ -116,62 +120,51 @@ class MapobjectType(ExperimentModel):
         ref_type: str, optional
             name of reference type (if ``"NULL"`` all mapobject types without
             a `ref_type` will be deleted)
-        id: int, optional
-            ID of a specific mapobject type that should be deleted
+        ids: List[int], optional
+            IDs of mapobject types that should be deleted
 
         '''
+        delete = True
         if ref_type is 'NULL':
             logger.debug('delete non-static mapobjects')
             connection.execute('''
-                SELECT id, name FROM mapobject_types
+                SELECT id FROM mapobject_types
                 WHERE ref_type IS NULL;
             ''')
-            mapobject_type = connection.fetchone()
-            if mapobject_type:
-                logger.debug(
-                    'delete mapobjects of type "%s"', mapobject_type.name
-                )
-                Mapobject.delete_cascade(connection, mapobject_type.id)
-                logger.debug('delete mapobject type %s', mapobject_type.name)
-                connection.execute('''
-                    DELETE FROM mapobject_types WHERE id = %(id)s;
-                ''', {
-                    'id': mapobject_type.id
-                })
+            records = connection.fetchall()
+            if records:
+                ids = [r.id for r in records]
+            else:
+                delete = False
         elif ref_type is not None:
             logger.debug('delete static mapobjects referencing "%s"', ref_type)
             connection.execute('''
-                SELECT id, name FROM mapobject_types
+                SELECT id FROM mapobject_types
                 WHERE ref_type = %(ref_type)s
             ''', {
                 'ref_type': ref_type
             })
-            mapobject_type = connection.fetchone()
-            if mapobject_type:
-                logger.debug(
-                    'delete mapobjects of type "%s"', mapobject_type.name
-                )
-                Mapobject.delete_cascade(connection, mapobject_type.id)
-                logger.debug('delete mapobject type %s', mapobject_type.name)
-                connection.execute('''
-                    DELETE FROM mapobject_types WHERE id = %(id)s;
-                ''', {
-                    'id': mapobject_type.id
-                })
-        elif id is not None:
-            logger.debug('delete mapobjects of type %d', id)
-            Mapobject.delete_cascade(connection, id)
-            logger.debug('delete mapobject type %d', id)
-            connection.execute('''
-                DELETE FROM mapobject_types WHERE id = %(id)s;
-            ''', {
-                'id': id
-            })
-        else:
-            logger.debug('delete all mapobjects')
-            Mapobject.delete_cascade(connection)
-            logger.debug('delete all mapobject types')
-            connection.execute('DELETE FROM mapobject_types;')
+            records = connection.fetchall()
+            if records:
+                ids = [r.id for r in records]
+            else:
+                delete = False
+        if delete:
+            if ids:
+                for id in ids:
+                    logger.debug('delete mapobjects of type %d', id)
+                    Mapobject.delete_cascade(connection, id)
+                    logger.debug('delete mapobject type %d', id)
+                    connection.execute('''
+                        DELETE FROM mapobject_types WHERE id = %(id)s;
+                    ''', {
+                        'id': id
+                    })
+            else:
+                logger.debug('delete all mapobjects')
+                Mapobject.delete_cascade(connection)
+                logger.debug('delete all mapobject types')
+                connection.execute('DELETE FROM mapobject_types;')
 
     def get_site_geometry(self, site_id):
         '''Gets the geometric representation of a
@@ -291,16 +284,16 @@ class MapobjectType(ExperimentModel):
         feature_map = {str(id): name for id, name in features}
 
         if feature_ids is not None:
-            results = session.query(
+            records = session.query(
                 FeatureValues.mapobject_id,
                 FeatureValues.values.slice(feature_map.keys()).label('values')
             )
         else:
-            results = session.query(
+            records = session.query(
                 FeatureValues.mapobject_id,
                 FeatureValues.values
             )
-        results = results.\
+        records = records.\
             join(Mapobject).\
             join(MapobjectSegmentation).\
             filter(
@@ -310,8 +303,8 @@ class MapobjectType(ExperimentModel):
             ).\
             order_by(Mapobject.id).\
             all()
-        values = [r.values for r in results]
-        mapobject_ids = [r.mapobject_id for r in results]
+        values = [r.values for r in records]
+        mapobject_ids = [r.mapobject_id for r in records]
         df = pd.DataFrame(values, index=mapobject_ids)
         df.rename(columns=feature_map, inplace=True)
 
@@ -346,7 +339,7 @@ class MapobjectType(ExperimentModel):
             all()
         label_map = {str(id): name for id, name in labels}
 
-        results = session.query(
+        records = session.query(
                 LabelValues.mapobject_id, LabelValues.values
             ).\
             join(Mapobject).\
@@ -358,8 +351,8 @@ class MapobjectType(ExperimentModel):
             ).\
             order_by(Mapobject.id).\
             all()
-        values = [r.values for r in results]
-        mapobject_ids = [r.mapobject_id for r in results]
+        values = [r.values for r in records]
+        mapobject_ids = [r.mapobject_id for r in records]
         df = pd.DataFrame(values, index=mapobject_ids)
         df.rename(columns=label_map, inplace=True)
 
@@ -396,7 +389,7 @@ class MapobjectType(ExperimentModel):
             filter_by(mapobject_type_id=self.id, tpoint=tpoint, zplane=zplane).\
             one()
 
-        results = session.query(
+        records = session.query(
                 MapobjectSegmentation.mapobject_id,
                 case([(
                     MapobjectSegmentation.geom_polygon.ST_Intersects(
@@ -411,8 +404,8 @@ class MapobjectType(ExperimentModel):
             ).\
             order_by(MapobjectSegmentation.mapobject_id).\
             all()
-        values = [r.is_border for r in results]
-        mapobject_ids = [r.mapobject_id for r in results]
+        values = [r.is_border for r in records]
+        mapobject_ids = [r.mapobject_id for r in records]
         s = pd.Series(values, index=mapobject_ids)
 
         return s
@@ -490,7 +483,7 @@ class Mapobject(ExperimentModel):
 
     @classmethod
     def delete_invalid_cascade(cls, connection):
-        '''Deletes all instances with invalid geometries as well as all
+        '''Deletes all instances with invalid segmentations as well as all
         "children" instances of
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
         :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
@@ -514,8 +507,8 @@ class Mapobject(ExperimentModel):
 
     @classmethod
     def delete_missing_cascade(cls, connection):
-        '''Deletes all instances with missing geometries as well as all
-        "children" instances of
+        '''Deletes all instances with missing segmentations or feature values
+        as well as all "children" instances of
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
         :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
         :class:`LabelValues <tmlib.models.feature.LabelValues>`.
@@ -534,46 +527,112 @@ class Mapobject(ExperimentModel):
             WHERE s.id IS NULL;
         ''')
         mapobjects = connection.fetchall()
-        mapobject_ids = [s.id for s in mapobjects]
+        missing_segmentation_ids = [s.id for s in mapobjects]
+        if missing_segmentation_ids:
+            logger.info(
+                'delete %d mapobjects with missing segmentations',
+                len(missing_segmentation_ids)
+            )
+
+        connection.execute('''
+            SELECT count(id) FROM feature_values LIMIT 2
+        ''')
+        count = connection.fetchone()[0]
+        if count > 0:
+            # Make sure there are any feature values, otherwise all mapobjects
+            # would get deleted.
+            connection.execute('''
+                SELECT m.id FROM mapobjects AS m
+                LEFT OUTER JOIN feature_values AS v
+                ON m.id = v.mapobject_id
+                WHERE v.id IS NULL;
+            ''')
+            mapobjects = connection.fetchall()
+            missing_feature_values_ids = [s.id for s in mapobjects]
+            if missing_feature_values_ids:
+                logger.info(
+                    'delete %d mapobjects with missing feature values',
+                    len(missing_feature_values_ids)
+                )
+        else:
+            missing_feature_values_ids = []
+
+        mapobject_ids = missing_segmentation_ids + missing_feature_values_ids
         if mapobject_ids:
             cls._delete_cascade(connection, mapobject_ids)
 
     @classmethod
-    def add(cls, connection, mapobject_type_id, ref_id=None):
-        '''Adds a new record.
+    def add(cls, connection, mapobject):
+        '''Adds the object to the database table.
 
         Parameters
         ----------
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_type_id: int
-            ID of parent
-            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-        ref_id: int, optional
-            ID of reference mapobject
+        mapobject: tmlib.models.mapobject.Mapobject
 
         Returns
         -------
-        int
-            ID of added record
+        tmlib.models.mapobject.Mapobject
+            object with assigned database ID
         '''
-        connection.execute('''
-            SELECT nextval FROM nextval('mapobjects_id_seq');
-        ''')
-        record = connection.fetchone()
-        mapobject_id = record.nextval
+        if not isinstance(mapobject, cls):
+            raise TypeError(
+                'Object must have type tmlib.models.mapobject.Mapobject'
+            )
+        shard_id = connection.get_shard_id(cls)
+        mapobject.id = connection.get_unique_id(cls)
         connection.execute('''
             INSERT INTO mapobjects (id, mapobject_type_id, ref_id)
-            VALUES (%(mapobject_id)s, %(mapobject_type_id)s, %(ref_id)s);
+            VALUES (%(id)s, %(mapobject_type_id)s, %(ref_id)s);
         ''', {
-            'mapobject_id': mapobject_id,
-            'mapobject_type_id': mapobject_type_id,
-            'ref_id': ref_id
+            'id': mapobject.id,
+            'mapobject_type_id': mapobject.mapobject_type_id,
+            'ref_id': mapobject.ref_id
         })
-        # TODO: Apparently, this doesn't insert in some cases???
-        # INSERT INTO teams VALUES (...) RETURNING id INTO mapobject_id;
-        return mapobject_id
+        # TODO: INSERT INTO teams VALUES (...) RETURNING id INTO mapobject_id;
+        return mapobject
+
+    @classmethod
+    def add_multiple(cls, connection, mapobjects):
+        '''Adds multiple objects at once.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        mapobjects: List[tmlib.models.mapobject.Mapobject]
+
+        Returns
+        -------
+        List[tmlib.models.mapobject.Mapobject]
+            objects with assigned database ID
+        '''
+        # Select a random shard, get all values for mapobject_id from
+        # the same shard-specific sequence and COPY the data from STDIN.
+        # This will target exactly only one shard, which allows adding data
+        # in a highly efficient manner.
+        shard_id = connection.get_shard_id(cls)
+        f = StringIO()
+        w = csv.writer(f, delimiter=';')
+        ids = list()
+        for obj in mapobjects:
+            if not isinstance(obj, cls):
+                raise TypeError(
+                    'Object must have type tmlib.models.mapobject.Mapobject'
+                )
+            obj.id = connection.get_shard_specific_unique_id(cls, shard_id)
+            w.writerow((obj.id, obj.mapobject_type_id, obj.ref_id))
+            ids.append(obj.id)
+        columns = ('id', 'mapobject_type_id', 'ref_id')
+        f.seek(0)
+        connection.copy_from(
+            f, cls.__table__.name, sep=';', columns=columns, null=''
+        )
+        f.close()
+        return mapobjects
 
     @classmethod
     def delete_cascade(cls, connection, mapobject_type_id=None,
@@ -671,8 +730,8 @@ class Mapobject(ExperimentModel):
                 cls._delete_cascade(connection)
 
     def __repr__(self):
-        return '<Mapobject(id=%d, mapobject_type_id=%s)>' % (
-            self.id, self.mapobject_type_id
+        return '<%s(id=%r, mapobject_type_id=%r)>' % (
+            self.__class__.__name__, self.id, self.mapobject_type_id
         )
 
 
@@ -707,7 +766,7 @@ class MapobjectSegmentation(ExperimentModel):
 
     #: int: ID of parent mapobject
     mapobject_id = Column(
-        Integer, ForeignKey('mapobjects.id', ondelete='CASCADE')
+        BigInteger, ForeignKey('mapobjects.id', ondelete='CASCADE')
     )
 
     #: int: ID of parent segmentation layer
@@ -737,8 +796,7 @@ class MapobjectSegmentation(ExperimentModel):
         self.label = label
 
     @classmethod
-    def add(cls, connection, mapobject_id, segmentation_layer_id,
-            polygon=None, centroid=None, label=None):
+    def add(cls, connection, mapobject_segmentation):
         '''Adds a new record.
 
         Parameters
@@ -746,36 +804,14 @@ class MapobjectSegmentation(ExperimentModel):
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
             :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_id: int
-            ID of parent
-            :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
-        segmentation_layer_id: int
-            ID of parent
-            :class:`SegmentationLayer <tmlib.models.layer.SegmentationLayer>`
-        polygon: shapely.geometry.polygon, optional
-            outline of the segmented object
-        centroid: shapely.geometry.point, optional
-            centroid of the segmented object
-        label: int, optional
-            label assigned to the segmented object
+        mapobject_segmentation: tmlib.modeles.mapobject.MapobjectSegmentation
 
-        Raises
-        ------
-        ValueError
-            when neither `polygon` nor `centroid` is provided
-
-        Note
-        ----
-        The `centroid` is required, but it can be caluculate from the `polygon`.
         '''
-        if polygon is None and centroid is None:
-            raise ValueError('A mapobject segmentation must have a "centroid".')
-        if centroid is None:
-            geom_centroid = polygon.centroid.wkt
-            geom_polygon = polygon.wkt
-        else:
-            geom_centroid = centroid.wkt
-            geom_polygon = None
+        if not isinstance(mapobject_segmentation, cls):
+            raise TypeError(
+                'Object must have type '
+                'tmlib.models.mapobject.MapobjectSegmentation'
+            )
         connection.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id, segmentation_layer_id,
@@ -784,16 +820,51 @@ class MapobjectSegmentation(ExperimentModel):
             VALUES (
                 %(mapobject_id)s, %(segmentation_layer_id)s,
                 %(geom_polygon)s, %(geom_centroid)s, %(label)s
-            );
+            )
         ''', {
-            'mapobject_id': mapobject_id,
-            'segmentation_layer_id': segmentation_layer_id,
-            'geom_polygon': geom_polygon, 'geom_centroid': geom_centroid,
-            'label': label
+            'mapobject_id': mapobject_segmentation.mapobject_id,
+            'segmentation_layer_id': mapobject_segmentation.segmentation_layer_id,
+            'geom_polygon': mapobject_segmentation.geom_polygon.wkt,
+            'geom_centroid': mapobject_segmentation.geom_centroid.wkt,
+            'label': mapobject_segmentation.label
         })
 
+    @classmethod
+    def add_multiple(cls, connection, mapobject_segmentations):
+        '''Adds multiple new records at once.
+
+        Parameters
+        ----------
+        connection: psycopg2.extras.NamedTupleCursor
+            experiment-specific database connection created via
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        mapobject_segmentations: List[tmlib.modeles.mapobject.MapobjectSegmentation]
+
+        '''
+        f = StringIO()
+        w = csv.writer(f, delimiter=';')
+        for obj in mapobject_segmentations:
+            if not isinstance(obj, cls):
+                raise TypeError(
+                    'Object must have type '
+                    'tmlib.models.mapobject.MapobjectSegmentation'
+                )
+            w.writerow((
+                obj.geom_polygon.wkt, obj.geom_centroid.wkt,
+                obj.mapobject_id, obj.segmentation_layer_id, obj.label
+            ))
+        columns = (
+            'geom_polygon', 'geom_centroid', 'mapobject_id',
+            'segmentation_layer_id', 'label'
+        )
+        f.seek(0)
+        connection.copy_from(
+            f, cls.__table__.name, sep=';', columns=columns, null=''
+        )
+        f.close()
+
     def __repr__(self):
-        return '<%s(id=%d, mapobject_id=%r, segmentation_layer_id=%s)>' % (
+        return '<%s(id=%r, mapobject_id=%r, segmentation_layer_id=%r)>' % (
             self.__class__.__name__, self.id, self.mapobject_id,
             self.segmentation_layer_id
         )

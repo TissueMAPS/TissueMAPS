@@ -72,7 +72,6 @@ class Classification(Classifier):
         payload: dict
             description of the tool job
         '''
-        # Get mapobject
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
         method = payload['options']['method']
@@ -85,10 +84,7 @@ class Classification(Classifier):
         label_map = dict()
         for i, cls in enumerate(payload['training_classes']):
             labels.update({j: float(i) for j in cls['object_ids']})
-            label_map[float(i)] = {
-                'name': cls['name'],
-                'color': cls['color']
-            }
+            label_map[float(i)] = {'name': cls['name'], 'color': cls['color']}
 
         feature_data = self.load_feature_values(
             mapobject_type_name, feature_names

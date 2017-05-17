@@ -74,7 +74,7 @@ def create_gc3pie_sql_store():
     The "tasks" table must already exist.
     '''
     logger.debug('create GC3Pie store using "tasks" table')
-    store_url = Url(cfg.db_uri)
+    store_url = Url(cfg.db_master_uri)
     table_columns = tm.Task.__table__.columns
     now = datetime.now()
     return make_sqlstore(

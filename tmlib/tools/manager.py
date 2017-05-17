@@ -22,7 +22,6 @@ from tmlib.tools import get_tool_class, get_available_tools
 logger = logging.getLogger(__name__)
 
 
-
 class ToolRequestManager(SubmissionManager):
 
     '''Command line interface for handling `TissueMAPS` tool requests.'''
@@ -262,10 +261,19 @@ class ToolRequestManager(SubmissionManager):
         lib_logger.setLevel(level)
         logger.debug('processing on node: %s', socket.gethostname())
 
+        # Use multiple database connection simultaneouls per job.
+        # The major bottleneck for tools is I/O, i.e. reading feature data from
+        # the database and writing label values back.
+        # Since we use a distributed database, we can speed up I/O using
+        # multiple connections.
+        tm.utils.set_pool_size(10)
+
         manager = cls(args.experiment_id, args.name, args.verbosity)
         manager._print_logo()
         payload = manager.get_payload(args.submission_id)
         tool_cls = get_tool_class(args.name)
         tool = tool_cls(args.experiment_id)
         tool.process_request(args.submission_id, payload)
+
+        logger.info('done')
 

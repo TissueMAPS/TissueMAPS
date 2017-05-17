@@ -25,7 +25,7 @@ import logging
 from sqlalchemy.ext.declarative import (
     declarative_base, DeclarativeMeta, declared_attr
 )
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Column, DateTime, Integer, BigInteger, String
 from sqlalchemy import func
 from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.ext.compiler import compiles
@@ -58,11 +58,11 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
         DeclarativeMeta.__init__(self, name, bases, d)
         if hasattr(self, '__table__'):
             if distribution_column is not None:
-                column_names = [c.name for c in self.__table__.columns]
-                if distribution_column not in column_names:
+                columns = self.__table__.c
+                if distribution_column not in columns:
                     raise ValueError(
-                        'Hash for distribution "%s" '
-                        'is not a column of table "%s"'
+                        'Specified distribution column "%s" '
+                        'is not a column of table "%s".'
                         % (distribution_column, self.__table__.name)
                     )
                 self.__table__.info['distribute_by_hash'] = distribution_column
@@ -115,7 +115,7 @@ class IdMixIn(object):
     '''
 
     #: int: ID assigned to the object by the database
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
 
     @property
     def hash(self):
