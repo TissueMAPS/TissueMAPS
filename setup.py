@@ -94,7 +94,7 @@ setuptools.setup(
     package_data={'': ['*.rst']},
     include_package_data=True,
     install_requires=[
-        'opencv-python>=3.2',
+        'opencv-contrib-python>=3.2',
         'pandas>=0.19.1',
         'prettytable>=0.7.2',
         'PyYAML>=3.11',
