@@ -229,7 +229,7 @@ class Tool(object):
         return null_indices
 
     def save_result_values(self, result_id, data):
-        '''Saves the computed label values.
+        '''Saves the generated label values.
 
         Parameters
         ----------
@@ -237,19 +237,20 @@ class Tool(object):
             ID of a registerd
             :class:`ToolResult <tmlib.models.result.ToolResult>`
         data: pandas.Series
-            series with compound index for "mapobject_id" and "tpoint"
+            series with multi-level index for "mapobject_id" and "tpoint"
 
         See also
         --------
         :class:`tmlib.models.result.LabelValues`
         '''
         logger.info('save label values for result %d', result_id)
-        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
             mapobject_ids = data.index.get_level_values('mapobject_id')
-            args = conn.group_ids_per_shard(tm.LabelValues, mapobject_ids)
+            args = connection.group_ids_per_shard(tm.LabelValues, mapobject_ids)
 
         def upsert(*args):
             for host, port, shard_id, row_ids in args:
+                logger.debug('upsert label values of shard %d', shard_id)
                 with tm.utils.ExperimentWorkerConnection(
                         self.experiment_id, host, port
                     ) as connection:
