@@ -1014,6 +1014,16 @@ class ExperimentConnection(_Connection):
                 'Table of class "%s" is not distributed.' % model_class.__name__
             )
 
+        # NOTE: This approach requires distribution method "range".
+        # This method is not exposed at the level of the
+        # "create_distributed_table()" function, but requires modification of
+        # the "pg_dist_partition" metadata table on the master server.
+        # The apporach won't work with standard "hash" distributed tables,
+        # since IDs get mapped to a different value range by the
+        # "worker_hash()" function. In this case, the
+        # "get_shard_id_for_distribution_column()" utility function
+        # can be used to determine the shard for a given value of the
+        # partition key (distribution column).
         ids = pd.Series(ids)
         self._cursor.execute('''
             SELECT s.shardid, s.shardminvalue::bigint, s.shardmaxvalue::bigint,
@@ -1030,29 +1040,6 @@ class ExperimentConnection(_Connection):
         for shard_id, min_val, max_val, host, port in records:
             row_ids = ids[(ids >= min_val) & (ids <= max_val)]
             shard_metadata.append((host, port, shard_id, row_ids))
-
-        # shard_map = collections.defaultdict(list)
-        # for id in ids:
-        #     # TODO: When distributed by "range", we could simplify this lookup.
-        #     self._cursor.execute('''
-        #         SELECT get_shard_id_for_distribution_column(%(table)s, %(id)s)
-        #     ''', {
-        #         'table': model_class.__table__.name,
-        #         'id': id
-        #     })
-        #     shard_id = self._cursor.fetchone()[0]
-        #     shard_map[shard_id].append(id)
-
-        # shard_metadata = list()
-        # for shard_id in shard_map:
-        #     self._cursor.execute('''
-        #         SELECT nodename, nodeport FROM pg_dist_shard_placement
-        #         WHERE shardid = %(shard_id)s
-        #     ''', {
-        #         'shard_id': shard_id
-        #     })
-        #     host, port = self._cursor.fetchone()
-        #     shard_metadata.append((host, port, shard_id, shard_map[shard_id]))
 
         return shard_metadata
 
