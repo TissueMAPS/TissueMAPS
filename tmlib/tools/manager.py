@@ -262,8 +262,8 @@ class ToolRequestManager(SubmissionManager):
         logger.debug('processing on node: %s', socket.gethostname())
 
         # Use multiple database connection simultaneouls per job.
-        # The major bottleneck for tools is I/O, i.e. reading data from the
-        # database and writing data back.
+        # The major bottleneck for tools is I/O, i.e. reading feature data from
+        # the database and writing label values back.
         # Since we use a distributed database, we can speed up I/O using
         # multiple connections.
         tm.utils.set_pool_size(10)
@@ -274,4 +274,6 @@ class ToolRequestManager(SubmissionManager):
         tool_cls = get_tool_class(args.name)
         tool = tool_cls(args.experiment_id)
         tool.process_request(args.submission_id, payload)
+
+        logger.info('done')
 
