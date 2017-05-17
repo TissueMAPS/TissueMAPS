@@ -145,7 +145,10 @@ class Tool(object):
             })
             records = conn.fetchall()
             values = [r.values for r in records]
-            index = [(r.mapobject_id, r.tpoint) for r in records]
+            index = pd.MultiIndex.from_tuples(
+                [(r.mapobject_id, r.tpoint) for r in records],
+                names=['mapobject_id', 'tpoint']
+            )
 
         df = pd.DataFrame(values, index=index).astype(float)
         column_map = {i: name for i, name in feature_map.iteritems()}
@@ -242,51 +245,38 @@ class Tool(object):
         '''
         logger.info('save label values for result %d', result_id)
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-            # Group data per shard.
-            shard_map = collections.defaultdict(list)
-            for mapobject_id, tpoint in data.index:
-                conn.execute('''
-                    SELECT get_shard_id_for_distribution_column(
-                        'label_values', %(id)s
-                    )
-                ''', {
-                    'id': mapobject_id
-                })
-                shard_id = conn.fetchone()[0]
-                shard_map[shard_id].append((mapobject_id, tpoint))
+            mapobject_ids = data.index.get_level_values('mapobject_id')
+            args = conn.group_ids_per_shard(tm.LabelValues, mapobject_ids)
 
-            worker_map = collections.defaultdict(list)
-            for shard_id in shard_map:
-                conn.execute('''
-                    SELECT nodename, nodeport FROM pg_dist_shard_placement
-                    WHERE shardid = %(shard_id)s
-                ''', {
-                    'shard_id': shard_id
-                })
-                worker_map[shard_id] = conn.fetchone()
+        def upsert(*args):
+            for host, port, shard_id, row_ids in args:
+                with tm.utils.ExperimentWorkerConnection(
+                        self.experiment_id, host, port
+                    ) as connection:
+                    for tpoint in data.index.levels[1]:
+                        for mapobject_id in row_ids:
+                            value = np.round(data.ix[mapobject_id, tpoint], 6)
+                            connection.execute('''
+                                INSERT INTO label_values_{shard_id} AS v (
+                                    mapobject_id, values, tpoint
+                                )
+                                VALUES (
+                                    %(mapobject_id)s, %(values)s, %(tpoint)s
+                                )
+                                ON CONFLICT
+                                ON CONSTRAINT
+                                label_values_mapobject_id_tpoint_key_{shard_id}
+                                DO UPDATE
+                                SET values = v.values || %(values)s
+                                WHERE v.mapobject_id = %(mapobject_id)s
+                                AND v.tpoint = %(tpoint)s;
+                            '''.format(shard_id=shard_id), {
+                                'values': {str(result_id): str(value)},
+                                'mapobject_id': mapobject_id,
+                                'tpoint': tpoint
+                            })
 
-        for shard_id, (host, port) in worker_map.iteritems():
-            with tm.utils.ExperimentWorkerConnection(self.experiment_id, host, port) as conn:
-                for mapobject_id, tpoint in shard_map[shard_id]:
-                    value = np.round(data[(mapobject_id, tpoint)], 6)
-                    conn.execute('''
-                        INSERT INTO label_values_{shard_id} AS v (
-                            mapobject_id, values, tpoint
-                        )
-                        VALUES (
-                            %(mapobject_id)s, %(values)s, %(tpoint)s
-                        )
-                        ON CONFLICT
-                        ON CONSTRAINT label_values_mapobject_id_tpoint_key_{shard_id}
-                        DO UPDATE
-                        SET values = v.values || %(values)s
-                        WHERE v.mapobject_id = %(mapobject_id)s
-                        AND v.tpoint = %(tpoint)s;
-                    '''.format(shard_id=shard_id), {
-                        'values': {str(result_id): str(value)},
-                        'mapobject_id': mapobject_id,
-                        'tpoint': tpoint
-                    })
+        tm.utils.parallelize_query(upsert, args)
 
     def register_result(self, submission_id, mapobject_type_name,
             result_type, **result_attributes):
