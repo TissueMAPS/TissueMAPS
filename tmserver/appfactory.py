@@ -183,7 +183,7 @@ def create_app(verbosity=None):
     jwt.init_app(app)
 
     # Create a session scope for interacting with the main database
-    engine = create_db_engine(cfg.db_uri)
+    engine = create_db_engine(cfg.db_master_uri)
     session_factory = create_db_session_factory()
     session_factory.configure(bind=engine)
     session = flask_scoped_session(session_factory, app)

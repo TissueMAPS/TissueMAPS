@@ -287,6 +287,31 @@ def get_feature_values(experiment_id, mapobject_type_id):
         mapobject_type_name = mapobject_type.name
         mapobject_type_ref_type = mapobject_type.ref_type
 
+    if mapobject_type_ref_type in {'Plate', 'Well'}:
+        if well_pos_y is not None:
+            raise MalformedRequestError(
+                'Invalid query parameter "well_pos_y" for mapobjects of type '
+                '"{0}"'.format(mapobject_type_name)
+            )
+        if well_pos_x is not None:
+            raise MalformedRequestError(
+                'Invalid query parameter "well_pos_x" for mapobjects of type '
+                '"{0}"'.format(mapobject_type_name)
+            )
+    if mapobject_type_ref_type == 'Plate':
+        ref_type = 'Plate'
+        if well_name is not None:
+            raise MalformedRequestError(
+                'Invalid query parameter "well_name" for mapobjects of type '
+                '"{0}"'.format(mapobject_type_name)
+            )
+    elif mapobject_type_ref_type == 'Well':
+        ref_type = 'Plate'
+    elif mapobject_type_ref_type == 'Site':
+        ref_type = 'Well'
+    else:
+        ref_type = 'Site'
+
     filename_formatstring = '{experiment}'
     if well_name is not None:
         filename_formatstring += '_{well}'
@@ -301,31 +326,6 @@ def get_feature_values(experiment_id, mapobject_type_id):
         experiment=experiment_name, well=well_name, y=well_pos_y, x=well_pos_x,
         t=tpoint, object_type=mapobject_type_name
     )
-
-    if mapobject_type_ref_type in {'Plate', 'Well'}:
-        if well_pos_y is not None:
-            raise MalformedRequestError(
-                'Invalid query parameter "well_pos_y" for mapobjects type '
-                '{0}'.format(mapobject_type_name)
-            )
-        if well_pos_x is not None:
-            raise MalformedRequestError(
-                'Invalid query parameter "well_pos_x" for mapobjects type '
-                '{0}'.format(mapobject_type_name)
-            )
-    if mapobject_type_ref_type == 'Plate':
-        ref_type = 'Plate'
-        if well_name is not None:
-            raise MalformedRequestError(
-                'Invalid query parameter "well_name" for mapobjects type '
-                '{0}'.format(mapobject_type_name)
-            )
-    elif mapobject_type_ref_type == 'Well':
-        ref_type = 'Plate'
-    elif mapobject_type_ref_type == 'Site':
-        ref_type = 'Well'
-    else:
-        ref_type = 'Site'
 
     def generate_feature_matrix(mapobject_type_id, ref_type):
         data = StringIO()
@@ -494,21 +494,21 @@ def get_metadata(experiment_id, mapobject_type_id):
     if mapobject_type_ref_type in {'Plate', 'Well'}:
         if well_pos_y is not None:
             raise MalformedRequestError(
-                'Invalid query parameter "well_pos_y" for mapobjects type '
-                '{0}'.format(mapobject_type_name)
+                'Invalid query parameter "well_pos_y" for mapobjects of type '
+                '"{0}"'.format(mapobject_type_name)
             )
         if well_pos_x is not None:
             raise MalformedRequestError(
-                'Invalid query parameter "well_pos_x" for mapobjects type '
-                '{0}'.format(mapobject_type_name)
+                'Invalid query parameter "well_pos_x" for mapobjects of type '
+                '"{0}"'.format(mapobject_type_name)
             )
 
     if mapobject_type_ref_type == 'Plate':
         ref_type = 'Plate'
         if well_name is not None:
             raise MalformedRequestError(
-                'Invalid query parameter "well_name" for mapobjects type '
-                '{0}'.format(mapobject_type_name)
+                'Invalid query parameter "well_name" for mapobjects of type '
+                '"{0}"'.format(mapobject_type_name)
             )
     elif mapobject_type_ref_type == 'Well':
         ref_type = 'Well'
