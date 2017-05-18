@@ -98,8 +98,8 @@
   file:
     path: "{{ tm_home }}/tmui/src"
     state: directory
-    owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
     mode: 0700
   tags:
     - web-server
@@ -110,8 +110,8 @@
     path: "{{ tm_home }}/tmui/src/build"
     state: directory
     recurse: yes
-    owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
     mode: 0700
   tags:
     - web-server
@@ -122,8 +122,8 @@
     path: "{{ tm_home }}/tmui/src/tasks"
     state: directory
     recurse: yes
-    owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
     mode: 0700
   tags:
     - web-server

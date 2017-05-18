@@ -25,7 +25,7 @@
   user:
     name: "{{ tm_user }}"
     shell: /bin/bash
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     append: yes
     createhome: yes
     home: /home/{{ tm_user }}
@@ -54,7 +54,7 @@
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
 
 - name: Enable SSH access
@@ -64,5 +64,5 @@
     remote_src: yes
     dest: "{{ tm_home }}/.ssh/authorized_keys"
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700

@@ -20,7 +20,7 @@
     path: "{{ tm_home }}/.gc3"
     state: directory
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - gc3pie
@@ -30,7 +30,7 @@
     src: gc3pie.conf.j2
     dest: "{{ tm_home }}/.gc3/gc3pie.conf"
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
   tags:
     - gc3pie
 

@@ -5,8 +5,8 @@ After=syslog.target network.target remote-fs.target nss-lookup.target
 [Service]
 Type=forking
 {% if web_port|int > 1024 %}
-User={{ tm_user }}
-Group={{ tm_user }}
+User={{ web_user }}
+Group={{ web_group }}
 {% endif %}
 PIDFile=/var/run/nginx/nginx.pid
 ExecStartPre=/usr/sbin/nginx -t

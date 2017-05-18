@@ -19,7 +19,7 @@
     src: "{{ item }}.j2"
     dest: "{{ tm_home }}/{{ item }}"
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   with_items:
     - create_slurm_account.sh

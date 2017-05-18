@@ -23,7 +23,7 @@
 - include: configure.yml
 
 - name: Start database cluster
-  become_user: "{{ db_superuser }}"
+  become_user: "{{ db_user }}"
   command: '{{ db_executable_directory }}/pg_ctl start -w -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log'
   tags:
     - database

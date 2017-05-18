@@ -19,9 +19,21 @@
   template:
     src: postgresql.conf.j2
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/postgresql.conf"
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
     mode: 0666
+  tags:
+    - database
+
+- name: Allow unrestricted access by db_role from private IP range
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
+    line: 'host    {{ db_name }}   {{ db_role }}    {{ ip_range }}         trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  when: ip_range is defined
   tags:
     - database
 
@@ -30,22 +42,21 @@
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
-    line: 'host    {{ db_name }}   {{ db_user }}    {{ ip_range }}         trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    line: 'host    all        {{ db_user }}    {{ ip_range }}         trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   when: ip_range is defined
   tags:
     - database
 
-- name: Allow unrestricted access by db_superuser from private IP range
+- name: Allow host unrestricted access by db_role to connect to itself I
   lineinfile:
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
-    regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
-    line: 'host    all        {{ db_superuser }}    {{ ip_range }}         trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
-  when: ip_range is defined
+    regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
+    line: 'host    {{ db_name }}   {{ db_role }}    127.0.0.1/32           trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   tags:
     - database
 
@@ -54,20 +65,20 @@
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
-    line: 'host    {{ db_name }}   {{ db_user }}    127.0.0.1/32           trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    line: 'host    all        {{ db_user }}    127.0.0.1/32           trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   tags:
     - database
 
-- name: Allow host unrestricted access by db_superuser to connect to itself I
+- name: Allow host unrestricted access by db_role to connect to itself II
   lineinfile:
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
-    regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
-    line: 'host    all        {{ db_superuser }}    127.0.0.1/32           trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
+    line: 'host    {{ db_name }}   {{ db_role }}    ::1/128                trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   tags:
     - database
 
@@ -76,20 +87,20 @@
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
     regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
-    line: 'host    {{ db_name }}   {{ db_user }}    ::1/128                trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    line: 'host    all        {{ db_user }}    ::1/128                trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   tags:
     - database
 
-- name: Allow host unrestricted access by db_superuser to connect to itself II
+- name: Allow unrestricted host access by db_role from local private network (10.0.0.0/8)
   lineinfile:
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
-    regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
-    line: 'host    all        {{ db_superuser }}    ::1/128                trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    line: 'host    {{ db_name }}   {{ db_role }}    10.0.0.0/8             trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
 
@@ -97,20 +108,20 @@
   lineinfile:
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
-    line: 'host    {{ db_name }}   {{ db_user }}    10.0.0.0/8             trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    line: 'host    all        {{ db_user }}    10.0.0.0/8             trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
 
-- name: Allow unrestricted host access by db_superuser from local private network (10.0.0.0/8)
+- name: Allow unrestricted host access by db_role from local private network (172.16.0.0/12)
   lineinfile:
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
-    line: 'host    all        {{ db_superuser }}    10.0.0.0/8             trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    line: 'host    {{ db_name }}   {{ db_role }}    172.16.0.0/12          trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
@@ -119,20 +130,20 @@
   lineinfile:
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
-    line: 'host    {{ db_name }}   {{ db_user }}    172.16.0.0/12          trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    line: 'host    all        {{ db_user }}    172.16.0.0/12          trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
 
-- name: Allow unrestricted host access by db_superuser from local private network (172.16.0.0/12)
+- name: Allow unrestricted host access by db_role from local private network (192.168.0.0/16)
   lineinfile:
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
-    line: 'host    all        {{ db_superuser }}    172.16.0.0/12          trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    line: 'host    {{ db_name }}   {{ db_role }}    192.168.0.0/16         trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - database
@@ -141,44 +152,10 @@
   lineinfile:
     dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
     state: present
-    line: 'host    {{ db_name }}   {{ db_user }}    192.168.0.0/16         trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    line: 'host    all        {{ db_user }}    192.168.0.0/16         trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
   when: ansible_env.ANSIBLE_CONTAINER is defined
-  tags:
-    - database
-
-- name: Allow unrestricted host access by db_superuser from local private network (192.168.0.0/16)
-  lineinfile:
-    dest: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/pg_hba.conf"
-    state: present
-    line: 'host    all        {{ db_superuser }}    192.168.0.0/16         trust'
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
-  when: ansible_env.ANSIBLE_CONTAINER is defined
-  tags:
-    - database
-
-- name: Increase kernel limits for semaphores
-  shell: sysctl -w kernel.sem="250 60000 32 250"
-  tags:
-    - database
-
-- name: Increaese limit for number of open files
-  lineinfile:
-    dest: /etc/security/limits.conf
-    line: "{{ db_superuser }} soft nofile {{ pg_max_files_per_process }}"
-  tags:
-    - database
-
-- name: Place PostgreSQL systemd config file
-  template:
-    src: postgresql.service.j2
-    dest: /lib/systemd/system/postgresql@{{ db_node }}.service
-    owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
-  when:
-    - ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - database
 
@@ -187,8 +164,8 @@
     path: /var/run/postgresql
     state: directory
     recurse: yes
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
     mode: 0700
   tags:
     - database
