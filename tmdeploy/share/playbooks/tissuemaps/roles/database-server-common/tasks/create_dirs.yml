@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 
-- name: Create root directory for data and log files
+- name: Create root directory for database files
   file:
     path: "{{ db_data_directory | dirname }}"
     state: directory

@@ -10,8 +10,8 @@ server {
     server_name {{ public_host_name }}
     {% endif %}
 
-    access_log {{ tm_log_directory }}/nginx-access.log;
-    error_log {{ tm_log_directory }}/nginx-error.log warn;
+    access_log /var/log/nginx/tissuemaps-access.log;
+    error_log /var/log/nginx/tissuemaps-error.log warn;
 
     # all non-api requests are file requests and should be served
     # from the gulp built directory
