@@ -74,7 +74,7 @@ class MapobjectType(ExperimentModel):
 
     #: int: ID of parent experiment
     experiment_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -431,10 +431,10 @@ class Mapobject(ExperimentModel):
     #: This could refer to another mapobject in the same table, e.g. in order
     #: to track proliferating cells, or a record in another reference table,
     #: e.g. to identify the corresponding record of a "Well".
-    ref_id = Column(Integer, index=True)
+    ref_id = Column(BigInteger, index=True)
 
     #: int: ID of parent mapobject type
-    mapobject_type_id = Column(Integer, index=True, nullable=False)
+    mapobject_type_id = Column(BigInteger, index=True, nullable=False)
 
     def __init__(self, mapobject_type_id, ref_id=None):
         '''
@@ -770,7 +770,7 @@ class MapobjectSegmentation(ExperimentModel):
     )
 
     #: int: ID of parent segmentation layer
-    segmentation_layer_id = Column(Integer, nullable=False)
+    segmentation_layer_id = Column(BigInteger, nullable=False)
 
     def __init__(self, geom_polygon, geom_centroid, mapobject_id,
             segmentation_layer_id, label=None):
@@ -892,7 +892,7 @@ class SegmentationLayer(ExperimentModel):
 
     #: int: ID of parent channel
     mapobject_type_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

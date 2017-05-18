@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 import numpy as np
-from sqlalchemy import Column, Integer, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
@@ -61,7 +61,7 @@ class Site(ExperimentModel):
 
     #: int: ID of parent well
     well_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('wells.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

@@ -17,7 +17,9 @@ import os
 import logging
 import psycopg2
 import numpy as np
-from sqlalchemy import Column, String, Integer, Boolean, ForeignKey, Index
+from sqlalchemy import (
+    Column, String, Integer, BigInteger, Boolean, ForeignKey, Index
+)
 from sqlalchemy.dialects.postgresql import BYTEA
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -77,7 +79,7 @@ class ChannelLayerTile(ExperimentModel):
     # between rasters and numpy arrays.
 
     #: int: ID of parent channel layer
-    channel_layer_id = Column(Integer, nullable=False)
+    channel_layer_id = Column(BigInteger, nullable=False)
 
     def __init__(self, z, y, x, channel_layer_id, pixels=None):
         '''

@@ -15,7 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import gc3libs
 from sqlalchemy import (
-    Column, Integer, String, LargeBinary, Interval, ForeignKey, Boolean
+    Column, Integer, BigInteger, String, LargeBinary, Interval, ForeignKey,
+    Boolean
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
@@ -36,7 +37,7 @@ class Submission(MainModel, DateMixIn):
 
     #: int: ID of the parent experiment
     experiment_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey(
             'experiment_references.id', onupdate='CASCADE', ondelete='CASCADE'
         ),
@@ -45,7 +46,7 @@ class Submission(MainModel, DateMixIn):
 
     #: int: ID of the submitting user
     user_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey(
             'users.id', onupdate='CASCADE', ondelete='CASCADE'
         ),
@@ -54,7 +55,7 @@ class Submission(MainModel, DateMixIn):
     )
 
     #: int: ID of the top task in the submitted collection of tasks
-    top_task_id = Column(Integer,index=True)
+    top_task_id = Column(BigInteger, index=True)
     # TODO: make top_task_id a foreign key and create a relationship
 
     #: tmlib.models.experiment.Experimment: parent experiment
@@ -117,7 +118,7 @@ class Submission(MainModel, DateMixIn):
 #     name = Column(String, index=True)
 #     description = Column(JSONB)
 #     submission_id = Column(
-#         Integer,
+#         BigInteger,
 #         ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE')
 #     )
 
@@ -193,13 +194,13 @@ class Task(MainModel, DateMixIn):
     is_collection = Column(Boolean, index=True)
 
     #: int: ID of the parent task
-    parent_id = Column(Integer, index=True)
+    parent_id = Column(BigInteger, index=True)
 
     #: Pickeled Python `gc3libs.Task` object
     data = Column(LargeBinary)
 
     #: int: ID of parent submission
-    submission_id = Column(Integer, index=True)
+    submission_id = Column(BigInteger, index=True)
 
     def __repr__(self):
         return (
