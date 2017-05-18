@@ -18,8 +18,8 @@
   postgresql_user:
     db: postgres
     port: "{{ db_port }}"
-    user: "{{ db_superuser }}"
-    login_user: "{{ db_superuser }}"
+    user: "{{ db_user }}"
+    login_user: "{{ db_user }}"
     login_host: 127.0.0.1
   tags:
     - database
@@ -28,9 +28,9 @@
   postgresql_user:
     db: "{{ db_name }}"
     port: "{{ db_port }}"
-    user: "{{ db_user }}"
+    user: "{{ db_role }}"
     role_attr_flags: LOGIN
-    login_user: "{{ db_superuser }}"
+    login_user: "{{ db_user }}"
     login_host: 127.0.0.1
   tags:
     - database
@@ -41,9 +41,9 @@
     type: database
     obj: "{{ db_name }}"
     port: "{{ db_port }}"
-    role: "{{ db_user }}"
+    role: "{{ db_role }}"
     privs: ALL
-    login_user: "{{ db_superuser }}"
+    login_user: "{{ db_user }}"
     login_host: 127.0.0.1
   tags:
     - database

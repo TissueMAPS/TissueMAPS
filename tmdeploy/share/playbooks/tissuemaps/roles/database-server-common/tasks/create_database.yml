@@ -19,7 +19,7 @@
     name: "{{ db_name }}"
     port: "{{ db_port }}"
     login_host: 127.0.0.1
-    login_user: "{{ db_superuser }}"
+    login_user: "{{ db_user }}"
   tags:
     - database
 
@@ -29,7 +29,7 @@
     db: "{{ db_name }}"
     port: "{{ db_port }}"
     login_host: 127.0.0.1
-    login_user: "{{ db_superuser }}"
+    login_user: "{{ db_user }}"
   tags:
     - database
 
@@ -39,7 +39,7 @@
     db: "{{ db_name }}"
     port: "{{ db_port }}"
     login_host: 127.0.0.1
-    login_user: "{{ db_superuser }}"
+    login_user: "{{ db_user }}"
   tags:
     - database
 
@@ -49,6 +49,6 @@
     db: "{{ db_name }}"
     port: "{{ db_port }}"
     login_host: 127.0.0.1
-    login_user: "{{ db_superuser }}"
+    login_user: "{{ db_user }}"
   tags:
     - database

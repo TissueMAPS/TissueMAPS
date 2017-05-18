@@ -30,8 +30,8 @@
     path: "{{ db_data_directory }}"
     state: directory
     recurse: yes
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
     mode: 0700
   tags:
     - database
@@ -41,8 +41,8 @@
     path: "{{ db_data_directory }}/{{ postgresql_version }}"
     state: directory
     recurse: yes
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
     mode: 0700
   tags:
     - database
@@ -52,8 +52,8 @@
     path: "{{ db_log_directory }}"
     state: directory
     recurse: yes
-    owner: "{{ db_superuser }}"
-    group: "{{ db_superuser }}"
+    owner: "{{ db_user }}"
+    group: "{{ db_user }}"
     mode: 0700
   tags:
     - database

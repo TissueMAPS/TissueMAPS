@@ -46,7 +46,7 @@
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   when: app_host == 'unix'
   tags:
@@ -59,7 +59,7 @@
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - app-server
@@ -70,7 +70,7 @@
     path: /var/log/uwsgi/tissuemaps.log
     state: touch
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - app-server
@@ -81,7 +81,7 @@
     src: uwsgi.ini.j2
     dest: /home/{{ tm_user }}/.tmaps/uwsgi.ini
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
   tags:
     - app-server
     - uwsgi
@@ -91,7 +91,7 @@
     src: uwsgi.sh.j2
     dest: /home/{{ tm_user }}/.tmaps/uwsgi.sh
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0550
   tags:
     - app-server
@@ -103,7 +103,7 @@
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - app-server
@@ -114,7 +114,7 @@
     src: uwsgi.service.j2
     dest: /etc/systemd/system/uwsgi.service
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
   tags:

@@ -4,6 +4,6 @@ start on runlevel [2345]
 stop on runlevel [!2345]
 
 setuid {{ tm_user }}
-setgid {{ tm_user }}
+setgid {{ tm_group }}
 
 exec env HOME={{ tm_home }} sh /home/{{ tm_user }}/.tmaps/uwsgi.sh

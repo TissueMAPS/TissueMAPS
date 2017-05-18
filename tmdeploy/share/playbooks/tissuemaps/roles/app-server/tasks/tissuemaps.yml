@@ -46,7 +46,7 @@
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - tissuemaps
@@ -57,7 +57,7 @@
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - tissuemaps
@@ -67,7 +67,7 @@
     src: tm_server.sh.j2
     dest: "{{ tm_home }}/.tmaps/tm_server.sh"
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
