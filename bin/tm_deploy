@@ -15,7 +15,7 @@ from tmdeploy.config import Setup
 from tmdeploy.inventory import build_inventory_information
 from tmdeploy.log import configure_logging, map_logging_verbosity
 from tmdeploy.inventory import HOSTNAME_FORMAT
-from tmdeploy.errors import SetupDescriptionError
+from tmdeploy.errors import SetupDescriptionError, SetupEnvironmentError
 from tmdeploy.utils import to_yaml, to_json
 
 logger = logging.getLogger(os.path.basename(__file__))
@@ -411,4 +411,11 @@ if __name__ == '__main__':
     tmdeploy_logger = logging.getLogger('tmdeploy')
     tmdeploy_logger.setLevel(log_level)
 
-    main(args)
+    try:
+        main(args)
+    except SetupDescriptionError as err:
+        logger.error(str(err))
+        sys.exit(1)
+    except SetupEnvironmentError as err:
+        logger.error(str(err))
+        sys.exit(1)
