@@ -51,7 +51,7 @@ class ToolResult(ExperimentModel):
     tool_name = Column(String(30), index=True)
 
     #: int: ID of the corresponding job submission
-    submission_id = Column(Integer, index=True, unique=True)
+    submission_id = Column(BigInteger, index=True, unique=True)
 
     #: str: label layer type
     type = Column(String(50))
@@ -63,7 +63,7 @@ class ToolResult(ExperimentModel):
 
     #: int: id of the parent mapobject type
     mapobject_type_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

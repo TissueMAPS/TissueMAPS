@@ -18,7 +18,9 @@ import numpy as np
 import logging
 import itertools
 from cached_property import cached_property
-from sqlalchemy import Column, String, Integer, Text, ForeignKey, Boolean
+from sqlalchemy import (
+    Column, String, Integer, BigInteger, Text, ForeignKey, Boolean
+)
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy import UniqueConstraint
 
@@ -73,7 +75,7 @@ class ExperimentReference(MainModel, DateMixIn):
     root_directory = Column(String)
 
     #: int: ID of the owner
-    user_id = Column(Integer, ForeignKey('users.id'), index=True)
+    user_id = Column(BigInteger, ForeignKey('users.id'), index=True)
 
     #: tmlib.models.user.User: user that owns the experiment
     user = relationship('User', back_populates='experiments')
@@ -187,11 +189,11 @@ class ExperimentShare(MainModel):
 
     #: int: ID of shared experiment
     experiment_id = Column(
-        Integer, ForeignKey('experiment_references.id'), index=True
+        BigInteger, ForeignKey('experiment_references.id'), index=True
     )
 
     #: int: ID of user with whom the experiment is shared
-    user_id = Column(Integer, ForeignKey('users.id'), index=True)
+    user_id = Column(BigInteger, ForeignKey('users.id'), index=True)
 
     #: tmlib.models.experiment.ExperimentReference: shared experiment
     experiment = relationship('ExperimentReference', backref='shares')

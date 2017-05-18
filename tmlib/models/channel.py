@@ -21,7 +21,9 @@ import lxml
 import itertools
 import collections
 from cached_property import cached_property
-from sqlalchemy import Column, Integer, ForeignKey, String, UniqueConstraint
+from sqlalchemy import (
+    Column, Integer, BigInteger, ForeignKey, String, UniqueConstraint
+)
 from sqlalchemy import or_
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declared_attr
@@ -83,7 +85,7 @@ class Channel(DirectoryModel, DateMixIn):
 
     #: int: ID of the parent experiment
     experiment_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -176,7 +178,7 @@ class ChannelLayer(ExperimentModel):
 
     #: int: ID of parent channel
     channel_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

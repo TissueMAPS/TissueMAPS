@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from sqlalchemy import Column, String, Integer, Text, ForeignKey
+from sqlalchemy import Column, String, BigInteger, Integer, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
@@ -66,7 +66,7 @@ class Acquisition(DirectoryModel, DateMixIn):
 
     #: int: ID of the parent plate
     plate_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -207,28 +207,28 @@ class ImageFileMapping(ExperimentModel):
 
     #: int: ID of parent site
     site_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of parent site
     cycle_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of parent acquisition
     acquisition_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of parent channel
     channel_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

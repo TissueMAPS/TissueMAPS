@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey
 from sqlalchemy.orm import relationship, backref
 
 from tmlib.models import ExperimentModel
@@ -44,14 +44,14 @@ class SiteShift(ExperimentModel):
 
     #: int: ID of the parent site
     site_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of the parent cycle
     cycle_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -124,7 +124,7 @@ class SiteIntersection(ExperimentModel):
 
     #: int: ID of parent site
     site_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
