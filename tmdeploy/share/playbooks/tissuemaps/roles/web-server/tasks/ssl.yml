@@ -13,35 +13,37 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ---
-- name: Install yum package for NGINX
-  yum:
-    name: nginx
-    state: installed
+- name: Create csr file
+  openssl_csr:
+    path: "{{ ssl_certificate_csr_file }}"
+    privatekey_path: "{{ ssl_certificate_key_file }}"
+    commonName: "{{ public_host_name }}"
+    subjectAltName: "IP:{{ public_host_name }}"
   tags:
     - web-server
     - nginx
 
-- name: Download NodeJS
-  shell: curl --silent --location https://rpm.nodesource.com/setup_6.x | bash -
+- name: Generate TLS certificate
+  letsencrypt:
+    account_key: "{{ ssl_certificate_key_file }}"
+    csr: "{{ ssl_certificate_csr_file }}"
+    dest: "{{ ssl_certificate_file | dirname }}/without_chain.crt"
   tags:
     - web-server
-    - tissuemaps
+    - nginx
 
-- name: Install yum package for NodeJS and NPM
-  yum:
-    name: nodejs
+- name: Place chain crt file
+  template:
+    src: chain.j2
+    dest: "{{ ssl_certificate_file | dirname }}/full_chain.crt"
   tags:
     - web-server
-    - tissuemaps
+    - nginx
 
-- name: Install yum package for SSL
-  yum:
-    name: "{{ item }}"
-    state: installed
-  with_items:
-    - openssl
-    - pki-base
+- name: Create full chain crt file
+  shell: cat {{ ssl_certificate_file | dirname }}/without_chain.crt >> {{ ssl_certificate_file | dirname }}/full_chain.crt
   tags:
     - web-server
     - nginx
