@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
@@ -48,7 +48,7 @@ class Cycle(ExperimentModel, DateMixIn):
 
     #: int: ID of parent experiment
     experiment_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

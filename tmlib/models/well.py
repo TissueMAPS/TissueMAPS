@@ -18,7 +18,7 @@ import numpy as np
 import logging
 from cached_property import cached_property
 from sqlalchemy import (
-    Column, String, Integer, ForeignKey, Index, UniqueConstraint
+    Column, String, Integer, BigInteger, ForeignKey, Index, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
@@ -59,7 +59,7 @@ class Well(ExperimentModel, DateMixIn):
 
     #: int: ID of parent plate
     plate_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

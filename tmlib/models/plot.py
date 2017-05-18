@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from sqlalchemy import Integer, ForeignKey, Column
+from sqlalchemy import Integer, BigInteger, ForeignKey, Column
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.dialects.postgresql import JSON
 
@@ -36,7 +36,7 @@ class Plot(ExperimentModel):
 
     #: int: ID of the parent tool result
     result_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('tool_results.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

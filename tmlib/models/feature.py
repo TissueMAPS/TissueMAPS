@@ -53,7 +53,7 @@ class Feature(ExperimentModel):
 
     #: int: id of the parent mapobject type
     mapobject_type_id = Column(
-        Integer,
+        BigInteger,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
