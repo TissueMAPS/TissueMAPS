@@ -520,7 +520,7 @@ class AnsibleHostVariableSection(_SetupSection):
 
     _OPTIONAL_ATTRS = {
         'disk_size', 'volume_size', 'volume_mountpoint',
-        'assign_public_ip', 'tags', 'ssh_user'
+        'assign_public_ip', 'tags', 'ssh_user', 'tm_user'
     }
 
     def __init__(self, description):
