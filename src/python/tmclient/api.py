@@ -1922,6 +1922,10 @@ class TmClient(HttpClient):
                     logger.debug('write chunk #%d', j)
                     f.write(c)
 
+        for i, s in enumerate(sites):
+            download_per_site(i, s)
+
+
     def _download_object_metadata(self, mapobject_type_name, plate_name,
             well_name, well_pos_y, well_pos_x, tpoint=None):
         logger.info(
