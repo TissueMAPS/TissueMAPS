@@ -89,8 +89,8 @@
     security_group: web
     protocol: tcp
     direction: ingress
-    port_range_min: 8080
-    port_range_max: 8080
+    port_range_min: 8002
+    port_range_max: 8002
     remote_ip_prefix: 0.0.0.0/0
     region_name: "{{ region }}"
   run_once: yes
