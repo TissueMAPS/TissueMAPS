@@ -40,19 +40,6 @@
   tags:
     - tissuemaps
 
-- name: Update log_home in TissueMAPS configuration
-  ini_file:
-    dest: "{{ tm_config_file }}"
-    section: tmserver
-    state: present
-    option: log_home
-    value: "{{ tm_log_directory }}"
-    owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
-    mode: "u+rwx"
-  tags:
-    - tissuemaps
-
 - name: Set permissions for code directory
   file:
     path: "{{ tm_home }}/.local"
