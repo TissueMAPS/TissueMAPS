@@ -49,3 +49,37 @@
   command: "{{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log"
   tags:
     - database
+
+- name: Increase kernel limits for semaphores
+  shell: sysctl -w kernel.sem="250 60000 32 250"
+  tags:
+    - database
+
+- name: Increaese limit for number of open files
+  lineinfile:
+    dest: /etc/security/limits.conf
+    line: "{{ db_superuser }} soft nofile {{ pg_max_files_per_process }}"
+  tags:
+    - database
+
+- name: Place PostgreSQL systemd config file
+  template:
+    src: postgresql.service.j2
+    dest: /etc/systemd/system/postgresql@{{ db_node }}.service
+    owner: "{{ tm_user }}"
+    group: "{{ tm_user }}"
+  when:
+    - ansible_env.ANSIBLE_CONTAINER is undefined
+  tags:
+    - database
+
+- name: Create directory for PostgreSQL lock file
+  file:
+    path: /var/run/postgresql
+    state: directory
+    recurse: yes
+    owner: "{{ db_superuser }}"
+    group: "{{ db_superuser }}"
+    mode: 0700
+  tags:
+    - database

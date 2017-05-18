@@ -1,7 +1,7 @@
 [uwsgi]
 module = tmserver.wsgi:app
 http-socket = :8080
-logto = {{ tm_log_directory }}/uwsgi.log
+logto = /var/log/uwsgi/tissuemaps.log
 socket = {{ uwsgi_socket }}
 pidfile = /var/run/uwsgi/tissuemaps.pid
 chmod-socket = 666
