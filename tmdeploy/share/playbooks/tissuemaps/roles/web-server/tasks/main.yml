@@ -18,8 +18,8 @@
 
 - include: tissuemaps.yml
 
-- include: ssl.yml
-  when: enable_https
+# - include: ssl.yml
+#   when: enable_https
 
 - include: nginx.yml
 
