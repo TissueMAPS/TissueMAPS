@@ -70,11 +70,3 @@ tmserver.version module
     :undoc-members:
     :show-inheritance:
 
-tmserver.wsgi module
---------------------
-
-.. automodule:: tmserver.wsgi
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
