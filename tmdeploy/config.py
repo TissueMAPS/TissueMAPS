@@ -521,7 +521,7 @@ class AnsibleHostVariableSection(_SetupSection):
     _OPTIONAL_ATTRS = {
         'disk_size', 'volume_size', 'volume_mountpoint',
         'assign_public_ip', 'tags', 'ssh_user', 'tm_user', 'tm_group',
-        'web_user', 'web_group', 'db_user', 'db_group'
+        'db_user', 'db_group'
     }
 
     def __init__(self, description):
@@ -529,8 +529,6 @@ class AnsibleHostVariableSection(_SetupSection):
         self.ssh_user = 'ubuntu'
         self.tm_user = 'tissuemaps'
         self._tm_group = None
-        self.web_user = 'nginx'
-        self._web_group = None
         self.db_user = 'postgres'
         self._db_group = None
         super(AnsibleHostVariableSection, self).__init__(description)
@@ -607,30 +605,6 @@ class AnsibleHostVariableSection(_SetupSection):
     def tm_group(self, value):
         self._check_value_type(value, 'tm_group', str)
         self._tm_group = str(value)
-
-    @property
-    def web_user(self):
-        '''str: web system user (default: ``"nginx"``)
-        '''
-        return self._web_user
-
-    @web_user.setter
-    def web_user(self, value):
-        self._check_value_type(value, 'web_user', str)
-        self._web_user = str(value)
-
-    @property
-    def web_group(self):
-        '''str: web system group (defaults to `web_user`)
-        '''
-        if self._web_group is None:
-            self._web_group = self.web_user
-        return self._web_group
-
-    @web_group.setter
-    def web_group(self, value):
-        self._check_value_type(value, 'web_group', str)
-        self._web_group = str(value)
 
     @property
     def db_user(self):

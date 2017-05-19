@@ -22,3 +22,5 @@ ssl_certificate_key_file: /etc/pki/tls/private/account.pem
 ssl_certificate_csr_file: /etc/pki/tls/certs/request.csr
 
 public_host_name: "{{ ansible_default_ipv4['address'] }}"
+
+enable_https: no
