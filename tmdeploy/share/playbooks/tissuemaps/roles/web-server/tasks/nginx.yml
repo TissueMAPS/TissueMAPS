@@ -18,19 +18,30 @@
   template:
     src: nginx.conf.j2
     dest: /etc/nginx/nginx.conf
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - web-server
     - nginx
 
-- name: Place site specific NGINX conf.d
+- name: Place site specific NGINX conf.d (HTTP)
   template:
-    src: tissuemaps.conf.j2
+    src: tissuemaps.conf.http.j2
     dest: /etc/nginx/conf.d/tissuemaps.conf
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  tags:
+    - web-server
+    - nginx
+
+- name: Place site specific NGINX conf.d (HTTPS)
+  template:
+    src: tissuemaps.conf.https.j2
+    dest: /etc/nginx/conf.d/tissuemaps.conf
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - web-server
@@ -41,8 +52,8 @@
     path: /var/log/nginx
     state: directory
     recurse: yes
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - web-server
@@ -52,8 +63,8 @@
   file:
     path: /var/log/nginx/{{ item }}
     state: touch
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   with_items:
     - tissuemaps-access.log
@@ -66,8 +77,8 @@
   file:
     path: /var/log/nginx/{{ item }}
     state: touch
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   with_items:
     - access.log
@@ -81,8 +92,8 @@
     path: /var/run/nginx
     state: directory
     recurse: yes
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - web-server
@@ -92,8 +103,8 @@
   template:
     src: nginx.service.j2
     dest: /etc/systemd/system/nginx.service
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
@@ -106,8 +117,8 @@
     path: "{{ item }}"
     state: directory
     recurse: yes
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   with_items:
     - /var/lib/nginx

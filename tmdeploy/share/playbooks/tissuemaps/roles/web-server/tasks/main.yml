@@ -18,9 +18,10 @@
 
 - include: tissuemaps.yml
 
-- include: nginx.yml
+- include: ssl.yml
+  when: enable_https
 
-# - include: ssl.yml
+- include: nginx.yml
 
 - name: Stop nginx web server
   command: nginx -s stop

@@ -6,8 +6,8 @@ ConditionPathExists={{ db_data_directory }}/{{ postgresql_version }}/{{ db_node 
 
 [Service]
 Type=forking
-User={{ db_superuser }}
-Group={{ db_superuser }}
+User={{ db_user }}
+Group={{ db_group }}
 ExecStart={{ db_executable_directory }}/pg_ctl start -W -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
 ExecStop={{ db_executable_directory }}/pg_ctl stop -m smart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}
 ExecReload={{ db_executable_directory }}/pg_ctl reload -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}

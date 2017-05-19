@@ -18,36 +18,45 @@
 - name: Add user group
   become: yes
   group:
-    name: "{{ tm_user }}"
+    name: "{{ item }}"
+  with_items:
+    - "{{ tm_group }}"
+    - "{{ db_group }}"
 
 - name: Add user
   become: yes
   user:
-    name: "{{ tm_user }}"
+    name: "{{ item['user'] }}"
     shell: /bin/bash
-    group: "{{ tm_group }}"
+    group: "{{ item['group'] }}"
     append: yes
     createhome: yes
-    home: /home/{{ tm_user }}
+    home: /home/{{ item['user'] }}
+  with_items:
+    - "{ 'group': {{ tm_group }}, 'user': {{ tm_user }} }"
+    - "{ 'group': {{ db_group }}, 'user': {{ db_user }} }"
 
 - name: Change permissions for user home directory
   become: yes
   file:
-    path: /home/{{ tm_user }}
+    path: /home/{{ item }}
     state: directory
     mode: 0775
+  with_items:
+    - "{{ tm_user }}"
+    - "{{ db_user }}"
 
-- name: Add user to sudoers
+- name: Add tm_user to sudoers
   become: yes
   lineinfile:
     dest: /etc/sudoers.d/{{ tm_user }}
-    # TODO: Make sudo rights more restrictions
+    # TODO: Make sudo rights more restrictive
     regexp: "{{ tm_user }} ALL=(ALL) NOPASSWD:ALL"
     line: "{{ tm_user }} ALL=(ALL) NOPASSWD:ALL"
     state: present
     create: yes
 
-- name: Create SSH user directory
+- name: Create SSH directory for tm_user
   become: yes
   file:
     path: "{{ tm_home }}/.ssh"
@@ -57,7 +66,7 @@
     group: "{{ tm_group }}"
     mode: 0700
 
-- name: Enable SSH access
+- name: Enable SSH access for tm_user
   become: yes
   copy:
     src: /home/{{ ansible_user }}/.ssh/authorized_keys
