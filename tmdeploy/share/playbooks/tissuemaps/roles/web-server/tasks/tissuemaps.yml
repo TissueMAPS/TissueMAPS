@@ -15,12 +15,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+- name: Create root directory for static www data
+  file:
+    path: "{{ tm_www_directory }}"
+    state: directory
+    mode: 0755
+  tags:
+    - web-server
+    - tissuemaps
+
 - name: Get the latest tmui code
   git:
     repo: "{{ tm_github_url }}/tmui"
     version: "{{ tm_version }}"
     recursive: yes
-    dest: "{{ tm_home }}/tmui"
+    dest: "{{ tm_www_directory }}/tmui"
     force: yes
   tags:
     - web-server
@@ -30,7 +39,7 @@
   npm:
     name: "{{ item }}"
     state: present
-    path: "{{ tm_home }}/tmui/src"
+    path: "{{ tm_www_directory }}/tmui/src"
     global: yes
   with_items:
     - bower
@@ -49,9 +58,9 @@
   # shell: npm install app --unsafe-perm
   # args:
   #   executable: /bin/bash
-  #   chdir: "{{ tm_home }}/tmui/src"
+  #   chdir: "{{ tm_www_directory }}/tmui/src"
   npm:
-    path: "{{ tm_home }}/tmui/src/app"
+    path: "{{ tm_www_directory }}/tmui/src/app"
     state: present
   tags:
     - web-server
@@ -59,7 +68,7 @@
 
 - name: Install bower dependencies
   bower:
-    path: "{{ tm_home }}/tmui/src"
+    path: "{{ tm_www_directory }}/tmui/src"
     state: present
   tags:
     - web-server
@@ -67,7 +76,7 @@
 
 - name: Update gulp proxy settings
   replace:
-    dest: "{{ tm_home }}/tmui/src/tasks/server.js"
+    dest: "{{ tm_www_directory }}/tmui/src/tasks/server.js"
     regexp: 'target:\s.http.*$'
     replace: "target: 'http://{{ app_host }}:{{ app_port }}',"
   when: app_host != 'unix'
@@ -77,7 +86,7 @@
 
 - name: Update gulp proxy settings
   replace:
-    dest: "{{ tm_home }}/tmui/src/tasks/server.js"
+    dest: "{{ tm_www_directory }}/tmui/src/tasks/server.js"
     regexp: 'changeOrigin:\s.*$'
     replace: "xfwd: true"
   when: app_host != 'unix'
@@ -89,17 +98,17 @@
   shell: gulp build --prod
   args:
     executable: /bin/bash
-    chdir: "{{ tm_home }}/tmui/src"
+    chdir: "{{ tm_www_directory }}/tmui/src"
   tags:
     - web-server
     - tissuemaps
 
 - name: Set permissions for tmui/src directory
   file:
-    path: "{{ tm_home }}/tmui/src"
+    path: "{{ tm_www_directory }}/tmui/src"
     state: directory
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
     mode: 0700
   tags:
     - web-server
@@ -107,11 +116,11 @@
 
 - name: Set permissions for tmui/src/build directory recursively
   file:
-    path: "{{ tm_home }}/tmui/src/build"
+    path: "{{ tm_www_directory }}/tmui/src/build"
     state: directory
     recurse: yes
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
     mode: 0700
   tags:
     - web-server
@@ -119,11 +128,11 @@
 
 - name: Set permissions for tmui/src/tasks directory recursively
   file:
-    path: "{{ tm_home }}/tmui/src/tasks"
+    path: "{{ tm_www_directory }}/tmui/src/tasks"
     state: directory
     recurse: yes
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
     mode: 0700
   tags:
     - web-server
