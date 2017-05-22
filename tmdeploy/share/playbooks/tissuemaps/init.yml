@@ -18,6 +18,12 @@
 # started upon system startup.
 # We don't do this within the respective roles for compatibility with
 # Ansible-container.
+- name: Refresh tmpfiles.d
+  hosts: all
+  tasks:
+    - name: Create directories defined in tmpfiles.d
+      command: systemd-tmpfiles --create
+
 - name: Restart database master server
   hosts:
     - tissuemaps_db_master
