@@ -18,8 +18,8 @@
 - name: Install web and application servers
   hosts: tissuemaps_server
   vars:
-    app_host: unix                        # 127.0.0.1
-    app_port: /etc/uwsgi/tissuemaps.sock  # 5002
+    app_host: unix                            # 127.0.0.1
+    app_port: /var/run/uwsgi/tissuemaps.sock  # 5002
   roles:
     - web-server
     - app-server
