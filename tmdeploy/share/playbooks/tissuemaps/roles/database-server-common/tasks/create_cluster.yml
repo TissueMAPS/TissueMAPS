@@ -50,7 +50,14 @@
   tags:
     - database
 
-- name: Increase kernel limits for semaphores
+- name: Increase kernel limits for semaphores permanently
+  temaplte:
+    src: pg_semaphores_limit.conf.j2
+    dest: /etc/sysctl.d/99-pg_semaphores_limit.conf
+  tags:
+    - database
+
+- name: Increase runtime kernel limits for semaphores
   shell: sysctl -w kernel.sem="250 60000 32 250"
   tags:
     - database
