@@ -126,7 +126,7 @@
 - name: Place tmpfiles.d config file for uWSGI
   template:
     src: tmpfiles.d.uwsgi.conf.j2
-    state: /etc/tmpfiles.d/uwsgi.conf
+    dest: /etc/tmpfiles.d/uwsgi.conf
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
     mode: 0700

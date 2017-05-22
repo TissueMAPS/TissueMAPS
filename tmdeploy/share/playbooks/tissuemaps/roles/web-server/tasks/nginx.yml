@@ -102,7 +102,7 @@
 - name: Place tmpfiles.d config file for NGINX
   template:
     src: tmpfiles.d.nginx.conf.j2
-    state: /etc/tmpfiles.d/nginx.conf
+    dest: /etc/tmpfiles.d/nginx.conf
     owner: "{{ web_user }}"
     group: "{{ web_group }}"
     mode: 0700
