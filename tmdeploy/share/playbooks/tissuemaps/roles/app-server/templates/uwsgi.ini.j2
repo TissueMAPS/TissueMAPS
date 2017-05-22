@@ -1,10 +1,10 @@
 [uwsgi]
 module = tmserver.wsgi:app
-http-socket = :8080
 logto = /var/log/uwsgi/tissuemaps.log
-socket = {{ uwsgi_socket }}
 pidfile = /var/run/uwsgi/tissuemaps.pid
-chmod-socket = 666
+http-socket = :8080
+uwsgi-socket = {{ uwsgi_socket }}
+chmod-socket = 660
 vacuum = true
 master = true
 processes = {{ uwsgi_processes }}
