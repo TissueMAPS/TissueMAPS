@@ -30,3 +30,13 @@
   selinux:
     policy: targeted
     state: permissive
+
+- name: Install generally required yum packages
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - gcc
+    - gcc-c++
+    - bzip2
+    - openssl-devel

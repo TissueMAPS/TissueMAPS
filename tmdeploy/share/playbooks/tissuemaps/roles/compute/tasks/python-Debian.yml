@@ -21,7 +21,6 @@
     name: "{{ item }}"
     state: installed
   with_items:
-    - build-essential
     - python-dev
     - python-pip
     - python-setuptools

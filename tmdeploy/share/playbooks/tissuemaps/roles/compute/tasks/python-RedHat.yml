@@ -20,18 +20,16 @@
     name: "{{ item }}"
     state: installed
   with_items:
-    - gcc
     - python-devel
     - python-pip
     - python-setuptools
     - libffi-devel
-    - openssl-devel
     - readline-devel
   when: ansible_os_family == 'RedHat'
   tags:
     - python
 
-- name: Install apt packages required by Python packages
+- name: Install yum packages required by Python packages
   yum:
     name: "{{ item }}"
     state: installed
