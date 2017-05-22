@@ -28,4 +28,4 @@ enable_https: no
 tm_www_directory: /var/www
 
 web_user: nginx
-web_group: nginx
+web_group: "{{ web_user }}"
