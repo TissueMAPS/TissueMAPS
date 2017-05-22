@@ -119,6 +119,7 @@
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
     mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - app-server
     - uwsgi
@@ -130,9 +131,10 @@
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
     mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
-    - web-server
-    - nginx
+    - app-server
+    - uwsgi
 
 - name: Place UWSGI service file for serviced
   template:
