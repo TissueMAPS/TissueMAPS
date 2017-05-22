@@ -24,3 +24,8 @@ ssl_certificate_csr_file: /etc/pki/tls/certs/request.csr
 public_host_name: "{{ ansible_default_ipv4['address'] }}"
 
 enable_https: no
+
+tm_www_directory: /var/www
+
+web_user: nginx
+web_group: nginx
