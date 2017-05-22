@@ -58,9 +58,22 @@
     path: "{{ app_port | dirname }}"
     entity: "{{ web_user }}"
     etype: user
-    permissions: rw
+    permissions: rx
     state: present
     default: yes
+    recursive: yes
+  when: app_host == 'unix'
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Set ACL to let NGINX access UNIX socket
+  acl:
+    path: "{{ app_port | dirname }}"
+    entity: "{{ web_user }}"
+    etype: user
+    permissions: rw
+    state: present
     recursive: yes
   when: app_host == 'unix'
   tags:
