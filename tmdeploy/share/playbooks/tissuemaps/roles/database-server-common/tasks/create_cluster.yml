@@ -51,7 +51,7 @@
     - database
 
 - name: Increase kernel limits for semaphores permanently
-  temaplte:
+  template:
     src: pg_semaphores_limit.conf.j2
     dest: /etc/sysctl.d/99-pg_semaphores_limit.conf
   tags:
