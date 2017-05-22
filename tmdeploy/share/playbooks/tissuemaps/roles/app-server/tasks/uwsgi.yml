@@ -53,6 +53,20 @@
     - app-server
     - uwsgi
 
+- name: Set ACL to let NGINX access UNIX socket
+  acl:
+    path: "{{ app_port | dirname }}"
+    entity: "{{ web_user }}"
+    etype: user
+    permissions: rw
+    state: present
+    default: yes
+    recursive: yes
+  when: app_host == 'unix'
+  tags:
+    - app-server
+    - uwsgi
+
 - name: Create log directory
   file:
     path: /var/log/uwsgi
@@ -108,6 +122,17 @@
   tags:
     - app-server
     - uwsgi
+
+- name: Place tmpfiles.d config file for uWSGI
+  template:
+    src: tmpfiles.d.uwsgi.conf.j2
+    state: /etc/tmpfiles.d/uwsgi.conf
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  tags:
+    - web-server
+    - nginx
 
 - name: Place UWSGI service file for serviced
   template:
