@@ -25,6 +25,7 @@
     - vim
     - unzip
     - openssl
+    - bash-completion
 
 - name: Install useful yum packages
   yum:

@@ -23,3 +23,9 @@
     upgrade: safe
     update_cache: yes
 
+- name: Install generally required apt packages
+  apt:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - build-essential

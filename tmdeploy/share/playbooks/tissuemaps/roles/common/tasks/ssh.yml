@@ -19,6 +19,7 @@
   file:
     path: "{{ tm_home }}/.ssh"
     state: directory
+    mode: 0700
 
 - name: Enable confirmation-free outgoing ssh connections
   template:
