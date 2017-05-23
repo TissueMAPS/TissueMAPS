@@ -221,15 +221,14 @@ def main(image, mask, threshold=150, bead_size=2, superpixel_size=4,
             method='linear'
         )
 
+        volume_image = volume_image.astype(image.dtype)
+
         if (close_surface is True):
             import mahotas as mh
             logger.info('morphological closing of cell surface')
             volume_image = mh.close(volume_image,
                                     Bc=mh.disk(close_disc_size))
-
         volume_image[mask == 0] = 0
-
-    volume_image = volume_image.astype(image.dtype)
 
     if plot:
         logger.debug('convert bottom surface plane to image for plotting')

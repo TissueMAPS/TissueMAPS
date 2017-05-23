@@ -34,7 +34,7 @@ input:
       Size of superpixels for searching the 3D position of a bead.
 
   - name: close_surface
-    type: bool
+    type: Boolean
     value: false
     help: >
       Whether the interpolated surface should be morphologically closed.
