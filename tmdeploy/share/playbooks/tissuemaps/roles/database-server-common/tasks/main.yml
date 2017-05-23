@@ -16,13 +16,18 @@
 ---
 - include: install-{{ ansible_os_family }}.yml
 
-- include: create_dirs.yml
+- include: data_dir.yml
+  become: yes
+  become_user: "{{ db_user }}"
 
 - include: create_cluster.yml
 
 - include: configure.yml
+  become: yes
+  become_user: "{{ db_user }}"
 
 - name: Start database cluster
+  become: yes
   become_user: "{{ db_user }}"
   command: '{{ db_executable_directory }}/pg_ctl start -w -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log'
   tags:

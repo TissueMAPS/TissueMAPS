@@ -19,9 +19,9 @@
   file:
     path: "{{ db_data_directory | dirname }}"
     state: directory
-    owner: root
-    group: root
-    mode: 0777
+    # owner: root
+    # group: root
+    # mode: 0777
   tags:
     - database
 
@@ -31,7 +31,7 @@
     state: directory
     recurse: yes
     owner: "{{ db_user }}"
-    group: "{{ db_user }}"
+    group: "{{ db_group }}"
     mode: 0700
   tags:
     - database
@@ -42,18 +42,7 @@
     state: directory
     recurse: yes
     owner: "{{ db_user }}"
-    group: "{{ db_user }}"
-    mode: 0700
-  tags:
-    - database
-
-- name: Create log directory
-  file:
-    path: "{{ db_log_directory }}"
-    state: directory
-    recurse: yes
-    owner: "{{ db_user }}"
-    group: "{{ db_user }}"
+    group: "{{ db_group }}"
     mode: 0700
   tags:
     - database
