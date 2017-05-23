@@ -40,7 +40,7 @@
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
     mode: 0700
   tags:
     - tissuemaps
