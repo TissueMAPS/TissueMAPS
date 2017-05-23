@@ -17,6 +17,7 @@
 ---
 # We need to remove an existing database cluster, otherwise initdb will fail.
 - name: Stop running default database server
+  become: yes
   become_user: "{{ db_user }}"
   command: "{{ db_executable_directory }}/pg_ctl stop -D {{ db_default_cluster_directory }}"
   ignore_errors: yes
@@ -31,6 +32,7 @@
     - database
 
 - name: Stop running database server
+  become: yes
   become_user: "{{ db_user }}"
   command: '{{ db_executable_directory }}/pg_ctl stop -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -o "-p {{ db_port }}" -m smart'
   ignore_errors: yes
@@ -44,7 +46,19 @@
   tags:
     - database
 
+- name: Create log directory
+  file:
+    path: "{{ db_log_directory }}"
+    state: directory
+    recurse: yes
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+    mode: 0700
+  tags:
+    - database
+
 - name: Initialize database cluster
+  become: yes
   become_user: "{{ db_user }}"
   command: "{{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log"
   tags:
@@ -74,7 +88,7 @@
     src: postgresql.service.j2
     dest: /etc/systemd/system/postgresql@{{ db_node }}.service
     owner: "{{ tm_user }}"
-    group: "{{ tm_user }}"
+    group: "{{ tm_group }}"
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
