@@ -1,6 +1,11 @@
 # Ensure correct language settings
 export LANG=en_US.UTF-8
 
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+    . /etc/bashrc
+fi
+
 # Bioformats CLI Tools
 export PATH=/home/{{ tm_user }}/bftools:$PATH
 
