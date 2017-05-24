@@ -134,6 +134,8 @@ def build_inventory_information(setup):
                     inventory[group.name]['hosts'].append(host_name)
                     if group.vars is not None:
                         inventory[group.name]['vars'] = group.vars
+                    if node_type.vars is not None:
+                        inventory[group.name]['vars'] = node_type.vars
 
     return inventory
 
