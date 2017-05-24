@@ -21,6 +21,7 @@
   with_items:
     - cmake
     - wget
+    - ipython
     - git
     - vim
     - unzip

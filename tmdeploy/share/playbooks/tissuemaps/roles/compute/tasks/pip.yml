@@ -15,28 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Upgrade pip
-  pip:
-    name: pip
-    extra_args: "--upgrade"
-    editable: false
+- name: Upgrade pip and setuptools
+  shell: pip install pip setuptools --no-cache-dir --upgrade
+  args:
+    executable: /bin/bash
   tags:
     - tissuemaps
 
-- name: Upgrade setuptools
-  pip:
-    name: setuptools
-    extra_args: "--upgrade"
-    editable: false
-  tags:
-    - tissuemaps
-
-- name: Install iPython
-  pip:
-    name: "{{ item }}"
-    editable: false
-  with_items:
-    - ipython
-    - ipdb
-  tags:
-    - tissuemaps

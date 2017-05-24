@@ -23,9 +23,13 @@
 # cython and numpy are not already installed.
 # Note that these two packages get installed globally!
 - name: Install cython and numpy packages
-  pip:
-    name: "{{ item }}"
-    editable: false
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install {{ item }} --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}"
+    executable: /bin/bash
+  # pip:
+  #   name: "{{ item }}"
+  #   editable: false
   with_items:
     - cython
     - numpy

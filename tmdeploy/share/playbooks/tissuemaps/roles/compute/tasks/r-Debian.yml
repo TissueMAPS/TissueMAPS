@@ -48,10 +48,3 @@
     - r-base-dev
   tags:
     - r
-
-# - name: Install rpy2 Python package
-#   pip:
-#     name: rpy2
-#     editable: false
-#   tags:
-#     - r
