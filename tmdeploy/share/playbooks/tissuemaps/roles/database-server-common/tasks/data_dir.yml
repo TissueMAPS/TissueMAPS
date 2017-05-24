@@ -19,9 +19,9 @@
   file:
     path: "{{ db_data_directory | dirname }}"
     state: directory
-    # owner: root
-    # group: root
-    # mode: 0777
+    owner: root
+    group: root
+    mode: 0777
   tags:
     - database
 
