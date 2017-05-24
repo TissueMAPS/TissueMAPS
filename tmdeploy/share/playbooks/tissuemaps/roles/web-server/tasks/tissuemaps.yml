@@ -48,12 +48,6 @@
     - web-server
     - tissuemaps
 
-- name: Update npm package manager
-  command: npm install -g npm
-  tags:
-    - web-server
-    - tissuemaps
-
 - name: Install node dependencies
   # shell: npm install app --unsafe-perm
   # args:
