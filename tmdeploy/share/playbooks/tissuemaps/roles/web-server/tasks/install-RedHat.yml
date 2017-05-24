@@ -22,9 +22,18 @@
     - web-server
     - nginx
 
+# - name: Download NodeJS
+#   shell: curl --silent --location https://rpm.nodesource.com/setup_6.x | bash -
+#   tags:
+#     - web-server
+#     - tissuemaps
+
 - name: Install yum package for NodeJS and NPM
   yum:
-    name: nodejs
+    name: "{{ item }}"
+  with_items:
+    - nodejs
+    - npm
   tags:
     - web-server
     - tissuemaps
