@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 '''Jterator module for extracting a volume image from a 3D stack'''
-import numpy as np
 import collections
 import logging
+import numpy as np
 from jtmodules import project, detect_blobs
 
 logger = logging.getLogger(__name__)
@@ -44,9 +44,7 @@ def subsample_coordinate_list(points, num):
 
 def plane(x, y, params):
     '''Compute z-coordinate of plane in 3D'''
-    a = params[0]
-    b = params[1]
-    c = params[2]
+    a, b, c = params
     z = (a * x) + (b * y) + c
     return z
 
