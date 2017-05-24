@@ -12,6 +12,14 @@ http {
     # Cut out all the scam
     server {
         listen 80 default_server;
+        listen [::]:80 default_server;
+        server_name "";
+        return 444;
+    }
+
+    server {
+        listen 443 default_server;
+        listen [::]:443 default_server;
         server_name "";
         return 444;
     }

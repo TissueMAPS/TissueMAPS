@@ -37,7 +37,7 @@
     - web-server
     - tissuemaps
 
-- name: Install yum package for SSL
+- name: Install apt package for SSL
   apt:
     name: "{{ item }}"
     state: installed
