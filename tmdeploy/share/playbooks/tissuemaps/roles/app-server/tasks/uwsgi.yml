@@ -14,16 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Install uWSGI package
-  pip:
-    name: uwsgi
-    editable: false
-  tags:
-    - app-server
-    - uwsgi
-
 # When app_host is "unix", app_port is assumed to be the path to the socket file.
-
 - name: Set socket in case of a HTTP socket
   set_fact:
     uwsgi_socket: "{{ app_host }}:{{ app_port }}"
