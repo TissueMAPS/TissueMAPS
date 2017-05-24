@@ -17,14 +17,10 @@
 - include: install-{{ ansible_os_family }}.yml
 
 - include: data_dir.yml
-  become: yes
-  become_user: "{{ db_user }}"
 
 - include: create_cluster.yml
 
 - include: configure.yml
-  become: yes
-  become_user: "{{ db_user }}"
 
 - name: Start database cluster
   become: yes
