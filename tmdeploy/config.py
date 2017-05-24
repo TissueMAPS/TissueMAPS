@@ -410,6 +410,8 @@ class ClusterSection(_SetupSection):
 
 class ClusterNodeTypeSection(_SetupSection):
 
+    _OPTIONAL_ATTRS = {'vars'}
+
     '''Class for the section of the `TissueMAPS` setup description that provides
     information about a particular set of virtual machine instances belonging
     to the same cluster (e.g. master or worker nodes).
@@ -470,6 +472,22 @@ class ClusterNodeTypeSection(_SetupSection):
             self._check_subsection_type(value, 'groups', dict, index=i)
             self._groups.append(AnsibleGroupSection(item))
 
+    @property
+    def vars(self):
+        '''dict: mapping of Ansible variable key-value pairs that should be set
+        for all :attr:`groups <tmdeploy.config.ClusterNodeTypeSection.groups>`
+        of the cluster node type
+        '''
+        return getattr(self, '_vars', None)
+
+    @vars.setter
+    def vars(self, value):
+        if value is None:
+            self._vars = value
+        else:
+            self._check_value_type(value, 'vars', dict)
+            self._vars = value
+
 
 class AnsibleGroupSection(_SetupSection):
 
@@ -499,7 +517,9 @@ class AnsibleGroupSection(_SetupSection):
 
     @property
     def vars(self):
-        '''dict: mapping of Ansible variable key-value pairs'''
+        '''dict: mapping of Ansible variable key-value pairs that should be
+        only set for the group
+    '''
         return getattr(self, '_vars', None)
 
     @vars.setter
@@ -521,7 +541,7 @@ class AnsibleHostVariableSection(_SetupSection):
     _OPTIONAL_ATTRS = {
         'disk_size', 'volume_size', 'volume_mountpoint',
         'assign_public_ip', 'tags', 'ssh_user', 'tm_user', 'tm_group',
-        'db_user', 'db_group'
+        'db_user', 'db_group', 'web_user', 'web_group'
     }
 
     def __init__(self, description):
@@ -531,6 +551,8 @@ class AnsibleHostVariableSection(_SetupSection):
         self._tm_group = None
         self.db_user = 'postgres'
         self._db_group = None
+        self.web_user = 'nginx'
+        self._web_group = None
         super(AnsibleHostVariableSection, self).__init__(description)
 
     @property
@@ -595,7 +617,8 @@ class AnsibleHostVariableSection(_SetupSection):
 
     @property
     def tm_group(self):
-        '''str: TissueMAPS system group (defaults to `tm_user`)
+        '''str: TissueMAPS system group (defaults to
+        :attr:`tm_user <tmdeploy.config.AnsibleHostVariableSection.tm_user>`)
         '''
         if self._tm_group is None:
             self._tm_group = self.tm_user
@@ -619,7 +642,8 @@ class AnsibleHostVariableSection(_SetupSection):
 
     @property
     def db_group(self):
-        '''str: database system group (defaults to `db_user`)
+        '''str: database system group (defaults to
+        :attr:`db_user <tmdeploy.config.AnsibleHostVariableSection.db_user>`)
         '''
         if self._db_group is None:
             self._db_group = self.db_user
@@ -629,6 +653,31 @@ class AnsibleHostVariableSection(_SetupSection):
     def db_group(self, value):
         self._check_value_type(value, 'db_group', str)
         self._db_group = str(value)
+
+    @property
+    def web_user(self):
+        '''str: database system user (default: ``"nginx"``)
+        '''
+        return self._web_user
+
+    @web_user.setter
+    def web_user(self, value):
+        self._check_value_type(value, 'web_user', str)
+        self._web_user = str(value)
+
+    @property
+    def web_group(self):
+        '''str: web system group (defaults to
+        :attr:`web_user <tmdeploy.config.AnsibleHostVariableSection.web_user>`)
+        '''
+        if self._web_group is None:
+            self._web_group = self.web_user
+        return self._web_group
+
+    @web_group.setter
+    def web_group(self, value):
+        self._check_value_type(value, 'web_group', str)
+        self._web_group = str(value)
 
     @property
     def image(self):
