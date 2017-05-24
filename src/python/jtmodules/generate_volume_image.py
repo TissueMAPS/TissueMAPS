@@ -15,7 +15,7 @@
 import collections
 import logging
 import numpy as np
-from jtmodules import project, detect_blobs
+from jtmodules import detect_blobs
 
 logger = logging.getLogger(__name__)
 
@@ -187,10 +187,10 @@ def main(image, mask, threshold=150, bead_size=2, superpixel_size=4,
     )
 
     logger.debug('detect_beads in 2D')
-    mip = project.main(image, 'max')
+    mip = np.max(image, axis=-1)
     try:
         beads = detect_blobs.main(
-            image=mip.projected_image, mask=mask,
+            image=mip, mask=mask,
             threshold=threshold, min_area=bead_size
         )
     except:
@@ -240,7 +240,7 @@ def main(image, mask, threshold=150, bead_size=2, superpixel_size=4,
         from jtlib import plotting
         plots = [
             plotting.create_intensity_image_plot(
-                mip.projected_image, 'ul', clip=True
+                mip, 'ul', clip=True
             ),
             plotting.create_intensity_image_plot(
                 bottom_surface_image, 'll', clip=True
