@@ -30,8 +30,6 @@
 - include: tissuemaps.yml
 
 - include: data_dir.yml
-  become: yes
-  become_user: "{{ tm_user }}"
 
 - include: bioformats.yml
 

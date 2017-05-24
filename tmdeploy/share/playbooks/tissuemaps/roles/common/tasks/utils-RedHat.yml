@@ -22,6 +22,7 @@
     - cmake
     - wget
     - git
+    - ipython
     - vim
     - unzip
     - openssl

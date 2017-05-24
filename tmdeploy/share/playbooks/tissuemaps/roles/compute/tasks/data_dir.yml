@@ -16,13 +16,12 @@
 
 ---
 - name: Create root directory for data files
-  become_user: "{{ tm_user }}"
   file:
     path: "{{ fs_data_directory | dirname }}"
     state: directory
-    # owner: root
-    # group: root
-    # mode: 0777
+    owner: root
+    group: root
+    mode: 0777
   tags:
     - tissuemaps
 
