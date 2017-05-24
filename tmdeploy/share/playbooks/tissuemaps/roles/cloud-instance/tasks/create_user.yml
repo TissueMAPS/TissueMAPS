@@ -15,15 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Add user group
+- name: Add user groups
   become: yes
   group:
     name: "{{ item }}"
   with_items:
     - "{{ tm_group }}"
     - "{{ db_group }}"
+    - "{{ web_group }}"
 
-- name: Add user
+- name: Add users
   become: yes
   user:
     name: "{{ item['user'] }}"
@@ -38,6 +39,20 @@
     - group: "{{ db_group }}"
       user: "{{ db_user }}"
 
+# For security reasons, the web user doesn't get a shell
+- name: Add web user
+  become: yes
+  user:
+    name: "{{ item['user'] }}"
+    shell: /bin/nologin
+    group: "{{ item['group'] }}"
+    append: yes
+    createhome: no
+  when: web_user != tm_user
+  with_items:
+    - group: "{{ web_group }}"
+      user: "{{ web_user }}"
+
 - name: Change permissions for user home directory
   become: yes
   file:
@@ -47,6 +62,7 @@
   with_items:
     - "{{ tm_user }}"
     - "{{ db_user }}"
+    - "{{ web_user }}"
 
 - name: Add tm_user to sudoers
   become: yes
