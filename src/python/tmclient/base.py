@@ -45,12 +45,16 @@ class HttpClient(object):
             password for `user_name` (may alternatively provided via the
             ``tm_pass`` file)
         '''
-        self._base_url = 'http://{host}:{port}'.format(host=host, port=port)
+        if port == 443:
+            self._base_url = 'https://{host}:{port}'.format(host=host, port=port)
+        else:
+            self._base_url = 'http://{host}:{port}'.format(host=host, port=port)
         self._session = requests.Session()
         self._session.get(self._base_url)
         if password is None:
             logger.debug('no password provided')
             password = self._load_credentials(user_name)
+        self._session.headers.update({'Host': host})
         self._login(user_name, password)
 
     def _build_url(self, route, params={}):
