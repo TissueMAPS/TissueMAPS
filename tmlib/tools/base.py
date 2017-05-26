@@ -150,6 +150,7 @@ class Tool(object):
                 names=['mapobject_id', 'tpoint']
             )
 
+        # TODO: This probably creates a copy in memory. Can we avoid this?
         df = pd.DataFrame(values, index=index).astype(float)
         column_map = {i: name for i, name in feature_map.iteritems()}
         df.rename(columns=column_map, inplace=True)
@@ -248,7 +249,7 @@ class Tool(object):
             mapobject_ids = data.index.get_level_values('mapobject_id')
             args = connection.group_ids_per_shard(tm.LabelValues, mapobject_ids)
 
-        def upsert(*args):
+        def upsert(args):
             for host, port, shard_id, row_ids in args:
                 logger.debug('upsert label values of shard %d', shard_id)
                 with tm.utils.ExperimentWorkerConnection(
@@ -276,6 +277,7 @@ class Tool(object):
                                 'mapobject_id': mapobject_id,
                                 'tpoint': tpoint
                             })
+            return []
 
         tm.utils.parallelize_query(upsert, args)
 
