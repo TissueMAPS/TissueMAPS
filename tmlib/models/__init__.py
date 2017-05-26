@@ -146,7 +146,7 @@ from tmlib.models.acquisition import Acquisition, ImageFileMapping
 from tmlib.models.cycle import Cycle
 from tmlib.models.submission import Submission, Task
 from tmlib.models.site import Site
-from tmlib.models.alignment import SiteShift, SiteIntersection
+from tmlib.models.alignment import SiteShift
 from tmlib.models.file import (
     MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile,
     IllumstatsFile

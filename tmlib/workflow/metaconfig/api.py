@@ -318,8 +318,7 @@ class MetadataConfigurator(WorkflowStepAPI):
                         logger.debug('time point #%d', t)
                         cycle = session.get_or_create(
                             tm.Cycle,
-                            index=c_index, tpoint=t_index,
-                            experiment_id=self.experiment_id
+                            index=c_index, experiment_id=self.experiment_id
                         )
 
                         wavelengths = session.query(
@@ -360,5 +359,5 @@ class MetadataConfigurator(WorkflowStepAPI):
 
                         if is_time_series:
                             t_index += 1
-
-                        c_index += 1
+                        else:
+                            c_index += 1

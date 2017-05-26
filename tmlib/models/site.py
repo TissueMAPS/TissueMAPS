@@ -34,8 +34,6 @@ class Site(ExperimentModel):
     ----------
     shifts: [tmlib.models.alignment.SiteShifts]
         shifts belonging to the site
-    intersection: tmlib.models.alignment.SiteIntersection
-        intersection belongings to the site
     channel_image_files: List[tmlib.models.file.ChannelImageFile]
         channel image files belonging to the site
     '''
@@ -58,6 +56,22 @@ class Site(ExperimentModel):
 
     #: bool: whether the site should be omitted from further analysis
     omitted = Column(Boolean, index=True)
+
+    #: number of overhanging pixels at the top, which would need to be cropped
+    #: at the bottom for overlay
+    upper_overhang = Column(Integer)
+
+    #: number of overhanging pixels at the bottom, which would need to be
+    #: cropped at the bottom for overlay
+    lower_overhang = Column(Integer)
+
+    #: number of overhanging pixels at the right side, which would need to
+    #: be cropped at the left side for overlay
+    right_overhang = Column(Integer)
+
+    #: number of overhanging pixels at the left side, which would need to
+    #: be cropped at the right side for overlay
+    left_overhang = Column(Integer)
 
     #: int: ID of parent well
     well_id = Column(
