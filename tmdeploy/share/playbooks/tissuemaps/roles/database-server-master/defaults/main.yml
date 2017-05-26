@@ -14,12 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-pg_shared_buffers: 128MB               # 20-40% of total memory
-pg_effective_cache_size: 4GB           # 50-75% of total memory
-pg_maintenance_work_mem: 64MB          # total memory * 3/(8*autovacuum_max_workers)
-pg_max_connections: 500                # at least: number of nodes x pool size
-pg_max_worker_processes: 4             # number of CPU cores
-pg_max_parallel_workers_per_gather: "{{ pg_max_worker_processes }}"
+# Override these values according to node flavor used for database master server.
+db_master_cores: 1
+db_master_memory: 1000
+
+pg_shared_buffers: "{{ (db_master_memory * 0.35)|int }}MB"
+pg_effective_cache_size: "{{ (db_master_memory * 0.75)|int }}MB"
+pg_max_worker_processes: "{{ db_master_cores * 2 }}"
+pg_max_parallel_workers_per_gather: "{{ db_master_cores }}"
 
 pg_checkpoint_timeout: 30min
 pg_max_wal_size: 30GB

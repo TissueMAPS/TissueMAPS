@@ -17,10 +17,10 @@ transport=local
 # you might need to change this for MacOSX
 #time_cmd=/usr/bin/time
 # max_cores sets a limit on the number of cuncurrently-running jobs
-max_cores=4
-max_cores_per_job=4
+max_cores={{ tm_compute_cores }}
+max_cores_per_job={{ tm_compute_cores }}
 # adjust the following to match the features of your local computer
-max_memory_per_core=4 GB
+max_memory_per_core={{ tm_compute_memory }} MB
 max_walltime=48 hours
 architecture=x64_64
 # When `override` is set to ``yes``, the shellcmd backend will try to
@@ -28,7 +28,7 @@ architecture=x64_64
 # memory of the machine and only use the values found on the
 # configuration file as a fallback. Default for the `override` option
 # is ``no``.
-override = true
+override={{ tm_compute_autodiscover }}
 
 [resource/slurmtmaps]
 enabled={{ cluster_mode|lower }}
@@ -38,8 +38,8 @@ transport=local
 frontend=frontend001
 auth=tmaps
 architecture=x86_64
-max_cores=80
-max_cores_per_job=8
-max_memory_per_core=1 TB
+max_cores={{ tm_compute_cores * tm_compute_nodes }}
+max_cores_per_job={{ tm_compute_cores }}
+max_memory_per_core={{ tm_compute_memory * tm_compute_nodes }} MB
 max_walltime=10 days
 
