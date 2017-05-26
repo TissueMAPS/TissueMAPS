@@ -19,7 +19,6 @@ import random
 import logging
 import inspect
 import collections
-import pandas as pd
 from copy import copy
 from threading import Thread
 from itertools import chain
@@ -35,7 +34,6 @@ from sqlalchemy.event import listens_for
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import NamedTupleCursor
 from cached_property import cached_property
-from threading import Thread
 
 from tmlib.models.base import MainModel, ExperimentModel, FileSystemModel
 from tmlib.models.dialect import *
