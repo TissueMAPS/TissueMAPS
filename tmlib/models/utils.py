@@ -19,8 +19,11 @@ import random
 import logging
 import inspect
 import collections
-import pandas as pd
 from copy import copy
+from threading import Thread
+from itertools import chain
+
+import pandas as pd
 import sqlalchemy
 import sqlalchemy.orm
 import sqlalchemy.pool
@@ -31,7 +34,6 @@ from sqlalchemy.event import listens_for
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import NamedTupleCursor
 from cached_property import cached_property
-from threading import Thread
 
 from tmlib.models.base import MainModel, ExperimentModel, FileSystemModel
 from tmlib.models.dialect import *
@@ -1131,9 +1133,14 @@ def parallelize_query(func, args):
     ----------
     func: function
         a function that establishes a database connection and executes a given
-        SQL query
-    args: list
+        SQL query; function must return a list
+    args: Union[list, generator]
         arguments that should be parsed to the function
+
+    Returns
+    -------
+    list
+        aggregated output of `function` return values
 
     Warning
     -------
@@ -1143,13 +1150,28 @@ def parallelize_query(func, args):
     logger.debug('execute query in %d parallel threads', POOL_SIZE)
     n = len(args) / POOL_SIZE
     arg_batches = create_partitions(args, n)
+
+    output = [None] * len(arg_batches)
+    def wrapper(func, args, index):
+        output[index] = func(args)
+
     threads = []
     for i, batch in enumerate(arg_batches):
         logger.debug('start thread #%d', i)
-        t = Thread(target=func, args=args)
-        t.setDaemon(True)
+        # TODO: use queue or generator?
+        t = Thread(target=wrapper, args=(func, batch, i))
+        # TODO: use Event
         t.start()
         threads.append(t)
 
     for t in threads:
         t.join()
+
+    return list(chain(*output))
+    # return [item for sublist in output for item in sublist]
+
+
+
+
+
+
