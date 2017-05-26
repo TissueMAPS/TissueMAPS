@@ -13,24 +13,25 @@
 # limitations under the License.
 import inspect
 import logging
-import requests
 import sys
 import os
 import cgi
 import re
 import json
-import yaml
-import cv2
 import glob
-import pandas as pd
-from pandas.io.common import EmptyDataError
-import numpy as np
-from prettytable import PrettyTable
 try:
     # NOTE: Python3 no longer has the cStringIO module
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
+
+import requests
+import yaml
+import cv2
+import pandas as pd
+from pandas.io.common import EmptyDataError
+import numpy as np
+from prettytable import PrettyTable
 
 from tmclient.base import HttpClient
 from tmclient.log import configure_logging
@@ -1033,21 +1034,26 @@ class TmClient(HttpClient):
             'and acquisition "%s"',
             self.experiment_name, plate_name, acquisition_name
         )
+        acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
+
+        def upload_file(filepath):
+            logger.info('upload file: %s', os.path.basename(filepath))
+            self._upload_file(acquisition_id, filepath)
+
         directory = os.path.expanduser(directory)
         directory = os.path.expandvars(directory)
         filenames = [
             f for f in os.listdir(directory)
             if not os.path.isdir(f) and not f.startswith('.')
         ]
-        acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
         registered_filenames = self._register_files_for_upload(
             acquisition_id, filenames
         )
         logger.info('registered %d files', len(registered_filenames))
-        for name in filenames:
-            logger.info('upload file: %s', name)
-            filepath = os.path.join(directory, name)
-            self._upload_file(acquisition_id, filepath)
+
+        args = [(os.path.join(directory, name), ) for name in filenames]
+        self._parallelize(upload_file, args)
+
         return registered_filenames
 
     def _register_files_for_upload(self, acquisition_id, filenames):
@@ -1877,54 +1883,49 @@ class TmClient(HttpClient):
         :meth:`tmclient.api.TmClient.download_object_feature_values`
         :meth:`tmclient.api.TmClient.download_object_metadata`
         '''
-        sites = self.get_sites()
 
-        def download_per_site(i, s):
-            logger.info('download feature values at site #%d', i)
+        def download_per_site(site):
+            logger.info(
+                'download feature data at site: '
+                'plate={plate}, well={well}, y={y}, x={x}'.format(
+                    plate=site['plate_name'], well=site['well_name'],
+                    y=site['y'], x=site['x']
+                )
+            )
             res = self._download_object_feature_values(
                 mapobject_type_name,
-                s['plate_name'], s['well_name'], s['y'], s['x']
+                site['plate_name'], site['well_name'], site['y'], site['x']
             )
             filename = self._extract_filename_from_headers(res.headers)
             filepath = os.path.join(directory, filename)
-            chunks = res.iter_content()
-            first_line = next(chunks)
-
-            if i == 0:
-                logger.info('write feature values to file: %s', filepath)
-                with open(filepath, 'wb') as f:
-                    logger.debug('write first line')
-                    f.write(first_line)
-
-            with open(filepath, 'ab') as f:
-                for j, c in enumerate(chunks):
-                    logger.debug('write chunk #%d', j)
+            logger.info('write feature values to file: %s', filepath)
+            with open(filepath, 'wb') as f:
+                for c in res.iter_content():
                     f.write(c)
 
-            logger.info('download metadata at site #%d', i)
+            logger.info(
+                'download feature metadata at site: '
+                'plate={plate}, well={well}, y={y}, x={x}'.format(
+                    plate=site['plate_name'], well=site['well_name'],
+                    y=site['y'], x=site['x']
+                )
+            )
             res = self._download_object_metadata(
                 mapobject_type_name,
-                s['plate_name'], s['well_name'], s['y'], s['x']
+                site['plate_name'], site['well_name'], site['y'], site['x']
             )
             filename = self._extract_filename_from_headers(res.headers)
             filepath = os.path.join(directory, filename)
-            chunks = res.iter_content()
-            first_line = next(chunks)
-
-            if i == 0:
-                logger.info('write metadata to file: %s', filepath)
-                with open(filepath, 'wb') as f:
-                    logger.debug('write first line')
-                    f.write(first_line)
-
-            with open(filepath, 'ab') as f:
-                for j, c in enumerate(chunks):
-                    logger.debug('write chunk #%d', j)
+            logger.info('write metadata to file: %s', filepath)
+            with open(filepath, 'wb') as f:
+                for c in res.iter_content():
                     f.write(c)
 
-        for i, s in enumerate(sites):
-            download_per_site(i, s)
-
+        sites = self.get_sites()
+        args = [(s, ) for s in sites]
+        self._parallelize(download_per_site, args)
+        # TODO: Store site-specific files in temporary directory and afterwards
+        # merge them into a single file in the directory sprecified by the user.
 
     def _download_object_metadata(self, mapobject_type_name, plate_name,
             well_name, well_pos_y, well_pos_x, tpoint=None):

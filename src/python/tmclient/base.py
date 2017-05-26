@@ -12,10 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import yaml
 import logging
-import requests
 from abc import ABCMeta
+from threading import Thread
+from itertools import chain
+
+import yaml
+import requests
 try:
     from urllib import urlencode
 except ImportError:
@@ -45,11 +48,13 @@ class HttpClient(object):
             password for `user_name` (may alternatively provided via the
             ``tm_pass`` file)
         '''
+        self._session = requests.Session()
         if port == 443:
             self._base_url = 'https://{host}:{port}'.format(host=host, port=port)
+            self._adapter = self._session.adapters['https://']
         else:
             self._base_url = 'http://{host}:{port}'.format(host=host, port=port)
-        self._session = requests.Session()
+            self._adapter = self._session.adapters['http://']
         self._session.get(self._base_url)
         if password is None:
             logger.debug('no password provided')
@@ -147,3 +152,26 @@ class HttpClient(object):
         self._session.headers.update(
             {'Authorization': 'JWT %s' % self._access_token}
         )
+
+    def _parallelize(self, func, args):
+        logger.debug('parallelize request')
+        pool_size = self._adapter.poolmanager.connection_pool_kw['maxsize']
+        n = len(args) / int(pool_size / 2)
+        arg_batches = [args[i:i + n] for i in range(0, len(args), n)]
+
+        def wrapper(func, batch):
+            for args in batch:
+                func(*args)
+
+        threads = []
+        for batch in arg_batches:
+            logger.debug('start thread #%d', i)
+            # TODO: use queue or generator?
+            t = Thread(target=wrapper, args=(func, batch))
+            # TODO: use Event
+            t.start()
+            threads.append(t)
+
+        for t in threads:
+            t.join()
+
