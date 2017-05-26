@@ -106,7 +106,7 @@ def label(im, n=8):
 
     Parameters
     ----------
-    im: numpy.ndarray[bool or int]
+    im: numpy.ndarray[numpy.bool]
         binary image that should be labeled
     n: int, optional
         neighbourhood (default: ``8``, choices: ``{4, 8}``)
@@ -118,21 +118,17 @@ def label(im, n=8):
 
     Raises
     ------
-    TypeError
-        when `im` is not binary
     ValueError
         when `n` is not ``4`` or ``8``
 
     '''
-    if not(all([e in {False, True, 0, 1} for e in np.unique(im)])):
-        raise TypeError('Image must be binary.')
     if n not in {4, 8}:
         raise ValueError('Neighbourhood must be 4 or 8.')
     if n == 8:
         strel = np.ones((3, 3), bool)
-        labeled_image, n_objects = mh.label(im, strel)
+        labeled_image, n_objects = mh.label(im>0, strel)
     else:
-        labeled_image, n_objects = mh.label(im)
+        labeled_image, n_objects = mh.label(im>0)
     return labeled_image
 
 

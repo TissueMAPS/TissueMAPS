@@ -593,8 +593,8 @@ class PointPattern(Features):
         '''Extracts the bounding box for a given parent object from
         :attr:`label_image <jtlib.features.PointPattern.label_image>`.
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         parant_object_id: int
             ID of object in
             :attr:`parent_label_image <jtlib.features.PointPattern.parent_label_image>`
