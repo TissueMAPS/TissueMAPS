@@ -19,8 +19,8 @@ citus_version: '6.1'
 
 pg_max_files_per_process: 10000
 pg_max_connections: 1000
+pg_maintenance_work_mem: 64MB  # default
 pg_autovacuum_max_workers: 6
-pg_maintenance_work_mem: 1GB
 
 db_user: postgres
 db_group: "{{ db_user }}"

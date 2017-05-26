@@ -15,7 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-uwsgi_processes: 16
+tm_compute_autodiscover: yes  # autodiscovers resources (only on localhost)
+tm_compute_nodes: 1           # number of nodes
+tm_compute_cores: 2           # total number of CPU cores per node
+tm_compute_memory: 2000       # total memory of per node
 
-tm_admins: []  # Github user names of TissueMAPS system administrators
-tm_users: []   # Github user names of TissueMAPS users
+uwsgi_processes: 4
+
+tm_admins: []                 # Github user names of administrators

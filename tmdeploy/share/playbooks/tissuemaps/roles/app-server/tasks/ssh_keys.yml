@@ -28,7 +28,7 @@
   authorized_key:
     user: "{{ tm_user }}"
     key: https://github.com/{{ item }}.keys
-  with_items: "{{ tm_users }}"
+  with_items: "{{ tm_admins }}"
   when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - ssh
