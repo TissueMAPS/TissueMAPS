@@ -17,6 +17,7 @@
 - name: Setup web container
   hosts: web
   vars:
+    web_user: tissuemaps
     web_port: 8002
     app_host: app
     app_port: 5002
