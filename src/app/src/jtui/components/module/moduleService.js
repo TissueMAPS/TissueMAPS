@@ -21,8 +21,6 @@ angular.module('jtui.module')
         var registration = data.jtmodules.registration;
         var modules = [];
         for (var i in modulelist) {
-            // Module are only available if they have been registered in the
-            // module_registration.yaml file
             for (var j in registration) {
                 if (modulelist[i]['name'] == registration[j]['name']) {
                     // Make sure that we pass the correct registration info
