@@ -82,46 +82,5 @@ setuptools.setup(
     author='Markus D. Herrmann',
     license='GPL-3.0+',
     platforms=['Linux', 'MacOSX'],
-    classifiers=[
-        'Intended Audience :: Developers',
-        'Intended Audience :: Science/Research',
-        'Intended Audience :: System Administrators',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Unix Shell',
-        'Development Status :: 4 - Beta',
-        'Operating System :: POSIX :: Linux',
-        'Operating System :: MacOS',
-        'Environment :: Console',
-        'Topic :: Scientific/Engineering',
-        'Topic :: System :: Clustering',
-        'Topic :: System :: Distributed Computing',
-        'Topic :: System :: Software Distribution',
-        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)'
-    ],
-    scripts=find_scripts(),
-    packages=setuptools.find_packages(),
-    include_package_data=True,
-    install_requires=[
-       'ansible>=2.2.1',
-       'ansible-container>=0.3.0,<=0.4',
-       'apache-libcloud>=1.3.0',
-       'boto3>=1.4.1',
-       'docker-py>=1.10.6',
-       # Ansible container requires a specific version of Docker compose.
-       'docker-compose==1.9.0',
-       'PyYAML>=3.11',
-       'psycopg2>=2.6.1',
-       # Ansible container requires a specific version of requests.
-       'requests==2.11.1',
-       'shade>=1.12.1',
-       'whichcraft>=0.4.0',
-       # OpenStack's `osc-lib` has stricter requirements that are not picked up
-       # because of pip's issue #988.  The only workaround for now is to manually
-       # add the complete requirement expression as a top-level dependency
-       'Babel>=2.3.4,!=2.4.0',
-    ]
 )
 
