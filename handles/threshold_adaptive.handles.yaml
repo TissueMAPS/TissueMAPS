@@ -31,12 +31,16 @@ input:
     - name: min_threshold
       type: Scalar
       value:
-      help: Minimal threshold level.
+      help: >
+        Minimal threshold level. Pixels with values below this level will be
+        assigned to background.
 
     - name: max_threshold
       type: Scalar
       value:
-      help: Maximal threshold level.
+      help: >
+        Maximal threshold level. Pixels with values above this level will
+        be assigned to foreground.
 
     - name: plot
       type: Plot
