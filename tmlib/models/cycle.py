@@ -26,9 +26,8 @@ logger = logging.getLogger(__name__)
 
 class Cycle(ExperimentModel, DateMixIn):
 
-    '''A *cycle* represents an individual image acquisition time point.
-    In case of a time series experiment, *cycles* have different time points,
-    while in case of a "multiplexing" experiment, they have the same time point.
+    '''A *cycle* represents an individual image acquisition time point of a
+    a "multiplexing" experiment.
 
     Attributes
     ----------
@@ -38,10 +37,7 @@ class Cycle(ExperimentModel, DateMixIn):
 
     __tablename__ = 'cycles'
 
-    __table_args__ = (UniqueConstraint('tpoint', 'index'), )
-
-    #: int: zero-based index in the time series
-    tpoint = Column(Integer, index=True)
+    __table_args__ = (UniqueConstraint('index'), )
 
     #: int: zero-based index in the acquisition sequence
     index = Column(Integer, index=True)
@@ -59,21 +55,18 @@ class Cycle(ExperimentModel, DateMixIn):
         backref=backref('cycles', cascade='all, delete-orphan')
     )
 
-    def __init__(self, index, tpoint, experiment_id):
+    def __init__(self, index, experiment_id):
         '''
         Parameters
         ----------
         index: int
             index of the cycle (based on the order of acquisition)
-        tpoint: int
-            time point index
         experiment_id: int
             ID of the parent
             :class:`Experiment <tmlib.models.experiment.Experiment>`
         '''
         self.index = index
-        self.tpoint = tpoint
         self.experiment_id = experiment_id
 
     def __repr__(self):
-        return '<Cycle(id=%r, tpoint=%r)>' % (self.id, self.tpoint)
+        return '<Cycle(id=%r, index=%r)>' % (self.id, self.index)
