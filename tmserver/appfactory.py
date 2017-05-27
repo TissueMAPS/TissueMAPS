@@ -86,7 +86,7 @@ def create_app(verbosity=None):
     log_level = map_logging_verbosity(verbosity)
 
     app = Flask('wsgi')
-    application.config['PROPAGATE_EXCEPTIONS'] = True
+    app.config['PROPAGATE_EXCEPTIONS'] = True
 
     app.logger.handlers = []  # remove standard handlers
     app.logger.setLevel(log_level)
