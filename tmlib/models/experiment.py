@@ -382,7 +382,10 @@ class Experiment(DirectoryModel):
         grid = np.zeros(dimensions, dtype=int)
         plates = sorted(self.plates, key=lambda p: p.id)
         for i, (x, y) in enumerate(cooridinates):
-            grid[y, x] = plates[i].id
+            try:
+                grid[y, x] = plates[i].id
+            except IndexError:
+                continue
         return grid
 
     @autocreate_directory_property

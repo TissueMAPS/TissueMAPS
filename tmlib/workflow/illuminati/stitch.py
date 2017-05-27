@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 
 def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
-    '''Guesses dimensions of a stitched mosaic image.
+    '''Guesses dimensions of a stitched mosaic image. In case `n_sites` is not
+    divisible by two, a larger mosaic will be selected that fits `n_sites`.
 
     Parameters
     ----------
@@ -57,19 +58,17 @@ def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
             '"horizontal".'
         )
 
-    # TODO: this could be further generalized
-    if n_sites > 100:
-        n = 10
-    else:
-        n = 5
-    tmpI = np.arange((int(np.sqrt(n_sites)) - n), (int(np.sqrt(n_sites)) + n))
-    tmpII = np.matrix(tmpI).conj().T * np.matrix(tmpI)
-    (a, b) = np.where(np.triu(tmpII) == n_sites)
-    if len(a) == 0 and len(b) == 0:
+    n = int(np.sqrt(n_sites))
+    v = np.arange(n - n, n + n)
+    m = np.matrix(v).conj().T * np.matrix(v)
+    t =  np.triu(m)
+    d = t - n_sites
+    y, x = np.where(d == np.min(d[d > 0]))
+    if len(y) == 0 and len(x) == 0:
         raise IndexError(
             'Dimensions of stitched overview could not be determined.'
         )
-    stitch_dims = sorted([abs(tmpI[a[0]]), abs(tmpI[b[0]])], reverse=decent)
+    stitch_dims = sorted([abs(v[y[0]]), abs(v[x[0]])], reverse=decent)
     return (stitch_dims[0], stitch_dims[1])
 
 
