@@ -167,26 +167,14 @@ class Site(ExperimentModel):
         '''int: number of pixels along the vertical axis of the site after
         alignment between cycles
         '''
-        if self.intersection is not None:
-            return self.height - (
-                self.intersection.lower_overhang +
-                self.intersection.upper_overhang
-            )
-        else:
-            return self.height
+        return self.height - (self.lower_overhang + self.upper_overhang)
 
     @property
     def aligned_width(self):
         '''int: number of pixels along the horizontal axis of the site after
         alignment between cycles
         '''
-        if self.intersection is not None:
-            return self.width - (
-                self.intersection.left_overhang +
-                self.intersection.right_overhang
-            )
-        else:
-            return self.width
+        return self.width - (self.left_overhang + self.right_overhang)
 
     @property
     def aligned_offset(self):
@@ -194,15 +182,8 @@ class Site(ExperimentModel):
         relative to the layer overview at the maximum zoom level after
         alignment for shifts between cycles
         '''
-        if self.intersection is not None:
-            y_offset, x_offset = self.offset
-            return (
-                y_offset + self.intersection.lower_overhang,
-                x_offset + self.intersection.right_overhang
-            )
-        else:
-            return self.offset
-
+        y_offset, x_offset = self.offset
+        return (y_offset + self.lower_overhang, x_offset + self.right_overhang)
 
     def __repr__(self):
         return (
