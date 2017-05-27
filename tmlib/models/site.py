@@ -111,6 +111,10 @@ class Site(ExperimentModel):
         self.width = width
         self.well_id = well_id
         self.omitted = omitted
+        self.upper_overhang = 0
+        self.lower_overhang = 0
+        self.right_overhang = 0
+        self.left_overhang = 0
 
     @property
     def coordinate(self):
