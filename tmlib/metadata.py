@@ -109,7 +109,7 @@ class SiteImageMetadata(ImageMetadata):
 
     @site_id.setter
     def site_id(self, value):
-        if not isinstance(value, int):
+        if not isinstance(value, long):
             raise TypeError('Argument "site_id" must have type int.')
         self._site_id = value
 
@@ -147,7 +147,7 @@ class SegmentationImageMetadata(SiteImageMetadata):
 
     @mapobject_type_id.setter
     def mapobject_type_id(self, value):
-        if not isinstance(value, int):
+        if not isinstance(value, long):
             raise TypeError('Argument "mapobject_type_id" must have type int.')
         self._mapobject_type_id = value
 
@@ -207,7 +207,7 @@ class ChannelImageMetadata(SiteImageMetadata):
 
     @channel_id.setter
     def channel_id(self, value):
-        if not isinstance(value, int):
+        if not isinstance(value, long):
             raise TypeError('Argument "channel_id" must have type int.')
         self._channel_id = value
 
@@ -220,7 +220,7 @@ class ChannelImageMetadata(SiteImageMetadata):
 
     @cycle_id.setter
     def cycle_id(self, value):
-        if not isinstance(value, int):
+        if not isinstance(value, long):
             raise TypeError('Argument "cycle_id" must have type int.')
         self._cycle_id = value
 
