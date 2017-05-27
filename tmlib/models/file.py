@@ -306,17 +306,16 @@ class ChannelImageFile(FileModel, DateMixIn):
         )
         with DatasetReader(self.location) as f:
             array = f.read('array')
-        if self.site.intersection is not None:
-            metadata.upper_overhang = self.site.upper_overhang
-            metadata.lower_overhang = self.site.lower_overhang
-            metadata.right_overhang = self.site.right_overhang
-            metadata.left_overhang = self.site.left_overhang
-            if self.site.shifts:
-                shift = [
-                    s for s in self.site.shifts if s.cycle_id == self.cycle_id
-                ][0]
-                metadata.x_shift = shift.x
-                metadata.y_shift = shift.y
+        metadata.upper_overhang = self.site.upper_overhang
+        metadata.lower_overhang = self.site.lower_overhang
+        metadata.right_overhang = self.site.right_overhang
+        metadata.left_overhang = self.site.left_overhang
+        if self.site.shifts:
+            shift = [
+                s for s in self.site.shifts if s.cycle_id == self.cycle_id
+            ][0]
+            metadata.x_shift = shift.x
+            metadata.y_shift = shift.y
         return ChannelImage(array, metadata)
 
     @assert_type(image='tmlib.image.ChannelImage')
