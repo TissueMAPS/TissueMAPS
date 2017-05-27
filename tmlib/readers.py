@@ -621,7 +621,7 @@ class BFImageReader(object):
         plane: int, optional
             zero-based plane index within a series
             (only relevant if *Image* elements within the file contain 
-             more than one *Plane* element)
+            more than one *Plane* element)
 
         Returns
         -------
