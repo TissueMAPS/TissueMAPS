@@ -133,7 +133,7 @@ def _set_search_path(connection, schema_name):
         cursor.close()
 
 
-def _customize_distributed_tables(connection, schema_name):
+def _customize_distribution_method(connection, schema_name):
     cursor = connection.connection.cursor()
     tables_to_distribute_by_range = {
         'mapobjects', 'mapobject_segmentations',
@@ -705,7 +705,7 @@ class ExperimentSession(_Session):
         exists = _create_schema_if_not_exists(connection, self._schema)
         if not exists:
             _create_experiment_db_tables(connection, self._schema)
-            _customize_distributed_tables(connection, self._schema)
+            _customize_distribution_method(connection, self._schema)
         _set_search_path(connection, self._schema)
         self._session_factory.configure(bind=connection)
         self._session = _SQLAlchemy_Session(
@@ -815,7 +815,7 @@ class ExperimentConnection(_Connection):
         exists = _create_schema_if_not_exists(self._connection, self._schema)
         if not exists:
             _create_experiment_db_tables(self._connection, self._schema)
-            _customize_distributed_tables(connection, self._schema)
+            _customize_distribution_method(connection, self._schema)
         _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
