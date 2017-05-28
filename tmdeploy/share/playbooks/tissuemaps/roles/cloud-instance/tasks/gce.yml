@@ -42,7 +42,7 @@
     state: present
     name: "{{ network }}"
     fwname: web
-    allowed: tcp:22,80,443,8002,8649;icmp;udp:8649
+    allowed: tcp:22,80,443,8002,8649;icmp
     ipv4_range: 0.0.0.0/0
     target_tags:
       - web
@@ -59,7 +59,7 @@
     state: present
     name: "{{ network }}"
     fwname: compute-storage
-    allowed: tcp:1-65535;icmp;udp:8649
+    allowed: tcp:1-65535;icmp;udp:1-65535
     src_tags:
       - web
       - compute

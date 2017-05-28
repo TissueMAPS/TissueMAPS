@@ -17,6 +17,14 @@
 ---
 - include: "{{provider}}.yml"
 
+- name: Refresh dynamic inventory
+  run_once: yes
+  command: tm_inventory --refresh-cache
+
+- name: Refresh in-memory inventory
+  run_once: yes
+  meta: refresh_inventory
+
 - pause:
     minutes: 1
     prompt: "Wait 1 minute for instance."
