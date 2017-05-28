@@ -17,8 +17,6 @@
 ---
 - name: Configure web host as database client
   hosts: tissuemaps_server
-  become: yes
-  become_user: "{{ tm_user }}"
   vars:
     db_host_master: "{{ hostvars[groups['tissuemaps_db_master'][0]].ansible_host }}"
     db_hosts_workers: "{{ groups['tissuemaps_db_worker']|map('extract', hostvars, ['ansible_host'])|list }}"

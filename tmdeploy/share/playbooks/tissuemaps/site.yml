@@ -20,5 +20,5 @@
 - include: compute.yml
 - include: server.yml
 - include: database.yml
-- include: postconfig.yml
 - include: init.yml
+- include: postconfig.yml
