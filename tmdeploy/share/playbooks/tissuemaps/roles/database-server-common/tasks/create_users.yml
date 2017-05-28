@@ -35,7 +35,7 @@
   tags:
     - database
 
-- name: Grant database user all permissions
+- name: Grant database user all permissions for tissuemaps database
   postgresql_privs:
     db: postgres
     type: database
@@ -43,6 +43,34 @@
     port: "{{ db_port }}"
     role: "{{ db_role }}"
     privs: ALL
+    login_user: "{{ db_user }}"
+    login_host: 127.0.0.1
+  tags:
+    - database
+
+- name: Grant database user permissions to select from citus metadata tables
+  postgresql_privs:
+    db: tissuemaps
+    type: table
+    schema: pg_catalog
+    objs: pg_dist_partition,pg_dist_shard,pg_dist_shard_placement
+    port: "{{ db_port }}"
+    role: "{{ db_role }}"
+    privs: SELECT
+    login_user: "{{ db_user }}"
+    login_host: 127.0.0.1
+  tags:
+    - database
+
+- name: Grant database user permissions to update pg_dist_partition metadata table
+  postgresql_privs:
+    db: tissuemaps
+    type: table
+    schema: pg_catalog
+    objs: pg_dist_partition,pg_dist_shard
+    port: "{{ db_port }}"
+    role: "{{ db_role }}"
+    privs: UPDATE
     login_user: "{{ db_user }}"
     login_host: 127.0.0.1
   tags:
