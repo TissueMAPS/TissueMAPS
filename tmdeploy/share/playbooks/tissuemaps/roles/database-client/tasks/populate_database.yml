@@ -15,14 +15,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Create database tables
-  shell: ". {{ tm_home }}/.bash_profile && tm_create_tables"
+  become: yes
+  become_user: "{{ tm_user }}"
+  command: "{{ tm_home }}/.local/bin/tm_create_tables"
   tags:
     - database
     - tissuemaps
 
 - name: Create default user
-  shell: ". {{ tm_home }}/.bash_profile && tm_add user --name devuser --password {{ tm_devuser_password | string | quote }} --email devuser@tissuemaps.org"
+  become: yes
+  become_user: "{{ tm_user }}"
+  command: "{{ tm_home }}/.local/bin/tm_add user --name item['name'] --password {{ item['password'] | string | quote }} --email item['email']"
+  with_items: "{{ tm_users }}"
   tags:
     - database
     - tissuemaps
-  when: tm_devuser_password is defined
