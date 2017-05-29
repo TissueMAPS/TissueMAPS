@@ -15,10 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- debug: msg={{ storage_directory }}
-
-- debug: msg={{ fs_data_directory }}
-
 - name: Ensure Ubuntu distribution in case of Debian OS family
   fail:
     msg: Requires Ubuntu distribution!
