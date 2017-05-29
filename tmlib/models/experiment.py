@@ -161,7 +161,7 @@ class ExperimentReference(MainModel, DateMixIn):
         else:
             session = Session.object_session(self)
             shares = session.query(ExperimentShare.user_id).\
-                filter_by(id=self.id).\
+                filter_by(experiment_id=self.id).\
                 all()
             if permission == 'read':
                 return user_id in [s.user_id for s in shares]
