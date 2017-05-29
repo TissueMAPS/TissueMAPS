@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+
 - name: Create root directory for data files
   file:
     path: "{{ fs_data_directory | dirname }}"

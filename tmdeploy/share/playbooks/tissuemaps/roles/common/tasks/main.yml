@@ -15,6 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+- debug: msg={{ storage_directory }}
+
+- debug: msg={{ fs_data_directory }}
+
 - name: Ensure Ubuntu distribution in case of Debian OS family
   fail:
     msg: Requires Ubuntu distribution!
@@ -48,3 +52,16 @@
 - include: utils-{{ ansible_os_family }}.yml
 
 - include: ssh.yml
+
+# - name: Clone su-exec repository
+#   git:
+#     repo: https://github.com/ncopa/su-exec.git
+#     dest: /usr/local/lib/su-exec
+#     version: v0.2
+#     force: yes
+
+# - name: Install su-exec
+#   # TODO
+#   command: cc
+#   args:
+#     chdir: /usr/local/lib/su-exec

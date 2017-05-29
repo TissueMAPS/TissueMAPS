@@ -28,8 +28,11 @@
 - include: java-{{ ansible_os_family }}.yml
 
 - include: tissuemaps.yml
+  when: "{{ 'slurm_master' in group_names or 'slurm_worker' not in groups }}"
 
 - include: data_dir.yml
+  when: "{{ 'slurm_master' in group_names or 'slurm_worker' not in groups }}"
 
 - include: bioformats.yml
+  when: "{{ 'slurm_master' in group_names or 'slurm_worker' not in groups }}"
 

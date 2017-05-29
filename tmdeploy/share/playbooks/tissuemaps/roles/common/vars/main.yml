@@ -17,6 +17,4 @@
 ---
 tm_home: /home/{{ tm_user }}
 tm_config_file: "{{ tm_home }}/.tmaps/tissuemaps.cfg"
-fs_data_directory: "{{ volume_mountpoint }}/filesystem"
-db_data_directory: "{{ volume_mountpoint }}/database"
-db_log_directory: /var/log/postgresql
+fs_data_directory: "{{ storage_directory }}/filesystem"
