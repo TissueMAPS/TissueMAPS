@@ -6,9 +6,6 @@ if [ -f /etc/bashrc ]; then
     . /etc/bashrc
 fi
 
-# Bioformats CLI Tools
-export PATH=/home/{{ tm_user }}/bftools:$PATH
-
 # Python
 export PATH=/home/{{ tm_user }}/.local/bin:$PATH
 export PYTHONPATH=/home/{{ tm_user }}/.local/lib/python2.7/site-packages:$PYTHONPATH
