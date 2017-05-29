@@ -3,6 +3,7 @@
 ''' distribute- and pip-enabled setup.py '''
 from __future__ import print_function
 import os
+from os.path import abspath, dirname, join, splitext
 import re
 import sys
 import glob
@@ -52,13 +53,11 @@ import setuptools
 
 def find_scripts():
     return [s for s in setuptools.findall('bin/')
-            if os.path.splitext(s)[1] != '.pyc']
+            if splitext(s)[1] != '.pyc']
 
 def get_version():
-    src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'python'
-    )
-    sys.path = [src_path] + sys.path
+    src_python_path = join(abspath(dirname(__file__)), 'src', 'python')
+    sys.path.insert(0, src_python_path)
     import jtlib
     return jtlib.__version__
 
@@ -82,7 +81,7 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=[],
-    packages=setuptools.find_packages(os.path.join('src', 'python')),
+    packages=setuptools.find_packages('src/python'),
     package_dir={'': 'src/python'},
     include_package_data=True,
     install_requires=[
