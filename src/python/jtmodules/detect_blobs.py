@@ -62,8 +62,8 @@ def extract_blobs_in_mask(
     blobs[mask == 0] = 0
     mh.labeled.relabel(blobs, inplace=True)
 
-    ret = collections.namedtuple('blobs', ['detection', 'centroids', 'blobs'])
-    return ret(detection, centroids, blobs)
+    ret = collections.namedtuple('blobs', ['centroids', 'blobs'])
+    return ret(centroids, blobs)
 
 
 def main(image, mask, threshold=5, min_area=5, plot=False):
@@ -103,7 +103,7 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
 
     n = np.max(blobs.blobs)
 
-    logger.info('%d blobs detected', len(blobs.detection))
+    logger.info('%d blobs detected', n)
 
     if plot:
         logger.info('create plot')
