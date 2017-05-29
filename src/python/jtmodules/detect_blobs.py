@@ -17,53 +17,13 @@ import numpy as np
 import mahotas as mh
 import collections
 import logging
+from jtlib.segmentation import extract_blobs_in_mask
 
 VERSION = '0.4.0'
 
 logger = logging.getLogger(__name__)
 
-sep.set_extract_pixstack(10**7)
-
 Output = collections.namedtuple('Output', ['centroids', 'blobs', 'figure'])
-
-
-def extract_blobs_in_mask(
-    image, mask, threshold, min_area, segmentation_map,
-        deblend_nthresh, deblend_cont, filter_kernel, clean):
-    '''Detects blobs in `image` using an implementation of
-    `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
-
-    References
-    ----------
-    .. [1] Bertin, E. & Arnouts, S. 1996: SExtractor: Software for source
-    extraction, Astronomy & Astrophysics Supplement 317, 393
-    '''
-    detection, blobs = sep.extract(
-        image.astype('float'), threshold, mask=np.invert(mask > 0),
-        minarea=min_area, segmentation_map=segmentation_map,
-        deblend_nthresh=deblend_nthresh, deblend_cont=deblend_cont,
-        filter_kernel=filter_kernel, clean=clean
-    )
-
-    n = len(detection)
-
-    centroids = np.zeros(image.shape, dtype=np.int32)
-    y = detection['y'].astype(int)
-    x = detection['x'].astype(int)
-    # WTF? In rare cases object coorindates lie outside of the image.
-    y[y > image.shape[0]] = image.shape[0]
-    x[x > image.shape[1]] = image.shape[1]
-    centroids[y, x] = np.arange(1, n + 1)
-
-    # Despite masking some objects are detected outside regions of interest.
-    # Let's make absolutely that no object lies outside.
-    centroids[mask == 0] = 0
-    mh.labeled.relabel(centroids, inplace=True)
-    blobs[mask == 0] = 0
-    mh.labeled.relabel(blobs, inplace=True)
-
-    ret = collections.namedtuple('blobs', ['centroids', 'blobs'])
-    return ret(centroids, blobs)
 
 
 def main(image, mask, threshold=5, min_area=5, plot=False):
