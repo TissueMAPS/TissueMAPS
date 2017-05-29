@@ -34,4 +34,5 @@
     - zlib1g-dev
     - cifs-utils
     - parallel
+    - collectl
   when: ansible_env.ANSIBLE_CONTAINER is undefined

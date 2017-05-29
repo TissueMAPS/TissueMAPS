@@ -33,6 +33,7 @@
     name: "{{ item }}"
   with_items:
     - cifs-utils
+    - collectl
   when: ansible_env.ANSIBLE_CONTAINER is undefined
 
 
