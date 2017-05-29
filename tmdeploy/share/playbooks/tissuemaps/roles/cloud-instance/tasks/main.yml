@@ -21,9 +21,8 @@
   run_once: yes
   command: tm_inventory --refresh-cache
 
-- name: Refresh in-memory inventory
+- meta: refresh_inventory
   run_once: yes
-  meta: refresh_inventory
 
 - pause:
     minutes: 1
