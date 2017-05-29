@@ -13,9 +13,9 @@
 # limitations under the License.
 '''Jterator module for making a projection along the final dimension of the
  array'''
-import numpy as np
 import collections
 import logging
+import numpy as np
 
 VERSION = '0.1.0'
 

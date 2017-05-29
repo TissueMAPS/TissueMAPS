@@ -15,7 +15,7 @@
 import collections
 import logging
 import numpy as np
-from jtmodules import detect_blobs
+from jtlib.segmentation import extract_blobs_in_mask
 
 logger = logging.getLogger(__name__)
 
@@ -189,9 +189,10 @@ def main(image, mask, threshold=150, bead_size=2, superpixel_size=4,
     logger.debug('detect_beads in 2D')
     mip = np.max(image, axis=-1)
     try:
-        beads = detect_blobs.main(
-            image=mip, mask=mask,
-            threshold=threshold, min_area=bead_size
+        beads = extract_blobs_in_mask(
+            image=mip, mask=mask, threshold=threshold, min_area=bead_size,
+            segmentation_map=True, deblend_nthresh=500, deblend_cont=0,
+            filter_kernel=None, clean=False
         )
     except:
         logger.warn('detect_blobs failed, returning empty volume image')
