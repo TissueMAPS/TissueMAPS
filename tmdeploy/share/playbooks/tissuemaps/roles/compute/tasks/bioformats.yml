@@ -26,7 +26,7 @@
 - name: Unpack bftools
   unarchive:
     src: /usr/local/share/bftools.zip
-    dest: /usr/local/bin
+    dest: /usr/local/share
     copy: no
   tags:
     - bioformats
@@ -35,5 +35,17 @@
   file:
     path: /usr/local/share/bftools.zip
     state: absent
+  tags:
+    - bioformats
+
+- name: Install selected bftools
+  file:
+    src: /usr/local/share/bftools/{{ item }}
+    dest: /usr/local/bin/showinf
+    state: link
+  with_items:
+    - bfconvert
+    - showinf
+    - mkfake
   tags:
     - bioformats
