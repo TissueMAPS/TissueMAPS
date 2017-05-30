@@ -15,18 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install generally required apt packages
-  apt:
-    name: "{{ item }}"
-  with_items:
-    - cmake
-    - wget
-    - ipython
-    - git
-    - vim
-    - unzip
-    - openssl
-
 - name: Install useful apt packages
   apt:
     name: "{{ item }}"
@@ -34,5 +22,6 @@
     - zlib1g-dev
     - cifs-utils
     - parallel
-    - collectl
-  when: ansible_env.ANSIBLE_CONTAINER is undefined
+    - ipython
+    - vim
+    - unzip
