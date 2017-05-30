@@ -17,6 +17,7 @@ override={{ tm_compute_autodiscover }}
 [resource/cluster]
 enabled={{ cluster_mode|lower }}
 type=slurm
+frontend={{ ansible_hostname }}
 transport=local
 auth=noauth
 architecture=x86_64
