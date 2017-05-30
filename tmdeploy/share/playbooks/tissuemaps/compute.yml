@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 # Cooks images used to launch VMs of frontend and compute nodes.
-- name: Install TissueMAPS python packages
+- name: Deploy TissueMAPS compute components
   hosts: tissuemaps_compute
   roles:
     - compute
