@@ -24,5 +24,6 @@
     - vim
     - unzip
     - bash-completion
+    - collectl
 
 
