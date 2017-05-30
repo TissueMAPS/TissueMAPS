@@ -12,6 +12,54 @@ architecture:
 
   clusters:
 
+    - name: slurm
+      node_types:
+        - name: frontend
+          count: 1
+          groups:
+            - name: tissuemaps_server
+              vars:
+                cluster_mode: yes
+                tm_compute_cores: 32
+                tm_compute_memory: 128000
+                tm_version: devel
+                storage_directory: /glusterfs
+            - name: slurm_master
+              vars:
+                multiuser_cluster: no
+                slurm_cluster_users:
+                  - tissuemaps
+            - name: glusterfs_client
+            - name: ganglia_monitor
+          instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            assign_public_ip: yes
+            flavor: 4cpu-16ram-hpc
+            tags:
+              - web
+              - compute
+
+        - name: worker
+          count: 8
+          groups:
+            - name: tissuemaps_compute
+              vars:
+                tm_version: devel
+                storage_directory: /glusterfs
+            - name: slurm_worker
+              vars:
+                multiuser_cluster: no
+            - name: glusterfs_client
+            - name: ganglia_monitor
+          instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            assign_public_ip: no
+            flavor: 4cpu-16ram-hpc
+            tags:
+              - compute
+
     - name: postgresql
       node_types:
         - name: master
@@ -19,79 +67,51 @@ architecture:
           groups:
             - name: tissuemaps_db_master
               vars:
-                pg_max_worker_processes: 16
-                pg_shared_buffer: 20GB
-                pg_effective_cache_size: 40GB
+                db_master_cores: 4
+                db_master_memory: 16000
             - name: ganglia_monitor
           instance:
-            volume_size: 7000
-            image: Ubuntu Server 14.04.04 LTS (2016-05-19)
-            flavor: 16cpu-64ram-hpc
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            assign_public_ip: no
+            flavor: 4cpu-16ram-hpc
+            volume_size: 1000
             tags:
               - storage
+
         - name: worker
-          count: 5
+          count: 2
           groups:
             - name: tissuemaps_db_worker
               vars:
-                pg_max_worker_processes: 4
-                pg_shared_buffer: 5GB
-                pg_effective_cache_size: 10GB
+                db_worker_cores: 4
+                db_worker_memory: 16000
             - name: ganglia_monitor
           instance:
-            volume_size: 7000
-            image: Ubuntu Server 14.04.04 LTS (2016-05-19)
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            assign_public_ip: no
             flavor: 4cpu-16ram-hpc
+            volume_size: 10000
             tags:
               - storage
 
     - name: glusterfs
       node_types:
         - name: server
-          count: 5
+          count: 2
           groups:
             - name: glusterfs_server
             - name: ganglia_monitor
           instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            assign_public_ip: no
+            flavor: 4cpu-16ram-hpc
+            volume_mountpoint: /srv/glusterfs
             volume_size: 10000
-            volume_mountpoint: /srv
-            image: Ubuntu Server 14.04.04 LTS (2016-05-19)
-            flavor: 2cpu-8ram-hpc
             tags:
               - storage
-
-    - name: slurm
-      node_types:
-        - name: master
-          count: 1
-          groups:
-            - name: tissuemaps_server
-              vars:
-                tm_data_directory: /glusterfs/data
-                tm_log_directory: /glusterfs/log
-            - name: slurm_master
-            - name: glusterfs_client
-            - name: ganglia_monitor
-          instance:
-            image: Matlab-R2016b - ubuntu 16.04.1 (2016-11-02)
-            flavor: 16cpu-64ram-hpc
-            tags:
-              - web
-              - compute
-        - name: worker
-          count: 50
-          groups:
-            - name: tissuemaps_compute
-              vars:
-                tm_data_directory: /glusterfs/data
-            - name: slurm_worker
-            - name: glusterfs_client
-            - name: ganglia_monitor
-          instance:
-            image: Matlab-R2016b - ubuntu 16.04.1 (2016-11-02)
-            flavor: 4cpu-16ram-hpc
-            tags:
-              - compute
 
     - name: ganglia
       node_types:
@@ -99,9 +119,10 @@ architecture:
           count: 1
           groups:
             - name: ganglia_master
-            - name: ganglia_monitor
           instance:
-            image: Ubuntu Server 14.04.04 LTS (2016-05-19)
-            flavor: 1cpu-4ram-hpc
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            assign_public_ip: yes
+            flavor: 2cpu-2ram-server
             tags:
               - web
