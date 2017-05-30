@@ -15,25 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install generally required yum packages
-  yum:
-    name: "{{ item }}"
-  with_items:
-    - cmake
-    - wget
-    - git
-    - ipython
-    - vim
-    - unzip
-    - openssl
-    - bash-completion
-
 - name: Install useful yum packages
   yum:
     name: "{{ item }}"
   with_items:
     - cifs-utils
-    - collectl
-  when: ansible_env.ANSIBLE_CONTAINER is undefined
+    - ipython
+    - vim
+    - unzip
+    - bash-completion
 
 

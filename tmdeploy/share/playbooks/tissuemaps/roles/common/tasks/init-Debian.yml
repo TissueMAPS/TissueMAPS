@@ -29,3 +29,9 @@
     state: installed
   with_items:
     - build-essential
+    - cmake
+    - wget
+    - git
+    - openssl
+    - collectl
+
