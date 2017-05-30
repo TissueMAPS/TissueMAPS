@@ -173,7 +173,7 @@ def _run_vm_commands(commands):
 def deploy_vm(args):
     variables = dict()
     commands = list()
-    commands.append(['tm_inventory', '--refresh'])
+    commands.append(['tm_inventory', '--refresh-cache'])
 
     # Run playbooks implemented in elasticluster, but only in case groups
     # are provided that are not supported by tmdeploy.
@@ -207,7 +207,7 @@ def launch_vm(args):
     logger.info('launch virtual machines')
     variables = {'instance_state': 'present'}
     commands = list()
-    commands.append(['tm_inventory', '--refresh'])
+    commands.append(['tm_inventory', '--refresh-cache'])
     tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
     playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
@@ -219,7 +219,7 @@ def terminate_vm(args):
     logger.info('terminate virtual machines')
     variables = {'instance_state': 'absent'}
     commands = list()
-    commands.append(['tm_inventory', '--refresh'])
+    commands.append(['tm_inventory', '--refresh-cache'])
     tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
     playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
