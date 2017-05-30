@@ -33,5 +33,4 @@
     - wget
     - git
     - openssl
-    - collectl
 
