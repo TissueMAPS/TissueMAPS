@@ -134,8 +134,8 @@ def get_channel_image_file(experiment_id, channel_id):
     f = StringIO()
     f.write(pixels)
     f.seek(0)
-    filename = '%s_%s_%s_x%.3d_y%.3d_z%.3d_t%.3d_%s.png' % (
-        experiment_name, plate_name, well_name, x, y, zplane, tpoint,
+    filename = '%s_%s_%s_y%.3d_x%.3d_z%.3d_t%.3d_%s.png' % (
+        experiment_name, plate_name, well_name, y, x, zplane, tpoint,
         channel_name
     )
     return send_file(
