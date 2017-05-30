@@ -1,5 +1,5 @@
 ---
-version: 0.4.0
+version: 0.5.0
 
 input:
 
@@ -15,15 +15,20 @@ input:
 
     - name: threshold
       type: Scalar
-      value: 5
+      value: 1
       help: >
           Factor by which pixel values in "image" must be above background
-          to be considered part of a blob.
+          in the enhanced image to be considered part of a blob.
 
     - name: min_area
       type: Scalar
       value: 5
-      help: Mininum size of an blob in pixels.
+      help: Mininum size of a blob in pixels.
+
+    - name: mean_area
+      type: Scalar
+      value: 5
+      help: Estimated avarage size of a blob in pixels.
 
     - name: plot
       type: Plot

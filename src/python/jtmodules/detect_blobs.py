@@ -19,16 +19,22 @@ import collections
 import logging
 from jtlib.segmentation import detect_blobs
 
-VERSION = '0.4.0'
+from jtlib.filter import log_2d
+
+VERSION = '0.5.0'
 
 logger = logging.getLogger(__name__)
 
 Output = collections.namedtuple('Output', ['centroids', 'blobs', 'figure'])
 
 
-def main(image, mask, threshold=5, min_area=5, plot=False):
+def main(image, mask, threshold=1, min_area=5, mean_area=5, plot=False):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
+    The `image` is first convolved with a Laplacian of Gaussian filter of size
+    `mean_area` to enhance blob-like structures. The enhanced image is
+    then thresholded at `threshold` level and connected pixel components are
+    subsequently deplended.
 
     Parameters
     ----------
@@ -38,10 +44,12 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
         binary or labeled image that masks pixel regions in which blobs
         should be detected
     threshold: int, optional
-        factor by which pixel values must be above background
-        to be considered part of a blob (default: ``5``)
+        factor by which pixel values in the convolved image must be above
+        background to be considered part of a blob (default: ``1``)
     min_area: int, optional
-        minimal size of a blob (default: ``5``)
+        minimal size a blob is allowed to have (default: ``5``)
+    mean_area: int, optional
+        estimated average size of a blob (default: ``5``)
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -86,3 +94,4 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
         figure = str()
 
     return Output(centroids, blobs, figure)
+
