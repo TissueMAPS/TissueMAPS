@@ -16,18 +16,42 @@
 
 ---
 # We need to remove an existing database cluster, otherwise initdb will fail.
+- name: Check if default data directory exists
+  stat:
+    path: "{{ db_default_cluster_data_directory }}"
+  register: stat_default_db_data_directory
+  tags:
+    - database
+
 - name: Stop running default database server
   become: yes
   become_user: "{{ db_user }}"
-  command: "{{ db_executable_directory }}/pg_ctl stop -D {{ db_default_cluster_directory }}"
-  ignore_errors: yes
+  command: "{{ db_executable_directory }}/pg_ctl stop -D {{ db_default_cluster_data_directory }}"
+  when:
+    - stat_default_db_data_directory.stat.exists
   tags:
     - database
 
 - name: Remove existing default data directory
   file:
-    path: "{{ db_default_cluster_directory }}"
+    path: "{{ db_default_cluster_data_directory }}"
     state: absent
+  when:
+    - stat_default_db_data_directory.stat.exists
+  tags:
+    - database
+
+- name: Check if data directory already exists
+  stat:
+    path: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}"
+  register: stat_db_data_directory
+  tags:
+    - database
+
+- name: Check if database is running
+  stat:
+    path: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}/postmaster.pid"
+  register: stat_db_pid
   tags:
     - database
 
@@ -35,14 +59,9 @@
   become: yes
   become_user: "{{ db_user }}"
   command: '{{ db_executable_directory }}/pg_ctl stop -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -o "-p {{ db_port }}" -m smart'
-  ignore_errors: yes
-  tags:
-    - database
-
-- name: Remove existing data directory
-  file:
-    path: "{{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}"
-    state: absent
+  when:
+    - stat_db_data_directory.stat.exists
+    - stat_db_pid.stat.exists
   tags:
     - database
 
@@ -61,6 +80,8 @@
   become: yes
   become_user: "{{ db_user }}"
   command: "{{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log"
+  when:
+    - not stat_db_data_directory.stat.exists
   tags:
     - database
 

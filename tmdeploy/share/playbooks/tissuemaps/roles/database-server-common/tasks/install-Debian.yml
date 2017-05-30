@@ -70,7 +70,7 @@
 
 - name: Set directory for default PostgreSQL cluster
   set_fact:
-    db_default_cluster_directory: /var/lib/postgresql/{{ postgresql_version }}/main
+    db_default_cluster_data_directory: /var/lib/postgresql/{{ postgresql_version }}/main
   tags:
     - database
 
