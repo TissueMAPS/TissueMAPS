@@ -561,7 +561,7 @@ def get_segmentations(experiment_id, mapobject_type_id):
             width = site.width
 
     img = SegmentationImage.create_from_polygons(
-        polygons[0][0], y_offset, x_offset, (height, width)
+        polygons, y_offset, x_offset, (height, width)
     )
     # TODO: apply gzip compression filter
     return jsonify(data=img.array.tolist())
