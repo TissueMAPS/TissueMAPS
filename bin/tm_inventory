@@ -18,8 +18,7 @@ from tmdeploy.errors import (
     SetupDescriptionError, SetupEnvironmentError
 )
 from tmdeploy.inventory import (
-    CONFIG_DIR, GROUP_VARS_DIR, HOST_VARS_DIR,
-    build_inventory_information, load_inventory, save_inventory
+    CONFIG_DIR, GROUP_VARS_DIR, HOST_VARS_DIR, build_inventory
 )
 
 logger = logging.getLogger(os.path.basename(__file__))
@@ -175,34 +174,22 @@ def get_host_ip(provider, region, network, host_name, host_vars):
     return str(ip)
 
 
-def update_static_inventory(inventory_info, setup):
+def update_inventory(inventory, setup):
     # Create the main ansible inventory file
-    persistent_inventory = load_inventory()
-    for group, group_content in inventory_info.items():
-        if group == '_meta':
+    for group, group_content in inventory.items():
+        if group in {'_meta', 'all'}:
             continue
 
-        if group == 'all':
-            continue
-
-        logger.info('update static inventory files for group "%s"', group)
+        logger.info('update inventory for group "%s"', group)
         # Create a separate variable file in YAML format for each group
-        group_vars_file = os.path.join(GROUP_VARS_DIR, group)
-        if group_content.get('vars', None) is not None:
-            logger.debug('update variables for group "%s"', group)
-            write_yaml_file(group_vars_file, group_content['vars'])
-
-        if not persistent_inventory.has_section(group):
-            persistent_inventory.add_section(group)
-        for host in inventory_info[group]['hosts']:
-            persistent_inventory.set(group, host)
+        for host in group_content['hosts']:
             # Create a separte variable file in YAML format for each host
             host_vars_file = os.path.join(HOST_VARS_DIR, host)
             private_key_file = os.path.expandvars(
                 os.path.expanduser(setup.cloud.key_file_private)
             )
             host_vars = dict()
-            host_vars.update(inventory_info['_meta']['hostvars'][host])
+            host_vars.update(inventory['_meta']['hostvars'][host])
             host_vars.update({
                 'ansible_user': host_vars['ssh_user'],
                 'ansible_ssh_private_key_file': private_key_file
@@ -215,7 +202,7 @@ def update_static_inventory(inventory_info, setup):
                     host_vars['ansible_host'] = get_host_ip(
                         setup.cloud.provider, setup.cloud.region,
                         setup.cloud.network, host,
-                        inventory_info['_meta']['hostvars'][host]
+                        inventory['_meta']['hostvars'][host]
                     )
                 except NoInstanceFoundError:
                     logger.warn('no instance found for host "%s"', host)
@@ -227,6 +214,14 @@ def update_static_inventory(inventory_info, setup):
                         str(err)
                     )
                     sys.exit(1)
+                if 'ansible_host' in host_vars:
+                    logger.debug('update variables for host "%s"', host)
+                    # The IP address of hosts is gets cached on disk, such that
+                    # it doens't need to be retrieved from the cloud for each call.
+                    write_yaml_file(
+                        host_vars_file,
+                        {'ansible_host': host_vars['ansible_host']}
+                    )
             else:
                 try:
                     pre_host_vars = read_yaml_file(host_vars_file)
@@ -253,71 +248,49 @@ def update_static_inventory(inventory_info, setup):
                     logger.info(
                         'use "%s" as bastion host', host_vars['ansible_host']
                     )
-                    inventory_info['all']['vars']['ansible_ssh_common_args'] = \
+                    inventory['all']['vars']['ansible_ssh_common_args'] = \
                         '-o ProxyCommand="ssh {o} -i {f} -W %h:%p -q {u}@{h}"'.format(
                             o='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no',
                             f=private_key_file,
                             u=host_vars['ansible_user'],
                             h=host_vars['ansible_host']
                         )
-                    all_group_vars_file = os.path.join(GROUP_VARS_DIR, 'all')
-                    logger.debug('update variables for group "all"')
-                    write_yaml_file(
-                        all_group_vars_file, inventory_info['all']['vars']
-                    )
             # Update inventory with host and group variables
-            inventory_info['_meta']['hostvars'][host].update(host_vars)
-            logger.debug('update variables for host "%s"', host)
-            write_yaml_file(host_vars_file, host_vars)
+            inventory['_meta']['hostvars'][host].update(host_vars)
 
-        # Remove group_vars and host_vars files when the respective group or
-        # host is no longer part of the inventory.
-        for group in os.listdir(GROUP_VARS_DIR):
-            if group == 'all':
-                continue
-            if group not in inventory_info:
-                group_vars_file = os.path.join(GROUP_VARS_DIR, group)
-                logger.debug('remove variables of group "%s"', group)
-                os.remove(group_vars_file)
+        # Remove host_vars files when the host is no longer in the inventory.
         for host in os.listdir(HOST_VARS_DIR):
-            if host not in inventory_info['_meta']['hostvars']:
+            if host not in inventory['_meta']['hostvars']:
                 host_vars_file = os.path.join(HOST_VARS_DIR, host)
                 logger.debug('remove variables of host "%s"', host)
                 os.remove(host_vars_file)
-        for group in persistent_inventory.sections():
-            if group not in inventory_info:
-                logger.debug('remove group "%s" from inventory', group)
-                persistent_inventory.remove_section(group)
 
-    # Create (or update) the main ansible inventory file in INI format
-    save_inventory(persistent_inventory)
+    return inventory
 
 
 def main(args):
 
     if not os.path.exists(CONFIG_DIR):
-        logger.error('configuration directory does not exist: %s', CONFIG_DIR)
+        logger.error('setup directory does not exist: %s', CONFIG_DIR)
         sys.exit(1)
 
     setup = Setup()
 
-    if not os.path.exists(GROUP_VARS_DIR):
-        os.mkdir(GROUP_VARS_DIR)
     if not os.path.exists(HOST_VARS_DIR):
         os.mkdir(HOST_VARS_DIR)
 
-    logger.info('build inventory')
-    inventory_info = build_inventory_information(setup)
+    logger.info('build inventory based on setup file')
+    inventory = build_inventory(setup)
 
-    logger.info('update static inventory files')
-    update_static_inventory(inventory_info, setup)
+    logger.info('update inventory')
+    inventory = update_inventory(inventory, setup)
 
     if args.list:
         print('---')
-        print(to_json(inventory_info))
+        print(to_json(inventory))
     elif args.host:
         print('---')
-        print(to_json(inventory_info['_meta']['hostvars'][args.host]))
+        print(to_json(inventory['_meta']['hostvars'][args.host]))
 
 
 if __name__ == "__main__":
@@ -355,10 +328,9 @@ if __name__ == "__main__":
     if args.debug:
         verbosity = 3
     else:
-        # NOTE: Logging to STDOUT breaks inventory functionality.
+        # NOTE: Logging to STDOUT breaks inventory functionality!!!
         # Ansible will raise an ERROR: Syntax Error while loading YAML.
-        # WARNING and ERROR messages are fine, because they get logged to
-        # STDERR.
+        # WARNING and ERROR messages are ok, because they get logged to STDERR.
         verbosity = 0
     log_level = map_logging_verbosity(verbosity)
     logger.setLevel(log_level)

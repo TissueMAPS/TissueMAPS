@@ -25,18 +25,18 @@ except ImportError:
 from tmdeploy.utils import read_yaml_file, to_json
 from tmdeploy.config import CONFIG_DIR, Setup
 
-
 GROUP_VARS_DIR = os.path.join(CONFIG_DIR, 'group_vars')
-HOST_VARS_DIR = os.path.join(CONFIG_DIR, 'host_vars')
 HOSTS_FILE = os.path.join(CONFIG_DIR, 'hosts')
+
+HOST_VARS_DIR = os.path.join(CONFIG_DIR, 'host_vars')
 
 HOSTNAME_FORMAT = '{name}-{cluster}-{node_type}-{index:03d}'
 
 logger = logging.getLogger(__name__)
 
 
-def build_inventory_information(setup):
-    '''Builds inventory information for use as part of an
+def build_inventory(setup):
+    '''Builds an inventory for use as part of an
     `dynamic Ansible inventory <http://docs.ansible.com/ansible/intro_dynamic_inventory.html>`_
     according to the
     `script conventions <http://docs.ansible.com/ansible/developing_inventory.html#script-conventions>`_::

@@ -12,7 +12,7 @@ from pkg_resources import resource_filename, resource_exists
 
 import tmdeploy
 from tmdeploy.config import Setup
-from tmdeploy.inventory import build_inventory_information
+from tmdeploy.inventory import build_inventory
 from tmdeploy.log import configure_logging, map_logging_verbosity
 from tmdeploy.inventory import HOSTNAME_FORMAT
 from tmdeploy.errors import SetupDescriptionError, SetupEnvironmentError
@@ -230,8 +230,8 @@ def terminate_vm(args):
 def show_vm_setup(args):
     groups = _get_host_groups()
     setup = Setup()
-    inventory_info = build_inventory_information(setup)
-    print(to_yaml(inventory_info))
+    inventory = build_inventory(setup)
+    print(to_yaml(inventory))
 
 
 def build_container(args):
@@ -312,12 +312,13 @@ if __name__ == '__main__':
 
     vm_parser = subparsers.add_parser(
         'vm', help='virtual machines',
-        description='''
-            Setup cloud virtual machines. Configure the setup process via
-            the ~/.tmaps/setup/setup.yml file.
-        '''
+        description='Deploy cloud virtual machines.'
     )
 
+    vm_parser.add_argument(
+        '-f', '--file', dest='setup_file', default='~/.tmaps/setup.yml',
+        help='path to the setup file'
+    )
     vm_subparsers = vm_parser.add_subparsers(dest='action', help='action')
     vm_subparsers.required = True
 
