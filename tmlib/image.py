@@ -27,7 +27,7 @@ from abc import ABCMeta
 import logging
 
 from tmlib.utils import assert_type
-from tmlib.metadata import ImageMetadata
+from tmlib.metadata import ImageMetadata, PyramidTileMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -771,7 +771,7 @@ class SegmentationImage(Image):
             y *= -1
             x -= x_offset
             y -= y_offset
-            y, x = skimage.draw.polygon(y, x)
+            y, x = skimage.draw.polygon(y, x, dimensions)
             array[y, x] = label
         return cls(array, metadata)
 
@@ -953,6 +953,22 @@ class PyramidTile(Image):
                 'Height and width of image must be greater than zero and '
                 'maximally %d pixels.' % self.TILE_SIZE
             )
+
+    @property
+    def metadata(self):
+        '''tmlib.metadata.ImageMetadata: image metadata
+        '''
+        return self._metadata
+
+    @metadata.setter
+    def metadata(self, value):
+        if value is not None:
+            if not isinstance(value, PyramidTileMetadata):
+                raise TypeError(
+                    'Argument "metadata" must have type '
+                    'tmlib.metadata.PyramidTileMetadata.'
+                )
+        self._metadata = value
 
     @property
     def array(self):
