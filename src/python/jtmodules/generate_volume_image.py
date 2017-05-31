@@ -15,7 +15,7 @@
 import collections
 import logging
 import numpy as np
-from jtlib.segmentation import extract_blobs_in_mask
+from jtlib.segmentation import detect_blobs
 
 logger = logging.getLogger(__name__)
 
@@ -189,10 +189,8 @@ def main(image, mask, threshold=150, bead_size=2, superpixel_size=4,
     logger.debug('detect_beads in 2D')
     mip = np.max(image, axis=-1)
     try:
-        beads = extract_blobs_in_mask(
-            image=mip, mask=mask, threshold=threshold, min_area=bead_size,
-            segmentation_map=True, deblend_nthresh=500, deblend_cont=0,
-            filter_kernel=None, clean=False
+        beads, beads_centroids = detect_blobs(
+            image=mip, mask=mask, threshold=threshold, min_area=bead_size
         )
     except:
         logger.warn('detect_blobs failed, returning empty volume image')
@@ -200,7 +198,7 @@ def main(image, mask, threshold=150, bead_size=2, superpixel_size=4,
         figure = str()
         return Output(volume_image, figure)
 
-    n_beads = np.count_nonzero(beads.centroids)
+    n_beads = np.count_nonzero(beads_centroids)
     logger.info('found %d beads on cells', n_beads)
 
     if n_beads == 0:
@@ -209,7 +207,7 @@ def main(image, mask, threshold=150, bead_size=2, superpixel_size=4,
     else:
         logger.debug('locate beads in 3D')
         beads_coords_3D = locate_in_3D(
-            image=image, mask=beads.centroids,
+            image=image, mask=beads_centroids,
             bin_size=superpixel_size
         )
 

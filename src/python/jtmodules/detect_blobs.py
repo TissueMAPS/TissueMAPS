@@ -57,9 +57,7 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
 
     logger.info('detect blobs above threshold {0}'.format(threshold))
     blobs, centroids = detect_blobs(
-        image=image, mask=mask, threshold=threshold, min_area=min_area,
-        segmentation_map=True, deblend_nthresh=500, deblend_cont=0,
-        filter_kernel=None, clean=False
+        image=image, mask=mask, threshold=threshold, min_area=min_area
     )
 
     n = np.unique(blobs[blobs>0])
