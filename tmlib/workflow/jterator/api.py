@@ -454,11 +454,13 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 # Create a mapobject for each segmented object, i.e. each
                 # pixel component having a unique label.
                 logger.info('add objects of type "%s"', obj_name)
+                # TODO: Can we avoid these multiple loops?
+                # Is the bottleneck inserting objects into the db or Python?
                 mapobjects = [
                     tm.Mapobject(mapobject_type_ids[obj_name])
                     for _ in segm_objs.labels
                 ]
-                logger.debug('insert mapobjects into db table')
+                logger.info('insert objects into database')
                 mapobjects = tm.Mapobject.add_multiple(conn, mapobjects)
                 mapobject_ids = {
                     label: mapobjects[i].id
@@ -519,7 +521,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                                 label=label
                             )
                         )
-                logger.debug('insert mapobject segmentations into db table')
+                logger.info('insert segmentations into database')
                 tm.MapobjectSegmentation.add_multiple(
                     conn, mapobject_segmentations
                 )
