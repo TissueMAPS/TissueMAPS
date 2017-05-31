@@ -13,9 +13,9 @@
 # limitations under the License.
 '''Jterator module for making a projection along the final dimension of the
  array'''
-import numpy as np
 import collections
 import logging
+import numpy as np
 
 VERSION = '0.1.0'
 
@@ -30,7 +30,7 @@ projections = {
 
 def main(image, method='max', plot=False):
     '''Projects an image along the last dimension using the given `method`.
-    
+
     Parameters
     ----------
     image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
@@ -44,6 +44,8 @@ def main(image, method='max', plot=False):
     logger.info('project image using "%s" method', method)
     func = projections[method]
     projected_image = func(image, axis=-1)
+
+    projected_image = projected_image.astype(image.dtype)
 
     if plot:
         logger.info('create plot')

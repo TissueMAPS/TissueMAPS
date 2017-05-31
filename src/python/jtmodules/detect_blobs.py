@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
+# Copyright 2016 Markus D. Herrmann, Scott Berry, University of Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,12 +17,11 @@ import numpy as np
 import mahotas as mh
 import collections
 import logging
+from jtlib.segmentation import extract_blobs_in_mask
 
 VERSION = '0.4.0'
 
 logger = logging.getLogger(__name__)
-
-sep.set_extract_pixstack(10**7)
 
 Output = collections.namedtuple('Output', ['centroids', 'blobs', 'figure'])
 
@@ -52,36 +51,19 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
 
     References
     ----------
-    .. [1] Bertin, E. & Arnouts, S. 1996: SExtractor: Software for source extraction, Astronomy & Astrophysics Supplement 317, 393
+    .. [1] Bertin, E. & Arnouts, S. 1996: SExtractor: Software for source
+    extraction, Astronomy & Astrophysics Supplement 317, 393
     '''
 
     logger.info('detect blobs above threshold {0}'.format(threshold))
-    detection, blobs = sep.extract(
-        image.astype('float'), threshold, mask=np.invert(mask>0),
-        minarea=min_area, segmentation_map=True,
-        deblend_nthresh=500, deblend_cont=0,
-        filter_kernel=None, clean=False
-    )
+    blobs = extract_blobs_in_mask(
+        image=image, mask=mask, threshold=threshold, min_area=min_area,
+        segmentation_map=True, deblend_nthresh=500, deblend_cont=0,
+        filter_kernel=None, clean=False)
 
-    n = len(detection)
+    n = np.max(blobs.blobs)
 
-    centroids = np.zeros(image.shape, dtype=np.int32)
-    y = detection['y'].astype(int)
-    x = detection['x'].astype(int)
-    # WTF? In rare cases object coorindates lie outside of the image.
-    y[y > image.shape[0]] = image.shape[0]
-    x[x > image.shape[1]] = image.shape[1]
-    centroids[y, x] = np.arange(1, n + 1)
-
-    # Despite masking some objects are detected outside regions of interest.
-    # Let's make absolutely that no object lies outside.
-    centroids[mask == 0] = 0
-    mh.labeled.relabel(centroids, inplace=True)
-    blobs[mask == 0] = 0
-    mh.labeled.relabel(blobs, inplace=True)
-
-    n = np.max(blobs)
-    logger.info('%d blobs detected', len(detection))
+    logger.info('%d blobs detected', n)
 
     if plot:
         logger.info('create plot')
@@ -94,7 +76,7 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
                 image, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
-                blobs, 'ur', colorscale=colorscale
+                blobs.blobs, 'ur', colorscale=colorscale
             )
         ]
         figure = plotting.create_figure(
@@ -104,4 +86,4 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
     else:
         figure = str()
 
-    return Output(centroids, blobs, figure)
+    return Output(blobs.centroids, blobs.blobs, figure)
