@@ -563,7 +563,7 @@ class Mapobject(ExperimentModel):
 
     @classmethod
     def add(cls, connection, mapobject):
-        '''Adds the object to the database table.
+        '''Adds a new object.
 
         Parameters
         ----------
@@ -582,7 +582,7 @@ class Mapobject(ExperimentModel):
                 'Object must have type tmlib.models.mapobject.Mapobject'
             )
         shard_id = connection.get_shard_id(cls)
-        mapobject.id = connection.get_unique_id(cls)
+        mapobject.id = connection.get_shard_specific_unique_id(cls, shard_id)
         connection.execute('''
             INSERT INTO mapobjects (id, mapobject_type_id, ref_id)
             VALUES (%(id)s, %(mapobject_type_id)s, %(ref_id)s);
