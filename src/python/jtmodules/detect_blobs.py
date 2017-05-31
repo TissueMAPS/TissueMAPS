@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 '''Jterator module for detection of blobs in images.'''
+import logging
+import collections
 import sep
 import numpy as np
 import mahotas as mh
@@ -77,19 +79,14 @@ def main(image, mask, threshold=1, min_area=3, mean_area=5, plot=False):
         logger.info('create plot')
         from jtlib import plotting
 
-        # We display the convolved image rather than the original input image,
-        # since the former is relevant for choosing a threshold level.
-        # Plotting both would be too much data and would slow down pulling the
-        # figure from the server.
-        img_c = mh.convolve(img.astype(float), k)
-        #img_c[img_c<0] = 0
+        #img_c = mh.convolve(img.astype(float), k)
 
         colorscale = plotting.create_colorscale(
             'Spectral', n=n, permute=True, add_background=True
         )
         plots = [
             plotting.create_float_image_plot(
-                img_c, 'ul', clip=True
+                image, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
                 blobs, 'ur', colorscale=colorscale
