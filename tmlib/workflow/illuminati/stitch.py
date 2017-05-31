@@ -58,7 +58,12 @@ def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
             '"horizontal".'
         )
 
-    n = int(np.sqrt(n_sites))
+    # Workaround for cases where n_sites < 4 (would result in error)
+    if n_sites < 4:
+        n = 2
+    else:
+        n = int(np.sqrt(n_sites))
+        
     v = np.arange(n - n, n + n)
     m = np.matrix(v).conj().T * np.matrix(v)
     t =  np.triu(m)
