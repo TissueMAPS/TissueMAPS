@@ -11,17 +11,40 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import collections
 import numpy as np
 import mahotas as mh
 import sep
 
 
-def extract_blobs_in_mask(
-    image, mask, threshold, min_area, segmentation_map,
-        deblend_nthresh, deblend_cont, filter_kernel, clean):
+def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
+        deblend_cont=0, filter_kernel=None):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
+
+    Parameters
+    ----------
+    image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
+        grayscale image in which blobs should be detected
+    mask: numpy.ndarray[Union[numpy.int32, numpy.bool]]
+        binary or labeled image that masks pixel regions in which blobs
+        should be detected
+    threshold: int, optional
+        factor by which pixel values must be above background
+        to be considered part of a blob (default: ``5``)
+    min_area: int, optional
+        minimal size of a blob
+    deblend_ntresh: int, optional
+        number of deblending thresholds (default: ``500``)
+    deblend_cont: int, optional
+        minimum contrast ratio for deblending (default: ``0``)
+    filter_kernel: numpy.ndarray[numpy.float], optional
+        convolution kernel that should be applied to the image before
+        thresholding (default: ``None``)
+
+    Returns
+    -------
+    Tuple[numpy.ndarray[numpy.int32]]
+        detected blobs and the corresponding centroids
 
     References
     ----------
@@ -32,12 +55,10 @@ def extract_blobs_in_mask(
 
     detection, blobs = sep.extract(
         image.astype('float'), threshold, mask=np.invert(mask > 0),
-        minarea=min_area, segmentation_map=segmentation_map,
+        minarea=min_area, segmentation_map=True,
         deblend_nthresh=deblend_nthresh, deblend_cont=deblend_cont,
-        filter_kernel=filter_kernel, clean=clean
+        filter_kernel=filter_kernel, clean=False
     )
-
-    n = len(detection)
 
     centroids = np.zeros(image.shape, dtype=np.int32)
     y = detection['y'].astype(int)
@@ -55,5 +76,4 @@ def extract_blobs_in_mask(
     mh.labeled.relabel(blobs, inplace=True)
     # TODO: check that labels are the same between centroids and blobs
 
-    ret = collections.namedtuple('blobs', ['centroids', 'blobs'])
-    return ret(centroids, blobs)
+    return (blobs, centroids)
