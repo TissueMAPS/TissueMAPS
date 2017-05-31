@@ -517,11 +517,8 @@ classdef plotting
 
             end
 
-            fig = plotlyfig;
-            fig.data = data;
-            fig.layout = layout;
-            jdata = escapechars(m2json(fig.data));
-            jlayout = escapechars(m2json(fig.layout));
+            jdata = escapechars(m2json(data));
+            jlayout = escapechars(m2json(layout));
             fig = sprintf('{"data": %s, "layout": %s}', jdata, jlayout);
 
         end
@@ -600,7 +597,7 @@ classdef plotting
             elseif nargin == 4
                 useLog = true;
             end
-                
+
             if ischar(Property)
                 matProperty = cell2mat(struct2cell(regionprops(imLogical,imIntensity,Property)))';
             elseif ismatrix(Property)
