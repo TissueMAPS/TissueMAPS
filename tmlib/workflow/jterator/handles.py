@@ -427,7 +427,7 @@ class SegmentedObjects(LabelImage):
 
     def iter_points(self, y_offset, x_offset):
         '''Iterates over point representations of segmented objects.
-        The coordinates of the points contours are relative to the global map,
+        The coordinates of the centroid points are relative to the global map,
         i.e. an offset is added to the image site specific coordinates.
 
         Parameters
@@ -446,13 +446,14 @@ class SegmentedObjects(LabelImage):
         logger.debug('calculate centroids for objects of type "%s"', self.key)
         points = dict()
         for (t, z), plane in self.iter_planes():
+            centroids = mh.center_of_mass(plane, labels=plane)
+            centroids[:, 1] += x_offset
+            centroids[:, 0] += y_offset
+            centroids[:, 0] *= -1
             for label in self.labels:
-                logger.debug('calculate centroid for object #%d', label)
-                y, x = np.where(plane == label)
-                point = shapely.geometry.Point(
-                    int(np.mean(x)) + x_offset,
-                    -1 * (int(np.mean(y)) + y_offset),
-                )
+                y = int(centroids[label, 0])
+                x = int(centroids[label, 1])
+                point = shapely.geometry.Point(x, y)
                 yield (t, z, label, point)
 
     def iter_polygons(self, y_offset, x_offset):

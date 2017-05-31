@@ -829,29 +829,6 @@ class ExperimentConnection(_Connection):
         ''')
         return self
 
-    def get_unique_id(self, model_class):
-        '''Gets a unique value for the distribution column.
-
-        Parameters
-        ----------
-        model_class: str
-            class dervired from
-            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
-            for which a shard should be selected
-        '''
-        logger.debug(
-            'get unique identifier for table of class "%s"',
-            model_class.__name__
-        )
-        self._cursor.execute('''
-            SELECT nextval FROM nextval(%(sequence)s);
-        ''', {
-            'sequence': '{table}_id_seq'.format(
-                table=model_class.__table__.name
-            )
-        })
-        return self._cursor.fetchone()[0]
-
     def get_shard_id(self, model_class):
         '''Selects a single shard at random from all available shards.
         The ID of the selected shard gets cached, such that subsequent calls
@@ -896,7 +873,7 @@ class ExperimentConnection(_Connection):
         self._shard_lut[model_class.__name__] = shard_id
         return shard_id
 
-    def get_shard_specific_unique_id(self, model_class, shard_id):
+    def get_unique_ids(self, model_class, shard_id, n):
         '''Gets a unique, but shard-specific value for the distribution column.
 
         Parameters
@@ -908,11 +885,13 @@ class ExperimentConnection(_Connection):
         shard_id: int
             ID of a shard that is located on the worker server to which the
             connection was established
+        n: int
+            number of IDs that should be returned
 
         Returns
         -------
-        int
-            unique, shard-specific ID
+        List[int]
+            unique, shard-specific IDs
 
         Raises
         ------
@@ -928,13 +907,15 @@ class ExperimentConnection(_Connection):
                 'Table of class "%s" is not distributed.' % model_class.__name__
             )
         self._cursor.execute('''
-            SELECT nextval FROM nextval(%(sequence)s);
+            SELECT nextval(%(sequence)s) FROM generate_series(1, %(n)s);
         ''', {
             'sequence': '{table}_id_seq_{shard}'.format(
                 table=model_class.__table__.name, shard=shard_id
-            )
+            ),
+            'n': n
         })
-        return self._cursor.fetchone()[0]
+        values = self._cursor.fetchall()
+        return [v[0] for v in values]
 
     def group_ids_per_shard(self, model_class, ids):
         '''Groups IDs (values of the partition key) of a distributed table

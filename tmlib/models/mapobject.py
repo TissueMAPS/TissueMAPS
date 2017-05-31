@@ -582,7 +582,7 @@ class Mapobject(ExperimentModel):
                 'Object must have type tmlib.models.mapobject.Mapobject'
             )
         shard_id = connection.get_shard_id(cls)
-        mapobject.id = connection.get_shard_specific_unique_id(cls, shard_id)
+        mapobject.id = connection.get_unique_ids(cls, shard_id, 1)[0]
         connection.execute('''
             INSERT INTO mapobjects (id, mapobject_type_id, ref_id)
             VALUES (%(id)s, %(mapobject_type_id)s, %(ref_id)s);
@@ -591,7 +591,6 @@ class Mapobject(ExperimentModel):
             'mapobject_type_id': mapobject.mapobject_type_id,
             'ref_id': mapobject.ref_id
         })
-        # TODO: INSERT INTO teams VALUES (...) RETURNING id INTO mapobject_id;
         return mapobject
 
     @classmethod
@@ -617,15 +616,14 @@ class Mapobject(ExperimentModel):
         shard_id = connection.get_shard_id(cls)
         f = StringIO()
         w = csv.writer(f, delimiter=';')
-        ids = list()
-        for obj in mapobjects:
+        ids = connection.get_unique_ids(cls, shard_id, len(mapobjects))
+        for i, obj in enumerate(mapobjects):
             if not isinstance(obj, cls):
                 raise TypeError(
                     'Object must have type tmlib.models.mapobject.Mapobject'
                 )
-            obj.id = connection.get_shard_specific_unique_id(cls, shard_id)
+            obj.id = ids[i]
             w.writerow((obj.id, obj.mapobject_type_id, obj.ref_id))
-            ids.append(obj.id)
         columns = ('id', 'mapobject_type_id', 'ref_id')
         f.seek(0)
         connection.copy_from(
