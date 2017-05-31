@@ -847,8 +847,12 @@ class MapobjectSegmentation(ExperimentModel):
                     'Object must have type '
                     'tmlib.models.mapobject.MapobjectSegmentation'
                 )
+            if obj.geom_polygon:
+                polygon = obj.geom_polygon.wkt
+            else:
+                polygon = None
             w.writerow((
-                obj.geom_polygon.wkt, obj.geom_centroid.wkt,
+                polygon, obj.geom_centroid.wkt,
                 obj.mapobject_id, obj.segmentation_layer_id, obj.label
             ))
         columns = (
