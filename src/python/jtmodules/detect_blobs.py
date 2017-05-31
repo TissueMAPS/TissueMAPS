@@ -17,7 +17,7 @@ import numpy as np
 import mahotas as mh
 import collections
 import logging
-from jtlib.segmentation import extract_blobs_in_mask
+from jtlib.segmentation import detect_blobs
 
 VERSION = '0.4.0'
 
@@ -56,12 +56,13 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
     '''
 
     logger.info('detect blobs above threshold {0}'.format(threshold))
-    blobs = extract_blobs_in_mask(
+    blobs, centroids = detect_blobs(
         image=image, mask=mask, threshold=threshold, min_area=min_area,
         segmentation_map=True, deblend_nthresh=500, deblend_cont=0,
-        filter_kernel=None, clean=False)
+        filter_kernel=None, clean=False
+    )
 
-    n = np.max(blobs.blobs)
+    n = np.unique(blobs[blobs>0])
 
     logger.info('%d blobs detected', n)
 
@@ -76,7 +77,7 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
                 image, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
-                blobs.blobs, 'ur', colorscale=colorscale
+                blobs, 'ur', colorscale=colorscale
             )
         ]
         figure = plotting.create_figure(
@@ -86,4 +87,4 @@ def main(image, mask, threshold=5, min_area=5, plot=False):
     else:
         figure = str()
 
-    return Output(blobs.centroids, blobs.blobs, figure)
+    return Output(centroids, blobs, figure)
