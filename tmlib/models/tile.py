@@ -113,39 +113,25 @@ class ChannelLayerTile(ExperimentModel):
         return PyramidTile.create_from_binary(self._pixels, metadata)
 
     @pixels.setter
-    def pixels(self, tile):
+    def pixels(self, value):
         # TODO: It might be better to use Postgis raster format, but there don't
         # seem to be good solutions for inserting raster data via Python
         # using numpy arrays.
-        if tile is not None:
-            self._pixels = tile.jpeg_encode()
+        if value is not None:
+            self._pixels = value.jpeg_encode()
         else:
             self._pixels = None
 
     @classmethod
-    def add(cls, connection, channel_layer_id, z, y, x, tile):
-        '''Adds a new record.
+    def add(cls, connection, tile):
+        '''Adds a new tile.
 
         Parameters
         ----------
         connection: psycopg2.extras.NamedTupleCursor
             experiment-specific database connection created via
-        channel_layer_id: int
-            ID of the parent
-            :class:`ChannelLayer <tmlib.models.channel.ChannelLayer>`
-        z: int
-            zero-based *z*-coordinate
-        y: int
-            zero-based *y*-coordinate
-        x: int
-            zero-based *x*-coordinate
-        tile: tmlib.image.PyramidTile
-            tile encoding pixel values
-
-        Returns
-        -------
-        int
-            ID of the added record
+            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        tile: tmlib.models.tile.ChannelLayerTile
         '''
         # Upsert the tile entry, i.e. insert or update if exists
         # NOTE: The UPSERT has some overhead and it may be more performant to
@@ -159,14 +145,39 @@ class ChannelLayerTile(ExperimentModel):
             )
             ON CONFLICT
             ON CONSTRAINT channel_layer_tiles_channel_layer_id_z_y_x_key
-            DO UPDATE
-            SET pixels = %(pixels)s
-            WHERE t.channel_layer_id = %(channel_layer_id)s
-            AND t.z = %(z)s AND t.y = %(y)s AND t.x = %(x)s;
+            DO UPDATE SET pixels = %(pixels)s
         ''', {
-            'channel_layer_id': channel_layer_id, 'z': z, 'y': y, 'x': x,
-            'pixels': psycopg2.Binary(tile.jpeg_encode().tostring())
+            'channel_layer_id': tile.channel_layer_id,
+            'z': tile.z, 'y': tile.y, 'x': tile.x,
+            'pixels': psycopg2.Binary(tile._pixels.tostring())
         })
+
+    # @classmethod
+    # def add_multiple(cls, connection, tiles):
+    #     '''Adds multiple tiles at once.
+
+    #     Parameters
+    #     ----------
+    #     connection: psycopg2.extras.NamedTupleCursor
+    #         experiment-specific database connection created via
+    #         :class:`ExperimentWorkerConnection <tmlib.models.utils.ExperimentWorkerConnection>`
+    #     tiles: List[tmlib.models.tile.ChannelLayerTile]
+    #     '''
+    #     psycopg2.extras.execute_values(connection, '''
+    #         INSERT INTO channel_layer_tiles AS t (
+    #             channel_layer_id, z, y, x, pixels
+    #         )
+    #         VALUES %s
+    #         ON CONFLICT
+    #         ON CONSTRAINT channel_layer_tiles_channel_layer_id_z_y_x_key
+    #         DO UPDATE SET pixels = EXCLUDED.pixels
+    #     ''', [
+    #         (
+    #             t.channel_layer_id, t.z, t.y, t.x,
+    #             psycopg2.Binary(t._pixels.tostring())
+    #         )
+    #         for t in tiles
+    #     ])
 
     def __repr__(self):
         return '<%s(z=%r, y=%r, x=%r, channel_layer_id=%r)>' % (
