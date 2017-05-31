@@ -1731,8 +1731,9 @@ class TmClient(HttpClient):
             t.add_row([f['id'], f['name']])
         print(t)
 
-    def _download_object_feature_values(self, mapobject_type_name, plate_name,
-            well_name, well_pos_y, well_pos_x, tpoint=None):
+    def _download_object_feature_values(self, mapobject_type_name,
+            plate_name=None, well_name=None, well_pos_y=None, well_pos_x=None,
+            tpoint=None):
         logger.info(
             'download features values for experiment "%s" and object type "%s"',
             self.experiment_name, mapobject_type_name
@@ -1868,8 +1869,8 @@ class TmClient(HttpClient):
 
     def download_feature_values_and_metadata_files(self, mapobject_type_name,
             directory):
-        '''Downloads all feature values for the given object type and writes
-        it into a *CSV* file on disk.
+        '''Downloads all feature values for the given object type and stores the
+        data as *CSV* files on disk.
 
         Parameters
         ----------
@@ -1884,51 +1885,47 @@ class TmClient(HttpClient):
         :meth:`tmclient.api.TmClient.download_object_metadata`
         '''
 
-        def download_per_site(site):
+        def download_per_well(well):
             logger.info(
-                'download feature data at site: '
-                'plate={plate}, well={well}, y={y}, x={x}'.format(
-                    plate=site['plate_name'], well=site['well_name'],
-                    y=site['y'], x=site['x']
+                'download feature data at well: '
+                'plate={plate}, well={well}'.format(
+                    plate=well['plate_name'], well=well['name'],
                 )
             )
             res = self._download_object_feature_values(
-                mapobject_type_name,
-                site['plate_name'], site['well_name'], site['y'], site['x']
+                mapobject_type_name, well['plate_name'], well['name']
             )
             filename = self._extract_filename_from_headers(res.headers)
             filepath = os.path.join(directory, filename)
             logger.info('write feature values to file: %s', filepath)
             with open(filepath, 'wb') as f:
-                for c in res.iter_content():
+                for c in res.iter_content(chunk_size=1000):
                     f.write(c)
 
             logger.info(
-                'download feature metadata at site: '
-                'plate={plate}, well={well}, y={y}, x={x}'.format(
-                    plate=site['plate_name'], well=site['well_name'],
-                    y=site['y'], x=site['x']
+                'download feature metadata at well: '
+                'plate={plate}, well={well}'.format(
+                    plate=well['plate_name'], well=well['name'],
                 )
             )
             res = self._download_object_metadata(
-                mapobject_type_name,
-                site['plate_name'], site['well_name'], site['y'], site['x']
+                mapobject_type_name, well['plate_name'], well['name']
             )
             filename = self._extract_filename_from_headers(res.headers)
             filepath = os.path.join(directory, filename)
             logger.info('write metadata to file: %s', filepath)
             with open(filepath, 'wb') as f:
-                for c in res.iter_content():
+                for c in res.iter_content(chunk_size=1000):
                     f.write(c)
 
-        sites = self.get_sites()
-        args = [(s, ) for s in sites]
-        self._parallelize(download_per_site, args)
+        wells = self.get_wells()
+        args = [(w, ) for w in wells]
+        self._parallelize(download_per_well, args)
         # TODO: Store site-specific files in temporary directory and afterwards
         # merge them into a single file in the directory sprecified by the user.
 
-    def _download_object_metadata(self, mapobject_type_name, plate_name,
-            well_name, well_pos_y, well_pos_x, tpoint=None):
+    def _download_object_metadata(self, mapobject_type_name, plate_name=None,
+            well_name=None, well_pos_y=None, well_pos_x=None, tpoint=None):
         logger.info(
             'download metadata for experiment "%s" and object type "%s"',
             self.experiment_name, mapobject_type_name
