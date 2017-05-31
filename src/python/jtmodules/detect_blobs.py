@@ -17,11 +17,7 @@ import collections
 import sep
 import numpy as np
 import mahotas as mh
-import collections
-import logging
 from jtlib.segmentation import detect_blobs
-
-from jtlib.filter import log_2d
 
 VERSION = '0.5.0'
 
@@ -86,7 +82,7 @@ def main(image, mask, threshold=1, min_area=3, mean_area=5, plot=False):
         )
         plots = [
             plotting.create_float_image_plot(
-                img_c, 'ul', clip=True
+                image, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
                 blobs, 'ur', colorscale=colorscale
