@@ -533,7 +533,7 @@ class IllumstatsImageMetadata(ImageMetadata):
 
     @channel_id.setter
     def channel_id(self, value):
-        if not isinstance(value, int):
+        if not isinstance(value, long):
             raise TypeError('Argument "channel_id" must have type int.')
         self._channel_id = value
 
