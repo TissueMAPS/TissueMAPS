@@ -491,11 +491,12 @@ class PyramidBuilder(WorkflowStepAPI):
                                 'Tile shouldn\'t be in this batch!'
                             )
 
-                    with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-                        tm.ChannelLayerTile.add(
-                            conn, channel_layer_id=layer.id,
-                            z=level, y=row, x=column, tile=tile
+                    with tm.utils.ExperimentConnection(self.experiment_id) as c:
+                        channel_layer_tile = tm.ChannelLayerTile(
+                            channel_layer_id=layer.id,
+                            z=level, y=row, x=column, pixels=tile
                         )
+                        tm.ChannelLayerTile.add(c, channel_layer_tile)
 
     def _create_lower_zoom_level_tiles(self, batch):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
