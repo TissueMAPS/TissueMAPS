@@ -197,7 +197,10 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             )
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            sites = session.query(tm.Site.id).order_by(tm.Site.id).all()
+            # Distribute sites randomly. Thereby we achieve a certain level
+            # of load balancing in case wells have different number of cells,
+            # for example.
+            sites = session.query(tm.Site.id).order_by(func.random()).all()
             site_ids = [s.id for s in sites]
             batches = self._create_batches(site_ids, args.batch_size)
             for j, batch in enumerate(batches):
