@@ -25,7 +25,7 @@ output:
 
   - name: projected_image
     type: IntensityImage
-    key:
+    key: project.projected_image
     help: Projected image.
 
   - name: figure

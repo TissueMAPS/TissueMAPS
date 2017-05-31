@@ -33,7 +33,7 @@ input:
 output:
 
     - name: centroids
-      type: BinaryImage
+      type: LabelImage
       key: detect_blobs.centroids
       help: Centroid positions of blobs.
 
