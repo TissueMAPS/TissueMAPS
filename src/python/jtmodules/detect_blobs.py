@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 Output = collections.namedtuple('Output', ['centroids', 'blobs', 'figure'])
 
 
-def main(image, mask, threshold=1, min_area=5, mean_area=5, plot=False):
+def main(image, mask, threshold=1, min_area=3, mean_area=5, plot=False):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
     The `image` is first convolved with a Laplacian of Gaussian filter of size
@@ -42,12 +42,13 @@ def main(image, mask, threshold=1, min_area=5, mean_area=5, plot=False):
         grayscale image in which blobs should be detected
     mask: numpy.ndarray[Union[numpy.int32, numpy.bool]]
         binary or labeled image that masks pixel regions in which blobs
+
         should be detected
     threshold: int, optional
         factor by which pixel values in the convolved image must be above
         background to be considered part of a blob (default: ``1``)
     min_area: int, optional
-        minimal size a blob is allowed to have (default: ``5``)
+        minimal size a blob is allowed to have (default: ``3``)
     mean_area: int, optional
         estimated average size of a blob (default: ``5``)
     plot: bool, optional
@@ -75,12 +76,20 @@ def main(image, mask, threshold=1, min_area=5, mean_area=5, plot=False):
     if plot:
         logger.info('create plot')
         from jtlib import plotting
+
+        # We display the convolved image rather than the original input image,
+        # since the former is relevant for choosing a threshold level.
+        # Plotting both would be too much data and would slow down pulling the
+        # figure from the server.
+        img_c = mh.convolve(img.astype(float), k)
+        #img_c[img_c<0] = 0
+
         colorscale = plotting.create_colorscale(
             'Spectral', n=n, permute=True, add_background=True
         )
         plots = [
-            plotting.create_intensity_image_plot(
-                image, 'ul', clip=True
+            plotting.create_float_image_plot(
+                img_c, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
                 blobs, 'ur', colorscale=colorscale
