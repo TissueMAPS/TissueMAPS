@@ -313,6 +313,8 @@ def get_feature_values(experiment_id, mapobject_type_id):
         ref_type = 'Site'
 
     filename_formatstring = '{experiment}'
+    if plate_name is not None:
+        filename_formatstring += '_{plate}'
     if well_name is not None:
         filename_formatstring += '_{well}'
     if well_pos_y is not None:
@@ -323,7 +325,8 @@ def get_feature_values(experiment_id, mapobject_type_id):
         filename_formatstring += '_t{t}'
     filename_formatstring += '_{object_type}_feature-values.csv'
     filename = filename_formatstring.format(
-        experiment=experiment_name, well=well_name, y=well_pos_y, x=well_pos_x,
+        experiment=experiment_name, plate=plate_name, well=well_name,
+        y=well_pos_y, x=well_pos_x,
         t=tpoint, object_type=mapobject_type_name
     )
 
@@ -477,6 +480,8 @@ def get_metadata(experiment_id, mapobject_type_id):
         mapobject_type_ref_type = mapobject_type.ref_type
 
     filename_formatstring = '{experiment}'
+    if plate_name is not None:
+        filename_formatstring += '_{plate}'
     if well_name is not None:
         filename_formatstring += '_{well}'
     if well_pos_y is not None:
@@ -487,7 +492,8 @@ def get_metadata(experiment_id, mapobject_type_id):
         filename_formatstring += '_t{t}'
     filename_formatstring += '_{object_type}_metadata.csv'
     filename = filename_formatstring.format(
-        experiment=experiment_name, well=well_name, y=well_pos_y, x=well_pos_x,
+        experiment=experiment_name, plate=plate_name, well=well_name,
+        y=well_pos_y, x=well_pos_x,
         t=tpoint, object_type=mapobject_type_name
     )
 
