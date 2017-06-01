@@ -229,7 +229,7 @@ def test_metadata(client, experiment_info):
 
         response_numeric = response.loc[:, ~is_object]
         expected_numeric = expected.loc[:, ~is_object]
-        assert np.allclose(expected_numeric, response_numeric), (
+        assert np.allclose(expected_numeric, response_numeric,equal_nan=True), (
             'Metadata for object type "{0}" are incorrect. '
             'Some numeric values are wrong'.format(mapobject_type['name'])
         )
