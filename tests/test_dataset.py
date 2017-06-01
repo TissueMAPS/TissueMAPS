@@ -193,7 +193,7 @@ def test_feature_values(client, experiment_info):
                 expected.shape[1]
             )
         )
-        assert assert_array_almost_equal(
+        assert_array_almost_equal(
             response.values, expected.values,
             err_msg='Feature values for object type "{0}" are incorrect.'.format(
                 mapobject_type['name']
