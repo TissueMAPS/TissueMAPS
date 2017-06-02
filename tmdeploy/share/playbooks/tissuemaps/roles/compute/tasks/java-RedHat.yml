@@ -17,7 +17,7 @@
 ---
 - name: Install yum package for JDK 8
   yum:
-    name: java-1.8.0-openjdk
+    name: java-1.{{ java_version }}-openjdk
     state: installed
   tags:
     - tissuemaps
