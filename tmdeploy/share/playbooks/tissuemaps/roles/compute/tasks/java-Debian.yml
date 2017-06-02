@@ -17,6 +17,6 @@
 ---
 - name: Install apt packages for JDK
   apt:
-    name: openjdk-8-jdk
+    name: openjdk-{{ java_version | replace('.', '') | list | first() }}-jdk
   tags:
     - tissuemaps
