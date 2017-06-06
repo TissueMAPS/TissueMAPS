@@ -64,6 +64,7 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
     y = detection['y'].astype(int)
     x = detection['x'].astype(int)
     # WTF? In rare cases object coorindates lie outside of the image.
+    n = len(detection)
     y[y > image.shape[0]] = image.shape[0]
     x[x > image.shape[1]] = image.shape[1]
     centroids[y, x] = np.arange(1, n + 1)
