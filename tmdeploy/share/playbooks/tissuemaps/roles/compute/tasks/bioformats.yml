@@ -41,7 +41,7 @@
 - name: Install selected bftools
   file:
     src: /usr/local/share/bftools/{{ item }}
-    dest: /usr/local/bin/showinf
+    dest: /usr/local/bin/{{ item }}
     state: link
   with_items:
     - bfconvert
