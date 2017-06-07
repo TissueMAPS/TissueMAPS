@@ -246,44 +246,30 @@
   run_once: yes
   when: instance_state == "present"
 
-- name: Create ingress UDP (8649) rule for storage security group
-  local_action: os_security_group_rule
-  args:
-    state: present
-    security_group: compute-storage
-    protocol: udp
-    direction: ingress
-    port_range_min: 8649
-    port_range_max: 8649
-    remote_group: web
-    region_name: "{{ region }}"
-  run_once: yes
-  when: instance_state == "present"
-
-- name: Create ingress UDP (8649) rule for web security group (remote compute-storage)
+- name: Create ingress UDP rule I for web security group
   local_action: os_security_group_rule
   args:
     state: present
     security_group: web
     protocol: udp
     direction: ingress
-    port_range_min: 8649
-    port_range_max: 8649
+    port_range_min: 1
+    port_range_max: 65535
+    remote_group: web
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress UDP rule II for web security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: udp
+    direction: ingress
+    port_range_min: 1
+    port_range_max: 65535
     remote_group: compute-storage
-    region_name: "{{ region }}"
-  run_once: yes
-  when: instance_state == "present"
-
-- name: Create ingress UDP (8649) rule for web security group (remote web)
-  local_action: os_security_group_rule
-  args:
-    state: present
-    security_group: web
-    protocol: udp
-    direction: ingress
-    port_range_min: 8649
-    port_range_max: 8649
-    remote_group: web
     region_name: "{{ region }}"
   run_once: yes
   when: instance_state == "present"

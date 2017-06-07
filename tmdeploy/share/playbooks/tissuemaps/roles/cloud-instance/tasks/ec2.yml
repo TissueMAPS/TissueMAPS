@@ -108,6 +108,10 @@
         from_port: -1
         to_port:  -1
         cidr_ip: 0.0.0.0/0
+      - proto: udp
+        from_port: 1
+        to_port: 65535
+        group_name: compute-storage
   run_once: yes
 
 - name: Update compute-storage security group
