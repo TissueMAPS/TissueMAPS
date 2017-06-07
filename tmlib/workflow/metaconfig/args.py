@@ -31,7 +31,7 @@ class MetaconfigBatchArguments(BatchArguments):
     )
 
     stitch_layout = Argument(
-        type=str, default='zigzag_horizontal',
+        type=str, default='horizontal',
         choices={
             'horizontal', 'zigzag_horizontal','vertical', 'zigzag_vertical'
         },
