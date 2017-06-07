@@ -142,7 +142,7 @@ class MetadataExtractor(WorkflowStepAPI):
                 # The "showinf" command line tool writes the extracted OMEXML
                 # to standard output.
                 command = [
-                    'showinf', '-omexml-only', '-nopix', '-novalid',
+                    'showinf', '-omexml-only', '-nopix', '-novalid', '-nocore',
                     '-no-upgrade', '-no-sas', img_file.location
                 ]
                 p = subprocess.Popen(
