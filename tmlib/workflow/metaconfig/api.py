@@ -199,6 +199,18 @@ class MetadataConfigurator(WorkflowStepAPI):
             logger.info(
                 'try to determine grid coordinates from provided stitch layout'
             )
+            # In general, the values of these arguments can be ``None``, because
+            # they are not required and may not be used.
+            # However, in case the grid coordinates should be determined based
+            # on user interput, these arguments are required.
+            if not isinstance(batch['n_vertical'], int):
+                raise TypeError(
+                    'Value of argument "n_vertical" must be an integer.'
+                )
+            if not isinstance(batch['n_horizontal'], int):
+                raise TypeError(
+                    'Value of argument "n_horizontal" must be an integer.'
+                )
             mdhandler.determine_grid_coordinates_from_layout(
                 stitch_layout=batch['stitch_layout'],
                 stitch_dimensions=(batch['n_vertical'], batch['n_horizontal'])
