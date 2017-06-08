@@ -68,8 +68,10 @@ def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
         raise ValueError(
             'Argument "n_sites" must be a positive integer.'
         )
-
-    n = int(np.sqrt(n_sites))
+    elif n_sites < 4:
+        n = 2
+    else:
+        n = int(np.sqrt(n_sites))
 
     v = np.arange(n - n, n + n + 1)
     m = np.matrix(v).conj().T * np.matrix(v)
