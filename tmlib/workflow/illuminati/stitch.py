@@ -270,7 +270,10 @@ def calc_grid_coordinates_from_positions(stage_positions, n,
     if spread[0] > spread[1]:
         splits = splits[splits.shape[0]/2:, :]
     else:
-        splits = splits[0:splits.shape[0]/2, :]
+        if splits.shape[0] == 1:
+            splits = splits[splits.shape[0]/2:, :]
+        else:
+            splits = splits[0:splits.shape[0]/2, :]
     cost = splits[:, 0] / splits[:, 1].astype(float) - spread[0] / spread[1]
     best_fit_index = np.where(cost == np.min(cost))[0][0]
     rows, cols = splits[best_fit_index]
