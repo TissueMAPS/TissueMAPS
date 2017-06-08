@@ -42,9 +42,11 @@ def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
 
     Raises
     ------
+    TypeError
+        when value of `n_sites` is not an integer
     ValueError
         when value of `stitch_major_axis` is neither ``"horizontal"`` nor
-        ``"vertical"``
+        ``"vertical"`` or when value of `n_sites` is not a positive integer
     IndexError
         when dimensions cannot be determined
     '''
@@ -58,23 +60,29 @@ def guess_stitch_dimensions(n_sites, stitch_major_axis='vertical'):
             '"horizontal".'
         )
 
-    # Workaround for cases where n_sites < 4 (would result in error)
-    if n_sites < 4:
-        n = 2
-    else:
-        n = int(np.sqrt(n_sites))
-        
-    v = np.arange(n - n, n + n)
+    if not isinstance(n_sites, int):
+        raise TypeError(
+            'Argument "n_sites" must have type int.'
+        )
+    if n_sites < 1:
+        raise ValueError(
+            'Argument "n_sites" must be a positive integer.'
+        )
+
+    n = int(np.sqrt(n_sites))
+
+    v = np.arange(n - n, n + n + 1)
     m = np.matrix(v).conj().T * np.matrix(v)
     t =  np.triu(m)
     d = t - n_sites
-    y, x = np.where(d == np.min(d[d > 0]))
+    y, x = np.where(d == np.min(d[d >= 0]))
     if len(y) == 0 and len(x) == 0:
-        raise IndexError(
-            'Dimensions of stitched overview could not be determined.'
-        )
-    stitch_dims = sorted([abs(v[y[0]]), abs(v[x[0]])], reverse=decent)
-    return (stitch_dims[0], stitch_dims[1])
+        raise IndexError('Stitch dimensions could not be determined.')
+    if np.any(y == x):
+        dim = v[y[y == x][0]]
+        return (dim, dim)
+    else:
+        return tuple(sorted([v[y[0]], v[x[0]]], reverse=decent))
 
 
 def calc_stitch_dimensions(stage_positions):
