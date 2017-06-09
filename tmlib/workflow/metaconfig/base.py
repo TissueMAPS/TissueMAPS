@@ -321,23 +321,24 @@ class MetadataHandler(object):
         filenames = natsorted(omexml_images)
         count = 0
         for i, f in enumerate(filenames):
-            current_omexml_element = omexml_images[f]
-            n_series = current_omexml_element.image_count
+            omexml_img = omexml_images[f]
+            n_series = omexml_img.image_count
             for s in xrange(n_series):
-                current_image = current_omexml_element.image(s)
+                extracted_image = omexml_img.image(s)
                 md_image = omexml_metadata.image(count)
                 for attr in image_element_attributes:
-                    value = getattr(current_image, attr)
-                    if value is not None:
-                        setattr(md_image, attr, value)
+                    extracted_value = getattr(extracted_image, attr)
+                    md_value = getattr(md_image, attr)
+                    if md_value is None and extracted_value is not None:
+                        setattr(md_image, attr, extracted_value)
 
-                current_pixels = current_image.Pixels
-                n_planes = current_pixels.plane_count
+                extracted_pixels = extracted_image.Pixels
+                n_planes = extracted_pixels.plane_count
                 if n_planes == 0:
                     # Sometimes an image doesn't have any plane elements.
                     # Let's create them for consistency.
-                    current_pixels = self._create_channel_planes(current_pixels)
-                    n_planes = current_pixels.plane_count
+                    extracted_pixels = self._create_channel_planes(extracted_pixels)
+                    n_planes = extracted_pixels.plane_count
 
                 md_pixels = md_image.Pixels
                 md_pixels.plane_count = n_planes
@@ -350,17 +351,22 @@ class MetadataHandler(object):
                     )
 
                 for attr in pixel_element_attributes:
-                    value = getattr(current_pixels, attr)
-                    if value is not None:
-                        setattr(md_pixels, attr, value)
+                    extracted_value = getattr(extracted_pixels, attr)
+                    md_value = getattr(md_pixels, attr)
+                    if attr in {'SizeX', 'SizeY'}:
+                        # This is python-bioformats being stupid.
+                        setattr(md_pixels, attr, extracted_value)
+                    elif md_value is None and extracted_value is not None:
+                        setattr(md_pixels, attr, extracted_value)
 
                 for p in xrange(n_planes):
-                    current_plane = current_pixels.Plane(p)
+                    extracted_plane = extracted_pixels.Plane(p)
                     md_plane = md_pixels.Plane(p)
                     for attr in plane_element_attributes:
-                        value = getattr(current_plane, attr)
-                        if value is not None:
-                            setattr(md_plane, attr, value)
+                        extracted_value = getattr(extracted_plane, attr)
+                        md_value = getattr(md_plane, attr)
+                        if md_value is None and extracted_value is not None:
+                            setattr(md_plane, attr, extracted_value)
 
                     fm = ImageFileMapping()
                     fm.ref_index = count + p
@@ -370,15 +376,16 @@ class MetadataHandler(object):
                     self._file_mapper_list.append(fm)
                     self._file_mapper_lut[f].append(fm)
 
-                n_channels = current_pixels.channel_count
+                n_channels = extracted_pixels.channel_count
                 md_image.channel_count = n_channels
                 for c in xrange(n_channels):
-                    current_channel = current_pixels.Channel(c)
+                    extracted_channel = extracted_pixels.Channel(c)
                     md_channel = md_pixels.Channel(c)
                     for attr in channel_element_attributes:
-                        value = getattr(current_channel, attr)
-                        if value is not None:
-                            setattr(md_channel, attr, value)
+                        extracted_value = getattr(extracted_channel, attr)
+                        md_value = getattr(md_channel, attr)
+                        if md_value is None and extracted_value is not None:
+                            setattr(md_channel, attr, extracted_value)
 
                 count += 1
 
