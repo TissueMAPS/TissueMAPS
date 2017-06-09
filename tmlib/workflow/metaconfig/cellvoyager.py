@@ -113,22 +113,39 @@ class CellvoyagerMetadataReader(MetadataReader):
                 mlf_filename = f
             elif f.endswith('mrf'):
                 mrf_filename = f
+
+        mrf_tree = etree.parse(mrf_filename)
+        mrf_root = mrf_tree.getroot()
+        channel_map = dict()
+        channel_elements = mrf_root.xpath(
+            './/bts:MeasurementChannel', namespaces=mrf_root.nsmap
+        )
+        mrf_ns = mrf_root.nsmap['bts']
+        for e in channel_elements:
+            channel_name = e.attrib['{%s}Ch' % mrf_ns]
+            channel_map[channel_name] = {
+                'bit_depth': e.attrib['{%s}InputBitDepth' % mrf_ns],
+                'size_x': e.attrib['{%s}HorizontalPixels' % mrf_ns],
+                'size_y': e.attrib['{%s}VerticalPixels' % mrf_ns],
+            }
+
+
         # Obtain the positional information for each image acquisition site
         # from the ".mlf" file:
         mlf_tree = etree.parse(mlf_filename)
         mlf_root = mlf_tree.getroot()
-        mlf_elements = mlf_root.xpath(
+        record_elements = mlf_root.xpath(
             './/bts:MeasurementRecord', namespaces=mlf_root.nsmap
         )
         mlf_ns = mlf_root.nsmap['bts']
 
         metadata.image_count = len([
-            e for e in mlf_elements
+            e for e in record_elements
             if e.attrib['{%s}Type' % mlf_ns] != 'ERR'
         ])
         lookup = defaultdict(list)
 
-        for e in mlf_elements:
+        for e in record_elements:
             # Translate positional information into well identifier string
             well_row = utils.map_number_to_letter(
                 int(e.attrib['{%s}Row' % mlf_ns]))
@@ -148,6 +165,12 @@ class CellvoyagerMetadataReader(MetadataReader):
             index = microscope_image_filenames.index(name)
             img = metadata.image(index)
             img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
+
+            channel_name = e.attrib['{%s}Ch' % mlf_ns]
+            img.Pixels.SizeX = channel_map[channel_name]['size_x']
+            img.Pixels.SizeY = channel_map[channel_name]['size_y']
+            # Bit depth should always be 16.
+            img.Pixels.PixelType = bioformats.omexml.PT_UINT16
             # Image files always contain only a single plane
             img.Pixels.SizeT = 1
             img.Pixels.SizeC = 1
@@ -156,7 +179,7 @@ class CellvoyagerMetadataReader(MetadataReader):
             # A name has to be set as a flag for the handler to update
             # the metadata
             img.Name = name
-            img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
+            img.Pixels.Channel(0).Name = channel_name
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
             img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
@@ -168,16 +191,12 @@ class CellvoyagerMetadataReader(MetadataReader):
 
         # Obtain the general experiment information and well plate format
         # specifications from the ".mrf" file:
-        mrf_tree = etree.parse(mrf_filename)
-        mrf_root = mrf_tree.getroot()
-        mrf_ns = mrf_root.nsmap['bts']
-        e = mrf_root
-        name = e.attrib['{%s}Title' % mrf_ns]
+        name = mrf_root.attrib['{%s}Title' % mrf_ns]
         plate = metadata.PlatesDucktype(metadata.root_node).newPlate(name=name)
         plate.RowNamingConvention = 'letter'
         plate.ColumnNamingConvention = 'number'
-        plate.Rows = e.attrib['{%s}RowCount' % mrf_ns]
-        plate.Columns = e.attrib['{%s}ColumnCount' % mrf_ns]
+        plate.Rows = mrf_root.attrib['{%s}RowCount' % mrf_ns]
+        plate.Columns = mrf_root.attrib['{%s}ColumnCount' % mrf_ns]
         wells = lookup.keys()
         for w in set(wells):
             # Create a *Well* element for each imaged well in the plate
