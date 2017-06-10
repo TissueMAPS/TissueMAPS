@@ -24,7 +24,7 @@ To run the containerized *TissueMAPS* server, clone the repository and bring up 
     docker-compose up -d
 
 
-To run a *TissueMAPS* server in a cloud virtual machine, launch a new instance from one of the shared `Amazon Machine Images (AMIs) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharing-amis.html>`_ using the `Elastic Compute Cloud (EC2) console <https://console.aws.amazon.com/ec2/>`_. To find the *TissueMAPS* images, filter available AMIs for ``Name: TissueMAPS server`` (see `AWS documentation <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/usingsharedamis-finding.html>`_).
+To run a *TissueMAPS* server in a cloud virtual machine, launch a new instance from one of the shared `Amazon Machine Images (AMIs) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharing-amis.html>`_ using the `Elastic Compute Cloud (EC2) console <https://console.aws.amazon.com/ec2/>`_. To find the *TissueMAPS* images, filter public AMIs in the ``Frankfurt`` region for ``AMI Name: TissueMAPS server`` (see `AWS documentation <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/usingsharedamis-finding.html>`_).
 
 For further details and alternative installation options, please refer to the `installation guide <http://docs.tissuemaps.org/installation.html>`_ of the online documentation.
 
