@@ -78,22 +78,23 @@ def _get_roles_and_variables_directories(name):
 
 def _get_group_variables(vars_dir):
     variables = collections.OrderedDict()
-    group_dirs = os.listdir(vars_dir)
-    for group in group_dirs:
-        filename = os.path.abspath(
-            os.path.join(vars_dir, group, 'vars.yml')
-        )
-        with open(filename) as f:
-            for line in f.readlines():
-                var_mapping = yaml.load(line)
-                if var_mapping is None:
-                    continue
-                for k, v in var_mapping.items():
-                    if type(v) in {list, dict}:
-                        raise TypeError(
-                            'Only simply key=value variables are supported.'
-                        )
-                    variables[k] = v
+    if os.path.exists(vars_dir):
+        group_dirs = os.listdir(vars_dir)
+        for group in group_dirs:
+            filename = os.path.abspath(
+                os.path.join(vars_dir, group, 'vars.yml')
+            )
+            with open(filename) as f:
+                for line in f.readlines():
+                    var_mapping = yaml.load(line)
+                    if var_mapping is None:
+                        continue
+                    for k, v in var_mapping.items():
+                        if type(v) in {list, dict}:
+                            raise TypeError(
+                                'Only simply key=value variables are supported.'
+                            )
+                        variables[k] = v
     return variables
 
 
@@ -104,11 +105,12 @@ def _build_ansible_container_command(verbosity, action_command):
         playbooks_dir, '../../container/projects/tissuemaps'
     )
     cmd = ['ansible-container', '--project', os.path.abspath(project_dir)]
-    group_dirs = os.listdir(vars_dir)
-    # NOTE: Ansible variables {{ }} declared in files are not expanded!
-    for group in group_dirs:
-        filename = os.path.abspath(os.path.join(vars_dir, group, 'vars.yml'))
-        cmd.extend(['--var-file', filename])
+    if os.path.exists(vars_dir):
+        group_dirs = os.listdir(vars_dir)
+        # NOTE: Ansible variables {{ }} declared in files are not expanded!
+        for group in group_dirs:
+            filename = os.path.abspath(os.path.join(vars_dir, group, 'vars.yml'))
+            cmd.extend(['--var-file', filename])
     if verbosity > 3:
         cmd.append('--debug')
     cmd.extend(action_command)
