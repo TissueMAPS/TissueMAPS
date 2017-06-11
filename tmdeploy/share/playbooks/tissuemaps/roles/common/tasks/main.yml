@@ -54,16 +54,4 @@
 - include: collectl.yml
   when: ansible_env.ANSIBLE_CONTAINER is undefined
 
-# Su problems might be fixed with the upcoming Ansible 2.4 release.
-# - name: Clone su-exec repository
-#   git:
-#     repo: https://github.com/ncopa/su-exec.git
-#     dest: /usr/local/lib/su-exec
-#     version: v0.2
-#     force: yes
-
-# - name: Install su-exec
-#   # TODO
-#   command: cc
-#   args:
-#     chdir: /usr/local/lib/su-exec
+- include: suexec.yml

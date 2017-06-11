@@ -21,6 +21,8 @@
     web_port: 8002
     app_host: app
     app_port: 5002
+    public_host_name: web
+    tm_version: devel
   roles:
     - web-server
 
@@ -30,6 +32,7 @@
     app_host: app
     app_port: 5002
     uwsgi_processes: 1
+    tm_version: devel
   roles:
     - app-server
 
@@ -43,11 +46,23 @@
   roles:
     - database-server-master
 
-- name: Configure web container as database client
+- name: Start database server on workers
+  hosts: db_worker
+  remote_user: postgres
+  tasks:
+    - name: Start database cluster
+      command: /usr/lib/postgresql/9.6/bin/pg_ctl start -o "-p 9700" -D /storage/database/worker
+
+- name: Stop database server on master
+  hosts: db_master
+  remote_user: postgres
+  tasks:
+    - name: Start database cluster
+      command: /usr/lib/postgresql/9.6/bin/pg_ctl start -o "-p 5432" -D /storage/database/master
+
+- name: Configure app container as database client
   hosts: app
-  remote_user: "{{ tm_user }}"
   vars:
-    tm_devuser_password: 123456
     db_host_master: db_master
     db_hosts_workers:
       - db_worker
@@ -55,25 +70,21 @@
     - database-client
 
 # It is important for container to shut down the server in a clean mode, i.e.
-# wait for all clients to disconnect and backup processes to finish.
+# wait for all backup processes to finish.
 # Otherwise, there will be problems when running the container afterwards.
 - name: Stop database server on workers
   hosts: db_worker
-  vars:
-    db_host: worker
-    postgresql_version: '9.6'
+  remote_user: postgres
   tasks:
     - name: Stop database cluster
-      command: pg_ctlcluster {{ postgresql_version }} {{ db_host }} stop -- -m smart
+      command: /usr/lib/postgresql/9.6/bin/pg_ctl stop -m smart -o "-p 9700" -D /storage/database/worker
 
 - name: Stop database server on master
   hosts: db_master
-  vars:
-    db_host: master
-    postgresql_version: '9.6'
+  remote_user: postgres
   tasks:
     - name: Stop database cluster
-      command: pg_ctlcluster {{ postgresql_version }} {{ db_host }} stop -- -m smart
+      command: /usr/lib/postgresql/9.6/bin/pg_ctl stop -m smart -o "-p 5432" -D /storage/database/master
 
 - name: Clean up
   hosts: all

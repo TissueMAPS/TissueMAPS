@@ -1,16 +1,16 @@
 # systemd service for PostgreSQL clusters
 
 [Unit]
-Description=Citus PostgreSQL Cluster {{ postgresql_version }}-{{ db_node }}
+Description=Citus PostgreSQL Cluster {{ db_node }}
 
 [Service]
 Type=notify
 User={{ db_user }}
 Group={{ db_group }}
-ExecStart={{ db_executable_directory }}/postgres -p {{ db_port }} -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }} -r {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
-ExecStop={{ db_executable_directory }}/pg_ctl stop -w -m smart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ postgresql_version }}/{{ db_node }}
+ExecStart={{ db_executable_directory }}/postgres -p {{ db_port }} -D {{ db_data_directory }}/{{ db_node }} -r {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+ExecStop={{ db_executable_directory }}/pg_ctl stop -w -m smart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ db_node }}
 ExecReload=/bin/kill -HUP $MAINPID
-SyslogIdentifier=postgresql@{{ postgresql_version }}-{{ db_node }}
+SyslogIdentifier=postgresql@{{ db_node }}
 # prevent OOM killer from choosing the postmaster (individual backends will
 # reset the score to 0)
 # OOMScoreAdjust=-900

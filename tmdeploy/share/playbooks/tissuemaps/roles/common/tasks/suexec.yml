@@ -13,9 +13,19 @@
 
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ---
-- include: auth.yml
+# NOTE: Su problems with the Docker connection plugin might be fixed with the
+# upcoming Ansible 2.4 release.
+- name: Clone su-exec repository
+  git:
+    repo: https://github.com/ncopa/su-exec.git
+    dest: /usr/local/lib/su-exec
+    version: v0.2
+    force: yes
 
-- include: add_worker.yml
+- name: Compile su-exec
+  command: cc -Wall -Werror -static -o /usr/local/bin/su-exec su-exec.c
+  args:
+    chdir: /usr/local/lib/su-exec
 
-- include: populate_database.yml

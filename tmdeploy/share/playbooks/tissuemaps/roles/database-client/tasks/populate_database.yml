@@ -15,17 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Create database tables
-  become: yes
-  become_user: "{{ tm_user }}"
-  command: "{{ tm_home }}/.local/bin/tm_create_tables"
+  command: su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_create_tables
   tags:
     - database
     - tissuemaps
 
 - name: Create default user
-  become: yes
-  become_user: "{{ tm_user }}"
-  command: "{{ tm_home }}/.local/bin/tm_add user --name item['name'] --password {{ item['password'] | string | quote }} --email item['email']"
+  command: su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_add user --name item['name'] --password {{ item['password'] | string | quote }} --email item['email']
   with_items: "{{ tm_users }}"
   tags:
     - database
