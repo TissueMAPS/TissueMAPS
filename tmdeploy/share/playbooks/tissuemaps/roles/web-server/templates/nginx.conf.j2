@@ -9,20 +9,24 @@ events {
 
 http {
 
+    {% if ansible_env.ANSIBLE_CONTAINER is undefined %}
     # Cut out all the scam
     server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
+        listen {{ web_port }} default_server;
+        listen [::]:{{ web_port }} default_server;
         server_name "";
         return 444;
     }
+    {% endif %}
 
+    {% if enable_https and ansible_env.ANSIBLE_CONTAINER is undefined %}
     server {
         listen 443 default_server;
         listen [::]:443 default_server;
         server_name "";
         return 444;
     }
+    {% endif %}
 
     ##
     # Basic Settings

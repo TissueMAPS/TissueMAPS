@@ -67,7 +67,7 @@
     state: touch
     owner: "{{ web_user }}"
     group: "{{ web_group }}"
-    mode: 0700
+    mode: 0600
   with_items:
     - tissuemaps-access.log
     - tissuemaps-error.log
@@ -81,7 +81,7 @@
     state: touch
     owner: "{{ web_user }}"
     group: "{{ web_group }}"
-    mode: 0700
+    mode: 0600
   with_items:
     - access.log
     - error.log
