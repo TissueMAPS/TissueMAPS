@@ -63,16 +63,18 @@ services:
     image: tissuemaps/base
     user: postgres
     expose:
-      - '5043'
+      - '5432'
     depends_on:
       - db_worker
     command:
       - 'dumb-init'
       - '/usr/lib/postgresql/9.6/bin/postgres'
+      - '-p'
+      - '5432'
       - '-D'
-      - '/storage/postgresql/data/9.6/master'
+      - '/storage/database/master'
       - '-c'
-      - 'config_file=/etc/postgresql/9.6/master/postgresql.conf'
+      - 'config_file=/storage/database/master/postgresql.conf'
 
   db_worker:
     image: tissuemaps/base
@@ -82,7 +84,9 @@ services:
     command:
       - 'dumb-init'
       - '/usr/lib/postgresql/9.6/bin/postgres'
+      - '-p'
+      - '9700'
       - '-D'
-      - '/storage/postgresql/data/9.6/worker'
+      - '/storage/database/worker'
       - '-c'
-      - 'config_file=/etc/postgresql/9.6/worker/postgresql.conf'
+      - 'config_file=/storage/database/worker/postgresql.conf'

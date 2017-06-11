@@ -35,14 +35,3 @@
     mode: 0700
   tags:
     - database
-
-- name: Create version-specific data subdirectory
-  file:
-    path: "{{ db_data_directory }}/{{ postgresql_version }}"
-    state: directory
-    recurse: yes
-    owner: "{{ db_user }}"
-    group: "{{ db_group }}"
-    mode: 0700
-  tags:
-    - database
