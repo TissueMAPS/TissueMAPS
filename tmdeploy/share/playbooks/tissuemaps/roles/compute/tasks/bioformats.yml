@@ -18,29 +18,29 @@
 - name: Get bftools
   get_url:
     url: https://downloads.openmicroscopy.org/bio-formats/{{ bf_version }}/artifacts/bftools.zip
-    dest: /usr/local/share
+    dest: /usr/local/lib
     timeout: 60
   tags:
     - bioformats
 
 - name: Unpack bftools
   unarchive:
-    src: /usr/local/share/bftools.zip
-    dest: /usr/local/share
+    src: /usr/local/lib/bftools.zip
+    dest: /usr/local/lib
     copy: no
   tags:
     - bioformats
 
 - name: Remove bftools.zip
   file:
-    path: /usr/local/share/bftools.zip
+    path: /usr/local/lib/bftools.zip
     state: absent
   tags:
     - bioformats
 
 - name: Install selected bftools
   file:
-    src: /usr/local/share/bftools/{{ item }}
+    src: /usr/local/lib/bftools/{{ item }}
     dest: /usr/local/bin/{{ item }}
     state: link
   with_items:
