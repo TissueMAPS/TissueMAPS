@@ -44,8 +44,8 @@ def main(image, mask, threshold=1, min_area=3, mean_area=5, plot=False):
         binary or labeled image that specifies pixel regions of interest
         in which blobs should be detected
     threshold: int, optional
-        factor by which pixel values in the convolved image must be above
-        background to be considered part of a blob (default: ``1``)
+        threshold level for pixel values in the convolved image
+        (default: ``1``)
     min_area: int, optional
         minimal size a blob is allowed to have (default: ``3``)
     mean_area: int, optional
