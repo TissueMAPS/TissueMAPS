@@ -30,7 +30,7 @@ globals {
 
 /* Cluster data (only for display purposes) */
 cluster {
-  name = "ElastiCluster"
+  name = "{{ ganglia_cluster_name }}"
   /* owner = "University of Zurich" */
   latlong = "unspecified" 
   url = "{{hostvars[groups.ganglia_master[0]].ansible_default_ipv4.address}}/ganglia"
