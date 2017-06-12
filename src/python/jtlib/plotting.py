@@ -190,7 +190,7 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
 
     See also
     --------
-    :func:`jtlib.plotting.create_intensity_image_plot`
+    :func:`jtlib.plotting.create_float_image_plot`
     :func:`jtlib.plotting.create_intensity_overlay_image_plot`
     '''
 
@@ -237,7 +237,7 @@ def create_intensity_image_plot(image, position, clip=True, clip_value=None):
     )
 
 
-def create_float_image_plot(image, position, colorscale=None):
+def create_float_image_plot(image, position, clip=True, clip_value=None):
     '''Creates a heatmap plot for a floating point image.
 
     Parameters
@@ -248,10 +248,13 @@ def create_float_image_plot(image, position, colorscale=None):
         coordinate that defines the relative position of the
         plot within the figure; ``"ul"`` -> upper left, ``"ur"`` -> upper
         right, ``"ll"`` lower left, ``"lr"`` -> lower right
-    colorscale: List[List[int, str]], optional
-        colors that should be used to visually highlight the objects in the
-        mask image; a default continous colorscale will be created if none
-        is provided (default: ``None``)
+    clip: bool, optional
+        whether intensity values should be clipped (default: ``True``)
+    clip_value: int, optional
+        value above which intensity values should be clipped;
+        the 99th percentile of intensity values will be used in case no value
+        is provided; will only be considered when `clip` is ``True``
+        (default: ``None``)
 
     Returns
     -------
@@ -260,7 +263,6 @@ def create_float_image_plot(image, position, colorscale=None):
     See also
     --------
     :func:`jtlib.plotting.create_intensity_image_plot`
-    :func:`jtlib.plotting.create_colorscale`
     '''
 
     _check_position_argument(position)
@@ -272,17 +274,24 @@ def create_float_image_plot(image, position, colorscale=None):
         image, block, func=np.mean
     )
 
-    if colorscale is None:
-        colorscale = create_colorscale(
-            'YlOrBr', add_background=True, background_color='white'
-        )
+    if clip:
+        if clip_value is None:
+            clip_upper = np.percentile(image, 99.99)
+        else:
+            clip_upper = clip_value
+    else:
+        clip_upper = np.max(image)
+    clip_lower = np.min(image)
+
     return plotly.graph_objs.Heatmap(
         z=ds_img,
         # Only show pixel intensities upon mouse hover.
         hoverinfo='z',
         # Background should be black and pixel intensities encode
         # as grey values.
-        colorscale=colorscale,
+        colorscale='Greys',
+        zmax=clip_upper,
+        zmin=clip_lower,
         zauto=False,
         colorbar=dict(
             thickness=10,
