@@ -44,3 +44,4 @@
     - wget
     - openssl
     - openssl-devel
+    - glibc-static
