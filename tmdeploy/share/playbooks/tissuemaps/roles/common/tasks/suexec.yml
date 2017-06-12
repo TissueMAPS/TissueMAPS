@@ -22,10 +22,13 @@
     repo: https://github.com/ncopa/su-exec.git
     dest: /usr/local/lib/su-exec
     version: v0.2
-    force: yes
 
-- name: Compile su-exec
+- name: Statically compile su-exec
   command: cc -Wall -Werror -static -o /usr/local/sbin/su-exec su-exec.c
   args:
     chdir: /usr/local/lib/su-exec
 
+- name: Remove su-exec repository
+  file:
+    path: /usr/local/lib/su-exec
+    state: absent

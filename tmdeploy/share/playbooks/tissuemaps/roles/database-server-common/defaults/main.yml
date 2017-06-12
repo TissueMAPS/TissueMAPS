@@ -18,7 +18,7 @@ postgis_version: '2.3'
 citus_version: '6.2'
 
 pg_max_files_per_process: 10000
-pg_max_connections: 1000
+pg_max_connections: 500
 pg_maintenance_work_mem: 64MB  # default
 pg_autovacuum_max_workers: 6
 
