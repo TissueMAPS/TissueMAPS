@@ -72,6 +72,14 @@
     - web
   when: is_debian_compatible
 
+- name: Set correct permissions for /usr/share/ganglia
+  file:
+    path: /usr/share/ganglia
+    state: directory
+    recurse: yes
+    owner: apache
+    group: apache
+    mode: 0700
 
 - name: Configure Ganglia web endpoint (RHEL/CentOS)
   tags:
@@ -87,7 +95,6 @@
     dest: /etc/httpd/conf.d/ganglia.conf
   notify: restart apache
   when: is_rhel_compatible
-
 
 - name: Ensure ganglia daemons are running
   tags:
