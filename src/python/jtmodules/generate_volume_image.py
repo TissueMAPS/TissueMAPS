@@ -189,8 +189,10 @@ def main(image, mask, threshold=150, bead_size=2, superpixel_size=4,
     logger.debug('detect_beads in 2D')
     mip = np.max(image, axis=-1)
     try:
+        # TODO: use LOG filter???
         beads, beads_centroids = detect_blobs(
-            image=mip, mask=mask, threshold=threshold, min_area=bead_size
+            image=mip, mask=np.invert(mask > 0), threshold=threshold,
+            min_area=bead_size
         )
     except:
         logger.warn('detect_blobs failed, returning empty volume image')
