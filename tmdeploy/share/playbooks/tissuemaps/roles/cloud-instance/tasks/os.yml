@@ -176,20 +176,6 @@
   run_once: yes
   when: instance_state == "present"
 
-- name: Create ingress UDP rule I for compute-storage security group
-  local_action: os_security_group_rule
-  args:
-    state: present
-    security_group: compute-storage
-    protocol: udp
-    direction: ingress
-    port_range_min: 1
-    port_range_max: 65535
-    remote_group: web
-    region_name: "{{ region }}"
-  run_once: yes
-  when: instance_state == "present"
-
 - name: Create ingress TCP rule II for compute-storage security group
   local_action: os_security_group_rule
   args:
@@ -200,6 +186,20 @@
     port_range_min: 1
     port_range_max: 65535
     remote_group: compute-storage
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress UDP rule I for compute-storage security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: compute-storage
+    protocol: udp
+    direction: ingress
+    port_range_min: 1
+    port_range_max: 65535
+    remote_group: web
     region_name: "{{ region }}"
   run_once: yes
   when: instance_state == "present"
@@ -241,34 +241,6 @@
     direction: ingress
     port_range_min: -1
     port_range_max: -1
-    remote_group: compute-storage
-    region_name: "{{ region }}"
-  run_once: yes
-  when: instance_state == "present"
-
-- name: Create ingress UDP rule I for web security group
-  local_action: os_security_group_rule
-  args:
-    state: present
-    security_group: web
-    protocol: udp
-    direction: ingress
-    port_range_min: 1
-    port_range_max: 65535
-    remote_group: web
-    region_name: "{{ region }}"
-  run_once: yes
-  when: instance_state == "present"
-
-- name: Create ingress UDP rule II for web security group
-  local_action: os_security_group_rule
-  args:
-    state: present
-    security_group: web
-    protocol: udp
-    direction: ingress
-    port_range_min: 1
-    port_range_max: 65535
     remote_group: compute-storage
     region_name: "{{ region }}"
   run_once: yes

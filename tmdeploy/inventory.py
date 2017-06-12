@@ -110,18 +110,17 @@ def build_inventory(setup):
                 host_vars = dict()
                 for k, v in node_type.instance.to_dict().items():
                     if k == 'tags':
-                        security_groups = ''
+                        # Every server is part of the "compute-storage"
+                        # security group, which is important for servers to be
+                        # able to connect to each other when part of a cluster.
+                        security_groups = 'compute-storage'
                         if 'compute' in v or 'storage' in v:
                             host_vars['assign_public_ip'] = 'no'
-                            security_groups = 'compute-storage'
                         if 'web' in v:
                             host_vars['assign_public_ip'] = 'yes'
-                            if security_groups:
-                                security_groups = ','.join([
-                                    security_groups, 'web'
-                                ])
-                            else:
-                                security_groups = 'web'
+                            security_groups = ','.join([
+                                security_groups, 'web'
+                            ])
                         host_vars['security_groups'] = security_groups
                     if isinstance(v, list):
                         v = ','.join(v)
