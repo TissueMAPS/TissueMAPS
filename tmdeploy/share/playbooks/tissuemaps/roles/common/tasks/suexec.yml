@@ -25,7 +25,7 @@
     force: yes
 
 - name: Compile su-exec
-  command: cc -Wall -Werror -static -o /usr/local/bin/su-exec su-exec.c
+  command: cc -Wall -Werror -static -o /usr/local/sbin/su-exec su-exec.c
   args:
     chdir: /usr/local/lib/su-exec
 
