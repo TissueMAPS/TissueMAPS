@@ -15,7 +15,7 @@ synchronous_commit = {{ pg_synchronous_commit }}
 # Where and how to log
 logging_collector = on
 log_directory = '{{ db_log_directory }}'
-log_filename = postgresql-{{ db_node }}-%Y-%m-%d_%H%M%S.log
+log_filename = 'postgresql-{{ db_node }}-%Y-%m-%d_%H%M%S.log'
 log_destination = stderr
 
 # What to log
