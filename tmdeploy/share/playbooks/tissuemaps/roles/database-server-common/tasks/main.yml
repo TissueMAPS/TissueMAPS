@@ -23,9 +23,9 @@
 - include: configure.yml
 
 - name: Start database cluster
-  become: yes
-  become_user: "{{ db_user }}"
-  command: '{{ db_executable_directory }}/pg_ctl start -w -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log'
+  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl start -w -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+  args:
+    chdir: "{{ db_data_directory }}"
   tags:
     - database
 
@@ -34,9 +34,9 @@
 - include: create_users.yml
 
 - name: Stop database cluster
-  become: yes
-  become_user: "{{ db_user }}"
-  command: '{{ db_executable_directory }}/pg_ctl stop -w -m smart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ db_node }}'
+  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl stop -w -m smart -o "-p {{ db_port }}" -D {{ db_data_directory }}/{{ db_node }}
+  args:
+    chdir: "{{ db_data_directory }}"
   tags:
     - database
 

@@ -15,13 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Create database tables
-  command: su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_create_tables
+  command: /usr/local/sbin/su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_create_tables
+  args:
+    chdir: "{{ tm_home }}"
   tags:
     - database
     - tissuemaps
 
 - name: Create default user
-  command: su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_add user --name item['name'] --password {{ item['password'] | string | quote }} --email item['email']
+  command: /usr/local/sbin/su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_add user --name item['name'] --password {{ item['password'] | string | quote }} --email item['email']
+  args:
+    chdir: "{{ tm_home }}"
   with_items: "{{ tm_users }}"
   tags:
     - database

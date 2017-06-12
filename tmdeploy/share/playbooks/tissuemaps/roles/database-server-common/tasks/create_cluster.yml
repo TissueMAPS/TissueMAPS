@@ -31,7 +31,9 @@
     - database
 
 - name: Stop running default database server
-  command: su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl stop -D {{ db_default_cluster_data_directory }}
+  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl stop -D {{ db_default_cluster_data_directory }}
+  args:
+    chdir: "{{ db_default_cluster_data_directory }}"
   when:
     - stat_default_db_data_directory.stat.exists
     - stat_default_db_pid.stat.exists
@@ -62,7 +64,9 @@
     - database
 
 - name: Stop running database server
-  command: su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl stop -D {{ db_data_directory }}/{{ db_node }} -o "-p {{ db_port }}" -m smart
+  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl stop -D {{ db_data_directory }}/{{ db_node }} -o "-p {{ db_port }}" -m smart
+  args:
+    chdir: "{{ db_data_directory }}"
   when:
     - stat_db_data_directory.stat.exists
     - stat_db_pid.stat.exists
@@ -81,7 +85,9 @@
     - database
 
 - name: Initialize database cluster
-  command: su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ postgresql_version }}-{{ db_node }}.log
+  args:
+    chdir: "{{ db_data_directory }}"
   when:
     - not stat_db_data_directory.stat.exists
   tags:
