@@ -11,13 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import numpy as np
 import mahotas as mh
 import sep
 
 
+logger = logging.getLogger(__name__)
+
+
 def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
-        deblend_cont=0, filter_kernel=None):
+        deblend_cont=0, filter_kernel=None, clip_percentile=99.999):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
 
@@ -26,7 +30,7 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
     image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
         grayscale image in which blobs should be detected
     mask: numpy.ndarray[Union[numpy.int32, numpy.bool]]
-        binary or labeled image that masks pixel regions in which blobs
+        binary or labeled image that masks pixel regions in which no blobs
         should be detected
     threshold: int, optional
         factor by which pixel values must be above background
@@ -40,6 +44,9 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
     filter_kernel: numpy.ndarray[numpy.float], optional
         convolution kernel that should be applied to the image before
         thresholding (default: ``None``)
+    clip_percentile: float, optional
+        clip intensity values in `image` above the given percentile; this may
+        help in attenuating artifacts
 
     Returns
     -------
@@ -53,8 +60,13 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
     '''
     sep.set_extract_pixstack(10**7)
 
+    img = image.astype('float')
+
+    p = np.percentile(img, clip_percentile)
+    img[img>p] = p
+
     detection, blobs = sep.extract(
-        image.astype('float'), threshold, mask=np.invert(mask > 0),
+        img, threshold, mask=mask,
         minarea=min_area, segmentation_map=True,
         deblend_nthresh=deblend_nthresh, deblend_cont=deblend_cont,
         filter_kernel=filter_kernel, clean=False
