@@ -156,13 +156,15 @@ class ImageRegistrator(WorkflowStepAPI):
                 s.right_overhang = 0
                 s.left_overhang = 0
 
-    def run_job(self, batch):
+    def run_job(self, batch, assume_clean_state=False):
         '''Calculates shift and overhang values for the given sites.
 
         Parameters
         ----------
         batch: dict
             description of the *run* job
+        assume_clean_state: bool, optional
+            assume that output of previous runs has already been cleaned up
 
         Note
         ----

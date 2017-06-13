@@ -383,13 +383,26 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         return command
 
     @abstractmethod
-    def run_job(self, batch):
+    def run_job(self, batch, assume_clean_state=False):
         '''Runs an individual job.
 
         Parameters
         ----------
         batch: dict
             description of the job
+        assume_clean_state: bool, optional
+            assume that output of previous runs has already been cleaned up
+
+        Note
+        ----
+        Each job should be atomic. This implies that it should remove any output
+        of a previous run when necessary to ensure data consistency, e.g.
+        prevent dublication of data. This can be relaxed when the job is run as
+        part of a :class:`WorkflowStep <tmlib.workflow.workflow.WorkflowStep>`,
+        because the *init* phase will clean-up any existing output of previous
+        runs. Setting `assume_clean_state` would thus be appropriate in this
+        context. It is up to the developer to implement this logic in a step
+        accordingly.
         '''
         pass
 

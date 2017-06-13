@@ -111,13 +111,15 @@ class IllumstatsCalculator(WorkflowStepAPI):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             session.query(tm.IllumstatsFile).delete()
 
-    def run_job(self, batch):
+    def run_job(self, batch, assume_clean_state=False):
         '''Calculates illumination statistics.
 
         Parameters
         ----------
         batch: dict
             job description
+        assume_clean_state: bool, optional
+            assume that output of previous runs has already been cleaned up
         '''
         file_ids = batch['channel_image_files_ids']
         logger.info('calculate illumination statistics')

@@ -570,13 +570,15 @@ class PyramidBuilder(WorkflowStepAPI):
                         z=level, y=row, x=column, tile=tile
                     )
 
-    def run_job(self, batch):
+    def run_job(self, batch, assume_clean_state=False):
         '''Creates 8-bit grayscale JPEG layer tiles.
 
         Parameters
         ----------
         batch: dict
             batches element
+        assume_clean_state: bool, optional
+            assume that output of previous runs has already been cleaned up
         '''
         if batch['index'] == 0:
             self._create_maxzoom_level_tiles(batch)
