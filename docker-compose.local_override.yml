@@ -5,6 +5,8 @@ services:
 
   web:
     image: tissuemaps-web
+    ports:
+      - '8002:8002'
 
   app:
     image: tissuemaps-app

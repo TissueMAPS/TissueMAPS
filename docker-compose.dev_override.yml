@@ -8,10 +8,18 @@ services:
       - 'dumb-init'
       - '/usr/bin/gulp'
       - '--gulpfile'
-      - '/home/tissuemaps/tmui/src/gulpfile.js'
+      - '/var/www/tmui/src/gulpfile.js'
+  # TODO: Figure out a way to set owernship correctly and handle gulp reload functionality elegantly
+  #   volumes:
+  #     - '~/tmui/src:/var/www/tmui/src'
 
   app:
     command:
       - 'dumb-init'
       - '/home/tissuemaps/.tmaps/tm_server.sh'
       - '-vv'
+    volumes:
+      - '~/tmserver:/home/tissuemaps/tmserver'
+      - '~/tmlibrary:/home/tissuemaps/tmlibrary'
+      - '~/jtmodules:/home/tissuemaps/jtmodules'
+      - '~/jtlibrary:/home/tissuemaps/jtlibary'
