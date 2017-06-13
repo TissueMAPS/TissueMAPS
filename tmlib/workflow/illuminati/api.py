@@ -352,7 +352,7 @@ class PyramidBuilder(WorkflowStepAPI):
 
         return job_collection
 
-    def _create_maxzoom_level_tiles(self, batch):
+    def _create_maxzoom_level_tiles(self, batch, assume_clean_state):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info(
@@ -496,9 +496,10 @@ class PyramidBuilder(WorkflowStepAPI):
                             channel_layer_id=layer.id,
                             z=level, y=row, x=column, pixels=tile
                         )
+                        # TODO: add_multiple()
                         tm.ChannelLayerTile.add(c, channel_layer_tile)
 
-    def _create_lower_zoom_level_tiles(self, batch):
+    def _create_lower_zoom_level_tiles(self, batch, assume_clean_state):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info('processing layer for channel %s', layer.channel.name)
@@ -565,10 +566,12 @@ class PyramidBuilder(WorkflowStepAPI):
                     # mosaic image, which is composed of the 4 tiles of the next
                     # higher zoom level
                     tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
-                    tm.ChannelLayerTile.add(
-                        conn, channel_layer_id=layer_id,
-                        z=level, y=row, x=column, tile=tile
+                    channel_layer_tile = tm.ChannelLayerTile(
+                        channel_layer_id=layer_id,
+                        z=level, y=row, x=column, pixels=tile
                     )
+                    # TODO: add_multiple()
+                    tm.ChannelLayerTile.add(conn, channel_layer_tile)
 
     def run_job(self, batch, assume_clean_state=False):
         '''Creates 8-bit grayscale JPEG layer tiles.
@@ -581,9 +584,9 @@ class PyramidBuilder(WorkflowStepAPI):
             assume that output of previous runs has already been cleaned up
         '''
         if batch['index'] == 0:
-            self._create_maxzoom_level_tiles(batch)
+            self._create_maxzoom_level_tiles(batch, assume_clean_state)
         else:
-            self._create_lower_zoom_level_tiles(batch)
+            self._create_lower_zoom_level_tiles(batch, assume_clean_state)
 
     def collect_job_output(self, batch):
         '''Creates :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
