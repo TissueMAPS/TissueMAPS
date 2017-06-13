@@ -386,14 +386,19 @@ class WorkflowStepCLI(WorkflowSubmissionManager):
         job_id=Argument(
             type=int, help='ID of the job that should be run',
             flag='job', short_flag='j'
+        ),
+        assume_clean_state=Argument(
+            type=bool,
+            help='assume that previous outputs have been cleaned up',
+            flag='assume-clean-state', default=False
         )
     )
-    def run(self, job_id):
+    def run(self, job_id, assume_clean_state):
         self._print_logo()
         api = self.api_instance
         batch = api.get_run_batch(job_id)
         logger.info('run job #%d' % job_id)
-        api.run_job(batch)
+        api.run_job(batch, assume_clean_state)
 
     @climethod(
         help='prints the description of a given batch job to the console',

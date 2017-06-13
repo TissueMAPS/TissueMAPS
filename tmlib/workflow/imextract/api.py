@@ -109,7 +109,7 @@ class ImageExtractor(WorkflowStepAPI):
         '''
         return {'delete': args.delete}
 
-    def run_job(self, batch):
+    def run_job(self, batch, assume_clean_state=False):
         '''Extracts individual planes from microscope image files and writes
         them into HDF5 files.
 
@@ -117,6 +117,8 @@ class ImageExtractor(WorkflowStepAPI):
         ----------
         batch: dict
             job description
+        assume_clean_state: bool, optional
+            assume that output of previous runs has already been cleaned up
         '''
         file_mapping_ids = batch['image_file_mapping_ids']
         with tm.utils.ExperimentSession(self.experiment_id) as session:

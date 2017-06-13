@@ -115,13 +115,15 @@ class MetadataExtractor(WorkflowStepAPI):
                 [{'id': f.id, 'omexml': None} for f in files]
             )
 
-    def run_job(self, batch):
+    def run_job(self, batch, assume_clean_state=False):
         '''Extracts OMEXML from microscope image or metadata files.
 
         Parameters
         ----------
         batch: dict
             description of the *run* job
+        assume_clean_state: bool, optional
+            assume that output of previous runs has already been cleaned up
 
         Note
         ----
@@ -134,7 +136,9 @@ class MetadataExtractor(WorkflowStepAPI):
         subprocess.CalledProcessError
             when extraction failed
         '''
-        # with JavaBridge() as java:
+        # NOTE: Ideally, we would use the BFOmeXmlReader together with JavaBridge
+        # but this approach has several shortcomings and requires too much
+        # memory to run efficiently on individual cores.
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             for fid in batch['microscope_image_file_ids']:
                 img_file = session.query(tm.MicroscopeImageFile).get(fid)
@@ -163,8 +167,6 @@ class MetadataExtractor(WorkflowStepAPI):
                     ).group()
                 except:
                     raise RegexError('OMEXML metadata could not be extracted.')
-                # with BFOmeXmlReader(img_file.location) as reader:
-                #     omexml = reader.read()
                 img_file.omexml = unicode(omexml)
 
     @notimplemented

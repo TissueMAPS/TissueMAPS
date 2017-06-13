@@ -109,7 +109,7 @@ class MetadataConfigurator(WorkflowStepAPI):
             logger.debug('delete existing image file mappings')
             session.query(tm.ImageFileMapping).delete()
 
-    def run_job(self, batch):
+    def run_job(self, batch, assume_clean_state=False):
         '''Configures OMEXML metadata extracted from microscope image files and
         complements it with metadata retrieved from additional microscope
         metadata files and/or user input.
@@ -121,6 +121,8 @@ class MetadataConfigurator(WorkflowStepAPI):
         ----------
         batch: dict
             job description
+        assume_clean_state: bool, optional
+            assume that output of previous runs has already been cleaned up
 
         See also
         --------

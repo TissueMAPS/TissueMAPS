@@ -67,6 +67,11 @@ class Jterator(WorkflowStepCLI):
         job_id=Argument(
             type=int, help='ID of the job that should be run',
             flag='job', short_flag='j'
+        ),
+        assume_clean_state=Argument(
+            type=bool,
+            help='assume that previous outputs have been cleaned up',
+            flag='assume-clean-state', default=False
         )
     )
     def run(self, job_id):
@@ -75,7 +80,7 @@ class Jterator(WorkflowStepCLI):
         logger.info('get batch for job #%d', job_id)
         batch = api.get_run_batch(job_id)
         logger.info('run job #%d' % job_id)
-        api.run_job(batch)
+        api.run_job(batch, assume_clean_state)
 
     @climethod(
         help='runs an invidiual site on the local machine for debugging',
@@ -94,7 +99,7 @@ class Jterator(WorkflowStepCLI):
         logger.info('DEBUG mode')
         logger.info('create debug batch for site %d', site_id)
         batch = {'site_ids': [site_id], 'plot': plot}
-        api.run_job(batch)
+        api.run_job(batch, assume_clean_state=False)
 
     @climethod(help='removes an existing project')
     def remove(self):
