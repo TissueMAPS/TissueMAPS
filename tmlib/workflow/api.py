@@ -371,7 +371,7 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         command = [self.step_name]
         command.extend(['-v' for x in range(verbosity)])
         command.append(self.experiment_id)
-        command.extend(['run', '--job', str(job_id)])
+        command.extend(['run', '--job', str(job_id), '--assume-clean-state'])
         return command
 
     def _build_collect_command(self, verbosity):
