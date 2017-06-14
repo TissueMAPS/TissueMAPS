@@ -74,7 +74,7 @@ class Jterator(WorkflowStepCLI):
             flag='assume-clean-state', default=False
         )
     )
-    def run(self, job_id):
+    def run(self, job_id, assume_clean_state):
         self._print_logo()
         api = self.api_instance
         logger.info('get batch for job #%d', job_id)
