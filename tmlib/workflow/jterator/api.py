@@ -375,7 +375,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         command.extend(['debug', '--site', str(site_id), '--plot'])
         return command
 
-    def _save_pipeline_outputs(self, store):
+    def _save_pipeline_outputs(self, store, assume_clean_state):
         logger.info('save pipeline outputs')
         objects_output = self.project.pipe.description.output.objects
         for item in objects_output:
@@ -673,7 +673,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             logger.info('process site %d', site_id)
             store = self._load_pipeline_input(site_id)
             store = self._run_pipeline(store, site_id, batch['plot'])
-            self._save_pipeline_outputs(store)
+            self._save_pipeline_outputs(store, assume_clean_state)
 
     def _aggregate(self, feature_map, mapobject_type_id, mapobject_type_name,
             ref_mapobject_type_id, ref_mapobject_id, ref_geometry):
