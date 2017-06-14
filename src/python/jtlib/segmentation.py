@@ -29,9 +29,9 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
     ----------
     image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
         grayscale image in which blobs should be detected
-    mask: numpy.ndarray[Union[numpy.int32, numpy.bool]]
-        binary or labeled image that masks pixel regions in which no blobs
-        should be detected
+    mask: numpy.ndarray[numpy.bool]
+        binary image that masks pixel regions in which no blobs should be
+        detected
     threshold: int, optional
         factor by which pixel values must be above background
         to be considered part of a blob (default: ``5``)
@@ -63,10 +63,13 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
     img = image.astype('float')
 
     p = np.percentile(img, clip_percentile)
-    img[img>p] = p
+    img[img > p] = p
 
+    img[mask > 0] = 0
+
+    logger.info('detect blobs via thresholding and deblending')
     detection, blobs = sep.extract(
-        img, threshold, mask=mask,
+        img, threshold,
         minarea=min_area, segmentation_map=True,
         deblend_nthresh=deblend_nthresh, deblend_cont=deblend_cont,
         filter_kernel=filter_kernel, clean=False
@@ -81,12 +84,12 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
     x[x > image.shape[1]] = image.shape[1]
     centroids[y, x] = np.arange(1, n + 1)
 
-    # Despite masking some objects are detected outside regions of interest.
-    # Let's make absolutely that no object lies outside.
-    centroids[mask == 0] = 0
-    mh.labeled.relabel(centroids, inplace=True)
-    blobs[mask == 0] = 0
+    # Blobs detected outside of regions of interest are discarded.
+    blobs[mask > 0] = 0
+    blobs[mh.bwperim(np.invert(mask)) > 0] = 0
     mh.labeled.relabel(blobs, inplace=True)
-    # TODO: check that labels are the same between centroids and blobs
+
+    # We need to ensure that centroids are labeled the same way as blobs.
+    centroids[centroids > 0] = blobs[centroids > 0]
 
     return (blobs, centroids)
