@@ -65,8 +65,6 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
     p = np.percentile(img, clip_percentile)
     img[img > p] = p
 
-    img[mask > 0] = 0
-
     logger.info('detect blobs via thresholding and deblending')
     detection, blobs = sep.extract(
         img, threshold,
