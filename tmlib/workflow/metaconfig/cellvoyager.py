@@ -116,19 +116,6 @@ class CellvoyagerMetadataReader(MetadataReader):
 
         mrf_tree = etree.parse(mrf_filename)
         mrf_root = mrf_tree.getroot()
-        channel_map = dict()
-        channel_elements = mrf_root.xpath(
-            './/bts:MeasurementChannel', namespaces=mrf_root.nsmap
-        )
-        mrf_ns = mrf_root.nsmap['bts']
-        for e in channel_elements:
-            channel_name = e.attrib['{%s}Ch' % mrf_ns]
-            channel_map[channel_name] = {
-                'bit_depth': e.attrib['{%s}InputBitDepth' % mrf_ns],
-                'size_x': e.attrib['{%s}HorizontalPixels' % mrf_ns],
-                'size_y': e.attrib['{%s}VerticalPixels' % mrf_ns],
-            }
-
 
         # Obtain the positional information for each image acquisition site
         # from the ".mlf" file:
@@ -166,11 +153,6 @@ class CellvoyagerMetadataReader(MetadataReader):
             img = metadata.image(index)
             img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
 
-            channel_name = e.attrib['{%s}Ch' % mlf_ns]
-            img.Pixels.SizeX = channel_map[channel_name]['size_x']
-            img.Pixels.SizeY = channel_map[channel_name]['size_y']
-            # Bit depth should always be 16.
-            img.Pixels.PixelType = bioformats.omexml.PT_UINT16
             # Image files always contain only a single plane
             img.Pixels.SizeT = 1
             img.Pixels.SizeC = 1
