@@ -405,8 +405,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 # Create a feature values entry for each segmented object at
                 # each time point.
                 logger.info('add features for objects of type "%s"', obj_name)
-                measurements = segm_objs.measurements
-                for feature_name in measurements[0].columns:
+                for feature_name in segm_objs.measurements[0].columns:
                     logger.debug('add feature "%s"', feature_name)
                     feature = session.get_or_create(
                         tm.Feature, name=feature_name,
@@ -536,7 +535,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 )
                 logger.debug('round feature values to 6 decimals')
                 feature_values = list()
-                for t, data in enumerate(measurements):
+                for t, data in enumerate(segm_objs.measurements):
                     data = data.round(6)  # single!
                     if data.empty:
                         logger.warn('empty measurement at time point %d', t)
