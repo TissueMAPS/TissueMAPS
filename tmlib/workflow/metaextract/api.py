@@ -168,6 +168,9 @@ class MetadataExtractor(WorkflowStepAPI):
                 except:
                     raise RegexError('OMEXML metadata could not be extracted.')
                 img_file.omexml = unicode(omexml)
+                session.add(img_file)
+                session.commit(img_file)
+                session.expunge(img_file)
 
     @notimplemented
     def collect_job_output(self, batch):
