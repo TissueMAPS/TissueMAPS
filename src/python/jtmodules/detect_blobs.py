@@ -73,7 +73,7 @@ def main(image, mask, threshold=1, min_area=3, mean_area=5, plot=False):
         min_area=min_area, filter_kernel=f
     )
 
-    n = np.unique(blobs[blobs>0])
+    n = len(np.unique(blobs[blobs>0]))
 
     logger.info('%d blobs detected', n)
 
@@ -81,7 +81,7 @@ def main(image, mask, threshold=1, min_area=3, mean_area=5, plot=False):
         logger.info('create plot')
         from jtlib import plotting
 
-        image_convolved = mh.convolve(img.astype(float), k)
+        image_convolved = mh.convolve(image.astype(float), f)
 
         colorscale = plotting.create_colorscale(
             'Spectral', n=n, permute=True, add_background=True
