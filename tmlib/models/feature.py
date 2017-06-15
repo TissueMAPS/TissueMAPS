@@ -152,7 +152,7 @@ class FeatureValues(ExperimentModel):
 
     __distribute_by__ = 'mapobject_id'
 
-    __distribution_method__ = 'hash'
+    __distribution_method__ = 'range'
 
     __colocate_with__ = 'mapobjects'
 

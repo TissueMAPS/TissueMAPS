@@ -427,7 +427,7 @@ class Mapobject(ExperimentModel):
 
     __distribute_by__ = 'id'
 
-    __distribution_method__ = 'hash'
+    __distribution_method__ = 'range'
 
     #: int: ID of another record to which the object is related.
     #: This could refer to another mapobject in the same table, e.g. in order
@@ -753,7 +753,7 @@ class MapobjectSegmentation(ExperimentModel):
 
     __distribute_by__ = 'mapobject_id'
 
-    __distribution_method__ = 'hash'
+    __distribution_method__ = 'range'
 
     __colocate_with__ = 'mapobjects'
 

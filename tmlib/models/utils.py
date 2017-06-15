@@ -135,41 +135,36 @@ def _set_search_path(connection, schema_name):
 
 def _update_distributed_table_metadata(connection, schema_name):
     cursor = connection.connection.cursor()
-    cursor.execute('''
-        SELECT logicalrelid::text AS table_name, partmethod AS distribution_method
-        FROM pg_dist_partition;
-    ''')
-    records = cursor.fetchall()
-    # NOTE: database user must be given permissions to update these tables!
-    for table_name, distribution_method in records:
+    # NOTE: The database user must be given permissions to update the
+    # Citus metadata tables!
+    for name, table in ExperimentModel.metadata.tables.iteritems():
+        if not table.info['is_distributed']:
+            continue
+        table_name = table.name
+        distribution_method = table.info['distribution_method']
         # We need to set the range of values for each shard in case the
         # distribution method is "range". In case of "hash" distribution this is
         # automatically handled.
-        if distribution_method == 'r':
-            # We actually use "range" distribution, but we need to trick citus
-            # in order to be able to co-locate tables. Therefore, we set "hash"
-            # distribution method for the creation of the shards and then
-            # subsequently change the distribution method to "range" (see below).
-            # This might be improved in future releases of Citus,
-            # see issue #
-            raise ValueError(
-                'Distributoin method "range" is not supported for table "%s"'
-                % table_name
-            )
-        elif distribution_method != 'h':
+        #dalfkjadf
+        # Tables that should be distribution by "range" where created with
+        # "hash" distribution method. Now, we need to change the distribution
+        # method manually by updating the metadata tables.
+        # In future releases of Citus this will hopefully be handled
+        # automatically, see issue #1450.
+        if distribution_method != 'range':
             continue
         cursor.execute('''
             UPDATE pg_dist_partition SET partmethod = 'r'
             WHERE logicalrelid = %(table)s::regclass
         ''', {
-            'table': table_name
+            'table': '{s}.{t}'.format(s=schema_name, t=table_name)
         })
         cursor.execute('''
             SELECT shardid FROM pg_dist_shard
             WHERE logicalrelid = %(table)s::regclass
             ORDER BY shardid;
         ''', {
-            'table': table_name
+            'table': '{s}.{t}'.format(s=schema_name, t=table_name)
         })
         shards = cursor.fetchall()
         n = len(shards)
@@ -195,16 +190,16 @@ def _update_distributed_table_metadata(connection, schema_name):
                 WHERE logicalrelid = %(table)s::regclass
                 AND shardid = %(shard_id)s
             ''', {
-                'table': table_name,
+                'table': '{s}.{t}'.format(s=schema_name, t=table_name),
                 'shard_id': shards[i][0],
                 'min_value': min_value, 'max_value': max_value
             })
             # Create a SEQUENCE for each shard, such that we are able to
             # create unique shard-specific values for the distribution column.
             cursor.execute('''
-                CREATE SEQUENCE {table}_id_seq_{shard}
+                CREATE SEQUENCE {schema}.{table}_id_seq_{shard}
                 MINVALUE %(min_value)s MAXVALUE %(max_value)s
-            '''.format(table=table_name, shard=shard_id), {
+            '''.format(schema=schema_name, table=table_name, shard=shard_id), {
                 'min_value': min_value, 'max_value': max_value
             })
 

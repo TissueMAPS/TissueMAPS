@@ -66,10 +66,11 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
                         % (self.__table__.name, distribution_method)
                     )
                 column_type = self.__table__.c[distribution_column].type
-                if not isinstance(column_type, sqlalchemy.types.BigInteger):
+                if (not isinstance(column_type, sqlalchemy.types.BigInteger) and
+                        distribution_method == 'range'):
                     raise TypeError(
                         'Distribution column "%s" of table "%s" must have type '
-                        '"%s"' % (
+                        '"%s" for distribtion method "range"' % (
                             distribution_column, self.__table__.name,
                             sqlalchemy.types.BigInteger.__name__
                         )
