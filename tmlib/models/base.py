@@ -22,6 +22,7 @@ decorator.
 '''
 import os
 import logging
+import sqlalchemy
 from sqlalchemy.ext.declarative import (
     declarative_base, DeclarativeMeta, declared_attr
 )
@@ -45,19 +46,34 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
     '''Metaclass for declarative base classes.'''
 
     def __init__(self, name, bases, d):
+        DeclarativeMeta.__init__(self, name, bases, d)
+        if not hasattr(self, '__table__'):
+            return
+        distribution_method = d.pop('__distribution_method__', None)
         distribution_column = (
-            d.pop('__distribute_by_hash__', None) or
+            d.pop('__distribute_by__', None) or
             getattr(self, '__bind_key__', None)
         )
-        distribute_by_replication = (
-            d.pop('__distribute_by_replication__', False)
-        )
-        colocated_table = (
-            d.pop('__colocate_with__', None)
-        )
-        DeclarativeMeta.__init__(self, name, bases, d)
-        if hasattr(self, '__table__'):
-            if distribution_column is not None:
+        colocated_table = d.pop('__colocate_with__', None)
+        if distribution_method is not None:
+            self.__table__.info['is_distributed'] = True
+            self.__table__.info['distribution_method'] = distribution_method
+            if distribution_method in {'range', 'hash'}:
+                if distribution_column is None:
+                    raise ValueError(
+                        'Table "%s" is distributed by "%s" and must therefore '
+                        'provide a distribution column via "__distribute_by__".'
+                        % (self.__table__.name, distribution_method)
+                    )
+                column_type = self.__table__.c[distribution_column].type
+                if not isinstance(column_type, sqlalchemy.types.BigInteger):
+                    raise TypeError(
+                        'Distribution column "%s" of table "%s" must have type '
+                        '"%s"' % (
+                            distribution_column, self.__table__.name,
+                            sqlalchemy.types.BigInteger.__name__
+                        )
+                    )
                 columns = self.__table__.c
                 if distribution_column not in columns:
                     raise ValueError(
@@ -65,14 +81,19 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
                         'is not a column of table "%s".'
                         % (distribution_column, self.__table__.name)
                     )
-                self.__table__.info['distribute_by_hash'] = distribution_column
-                self.__table__.info['colocated_table'] = colocated_table
-                self.is_distributed = True
-            elif distribute_by_replication:
-                self.__table__.info['distribute_by_replication'] = True
-                self.is_distributed = True
+                self.__table__.info['distribute_by'] = distribution_column
+                self.__table__.info['colocate_with'] = colocated_table
+            elif distribution_method == 'replication':
+                self.__table__.info['distribute_by'] = None
+                self.__table__.info['colocate_with'] = None
             else:
-                self.is_distributed = False
+                raise ValueError(
+                    'Table "%s" specified an unsupported distribution method. '
+                    'Supported are: "range", "hash" and "replication".'
+                    % self.__table__.name
+                )
+        else:
+            self.__table__.info['is_distributed'] = False
 
 
 #: Abstract base class for models of the main database.
@@ -99,13 +120,16 @@ class DateMixIn(object):
     @declared_attr
     def created_at(cls):
         '''datetime: date and time when the row was inserted into the column'''
-        return Column(DateTime, default=func.now())
+        return Column(DateTime, default=sqlalchemy.func.now())
 
     @declared_attr
     def updated_at(cls):
         '''datetime: date and time when the row was last updated'''
         # TODO: CREATE TRIGGER to update independent of ORM
-        return Column(DateTime, default=func.now(), onupdate=func.now())
+        return Column(
+            DateTime,
+            default=sqlalchemy.func.now(), onupdate=sqlalchemy.func.now()
+        )
 
 
 class IdMixIn(object):

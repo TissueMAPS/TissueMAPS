@@ -96,7 +96,7 @@ def create_db_engine(db_uri, cache=True):
             raise ValueError('Pool size must be a positive integer.')
         engine = sqlalchemy.create_engine(
             db_uri, poolclass=sqlalchemy.pool.QueuePool,
-            pool_size=POOL_SIZE, max_overflow=overflow_size,
+            pool_size=POOL_SIZE, max_overflow=overflow_size
         )
         if cache:
             logger.debug('cache database engine for reuse')
@@ -133,38 +133,53 @@ def _set_search_path(connection, schema_name):
         cursor.close()
 
 
-def _customize_distribution_method(connection, schema_name):
+def _update_distributed_table_metadata(connection, schema_name):
     cursor = connection.connection.cursor()
-    tables_to_distribute_by_range = {
-        'mapobjects', 'mapobject_segmentations',
-        'feature_values', 'label_values'
-    }
-    # Change distribution method from "hash" to "range". This is important to
-    # be able to target individual shards from compute nodes for parallel
-    # bulk ingestion of data.
+    cursor.execute('''
+        SELECT logicalrelid::text AS table_name, partmethod AS distribution_method
+        FROM pg_dist_partition;
+    ''')
+    records = cursor.fetchall()
     # NOTE: database user must be given permissions to update these tables!
-    for table_name in tables_to_distribute_by_range:
+    for table_name, distribution_method in records:
+        # We need to set the range of values for each shard in case the
+        # distribution method is "range". In case of "hash" distribution this is
+        # automatically handled.
+        if distribution_method == 'r':
+            # We actually use "range" distribution, but we need to trick citus
+            # in order to be able to co-locate tables. Therefore, we set "hash"
+            # distribution method for the creation of the shards and then
+            # subsequently change the distribution method to "range" (see below).
+            # This might be improved in future releases of Citus,
+            # see issue #
+            raise ValueError(
+                'Distributoin method "range" is not supported for table "%s"'
+                % table_name
+            )
+        elif distribution_method != 'h':
+            continue
         cursor.execute('''
             UPDATE pg_dist_partition SET partmethod = 'r'
             WHERE logicalrelid = %(table)s::regclass
         ''', {
-            'table': '{schema}.{table}'.format(
-                schema=schema_name, table=table_name
-            )
+            'table': table_name
         })
         cursor.execute('''
             SELECT shardid FROM pg_dist_shard
             WHERE logicalrelid = %(table)s::regclass
             ORDER BY shardid;
         ''', {
-            'table': '{schema}.{table}'.format(
-                schema=schema_name, table=table_name
-            )
+            'table': table_name
         })
         shards = cursor.fetchall()
         n = len(shards)
-        # NOTE: distribution column of "range" partitioned tables must have type
-        # BigInteger
+        # Shards should have been created upon experiment creation.
+        if n == 0:
+            raise ValueError(
+                'No shards found for distributed table "%s".' % table_name
+            )
+        # Distribution column of "range" distributed tables must have type
+        # BigInteger.
         total_max_value = 9223372036854775807  # positive bigint range
         batch_size = total_max_value / n
         for i in range(n):
@@ -172,37 +187,25 @@ def _customize_distribution_method(connection, schema_name):
             min_value = i * batch_size + 1
             max_value = (i+1) * batch_size
             # TODO: What happens if the "shard_max_size" is exceeded?
-            # How does Citus handle the range paritioning?
             # To prevent creation of new shards in the first place, we may need
             # to further increase "shard_count" and/or "shard_max_size".
             cursor.execute('''
-                UPDATE pg_dist_shard SET shardminvalue = %(min_value)s
+                UPDATE pg_dist_shard
+                SET shardminvalue = %(min_value)s, shardmaxvalue = %(max_value)s
                 WHERE logicalrelid = %(table)s::regclass
                 AND shardid = %(shard_id)s
             ''', {
-                'table': '{schema}.{table}'.format(
-                    schema=schema_name, table=table_name
-                ),
-                'min_value': min_value,
-                'shard_id': shards[i][0]
+                'table': table_name,
+                'shard_id': shards[i][0],
+                'min_value': min_value, 'max_value': max_value
             })
+            # Create a SEQUENCE for each shard, such that we are able to
+            # create unique shard-specific values for the distribution column.
             cursor.execute('''
-                UPDATE pg_dist_shard SET shardmaxvalue = %(max_value)s
-                WHERE logicalrelid = %(table)s::regclass
-                AND shardid = %(shard_id)s
-            ''', {
-                'table': '{schema}.{table}'.format(
-                    schema=schema_name, table=table_name
-                ),
-                'max_value': max_value,
-                'shard_id': shard_id
-            })
-            cursor.execute('''
-                CREATE SEQUENCE {schema}.{table}_id_seq_{shard}
+                CREATE SEQUENCE {table}_id_seq_{shard}
                 MINVALUE %(min_value)s MAXVALUE %(max_value)s
-            '''.format(schema=schema_name, table=table_name, shard=shard_id), {
-                'min_value': min_value,
-                'max_value': max_value
+            '''.format(table=table_name, shard=shard_id), {
+                'min_value': min_value, 'max_value': max_value
             })
 
 
@@ -262,7 +265,7 @@ def _create_experiment_db_tables(connection, schema_name):
 #     )
 #     experiment_specific_metadata = sqlalchemy.MetaData(schema=schema_name)
 #     for name, table in ExperimentModel.metadata.tables.iteritems():
-#         if table.is_distributed:
+#         if table.info['is_distributed']:
 #             table_copy = table.tometadata(experiment_specific_metadata)
 #     experiment_specific_metadata.create_all(connection)
 
@@ -388,7 +391,7 @@ class Query(sqlalchemy.orm.query.Query):
         classes = [d['type'] for d in self.column_descriptions]
         locations = list()
         for cls in classes:
-            if cls.is_distributed:
+            if cls.__table__.info['is_distributed']:
                 raise ValueError(
                     'Records of distributed model "%s" cannot be deleted '
                     'within a transaction.' % cls.__name__
@@ -705,7 +708,7 @@ class ExperimentSession(_Session):
         exists = _create_schema_if_not_exists(connection, self._schema)
         if not exists:
             _create_experiment_db_tables(connection, self._schema)
-            _customize_distribution_method(connection, self._schema)
+            _update_distributed_table_metadata(connection, self._schema)
         _set_search_path(connection, self._schema)
         self._session_factory.configure(bind=connection)
         self._session = _SQLAlchemy_Session(
@@ -728,7 +731,7 @@ class _Connection(object):
     you are doing.
     '''
 
-    def __init__(self, db_uri):
+    def __init__(self, db_uri, transaction):
         '''
         Parameters
         ----------
@@ -738,12 +741,14 @@ class _Connection(object):
         '''
         self._db_uri = db_uri
         self._engine = create_db_engine(self._db_uri)
+        self._transaction = transaction
 
     def __enter__(self):
         # NOTE: We need to run queries outside of a transaction in Postgres
         # autocommit mode.
         self._connection = self._engine.raw_connection()
-        self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        if not self._transaction:
+            self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
         # need to perform queries in parallel under the assumption that
@@ -756,6 +761,12 @@ class _Connection(object):
         return self
 
     def __exit__(self, except_type, except_value, except_trace):
+        if self._transaction:
+            if except_value:
+                logger.error('transaction rolled back due to error')
+                self._connection.rollback()
+            else:
+                self._connection.commit()
         self._cursor.close()
         self._connection.close()
 
@@ -793,29 +804,33 @@ class ExperimentConnection(_Connection):
     :class:`tmlib.models.base.ExperimentModel`
     '''
 
-    def __init__(self, experiment_id):
+    def __init__(self, experiment_id, transaction=False):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the experiment that should be queried
         '''
-        super(ExperimentConnection, self).__init__(cfg.db_master_uri)
+        super(ExperimentConnection, self).__init__(
+            cfg.db_master_uri, transaction
+        )
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=experiment_id
         )
         self.experiment_id = experiment_id
         self._shard_lut = dict()
+        self._transaction = transaction
 
     def __enter__(self):
         # NOTE: We need to run queries outside of a transaction in Postgres
         # autocommit mode.
         self._connection = self._engine.raw_connection()
-        self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        if not self._transaction:
+            self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         exists = _create_schema_if_not_exists(self._connection, self._schema)
         if not exists:
             _create_experiment_db_tables(self._connection, self._schema)
-            _customize_distribution_method(connection, self._schema)
+            _update_distributed_table_metadata(connection, self._schema)
         _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
@@ -855,7 +870,7 @@ class ExperimentConnection(_Connection):
             'get ID of randomly selected shard for table of class "%s"',
             model_class.__name__
         )
-        if not model_class.is_distributed:
+        if not model_class.__table__.info['is_distributed']:
             raise ValueError(
                 'Table of class "%s" is not distributed.' % model_class.__name__
             )
@@ -902,7 +917,7 @@ class ExperimentConnection(_Connection):
             'get unique identifier for shard %d of table of class "%s"',
             shard_id, model_class.__name__
         )
-        if not model_class.is_distributed:
+        if not model_class.__table__.info['is_distributed']:
             raise ValueError(
                 'Table of class "%s" is not distributed.' % model_class.__name__
             )
@@ -945,7 +960,7 @@ class ExperimentConnection(_Connection):
             'group distribution column values of table of class "%s" per shard',
             model_class.__name__
         )
-        if not model_class.is_distributed:
+        if not model_class.__table__.info['is_distributed']:
             raise ValueError(
                 'Table of class "%s" is not distributed.' % model_class.__name__
             )
@@ -1002,8 +1017,8 @@ class MainConnection(_Connection):
     :class:`tmlib.models.base.MainModel`
     '''
 
-    def __init__(self):
-        super(MainConnection, self).__init__(cfg.db_master_uri)
+    def __init__(self, transaction=False):
+        super(MainConnection, self).__init__(cfg.db_master_uri, False)
 
 
 class ExperimentWorkerConnection(_Connection):
@@ -1064,7 +1079,7 @@ class ExperimentWorkerConnection(_Connection):
         ValueError
             when the `model_class` does not represent a distributed table
         '''
-        if not model_class.is_distributed:
+        if not model_class.__table__.info['is_distributed']:
             raise ValueError(
                 'Shard selection not possible, since provided model class does '
                 'not represent a distributed database table.'

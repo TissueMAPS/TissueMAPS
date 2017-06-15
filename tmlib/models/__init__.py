@@ -95,14 +95,14 @@ schema explicitly, e.g. ``SELECT * FROM experiment_1.plates``.
 Some of the data models represent distributed table, which are sharded accross
 different servers to scale out the database backend over a cluster. To this end,
 *TissueMAPS* uses `Citus <https://docs.citusdata.com/en/stable/index.html>`_.
-Distributed models are flagged with ``__distribute_by_replication__`` or
-``__distribute_by_hash__``, which will either replicate the table
-(so called "reference" table) or distribute it accross available
-database server nodes. To this end, the extension must have been installed on
-all database servers and these servers (*worker* nodes) must have been
-registered on the main database server (*master* node).
-For more details on how to set up a database cluster, please refer to
-:doc:`setup_and_deployment` section of the documentation.
+Distributed models are flagged with ``__distribution_method__`` and in case
+of *hash* or *range* distribution additionally with ``__distribute_by__``.
+This will either replicate the table (so called "reference" table) or
+distribute it accross available database server nodes. To this end, the
+extension must have been installed on all database servers and these servers
+(*worker* nodes) must have been registered on the main database server
+(*master* node). For more details on how to set up a database cluster, please
+refer to :doc:`installation` section of the documentation.
 
 Distributed tables can be accessed via the *ORM* for reading (``SELECT``) using
 :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`. However,

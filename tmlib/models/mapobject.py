@@ -425,7 +425,9 @@ class Mapobject(ExperimentModel):
     #: str: name of the corresponding database table
     __tablename__ = 'mapobjects'
 
-    __distribute_by_hash__ = 'id'
+    __distribute_by__ = 'id'
+
+    __distribution_method__ = 'hash'
 
     #: int: ID of another record to which the object is related.
     #: This could refer to another mapobject in the same table, e.g. in order
@@ -578,9 +580,7 @@ class Mapobject(ExperimentModel):
             object with assigned database ID
         '''
         if not isinstance(mapobject, cls):
-            raise TypeError(
-                'Object must have type tmlib.models.mapobject.Mapobject'
-            )
+            raise TypeError('Object must have type %s' % cls.__name__)
         shard_id = connection.get_shard_id(cls)
         mapobject.id = connection.get_unique_ids(cls, shard_id, 1)[0]
         connection.execute('''
@@ -609,6 +609,8 @@ class Mapobject(ExperimentModel):
         List[tmlib.models.mapobject.Mapobject]
             objects with assigned database ID
         '''
+        if not mapobjects:
+            return []
         # Select a random shard, get all values for mapobject_id from
         # the same shard-specific sequence and COPY the data from STDIN.
         # This will target exactly only one shard, which allows adding data
@@ -619,9 +621,7 @@ class Mapobject(ExperimentModel):
         ids = connection.get_unique_ids(cls, shard_id, len(mapobjects))
         for i, obj in enumerate(mapobjects):
             if not isinstance(obj, cls):
-                raise TypeError(
-                    'Object must have type tmlib.models.mapobject.Mapobject'
-                )
+                raise TypeError('Object must have type %s' % cls.__name__)
             obj.id = ids[i]
             w.writerow((obj.id, obj.mapobject_type_id, obj.ref_id))
         columns = ('id', 'mapobject_type_id', 'ref_id')
@@ -751,7 +751,11 @@ class MapobjectSegmentation(ExperimentModel):
         )
     )
 
-    __distribute_by_hash__ = 'mapobject_id'
+    __distribute_by__ = 'mapobject_id'
+
+    __distribution_method__ = 'hash'
+
+    __colocate_with__ = 'mapobjects'
 
     #: str: EWKT POLYGON geometry
     geom_polygon = Column(Geometry('POLYGON'))
@@ -806,10 +810,7 @@ class MapobjectSegmentation(ExperimentModel):
 
         '''
         if not isinstance(mapobject_segmentation, cls):
-            raise TypeError(
-                'Object must have type '
-                'tmlib.models.mapobject.MapobjectSegmentation'
-            )
+            raise TypeError('Object must have type %s' % cls.__name__)
         connection.execute('''
             INSERT INTO mapobject_segmentations (
                 mapobject_id, segmentation_layer_id,
@@ -839,14 +840,13 @@ class MapobjectSegmentation(ExperimentModel):
         mapobject_segmentations: List[tmlib.modeles.mapobject.MapobjectSegmentation]
 
         '''
+        if not mapobject_segmentations:
+            return
         f = StringIO()
         w = csv.writer(f, delimiter=';')
         for obj in mapobject_segmentations:
             if not isinstance(obj, cls):
-                raise TypeError(
-                    'Object must have type '
-                    'tmlib.models.mapobject.MapobjectSegmentation'
-                )
+                raise TypeError('Object must have type %s' % cls.__name__)
             if obj.geom_polygon:
                 polygon = obj.geom_polygon.wkt
             else:
