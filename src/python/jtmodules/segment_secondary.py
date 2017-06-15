@@ -131,10 +131,9 @@ def main(primary_label_image, intensity_image, contrast_threshold,
         regions = mh.labeled.remove_regions(regions, too_small)
 
         # Remove regions that don't overlap with primary objects and assign
-        # correct labels, i.e. those of the secondary objects
+        # correct labels, i.e. those of the primary objects.
         logger.info('relabel secondary objects according to primary objects')
-        se = np.ones((3, 3), bool)  # use 8-connected neighbourhood
-        new_label_image, n_new_labels = mh.label(regions > 0, Bc=se)
+        new_label_image, n_new_labels = mh.labeled.relabel(regions)
         lut = np.zeros(np.max(new_label_image)+1, new_label_image.dtype)
         for i in range(1, n_new_labels+1):
             orig_labels = primary_label_image[new_label_image == i]

@@ -1,5 +1,5 @@
 ---
-version: 0.5.0
+version: 0.6.0
 
 input:
 
@@ -29,6 +29,12 @@ input:
       type: Scalar
       value: 5
       help: Estimated avarage size of a blob in pixels.
+
+    - name: max_area
+      type: Scalar
+      value: 100
+      help: >
+        Maximum size of a blob in pixels. Blobs above this size will be discarded.
 
     - name: plot
       type: Plot

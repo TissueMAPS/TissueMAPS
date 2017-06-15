@@ -21,14 +21,15 @@ import mahotas as mh
 from jtlib.segmentation import detect_blobs
 from jtlib.filter import log_2d
 
-VERSION = '0.5.0'
+VERSION = '0.6.0'
 
 logger = logging.getLogger(__name__)
 
 Output = collections.namedtuple('Output', ['centroids', 'blobs', 'figure'])
 
 
-def main(image, mask, threshold=1, min_area=3, mean_area=5, plot=False):
+def main(image, mask, threshold=1, min_area=3, mean_area=5, max_area=1000,
+        clip_percentile=99.999, plot=False):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
     The `image` is first convolved with a Laplacian of Gaussian filter of size
@@ -50,6 +51,13 @@ def main(image, mask, threshold=1, min_area=3, mean_area=5, plot=False):
         minimal size a blob is allowed to have (default: ``3``)
     mean_area: int, optional
         estimated average size of a blob (default: ``5``)
+    max_area: int, optional
+        maximal size a blob is allowed to have to be subject to deblending;
+        no attempt will be made to deblend blobs larger than `max_area`
+        (default: ``100``)
+    clip_percentile: float, optional
+        clip intensity values in `image` above the given percentile; this may
+        help in attenuating artifacts
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
@@ -65,30 +73,48 @@ def main(image, mask, threshold=1, min_area=3, mean_area=5, plot=False):
 
     logger.info('detect blobs above threshold {0}'.format(threshold))
 
-    # Create a LOG filter to enhance the image for blob detection
-    f = -1 * log_2d(size=mean_area, sigma=float(mean_area - 1)/3)
+    detect_image = image.copy()
 
+    p = np.percentile(image, clip_percentile)
+    detect_image[image > p] = p
+
+    # Enhance the image for blob detection by convoling it with a LOG filter
+    f = -1 * log_2d(size=mean_area, sigma=float(mean_area - 1)/3)
+    detect_image = mh.convolve(detect_image.astype(float), f)
+    detect_image[detect_image < 0] = 0
+
+    # Mask regions of too big blobs
+    pre_blobs = mh.label(detect_image > threshold)[0]
+    bad_blobs, n_bad = mh.labeled.filter_labeled(pre_blobs, min_size=max_area)
+    logger.info(
+        'remove {0} blobs because they are bigger than {1} pixels'.format(
+            n_bad, max_area
+        )
+    )
+    detect_mask = np.invert(mask > 0)
+    detect_mask[bad_blobs > 0] = True
+    detect_image[bad_blobs > 0] = 0
+
+    logger.info('deblend blobs')
     blobs, centroids = detect_blobs(
-        image=image, mask=np.invert(mask > 0), threshold=threshold,
-        min_area=min_area, filter_kernel=f
+        image=detect_image, mask=detect_mask, threshold=threshold,
+        min_area=min_area
     )
 
     n = len(np.unique(blobs[blobs>0]))
 
-    logger.info('%d blobs detected', n)
+    logger.info('{0} blobs detected'.format(n))
 
     if plot:
         logger.info('create plot')
         from jtlib import plotting
-
-        image_convolved = mh.convolve(image.astype(float), f)
 
         colorscale = plotting.create_colorscale(
             'Spectral', n=n, permute=True, add_background=True
         )
         plots = [
             plotting.create_float_image_plot(
-                image_convolved, 'ul', clip=True
+                detect_image, 'ul', clip=True
             ),
             plotting.create_mask_image_plot(
                 blobs, 'ur', colorscale=colorscale
