@@ -27,7 +27,7 @@ from gc3libs.quantity import Duration
 from gc3libs.quantity import Memory
 
 import tmlib.models as tm
-from tmlib.utils import flatten, notimplemented
+from tmlib.utils import flatten, notimplemented, create_partitions
 from tmlib.image import PyramidTile
 from tmlib.image import Image
 from tmlib.errors import DataIntegrityError
@@ -353,7 +353,8 @@ class PyramidBuilder(WorkflowStepAPI):
         return job_collection
 
     def _create_maxzoom_level_tiles(self, batch, assume_clean_state):
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
+        exp_id = self.experiment_id
+        with tm.utils.ExperimentSession(exp_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info(
                 'process layer: channel=%s, zplane=%d, tpoint=%d',
@@ -403,6 +404,7 @@ class PyramidBuilder(WorkflowStepAPI):
                     image = image.scale(clip_min, clip_max)
                 image_store[file.id] = image
 
+                channel_layer_tiles = list()
                 extra_file_map = layer.map_base_tile_to_images(file.site)
                 for t in tiles:
                     level = batch['level']
@@ -491,16 +493,22 @@ class PyramidBuilder(WorkflowStepAPI):
                                 'Tile shouldn\'t be in this batch!'
                             )
 
-                    with tm.utils.ExperimentConnection(self.experiment_id) as c:
-                        channel_layer_tile = tm.ChannelLayerTile(
-                            channel_layer_id=layer.id,
-                            z=level, y=row, x=column, pixels=tile
-                        )
-                        # TODO: add_multiple()
-                        tm.ChannelLayerTile.add(c, channel_layer_tile)
+                    channel_layer_tile = tm.ChannelLayerTile(
+                        channel_layer_id=layer.id,
+                        z=level, y=row, x=column, pixels=tile
+                    )
+                    if not assume_clean_state:
+                        with tm.utils.ExperimentConnection(exp_id) as c:
+                            tm.ChannelLayerTile.add(c, channel_layer_tile)
+                    else:
+                        channel_layer_tiles.append(channel_layer_tile)
+
+                with tm.utils.ExperimentConnection(exp_id) as c:
+                    tm.ChannelLayerTile.add_multiple(c, channel_layer_tiles)
 
     def _create_lower_zoom_level_tiles(self, batch, assume_clean_state):
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
+        exp_id = self.experiment_id
+        with tm.utils.ExperimentSession(exp_id) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info('processing layer for channel %s', layer.channel.name)
             level = batch['level']
@@ -508,70 +516,84 @@ class PyramidBuilder(WorkflowStepAPI):
             layer_id = layer.id
             zoom_factor = layer.zoom_factor
 
-            for current_coordinate in batch['coordinates']:
-                row, column = tuple(current_coordinate)
-                pre_coordinates = layer.calc_coordinates_of_next_higher_level(
-                    level, row, column
-                )
-                logger.debug(
-                    'creating tile: z=%d, y=%d, x=%d', level, row, column
-                )
-                # Build the mosaic by loading required higher level tiles
-                # (created in a previous run) and stitching them together
-                pre_rows = np.unique([c[0] for c in pre_coordinates])
-                pre_cols = np.unique([c[1] for c in pre_coordinates])
-                with tm.utils.ExperimentConnection(self.experiment_id) as conn:
-                    for i, r in enumerate(pre_rows):
-                        for j, c in enumerate(pre_cols):
-                            conn.execute('''
-                                SELECT pixels FROM channel_layer_tiles
-                                WHERE channel_layer_id=%(channel_layer_id)s
-                                AND z=%(z)s AND y=%(y)s AND x=%(x)s;
-                            ''', {
-                                'z': level+1, 'y': r, 'x': c,
-                                'channel_layer_id': layer_id
-                            })
-                            pre_tile = conn.fetchone()
-                            if pre_tile:
-                                pre_tile = PyramidTile.create_from_buffer(
-                                    pre_tile.pixels
-                                )
-                            else:
-                                # Tiles at maxzoom level might not exist in case
-                                # they are empty. They must exist at the lower
-                                # levels however.
-                                if batch['index'] > 1:
-                                    raise ValueError(
-                                        'Tile "%d-%d-%d" was not created.'
-                                        % (level+1, r, c)
-                                    )
-                                logger.debug(
-                                    'tile "%d-%d-%d" missing - might be empty',
-                                     batch['level']+1, r, c
-                                )
-                                pre_tile = PyramidTile.create_as_background()
-                            # We have to temporally treat it as an "image",
-                            # since a tile can per definition not be larger
-                            # than 256x256 pixels.
-                            img = Image(pre_tile.array)
-                            if j == 0:
-                                row_img = img
-                            else:
-                                row_img = row_img.join(img, 'x')
-                        if i == 0:
-                            mosaic_img = row_img
-                        else:
-                            mosaic_img = mosaic_img.join(row_img, 'y')
-                    # Create the tile at the current level by downsampling the
-                    # mosaic image, which is composed of the 4 tiles of the next
-                    # higher zoom level
-                    tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
-                    channel_layer_tile = tm.ChannelLayerTile(
-                        channel_layer_id=layer_id,
-                        z=level, y=row, x=column, pixels=tile
+            partitions = create_partitions(batch['coordinates'], 10)
+            for part in partitions:
+                channel_layer_tiles = list()
+                for coordinates in part:
+                    row = coordinates[0]
+                    column = coordinates[1]
+                    pre_coordinates = layer.calc_coordinates_of_next_higher_level(
+                        level, row, column
                     )
-                    # TODO: add_multiple()
-                    tm.ChannelLayerTile.add(conn, channel_layer_tile)
+                    logger.debug(
+                        'creating tile: z=%d, y=%d, x=%d', level, row, column
+                    )
+                    # Build the mosaic by loading required higher level tiles
+                    # (created in a previous run) and stitching them together
+                    pre_rows = np.unique([c[0] for c in pre_coordinates])
+                    pre_cols = np.unique([c[1] for c in pre_coordinates])
+                    with tm.utils.ExperimentConnection(exp_id) as connection:
+                        for i, r in enumerate(pre_rows):
+                            for j, c in enumerate(pre_cols):
+                                connection.execute('''
+                                    SELECT pixels FROM channel_layer_tiles
+                                    WHERE channel_layer_id=%(channel_layer_id)s
+                                    AND z=%(z)s AND y=%(y)s AND x=%(x)s;
+                                ''', {
+                                    'z': level+1, 'y': r, 'x': c,
+                                    'channel_layer_id': layer_id
+                                })
+                                pre_tile = connection.fetchone()
+                                if pre_tile:
+                                    pre_tile = PyramidTile.create_from_buffer(
+                                        pre_tile.pixels
+                                    )
+                                else:
+                                    # Tiles at maxzoom level might not exist in
+                                    # case they did not fall into a region of
+                                    # the map occupied by an image.
+                                    # They must exist at the lower zoom levels,
+                                    # though, for subsampling.
+                                    if batch['index'] > 1:
+                                        raise ValueError(
+                                            'Tile "%d-%d-%d" was not created.'
+                                            % (level+1, r, c)
+                                        )
+                                    logger.debug(
+                                        'tile "%d-%d-%d" missing',
+                                         batch['level']+1, r, c
+                                    )
+                                    pre_tile = PyramidTile.create_as_background()
+                                # We have to temporally treat it as an "image",
+                                # since a tile can per definition not be larger
+                                # than 256x256 pixels.
+                                # FIXME: This can be done more efficiently using
+                                # a predefined array instead of these loops.
+                                img = Image(pre_tile.array)
+                                if j == 0:
+                                    row_img = img
+                                else:
+                                    row_img = row_img.join(img, 'x')
+                            if i == 0:
+                                mosaic_img = row_img
+                            else:
+                                mosaic_img = mosaic_img.join(row_img, 'y')
+                        # Create the tile at the current level by downsampling
+                        # the mosaic image, which is composed of the 4 tiles
+                        # of the next higher zoom level
+                        tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
+                        channel_layer_tile = tm.ChannelLayerTile(
+                            channel_layer_id=layer_id,
+                            z=level, y=row, x=column, pixels=tile
+                        )
+                        if not assume_clean_state:
+                            with tm.utils.ExperimentConnection(exp_id) as c:
+                                tm.ChannelLayerTile.add(c, channel_layer_tile)
+                        else:
+                            channel_layer_tiles.append(channel_layer_tile)
+
+                with tm.utils.ExperimentConnection(exp_id) as c:
+                    tm.ChannelLayerTile.add_multiple(c, channel_layer_tiles)
 
     def run_job(self, batch, assume_clean_state=False):
         '''Creates 8-bit grayscale JPEG layer tiles.
