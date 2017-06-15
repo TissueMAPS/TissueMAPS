@@ -116,6 +116,7 @@ class CellvoyagerMetadataReader(MetadataReader):
 
         mrf_tree = etree.parse(mrf_filename)
         mrf_root = mrf_tree.getroot()
+        mrf_ns = mrf_root.nsmap['bts']
 
         # Obtain the positional information for each image acquisition site
         # from the ".mlf" file:
@@ -161,7 +162,7 @@ class CellvoyagerMetadataReader(MetadataReader):
             # A name has to be set as a flag for the handler to update
             # the metadata
             img.Name = name
-            img.Pixels.Channel(0).Name = channel_name
+            img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
             img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
