@@ -955,7 +955,7 @@ class SegmentationLayer(ExperimentModel):
         maxy = -y0 - size
         return (minx, miny, maxx, maxy)
 
-    def calculate_zoom_thresholds(self, maxzoom_level):
+    def calculate_zoom_thresholds(self, maxzoom_level, represent_as_polygons):
         '''Calculates the zoom level below which mapobjects are
         represented on the map as centroids rather than polygons and the
         zoom level below which mapobjects are no longer visualized at all.
@@ -967,6 +967,9 @@ class SegmentationLayer(ExperimentModel):
         ----------
         maxzoom_level: int
             maximum zoom level of the pyramid
+        represent_as_polygons: bool
+            whether the objects should be represented as polygons or only as
+            centroid points
 
         Returns
         -------
@@ -979,17 +982,31 @@ class SegmentationLayer(ExperimentModel):
         contour of objects, but also the size of the browser window and the
         resolution settings of the browser.
         '''
-        # TODO: This is too simplistic. Calculate optimal zoom level by
-        # sampling mapobjects at the highest resolution level and approximate
-        # number of points that would be sent to the client.
-        if self.mapobject_type.ref_type is None:
-            polygon_thresh = 0
-            centroid_thresh = 0
+        # TODO: This is a bit too simplistic. Ideally, we would calculate
+        # the optimal zoom level by sampling mapobjects at the highest
+        # resolution level and approximate number of points that would be sent
+        # to the client. This is tricky, however, because the current view
+        # and thus the number of requested mapobject segmentations dependents
+        # on the size of monitor.
+        if self.mapobject_type.ref_type is not None:
+            if self.mapobject_type.ref_type == 'Plate':
+                polygon_thresh = 0
+                centroid_thresh = 0
+            elif self.mapobject_type.ref_type == 'Well':
+                polygon_thresh = maxzoom_level - 11
+                centroid_thresh = 0
+            elif self.mapobject_type.ref_type == 'Site':
+                polygon_thresh = maxzoom_level - 8
+                centroid_thresh = 0
         else:
-            polygon_thresh = maxzoom_level - 4
-            polygon_thresh = 0 if polygon_thresh < 0 else polygon_thresh
+            if represent_as_polygons:
+                polygon_thresh = maxzoom_level - 5
+            else:
+                polygon_thresh = maxzoom_level
             centroid_thresh = polygon_thresh - 2
-            centroid_thresh = 0 if centroid_thresh < 0 else centroid_thresh
+
+        polygon_thresh = 0 if polygon_thresh < 0 else polygon_thresh
+        centroid_thresh = 0 if centroid_thresh < 0 else centroid_thresh
         return (polygon_thresh, centroid_thresh)
 
     def get_segmentations(self, x, y, z, tolerance=2):
@@ -1038,8 +1055,8 @@ class SegmentationLayer(ExperimentModel):
             '))'.format(minx=minx, maxx=maxx, miny=miny, maxy=maxy)
         )
 
-        do_simplify = self.centroid_thresh <= z < self.polygon_thresh
-        do_nothing = z < self.centroid_thresh
+        do_simplify = self.centroid_thresh < z <= self.polygon_thresh
+        do_nothing = z <= self.centroid_thresh
         if do_nothing:
             logger.debug('dont\'t represent objects')
             return list()
