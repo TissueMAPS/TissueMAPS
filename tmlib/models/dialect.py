@@ -47,6 +47,10 @@ def _compile_create_table(element, compiler, **kwargs):
         distribute_by_range = table.info['distribution_method'] == 'range'
         distribute_by_repl = table.info['distribution_method'] == 'replication'
         if distribute_by_hash or distribute_by_range:
+            # FIXME: Currently we create all tables with distribution method
+            # "hash" and update the metadata tables afterwards. This is
+            # currently reuqired as of Citus version 6.2, because co-location
+            # is not officially supported for "range" distribtion (yet).
             # TODO: What's the optimal shard count and size for the different
             # distribution methods?
             shard_count = 30 * cfg.db_nodes
@@ -63,13 +67,13 @@ def _compile_create_table(element, compiler, **kwargs):
                 # NOTE: This would currently fail for "range" distributed tables.
                 sql_dist = "'{s}.{t}','{c}','{m}',colocate_with=>'{s}.{t2}'".format(
                     s=table.schema, t=table.name, c=distribution_column,
-                    m=table.info['distribution_method'],
+                    m='hash', #table.info['distribution_method'],
                     t2=table.info['colocate_with']
                 )
             else:
                 sql_dist = "'{s}.{t}','{c}','{m}'".format(
                     s=table.schema, t=table.name, c=distribution_column,
-                    m=table.info['distribution_method']
+                    m='hash' #table.info['distribution_method']
                 )
             sql += ';\nSELECT create_distributed_table(%s);\n' % (sql_dist)
 

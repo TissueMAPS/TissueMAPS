@@ -55,7 +55,7 @@ class ChannelLayerTile(ExperimentModel):
         )
     )
 
-    __distribute_by__ = 'id'
+    __distribute_by__ = 'y'
 
     __distribution_method__ = 'hash'
 
@@ -144,127 +144,23 @@ class ChannelLayerTile(ExperimentModel):
         it doesn't exist yet and *updates* it otherwise.
         '''
         # Upsert the tile entry, i.e. insert or update if exists
-        # NOTE: The UPSERT has some overhead and it may be more performant to
-        # DELETE tiles first and then INSERT new ones without UPDATE.
+        # We can do this because the partition key is already known and can
+        # be included in the WHERE clause.
         connection.execute('''
-            SELECT id FROM channel_layer_tiles
-            WHERE channel_layer_id = %(channel_layer_id)s
-            AND y = %(y)s AND x = %(x)s AND z = %(z)s
+            INSERT INTO channel_layer_tiles AS t (
+                channel_layer_id, z, y, x, pixels
+            )
+            VALUES (
+                %(channel_layer_id)s, %(z)s, %(y)s, %(x)s, %(pixels)s
+            )
+            ON CONFLICT
+            ON CONSTRAINT channel_layer_tiles_channel_layer_id_z_y_x_key
+            DO UPDATE SET pixels = %(pixels)s
         ''', {
             'channel_layer_id': tile.channel_layer_id,
             'z': tile.z, 'y': tile.y, 'x': tile.x,
+            'pixels': psycopg2.Binary(tile._pixels.tostring())
         })
-        records = connection.fetchall()
-        if records:
-            tile.id = records[0].id
-            connection.execute('''
-                UPDATE channel_layer_tiles
-                SET pixels = %(pixels)s
-                WHERE id = %(id)s
-            ''', {
-                'id': tile.id,
-                'pixels': psycopg2.Binary(tile._pixels.tostring())
-            })
-        else:
-            shard_id = connection.get_shard_id(cls)
-            tile.id = connection.get_unique_ids(cls, shard_id, 1)[0]
-            connection.execute('''
-                INSERT INTO channel_layer_tiles (
-                    id, channel_layer_id, z, y, x, pixels
-                )
-                VALUES (
-                    %(id)s, %(channel_layer_id)s, %(z)s, %(y)s, %(x)s,
-                    %(pixels)s
-                )
-            ''', {
-                'id': tile.id, 'channel_layer_id': tile.channel_layer_id,
-                'z': tile.z, 'y': tile.y, 'x': tile.x,
-                'pixels': psycopg2.Binary(tile._pixels.tostring())
-            })
-
-    @classmethod
-    def _prepare_binary(cls, data):
-        pgcopy_dtype = [('num_columns','>i2')]
-        for c in cls.__table__.columns:
-            column = str(c.name)
-            # TODO: data type of binary numpy string ???
-            dtype = data[column].dtype.descr[0][1]
-            pgcopy_dtype += [(column + '_length', '>i4'),
-                             (column, dtype.replace('<', '>'))]
-        pgcopy_data = np.empty((data.shape[0], ), pgcopy_dtype)
-        pgcopy_data['num_columns'] = len(data.columns)
-        for column in data:
-            pgcopy_data[column + '_length'] = data[column].dtype.alignment
-            pgcopy_data[column] = data[column]
-        f = BytesIO()
-        f.write(pack('!11sii', b'PGCOPY\n\377\r\n\0', 0, 0))
-        f.write(pgcopy_data.tostring())
-        f.write(pack('!h', -1))
-        f.seek(0)
-        return f
-
-    @classmethod
-    def _prepare_text(cls, data):
-        f = BytesIO()
-        for i, row in data.iterrows():
-            f.write('\t'.join([repr(x) for x in row]) + '\n')
-        f.seek(0)
-        return f
-
-    @classmethod
-    def add_multiple(cls, connection, tiles):
-        '''Adds multiple tiles at once.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        tiles: List[tmlib.models.tile.ChannelLayerTile]
-
-        Warning
-        -------
-        Existing tiles will not be updated.
-        '''
-        if not tiles:
-            return
-        shard_id = connection.get_shard_id(cls)
-        ids = connection.get_unique_ids(cls, shard_id, len(tiles))
-        for i, obj in enumerate(tiles):
-            obj.id = ids[i]
-            connection.execute('''
-                INSERT INTO channel_layer_tiles (
-                    id, channel_layer_id, z, y, x, pixels
-                )
-                VALUES (
-                    %(id)s, %(channel_layer_id)s, %(z)s, %(y)s, %(x)s,
-                    %(pixels)s
-                )
-            ''', {
-                'id': obj.id, 'channel_layer_id': obj.channel_layer_id,
-                'z': obj.z, 'y': obj.y, 'x': obj.x,
-                'pixels': psycopg2.Binary(obj._pixels.tostring())
-            })
-        # FIXME: This returns "incorrect data type"
-        # TODO: Figure out how to copy into a table with bytea data
-        # rows = list()
-        # for i, obj in enumerate(tiles):
-        #     if not isinstance(obj, cls):
-        #         raise TypeError('Object must have type %s' % cls.__name__)
-        #     obj.id = ids[i]
-        #     rows.append((
-        #         obj.id, psycopg2.Binary(obj._pixels.tostring()),
-        #         obj.z, obj.y, obj.x, obj.channel_layer_id,
-        #     ))
-        # rows = pd.DataFrame(rows, columns=[str(c.name) for c in cls.__table__.c])
-        # f = cls._prepare_text(rows)
-        # connection.copy_from(f, cls.__table__.name, columns=rows.columns, null='')
-        # f = cls._prepare_binary(rows)
-        # connection.copy_expert(
-        #     'COPY {t} FROM STDIN WITH BINARY'.format(t=cls.__table__.name),
-        #     f
-        # )
-        # f.close()
 
     def __repr__(self):
         return '<%s(z=%r, y=%r, x=%r, channel_layer_id=%r)>' % (
