@@ -421,16 +421,8 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                         tpoint=t, zplane=z
                     )
 
-                    segmentation_layer_ids[(obj_name, t, z)] = segmentation_layer.id
-                    # We will update this in collect phase, but we need to set
-                    # some limits in case the user already starts viewing
-                    # Without any contraints the user interface might explode.
-                    poly_thresh = layer.maxzoom_level_index - 3
-                    segmentation_layer.polygon_threshold = \
-                        0 if poly_thresh < 0 else poly_thresh
-                    centroid_thresh = segmentation_layer.polygon_threshold - 2
-                    segmentation_layer.centroid_threshold = \
-                        0 if centroid_thresh < 0 else centroid_thresh
+                    segmentation_layer_ids[(obj_name, t, z)] = \
+                        segmentation_layer.id
 
             site = session.query(tm.Site).get(store['site_id'])
             y_offset, x_offset = site.aligned_offset
@@ -787,13 +779,23 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         logger.info('clean-up mapobjects with invalid or missing segmentations')
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
-            layer = session.query(tm.ChannelLayer).first()
-            maxzoom = layer.maxzoom_level_index
+            experiment = session.query(tm.Experiment.pyramid_depth).one()
+            maxzoom = experiment.pyramid_depth - 1
             segmentation_layers = session.query(tm.SegmentationLayer).all()
+            polygon_representation_lut = {
+                o.name: o.as_polygons
+                for o in self.project.pipe.description.output.objects
+            }
             for segm_layer in segmentation_layers:
-                pt, ct = segm_layer.calculate_zoom_thresholds(maxzoom)
-                segm_layer.polygon_threshold = pt
-                segm_layer.centroid_threshold = ct
+                mapobject_type_name = segm_layer.mapobject_type.name
+                as_polygons = polygon_representation_lut.get(
+                    mapobject_type_name, True
+                )
+                pt, ct = segm_layer.calculate_zoom_thresholds(
+                    maxzoom, as_polygons
+                )
+                segm_layer.polygon_thresh = pt
+                segm_layer.centroid_thresh = ct
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             ref_types = [tm.Plate.__name__, tm.Well.__name__, tm.Site.__name__]
