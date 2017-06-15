@@ -335,6 +335,10 @@ def _docker_up(root_dir):
         '-f', os.path.join(root_dir, 'docker-compose.local_override.yml'),
         'up', '-d', '--force-recreate'
     ])
+    _execute(['docker', 'exec', 'tissuemaps-app',
+        '/home/tissuemaps/.local/bin/tm_add', 'user',
+        '-n', 'devuser', '-p', '123456', '-e', 'devuser@shemail.com'
+    ])
 
 
 def _docker_down(root_dir):
