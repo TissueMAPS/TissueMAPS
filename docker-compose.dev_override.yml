@@ -8,8 +8,10 @@ services:
       - 'dumb-init'
       - '/usr/bin/gulp'
       - '--gulpfile'
-      - '/home/tissuemaps/tmui/src/gulpfile.js'
+      - '/var/www/tmui/src/gulpfile.js'
   # TODO: Figure out a way to set owernship correctly and handle gulp reload functionality elegantly
+  # TODO: Also add a custom, container-specific glupfile that maps the hostname
+  # correctly for the live reload sever.
   #   volumes:
   #     - '~/tmui/src:/var/www/tmui/src'
 
