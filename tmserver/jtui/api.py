@@ -231,8 +231,8 @@ def create_joblist(experiment_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         query = session.query(
                 tm.Site.y, tm.Site.x,
-                tm.Well.name.alias('well'),
-                tm.Plate.name.alias('plate')
+                tm.Well.name.label('well'),
+                tm.Plate.name.label('plate')
             ).\
             join(tm.Well).\
             join(tm.Plate).\
