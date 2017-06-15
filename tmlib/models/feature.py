@@ -150,7 +150,11 @@ class FeatureValues(ExperimentModel):
     # TODO: We may want this to be a PRIMARY KEY CONTRAINT instead
     __table_args__ = (UniqueConstraint('mapobject_id', 'tpoint'), )
 
-    __distribute_by_hash__ = 'mapobject_id'
+    __distribute_by__ = 'mapobject_id'
+
+    __distribution_method__ = 'hash'
+
+    __colocate_with__ = 'mapobjects'
 
     #: Dict[str, str]: mapping of feature ID to value encoded as text
     # NOTE: HSTORE is more performant than JSONB upon SELECT and upon INSERT.

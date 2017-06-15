@@ -42,33 +42,38 @@ def _update_table_constraints(table, distribution_column):
 def _compile_create_table(element, compiler, **kwargs):
     table = element.element
     logger.debug('create table "%s"', table.name)
-    distribute_by_hash = 'distribute_by_hash' in table.info
-    distribute_by_replication = 'distribute_by_replication' in table.info
-    if distribute_by_hash or distribute_by_replication:
-        if distribute_by_hash:
-            distribution_column = table.info['distribute_by_hash']
+    if table.info['is_distributed']:
+        distribute_by_hash = table.info['distribution_method'] == 'hash'
+        distribute_by_range = table.info['distribution_method'] == 'range'
+        distribute_by_repl = table.info['distribution_method'] == 'replication'
+        if distribute_by_hash or distribute_by_range:
+            # TODO: What's the optimal shard count and size for the different
+            # distribution methods?
+            shard_count = 30 * cfg.db_nodes
+            distribution_column = table.info['distribute_by']
             table = _update_table_constraints(table, distribution_column)
             logger.debug(
-                'distribute table "%s" by hash "%s"', table.name,
-                distribution_column
+                'distribute table "%s" by "%s"', table.name, distribution_column
             )
             # No replication of tables.
             sql = 'SET citus.shard_replication_factor = 1;\n'
-            sql += 'SET citus.shard_count = {n};\n'.format(n=30*cfg.db_nodes)
+            sql += 'SET citus.shard_count = {n};\n'.format(n=shard_count)
             sql += compiler.visit_create_table(element)
-            # More aggressive autovacuum for large tables?
-            if table.info['colocated_table']:
-                distributed_sql = "'{s}.{t}','{c}',colocate_with=>'{s}.{t2}'".format(
+            if table.info['colocate_with'] is not None:
+                # NOTE: This would currently fail for "range" distributed tables.
+                sql_dist = "'{s}.{t}','{c}','{m}',colocate_with=>'{s}.{t2}'".format(
                     s=table.schema, t=table.name, c=distribution_column,
-                    t2=table.info['colocated_table']
+                    m=table.info['distribution_method'],
+                    t2=table.info['colocate_with']
                 )
             else:
-                distributed_sql = "'{s}.{t}', '{c}'".format(
-                    s=table.schema, t=table.name, c=distribution_column
+                sql_dist = "'{s}.{t}','{c}','{m}'".format(
+                    s=table.schema, t=table.name, c=distribution_column,
+                    m=table.info['distribution_method']
                 )
-            sql += ';\nSELECT create_distributed_table(%s);' % (distributed_sql)
+            sql += ';\nSELECT create_distributed_table(%s);\n' % (sql_dist)
 
-        elif distribute_by_replication:
+        elif distribute_by_repl:
             # The first column will be used as partition column and must be
             # included in UNIQUE and PRIMARY KEY constraints.
             # NOTE: This assumes that "id" column is the first column. This is

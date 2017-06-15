@@ -307,7 +307,11 @@ class LabelValues(ExperimentModel):
 
     __tablename__ = 'label_values'
 
-    __distribute_by_hash__ = 'mapobject_id'
+    __distribute_by__ = 'mapobject_id'
+
+    __distribution_method__ = 'hash'
+
+    __colocate_with__ = 'mapobjects'
 
     __table_args__ = (UniqueConstraint('mapobject_id', 'tpoint'), )
 
