@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
-        deblend_cont=0, filter_kernel=None, clip_percentile=99.999):
+        deblend_cont=0):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
 
@@ -41,12 +41,6 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
         number of deblending thresholds (default: ``500``)
     deblend_cont: int, optional
         minimum contrast ratio for deblending (default: ``0``)
-    filter_kernel: numpy.ndarray[numpy.float], optional
-        convolution kernel that should be applied to the image before
-        thresholding (default: ``None``)
-    clip_percentile: float, optional
-        clip intensity values in `image` above the given percentile; this may
-        help in attenuating artifacts
 
     Returns
     -------
@@ -62,25 +56,35 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
 
     img = image.astype('float')
 
-    p = np.percentile(img, clip_percentile)
-    img[img > p] = p
+    # We pad the image with mirrored pixels to prevent border artifacts.
+    pad = 50
+    left = img[:, 1:pad]
+    right = img[:, -pad:-1]
+    detect_img = np.c_[np.fliplr(left), img, np.fliplr(right)]
+    upper = detect_img[1:pad, :]
+    lower = detect_img[-pad:-1, :]
+    detect_img = np.r_[np.flipud(upper), detect_img, np.flipud(lower)]
 
     logger.info('detect blobs via thresholding and deblending')
     detection, blobs = sep.extract(
-        img, threshold,
+        detect_img, threshold,
         minarea=min_area, segmentation_map=True,
         deblend_nthresh=deblend_nthresh, deblend_cont=deblend_cont,
-        filter_kernel=filter_kernel, clean=False
+        filter_kernel=None, clean=False
     )
 
-    centroids = np.zeros(image.shape, dtype=np.int32)
+    centroids = np.zeros(detect_img.shape, dtype=np.int32)
     y = detection['y'].astype(int)
     x = detection['x'].astype(int)
     # WTF? In rare cases object coorindates lie outside of the image.
     n = len(detection)
-    y[y > image.shape[0]] = image.shape[0]
-    x[x > image.shape[1]] = image.shape[1]
+    y[y > detect_img.shape[0]] = detect_img.shape[0]
+    x[x > detect_img.shape[1]] = detect_img.shape[1]
     centroids[y, x] = np.arange(1, n + 1)
+
+    # Remove the padded border pixels
+    blobs = blobs[pad-1:-(pad-1), pad-1:-(pad-1)].copy()
+    centroids = centroids[pad-1:-(pad-1), pad-1:-(pad-1)].copy()
 
     # Blobs detected outside of regions of interest are discarded.
     blobs[mask > 0] = 0
