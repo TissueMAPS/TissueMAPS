@@ -6,8 +6,8 @@ fi
 export EDITOR=vim;
 
 # Slurm
-export SQUEUE_FORMAT="%.18a %.18i %.40j %.8T %.10M %.9l %.6D %R"
-export SACCT_FORMAT="Account,JobId,JobName%40,State,Exitcode,DerivedExitCode,Elapsed,CPUTime,AveCPU,AveDiskRead,AveDiskWrite"
+export SQUEUE_FORMAT="%.12a %.16i %.40j %.8T %.10M %.10l %.4C %R"
+export SACCT_FORMAT="Account,JobId,JobName%30,State,Exitcode,DerivedExitCode,Submit,Elapsed,CPUTime,MaxRSS,AveCPU,AveDiskRead,AveDiskWrite"
 
 # Postgres database
 export PGPASSFILE=~/.pgpass
