@@ -18,6 +18,13 @@
     state: installed
   with_items: '{{ ganglia_gmetad_packages }}'
 
+- name: Set permissions for /var/lib/ganglia/rrds
+  file:
+    path: /var/lib/ganglia/rrds
+    state: directory
+    recurse: yes
+    owner: nobody
+    group: root
 
 - name: Configure `gmetad`
   tags:
