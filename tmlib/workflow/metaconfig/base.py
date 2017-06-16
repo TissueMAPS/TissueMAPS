@@ -292,7 +292,8 @@ class MetadataHandler(object):
 
     def _combine_omexml_elements(self, omexml_images, omexml_metadata):
         logger.info('combine OMEXML elements')
-        n_images = np.sum([v.image_count for v in omexml_images.values()])
+        # We assume here that each image files contains the same number images.
+        n_images = omexml_images.values()[0].image_count * len(omexml_images)
         if omexml_metadata is not None:
             extra_omexml_available = True
             if not isinstance(omexml_metadata, bioformats.omexml.OMEXML):
@@ -328,8 +329,7 @@ class MetadataHandler(object):
                 md_image = omexml_metadata.image(count)
                 for attr in image_element_attributes:
                     extracted_value = getattr(extracted_image, attr)
-                    md_value = getattr(md_image, attr)
-                    if md_value is None and extracted_value is not None:
+                    if extracted_value is not None:
                         setattr(md_image, attr, extracted_value)
 
                 extracted_pixels = extracted_image.Pixels
@@ -352,11 +352,9 @@ class MetadataHandler(object):
 
                 for attr in pixel_element_attributes:
                     extracted_value = getattr(extracted_pixels, attr)
-                    md_value = getattr(md_pixels, attr)
-                    if attr in {'SizeX', 'SizeY'}:
-                        # This is python-bioformats being stupid.
-                        setattr(md_pixels, attr, extracted_value)
-                    elif md_value is None and extracted_value is not None:
+                    if extracted_value is not None:
+                        # This is python-bioformats being stupid by setting
+                        # random default values.
                         setattr(md_pixels, attr, extracted_value)
 
                 for p in xrange(n_planes):
@@ -383,8 +381,7 @@ class MetadataHandler(object):
                     md_channel = md_pixels.Channel(c)
                     for attr in channel_element_attributes:
                         extracted_value = getattr(extracted_channel, attr)
-                        md_value = getattr(md_channel, attr)
-                        if md_value is None and extracted_value is not None:
+                        if extracted_value is not None:
                             setattr(md_channel, attr, extracted_value)
 
                 count += 1
