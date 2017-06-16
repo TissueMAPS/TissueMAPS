@@ -77,9 +77,7 @@
     path: /usr/share/ganglia
     state: directory
     recurse: yes
-    owner: apache
-    group: apache
-    mode: 0700
+    mode: 0755
 
 - name: Configure Ganglia web endpoint (RHEL/CentOS)
   tags:
