@@ -114,13 +114,13 @@ def build_inventory(setup):
                         # security group, which is important for servers to be
                         # able to connect to each other when part of a cluster.
                         security_groups = 'compute-storage'
-                        if 'compute' in v or 'storage' in v:
-                            host_vars['assign_public_ip'] = 'no'
                         if 'web' in v:
                             host_vars['assign_public_ip'] = 'yes'
                             security_groups = ','.join([
                                 security_groups, 'web'
                             ])
+                        else:
+                            host_vars['assign_public_ip'] = 'no'
                         host_vars['security_groups'] = security_groups
                     if isinstance(v, list):
                         v = ','.join(v)
