@@ -304,13 +304,17 @@ def _get_output(experiment_id, jobs):
     output = list()
     if jobs is None:
         return output
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        sites = session.query(tm.Site.id).order_by(tm.Site.id).all()
+        site_ids = [s.id for s in sites]
     for task in jobs.iter_workflow():
         if not isinstance(task, RunPhase):
             continue
         for subtask in task.iter_tasks():
             if not isinstance(subtask, RunJob):
                 continue
-            j = int(re.search(r'_(\d+)$', subtask.jobname).group(1))
+            site_id = int(re.search(r'_(\d+)$', subtask.jobname).group(1))
+            job_id = site_ids.index(site_id)
             stdout_file = os.path.join(subtask.output_dir, subtask.stdout)
             if os.path.exists(stdout_file):
                 with open(stdout_file) as f:
@@ -330,7 +334,7 @@ def _get_output(experiment_id, jobs):
                 submission_id = task_info.submission_id
             failed = exitcode != 0
             output.append({
-                'id': j,
+                'id': job_id,
                 'submission_id': submission_id,
                 'name': subtask.jobname,
                 'stdout': stdout,
