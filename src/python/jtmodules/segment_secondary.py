@@ -75,7 +75,7 @@ def main(primary_label_image, intensity_image, contrast_threshold,
         # use adaptive thresholding to determine background regions,
         # i.e. regions in the intensity_image that should not be covered by
         # secondary objects.
-        n_objects = np.max(primary_label_image)
+        n_objects = len(np.unique(primary_label_image[1:]))
         # TODO: consider using contrast_treshold as input parameter
         background_mask = mh.thresholding.bernsen(
             intensity_image, 5, contrast_threshold
@@ -123,12 +123,9 @@ def main(primary_label_image, intensity_image, contrast_threshold,
         # Remove objects that are obviously too small, i.e. smaller than any of
         # the seeds (this could happen when we remove certain parts of objects
         # after the watershed region growing)
-        # TODO: Ensure that mapping of objects is one-to-one, i.e. each primary
-        # object has exactly one secondary object
-        min_size = np.min(mh.labeled.labeled_size(primary_label_image))
-        sizes = mh.labeled.labeled_size(regions)
-        too_small = np.where(sizes < min_size)
-        regions = mh.labeled.remove_regions(regions, too_small)
+        primary_sizes = mh.labeled.labeled_size(primary_label_image)
+        min_size = np.min(primary_sizes[1:]) + 1
+        regions = mh.labeled.filter_labeled(regions, min_size=min_size)[0]
 
         # Remove regions that don't overlap with primary objects and assign
         # correct labels, i.e. those of the primary objects.
@@ -150,13 +147,15 @@ def main(primary_label_image, intensity_image, contrast_threshold,
                 lut[i] = np.where(orig_count == np.max(orig_count))[0][0]
         secondary_label_image = lut[new_label_image]
 
-    # Ensure that primary objects are fully contained within primary objects
+    # Ensure that primary objects are fully contained within secondary objects
     index = (primary_label_image - secondary_label_image) > 0
     secondary_label_image[index] = primary_label_image[index]
 
+    n_objects = len(np.unique(secondary_label_image)[1:])
+    logger.info('identified %d objects', n_objects)
+
     if plot:
         from jtlib import plotting
-        n_objects = len(np.unique(secondary_label_image)[1:])
         colorscale = plotting.create_colorscale(
             'Spectral', n=n_objects, permute=True, add_background=True
         )
