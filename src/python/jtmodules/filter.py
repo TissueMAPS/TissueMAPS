@@ -74,7 +74,7 @@ def main(mask, feature, lower_threshold=None, upper_threshold=None, plot=False):
 
     name = 'Morphology_{0}'.format(feature.capitalize())
 
-    labeled_image = mh.label(mask > 0, np.ones((3, 3), bool))[0]
+    labeled_image = mh.label(mask > 0)[0]
     f = Morphology(labeled_image)
     measurement = f.extract()[name]
     values = measurement.values
