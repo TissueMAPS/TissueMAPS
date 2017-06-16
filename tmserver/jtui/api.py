@@ -416,15 +416,19 @@ def run_jobs(experiment_id):
     ]
     job_descriptions = list()
     with tm.utils.ExperimentSession(experiment_id) as session:
+        sites = session.query(tm.Site.id).\
+            order_by(tm.Site.id).\
+            all()
         for j in job_ids:
+            site_id = sites[j].id
             image_file_count = session.query(tm.ChannelImageFile.id).\
                 join(tm.Channel).\
                 filter(tm.Channel.name.in_(channel_names)).\
-                filter(tm.ChannelImageFile.site_id == j).\
+                filter(tm.ChannelImageFile.site_id == site_id).\
                 count()
             if image_file_count == 0:
                 raise MalformedRequestError('No images found for job ID %s.' % j)
-            job_descriptions.append({'site_id': j, 'plot': True})
+            job_descriptions.append({'site_id': site_id, 'plot': True})
 
     with tm.utils.MainSession() as session:
         submission = tm.Submission(
