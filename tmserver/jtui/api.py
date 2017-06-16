@@ -193,13 +193,15 @@ def get_module_figure(experiment_id):
     '''Gets the figure for a given module.'''
     module_name = request.args.get('module_name')
     job_id = request.args.get('job_id', type=int)
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        sites = session.query(tm.Site.id).order_by(tm.Site.id).all()
     logger.info(
         'get figure for module "%s" and job %d of experiment %d',
         module_name, job_id, experiment_id
     )
     jt = ImageAnalysisPipelineEngine(experiment_id)
     fig_file = [
-        m.build_figure_filename(jt.figures_location, job_id)
+        m.build_figure_filename(jt.figures_location, sites[job_id].id)
         for m in jt.pipeline if m.name == module_name
     ]
     if len(fig_file) == 0:
@@ -298,7 +300,7 @@ def kill_jobs(experiment_id):
     gc3pie.kill_task(task)
 
 
-def _get_output(jobs, modules, fig_location):
+def _get_output(experiment_id, jobs):
     output = list()
     if jobs is None:
         return output
@@ -371,7 +373,7 @@ def get_job_output(experiment_id):
     )
     try:
         jobs = gc3pie.retrieve_most_recent_task(experiment_id, 'jtui')
-        output = _get_output(jobs, jt.pipeline, jt.figures_location)
+        output = _get_output(experiment_id, jobs)
         return jsonify(output=output)
     except IndexError:
         return jsonify(output=None)
