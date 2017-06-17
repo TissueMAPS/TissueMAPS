@@ -466,9 +466,8 @@ class Mapobject(ExperimentModel):
         '''
         for mids in mapobject_id_partitions:
             connection.execute(
-                compile_distributed_query(sql), {
-                'mapobject_ids': mids
-            })
+                compile_distributed_query(sql), {'mapobject_ids': mids}
+            )
 
     @classmethod
     def delete_invalid_cascade(cls, connection):
@@ -523,32 +522,34 @@ class Mapobject(ExperimentModel):
                 len(missing_segmentation_ids)
             )
 
+        # Make sure only mapobject types are selected that have any features,
+        # otherwise all mapobjects of that type would be deleted.
         connection.execute('''
             SELECT m.mapobject_type_id, count(v.mapobject_id)
             FROM feature_values AS v
-            RIGHT OUTER JOIN mapobjects AS m
+            JOIN mapobjects AS m
             ON m.id = v.mapobject_id AND m.partition_key = v.partition_key
             GROUP BY m.mapobject_type_id
         ''')
         results = connection.fetchall()
         missing_feature_values_ids = []
         for mapobject_type_id, count in results:
-            if count == 0:
-                continue
-            # Make sure there are any feature values, otherwise all mapobjects
-            # would get deleted.
             connection.execute('''
                 SELECT m.id FROM mapobjects AS m
                 LEFT OUTER JOIN feature_values AS v
                 ON m.id = v.mapobject_id AND m.partition_key = v.partition_key
-                WHERE v.mapobject_id IS NULL
-            ''')
+                WHERE m.mapobject_type_id = %(mapobject_type_id)s
+                AND v.mapobject_id IS NULL
+            ''', {
+                'mapobject_type_id': mapobject_type_id
+            })
             mapobjects = connection.fetchall()
             missing_feature_values_ids = [s.id for s in mapobjects]
             if missing_feature_values_ids:
                 logger.info(
-                    'delete %d mapobjects with missing feature values',
-                    len(missing_feature_values_ids)
+                    'delete %d mapobjects of type %d with missing feature '
+                    'values',
+                    len(missing_feature_values_ids), mapobject_type_id
                 )
 
         mapobject_ids = missing_segmentation_ids + missing_feature_values_ids
@@ -607,10 +608,6 @@ class Mapobject(ExperimentModel):
         '''
         if not mapobjects:
             return []
-        # Select a random shard, get all values for mapobject_id from
-        # the same shard-specific sequence and COPY the data from STDIN.
-        # This will target exactly only one shard, which allows adding data
-        # in a highly efficient manner.
         f = StringIO()
         w = csv.writer(f, delimiter=';')
         ids = connection.get_unique_ids(cls, len(mapobjects))
