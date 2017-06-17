@@ -15,14 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from sqlalchemy import Column, String, BigInteger, Integer, Text, ForeignKey
+from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from tmlib.models.base import DirectoryModel, ExperimentModel, DateMixIn
+from tmlib.models.base import (
+    DirectoryModel, ExperimentModel, DateMixIn, IdMixIn
+)
 from tmlib.models.status import FileUploadStatus as fus
 from tmlib.models.file import MicroscopeImageFile, MicroscopeMetadataFile
 from tmlib.models.utils import remove_location_upon_delete
@@ -35,7 +37,7 @@ ACQUISITION_LOCATION_FORMAT = 'acquisition_{id}'
 
 
 @remove_location_upon_delete
-class Acquisition(DirectoryModel, DateMixIn):
+class Acquisition(DirectoryModel, DateMixIn, IdMixIn):
 
     '''An *acquisition* contains all files belonging to one microscope image
     acquisition process. Note that in contrast to a *cycle*, an *acquisition*
@@ -66,7 +68,7 @@ class Acquisition(DirectoryModel, DateMixIn):
 
     #: int: ID of the parent plate
     plate_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -178,7 +180,7 @@ class Acquisition(DirectoryModel, DateMixIn):
         return '<Acquisition(id=%r, name=%r)>' % (self.id, self.name)
 
 
-class ImageFileMapping(ExperimentModel):
+class ImageFileMapping(ExperimentModel, IdMixIn):
 
     '''Mapping of an individual 2D pixels plane to its location within one or
     more microscope image files. The nomenclature for image file content is
@@ -207,28 +209,28 @@ class ImageFileMapping(ExperimentModel):
 
     #: int: ID of parent site
     site_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of parent site
     cycle_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of parent acquisition
     acquisition_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of parent channel
     channel_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

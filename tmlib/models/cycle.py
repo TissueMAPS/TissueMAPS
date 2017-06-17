@@ -15,16 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models.base import ExperimentModel, DateMixIn
+from tmlib.models.base import ExperimentModel, DateMixIn, IdMixIn
 
 logger = logging.getLogger(__name__)
 
 
-class Cycle(ExperimentModel, DateMixIn):
+class Cycle(ExperimentModel, DateMixIn, IdMixIn):
 
     '''A *cycle* represents an individual image acquisition time point of a
     a "multiplexing" experiment.
@@ -44,7 +44,7 @@ class Cycle(ExperimentModel, DateMixIn):
 
     #: int: ID of parent experiment
     experiment_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

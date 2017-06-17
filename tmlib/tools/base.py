@@ -137,7 +137,8 @@ class Tool(object):
                     v.mapobject_id, v.tpoint,
                     slice(v.values, %(feature_ids)s) AS values
                 FROM feature_values AS v
-                JOIN mapobjects AS m ON m.id = v.mapobject_id
+                JOIN mapobjects AS m
+                ON m.id = v.mapobject_id AND m.partition_key = v.partition_key
                 WHERE m.mapobject_type_id = %(mapobject_type_id)s
             ''', {
                 'feature_ids': feature_map.keys(),
@@ -229,11 +230,14 @@ class Tool(object):
             null_indices.append((name, np.sum(values)))
         return null_indices
 
-    def save_result_values(self, result_id, data):
+    def save_result_values(self, mapobject_type_name, result_id, data):
         '''Saves the generated label values.
 
         Parameters
         ----------
+        mapobject_type_name: str
+            name of the selected
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
         result_id: int
             ID of a registerd
             :class:`ToolResult <tmlib.models.result.ToolResult>`
@@ -246,40 +250,38 @@ class Tool(object):
         '''
         logger.info('save label values for result %d', result_id)
         with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            mapobject_ids = data.index.get_level_values('mapobject_id')
-            args = connection.group_ids_per_shard(tm.LabelValues, mapobject_ids)
+            connection.execute('''
+                SELECT id FROM mapobject_types
+                WHERE name = %(mapobject_type_name)s
+            ''', {
+                'mapobject_type_name': mapobject_type_name
+            })
+            results = connection.fetchall()
+            mapobject_type_id = results[0][0]
+            connection.execute('''
+                SELECT partition_key, id FROM mapobjects AS m
+                WHERE m.mapobject_type_id = %(mapobject_type_id)s
+                ORDER BY id
+            ''', {
+                'mapobject_type_id': mapobject_type_id
+            })
+            results = connection.fetchall()
+            partitions = pd.DataFrame(results)
+            grouped = partitions.groupby('partition_key')
 
-        def upsert(args):
-            for host, port, shard_id, row_ids in args:
-                logger.debug('upsert label values of shard %d', shard_id)
-                with tm.utils.ExperimentWorkerConnection(
-                        self.experiment_id, host, port
-                    ) as connection:
-                    for tpoint in data.index.levels[1]:
-                        for mapobject_id in row_ids:
-                            value = np.round(data.ix[mapobject_id, tpoint], 6)
-                            connection.execute('''
-                                INSERT INTO label_values_{shard_id} AS v (
-                                    mapobject_id, values, tpoint
-                                )
-                                VALUES (
-                                    %(mapobject_id)s, %(values)s, %(tpoint)s
-                                )
-                                ON CONFLICT
-                                ON CONSTRAINT
-                                label_values_mapobject_id_tpoint_key_{shard_id}
-                                DO UPDATE
-                                SET values = v.values || %(values)s
-                                WHERE v.mapobject_id = %(mapobject_id)s
-                                AND v.tpoint = %(tpoint)s;
-                            '''.format(shard_id=shard_id), {
-                                'values': {str(result_id): str(value)},
-                                'mapobject_id': mapobject_id,
-                                'tpoint': tpoint
-                            })
-            return []
-
-        tm.utils.parallelize_query(upsert, args)
+            for tpoint in data.index.levels[1]:
+                label_values = list()
+                for partition_key, index in grouped.groups.iteritems():
+                    for mapobject_id in partitions.ix[index, 'id']:
+                        value = np.round(data.ix[mapobject_id, tpoint], 6)
+                        label_values.append(
+                            tm.LabelValues(
+                                partition_key=partition_key,
+                                mapobject_id=mapobject_id,
+                                values={str(result_id): value}, tpoint=tpoint
+                            )
+                        )
+                tm.LabelValues.add_multiple(connection, label_values)
 
     def register_result(self, submission_id, mapobject_type_name,
             result_type, **result_attributes):

@@ -14,16 +14,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from sqlalchemy import Integer, BigInteger, ForeignKey, Column
+from sqlalchemy import Integer, ForeignKey, Column
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.dialects.postgresql import JSON
 
-from tmlib.models import ExperimentModel
+from tmlib.models.base import ExperimentModel, IdMixIn
 
 logger = logging.getLogger(__name__)
 
 
-class Plot(ExperimentModel):
+class Plot(ExperimentModel, IdMixIn):
 
     '''A plot that can be visualized client side along with a
     :class:`tmlib.models.layer.LabelLayer`.
@@ -36,7 +36,7 @@ class Plot(ExperimentModel):
 
     #: int: ID of the parent tool result
     result_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('tool_results.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

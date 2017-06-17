@@ -133,77 +133,6 @@ def _set_search_path(connection, schema_name):
         cursor.close()
 
 
-def _update_distributed_table_metadata(connection, schema_name):
-    cursor = connection.connection.cursor()
-    # NOTE: The database user must be given permissions to update the
-    # Citus metadata tables!
-    for name, table in ExperimentModel.metadata.tables.iteritems():
-        if not table.info['is_distributed']:
-            continue
-        table_name = table.name
-        distribution_method = table.info['distribution_method']
-        # We need to set the range of values for each shard in case the
-        # distribution method is "range". In case of "hash" distribution this is
-        # automatically handled.
-        #dalfkjadf
-        # Tables that should be distribution by "range" where created with
-        # "hash" distribution method. Now, we need to change the distribution
-        # method manually by updating the metadata tables.
-        # In future releases of Citus this will hopefully be handled
-        # automatically, see issue #1450.
-        if distribution_method != 'range':
-            continue
-        cursor.execute('''
-            UPDATE pg_dist_partition SET partmethod = 'r'
-            WHERE logicalrelid = %(table)s::regclass
-        ''', {
-            'table': '{s}.{t}'.format(s=schema_name, t=table_name)
-        })
-        cursor.execute('''
-            SELECT shardid FROM pg_dist_shard
-            WHERE logicalrelid = %(table)s::regclass
-            ORDER BY shardid;
-        ''', {
-            'table': '{s}.{t}'.format(s=schema_name, t=table_name)
-        })
-        shards = cursor.fetchall()
-        n = len(shards)
-        # Shards should have been created upon experiment creation.
-        if n == 0:
-            raise ValueError(
-                'No shards found for distributed table "%s".' % table_name
-            )
-        # Distribution column of "range" distributed tables must have type
-        # BigInteger.
-        total_max_value = 9223372036854775807  # positive bigint range
-        batch_size = total_max_value / n
-        for i in range(n):
-            shard_id = shards[i][0]
-            min_value = i * batch_size + 1
-            max_value = (i+1) * batch_size
-            # TODO: What happens if the "shard_max_size" is exceeded?
-            # To prevent creation of new shards in the first place, we may need
-            # to further increase "shard_count" and/or "shard_max_size".
-            cursor.execute('''
-                UPDATE pg_dist_shard
-                SET shardminvalue = %(min_value)s, shardmaxvalue = %(max_value)s
-                WHERE logicalrelid = %(table)s::regclass
-                AND shardid = %(shard_id)s
-            ''', {
-                'table': '{s}.{t}'.format(s=schema_name, t=table_name),
-                'shard_id': shards[i][0],
-                'min_value': min_value, 'max_value': max_value
-            })
-            # Create a SEQUENCE for each shard, such that we are able to
-            # create unique shard-specific values for the distribution column.
-            cursor.execute('''
-                CREATE SEQUENCE {schema}.{table}_id_seq_{shard}
-                MINVALUE %(min_value)s MAXVALUE %(max_value)s
-            '''.format(schema=schema_name, table=table_name, shard=shard_id), {
-                'min_value': min_value, 'max_value': max_value
-            })
-
-
 def _create_schema_if_not_exists(connection, schema_name):
     cursor = connection.connection.cursor()
     cursor.execute('''
@@ -703,7 +632,6 @@ class ExperimentSession(_Session):
         exists = _create_schema_if_not_exists(connection, self._schema)
         if not exists:
             _create_experiment_db_tables(connection, self._schema)
-            _update_distributed_table_metadata(connection, self._schema)
         _set_search_path(connection, self._schema)
         self._session_factory.configure(bind=connection)
         self._session = _SQLAlchemy_Session(
@@ -825,7 +753,6 @@ class ExperimentConnection(_Connection):
         exists = _create_schema_if_not_exists(self._connection, self._schema)
         if not exists:
             _create_experiment_db_tables(self._connection, self._schema)
-            _update_distributed_table_metadata(connection, self._schema)
         _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
@@ -839,51 +766,7 @@ class ExperimentConnection(_Connection):
         ''')
         return self
 
-    def get_shard_id(self, model_class):
-        '''Selects a single shard at random from all available shards.
-        The ID of the selected shard gets cached, such that subsequent calls
-        will return the same identifier.
-
-        Parameters
-        ----------
-        model_class: class
-            class dervired from
-            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
-            for which a shard should be selected
-
-        Returns
-        -------
-        int
-            ID of the selected shard
-
-        Raises
-        ------
-        ValueError
-            when the table of `model_class` is not distributed
-        '''
-        logger.debug(
-            'get ID of randomly selected shard for table of class "%s"',
-            model_class.__name__
-        )
-        if not model_class.__table__.info['is_distributed']:
-            raise ValueError(
-                'Table of class "%s" is not distributed.' % model_class.__name__
-            )
-        if model_class.__name__ in self._shard_lut:
-            return self._shard_lut[model_class.__name__]
-        self._cursor.execute('''
-            SELECT shardid FROM pg_dist_shard
-            WHERE logicalrelid = %(table)s::regclass
-            ORDER BY random()
-            LIMIT 1
-        ''', {
-            'table': model_class.__table__.name,
-        })
-        shard_id = self._cursor.fetchone()[0]
-        self._shard_lut[model_class.__name__] = shard_id
-        return shard_id
-
-    def get_unique_ids(self, model_class, shard_id, n):
+    def get_unique_ids(self, model_class, n):
         '''Gets a unique, but shard-specific value for the distribution column.
 
         Parameters
@@ -892,9 +775,6 @@ class ExperimentConnection(_Connection):
             class dervired from
             :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
             for which a shard should be selected
-        shard_id: int
-            ID of a shard that is located on the worker server to which the
-            connection was established
         n: int
             number of IDs that should be returned
 
@@ -909,19 +789,12 @@ class ExperimentConnection(_Connection):
             when the table of `model_class` is not distributed
         '''
         logger.debug(
-            'get unique identifier for shard %d of table of class "%s"',
-            shard_id, model_class.__name__
+            'get unique identifier for model "%s"', model_class.__name__
         )
-        if not model_class.__table__.info['is_distributed']:
-            raise ValueError(
-                'Table of class "%s" is not distributed.' % model_class.__name__
-            )
         self._cursor.execute('''
             SELECT nextval(%(sequence)s) FROM generate_series(1, %(n)s);
         ''', {
-            'sequence': '{table}_id_seq_{shard}'.format(
-                table=model_class.__table__.name, shard=shard_id
-            ),
+            'sequence': '{t}_id_seq'.format(t=model_class.__table__.name),
             'n': n
         })
         values = self._cursor.fetchall()

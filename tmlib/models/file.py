@@ -16,9 +16,7 @@
 import os
 import logging
 import numpy as np
-from sqlalchemy import (
-    Column, String, Integer, BigInteger, Text, Boolean, ForeignKey
-)
+from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
@@ -64,7 +62,7 @@ class MicroscopeImageFile(FileModel, DateMixIn):
 
     #: int: ID of the parent acquisition
     acquisition_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -142,7 +140,7 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
 
     #: int: ID of the parent acquisition
     acquisition_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -228,21 +226,21 @@ class ChannelImageFile(FileModel, DateMixIn):
 
     #: int: ID of the parent cycle
     cycle_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of the parent site
     site_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of the parent channel
     channel_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -365,7 +363,7 @@ class IllumstatsFile(FileModel, DateMixIn):
 
     #: int: ID of parent channel
     channel_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

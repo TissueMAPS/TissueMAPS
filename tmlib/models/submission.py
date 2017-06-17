@@ -37,7 +37,7 @@ class Submission(MainModel, DateMixIn):
 
     #: int: ID of the parent experiment
     experiment_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey(
             'experiment_references.id', onupdate='CASCADE', ondelete='CASCADE'
         ),
@@ -46,13 +46,15 @@ class Submission(MainModel, DateMixIn):
 
     #: int: ID of the submitting user
     user_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey(
             'users.id', onupdate='CASCADE', ondelete='CASCADE'
         ),
         index=True
 
     )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True, index=True)
 
     #: int: ID of the top task in the submitted collection of tasks
     top_task_id = Column(BigInteger, index=True)
@@ -91,68 +93,6 @@ class Submission(MainModel, DateMixIn):
                 self.id, self.experiment_id, self.program, self.user_id
             )
         )
-
-
-# class Batch(MainModel):
-
-#     '''A *batch* describes all inputs as well as the expected outputs of
-#     an individual *task*.
-
-#     Attributes
-#     ----------
-#     name: str
-#         name of the corresponding task
-#     job_description: dict
-#         specification of inputs and outputs (and potentially other
-#         parameters)
-#     submission_id: int
-#         ID of the parent submission
-#     submission: tmlib.models.Submission
-#         parent submission to which the batch belongs
-#     '''
-
-#     #: str: name of the corresponding database table
-#     __tablename__ = 'batches'
-
-#     # Table columns
-#     name = Column(String, index=True)
-#     description = Column(JSONB)
-#     submission_id = Column(
-#         BigInteger,
-#         ForeignKey('submissions.id', onupdate='CASCADE', ondelete='CASCADE')
-#     )
-
-#     # Relationships to other tables
-#     submission = relationship(
-#         'Submission',
-#         backref=backref('batches', cascade='all, delete-orphan')
-#     )
-
-#     def __init__(self, name, description, submission_id):
-#         '''
-#         Parameters
-#         ----------
-#         name: str
-#             name of the corresponding task
-#         description: dict
-#             specification of inputs and outputs (and potentially other
-#             parameters)
-#         submission_id: int
-#             ID of the parent submission
-
-#         See also
-#         --------
-#         ::meth:`tmlib.workflow.api.create_batches`
-#         '''
-#         self.name = name
-#         self.description = description
-#         self.submission_id = submission_id
-
-#     def __repr__(self):
-#         return (
-#             '<Batch(id=%r, name=%r, submission_id=%r)>'
-#             % (self.id, self.name, self.submission_id)
-#         )
 
 
 class Task(MainModel, DateMixIn):

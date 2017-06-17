@@ -813,9 +813,12 @@ class SegmentationImage(Image):
             # correct number of objects and that polygons are in the
             # correct order, i.e. sorted according to their corresponding label.
             mask = obj_im == label
-            # We need to remove single pixel extensions on the border of objects
-            # because they can lead to polygon self-intersections.
-            mask = mh.open(mask)
+            if np.sum(mask > 0) > 1:
+                # We need to remove single pixel extensions on the border of
+                # objects because they can lead to polygon self-intersections.
+                # However, this should only be done if the object is larger
+                # than 1 pixel.
+                mask = mh.open(mask)
             # NOTE: OpenCV returns x, y coordinates. This means one would need
             # to flip the axis for numpy-based indexing (y,x coordinates).
             _, contours, hierarchy = cv2.findContours(
@@ -824,9 +827,7 @@ class SegmentationImage(Image):
                 cv2.CHAIN_APPROX_NONE
             )
             if len(contours) == 0:
-                logger.warn(
-                    'no contours identified for object #%d', label
-                )
+                logger.warn('no contours identified for object #%d', label)
                 # This is most likely an object that does not extend
                 # beyond the line of border pixels.
                 # To ensure a correct number of objects we represent

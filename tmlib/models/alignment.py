@@ -14,10 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey, PrimaryKeyConstraint
 from sqlalchemy.orm import relationship, backref
 
-from tmlib.models import ExperimentModel
+from tmlib.models.base import ExperimentModel
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,8 @@ class SiteShift(ExperimentModel):
 
     __tablename__ = 'site_shifts'
 
+    __table_args__ = (PrimaryKeyConstraint('site_id', 'cycle_id'), )
+
     #: int: horizontal translation in pixels relative to the corresponding
     #: site of the reference cycle
     #: (positive value -> right, negative value -> left)
@@ -44,14 +46,14 @@ class SiteShift(ExperimentModel):
 
     #: int: ID of the parent site
     site_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 
     #: int: ID of the parent cycle
     cycle_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

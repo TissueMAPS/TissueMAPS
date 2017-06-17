@@ -21,9 +21,7 @@ import lxml
 import itertools
 import collections
 from cached_property import cached_property
-from sqlalchemy import (
-    Column, Integer, BigInteger, ForeignKey, String, UniqueConstraint
-)
+from sqlalchemy import Column, Integer, ForeignKey, String, UniqueConstraint
 from sqlalchemy import or_
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declared_attr
@@ -38,7 +36,9 @@ from tmlib.models.result import LabelValues
 from tmlib.models.tile import ChannelLayerTile
 from tmlib.models.mapobject import MapobjectSegmentation
 from tmlib.models.plate import Plate
-from tmlib.models.base import ExperimentModel, DirectoryModel, DateMixIn
+from tmlib.models.base import (
+    ExperimentModel, DirectoryModel, DateMixIn, IdMixIn
+)
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
 from tmlib.models.utils import remove_location_upon_delete
 from tmlib.models.dialect import compile_distributed_query
@@ -56,7 +56,7 @@ CHANNEL_LAYER_LOCATION_FORMAT = 'layer_{id}'
 
 
 @remove_location_upon_delete
-class Channel(DirectoryModel, DateMixIn):
+class Channel(DirectoryModel, DateMixIn, IdMixIn):
 
     '''A *channel* represents all *images* across different time points and
     spatial positions that were acquired with the same illumination and
@@ -85,7 +85,7 @@ class Channel(DirectoryModel, DateMixIn):
 
     #: int: ID of the parent experiment
     experiment_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -150,7 +150,7 @@ class Channel(DirectoryModel, DateMixIn):
         return '<Channel(id=%r, name=%r)>' % (self.id, self.name)
 
 
-class ChannelLayer(ExperimentModel):
+class ChannelLayer(ExperimentModel, IdMixIn):
 
     '''A *channel layer* represents a multi-resolution overview of all images
     belonging to a given :class:`Channel <tmlib.models.channel.Channel>`,
@@ -178,7 +178,7 @@ class ChannelLayer(ExperimentModel):
 
     #: int: ID of parent channel
     channel_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
