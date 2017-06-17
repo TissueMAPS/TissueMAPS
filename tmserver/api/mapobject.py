@@ -146,16 +146,7 @@ def _get_matching_layers(session, tpoint):
 
 
 def _get_mapobjects_at_ref_position(session, mapobject_type_id,
-        ref_mapobject_type_id, ref_id, segmentation_layer_ids):
-    ref_segmentation = session.query(
-            tm.MapobjectSegmentation.geom_polygon
-        ).\
-        join(tm.Mapobject).\
-        filter(
-            tm.Mapobject.ref_id == ref_id,
-            tm.Mapobject.mapobject_type_id == ref_mapobject_type_id
-        ).\
-        one()
+        ref_id, segmentation_layer_ids):
 
     return session.query(
             tm.Mapobject.id, tm.MapobjectSegmentation.label,
@@ -164,9 +155,7 @@ def _get_mapobjects_at_ref_position(session, mapobject_type_id,
         join(tm.MapobjectSegmentation).\
         filter(
             tm.Mapobject.mapobject_type_id == mapobject_type_id,
-            tm.MapobjectSegmentation.geom_centroid.ST_Intersects(
-                ref_segmentation.geom_polygon
-            ),
+            tm.Mapobject.partition_key == ref_id,
             tm.MapobjectSegmentation.segmentation_layer_id.in_(
                 segmentation_layer_ids
             )
@@ -176,14 +165,14 @@ def _get_mapobjects_at_ref_position(session, mapobject_type_id,
 
 
 def _get_border_mapobjects_at_ref_position(session, mapobject_ids,
-        ref_mapobject_type_id, ref_id):
+        ref_type_id, ref_id):
     ref_segmentation = session.query(
             tm.MapobjectSegmentation.geom_polygon
         ).\
         join(tm.Mapobject).\
         filter(
-            tm.Mapobject.ref_id == ref_id,
-            tm.Mapobject.mapobject_type_id == ref_mapobject_type_id
+            tm.Mapobject.partition_key == ref_id,
+            tm.Mapobject.mapobject_type_id == ref_type_id
         ).\
         one()
 
@@ -305,7 +294,7 @@ def update_mapobject_type(experiment_id, mapobject_type_id):
 )
 @jwt_required()
 @decode_query_ids('write')
-def delete_mapobject_typed(experiment_id, mapobject_type_id):
+def delete_mapobject_type(experiment_id, mapobject_type_id):
     """
     .. http:delete:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)
 
@@ -451,18 +440,21 @@ def add_segmentations(experiment_id, mapobject_type_id):
             ).\
             one()
         y_offset, y_offset = site.offset
+        site_id = site.id
 
         metadata = SegmentationImageMetadata(
-            mapobject_type_id, site.id, tpoint, zplane
+            mapobject_type_id, site_id, tpoint, zplane
         )
         image = SegmentationImage(array, metadata)
 
     # We need to use a raw connection, since we insert into a distributed table.
     with tm.utils.ExperimentConnection(experiment_id) as connection:
         for label, polygon in image.extract_polygons(y_offset, x_offset):
-            mapobject_id = tm.Mapobject.add(connection, mapobject_type_id)
+            mapobject_id = tm.Mapobject.add(
+                connection, site_id, mapobject_type_id
+            )
             tm.MapobjectSegmentation.add(
-                connection, mapobject_id, segmentation_layer_id,
+                connection, site_id, mapobject_id, segmentation_layer_id,
                 polygon=polygon, label=label
             )
 
