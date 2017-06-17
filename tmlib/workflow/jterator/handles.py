@@ -620,8 +620,8 @@ class SegmentedObjects(LabelImage):
         for t, val in enumerate(measurement.value):
             if len(val.index) < len(self.labels):
                 logger.warn(
-                    'missing values for "%s" at time point %d',
-                    measurement.name, t
+                    'missing values for object type "%s" at time point %d',
+                    self.name, t
                 )
                 for label in self.labels:
                     if label not in val.index:
@@ -640,8 +640,8 @@ class SegmentedObjects(LabelImage):
                     val = val[~val.index.duplicated(keep='first')]
                 else:
                     logger.warn(
-                        'too many values for "%s" at time point %d',
-                        measurement.name, t
+                        'too many values for object type "%s" at time point %d',
+                        self.name, t
                     )
                     for i in val.index:
                         if i not in self.labels:

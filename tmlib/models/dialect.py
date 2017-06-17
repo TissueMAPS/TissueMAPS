@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
+from psycopg2 import sql
 from sqlalchemy import func, text, cast
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy_utils.expressions import array_agg
@@ -43,21 +44,18 @@ def _compile_create_table(element, compiler, **kwargs):
     table = element.element
     logger.debug('create table "%s"', table.name)
     if table.info['is_distributed']:
-        distribute_by_hash = table.info['distribution_method'] == 'hash'
-        distribute_by_range = table.info['distribution_method'] == 'range'
-        distribute_by_repl = table.info['distribution_method'] == 'replication'
-        if distribute_by_hash or distribute_by_range:
-            # FIXME: Currently we create all tables with distribution method
-            # "hash" and update the metadata tables afterwards. This is
-            # currently reuqired as of Citus version 6.2, because co-location
-            # is not officially supported for "range" distribtion (yet).
-            # TODO: What's the optimal shard count and size for the different
-            # distribution methods?
-            shard_count = 30 * cfg.db_nodes
+
+        if table.info['distribution_method'] == 'hash':
+            distribtion_column = 'partition_key'
+            # TODO: What's the optimal shard count and size?
+            # This will effect the number of connections on workers, since the
+            # coordinator will create a connection for each shard placement.
+            shard_count = 10 * cfg.db_nodes
             distribution_column = table.info['distribute_by']
             table = _update_table_constraints(table, distribution_column)
-            logger.debug(
-                'distribute table "%s" by "%s"', table.name, distribution_column
+            logger.info(
+                'distribute table "%s" by "%s"',
+                table.name, distribution_column
             )
             # No replication of tables.
             sql = 'SET citus.shard_replication_factor = 1;\n'
@@ -67,17 +65,17 @@ def _compile_create_table(element, compiler, **kwargs):
                 # NOTE: This would currently fail for "range" distributed tables.
                 sql_dist = "'{s}.{t}','{c}','{m}',colocate_with=>'{s}.{t2}'".format(
                     s=table.schema, t=table.name, c=distribution_column,
-                    m='hash', #table.info['distribution_method'],
+                    m=table.info['distribution_method'],
                     t2=table.info['colocate_with']
                 )
             else:
                 sql_dist = "'{s}.{t}','{c}','{m}'".format(
                     s=table.schema, t=table.name, c=distribution_column,
-                    m='hash' #table.info['distribution_method']
+                    m=table.info['distribution_method']
                 )
             sql += ';\nSELECT create_distributed_table(%s);\n' % (sql_dist)
 
-        elif distribute_by_repl:
+        elif table.info['distribution_method'] == 'replication':
             # The first column will be used as partition column and must be
             # included in UNIQUE and PRIMARY KEY constraints.
             # NOTE: This assumes that "id" column is the first column. This is
@@ -96,13 +94,19 @@ def _compile_create_table(element, compiler, **kwargs):
             sql += ';\nSELECT create_reference_table(\'%s.%s\');' % (
                 table.schema, table.name
             )
+
         else:
-            sql = compiler.visit_create_table(element)
+            raise ValueError(
+                'Distribution method "%s" is not supported.'
+                % table.info['distribution_method']
+            )
+
     else:
+        # Tables don't have to be distributed.
+        # If they don't get distributed, they live happily as normal tables
+        # on the master node.
         sql = compiler.visit_create_table(element)
-    # NOTE: Tables don't have to be distributed.
-    # If they don't get distributed, they live happily as normal
-    # PostgreSQL tables on the master node.
+
     return sql
 
 
@@ -124,13 +128,13 @@ def _compile_array_agg(element, compiler, **kw):
     ).compile(compiler))
 
 
-def compile_distributed_query(sql):
+def compile_distributed_query(query):
     '''Compiles a *SQL* query for modification of a hash distributed Citus table.
 
     Parameters
     ----------
-    sql: str
-        query
+    query: str
+        SQL query
 
     Returns
     -------
@@ -140,7 +144,7 @@ def compile_distributed_query(sql):
     # This is required for modification of distributed tables
     # TODO: compile UPDATE and DELETE queries in dialect
     return '''
-        SELECT master_modify_multiple_shards($$
+        SELECT master_modify_multiple_shards($dist$
             {query}
-        $$)
-    '''.format(query=sql)
+        $dist$)
+    '''.format(query=query)

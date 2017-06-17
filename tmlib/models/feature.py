@@ -18,12 +18,12 @@ import csv
 from cStringIO import StringIO
 from sqlalchemy import (
     Column, String, Integer, BigInteger, ForeignKey, Boolean, Index,
-    PrimaryKeyConstraint, UniqueConstraint
+    PrimaryKeyConstraint, UniqueConstraint, ForeignKeyConstraint
 )
 from sqlalchemy.dialects.postgresql import HSTORE
 from sqlalchemy.orm import relationship, backref
 
-from tmlib.models.base import ExperimentModel
+from tmlib.models.base import ExperimentModel, IdMixIn
 from tmlib.models.utils import ExperimentConnection
 from tmlib.models.dialect import compile_distributed_query
 from tmlib import cfg
@@ -31,7 +31,7 @@ from tmlib import cfg
 logger = logging.getLogger(__name__)
 
 
-class Feature(ExperimentModel):
+class Feature(ExperimentModel, IdMixIn):
 
     '''A *feature* is a measurement that is associated with a particular
     :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`.
@@ -53,7 +53,7 @@ class Feature(ExperimentModel):
 
     #: int: id of the parent mapobject type
     mapobject_type_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -99,7 +99,6 @@ class Feature(ExperimentModel):
         ids: List[int], optional
             IDs of features that should be deleted
         '''
-        logger.info('delete feature values')
         delete = True
         if mapobject_type_id:
             delete = False
@@ -114,6 +113,7 @@ class Feature(ExperimentModel):
                 delete = True
                 ids = [r.id for r in records]
         if delete:
+            logger.info('delete feature values')
             if ids:
                 # TODO: Would it be worth indexing the HSTORE column?
                 sql = '''
@@ -130,7 +130,7 @@ class Feature(ExperimentModel):
                     'feature_ids': ids
                 })
             else:
-                sql = "UPDATE feature_values SET values = ' ';"
+                sql = "UPDATE feature_values SET values = $$' '$$;"
                 connection.execute(compile_distributed_query(sql))
                 connection.execute('DELETE FROM features;')
 
@@ -147,14 +147,22 @@ class FeatureValues(ExperimentModel):
 
     __tablename__ = 'feature_values'
 
-    # TODO: We may want this to be a PRIMARY KEY CONTRAINT instead
-    __table_args__ = (UniqueConstraint('mapobject_id', 'tpoint'), )
+    __table_args__ = (
+        PrimaryKeyConstraint('mapobject_id', 'tpoint'),
+        ForeignKeyConstraint(
+            ['mapobject_id', 'partition_key'],
+            ['mapobjects.id', 'mapobjects.partition_key'],
+            ondelete='CASCADE'
+        )
+    )
 
-    __distribute_by__ = 'mapobject_id'
+    __distribute_by__ = 'partition_key'
 
-    __distribution_method__ = 'range'
+    __distribution_method__ = 'hash'
 
     __colocate_with__ = 'mapobjects'
+
+    partition_key = Column(Integer, index=True, nullable=False)
 
     #: Dict[str, str]: mapping of feature ID to value encoded as text
     # NOTE: HSTORE is more performant than JSONB upon SELECT and upon INSERT.
@@ -165,17 +173,15 @@ class FeatureValues(ExperimentModel):
     #: int: zero-based time point index
     tpoint = Column(Integer, index=True)
 
-    #: int: ID of the parent mapobject (FOREIGN KEY)
-    mapobject_id = Column(
-        BigInteger,
-        ForeignKey('mapobjects.id', ondelete='CASCADE'),
-        index=True
-    )
+    #: int: ID of the parent mapobject
+    mapobject_id = Column(BigInteger, index=True)
 
-    def __init__(self, mapobject_id, values, tpoint=None):
+    def __init__(self, partition_key, mapobject_id, values, tpoint=None):
         '''
         Parameters
         ----------
+        partition_key: int
+            key that determines on which shard the object will be stored
         mapobject_id: int
             ID of the mapobject to which values should be assigned
         values: Dict[str, float]
@@ -183,6 +189,7 @@ class FeatureValues(ExperimentModel):
         tpoint: int, optional
             zero-based time point index
         '''
+        self.partition_key = partition_key
         self.mapobject_id = mapobject_id
         self.tpoint = tpoint
         self.values = values
@@ -204,8 +211,12 @@ class FeatureValues(ExperimentModel):
                 'Object must have type tmlib.models.feature.FeatureValues'
             )
         connection.execute('''
-            INSERT INTO feature_values AS v (values, mapobject_id, tpoint)
-            VALUES (%(values)s, %(mapobject_id)s, %(tpoint)s)
+            INSERT INTO feature_values AS v (
+                parition_key, values, mapobject_id, tpoint
+            )
+            VALUES (
+                %(partition_key)s, %(values)s, %(mapobject_id)s, %(tpoint)s
+            )
             ON CONFLICT
             ON CONSTRAINT feature_values_mapobject_id_tpoint_key
             DO UPDATE
@@ -213,6 +224,7 @@ class FeatureValues(ExperimentModel):
             WHERE v.mapobject_id = %(mapobject_id)s
             AND v.tpoint = %(tpoint)s
         ''', {
+            'partition_key': feature_values.partition_key,
             'values': feature_values.values,
             'mapobject_id': feature_values.mapobject_id,
             'tpoint': feature_values.tpoint
@@ -233,12 +245,12 @@ class FeatureValues(ExperimentModel):
         w = csv.writer(f, delimiter=';')
         for obj in feature_values:
             w.writerow((
-                obj.mapobject_id, obj.tpoint,
+                obj.partition_key, obj.mapobject_id, obj.tpoint,
                 ','.join([
                     '=>'.join([k, str(v)]) for k, v in obj.values.iteritems()
                 ])
             ))
-        columns = ('mapobject_id', 'tpoint', 'values')
+        columns = ('partition_key', 'mapobject_id', 'tpoint', 'values')
         f.seek(0)
         connection.copy_from(
             f, cls.__table__.name, sep=';', columns=columns, null=''

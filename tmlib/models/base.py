@@ -66,13 +66,13 @@ class _DeclarativeABCMeta(DeclarativeMeta, ABCMeta):
                         % (self.__table__.name, distribution_method)
                     )
                 column_type = self.__table__.c[distribution_column].type
-                if (not isinstance(column_type, sqlalchemy.types.BigInteger) and
-                        distribution_method == 'range'):
+                if not isinstance(column_type, sqlalchemy.types.Integer):
                     raise TypeError(
                         'Distribution column "%s" of table "%s" must have type '
-                        '"%s" for distribtion method "range"' % (
+                        '"%s" for distribtion method "%s"' % (
                             distribution_column, self.__table__.name,
-                            sqlalchemy.types.BigInteger.__name__
+                            sqlalchemy.types.Integer.__name__,
+                            table.info['distribution_method']
                         )
                     )
                 columns = self.__table__.c
@@ -139,8 +139,7 @@ class IdMixIn(object):
     with primary key constraint.
     '''
 
-    #: int: ID assigned to the object by the database
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     @property
     def hash(self):
@@ -155,14 +154,14 @@ class MainModel(_MainBase, IdMixIn):
     __abstract__ = True
 
 
-class ExperimentModel(_ExperimentBase, IdMixIn):
+class ExperimentModel(_ExperimentBase):
 
     '''Abstract base class for models of an experiment-specific database.'''
 
     __abstract__ = True
 
 
-class FileSystemModel(ExperimentModel):
+class FileSystemModel(ExperimentModel, IdMixIn):
 
     '''Abstract base class for model classes, which refer to data
     stored on disk outside of the database.

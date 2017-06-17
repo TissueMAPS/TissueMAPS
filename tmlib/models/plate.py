@@ -17,7 +17,7 @@ import os
 import logging
 import numpy as np
 from cached_property import cached_property
-from sqlalchemy import Column, String, Integer, BigInteger, Text, ForeignKey
+from sqlalchemy import Column, String, Integer, Text, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -101,7 +101,7 @@ class Plate(DirectoryModel, DateMixIn):
 
     #: int: ID of parent experiment
     experiment_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('experiment.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

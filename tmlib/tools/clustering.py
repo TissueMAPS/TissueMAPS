@@ -76,4 +76,4 @@ class Clustering(Classifier):
             submission_id, mapobject_type_name,
             result_type='ScalarToolResult', unique_labels=unique_labels
         )
-        self.save_result_values(result_id, predicted_labels)
+        self.save_result_values(mapobject_type_name, result_id, predicted_labels)

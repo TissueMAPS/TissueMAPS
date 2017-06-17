@@ -18,19 +18,19 @@ import numpy as np
 import logging
 from cached_property import cached_property
 from sqlalchemy import (
-    Column, String, Integer, BigInteger, ForeignKey, Index, UniqueConstraint
+    Column, String, Integer, ForeignKey, Index, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, backref
 
 from tmlib import utils
-from tmlib.models.base import ExperimentModel, DateMixIn
+from tmlib.models.base import ExperimentModel, DateMixIn, IdMixIn
 
 
 logger = logging.getLogger(__name__)
 
 
-class Well(ExperimentModel, DateMixIn):
+class Well(ExperimentModel, DateMixIn, IdMixIn):
 
     '''A *well* is a reservoir for a biological sample and multiple *wells* are
     typically arranged as a grid on a :class:`Plate <tmlib.models.plate.Plate>`.
@@ -59,7 +59,7 @@ class Well(ExperimentModel, DateMixIn):
 
     #: int: ID of parent plate
     plate_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('plates.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

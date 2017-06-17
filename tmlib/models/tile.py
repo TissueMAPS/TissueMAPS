@@ -22,12 +22,12 @@ import psycopg2
 import numpy as np
 import pandas as pd
 from sqlalchemy import (
-    Column, String, Integer, BigInteger, Boolean, ForeignKey, Index
+    Column, String, Integer, BigInteger, Boolean, ForeignKey, Index,
+    PrimaryKeyConstraint
 )
 from sqlalchemy.dialects.postgresql import BYTEA
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy import UniqueConstraint
 
 from tmlib.image import PyramidTile
 from tmlib.metadata import PyramidTileMetadata
@@ -46,18 +46,12 @@ class ChannelLayerTile(ExperimentModel):
     __tablename__ = 'channel_layer_tiles'
 
     __table_args__ = (
-        UniqueConstraint(
-            'channel_layer_id', 'z', 'y', 'x'
-        ),
-        Index(
-            'ix_channel_layer_tiles_channel_layer_id_z_y_x',
-            'channel_layer_id', 'z', 'y', 'x'
-        )
+        PrimaryKeyConstraint('y', 'channel_layer_id', 'z', 'x'),
     )
 
-    __distribute_by__ = 'y'
-
     __distribution_method__ = 'hash'
+
+    __distribute_by__ = 'y'
 
     _pixels = Column('pixels', BYTEA)
 
@@ -77,7 +71,7 @@ class ChannelLayerTile(ExperimentModel):
     # between rasters and numpy arrays.
 
     #: int: ID of parent channel layer
-    channel_layer_id = Column(BigInteger, nullable=False)
+    channel_layer_id = Column(Integer, nullable=False)
 
     def __init__(self, z, y, x, channel_layer_id, pixels=None):
         '''
@@ -144,17 +138,12 @@ class ChannelLayerTile(ExperimentModel):
         it doesn't exist yet and *updates* it otherwise.
         '''
         # Upsert the tile entry, i.e. insert or update if exists
-        # We can do this because the partition key is already known and can
-        # be included in the WHERE clause.
         connection.execute('''
             INSERT INTO channel_layer_tiles AS t (
                 channel_layer_id, z, y, x, pixels
             )
-            VALUES (
-                %(channel_layer_id)s, %(z)s, %(y)s, %(x)s, %(pixels)s
-            )
-            ON CONFLICT
-            ON CONSTRAINT channel_layer_tiles_channel_layer_id_z_y_x_key
+            VALUES (%(channel_layer_id)s, %(z)s, %(y)s, %(x)s, %(pixels)s)
+            ON CONFLICT ON CONSTRAINT channel_layer_tiles_pkey
             DO UPDATE SET pixels = %(pixels)s
         ''', {
             'channel_layer_id': tile.channel_layer_id,

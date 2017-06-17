@@ -99,4 +99,4 @@ class Classification(Classifier):
             result_type='SupervisedClassifierToolResult',
             unique_labels=unique_labels, label_map=label_map
         )
-        self.save_result_values(result_id, predicted_labels)
+        self.save_result_values(mapobject_type_name, result_id, predicted_labels)

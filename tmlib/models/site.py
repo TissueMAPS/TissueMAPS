@@ -15,17 +15,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 import numpy as np
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, ForeignKey, Boolean
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy import UniqueConstraint
 
-from tmlib.models.base import ExperimentModel
+from tmlib.models.base import ExperimentModel, IdMixIn
 
 
 logger = logging.getLogger(__name__)
 
 
-class Site(ExperimentModel):
+class Site(ExperimentModel, IdMixIn):
 
     '''A *site* is a unique `y`, `x` position projected onto the
     *plate* bottom plane that was scanned by the microscope.
@@ -75,7 +75,7 @@ class Site(ExperimentModel):
 
     #: int: ID of parent well
     well_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('wells.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )

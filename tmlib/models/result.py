@@ -14,21 +14,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
+from cStringIO import StringIO
+import csv
 import numpy as np
 import pandas as pd
 from sqlalchemy import (
-    Integer, BigInteger, Column, String, ForeignKey, UniqueConstraint
+    Integer, BigInteger, Column, String, ForeignKey, UniqueConstraint,
+    PrimaryKeyConstraint, ForeignKeyConstraint
 )
 from sqlalchemy.dialects.postgresql import HSTORE, JSON
 from sqlalchemy.orm import relationship, backref, Session
 
-from tmlib.models.base import ExperimentModel
+from tmlib.models.base import ExperimentModel, IdMixIn
 from tmlib.models.feature import FeatureValues
 
 logger = logging.getLogger(__name__)
 
 
-class ToolResult(ExperimentModel):
+class ToolResult(ExperimentModel, IdMixIn):
 
     '''A tool result bundles all elements that should be visualized together
     client side.
@@ -63,7 +66,7 @@ class ToolResult(ExperimentModel):
 
     #: int: id of the parent mapobject type
     mapobject_type_id = Column(
-        BigInteger,
+        Integer,
         ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
@@ -307,13 +310,22 @@ class LabelValues(ExperimentModel):
 
     __tablename__ = 'label_values'
 
-    __distribute_by__ = 'mapobject_id'
+    __table_args__ = (
+        PrimaryKeyConstraint('mapobject_id', 'tpoint'),
+        ForeignKeyConstraint(
+            ['mapobject_id', 'partition_key'],
+            ['mapobjects.id', 'mapobjects.partition_key'],
+            ondelete='CASCADE'
+        )
+    )
 
-    __distribution_method__ = 'range'
+    __distribution_method__ = 'hash'
+
+    __distribute_by__ = 'partition_key'
 
     __colocate_with__ = 'mapobjects'
 
-    __table_args__ = (UniqueConstraint('mapobject_id', 'tpoint'), )
+    partition_key = Column(Integer, nullable=False)
 
     #: Dict[str, str]: mapping of tool result ID to label value encoded as text
     values = Column(HSTORE)
@@ -322,16 +334,14 @@ class LabelValues(ExperimentModel):
     tpoint = Column(Integer, nullable=False, index=True)
 
     #: int: ID of the parent mapobject
-    mapobject_id = Column(
-        BigInteger,
-        ForeignKey('mapobjects.id', ondelete='CASCADE'),
-        index=True
-    )
+    mapobject_id = Column(BigInteger, index=True)
 
-    def __init__(self, mapobject_id, values, tpoint):
+    def __init__(self, partition_key, mapobject_id, values, tpoint):
         '''
         Parameters
         ----------
+        partition_key: int
+            key that determines on which shard the object will be stored
         mapobject_id: int
             ID of the mapobject to which values should be assigned
         values: Dict[str, float]
@@ -339,6 +349,7 @@ class LabelValues(ExperimentModel):
         tpoint: int
             zero-based time point index
         '''
+        self.partition_key = partition_key
         self.tpoint = tpoint
         self.values = values
         self.mapobject_id = mapobject_id
@@ -355,14 +366,19 @@ class LabelValues(ExperimentModel):
         label_values: tmlib.models.result.LabelValues
         '''
         connection.execute('''
-            INSERT INTO label_values AS v (values, mapobject_id, tpoint)
-            VALUES (%(values)s, %(mapobject_id)s, %(tpoint)s)
+            INSERT INTO label_values AS v (
+                partition_key, values, mapobject_id, tpoint
+            )
+            VALUES (
+                %(partition_key)s, %(values)s, %(mapobject_id)s, %(tpoint)s
+            )
             ON CONFLICT
             ON CONSTRAINT label_values_mapobject_id_tpoint_key
             DO UPDATE
             SET values = v.values || %(values)s
             WHERE v.mapobject_id = %(mapobject_id)s
             AND v.tpoint = %(tpoint)s
+            AND v.partition_key = %(partition_key)s
         ''', {
             'values': label_values.values,
             'mapobject_id': label_values.mapobject_id,
@@ -384,12 +400,12 @@ class LabelValues(ExperimentModel):
         w = csv.writer(f, delimiter=';')
         for obj in label_values:
             w.writerow((
-                obj.mapobject_id, obj.tpoint,
+                obj.partition_key, obj.mapobject_id, obj.tpoint,
                 ','.join([
                     '=>'.join([k, str(v)]) for k, v in obj.values.iteritems()
                 ])
             ))
-        columns = ('mapobject_id', 'tpoint', 'values')
+        columns = ('partition_key', 'mapobject_id', 'tpoint', 'values')
         f.seek(0)
         connection.copy_from(
             f, cls.__table__.name, sep=';', columns=columns, null=''
