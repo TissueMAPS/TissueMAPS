@@ -269,19 +269,36 @@ class Tool(object):
             partitions = pd.DataFrame(results)
             grouped = partitions.groupby('partition_key')
 
-            for tpoint in data.index.levels[1]:
-                label_values = list()
-                for partition_key, index in grouped.groups.iteritems():
-                    for mapobject_id in partitions.ix[index, 'id']:
-                        value = np.round(data.ix[mapobject_id, tpoint], 6)
-                        label_values.append(
-                            tm.LabelValues(
-                                partition_key=partition_key,
-                                mapobject_id=mapobject_id,
-                                values={str(result_id): value}, tpoint=tpoint
-                            )
-                        )
-                tm.LabelValues.add_multiple(connection, label_values)
+        def upsert(args):
+            for partition_key, index in args:
+                logger.debug('upsert label values for partition', partition_key)
+                with tm.utils.ExperimentConnection(self.experiment_id) as c:
+                    for tpoint in data.index.levels[1]:
+                        for mapobject_id in partitions.ix[index, 'id']:
+                            value = np.round(data.ix[mapobject_id, tpoint], 6)
+                            c.execute('''
+                                INSERT INTO label_values AS v (
+                                    partition_key, mapobject_id, values, tpoint
+                                )
+                                VALUES (
+                                    %(partition_key)s, %(mapobject_id)s,
+                                    %(values)s, %(tpoint)s
+                                )
+                                ON CONFLICT ON CONSTRAINT label_values_pkey
+                                DO UPDATE
+                                SET values = v.values || %(values)s
+                                WHERE v.mapobject_id = %(mapobject_id)s
+                                AND v.partition_key = %(partition_key)s
+                                AND v.tpoint = %(tpoint)s;
+                            ''', {
+                                'values': {str(result_id): str(value)},
+                                'mapobject_id': mapobject_id,
+                                'partition_key': partition_key,
+                                'tpoint': tpoint
+                            })
+            return []
+
+        tm.utils.parallelize_query(upsert, grouped.groups.items())
 
     def register_result(self, submission_id, mapobject_type_name,
             result_type, **result_attributes):
