@@ -957,9 +957,9 @@ class SegmentationLayer(ExperimentModel, IdMixIn):
                 centroid_thresh = 0
         else:
             if represent_as_polygons:
-                polygon_thresh = maxzoom_level - 5
+                polygon_thresh = maxzoom_level - 4
             else:
-                polygon_thresh = maxzoom_level
+                polygon_thresh = maxzoom_level + 1
             centroid_thresh = polygon_thresh - 2
 
         polygon_thresh = 0 if polygon_thresh < 0 else polygon_thresh
