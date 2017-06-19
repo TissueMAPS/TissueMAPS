@@ -86,7 +86,8 @@ class MetadataConfigurator(WorkflowStepAPI):
                     'acquisition_id': acq.id,
                     'n_vertical': args.n_vertical,
                     'n_horizontal': args.n_horizontal,
-                    'stitch_layout': args.stitch_layout
+                    'stitch_layout': args.stitch_layout,
+                    'perform_mip': args.mip
                 }
 
     def delete_previous_job_output(self):
@@ -106,8 +107,6 @@ class MetadataConfigurator(WorkflowStepAPI):
             session.query(tm.Cycle).delete()
             logger.info('delete existing wells')
             session.query(tm.Well).delete()
-            logger.debug('delete existing image file mappings')
-            session.query(tm.ImageFileMapping).delete()
 
     def run_job(self, batch, assume_clean_state=False):
         '''Configures OMEXML metadata extracted from microscope image files and
@@ -218,13 +217,14 @@ class MetadataConfigurator(WorkflowStepAPI):
                 stitch_dimensions=(batch['n_vertical'], batch['n_horizontal'])
             )
 
-        mdhandler.group_metadata_per_zstack()
+        if batch['perform_mip']:
+            mdhandler.group_metadata_per_zstack()
 
         # Create consistent zero-based ids
-        mdhandler.update_channel()
+        mdhandler.update_indices()
         mdhandler.assign_acquisition_site_indices()
         md = mdhandler.remove_redundant_columns()
-        fmap = mdhandler.create_image_file_mapping()
+        fmaps = mdhandler.create_image_file_mappings()
 
         logger.info('create database entries')
         for w in np.unique(md.well_name):
@@ -240,7 +240,16 @@ class MetadataConfigurator(WorkflowStepAPI):
                     plate_id=acquisition.plate.id, name=w
                 )
 
-                file_mappings = list()
+                channels = dict()
+                bit_depth = md['bit_depth'][0]
+                for ch_name in np.unique(md['channel_name']):
+                    channels[ch_name] = session.get_or_create(
+                        tm.Channel,
+                        name=ch_name, wavelength=ch_name, bit_depth=bit_depth,
+                        experiment_id=self.experiment_id
+                    )
+
+                channel_image_files = list()
                 for s in np.unique(md.loc[w_index, 'site']):
                     logger.debug('create site #%d', s)
                     s_index = md.site == s
@@ -248,27 +257,24 @@ class MetadataConfigurator(WorkflowStepAPI):
                     x = md.loc[s_index, 'well_position_x'].values[0]
                     height = md.loc[s_index, 'height'].values[0]
                     width = md.loc[s_index, 'width'].values[0]
-                    # We need the id because it's a foreign key on file mappings.
-                    # Therefore, we have to insert/update one by one.
+
                     site = session.get_or_create(
                         tm.Site,
                         y=y, x=x, height=height, width=width, well_id=well.id
                     )
 
                     for index, i in md.ix[s_index].iterrows():
-                        file_mappings.append(
-                            tm.ImageFileMapping(
-                                tpoint=i.tpoint,
-                                site_id=site.id, map=fmap[index],
-                                wavelength=i.channel_name,
-                                bit_depth=i.bit_depth,
-                                acquisition_id=acquisition.id
+
+                        channel_image_files.append(
+                            tm.ChannelImageFile(
+                                tpoint=i.tpoint, zplane=i.zplane,
+                                channel_id=channels[i.channel_name].id,
+                                site_id=site.id, acquisition_id=acquisition.id,
+                                file_map=fmaps[index],
                             )
                         )
 
-                # NOTE: bulk_save_objects() can handle inserts and updates and
-                # updates only rows that have changed.
-                session.bulk_save_objects(file_mappings)
+                session.bulk_save_objects(channel_image_files)
 
     def collect_job_output(self, batch):
         '''Assigns registered image files from different acquisitions to
@@ -300,18 +306,25 @@ class MetadataConfigurator(WorkflowStepAPI):
                 logger.info('time points are interpreted as multiplexing cycles')
 
         with tm.utils.ExperimentSession(self.experiment_id) as session:
+
+            channels = session.query(tm.Channel.name, tm.Channel.id).all()
+            channel_lut = dict(channels)
+
+            bit_depth = session.query(tm.Channel.bit_depth).distinct().one()
+            if len(bit_depth) > 1:
+                raise MetadataError('All channels must have the same bit depth.')
+            bit_depth = bit_depth[0]
+            wavelengths = session.query(tm.Channel.wavelength).\
+                distinct().\
+                all()
+            wavelengths = [w[0] for w in wavelengths]
+
             # We order acquisitions by the time they got created. This will
             # determine the order of multiplexing cycles.
             plates = session.query(tm.Plate.id).\
                 order_by(tm.Plate.created_at).\
                 all()
             plate_ids = [p.id for p in plates]
-            bit_depth = session.query(tm.ImageFileMapping.bit_depth).\
-                distinct().\
-                one()
-            if len(bit_depth) > 1:
-                raise MetadataError('Images must all have the same bit depth.')
-            bit_depth = bit_depth[0]
             for p in plate_ids:
                 acquisitions = session.query(tm.Acquisition.id).\
                     filter_by(plate_id=p).\
@@ -323,7 +336,7 @@ class MetadataConfigurator(WorkflowStepAPI):
                 c_index = 0
                 for a in acquisition_ids:
                     logger.debug('acquisition %d', a)
-                    tpoints = session.query(tm.ImageFileMapping.tpoint).\
+                    tpoints = session.query(tm.ChannelImageFile.tpoint).\
                         filter_by(acquisition_id=a).\
                         distinct().\
                         all()
@@ -335,41 +348,76 @@ class MetadataConfigurator(WorkflowStepAPI):
                             index=c_index, experiment_id=self.experiment_id
                         )
 
-                        wavelengths = session.query(
-                                tm.ImageFileMapping.wavelength
-                            ).\
-                            filter_by(acquisition_id=a).\
-                            distinct().\
-                            all()
-                        wavelengths = [w[0] for w in wavelengths]
                         for w in wavelengths:
-                            logger.debug('configure wavelength "%s"', w)
-                            if is_multiplexing:
-                                name = 'cycle-%d_wavelength-%s' % (c_index, w)
-                            else:
-                                name = 'wavelength-%s' % w
-                            channel = session.get_or_create(
-                                tm.Channel, experiment_id=self.experiment_id,
-                                name=name, wavelength=w, bit_depth=bit_depth
-                            )
+                            # Get all channel_image_files for the currently
+                            # processed acquisition that match the old values
+                            # of the "tpoint" and "channel_id" attributes.
+                            image_files = session.query(tm.ChannelImageFile.id).\
+                                filter_by(
+                                    tpoint=t, acquisition_id=a,
+                                    channel_id=channel_lut[w]
+                                ).\
+                                all()
 
-                            file_mapping_ids = session.query(tm.ImageFileMapping.id).\
-                                filter_by(tpoint=t, wavelength=w, acquisition_id=a)
+                            if len(image_files) == 0:
+                                # A wavelength might not have been used at
+                                # every time point.
+                                continue
+
+                            logger.debug('wavelength "%s"', w)
+                            if is_multiplexing:
+                                # In case of a multiplexing experiment
+                                # we create a separate channel for each
+                                # combination of wavelength and tpoint.
+                                new_channel_name = '{c}_{w}'.format(
+                                    c=c_index, w=w
+                                )
+                            else:
+                                # In case of a time series experiment
+                                # the name of the channel remains unchanged.
+                                new_channel_name = w
+
+                            # Check whether the channel already exists and
+                            # update the name accordingly (upon creation, the
+                            # "name" attribute should have been set to the
+                            # value of the "wavelength" attribute).
+                            channel = session.query(tm.Channel).\
+                                filter_by(name=w, wavelength=w).\
+                                one_or_none()
+                            if channel is not None:
+                                channel.name = new_channel_name
+                                session.add(channel)
+                                session.commit()
+                            else:
+                                channel = tm.Channel(
+                                    name=new_channel_name, wavelength=w,
+                                    bit_depth=bit_depth,
+                                    experiment_id=self.experiment_id
+                                )
+                                session.add(channel)
+                                session.commit()
+
                             logger.info(
-                                'update time point and channel metadata '
-                                'of file mappings: tpoint=%d, channel=%s',
+                                'update time point and channel id '
+                                'of channel image files: tpoint=%d, channel=%s',
                                 t_index, channel.name
                             )
+                            # Update the attributes of channel_image_files with
+                            # the new values for tpoint and channel_id and also
+                            # add the cycle_id.
                             session.bulk_update_mappings(
-                                tm.ImageFileMapping, [
+                                tm.ChannelImageFile, [
                                   {
-                                    'id': i.id,
+                                    'id': f.id,
                                     'tpoint': t_index,
                                     'cycle_id': cycle.id,
                                     'channel_id': channel.id
-                                  } for i in file_mapping_ids
+                                  } for f in image_files
                                 ]
                             )
+
+                            # Update lookup table
+                            channel_lut[new_channel_name] = channel.id
 
                         if is_time_series:
                             t_index += 1

@@ -573,9 +573,9 @@ class MetadataHandler(object):
         return self.metadata
 
     def group_metadata_per_zstack(self):
-        '''All focal planes belonging to one z-stack (i.e. that were acquired
+        '''Group all focal planes belonging to one z-stack (i.e. acquired
         at different z resolutions but at the same microscope stage position,
-        time point and channel) are grouped together.
+        time point and channel) together.
 
         Returns
         -------
@@ -601,13 +601,11 @@ class MetadataHandler(object):
             fm.files = list()
             fm.series = list()
             fm.planes = list()
-            fm.zlevels = list()
             fm.ref_index = indices[0]
             for index in indices:
                 fm.files.extend(self._file_mapper_list[index].files)
                 fm.series.extend(self._file_mapper_list[index].series)
                 fm.planes.extend(self._file_mapper_list[index].planes)
-                fm.zlevels.append(md.loc[index, 'zplane'])
             grouped_file_mapper_list.append(fm)
             grouped_file_mapper_lut[tuple(fm.files)].append(fm)
             # Keep only the first record
@@ -621,18 +619,14 @@ class MetadataHandler(object):
 
         return self.metadata
 
-    def update_channel(self):
-        '''Creates for each channel a zero-based unique identifier number.
+    def update_indices(self):
+        '''Creates for each channel, time point and z-plane a zero-based
+        unique identifier number.
 
         Returns
         -------
         pandas.DataFrame
             metadata for each 2D *Plane* element
-
-        Note
-        ----
-        The id may not reflect the order in which the channels were acquired
-        on the microscope.
 
         Warning
         -------
@@ -644,6 +638,12 @@ class MetadataHandler(object):
         for i, c in enumerate(channels):
             md.loc[(md.channel_name == c), 'channel'] = i
         md.channel = md.channel.astype(int)
+        tpoints = np.unique(md.tpoint)
+        for i, t in enumerate(tpoints):
+            md.loc[(md.tpoint == t), 'tpoint'] = i
+        zplanes = np.unique(md.zplane)
+        for i, z in enumerate(zplanes):
+            md.loc[(md.zplane == z), 'zplane'] = i
         return self.metadata
 
     def assign_acquisition_site_indices(self):
@@ -679,7 +679,7 @@ class MetadataHandler(object):
 
         return self.metadata
 
-    def create_image_file_mapping(self):
+    def create_image_file_mappings(self):
         '''Creates a file map for the extraction of individual planes from the
         microscopy image files.
 
@@ -691,7 +691,7 @@ class MetadataHandler(object):
             (*files* key) and their location within the files
             (*series* and *plane* keys)
         '''
-        logger.info('build image file mapping')
+        logger.info('build image file mappings')
         md = self.metadata
         mapper = dict()
         for item in self._file_mapper_list:

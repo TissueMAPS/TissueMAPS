@@ -148,16 +148,16 @@ class ImageRegistrator(WorkflowStepAPI):
         logger.info('delete existing site shifts and intersections')
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             session.query(tm.SiteShift).delete()
-            sites = session.query(tm.SiteIntersection).\
-                all()
-            for s in sites:
-                s.upper_overhang = 0
-                s.lower_overhang = 0
-                s.right_overhang = 0
-                s.left_overhang = 0
+            for site in session.query(tm.Site).all():
+                site.bottom_residue = 0
+                site.top_residue = 0
+                site.left_residue = 0
+                site.right_residue = 0
 
     def run_job(self, batch, assume_clean_state=False):
-        '''Calculates shift and overhang values for the given sites.
+        '''Calculates the number of pixels each image is shifted relative
+        its reference image. The calculated values can later be used to align
+        images between cycles.
 
         Parameters
         ----------
@@ -249,15 +249,15 @@ class ImageRegistrator(WorkflowStepAPI):
                     x_shifts.append(x)
 
                 logger.info('calculate intersection of sites across cycles')
-                top, bottom, right, left = reg.calculate_overhang(
+                bottom, top, left, right = reg.calculate_overlap(
                     y_shifts, x_shifts
                 )
 
                 site = session.query(tm.Site).get(reference_file.site_id)
-                site.upper_overhang = top
-                site.lower_overhang = bottom
-                site.right_overhang = left
-                site.left_overhang = right
+                site.bottom_residue = bottom
+                site.top_residue = top
+                site.left_residue = left
+                site.right_residue = right
 
     @notimplemented
     def collect_job_output(self, batch):

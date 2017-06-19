@@ -17,7 +17,8 @@ import os
 import logging
 import numpy as np
 from sqlalchemy import Column, String, Integer, Text, Boolean, ForeignKey
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, Session
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import UniqueConstraint
 from cached_property import cached_property
@@ -36,6 +37,7 @@ from tmlib.writers import ImageWriter
 from tmlib.models.base import FileModel, DateMixIn
 from tmlib.models.status import FileUploadStatus
 from tmlib.models.utils import remove_location_upon_delete
+from tmlib.models.alignment import SiteShift
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +216,8 @@ class ChannelImageFile(FileModel, DateMixIn):
 
     __table_args__ = (
         UniqueConstraint(
-            'tpoint', 'zplane', 'site_id', 'cycle_id', 'channel_id'
+            'tpoint', 'zplane',
+            'site_id', 'cycle_id', 'channel_id', 'acquisition_id'
         ),
     )
 
@@ -223,6 +226,9 @@ class ChannelImageFile(FileModel, DateMixIn):
 
     #: int: zero-based index in the z-stack
     zplane = Column(Integer, index=True)
+
+    # dict: link to microscope image files from which this file originated
+    file_map = Column(JSONB)
 
     #: int: ID of the parent cycle
     cycle_id = Column(
@@ -245,6 +251,13 @@ class ChannelImageFile(FileModel, DateMixIn):
         index=True
     )
 
+    #: int: ID of the parent acquisition
+    acquisition_id = Column(
+        Integer,
+        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
     #: tmlib.models.cycle.Cycle: parent cycle
     cycle = relationship(
         'Cycle',
@@ -263,10 +276,17 @@ class ChannelImageFile(FileModel, DateMixIn):
         backref=backref('image_files', cascade='all, delete-orphan')
     )
 
+    #: tmlib.models.channel.Channel: parent channel
+    acquisition = relationship(
+        'Acquisition',
+        backref=backref('channel_image_files', cascade='all, delete-orphan')
+    )
+
     #: Format string for filenames
     FILENAME_FORMAT = 'channel_image_file_{id}.h5'
 
-    def __init__(self, tpoint, zplane, site_id, cycle_id, channel_id):
+    def __init__(self, tpoint, zplane, site_id, acquisition_id, channel_id,
+            file_map, cycle_id=None):
         '''
         Parameters
         ----------
@@ -276,16 +296,28 @@ class ChannelImageFile(FileModel, DateMixIn):
             zero-based z-level index in the 3D stack
         site_id: int
             ID of the parent :class:`Site <tmlib.models.site.Site>`
-        cycle_id: int
-            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
         channel_id: int
             ID of the parent :class:`Channel <tmlib.models.channel.Channel>`
+        acquisition_id: int
+            ID of the parent
+            :class:`Acquisition <tmlib.models.acquisition.Acquisition>`
+        file_map: Dict[str, list]
+            mapping to link the file to each corresponding
+            :class:`MicroscopeImageFile <tmlib.models.file.MicroscopeImageFile>`
+            from which is was derived as well as the locations within the file
+            (a channel image file might be linked to more than one microscope
+            image file in case it was obtained by projection of a z-stack,
+            for example)
+        cycle_id: int, optional
+            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
         '''
         self.tpoint = tpoint
         self.zplane = zplane
         self.site_id = site_id
         self.cycle_id = cycle_id
         self.channel_id = channel_id
+        self.acquisition_id = acquisition_id
+        self.file_map = file_map
 
     def get(self):
         '''Gets stored image.
@@ -304,16 +336,18 @@ class ChannelImageFile(FileModel, DateMixIn):
         )
         with DatasetReader(self.location) as f:
             array = f.read('array')
-        metadata.upper_overhang = self.site.upper_overhang
-        metadata.lower_overhang = self.site.lower_overhang
-        metadata.right_overhang = self.site.right_overhang
-        metadata.left_overhang = self.site.left_overhang
-        if self.site.shifts:
-            shift = [
-                s for s in self.site.shifts if s.cycle_id == self.cycle_id
-            ][0]
-            metadata.x_shift = shift.x
-            metadata.y_shift = shift.y
+        metadata.bottom_residue = self.site.bottom_residue
+        metadata.top_residue = self.site.top_residue
+        metadata.left_residue = self.site.left_residue
+        metadata.right_residue = self.site.right_residue
+
+        session = Session.object_session(self)
+        shifts = session.query(SiteShift.y, SiteShift.x).\
+            filter_by(site_id=self.site_id, cycle_id=self.cycle_id).\
+            one_or_none()
+        if shifts is not None:
+            metadata.x_shift = shifts.x
+            metadata.y_shift = shifts.y
         return ChannelImage(array, metadata)
 
     @assert_type(image='tmlib.image.ChannelImage')
@@ -333,7 +367,7 @@ class ChannelImageFile(FileModel, DateMixIn):
         '''str: location of the file'''
         if self._location is None:
             self._location = os.path.join(
-                self.channel.images_location,
+                self.channel.get_image_file_location(self.id),
                 self.FILENAME_FORMAT.format(id=self.id)
             )
         return self._location

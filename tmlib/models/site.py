@@ -57,21 +57,17 @@ class Site(ExperimentModel, IdMixIn):
     #: bool: whether the site should be omitted from further analysis
     omitted = Column(Boolean, index=True)
 
-    #: number of overhanging pixels at the top, which would need to be cropped
-    #: at the bottom for overlay
-    upper_overhang = Column(Integer)
+    #: number of pixels that should be cropped at the bottom for alignment
+    bottom_residue = Column(Integer)
 
-    #: number of overhanging pixels at the bottom, which would need to be
-    #: cropped at the bottom for overlay
-    lower_overhang = Column(Integer)
+    #: number of pixels that should be cropped at the top for alignment
+    top_residue = Column(Integer)
 
-    #: number of overhanging pixels at the right side, which would need to
-    #: be cropped at the left side for overlay
-    right_overhang = Column(Integer)
+    #: number of pixels that should be cropped at the left side for alignment
+    left_residue = Column(Integer)
 
-    #: number of overhanging pixels at the left side, which would need to
-    #: be cropped at the right side for overlay
-    left_overhang = Column(Integer)
+    #: number of pixels that should be cropped at the right side for alignment
+    right_residue = Column(Integer)
 
     #: int: ID of parent well
     well_id = Column(
@@ -111,10 +107,10 @@ class Site(ExperimentModel, IdMixIn):
         self.width = width
         self.well_id = well_id
         self.omitted = omitted
-        self.upper_overhang = 0
-        self.lower_overhang = 0
-        self.right_overhang = 0
-        self.left_overhang = 0
+        self.bottom_residue = 0
+        self.top_residue = 0
+        self.left_residue = 0
+        self.right_residue = 0
 
     @property
     def coordinate(self):
@@ -167,14 +163,14 @@ class Site(ExperimentModel, IdMixIn):
         '''int: number of pixels along the vertical axis of the site after
         alignment between cycles
         '''
-        return self.height - (self.lower_overhang + self.upper_overhang)
+        return self.height - (self.top_residue + self.bottom_residue)
 
     @property
     def aligned_width(self):
         '''int: number of pixels along the horizontal axis of the site after
         alignment between cycles
         '''
-        return self.width - (self.left_overhang + self.right_overhang)
+        return self.width - (self.right_residue + self.left_residue)
 
     @property
     def aligned_offset(self):
@@ -183,7 +179,7 @@ class Site(ExperimentModel, IdMixIn):
         alignment for shifts between cycles
         '''
         y_offset, x_offset = self.offset
-        return (y_offset + self.lower_overhang, x_offset + self.right_overhang)
+        return (y_offset + self.top_residue, x_offset + self.left_residue)
 
     def __repr__(self):
         return (

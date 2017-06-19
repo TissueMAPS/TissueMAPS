@@ -402,7 +402,7 @@ class Image(object):
         except IndexError as e:
             raise IndexError(
                 'Shifting and cropping of the image failed!\n'
-                'Shift or overhang values are incorrect:\n%s' % str(e)
+                'Shift or residue values are incorrect:\n%s' % str(e)
             )
         except Exception as e:
             raise Exception(
@@ -412,7 +412,7 @@ class Image(object):
 
     def align(self, crop=True, inplace=True):
         '''Aligns, i.e. shifts and optionally crops, an image based on
-        pre-calculated shift and overhang values.
+        pre-calculated shift and residue values.
 
         Parameters
         ----------
@@ -441,8 +441,8 @@ class Image(object):
         # The shape of the arrays may change when cropped
         array = self._shift_and_crop(
             self.array, y=md.y_shift, x=md.x_shift,
-            bottom=md.upper_overhang, top=md.lower_overhang,
-            right=md.left_overhang, left=md.right_overhang, crop=crop
+            bottom=md.bottom_residue, top=md.top_residue,
+            right=md.right_residue, left=md.left_residue, crop=crop
         )
         if inplace:
             self.metadata.is_aligned = True
@@ -458,14 +458,14 @@ class ChannelImage(Image):
 
     '''Class for a channel image: a grayscale image.'''
 
-    def __init__(self, array, metadata):
+    def __init__(self, array, metadata=None):
         '''
         Parameters
         ----------
         array: numpy.ndarray[uint16]
             2D pixels array
-        metadata: tmlib.metadata.ChannelImageMetadata
-            image metadata
+        metadata: tmlib.metadata.ChannelImageMetadata, optional
+            image metadata (note that some methods need to access metadata)
         '''
         super(ChannelImage, self).__init__(array, metadata)
         if not self.is_uint:

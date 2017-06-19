@@ -54,6 +54,11 @@ class MetaconfigBatchArguments(BatchArguments):
         '''
     )
 
+    mip = Argument(
+        type=bool, default=False,
+        help='perform maximum intensity projection along z axis'
+    )
+
 
 @register_step_submission_args('metaconfig')
 class MetaconfigSubmissionArguments(SubmissionArguments):

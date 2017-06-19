@@ -166,8 +166,8 @@ class ChannelImageMetadata(SiteImageMetadata):
 
     __slots__ = (
         '_channel_id', '_cycle_id', '_is_corrected', '_is_rescaled', '_is_clipped',
-        '_upper_overhang', '_lower_overhang',
-        '_right_overhang', '_left_overhang', '_x_shift', '_y_shift'
+        '_bottom_residue', '_top_residue',
+        '_left_residue', '_right_residue', '_x_shift', '_y_shift'
     )
 
     def __init__(self, channel_id, site_id, cycle_id, tpoint, zplane):
@@ -191,10 +191,10 @@ class ChannelImageMetadata(SiteImageMetadata):
         self.is_corrected = False
         self.is_rescaled = False
         self.is_clipped = False
-        self.upper_overhang = 0
-        self.lower_overhang = 0
-        self.right_overhang = 0
-        self.left_overhang = 0
+        self.bottom_residue = 0
+        self.top_residue = 0
+        self.left_residue = 0
+        self.right_residue = 0
         self.x_shift = 0
         self.y_shift = 0
 
@@ -225,56 +225,48 @@ class ChannelImageMetadata(SiteImageMetadata):
         self._cycle_id = value
 
     @property
-    def upper_overhang(self):
-        '''int: overhang in pixels at the upper side of the image
-        relative to the site in the reference cycle
-        '''
-        return self._upper_overhang
+    def bottom_residue(self):
+        '''int: excess pixels at the bottom'''
+        return self._bottom_residue
 
-    @upper_overhang.setter
-    def upper_overhang(self, value):
+    @bottom_residue.setter
+    def bottom_residue(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "upper_overhang" must have type int')
-        self._upper_overhang = value
+            raise TypeError('Attribute "bottom_residue" must have type int')
+        self._bottom_residue = value
 
     @property
-    def lower_overhang(self):
-        '''int: overhang in pixels at the lower side of the image
-        relative to the site in the reference cycle
-        '''
-        return self._lower_overhang
+    def top_residue(self):
+        '''int: excess pixels at the top'''
+        return self._top_residue
 
-    @lower_overhang.setter
-    def lower_overhang(self, value):
+    @top_residue.setter
+    def top_residue(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "lower_overhang" must have type int')
-        self._lower_overhang = value
+            raise TypeError('Attribute "top_residue" must have type int')
+        self._top_residue = value
 
     @property
-    def left_overhang(self):
-        '''int: overhang in pixels at the left side of the image
-        relative to the site in the reference cycle
-        '''
-        return self._left_overhang
+    def right_residue(self):
+        '''int: excess pixels at the right side'''
+        return self._right_residue
 
-    @left_overhang.setter
-    def left_overhang(self, value):
+    @right_residue.setter
+    def right_residue(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "left_overhang" must have type int')
-        self._left_overhang = value
+            raise TypeError('Attribute "right_residue" must have type int')
+        self._right_residue = value
 
     @property
-    def right_overhang(self):
-        '''int: overhang in pixels at the right side of the image
-        relative to the site in the reference cycle
-        '''
-        return self._right_overhang
+    def left_residue(self):
+        '''int: excess pixels at the left side'''
+        return self._left_residue
 
-    @right_overhang.setter
-    def right_overhang(self, value):
+    @left_residue.setter
+    def left_residue(self, value):
         if not isinstance(value, int):
-            raise TypeError('Attribute "right_overhang" must have type int')
-        self._right_overhang = value
+            raise TypeError('Attribute "left_residue" must have type int')
+        self._left_residue = value
 
     @property
     def x_shift(self):
@@ -355,7 +347,7 @@ class ImageFileMapping(object):
     which is necessary to perform intensity projections.
     '''
 
-    __slots__ = ('_files', '_series', '_planes', '_ref_index', '_zlevels')
+    __slots__ = ('_files', '_series', '_planes', '_ref_index')
 
     def __init__(self, **kwargs):
         '''
@@ -371,7 +363,7 @@ class ImageFileMapping(object):
 
     @property
     def files(self):
-        '''str: absolute path to the microscope image files'''
+        '''List[str]: absolute path to the microscope image files'''
         return self._files
 
     @files.setter
@@ -384,8 +376,8 @@ class ImageFileMapping(object):
 
     @property
     def series(self):
-        '''int:zero-based position index of the required series in the source
-        file
+        '''List[int]: zero-based position index of the required series in
+        the source file
         '''
         return self._series
 
@@ -399,8 +391,8 @@ class ImageFileMapping(object):
 
     @property
     def planes(self):
-        '''int: zero-based position index of the required planes in the source
-        file
+        '''List[int]: zero-based position index of the required planes in the
+        source file
         '''
         return self._planes
 
@@ -411,21 +403,6 @@ class ImageFileMapping(object):
         if not all([isinstance(v, int) for v in value]):
             raise TypeError('Elements of "planes" must have type int')
         self._planes = value
-
-    @property
-    def zlevels(self):
-        '''int: zero-based position index of the required planes in the source
-        file
-        '''
-        return self._zlevels
-
-    @zlevels.setter
-    def zlevels(self, value):
-        if not isinstance(value, list):
-            raise TypeError('Attribute "zlevels" must have type list')
-        if not all([isinstance(v, int) for v in value]):
-            raise TypeError('Elements of "zlevels" must have type int')
-        self._zlevels = value
 
     @property
     def ref_index(self):
@@ -452,25 +429,16 @@ class ImageFileMapping(object):
         >>> ifm.series = [0, 0]
         >>> ifm.planes = [0, 1]
         >>> ifm.files = ["a", "b"]
-        >>> ifm.zlevels = [0, 1]
         >>> ifm.to_dict()
-        {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b'], 'zlevels': [0, 1]}
+        {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b']}
 
-        >>> ifm = ImageFileMapping(
-        ...    series=[0, 0],
-        ...    planes=[0, 1],
-        ...    files=["a", "b"],
-        ...    zlevels=[0, 1]
-        ...)
-        >>>ifm.to_dict()
-        {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b'], 'zlevels': [0, 1]}
+        >>> ifm = ImageFileMapping(series=[0, 0], planes=[0, 1], files=["a", "b"])
+        >>> ifm.to_dict()
+        {'series': [0, 0], 'planes': [0, 1], 'files': ['a', 'b']}
         '''
-        mapping = dict()
-        for attr in dir(self):
-            if hasattr(self.__class__, attr):
-                if isinstance(getattr(self.__class__, attr), property):
-                    mapping[attr] = getattr(self, attr)
-        return mapping
+        return {
+            'files': self.files, 'planes': self.planes, 'series': self.series
+        }
 
     def __repr__(self):
         return '%s(ref_index=%r)' % (self.__class__.__name__, self.ref_index)
