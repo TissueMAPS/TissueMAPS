@@ -15,11 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
-from sqlalchemy import Column, String, Integer, Text, ForeignKey
+from sqlalchemy import (
+    Column, String, Integer, Text, ForeignKey, UniqueConstraint
+)
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship, backref
-from sqlalchemy import UniqueConstraint
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import relationship, backref, Session
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.models.base import (
@@ -52,8 +52,8 @@ class Acquisition(DirectoryModel, DateMixIn, IdMixIn):
         microscope image files belonging to the acquisition
     microscope_metadata_files: List[tmlib.models.file.MicroscopeMetadataFile]
         microscope metadata files belonging to the acquisition
-    image_file_mappings: List[tmlib.models.acquisition.ImageFileMapping]
-        image file mappings belonging to the acquisition
+    channel_image_files: List[tmlib.models.file.ChannelImageFile]
+        channel image files belonging to the acquisition
     '''
 
     __tablename__ = 'acquisitions'
@@ -179,115 +179,3 @@ class Acquisition(DirectoryModel, DateMixIn, IdMixIn):
     def __repr__(self):
         return '<Acquisition(id=%r, name=%r)>' % (self.id, self.name)
 
-
-class ImageFileMapping(ExperimentModel, IdMixIn):
-
-    '''Mapping of an individual 2D pixels plane to its location within one or
-    more microscope image files. The nomenclature for image file content is
-    based on the `OME data model <http://www.openmicroscopy.org/site/support/ome-model/>`_.
-
-    See also
-    --------
-    :class:`tmlib.models.file.MicroscopeImageFile`
-    :class:`tmlib.models.file.ChannelImageFile`
-
-    '''
-
-    __tablename__ = 'image_file_mappings'
-
-    #: int: zero-based time point index in the time series
-    tpoint = Column(Integer, index=True)
-
-    #: int: number of bites used to encode intensity values
-    bit_depth = Column(Integer)
-
-    #: str: name of the wavelength
-    wavelength = Column(String, index=True)
-
-    #: dict: mapping of individual pixel plane to sub-file location
-    map = Column(JSONB, index=True)
-
-    #: int: ID of parent site
-    site_id = Column(
-        Integer,
-        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: int: ID of parent site
-    cycle_id = Column(
-        Integer,
-        ForeignKey('cycles.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: int: ID of parent acquisition
-    acquisition_id = Column(
-        Integer,
-        ForeignKey('acquisitions.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: int: ID of parent channel
-    channel_id = Column(
-        Integer,
-        ForeignKey('channels.id', onupdate='CASCADE', ondelete='CASCADE'),
-        index=True
-    )
-
-    #: tmlib.models.site.Site: parent site
-    site = relationship(
-        'Site',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan')
-    )
-
-    #: tmlib.models.acquisition.Acquisition: parent acquisition
-    acquisition = relationship(
-        'Acquisition',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan')
-    )
-
-    #: tmlib.models.cycle.Cycle: parent cycle
-    cycle = relationship(
-        'Cycle',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan')
-    )
-
-    #: tmlib.models.channel.Channel: parent channel
-    channel = relationship(
-        'Channel',
-        backref=backref('image_file_mappings', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, tpoint, wavelength, bit_depth, map, site_id,
-                 acquisition_id, cycle_id=None, channel_id=None):
-        '''
-        Parameters
-        ----------
-        tpoint: int
-            zero-based time point index in the time series
-        wavelength: str
-            name of the wavelength
-        bit_depth: int
-            number of bites used to indicate intensity
-        map: dict
-            maps an individual pixels plane to location(s) within microscope
-            image files
-        site_id: int
-            ID of the parent :class:`Site <tmlib.models.site.Site>`
-        acquisition_id: int
-            ID of the parent
-            :class:`Acquisition <tmlib.models.acquisition.Acquisition>`
-        cycle_id: int, optional
-            ID of the parent :class:`Cycle <tmlib.models.cycle.Cycle>`
-        channel_id: int, optional
-            ID of the parent :class:`Channel <tmlib.models.channel.Channel>`
-        '''
-        self.tpoint = tpoint
-        self.wavelength = wavelength
-        self.bit_depth = bit_depth
-        self.map = map
-        self.site_id = site_id
-        self.acquisition_id = acquisition_id
-        self.cycle_id = cycle_id
-        self.channel_id = channel_id

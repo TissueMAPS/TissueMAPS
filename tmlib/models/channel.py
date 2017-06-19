@@ -15,11 +15,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import re
-import numpy as np
+import shutil
 import logging
-import lxml
 import itertools
 import collections
+import lxml
+import numpy as np
 from cached_property import cached_property
 from sqlalchemy import Column, Integer, ForeignKey, String, UniqueConstraint
 from sqlalchemy import or_
@@ -96,7 +97,7 @@ class Channel(DirectoryModel, DateMixIn, IdMixIn):
         backref=backref('channels', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, wavelength, bit_depth, experiment_id):
+    def __init__(self, name, wavelength, bit_depth,  experiment_id):
         '''
         Parameters
         ----------
@@ -117,7 +118,7 @@ class Channel(DirectoryModel, DateMixIn, IdMixIn):
 
     @hybrid_property
     def location(self):
-        '''str: location were cycle content is stored'''
+        '''str: location were channel content is stored'''
         if self._location is None:
             if self.id is None:
                 raise AttributeError(
@@ -137,9 +138,21 @@ class Channel(DirectoryModel, DateMixIn, IdMixIn):
         return self._location
 
     @autocreate_directory_property
-    def images_location(self):
+    def image_files_location(self):
         '''str: location where image files are stored'''
         return os.path.join(self.location, 'images')
+
+    def get_image_file_location(self, image_file_id):
+        # TODO: It's not ideal to store them all in one directory. While modern
+        # filesystems are able to handle this relatively well we should get
+        # better performance using subdirectories.
+        # Use a hash function to map image ID to subdirectory.
+        return self.image_files_location
+
+    def remove_image_files(self):
+        '''Removes all image files on disk'''
+        # TODO: walk sudirectories and delete all files
+        shutil.rmtree(self.image_files_location)
 
     @autocreate_directory_property
     def illumstats_location(self):

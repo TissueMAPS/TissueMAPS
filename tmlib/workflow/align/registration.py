@@ -38,17 +38,11 @@ def calculate_shift(target_image, reference_image):
     '''
     logger.debug('calculate shift between target and reference image')
     x, y, a, b = image_registration.chi2_shift(target_image, reference_image)
-    x = int(x)
-    y = int(y)
-    if x < 0:
-        x -= 1
-    if y < 0:
-        y -= 1
-    return (y, x)
+    return (int(np.round(y)), int(np.round(x)))
 
 
-def calculate_overhang(y_shifts, x_shifts):
-    '''Calculates the overhang of images acquired at the same site
+def calculate_overlap(y_shifts, x_shifts):
+    '''Calculates the overlap of images acquired at the same site
     across different acquisition cycles.
 
     Parameters
@@ -61,7 +55,7 @@ def calculate_overhang(y_shifts, x_shifts):
     Returns
     -------
     List[int]
-        upper, lower, right and left overhang
+        number of overhanging pixels at the top, bottom, right and left side
     '''
     # in y direction
     y_shifts = np.array(y_shifts)

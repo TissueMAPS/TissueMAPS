@@ -28,11 +28,6 @@ class ImextractBatchArguments(BatchArguments):
         help='number of image acquisition sites to process per job',
     )
 
-    mip = Argument(
-        type=bool, default=False,
-        help='perform maximum intensity projection along z axis'
-    )
-
     delete = Argument(
         type=bool, default=False,
         help='''

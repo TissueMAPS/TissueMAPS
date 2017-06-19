@@ -142,7 +142,7 @@ from tmlib.models.mapobject import (
 )
 from tmlib.models.feature import Feature, FeatureValues
 from tmlib.models.plate import Plate
-from tmlib.models.acquisition import Acquisition, ImageFileMapping
+from tmlib.models.acquisition import Acquisition
 from tmlib.models.cycle import Cycle
 from tmlib.models.submission import Submission, Task
 from tmlib.models.site import Site
