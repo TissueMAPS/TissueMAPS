@@ -23,6 +23,7 @@
   with_items:
     - python-dev
     - python-pip
+    - python-tk
     - python-setuptools
     - libssl-dev
     - libffi-dev

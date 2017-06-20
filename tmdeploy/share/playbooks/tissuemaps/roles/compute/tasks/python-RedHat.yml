@@ -22,6 +22,8 @@
   with_items:
     - python-devel
     - python-pip
+    - tkinter
+    - tk-devel
     - python-setuptools
     - libffi-devel
     - readline-devel
