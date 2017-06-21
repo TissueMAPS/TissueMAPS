@@ -107,6 +107,21 @@ def create_db_engine(db_uri, cache=True):
     return engine
 
 
+def create_db_tables(engine):
+    '''Creates all tables in the *public* schema.
+
+    Parameters
+    ----------
+    engine: sqlalchemy.engine
+
+    '''
+    logger.debug(
+        'create tables of models derived from %s in schema "public"',
+        MainModel.__name__
+    )
+    MainModel.metadata.create_all(engine)
+
+
 def _assert_db_exists(engine):
     db_url = make_url(engine.url)
     db_name = db_url.database
@@ -527,11 +542,6 @@ class _Session(object):
         self._db_uri = db_uri
         self._schema = schema
         self._session_factory = create_db_session_factory()
-
-    # @cached_property
-    # def engine(self):
-    #     '''sqlalchemy.engine: engine object for the currently used database'''
-    #     return create_db_engine(self._db_uri)
 
     def __exit__(self, except_type, except_value, except_trace):
         if except_value:
