@@ -3,6 +3,7 @@ import os
 import sys
 import argparse
 import inspect
+import subprocess
 import sqlalchemy.orm.exc
 from werkzeug import secure_filename
 
@@ -197,6 +198,31 @@ def add_user(name, password, email):
         except sqlalchemy.orm.exc.NoResultFound:
             user = tm.User(name=name, password=password, email=email)
             session.add(user)
+
+    # Create a Slurm account for the user, which is needed for submission of
+    # jobs to the cluster. This is only relevant of course if there is a Slurm
+    # cluster.
+    try:
+        exitcode = subprocess.check_call(
+            ['sinfo'],
+            stdout=open(os.devnull, 'wb')
+        )
+        is_slurm_installed = True
+    except OSError:
+        is_slurm_installed = False
+
+    if is_slurm_installed:
+        subprocess.call(
+            ['sudo', 'sacctmgr', '-i', 'add', 'account', name],
+            stdout=open(os.devnull, 'wb')
+        )
+        subprocess.call(
+            [
+                'sudo', 'sacctmgr', '-i', 'add', 'user', 'tissuemaps',
+                'Account=%s' % name
+            ],
+            stdout=open(os.devnull, 'wb')
+        )
 
 
 if __name__ == '__main__':
