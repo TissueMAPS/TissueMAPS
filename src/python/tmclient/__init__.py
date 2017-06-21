@@ -12,3 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from tmclient.api import TmClient
+from tmclient.version import __version__

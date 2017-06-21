@@ -14,6 +14,8 @@
 import argparse
 import tempfile
 
+from tmclient.version import __version__
+
 
 def _check_dependency(required_arg, required_value=None):
     class ArgumentDependencyAction(argparse.Action):
@@ -37,7 +39,10 @@ def _check_dependency(required_arg, required_value=None):
 
 
 parser = argparse.ArgumentParser(
-    prog='tm_client', description='TissueMAPS REST API client.'
+    prog='tm_client',
+    description='TissueMAPS REST API client (version: {version}).'.format(
+        version=__version__
+    )
 )
 parser.add_argument(
     '-H', '--host', required=True,
