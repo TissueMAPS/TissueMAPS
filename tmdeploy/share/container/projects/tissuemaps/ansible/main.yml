@@ -22,7 +22,6 @@
     app_host: app
     app_port: 5002
     public_host_name: web
-    tm_version: devel
   roles:
     - web-server
 
@@ -32,7 +31,6 @@
     app_host: app
     app_port: 5002
     uwsgi_processes: 1
-    tm_version: devel
   roles:
     - app-server
 
