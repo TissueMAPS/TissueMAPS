@@ -25,7 +25,9 @@ import gc3libs
 
 import tmlib.models as tm
 from tmlib.log import map_logging_verbosity
-from tmlib.models.utils import create_db_engine, create_db_session_factory
+from tmlib.models.utils import (
+    create_db_engine, create_db_tables, create_db_session_factory
+)
 
 from tmserver.extensions import jwt
 from tmserver.serialize import TmJSONEncoder
@@ -37,7 +39,7 @@ from tmlib import cfg as libcfg
 logger = logging.getLogger(__name__)
 
 
-def get_interrupted_tasks():
+def _get_interrupted_tasks():
     """Gets the IDs of all tasks that are not in state ``STOPPED`` or
     ``TERMINATED``. If tasks are have one of these states at server startup,
     they have probably been interrupted by a previous shutdown and need to
@@ -185,6 +187,7 @@ def create_app(verbosity=None):
 
     # Create a session scope for interacting with the main database
     engine = create_db_engine(cfg.db_master_uri)
+    create_db_tables(engine)
     session_factory = create_db_session_factory()
     session_factory.configure(bind=engine)
     session = flask_scoped_session(session_factory, app)
@@ -202,7 +205,7 @@ def create_app(verbosity=None):
     # Restart all jobs that might have been accidentially stopped by
     # a server shutdown.
     with app.app_context():
-        task_ids = get_interrupted_tasks()
+        task_ids = _get_interrupted_tasks()
         for tid in task_ids:
             task = gc3pie.retrieve_task(tid)
             gc3pie.continue_task(task)
