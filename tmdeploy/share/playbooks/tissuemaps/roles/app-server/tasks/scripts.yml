@@ -22,7 +22,6 @@
     group: "{{ tm_group }}"
     mode: 0700
   with_items:
-    - create_slurm_account.sh
     - start_server.sh
     - stop_server.sh
   when: ansible_env.ANSIBLE_CONTAINER is undefined
