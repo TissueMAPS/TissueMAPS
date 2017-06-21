@@ -761,12 +761,6 @@ class MapobjectSegmentation(ExperimentModel):
 
         '''
         if not isinstance(mapobject_segmentation, cls):
-<<<<<<< HEAD
-            raise TypeError(
-                'Object must have type '
-                'tmlib.models.mapobject.MapobjectSegmentation'
-            )
-=======
             raise TypeError('Object must have type %s' % cls.__name__)
         connection.execute('''
             INSERT INTO mapobject_segmentations (
@@ -803,7 +797,6 @@ class MapobjectSegmentation(ExperimentModel):
         f = StringIO()
         w = csv.writer(f, delimiter=';')
         for obj in mapobject_segmentations:
->>>>>>> Change table distribution to optimize performance
             if not isinstance(obj, cls):
                 raise TypeError('Object must have type %s' % cls.__name__)
             w.writerow((
