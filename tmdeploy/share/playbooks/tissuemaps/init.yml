@@ -28,39 +28,39 @@
         name: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
         state: restarted
 
-- name: Restart database master server
+- name: Initialize database master server
   hosts:
     - tissuemaps_db_master
   tasks:
-    - name: Restart and enable postgresql service
+    - name: Enable and start postgresql service
       systemd:
         name: postgresql@master
         daemon_reload: yes
         state: restarted
         enabled: yes
 
-- name: Restart database worker servers
+- name: Initialize database worker servers
   hosts:
     - tissuemaps_db_worker
   tasks:
-    - name: Restart and enable postgresql service
+    - name: Enable and start postgresql service
       systemd:
         name: postgresql@worker
         daemon_reload: yes
         state: restarted
         enabled: yes
 
-- name: Restart web and application servers
+- name: Initialize web and application servers
   hosts:
     - tissuemaps_server
   tasks:
-    - name: Restart and enable nginx service
+    - name: Enable and start nginx service
       systemd:
         name: nginx
         state: restarted
         daemon_reload: yes
         enabled: yes
-    - name: Restart and enable uwsgi service
+    - name: Enable and start uwsgi service
       systemd:
         name: uwsgi
         state: restarted
