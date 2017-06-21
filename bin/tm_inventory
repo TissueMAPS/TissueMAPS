@@ -274,12 +274,15 @@ def main(args):
         logger.error('setup directory does not exist: %s', CONFIG_DIR)
         sys.exit(1)
 
-    setup = Setup()
+    if 'TM_SETUP' not in os.environ:
+        raise Exception('"TM_SETUP" environment variable is not set.')
+    setup_file = os.environ['TM_SETUP']
+    setup = Setup(setup_file)
 
     if not os.path.exists(HOST_VARS_DIR):
         os.mkdir(HOST_VARS_DIR)
 
-    logger.info('build inventory based on setup file')
+    logger.info('build inventory based on setup file: %s', setup_file)
     inventory = build_inventory(setup)
 
     logger.info('update inventory')

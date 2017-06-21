@@ -12,6 +12,7 @@ from pkg_resources import resource_filename, resource_exists
 
 import tmdeploy
 from tmdeploy.config import Setup
+from tmdeploy.version import __version__
 from tmdeploy.inventory import build_inventory
 from tmdeploy.log import configure_logging, map_logging_verbosity
 from tmdeploy.inventory import HOSTNAME_FORMAT
@@ -45,9 +46,9 @@ def _get_playbooks_dir(name):
     return path
 
 
-def _get_host_groups():
+def _get_host_groups(setup_file):
     logger.info('build Ansible commands')
-    setup = Setup()
+    setup = Setup(setup_file)
     groups_to_deploy = collections.defaultdict(list)
     for cluster in setup.architecture.clusters:
         for node_type in cluster.node_types:
@@ -133,7 +134,7 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict()):
         if verbosity > 0:
             cmd.append('-{0}'.format(verbosity * 'v'))
     if variables:
-        cmd.extend(['-e', '{0}'.format(','.join(var_strings))])
+        cmd.extend(['-e', '{0}'.format(' '.join(var_strings))])
         for var_map in var_mappings:
             cmd.extend(['-e', var_map])
     return cmd
@@ -159,14 +160,15 @@ def _run_container_commands(commands):
         _run_command(cmd, env)
 
 
-def _run_vm_commands(commands):
+def _run_vm_commands(commands, setup_file):
     logger.info('run Ansible commands')
     config_file = os.path.join(
         _get_playbooks_dir('tissuemaps'), 'ansible.cfg'
     )
     logger.debug('using Ansible config file: %s', config_file)
     env = dict(os.environ)
-    env['ANSIBLE_CONFIG'] = config_file
+    env['ANSIBLE_CONFIG'] = os.path.abspath(config_file)
+    env['TM_SETUP'] = os.path.abspath(setup_file)
     for cmd in commands:
         logger.debug('command: %s', ' '.join(cmd))
         _run_command(cmd, env)
@@ -176,11 +178,10 @@ def deploy_vm(args):
     variables = dict()
     commands = list()
     commands.append(['tm_inventory', '--refresh-cache'])
-
     # Run playbooks implemented in elasticluster, but only in case groups
     # are provided that are not supported by tmdeploy.
     use_elasticluster = False
-    groups_to_deploy = _get_host_groups()
+    groups_to_deploy = _get_host_groups(args.setup_file)
     for group in groups_to_deploy.keys():
         if group not in SUPPORTED_TM_GROUPS:
             use_elasticluster = True
@@ -193,7 +194,6 @@ def deploy_vm(args):
         cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
         cmd.append('--become')
         commands.append(cmd)
-
     # Run the TissueMAPS-specific playbooks implemented in tmdeploy
     tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
     playbook = os.path.join(tmdeploy_playbooks_dir, 'site.yml')
@@ -201,37 +201,36 @@ def deploy_vm(args):
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
     cmd.append('--become')
     commands.append(cmd)
-
-    _run_vm_commands(commands)
+    _run_vm_commands(commands, args.setup_file)
 
 
 def launch_vm(args):
     logger.info('launch virtual machines')
-    variables = {'instance_state': 'present'}
+    variables = {'instance_state': 'present', 'tm_setup_file': args.setup_file}
     commands = list()
     commands.append(['tm_inventory', '--refresh-cache'])
     tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
     playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
     commands.append(cmd)
-    _run_vm_commands(commands)
+    _run_vm_commands(commands, args.setup_file)
 
 
 def terminate_vm(args):
     logger.info('terminate virtual machines')
-    variables = {'instance_state': 'absent'}
+    variables = {'instance_state': 'absent', 'tm_setup_file': args.setup_file}
     commands = list()
     commands.append(['tm_inventory', '--refresh-cache'])
     tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
     playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
     commands.append(cmd)
-    _run_vm_commands(commands)
+    _run_vm_commands(commands, args.setup_file)
 
 
 def show_vm_setup(args):
-    groups = _get_host_groups()
-    setup = Setup()
+    groups = _get_host_groups(args.setup_file)
+    setup = Setup(args.setup_file)
     inventory = build_inventory(setup)
     print(to_yaml(inventory))
 
@@ -302,7 +301,10 @@ def main(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-        description='Deploy TissueMAPS on virtual machines or containers.'
+        description=(
+            'Deploy TissueMAPS on virtual machines or '
+            'containers (version: {version})'.format(version=__version__)
+        )
     )
     parser.add_argument(
         '--verbosity', '-v', action='count', default=0,
@@ -318,7 +320,7 @@ if __name__ == '__main__':
     )
 
     vm_parser.add_argument(
-        '-f', '--file', dest='setup_file', default='~/.tmaps/setup.yml',
+        '-s', '--setup-file', dest='setup_file', default='~/.tmaps/setup.yml',
         help='path to the setup file'
     )
     vm_subparsers = vm_parser.add_subparsers(dest='action', help='action')

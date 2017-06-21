@@ -31,9 +31,6 @@ from tmdeploy.utils import read_yaml_file
 
 CONFIG_DIR = os.path.expanduser('~/.tmaps/setup')
 
-# TODO: allow overriding by environment variable TM_SETUP_FILE
-SETUP_FILE = os.path.join(CONFIG_DIR, 'setup.yml')
-
 
 logger = logging.getLogger(__name__)
 
@@ -749,8 +746,8 @@ class Setup(object):
 
     '''Description of the `TissueMAPS` setup.'''
 
-    def __init__(self, description_file=SETUP_FILE):
-        description = self._load_description(description_file)
+    def __init__(self, setup_file):
+        description = self._load_description(setup_file)
         for k, v in description.items():
             if k not in dir(self):
                 raise SetupDescriptionError(

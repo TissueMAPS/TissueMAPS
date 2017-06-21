@@ -20,6 +20,8 @@
 - name: Refresh dynamic inventory
   run_once: yes
   command: tm_inventory --refresh-cache
+  environment:
+    TM_SETUP: "{{ tm_setup_file }}"
 
 - meta: refresh_inventory
   run_once: yes
