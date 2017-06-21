@@ -162,7 +162,10 @@ class CellvoyagerMetadataReader(MetadataReader):
             # A name has to be set as a flag for the handler to update
             # the metadata
             img.Name = name
-            img.Pixels.Channel(0).Name = e.attrib['{%s}Ch' % mlf_ns]
+            # Make channel name consistent with how it is encoded in the image
+            # file name to ensure that the result is the same, independent of
+            # whether it was obtained from the metadata or the image file name.
+            img.Pixels.Channel(0).Name = '%02d' % int(e.attrib['{%s}Ch' % mlf_ns])
             img.Pixels.Plane(0).PositionX = float(e.attrib['{%s}X' % mlf_ns])
             img.Pixels.Plane(0).PositionY = float(e.attrib['{%s}Y' % mlf_ns])
             img.Pixels.Plane(0).PositionZ = float(e.attrib['{%s}Z' % mlf_ns])
