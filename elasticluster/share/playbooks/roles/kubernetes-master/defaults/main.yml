@@ -1,4 +1,0 @@
----
-
-kubernetes_default_networking: flannel
-kubernetes_network: 10.244.0.0/16
