@@ -33,7 +33,6 @@ try:
     distribute_setup.use_setuptools()
     logger.info('distribute_setup.py imported and used')
 except ImportError:
-<<<<<<< HEAD
     # falback to setuptools?
     # distribute_setup.py was not in this directory
     if not (setup_tools_fallback):
