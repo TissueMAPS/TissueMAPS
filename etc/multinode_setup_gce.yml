@@ -21,7 +21,6 @@ architecture:
                 cluster_mode: yes
                 tm_compute_cores: 32
                 tm_compute_memory: 128000
-                tm_version: devel
                 storage_directory: /glusterfs
             - name: slurm_master
               vars:
@@ -44,7 +43,6 @@ architecture:
           groups:
             - name: tissuemaps_compute
               vars:
-                tm_version: devel
                 storage_directory: /glusterfs
             - name: slurm_worker
               vars:
