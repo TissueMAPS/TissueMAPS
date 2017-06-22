@@ -2,7 +2,7 @@
 import os
 import argparse
 
-import tmlib.models as tm
+from tmlib.models.utils import create_db_engine, create_db_tables
 from tmlib.log import configure_logging
 from tmlib import cfg
 
@@ -18,8 +18,8 @@ def create_tables(db_uri=None):
     '''
     if db_uri is None:
         db_uri = cfg.db_master_uri
-    engine = tm.utils.create_db_engine(db_uri)
-    tm.MainModel.metadata.create_all(engine)
+    engine = create_db_engine(db_uri)
+    create_db_tables(engine)
 
 
 if __name__ == '__main__':
