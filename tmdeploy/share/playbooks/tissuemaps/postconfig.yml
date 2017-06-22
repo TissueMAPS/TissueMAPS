@@ -15,10 +15,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Configure web host as database client
+- name: Configure TissueMAPS application as database client
   hosts: tissuemaps_server
   vars:
     db_host_master: "{{ hostvars[groups['tissuemaps_db_master'][0]].ansible_host }}"
     db_hosts_workers: "{{ groups['tissuemaps_db_worker']|map('extract', hostvars, ['ansible_host'])|list }}"
   roles:
     - database-client
+
+- name: Start TissueMAPS web and application servers
+  hosts: tissuemaps_server
+  tasks:
+    - name: Start nginx service
+      systemd:
+        name: nginx
+        state: restarted
+    - name: Start uwsgi service
+      systemd:
+        name: uwsgi
+        state: restarted

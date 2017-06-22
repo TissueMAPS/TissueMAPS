@@ -54,16 +54,16 @@
   hosts:
     - tissuemaps_server
   tasks:
-    - name: Enable and start nginx service
+    - name: Enable nginx service
       systemd:
         name: nginx
-        state: restarted
+        state: reloaded
         daemon_reload: yes
         enabled: yes
-    - name: Enable and start uwsgi service
+    - name: Enable uwsgi service
       systemd:
         name: uwsgi
-        state: restarted
+        state: reloaded
         daemon_reload: yes
         enabled: yes
 
