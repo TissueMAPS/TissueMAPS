@@ -270,10 +270,6 @@ def update_inventory(inventory, setup):
 
 def main(args):
 
-    if not os.path.exists(CONFIG_DIR):
-        logger.error('setup directory does not exist: %s', CONFIG_DIR)
-        sys.exit(1)
-
     if 'TM_SETUP' not in os.environ:
         raise Exception('"TM_SETUP" environment variable is not set.')
     setup_file = os.environ['TM_SETUP']
