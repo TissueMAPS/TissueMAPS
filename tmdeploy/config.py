@@ -73,6 +73,8 @@ class _SetupSection(object):
                         k, self._section_name
                     )
                 )
+        if not os.path.exists(CONFIG_DIR):
+            os.makedirs(CONFIG_DIR)
 
     @abstractproperty
     def _section_name(self):
