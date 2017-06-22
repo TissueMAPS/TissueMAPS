@@ -14,11 +14,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
+- name: Create database tables
+  command: /usr/local/sbin/su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_create_tables
+  args:
+    chdir: "{{ tm_home }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+  tags:
+    - database
+    - tissuemaps
+
 - name: Create TissueMAPS users
   command: /usr/local/sbin/su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_add user --name item['name'] --password {{ item['password'] | string | quote }} --email item['email']
   args:
     chdir: "{{ tm_home }}"
   with_items: "{{ tm_users }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - database
     - tissuemaps
