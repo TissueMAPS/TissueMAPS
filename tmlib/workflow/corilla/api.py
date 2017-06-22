@@ -73,7 +73,8 @@ class IllumstatsCalculator(WorkflowStepAPI):
                 if n > limit:
                     logger.info(
                         'using a subset of image files (n=%d) to calculate '
-                        'illumination statistics', limit
+                        'illumination statistics for channel "%s"', limit,
+                        ch.name
                     )
                     file_ids = session.query(tm.ChannelImageFile.id).\
                         filter_by(channel_id=ch.id).\
@@ -85,7 +86,7 @@ class IllumstatsCalculator(WorkflowStepAPI):
                         logger.warn(
                             'calculation of illumnation statistics for channel '
                             '"%s" on only %d images - this may introduce '
-                            'artifacts upon illumination correction', n
+                            'artifacts upon illumination correction', ch.name, n
                         )
                     file_ids = session.query(tm.ChannelImageFile.id).\
                         filter_by(channel_id=ch.id).\
