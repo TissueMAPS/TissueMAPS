@@ -157,6 +157,7 @@ class HttpClient(object):
         logger.debug('parallelize request')
         pool_size = self._adapter.poolmanager.connection_pool_kw['maxsize']
         n = len(args) / int(pool_size / 2)
+        n = max([n, 1])
         arg_batches = [args[i:i + n] for i in range(0, len(args), n)]
 
         def wrapper(func, batch):
