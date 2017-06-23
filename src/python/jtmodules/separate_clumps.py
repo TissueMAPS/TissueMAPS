@@ -80,13 +80,6 @@ def main(mask, intensity_image, min_area, max_area,
             max_circularity, max_convexity
         )
 
-    clumps_mask = np.zeros(mask.shape, bool)
-    initial_objects_label_image, n_initial_objects = mh.label(mask > 0)
-    for i in range(1, n_initial_objects+1):
-        index = initial_objects_label_image == i
-        if len(np.unique(separated_mask[index])) > 1:
-            clumps_mask[index] = True
-
     if plot:
         from jtlib import plotting
         if selection_test_mode:
@@ -138,6 +131,14 @@ def main(mask, intensity_image, min_area, max_area,
             )
         else:
             logger.info('create plot')
+        
+            clumps_mask = np.zeros(mask.shape, bool)
+            initial_objects_label_image, n_initial_objects = mh.label(mask > 0)
+            for i in range(1, n_initial_objects+1):
+                index = initial_objects_label_image == i
+                if len(np.unique(separated_mask[index])) > 1:
+                    clumps_mask[index] = True
+                
             labeled_separated_mask, n_objects = mh.label(separated_mask)
             colorscale = plotting.create_colorscale(
                 'Spectral', n=n_objects, permute=True, add_background=True
