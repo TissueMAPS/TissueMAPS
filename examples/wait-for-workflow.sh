@@ -25,11 +25,9 @@ Monitor workflow processing of experiment NAME and exit when done.
 
 Optionally, send a notification email (requires the 'mutt' program). Note that
 this email notification feature requires that environment variables
-'SMTP_SERVER', 'SMTP_USERNAME', and 'SMTP_PASSWORD' are set to the appropriate
-values (which are domain-specific; you cannot expect to be able to send email
-from a random host on the internet these days).  Especially the latter is a
-**exposing secret data** to any other user on the computer, so this feature
-should not be used on shared computers.
+'SMTP_SERVER', and 'EMAIL' are set to the appropriate values (which are
+domain-specific; you cannot expect to be able to send email from a random host
+on the internet these days).
 
 Main options:
 
@@ -187,12 +185,12 @@ require_command tput
 if [ -n "$email" ]; then
    require_command mutt
 
-   if [ -z "$SMTP_SERVER" ] || [ -z "$SMTP_USERNAME" ] || [ -z "$SMTP_PASSWORD" ]; then
-       die $EX_USAGE "Use of the '--email' option requires setting the SMTP_SERVER, SMTP_USERNAME, and SMTP_PASSWORD environment variables."
+   if [ -z "$SMTP_SERVER" ] || [ -z "$EMAIL" ]; then
+       die $EX_USAGE "Use of the '--email' option requires setting the SMTP_SERVER and EMAIL environment variables."
    fi
 
    mutt () {
-       command mutt -n -e "set smtp_url='smtps://${SMTP_USERNAME}@SMTP_SERVER'; set smtp_pass='${SMTP_PASSWORD}';" "$@";
+       command mutt -x -n -e "set ssl_starttls=no; set smtp_url='smtp://${SMTP_SERVER}'; set from='${EMAIL}';" "$@";
    }
 fi
 
