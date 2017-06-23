@@ -240,21 +240,20 @@ def _calc_morphology(mask):
     return (area, circularity, convexity)
 
 
-def separate_clumped_objects(clumps_image, min_area, max_area, max_circularity,
-        max_convexity):
+def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
+        max_circularity, max_convexity):
     '''Separates objects in `clumps_image` based on morphological criteria.
 
     Parameters
     ----------
     clumps_image: numpy.ndarray[Union[numpy.int32, numpy.bool]]
         objects that should be separated
+    min_cut_area: int
+        minimal area a cut object can have
     min_area: int
         minimal area an object must have to be considered a clump
     max_area: int
         maximal area an object can have to be considered a clump
-    min_cut_area: int
-        minimal area a cut object can have
-        (useful to limit size of cut objects)
     max_circularity: float
         maximal circularity an object must have to be considerd a clump
     max_convexity: float
@@ -277,9 +276,8 @@ def separate_clumped_objects(clumps_image, min_area, max_area, max_circularity,
     bboxes = mh.labeled.bbox(label_image)
     for oid in object_ids:
         logger.debug('process object #%d', oid)
-        obj_clumps_image = extract_bbox(label_image, bboxes[oid], pad=PAD)
+        obj_clumps_image = extract_bbox(label_image, bboxes[oid], pad=1)
         obj_clumps_image = obj_clumps_image == oid
-        int_img = extract_bbox(intensity_image, bboxes[oid], pad=PAD)
 
         area, circularity, convexity = _calc_morphology(obj_clumps_image)
         if area < min_area or area > max_area:
@@ -359,8 +357,8 @@ def separate_clumped_objects(clumps_image, min_area, max_area, max_circularity,
         y_offset, x_offset = bboxes[oid][[0, 2]] - PAD - 1
         y += y_offset
         x += x_offset
-        cut_clumps_image[y, x] = True
+        cut_mask[y, x] = True
 
-        separated_image[cut_clumps_image] = False
+        separated_image[cut_mask] = False
 
         return separated_image
