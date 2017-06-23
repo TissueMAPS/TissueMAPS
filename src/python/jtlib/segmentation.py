@@ -361,4 +361,4 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
 
         separated_image[cut_mask] = False
 
-        return separated_image
+    return separated_image
