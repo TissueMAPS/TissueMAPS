@@ -37,11 +37,3 @@
   tags:
     - database
     - tissuemaps
-
-# - name: Source bash_profile
-#   shell: . {{ tm_home }}/.bash_profile
-#   args:
-#     executable: /bin/bash
-#   tags:
-#     - database
-#     - tissuemaps

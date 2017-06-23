@@ -24,7 +24,7 @@
     - tissuemaps
 
 - name: Create TissueMAPS users
-  command: /usr/local/sbin/su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_add user --name item['name'] --password {{ item['password'] | string | quote }} --email item['email']
+  command: /usr/local/sbin/su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_add user --name {{ item['name'] }} --password {{ item['password'] | string | quote }} --email {{ item['email'] }}
   args:
     chdir: "{{ tm_home }}"
   with_items: "{{ tm_users }}"
