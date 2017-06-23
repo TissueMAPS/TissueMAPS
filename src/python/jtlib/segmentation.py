@@ -209,37 +209,6 @@ def find_concave_regions(mask, max_dist):
     return mh.label(concave_img)
 
 
-def _calc_morphology(mask):
-    '''Calcuates *area*, *circularity* and *convexity* for a given object.
-
-    Parameters
-    ----------
-    mask: numpy.ndarray[numpy.bool]
-        bounding box image representing the object as a continuous region of
-        positive pixels
-
-    Returns
-    -------
-    Tuple[numpy.float64]
-        area, circularity and convexity
-    '''
-    mask = mask > 0
-    area = np.float64(np.count_nonzero(mask))
-    perimeter = mh.labeled.perimeter(mask)
-    if perimeter == 0:
-        circularity = np.nan
-    else:
-        circularity = (4.0 * np.pi * area) / (perimeter**2)
-    convex_hull = mh.polygon.fill_convexhull(mask)
-    area_convex_hull = np.count_nonzero(convex_hull)
-    convexity = area / area_convex_hull
-    # eccentricity = mh.features.eccentricity(mask)
-    # roundness = mh.features.roundness(mask)
-    # major_axis, minor_axis = mh.features.ellipse_axes(mask)
-    # elongation = (major_axis - minor_axis) / major_axis
-    return (area, circularity, convexity)
-
-
 def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
         max_circularity, max_convexity):
     '''Separates objects in `clumps_image` based on morphological criteria.
@@ -249,7 +218,8 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     clumps_image: numpy.ndarray[Union[numpy.int32, numpy.bool]]
         objects that should be separated
     min_cut_area: int
-        minimal area a cut object can have
+        minimal area an object must have (prevents cuts that would result
+        in too small objects)
     min_area: int
         minimal area an object must have to be considered a clump
     max_area: int
@@ -263,103 +233,113 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     -------
     numpy.ndarray[numpy.uint32]
         separated objects
+
+    See also
+    --------
+    :class:`jtlib.features.Morphology`
     '''
-    pad = 1
-    separated_image = clumps_image.copy()
-    cut_mask = np.zeros(separated_image.shape, bool)
 
-    label_image = mh.label(clumps_image > 0)[0]
-    object_ids = np.unique(label_image[label_image > 0])
-    if len(object_ids) == 0:
+    logger.info('separate clumped objects')
+    label_image, n_objects = mh.label(clumps_image)
+    if n_objects == 0:
         logger.debug('no objects')
-        return separated_image
+        return label_image
 
-    bboxes = mh.labeled.bbox(label_image)
-    for oid in object_ids:
-        logger.debug('process object #%d', oid)
-        obj_clumps_image = extract_bbox(label_image, bboxes[oid], pad=pad)
-        obj_clumps_image = obj_clumps_image == oid
+    pad = 1
+    n = 1
+    separated_image = np.zeros(clumps_image.shape, np.bool)
+    while True:
+        logger.debug('cutting pass #%d', n)
+        mh.labeled.relabel(label_image, inplace=True)
 
-        area, circularity, convexity = _calc_morphology(obj_clumps_image)
-        if area < min_area or area > max_area:
-            logger.debug('not a clump - outside area range')
-            continue
-        if circularity > max_circularity:
-            logger.debug('not a clump - above form factor threshold')
-            continue
-        if convexity > max_convexity:
-            logger.debug('not a clump - above convexity threshold')
-            continue
+        f = Morphology(label_image)
+        values = f.extract()
+        index = (
+            min_area < values['Morphology_Area'] < max_area &
+            values['Morphology_Convexity'] < max_convexity &
+            values['Morphology_Circularity'] < max_circularity
+        )
+        object_ids = values[index].index.values
 
-        y, x = np.where(obj_clumps_image)
-        y_offset, x_offset = bboxes[oid][[0, 2]] - pad - 1
-        y += y_offset
-        x += x_offset
+        if len(object_ids) == 0:
+            logger.debug('no more clumped objects')
+            break
 
-        # Rescale distance intensities to make them independent of clump size
-        dist = mh.stretch(mh.distance(obj_clumps_image))
+        mh.labeled.remove_regions(
+            label_image, values[~index].index.values, inplace=True
+        )
+        bboxes = mh.labeled.bbox(label_image)
+        cut_mask = np.zeros(label_image.shape, bool)
+        for oid in object_ids:
+            bbox = bboxes[oid]
+            logger.debug('process clumped object #%d', oid)
+            obj_image = extract_bbox(label_image, bboxes[oid], pad=pad)
+            obj_image = obj_image == oid
 
-        # Find peaks that can be used as seeds for the watershed transform
-        thresh = mh.otsu(dist)
-        peaks = dist > thresh
-        n = mh.label(peaks)[1]
-        if n == 1:
-            logger.debug(
-                'only one peak detected - perform iterative erosion'
-            )
-            # Iteratively shrink the peaks until we have two peaks that we
-            # can use to separate the clump.
-            while True:
-                tmp = mh.morph.open(mh.morph.erode(peaks))
-                n = mh.label(tmp)[1]
-                if n == 2 or n == 0:
-                    if n == 2:
-                        peaks = tmp
-                    break
-                peaks = tmp
+            y, x = np.where(obj_image)
+            y_offset, x_offset = bbox[[0, 2]] - pad - 1
+            y += y_offset
+            x += x_offset
 
-        # Select the two biggest peaks, since we want only two objects.
-        peaks = mh.label(peaks)[0]
-        sizes = mh.labeled.labeled_size(peaks)
-        index = np.argsort(sizes)[::-1][1:3]
-        for label in np.unique(peaks):
-            if label not in index:
-                peaks[peaks == label] = 0
-        peaks = mh.labeled.relabel(peaks)[0]
-        regions = mh.cwatershed(np.invert(dist), peaks)
+            # Rescale distance intensities to make them independent of clump size
+            dist = mh.stretch(mh.distance(obj_image))
 
-        # Use the line separating the watershed regions to make the cut
-        se = np.ones((3,3), np.bool)
-        line = mh.labeled.borders(regions, Bc=se)
-        line[~obj_clumps_image] = 0
-        line = mh.morph.dilate(line)
+            # Find peaks that can be used as seeds for the watershed transform
+            thresh = mh.otsu(dist)
+            peaks = dist > thresh
+            n = mh.label(peaks)[1]
+            if n == 1:
+                logger.debug(
+                    'only one peak detected - perform iterative erosion'
+                )
+                # Iteratively shrink the peaks until we have two peaks that we
+                # can use to separate the clump.
+                while True:
+                    tmp = mh.morph.open(mh.morph.erode(peaks))
+                    n = mh.label(tmp)[1]
+                    if n == 2 or n == 0:
+                        if n == 2:
+                            peaks = tmp
+                        break
+                    peaks = tmp
 
-        # Ensure that cut is reasonable given user-defined criteria
-        test_cut_clumps_image = obj_clumps_image.copy()
-        test_cut_clumps_image[line] = False
-        test_cut_clumps_image = mh.morph.open(test_cut_clumps_image)
-        subobjects, n_subobjects = mh.label(test_cut_clumps_image)
-        sizes = mh.labeled.labeled_size(subobjects)
-        smaller_id = np.where(sizes == np.min(sizes))[0][0]
-        smaller_object = subobjects == smaller_id
-        area, circularity, convexity = _calc_morphology(smaller_object)
+            # Select the two biggest peaks, since we want only two objects.
+            peaks = mh.label(peaks)[0]
+            sizes = mh.labeled.labeled_size(peaks)
+            index = np.argsort(sizes)[::-1][1:3]
+            for label in np.unique(peaks):
+                if label not in index:
+                    peaks[peaks == label] = 0
+            peaks = mh.labeled.relabel(peaks)[0]
+            regions = mh.cwatershed(np.invert(dist), peaks)
 
-        # TODO: We may want to prevent cuts that go through areas with
-        # high distance intensity values.
-        if area < min_cut_area:
-            logger.debug(
-                'object %d not cut - resulting object too small', oid
-            )
-            continue
+            # Use the line separating watershed regions to make the cut
+            se = np.ones((3,3), np.bool)
+            line = mh.labeled.borders(regions, Bc=se)
+            line[~obj_image] = 0
+            line = mh.morph.dilate(line)
 
-        # Update cut clumps_image
-        logger.debug('cut object %d', oid)
-        y, x = np.where(line)
-        y_offset, x_offset = bboxes[oid][[0, 2]] - pad - 1
-        y += y_offset
-        x += x_offset
-        cut_mask[y, x] = True
+            # Ensure that cut is reasonable given user-defined criteria
+            test_cut_image = obj_image.copy()
+            test_cut_image[line] = False
+            subobjects, n_subobjects = mh.label(test_cut_image)
+            sizes = mh.labeled.labeled_size(subobjects)
+            smaller_object_area = np.min(sizes)
+            smaller_id = np.where(sizes == smaller_object_area)[0][0]
+            smaller_object = subobjects == smaller_id
 
-        separated_image[cut_mask] = False
+            if smaller_object_area < min_cut_area:
+                logger.debug('don\'t cut object #%d - too small', oid)
+                # Remove this objects from the image with remaining clumps,
+                # because we would otherwise never reach the stop criterion
+                # for the while loop.
+                mh.labeled.remove_regions(label_image, oid, inplace=True)
+            else:
+                logger.debug('cut object #%d', oid)
+                obj_image[line] = False
 
-    return separated_image
+            separated_image[bbox[0]:bbox[1], bbox[2]:bbox[3]] = obj_image
+
+            n += 1
+
+    return mh.label(separated_image)[0]
