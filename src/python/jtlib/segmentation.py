@@ -264,7 +264,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     numpy.ndarray[numpy.uint32]
         separated objects
     '''
-    PAD = 1
+    pad = 1
     separated_image = clumps_image.copy()
     cut_mask = np.zeros(separated_image.shape, bool)
 
@@ -277,7 +277,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     bboxes = mh.labeled.bbox(label_image)
     for oid in object_ids:
         logger.debug('process object #%d', oid)
-        obj_clumps_image = extract_bbox(label_image, bboxes[oid], pad=1)
+        obj_clumps_image = extract_bbox(label_image, bboxes[oid], pad=pad)
         obj_clumps_image = obj_clumps_image == oid
 
         area, circularity, convexity = _calc_morphology(obj_clumps_image)
@@ -292,7 +292,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
             continue
 
         y, x = np.where(obj_clumps_image)
-        y_offset, x_offset = bboxes[oid][[0, 2]] - PAD - 1
+        y_offset, x_offset = bboxes[oid][[0, 2]] - pad - 1
         y += y_offset
         x += x_offset
 
@@ -355,7 +355,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
         # Update cut clumps_image
         logger.debug('cut object %d', oid)
         y, x = np.where(line)
-        y_offset, x_offset = bboxes[oid][[0, 2]] - PAD - 1
+        y_offset, x_offset = bboxes[oid][[0, 2]] - pad - 1
         y += y_offset
         x += x_offset
         cut_mask[y, x] = True
