@@ -26,7 +26,7 @@ angular.module('jtui.module')
             for (var j in registration) {
                 if (modulelist[i]['name'] == registration[j]['name']) {
                     // Make sure that we pass the correct registration info
-                    console.log('module \"' + modulelist[i]['name'] + '\" registered')
+                    // console.log('module \"' + modulelist[i]['name'] + '\" registered')
                     modules.push(new Module(modulelist[i]['name'],
                                              modulelist[i]['description'],
                                              registration[j]['description']));

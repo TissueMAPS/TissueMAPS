@@ -55,7 +55,7 @@ angular.module('jtui.runner')
 
         var url = '/jtui/experiments/' + project.experiment_id +
                   '/jobs/output';
-        console.log(project)
+        // console.log(project)
         var request = $http({
             method: 'post',
             url: url,

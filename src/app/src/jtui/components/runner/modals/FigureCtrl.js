@@ -15,7 +15,7 @@ angular.module('jtui.runner')
 .controller('FigureCtrl', ['$scope', 'figure', 'name', 'jobId', '$uibModalInstance', '$rootScope',
     function($scope, figure, name, jobId, $uibModalInstance, $rootScope) {
 
-    console.log('plot figure: ', figure)
+    // console.log('plot figure: ', figure)
     // TODO: When setting figure on $scope it's not updating!
     $rootScope.figure = figure;
     $rootScope.figure.layout.height = 1000;

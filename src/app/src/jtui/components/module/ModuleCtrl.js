@@ -24,7 +24,7 @@ angular.module('jtui.module')
 	});
 
 	$scope.onDragComplete = function (data, evt) {
-       console.log("drag success, data:", data);
+       // console.log("drag success, data:", data);
     };
 
     var codeIsOpen = false;

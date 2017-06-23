@@ -180,7 +180,7 @@ angular.module('jtui.handles')
     $scope.boolOptions = [true, false]
 
     $scope.getHelpForModule = function(moduleName) {
-        console.log('get help for module \"' + moduleName + '\"')
+        // console.log('get help for module \"' + moduleName + '\"')
 
         // Use the name of the executable file
         var ixPipe = $scope.project.pipe.description.pipeline.map(function(e) { 
@@ -194,7 +194,7 @@ angular.module('jtui.handles')
             resolve: {
                 help: ['handlesService', function(handlesService){
                             return handlesService.getHelp(moduleName).then(function(helpFile) {
-                                console.log(helpFile)
+                                // console.log(helpFile)
                                 return helpFile;
                             });
                 }]
@@ -208,9 +208,9 @@ angular.module('jtui.handles')
 
 
     $scope.convert2yaml = function(inarg, $index) {
-        console.log('input value:', typeof inarg.value)
+        // console.log('input value:', typeof inarg.value)
         var newinarg = jsyaml.load(inarg.value);
-        console.log('converted value: '. newinarg)
+        // console.log('converted value: '. newinarg)
         $scope.module.description.input[$index].value = newinarg;
         // console.log('input value:', typeof newinarg)
     };

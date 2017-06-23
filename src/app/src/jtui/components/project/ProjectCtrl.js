@@ -15,7 +15,7 @@ angular.module('jtui.project')
 .controller('ProjectCtrl', ['$scope', '$state', '$stateParams', '$interval', 'project', 'channels', 'projectService', 'runnerService', '$uibModal', 'hotkeys',
             function ($scope, $state, $stateParams, $interval, project, channels, projectService, runnerService, $uibModal, hotkeys) {
 
-    console.log('project: ', project)
+    // console.log('project: ', project)
     $scope.project = project;
 
     // console.log('channels: ', channels)
