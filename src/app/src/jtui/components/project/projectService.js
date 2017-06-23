@@ -24,6 +24,9 @@ angular.module('jtui.project')
             for (var i in h.description.input) {
                 if ('key' in h.description.input[i]) {
                     var val = h.description.input[i].key;
+                    // Let's quote the value of "key" keys to be sure
+                    // that they will be strings.
+                    val = "'" + val + "'";
                 } else {
                     var val = h.description.input[i].value;
                 }
@@ -33,9 +36,6 @@ angular.module('jtui.project')
                 if (typeof val == 'string') {
                     if (val.indexOf(',') > -1) {
                         val = val.split(',');
-                    } else {
-                        // We need to quote strings explicitly.
-                        val = "'" + val + "'";
                     }
                 }
                 if (val instanceof Array) {
