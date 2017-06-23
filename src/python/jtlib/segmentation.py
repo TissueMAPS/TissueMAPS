@@ -264,6 +264,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     numpy.ndarray[numpy.uint32]
         separated objects
     '''
+    PAD = 1
     separated_image = clumps_image.copy()
     cut_mask = np.zeros(separated_image.shape, bool)
 
