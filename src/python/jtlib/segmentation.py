@@ -258,9 +258,9 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
         values = f.extract()
         index = (
             (min_area < values['Morphology_Area']) &
-            (values['Morphology_Area'] < max_area) &
-            (values['Morphology_Convexity'] < max_convexity) &
-            (values['Morphology_Circularity'] < max_circularity)
+            (values['Morphology_Area'] <= max_area) &
+            (values['Morphology_Convexity'] <= max_convexity) &
+            (values['Morphology_Circularity'] <= max_circularity)
         )
         clumped_ids = values[index].index.values
         not_clumped_ids = values[~index].index.values
