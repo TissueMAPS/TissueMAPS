@@ -93,12 +93,13 @@ def main(mask, feature, lower_threshold=None, upper_threshold=None, plot=False):
         condition_image = np.logical_or(
             feature_image < lower_threshold, feature_image > upper_threshold
         )
-        filtered_image = labeled_image.copy()
-        filtered_image[condition_image] = 0
+        filtered_mask = labeled_image.copy()
+        filtered_mask[condition_image] = 0
     else:
         logger.warn('no objects detected in image')
-        filtered_image = labeled_image
-    filtered_mask = filtered_image > 0
+        filtered_mask = labeled_image
+
+    mh.labeled.relabel(filtered_mask, inplace=True)
 
     if plot:
         from jtlib import plotting
@@ -108,7 +109,7 @@ def main(mask, feature, lower_threshold=None, upper_threshold=None, plot=False):
             plotting.create_mask_image_plot(filtered_mask, 'll'),
         ]
         n_removed = (
-            len(np.unique(labeled_image)) - len(np.unique(filtered_image))
+            len(np.unique(labeled_image)) - len(np.unique(filtered_mask))
         )
         figure = plotting.create_figure(
             plots,
