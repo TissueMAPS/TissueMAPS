@@ -351,7 +351,10 @@ class Morphology(Features):
 
     @property
     def _feature_names(self):
-        names = ['Area', 'Eccentricity', 'Convexity', 'Circularity']
+        names = [
+            'Area', 'Eccentricity', 'Convexity', 'Circularity', 'Perimeter',
+            'Elongation'
+        ]
         if self.compute_zernike:
             for n in xrange(self._degree+1):
                 for m in xrange(n+1):
@@ -360,7 +363,7 @@ class Morphology(Features):
         return names
 
     def extract(self):
-        '''Extracts morphology features, i.e. the size and shape of objects.
+        '''Extracts morphology features to measure the size and shape of objects.
 
         Returns
         -------
@@ -370,26 +373,30 @@ class Morphology(Features):
         logger.info('extract morphology features')
         features = list()
         for obj in self.object_ids:
-            region = self.object_properties[obj]
-            logger.debug('extract basic area/shape features for object #%d', obj)
-            if region.perimeter == 0:
+            mask = self.get_object_mask_image(obj)
+            area = np.float64(np.count_nonzero(mask))
+            perimeter = mh.labeled.perimeter(mask)
+            if perimeter == 0:
                 circularity = np.nan
             else:
-                circularity = (4.0 * np.pi * region.area) / (region.perimeter**2)
+                circularity = (4.0 * np.pi * area) / (perimeter**2)
+            convex_hull = mh.polygon.fill_convexhull(mask)
+            area_convex_hull = np.count_nonzero(convex_hull)
+            convexity = area / area_convex_hull
+            eccentricity = mh.features.eccentricity(mask)
+            major_axis, minor_axis = mh.features.ellipse_axes(mask)
+            elongation = (major_axis - minor_axis) / major_axis
             values = [
-                region.area,
-                region.eccentricity,
-                region.solidity,
-                circularity
+                area, eccentricity, convexity, circularity, perimeter,
+                elongation
             ]
             if self.compute_zernike:
                 logger.debug('extract Zernike moments for object #%d', obj)
                 r = 100
-                mask = self.get_object_mask_image(obj)
                 mask_rs = mh.imresize(mask, [r*2, r*2])
                 zernike_values = mh.features.zernike_moments(
-                        mask_rs, degree=self._degree, radius=r
-                    )
+                    mask_rs, degree=self._degree, radius=r
+                )
                 values.extend(zernike_values)
             features.append(values)
         return pd.DataFrame(features, columns=self.names, index=self.object_ids)
