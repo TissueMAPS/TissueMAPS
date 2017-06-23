@@ -18,6 +18,7 @@ import mahotas as mh
 import sep
 
 from jtlib.utils import extract_bbox
+from jtlib.features import Morphology
 
 logger = logging.getLogger(__name__)
 
@@ -249,15 +250,16 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     n = 1
     separated_image = np.zeros(clumps_image.shape, np.bool)
     while True:
-        logger.debug('cutting pass #%d', n)
+        logger.info('cutting pass #%d', n)
         mh.labeled.relabel(label_image, inplace=True)
 
         f = Morphology(label_image)
         values = f.extract()
         index = (
-            min_area < values['Morphology_Area'] < max_area &
-            values['Morphology_Convexity'] < max_convexity &
-            values['Morphology_Circularity'] < max_circularity
+            (min_area < values['Morphology_Area']) &
+            (values['Morphology_Area'] < max_area) &
+            (values['Morphology_Convexity'] < max_convexity) &
+            (values['Morphology_Circularity'] < max_circularity)
         )
         object_ids = values[index].index.values
 
@@ -330,15 +332,14 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
 
             if smaller_object_area < min_cut_area:
                 logger.debug('don\'t cut object #%d - too small', oid)
-                # Remove this objects from the image with remaining clumps,
-                # because we would otherwise never reach the stop criterion
-                # for the while loop.
-                mh.labeled.remove_regions(label_image, oid, inplace=True)
             else:
                 logger.debug('cut object #%d', oid)
                 obj_image[line] = False
 
-            separated_image[bbox[0]:bbox[1], bbox[2]:bbox[3]] = obj_image
+            mh.labeled.remove_regions(label_image, oid, inplace=True)
+
+            separated_image[bbox[0]:bbox[1], bbox[2]:bbox[3]] = \
+                obj_image[pad:-pad, pad:-pad]
 
             n += 1
 
