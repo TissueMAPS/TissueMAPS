@@ -21,7 +21,7 @@ from jtlib import utils
 from jtlib.features import Morphology, create_feature_image
 
 
-VERSION = '0.1.1'
+VERSION = '0.2.0'
 
 logger = logging.getLogger(__name__)
 
