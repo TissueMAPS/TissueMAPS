@@ -19,7 +19,7 @@ import numpy as np
 import mahotas as mh
 import collections
 
-from tmlib.segmentation import expand_objects_watershed
+from jtlib.segmentation import expand_objects_watershed
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ def main(primary_label_image, intensity_image, contrast_threshold,
         background_label_image[background_mask] += n_objects
 
         logger.info('detect secondary objects via watershed transform')
-        seconary_label_image = expand_objects_watershed(
+        secondary_label_image = expand_objects_watershed(
             primary_label_image, background_label_image, intensity_image
         )
 

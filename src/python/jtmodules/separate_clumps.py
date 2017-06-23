@@ -27,7 +27,6 @@ from jtlib.features import Morphology, create_feature_image
 VERSION = '0.1.1'
 
 logger = logging.getLogger(__name__)
-PAD = 1
 
 Output = collections.namedtuple('Output', ['separated_mask', 'figure'])
 
@@ -77,7 +76,8 @@ def main(mask, intensity_image, min_area, max_area,
     for n in range(cutting_passes):
         logger.info('cutting pass #%d', n+1)
         separated_mask = separate_clumped_objects(
-            separated_mask, min_area, max_area, max_circularity, max_convexity
+            separated_mask, min_cut_area, min_area, max_area,
+            max_circularity, max_convexity
         )
 
     clumps_mask = np.zeros(mask.shape, bool)
