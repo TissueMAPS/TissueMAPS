@@ -61,9 +61,9 @@ input:
 output:
 
   - name: separated_mask
-    type: BinaryImage
+    type: MaskImage
     key: separate_clumps.separated_mask
-    help: Binary output image.
+    help: Labeled output image with separated objects.
 
   - name: figure
     type: Figure

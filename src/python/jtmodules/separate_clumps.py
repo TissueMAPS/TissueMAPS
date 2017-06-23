@@ -127,7 +127,7 @@ def main(mask, intensity_image, min_area, max_area,
         else:
             logger.info('create plot')
 
-            cut_mask = mask > 0 - separated_mask > 0
+            cut_mask = (mask > 0) - (separated_mask > 0)
             clumps_mask = np.zeros(mask.shape, bool)
             initial_objects_label_image, n_initial_objects = mh.label(mask > 0)
             for i in range(1, n_initial_objects+1):
