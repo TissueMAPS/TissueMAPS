@@ -19,6 +19,8 @@ import numpy as np
 import mahotas as mh
 import collections
 
+from tmlib.segmentation import expand_objects_watershed
+
 logger = logging.getLogger(__name__)
 
 VERSION = '0.0.3'
@@ -96,60 +98,9 @@ def main(primary_label_image, intensity_image, contrast_threshold,
         background_label_image[background_mask] += n_objects
 
         logger.info('detect secondary objects via watershed transform')
-        # We compute the watershed transform using the seeds of the primary
-        # objects and the additional seeds for the background regions. The
-        # background regions will compete with the foreground regions and
-        # thereby work as a stop criterion for expansion of primary objects.
-        labels = primary_label_image + background_label_image
-        regions = mh.cwatershed(np.invert(intensity_image), labels)
-        # Remove background regions
-        regions[regions > n_objects] = 0
-        # regions[intensity_image < background_level] = 0
-
-        # Ensure objects are separated
-        lines = mh.labeled.borders(regions)
-        regions[lines] = 0
-
-        # Close holes in objects.
-        foreground_mask = regions > 0
-        holes = mh.close_holes(foreground_mask) - foreground_mask
-        holes = mh.morph.dilate(holes)
-        holes_labeled, n_holes = mh.label(holes)
-        for i in range(1, n_holes+1):
-            fill_value = np.unique(regions[holes_labeled == i])[-1]
-            fill_value = fill_value[fill_value > 0][0]
-            regions[holes_labeled == i] = fill_value
-
-        # Remove objects that are obviously too small, i.e. smaller than any of
-        # the seeds (this could happen when we remove certain parts of objects
-        # after the watershed region growing)
-        primary_sizes = mh.labeled.labeled_size(primary_label_image)
-        min_size = np.min(primary_sizes[1:]) + 1
-        regions = mh.labeled.filter_labeled(regions, min_size=min_size)[0]
-
-        # Remove regions that don't overlap with primary objects and assign
-        # correct labels, i.e. those of the primary objects.
-        logger.info('relabel secondary objects according to primary objects')
-        new_label_image, n_new_labels = mh.labeled.relabel(regions)
-        lut = np.zeros(np.max(new_label_image)+1, new_label_image.dtype)
-        for i in range(1, n_new_labels+1):
-            orig_labels = primary_label_image[new_label_image == i]
-            orig_labels = orig_labels[orig_labels > 0]
-            orig_count = np.bincount(orig_labels)
-            orig_unique = np.where(orig_count)[0]
-            if orig_unique.size == 1:
-                lut[i] = orig_unique[0]
-            elif orig_unique.size > 1:
-                logger.debug(
-                    'overlapping objects: %s',
-                    ', '.join(map(str, orig_unique))
-                )
-                lut[i] = np.where(orig_count == np.max(orig_count))[0][0]
-        secondary_label_image = lut[new_label_image]
-
-    # Ensure that primary objects are fully contained within secondary objects
-    index = (primary_label_image - secondary_label_image) > 0
-    secondary_label_image[index] = primary_label_image[index]
+        seconary_label_image = expand_objects_watershed(
+            primary_label_image, background_label_image, intensity_image
+        )
 
     n_objects = len(np.unique(secondary_label_image)[1:])
     logger.info('identified %d objects', n_objects)
