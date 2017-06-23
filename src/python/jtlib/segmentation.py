@@ -247,11 +247,12 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
         return label_image
 
     pad = 1
-    n = 1
-    separated_image = np.zeros(clumps_image.shape, np.bool)
+    cutting_pass = 1
+    separated_image = label_image.copy()
     while True:
-        logger.info('cutting pass #%d', n)
-        mh.labeled.relabel(label_image, inplace=True)
+        logger.info('cutting pass #%d', cutting_pass)
+        cutting_pass += 1
+        label_image = mh.label(label_image > 0)[0]
 
         f = Morphology(label_image)
         values = f.extract()
@@ -261,27 +262,21 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
             (values['Morphology_Convexity'] < max_convexity) &
             (values['Morphology_Circularity'] < max_circularity)
         )
-        object_ids = values[index].index.values
+        clumped_ids = values[index].index.values
+        not_clumped_ids = values[~index].index.values
 
-        if len(object_ids) == 0:
+        if len(clumped_ids) == 0:
             logger.debug('no more clumped objects')
             break
 
-        mh.labeled.remove_regions(
-            label_image, values[~index].index.values, inplace=True
-        )
+        mh.labeled.remove_regions(label_image, not_clumped_ids, inplace=True)
+        mh.labeled.relabel(label_image, inplace=True)
         bboxes = mh.labeled.bbox(label_image)
-        cut_mask = np.zeros(label_image.shape, bool)
-        for oid in object_ids:
+        for oid in np.unique(label_image[label_image > 0]):
             bbox = bboxes[oid]
             logger.debug('process clumped object #%d', oid)
             obj_image = extract_bbox(label_image, bboxes[oid], pad=pad)
             obj_image = obj_image == oid
-
-            y, x = np.where(obj_image)
-            y_offset, x_offset = bbox[[0, 2]] - pad - 1
-            y += y_offset
-            x += x_offset
 
             # Rescale distance intensities to make them independent of clump size
             dist = mh.stretch(mh.distance(obj_image))
@@ -330,17 +325,20 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
             smaller_id = np.where(sizes == smaller_object_area)[0][0]
             smaller_object = subobjects == smaller_id
 
-            if smaller_object_area < min_cut_area:
-                logger.debug('don\'t cut object #%d - too small', oid)
-            else:
+            do_cut = (
+                (smaller_object_area > min_cut_area) &
+                (np.sum(line) > 0)
+            )
+            if do_cut:
                 logger.debug('cut object #%d', oid)
-                obj_image[line] = False
-
-            mh.labeled.remove_regions(label_image, oid, inplace=True)
-
-            separated_image[bbox[0]:bbox[1], bbox[2]:bbox[3]] = \
-                obj_image[pad:-pad, pad:-pad]
-
-            n += 1
+                y, x = np.where(line)
+                y_offset, x_offset = bboxes[oid][[0, 2]] - pad - 1
+                y += y_offset
+                x += x_offset
+                label_image[y, x] = 0
+                separated_image[y, x] = 0
+            else:
+                logger.debug('don\'t cut object #%d', oid)
+                mh.labeled.remove_regions(label_image, oid, inplace=True)
 
     return mh.label(separated_image)[0]
