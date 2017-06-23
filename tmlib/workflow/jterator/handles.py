@@ -154,7 +154,6 @@ class PipeHandle(Handle):
 
     __metaclass__ = ABCMeta
 
-    @assert_type(key='basestring')
     def __init__(self, name, key, help):
         '''
         Parameters
@@ -171,7 +170,7 @@ class PipeHandle(Handle):
 
         '''
         super(PipeHandle, self).__init__(name, help)
-        self.key = key
+        self.key = str(key)
 
     @abstractproperty
     def value(self):
@@ -272,7 +271,7 @@ class IntensityImage(Image):
         help: str, optional
             help message (default: ``""``)
         '''
-        super(Image, self).__init__(name, key, help)
+        super(IntensityImage, self).__init__(name, key, help)
 
     @property
     def value(self):
@@ -405,7 +404,6 @@ class SegmentedObjects(LabelImage):
     extracted.
     '''
 
-    @assert_type(key='basestring')
     def __init__(self, name, key, help=''):
         '''
         Parameters
