@@ -24,7 +24,7 @@ import collections
 from jtlib.segmentation import separate_clumped_objects
 from jtlib.features import Morphology, create_feature_image
 
-VERSION = '0.1.1'
+VERSION = '0.2.0'
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ Output = collections.namedtuple('Output', ['separated_mask', 'figure'])
 
 
 def main(mask, intensity_image, min_area, max_area,
-        min_cut_area, max_circularity, max_convexity, cutting_passes,
+        min_cut_area, max_circularity, max_convexity,
         plot=False, selection_test_mode=False):
     '''Detects clumps in `mask` given criteria provided by the user
     and cuts them along the borders of watershed regions, which are determined
@@ -51,15 +51,12 @@ def main(mask, intensity_image, min_area, max_area,
     max_area: int
         maximal area an object can have to be considered a clump
     min_cut_area: int
-        minimal area a cut object can have
-        (useful to limit size of cut objects)
+        minimal area an object must have
+        (useful to prevent cuts that would result in too small objects)
     max_circularity: float
         maximal circularity an object can have to be considerd a clump
     max_convexity: float
         maximal convexity an object can have to be considerd a clump
-    cutting_passes: int
-        number of cutting cycles to separate clumps that consist of more than
-        two subobjects
     plot: bool, optional
         whether a plot should be generated
     selection_test_mode: bool, optional
@@ -72,13 +69,11 @@ def main(mask, intensity_image, min_area, max_area,
     -------
     jtmodules.separate_clumps.Output
     '''
-    separated_mask = mask > 0
-    for n in range(cutting_passes):
-        logger.info('cutting pass #%d', n+1)
-        separated_mask = separate_clumped_objects(
-            separated_mask, min_cut_area, min_area, max_area,
-            max_circularity, max_convexity
-        )
+
+    separated_mask = separate_clumped_objects(
+        mask, min_cut_area, min_area, max_area,
+        max_circularity, max_convexity
+    )
 
     if plot:
         from jtlib import plotting
@@ -132,7 +127,7 @@ def main(mask, intensity_image, min_area, max_area,
         else:
             logger.info('create plot')
 
-            cut_mask = mask - separated_mask
+            cut_mask = mask > 0 - separated_mask > 0
             clumps_mask = np.zeros(mask.shape, bool)
             initial_objects_label_image, n_initial_objects = mh.label(mask > 0)
             for i in range(1, n_initial_objects+1):
@@ -140,15 +135,15 @@ def main(mask, intensity_image, min_area, max_area,
                 if len(np.unique(separated_mask[index])) > 1:
                     clumps_mask[index] = True
 
-            labeled_separated_mask, n_objects = mh.label(separated_mask)
+            n_objects = len(np.unique(separated_mask[separated_mask > 0]))
             colorscale = plotting.create_colorscale(
                 'Spectral', n=n_objects, permute=True, add_background=True
             )
-            outlines = mh.morph.dilate(mh.labeled.bwperim(separated_mask))
+            outlines = mh.morph.dilate(mh.labeled.bwperim(separated_mask > 0))
             cutlines = mh.morph.dilate(mh.labeled.bwperim(cut_mask))
             plots = [
                 plotting.create_mask_image_plot(
-                    labeled_separated_mask, 'ul', colorscale=colorscale
+                    separated_mask, 'ul', colorscale=colorscale
                 ),
                 plotting.create_intensity_overlay_image_plot(
                     intensity_image, outlines, 'ur'

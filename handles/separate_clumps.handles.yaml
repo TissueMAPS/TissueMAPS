@@ -1,5 +1,5 @@
 ---
-version: 0.1.1
+version: 0.2.0
 
 input:
 
@@ -12,11 +12,6 @@ input:
     type: IntensityImage
     key:
     help: Grayscale image that may be used to help separating clumps.
-
-  - name: cutting_passes
-    type: Numeric
-    value: 3
-    help: Number of cutting rounds that should be applied.
 
   - name: min_cut_area
     type: Numeric
