@@ -115,7 +115,7 @@ def update_project(experiment_id):
     pipeline_description = PipelineDescription(**project['pipe']['description'])
     handles_descriptions = dict()
     for h in project['handles']:
-        logger.info('check handles of module "%s"', h['name'])
+        logger.debug('check handles of module "%s"', h['name'])
         handles_descriptions[h['name']] = HandleDescriptions(**h['description'])
     jt = ImageAnalysisPipelineEngine(
         experiment_id,
