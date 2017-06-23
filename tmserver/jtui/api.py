@@ -113,10 +113,10 @@ def update_project(experiment_id):
     data = json.loads(request.data)
     project = yaml.load(data['project'])
     pipeline_description = PipelineDescription(**project['pipe']['description'])
-    handles_descriptions = {
-        h['name']: HandleDescriptions(**h['description'])
-        for h in project['handles']
-    }
+    handles_descriptions = dict()
+    for h in project['handles']:
+        logger.info('check handles of module "%s"', h['name'])
+        handles_descriptions[h['name']] = HandleDescriptions(**h['description'])
     jt = ImageAnalysisPipelineEngine(
         experiment_id,
         pipeline_description=pipeline_description,
