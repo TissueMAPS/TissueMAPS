@@ -31,7 +31,12 @@ angular.module('jtui.project')
                 // console.log('value of "' + name + '" : ' + val)
                 // To support arrays, we need to split the string into an array
                 if (typeof val == 'string') {
-                    val = val.split(',');
+                    if (val.indexOf(',') > -1) {
+                        val = val.split(',');
+                    } else {
+                        // We need to quote strings explicitly.
+                        val = "'" + val + "'";
+                    }
                 }
                 if (val instanceof Array) {
                     // After splitting the string we have an array,
@@ -42,19 +47,19 @@ angular.module('jtui.project')
                     }
                     // For non-empty input we convert each element to YAML
                     var newValue = val.map(function (v) {
-                            return jsyaml.load(v);
+                        return jsyaml.safeLoad(v);
                     });
                     // Now we deal with arrays with a single element and empty
                     // arrays
                     if (newValue.length == 1) {
                         newValue = newValue[0];
                     } else if (newValue.length == 0) {
-                        newValue = jsyaml.load(null);
+                        newValue = jsyaml.safeLoad(null);
                     }
                 } else if (val == undefined) {
-                    var newValue = jsyaml.load(null);
+                    var newValue = jsyaml.safeLoad(null);
                 } else {
-                    var newValue = jsyaml.load(val);
+                    var newValue = jsyaml.safeLoad(val);
                 }
                 if ('key' in h.description.input[i]) {
                     h.description.input[i].key = newValue;
