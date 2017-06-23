@@ -67,7 +67,7 @@ def extract_bbox(im, bbox, pad=0):
 
     Note
     ----
-    The bounding box can be created by meth:`mahotas.labeled.bbox`.
+    The bounding box can be created by :meth:`mahotas.labeled.bbox`.
     '''
     cropped_im = im[bbox[0]:bbox[1], bbox[2]:bbox[3]]
     if pad:
@@ -101,7 +101,7 @@ def get_border_ids(im):
     return [i for i in object_ids if i in border_ids]
 
 
-def label(im, n=8):
+def label(im, n=4):
     '''Labels connected components in an image.
 
     Parameters
@@ -109,7 +109,7 @@ def label(im, n=8):
     im: numpy.ndarray[numpy.bool]
         binary image that should be labeled
     n: int, optional
-        neighbourhood (default: ``8``, choices: ``{4, 8}``)
+        neighbourhood (default: ``4``, choices: ``{4, 8}``)
 
     Returns
     -------
