@@ -145,10 +145,13 @@ class Tool(object):
                 'mapobject_type_id': mapobject_type_id
             })
             records = conn.fetchall()
-            values = [r.values for r in records]
+            values = list()
+            index = list()
+            for r in records:
+                values.append(r.values)
+                index.append((r.mapobject_id, r.tpoint))
             index = pd.MultiIndex.from_tuples(
-                [(r.mapobject_id, r.tpoint) for r in records],
-                names=['mapobject_id', 'tpoint']
+                index, names=['mapobject_id', 'tpoint']
             )
 
         # TODO: This probably creates a copy in memory. Can we avoid this?
@@ -259,46 +262,48 @@ class Tool(object):
             results = connection.fetchall()
             mapobject_type_id = results[0][0]
             connection.execute('''
-                SELECT partition_key, id FROM mapobjects AS m
+                SELECT partition_key, array_agg(id) AS mapobject_ids
+                FROM mapobjects AS m
                 WHERE m.mapobject_type_id = %(mapobject_type_id)s
-                ORDER BY id
+                GROUP BY partition_key
             ''', {
                 'mapobject_type_id': mapobject_type_id
             })
-            results = connection.fetchall()
-            partitions = pd.DataFrame(results)
-            grouped = partitions.groupby('partition_key')
+            records = connection.fetchall()
 
-        def upsert(args):
-            for partition_key, index in args:
-                logger.debug('upsert label values for partition', partition_key)
-                with tm.utils.ExperimentConnection(self.experiment_id) as c:
-                    for tpoint in data.index.levels[1]:
-                        for mapobject_id in partitions.ix[index, 'id']:
-                            value = np.round(data.ix[mapobject_id, tpoint], 6)
-                            c.execute('''
-                                INSERT INTO label_values AS v (
-                                    partition_key, mapobject_id, values, tpoint
-                                )
-                                VALUES (
-                                    %(partition_key)s, %(mapobject_id)s,
-                                    %(values)s, %(tpoint)s
-                                )
-                                ON CONFLICT ON CONSTRAINT label_values_pkey
-                                DO UPDATE
-                                SET values = v.values || %(values)s
-                                WHERE v.mapobject_id = %(mapobject_id)s
-                                AND v.partition_key = %(partition_key)s
-                                AND v.tpoint = %(tpoint)s;
-                            ''', {
-                                'values': {str(result_id): str(value)},
-                                'mapobject_id': mapobject_id,
-                                'partition_key': partition_key,
-                                'tpoint': tpoint
-                            })
-            return []
-
-        tm.utils.parallelize_query(upsert, grouped.groups.items())
+            # NOTE: Grouping mapobject IDs per partition_key would allow us
+            # to target individual shards of the label_values table directly
+            # on the worker nodes, which would give us full SQL support,
+            # including multi-row statements and transactions.
+            # This would probably give a hugh performance benefit for inserting
+            # or updating values.
+            for tpoint in data.index.levels[1]:
+                for partition_key, mapobject_ids in records:
+                    logger.debug(
+                        'upsert label values for partition %d', partition_key
+                    )
+                    for mapobject_id in mapobject_ids:
+                        value = np.round(data.ix[(mapobject_id, tpoint)], 6)
+                        connection.execute('''
+                            INSERT INTO label_values AS v (
+                                partition_key, mapobject_id, values, tpoint
+                            )
+                            VALUES (
+                                %(partition_key)s, %(mapobject_id)s,
+                                %(values)s, %(tpoint)s
+                            )
+                            ON CONFLICT ON CONSTRAINT label_values_pkey
+                            DO UPDATE
+                            SET values = v.values || %(values)s
+                            WHERE v.mapobject_id = %(mapobject_id)s
+                            AND v.partition_key = %(partition_key)s
+                            AND v.tpoint = %(tpoint)s;
+                        ''', {
+                            'values': {str(result_id): str(value)},
+                            'mapobject_id': mapobject_id,
+                            'partition_key': partition_key,
+                            'tpoint': tpoint
+                        })
 
     def register_result(self, submission_id, mapobject_type_name,
             result_type, **result_attributes):
