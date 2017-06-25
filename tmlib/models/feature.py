@@ -148,7 +148,7 @@ class FeatureValues(ExperimentModel):
     __tablename__ = 'feature_values'
 
     __table_args__ = (
-        PrimaryKeyConstraint('mapobject_id', 'tpoint'),
+        PrimaryKeyConstraint('partition_key', 'mapobject_id', 'tpoint'),
         ForeignKeyConstraint(
             ['mapobject_id', 'partition_key'],
             ['mapobjects.id', 'mapobjects.partition_key'],

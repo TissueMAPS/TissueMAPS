@@ -311,7 +311,7 @@ class LabelValues(ExperimentModel):
     __tablename__ = 'label_values'
 
     __table_args__ = (
-        PrimaryKeyConstraint('mapobject_id', 'tpoint'),
+        PrimaryKeyConstraint('mapobject_id', 'partition_key', 'tpoint'),
         ForeignKeyConstraint(
             ['mapobject_id', 'partition_key'],
             ['mapobjects.id', 'mapobjects.partition_key'],

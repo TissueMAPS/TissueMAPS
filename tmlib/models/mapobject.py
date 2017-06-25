@@ -688,7 +688,9 @@ class MapobjectSegmentation(ExperimentModel):
     __tablename__ = 'mapobject_segmentations'
 
     __table_args__ = (
-        PrimaryKeyConstraint('mapobject_id', 'segmentation_layer_id'),
+        PrimaryKeyConstraint(
+            'mapobject_id', 'partition_key', 'segmentation_layer_id'
+        ),
         ForeignKeyConstraint(
             ['mapobject_id', 'partition_key'],
             ['mapobjects.id', 'mapobjects.partition_key'],
