@@ -62,6 +62,14 @@
   tags:
     - tissuemaps
 
+- name: Create ~/.tmaps directory
+  file:
+    path: "{{ tm_home }}/.tmaps"
+    state: directory
+    owner: "{{ tm_user }}"
+  tags:
+    - tissuemaps
+
 - name: Place tm_server startup script
   template:
     src: tm_server.sh.j2
@@ -70,5 +78,17 @@
     group: "{{ tm_group }}"
     mode: 0700
   when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - tissuemaps
+
+- name: Update ``storage_home`` in TissueMAPS configuration
+  ini_file:
+    dest: "{{ tm_config_file }}"
+    section: tmlib
+    state: present
+    option: storage_home
+    value: "{{ fs_data_directory }}"
+    owner: "{{ tm_user }}"
+    mode: "u+rwx"
   tags:
     - tissuemaps

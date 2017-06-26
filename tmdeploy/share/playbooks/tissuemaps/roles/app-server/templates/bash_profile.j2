@@ -6,11 +6,10 @@ fi
 export EDITOR=vim;
 
 # Slurm
-export SQUEUE_FORMAT="%.12a %.16i %.40j %.8T %.10M %.10l %.4C %R"
+export SQUEUE_FORMAT="%.12a %.16i %.40j %.8T %.10M %.10l %.4C %.10m %R"
 export SACCT_FORMAT="Account,JobId,JobName%30,State,Exitcode,DerivedExitCode,Submit,Elapsed,CPUTime,MaxRSS,AveCPU,AveDiskRead,AveDiskWrite"
 
 # Postgres database
-export PGPASSFILE=~/.pgpass
 export TMAPS_DB_HOST=localhost
 alias db="psql -h $TMAPS_DB_HOST tissuemaps tissuemaps"
 alias sudb="psql -h $TMAPS_DB_HOST postgres postgres"

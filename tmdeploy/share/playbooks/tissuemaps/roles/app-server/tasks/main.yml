@@ -18,6 +18,8 @@
 
 - include: ssh_keys.yml
 
+- include: env.yml
+
 - include: uwsgi.yml
 
 - include: tissuemaps.yml
