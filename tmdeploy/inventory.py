@@ -131,10 +131,11 @@ def build_inventory(setup):
                     if group.name not in inventory:
                         inventory[group.name] = {'hosts': list()}
                     inventory[group.name]['hosts'].append(host_name)
+                    inventory[group.name]['vars'] = dict()
                     if group.vars is not None:
-                        inventory[group.name]['vars'] = group.vars
+                        inventory[group.name]['vars'].update(group.vars)
                     if node_type.vars is not None:
-                        inventory[group.name]['vars'] = node_type.vars
+                        inventory[group.name]['vars'].update(node_type.vars)
 
     return inventory
 
