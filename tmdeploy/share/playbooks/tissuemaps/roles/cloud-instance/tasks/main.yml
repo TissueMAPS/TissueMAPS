@@ -15,6 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+- set_fact:
+    assign_public_ip: "{{ 'web' in tags }}"
+
 - include: "{{provider}}.yml"
 
 - name: Refresh dynamic inventory
