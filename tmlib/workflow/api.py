@@ -572,7 +572,7 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         )
 
     def create_run_jobs(self, user_name, job_collection,
-            verbosity, duration, memory, cores=1):
+            verbosity, duration, memory, cores):
         '''Creates jobs for the parallel "run" phase of the step.
 
         Parameters
@@ -591,7 +591,6 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             job
         cores: int
             number of CPU cores that should be allocated for a single job
-            (default: ``1``)
 
         Returns
         -------
@@ -619,11 +618,11 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         max_memory_per_core = cfg.resource.max_memory_per_core.amount(Memory.MB)
         if cores == 1:
             if memory > max_memory_per_core:
-                # We just warn here, since this may still work.
                 logger.warn(
                     'requested memory exceeds available memory per core: %d MB',
                     max_memory_per_core
                 )
+                memory = max_memory_per_core
         else:
             if memory > max_memory_per_node:
                 logger.warn(
