@@ -34,3 +34,4 @@
       systemd:
         name: uwsgi
         state: restarted
+

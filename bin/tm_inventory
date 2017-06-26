@@ -180,6 +180,21 @@ def update_inventory(inventory, setup):
         if group in {'_meta', 'all'}:
             continue
 
+        if group.startswith('ganglia'):
+            inventory[group]['vars'].update({
+                'ganglia_cluster_name': setup.architecture.name,
+                'ganglia_grid_name': 'tissuemaps'
+            })
+
+        if group.startswith('slurm'):
+            inventory[group]['vars'].update({
+                'multiuser_cluster': 'no',
+                'slurm_cluster_users': ['tissuemaps']
+            })
+            inventory['tissuemaps_server']['vars'].update({
+                'cluster_mode': 'yes'
+            })
+
         logger.info('update inventory for group "%s"', group)
         # Create a separate variable file in YAML format for each group
         for host in group_content['hosts']:
