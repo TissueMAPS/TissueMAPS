@@ -572,7 +572,7 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         )
 
     def create_run_jobs(self, user_name, job_collection,
-            verbosity, duration, memory, cores):
+            verbosity, duration, memory, cores=1):
         '''Creates jobs for the parallel "run" phase of the step.
 
         Parameters
@@ -591,6 +591,7 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             job
         cores: int
             number of CPU cores that should be allocated for a single job
+            (default: ``1``)
 
         Returns
         -------
@@ -600,6 +601,38 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         logger.info(
             'create "run" jobs for submission %d', job_collection.submission_id
         )
+
+        if cores > cfg.cores_per_node:
+            logger.warn(
+                'requested cores exceed available cores per node:  %s',
+                cfg.resource.max_cores_per_job
+            )
+            logger.debug(
+                'setting number of cores to %d', cfg.resource.max_cores_per_job
+            )
+            cores = cfg.resource.max_cores_per_job
+
+        max_memory_per_node = (
+            cfg.resource.max_cores_per_job *
+            cfg.resource.max_memory_per_core.amount(Memory.MB)
+        )
+        max_memory_per_core = cfg.resource.max_memory_per_core.amount(Memory.MB)
+        if cores == 1:
+            if memory > max_memory_per_core:
+                # We just warn here, since this may still work.
+                logger.warn(
+                    'requested memory exceeds available memory per core: %d MB',
+                    max_memory_per_core
+                )
+        else:
+            if memory > max_memory_per_node:
+                logger.warn(
+                    'requested memory exceeds available memory per node: %d MB',
+                    max_memory_per_node
+                )
+                logger.debug('setting memory to %d MB', max_memory_per_node)
+                memory = max_memory_per_node
+
         logger.debug('allocated time for run jobs: %s', duration)
         logger.debug('allocated memory for run jobs: %d MB', memory)
         logger.debug('allocated cores for run jobs: %d', cores)
@@ -649,9 +682,11 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         logger.info(
             'create "init" job for submission %d', job_collection.submission_id
         )
+        memory = cfg.resource.max_memory_per_core
+        cores = 1
         logger.debug('allocated time for "init" job: %s', duration)
-        logger.debug('allocated memory for "init" job: %d MB', cfg.cpu_memory)
-        logger.debug('allocated cores for "init" job: %d', cfg.cpu_cores)
+        logger.debug('allocated memory for "init" job: %d MB', memory)
+        logger.debug('allocated cores for "init" job: %d', cores)
         job = InitJob(
             step_name=self.step_name,
             arguments=self._build_init_command(batch_args, verbosity),
@@ -661,8 +696,8 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             parent_id=job_collection.persistent_id
         )
         job.requested_walltime = Duration(duration)
-        job.requested_memory = Memory(cfg.cpu_memory, Memory.MB)
-        job.requested_cores = cfg.cpu_cores
+        job.requested_memory = Memory(memory, Memory.MB)
+        job.requested_cores = cores
         job_collection.add(job)
         return job_collection
 
@@ -691,9 +726,11 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         logger.info(
             'create "collect" job for submission %d', job_collection.submission_id
         )
+        memory = cfg.resource.max_memory_per_core
+        cores = 1
         logger.debug('allocated time for "collect" job: %s', duration)
-        logger.debug('allocated memory for "collect" job: %d MB', cfg.cpu_memory)
-        logger.debug('allocated cores for "collect" job: %d', cfg.cpu_cores)
+        logger.debug('allocated memory for "collect" job: %d MB', memory)
+        logger.debug('allocated cores for "collect" job: %d', cores)
         job = CollectJob(
             step_name=self.step_name,
             arguments=self._build_collect_command(verbosity),
@@ -703,8 +740,8 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             parent_id=job_collection.persistent_id
         )
         job.requested_walltime = Duration(duration)
-        job.requested_memory = Memory(cfg.cpu_memory, Memory.MB)
-        job.requested_cores = cfg.cpu_cores
+        job.requested_memory = Memory(memory, Memory.MB)
+        job.requested_cores = cores
         job_collection.add(job)
         return job_collection
 

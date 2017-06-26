@@ -18,6 +18,7 @@ from abc import ABCMeta
 import logging
 from ConfigParser import SafeConfigParser
 from ConfigParser import NoOptionError
+from gc3libs.config import Configuration
 
 logger = logging.getLogger(__name__)
 
@@ -227,19 +228,39 @@ class LibraryConfig(TmapsConfig):
 
     '''`TissueMAPS` configuration specific to the `tmlib` package.'''
 
-    __slots__ = ('_config', )
+    __slots__ = ('_config', '_resource')
 
     def __init__(self):
         super(LibraryConfig, self).__init__()
         self.modules_home = '~/jtmodules'
         self.storage_home = '/storage/experiments'
-        self.cpu_cores = 1
-        self.cpu_memory = 3000
+        self._resource = None
         self.read()
 
     @property
+    def resource(self):
+        '''gc3libs.utils.Struct: information about the enabled *GC3Pie* resource
+        '''
+        if self._resource is None:
+            conf_file = os.path.expanduser('~/.gc3/gc3pie.conf')
+            conf = Configuration(conf_file)
+            resources = [r for r in conf.resources.values() if r.enabled]
+            if len(resources) == 0:
+                raise ValueError(
+                    'No enabled GC3Pie resource found. Check configuration file: %s'
+                    % conf_file
+                )
+            elif len(resources) > 1:
+                raise ValueError(
+                    'More than one enabled GC3Pie resource found. '
+                    'Check configuration file: %s' % conf_file
+                )
+            self._resource = resources[0]
+        return self._resource
+
+    @property
     def modules_home(self):
-        '''str: absolute path to root directory of local copy of `JtModules`
+        '''str: absolute path to root directory of local copy of *JtModules*
         repository (default: ``"~/jtmodules"``)
         '''
         return os.path.expandvars(os.path.expanduser(
@@ -274,40 +295,41 @@ class LibraryConfig(TmapsConfig):
         self._config.set(self._section, 'storage_home', str(value))
 
     @property
-    def cpu_memory(self):
-        '''int: amount of memory in Megabyte per CPU core that should be
-        allocated for a single job (default: ``3000``)
-
+    def memory_per_core(self):
+        '''int: amount of real memory in Megabyte per processing unit that can
+        be allocated for a single job (default: ``3000``)
         '''
-        return self._config.getint(self._section, 'cpu_memory')
+        return self._config.getint(self._section, 'memory_per_core')
 
-    @cpu_memory.setter
-    def cpu_memory(self, value):
+    @memory_per_core.setter
+    def memory_per_core(self, value):
         if not isinstance(value, int):
             raise TypeError(
-                'Configuration parameter "cpu_memory" must have type int.'
+                'Configuration parameter "memory_per_core" must have type int.'
             )
         if value <= 0:
             raise ValueError(
-                'Configuration parameter "cpu_memory" must be a positive number.'
+                'Configuration parameter "memory_per_core" must be a positive '
+                'number.'
             )
-        self._config.set(self._section, 'cpu_memory', str(value))
+        self._config.set(self._section, 'memory_per_core', str(value))
 
     @property
-    def cpu_cores(self):
-        '''int: number of CPU cores that should be allocated for a single
-        job (default: ``1``)
+    def cores_per_node(self):
+        '''int: number of processing units available per compute node
+        that can be allocated for a single job (default: ``4``)
         '''
-        return self._config.getint(self._section, 'cpu_cores')
+        return self._config.getint(self._section, 'cores_per_node')
 
-    @cpu_cores.setter
-    def cpu_cores(self, value):
+    @cores_per_node.setter
+    def cores_per_node(self, value):
         if not isinstance(value, int):
             raise TypeError(
-                'Configuration parameter "cpu_cores" must have type int.'
+                'Configuration parameter "cores_per_node" must have type int.'
             )
         if value <= 0:
             raise ValueError(
-                'Configuration parameter "cpu_cores" must be a positive number.'
+                'Configuration parameter "cores_per_node" must be a positive '
+                'number.'
             )
-        self._config.set(self._section, 'cpu_cores', str(value))
+        self._config.set(self._section, 'cores_per_node', str(value))

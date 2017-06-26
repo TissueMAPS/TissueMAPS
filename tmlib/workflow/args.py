@@ -19,6 +19,7 @@ import logging
 import inspect
 import argparse
 from abc import ABCMeta
+from gc3libs.quantity import Memory
 
 from tmlib import cfg
 from tmlib.utils import assert_type
@@ -520,30 +521,28 @@ class SubmissionArguments(ArgumentCollection):
     '''
 
     duration = Argument(
-        type=str, default='06:00:00', meta='HH:MM:SS',
-        help='''
+        type=str, default='06:00:00',
+        meta='HH:MM:SS', help='''
             walltime that should be allocated to a each "run" job
             in the format "HH:MM:SS"
-            (may need to be adapted depending on the batch size of jobs)
+            (may need to be adapted depending on the choice of batch size)
         '''
     )
 
-    # NOTE: This reflects the job's real memory, which is typically lower than
-    # the total memory of each CPU. Here it's assumed that CPUs have 4GB memory.
     memory = Argument(
-        type=int, default=cfg.cpu_memory, meta='MB',
-        help='''
-            amount of memory that should be allocated to each "run" job
-            in megabytes
-            (try to keep below real memory of cores for maximal parallelization)
+        type=int, default=cfg.resource.max_memory_per_core.amount(Memory.MB),
+        meta='MB', help='''
+            amount of memory in megabytes that should be allocated to each
+            "run" job
         '''
     )
 
     cores = Argument(
-        type=int, default=cfg.cpu_cores, meta='NUMBER',
-        help='''
+        type=int, default=cfg.resource.max_cores_per_job,
+        meta='NUMBER', help='''
             number of cores that should be allocated to each "run" job
-            (may be increased in case jobs parallelize over cores)
+            (may be increased in case memory requirements of a job exceed
+            resources of a single core)
         '''
     )
 

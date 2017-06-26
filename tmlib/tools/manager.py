@@ -82,7 +82,11 @@ class ToolRequestManager(SubmissionManager):
         return command
 
     def create_job(self, submission_id, user_name, duration='06:00:00',
-            memory=3000, cores=1):
+            memory=(
+                cfg.resource.max_cores_per_job *
+                cfg.resource.max_memory_per_core.amount(Memory.MB)
+            ),
+            cores=cfg.resource.max_cores_per_job):
         '''Creates a job for asynchroneous processing of a client tool request.
 
         Parameters
@@ -96,10 +100,13 @@ class ToolRequestManager(SubmissionManager):
             in HH:MM:SS format (default: ``"06:00:00"``)
         memory: int, optional
             amount of memory in Megabyte that should be allocated for the job
-            (default: ``3000``)
+            (defaults to
+            :attr:`resource.max_cores_per_job <tmlib.config.LibraryConfig.resource>` x
+            :attr:`resource.max_memory_per_core <tmlib.config.LibraryConfig.resource>`)
         cores: int, optional
             number of CPU cores that should be allocated for the job
-            (default: ``1``)
+            (defaults to
+            :attr:`resource.max_cores_per_job <tmlib.config.LibraryConfig.resource>`)
 
         Returns
         -------
@@ -107,19 +114,49 @@ class ToolRequestManager(SubmissionManager):
             tool job
         '''
         logger.info('create tool job for submission %d', submission_id)
+
+        if cores > cfg.cores_per_node:
+            logger.warn(
+                'requested cores exceed available cores per node:  %s',
+                cfg.resource.max_cores_per_job
+            )
+            logger.debug(
+                'setting number of cores to %d', cfg.resource.max_cores_per_job
+            )
+            cores = cfg.resource.max_cores_per_job
+
+        max_memory_per_node = (
+            cfg.resource.max_cores_per_job *
+            cfg.resource.max_memory_per_core.amount(Memory.MB)
+        )
+        max_memory_per_core = cfg.resource.max_memory_per_core.amount(Memory.MB)
+        if cores == 1:
+            if memory > max_memory_per_core:
+                # We just warn here, since this may still work.
+                logger.warn(
+                    'requested memory exceeds available memory per core: %d MB',
+                    max_memory_per_core
+                )
+        else:
+            if memory > max_memory_per_node:
+                logger.warn(
+                    'requested memory exceeds available memory per node: %d MB',
+                    max_memory_per_node
+                )
+                logger.debug('setting memory to %d MB', max_memory_per_node)
+                memory = max_memory_per_node
+
         logger.debug('allocated time for job: %s', duration)
         logger.debug('allocated memory for job: %d MB', memory)
         logger.debug('allocated cores for job: %d', cores)
         job = ToolJob(
             tool_name=self.tool_name,
-            # TODO: tool_name
             arguments=self._build_command(submission_id),
             output_dir=self._log_location,
             submission_id=submission_id,
             user_name=user_name
         )
         job.requested_walltime = Duration(duration)
-        # TODO: this might need to be increased for scikit learn jobs
         job.requested_memory = Memory(memory, Memory.MB)
         if not isinstance(cores, int):
             raise TypeError(
