@@ -59,6 +59,7 @@ Requirements
 
 * `Python <https://www.python.org/>`_: Many platforms are shipped with Python already pre-installed. If not, it can be downloaded from `python.org <https://www.python.org/downloads/>`_. Using version 2.7.9 or higher is recommended.
 * `Pip <https://pip.pypa.io/en/stable/>`_: The Python package manager is automatically installed with Python distributions obtained from python.org. Otherwise, it can be installed with the `get-pip.py <https://bootstrap.pypa.io/get-pip.py>`_ script.
+* `GCC <https://gcc.gnu.org/>`_ or similar compiler
 
 Installation
 ^^^^^^^^^^^^
@@ -96,9 +97,7 @@ Public cloud images
 
 *TissueMAPS* provides publically accessible images on `Amazon Web Services (AWS) <https://aws.amazon.com/>`_ in form of shared `Amazon Machine Images (AMIs) <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/sharing-amis.html>`_.
 
-Based on the images one can simply launch a virtual machine in the cloud via the `Elastic Compute Cloud (EC2) console <https://console.aws.amazon.com/ec2/>`_. To find the images follow the `instructions on AWS <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/usingsharedamis-finding.html>`_. You can filter AMIs using the following criteria:
-
-    - Name: `TissueMAPS server`
+Based on the images one can simply launch a virtual machine in the cloud via the `Elastic Compute Cloud (EC2) console <https://console.aws.amazon.com/ec2/>`_. To find the *TissueMAPS* images, filter public AMIs in the ``Frankfurt`` region for ``AMI Name: TissueMAPS server`` (see `AWS documentation <https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/usingsharedamis-finding.html>`_).
 
 .. _server-installation-docker:
 
@@ -120,7 +119,7 @@ Simply download the ``docker-compose.yml`` file and bring up the containers:
 
 .. code-block:: none
 
-    wget https://raw.githubusercontent.com/tissuemaps/tissuemaps/master/docker-compose.yml -q -P ~/tissuemaps
+    git clone https://github.com/tissuemaps/tissuemaps
     cd ~/tissuemaps
     docker-compose up -d
 
@@ -134,10 +133,10 @@ TmDeploy
 
 The :mod:`tmdeploy` Python package provides the ``tm_deploy`` program, which uses `Ansible <https://www.ansible.com/>`_ for
 
-* setup and deployment of remote virtual machines (VMs) in the cloud
-* building, running and shiping Docker containers
+* provisioning and deployment of remote virtual machines (VMs) in the cloud
+* building, running and shipping Linux containers
 
-The program calls `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_ to install and configure server components in virtual `Ubuntu <https://www.ubuntu.com/>`_ environments (tested with `14.04 Trusty <http://releases.ubuntu.com/14.04/>`_ and `16.04 Xenial <http://releases.ubuntu.com/16.04/>`_ distributions). The same `Ansible roles <https://docs.ansible.com/ansible/playbooks_roles.html#roles>`_ are used for setting up cloud VM and `Docker <https://www.docker.com/>`_ containers.
+The program uses `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_ and `Ansible container <https://docs.ansible.com/ansible-container/>` to install and configure server components in virtual Linux environments (supported distributions: `Ubuntu 16.04 Xenial <http://releases.ubuntu.com/16.04/>`_ and `CentOS-7 <https://wiki.centos.org/Manuals/ReleaseNotes/CentOS7>`). The same `Ansible roles <https://docs.ansible.com/ansible/playbooks_roles.html#roles>`_ are used for setting up cloud VMs and containers.
 
 For more information on invididual roles, please refer to the `TmDeploy <https://github.com/TissueMAPS/TmDeploy/tree/master/tmdeploy/share/playbooks/roles>`_ repository.
 
@@ -147,7 +146,8 @@ Requirements
 * `Python <https://www.python.org/>`_: Many platforms are shipped with Python already pre-installed. If not, it can be downloaded from `python.org <https://www.python.org/downloads/>`_. Using version 2.7.9 or higher is recommended.
 * `Pip <https://pip.pypa.io/en/stable/>`_: The Python package manager is automatically installed with Python distributions obtained from python.org. Otherwise, it can be installed with the `get-pip.py <https://bootstrap.pypa.io/get-pip.py>`_ script.
 * `OpenSSH <https://www.openssh.com/>`_: Using version 7.2 or higher is recommended.
-* `OpenSSL <https://www.openssl.org/>`_
+* `OpenSSL <https://www.openssl.org/>`_ (including the development libraries)
+* `GCC <https://gcc.gnu.org/>`_ or similar compiler
 * `Docker CE <https://www.docker.com/community-edition>`_ (optional, required for building containers): Download the community edition for your operating system from the `Docker Store <https://store.docker.com/search?type=edition&offering=community>`_. Also make sure that your operating system (OS) user has permissions to run the docker daemon. This can be achieved by adding the user to the *docker* group: ``sudo usermod -aG docker $(whoami)``.
 
 Installation
@@ -184,18 +184,18 @@ Create and run containers:
 Launch & Deploy VMs
 ^^^^^^^^^^^^^^^^^^^
 
-Dedicated virtual machines are used for production deployment in the cloud. Setup requires configuration provided in form of a `YAML <http://yaml.org/>`_ file: ``~/.tmaps/setup/setup.yml``.
+Dedicated virtual machines are used for production deployment in the cloud. This requires a setup configuration file in `YAML <http://yaml.org/>`_ format (the default location of the file is ``~/.tmaps/setup/setup.yml``).
 
 The setup configuration has two main sections:
 
-- **cloud** (:class:`CloudSection <tmdeploy.config.CloudSection>`): Provides information about the cloud on which machines should be set up. Currently, three different providers are supported:
+- **cloud** (:class:`CloudSection <tmdeploy.config.CloudSection>`): Information about the cloud provider on which machines should be set up. Currently, three providers are supported:
     + ``os``: `OpenStack <http://www.openstack.org/>`_
     + ``ec2``: `Elastic Compute Cloud (Amazon Web Services) <https://aws.amazon.com/ec2/>`_
     + ``gce``: `Google Compute Engine <https://cloud.google.com/compute/>`_
 
-- **architecture** (:class:`ArchitectureSection <tmdeploy.config.ArchitectureSection>`): Describes the computational resources that should be set up and how they should be configured. The different server components (web server, application server, database servers, ...) may all be hosted on a single machine or get distributed across several machines. For consistency, **clusters** (:class:`ClusterSection <tmdeploy.config.ClusterSection>`) refers to sets of machines that get configured the same way - even if there is only a single machine. Each *cluster* is composed of one or more **node_types** (:class:`ClusterNodeTypeSection <tmdeploy.config.ClusterNodeTypeSection>`). *Nodes* belonging to a particular *node type* get assigned to one or more **groups** (:class:`AnsibleGroupSection <tmdeploy.config.AnsibleGroupSection>`), which determine how these *nodes* will be configured.
+- **architecture** (:class:`ArchitectureSection <tmdeploy.config.ArchitectureSection>`): Computational resources that should be set up and how they should be configured. The different server components (web server, application server, database servers, ...) may all be hosted on a single machine or get distributed across several machines. For consistency, **clusters** (:class:`ClusterSection <tmdeploy.config.ClusterSection>`) refers to sets of machines that get configured the same way - even if there is only a single machine. Each *cluster* is composed of one or more **node_types** (:class:`ClusterNodeTypeSection <tmdeploy.config.ClusterNodeTypeSection>`). *Nodes* belonging to a particular *node type* get assigned to one or more **groups** (:class:`AnsibleGroupSection <tmdeploy.config.AnsibleGroupSection>`), which determine how these *nodes* will be named and configured.
 
-.. tip:: Adapt one of the setup `templates <https://github.com/TissueMAPS/TmDeploy/tree/master/etc>`_. To this end, copy the template for your cloud provider to ``~/.tmaps/setup/setup.yml`` on your deploying machine and modify it according to your needs.
+.. tip:: Copy one of the setup `templates <https://github.com/TissueMAPS/TmDeploy/tree/master/etc>`_ and modify it according to your needs.
 
 
 Standalone (single-node) setup
@@ -209,7 +209,7 @@ The following `Ansible groups <http://docs.ansible.com/ansible/intro_inventory.h
 
 .. TODO: variables
 
-Example ``setup.yml`` template for the `Google Compute Engine (GCE) <https://cloud.google.com/compute/>`_ provider:
+Example setup for the `Google Compute Engine (GCE) <https://cloud.google.com/compute/>`_ provider:
 
 .. literalinclude:: ../src/tmdeploy/etc/singlenode_setup_gce.yml
    :language: yaml
@@ -239,7 +239,7 @@ Additional components can be configured using playbooks provided by `Elasticlust
     * ``ganglia_master``
     * ``ganglia_monitor``
 
-Example ``setup.yml`` template for the `Google Compute Engine (GCE) <https://cloud.google.com/compute/>`_ provider:
+Example setup for the `Google Compute Engine (GCE) <https://cloud.google.com/compute/>`_ provider:
 
 .. literalinclude:: ../src/tmdeploy/etc/multinode_setup_gce.yml
    :language: yaml
@@ -247,9 +247,9 @@ Example ``setup.yml`` template for the `Google Compute Engine (GCE) <https://clo
 
 This configuration will set up one *TissueMAPS* server instance, one database master server instance, two database worker server instances, two file system server instances, one monitoring server instance and ten compute instances. Depending on your needs, you may want to choose different number of nodes, machine types or volume sizes.
 
-.. note:: *TissueMAPS* implements fair `scheduling <http://slurm.schedmd.com/sched_config.html>`_, based on `SLURM accounts <http://slurm.schedmd.com/accounting.html>`_. To enable this functionality, create an account for each user.
+.. note:: *TissueMAPS* implements fair `scheduling <http://slurm.schedmd.com/sched_config.html>`_, based on `SLURM accounts <http://slurm.schedmd.com/accounting.html>`_. To enable this functionality, create *TissueMAPS* user accounts via the ``tm_add`` command line tool.
 
-.. tip:: When deploying houndreds of slurm worker nodes, it is advisable to use a pre-built image to speed up the cluster deployment process. To this end, configure a dedicated machine with only the ``tissuemaps_compute`` group and create a `snapshot <https://en.wikipedia.org/wiki/Snapshot_(computer_storage)>`_ of the configured instance. The thereby created image can then be reused to quickly boot additional machines for a large cluster setup.
+.. tip:: When deploying houndreds of slurm worker nodes, it can be benefitial to use a pre-built image to speed up the cluster deployment process. To this end, configure a dedicated machine with only the ``tissuemaps_compute`` group and create a `snapshot <https://en.wikipedia.org/wiki/Snapshot_(computer_storage)>`_ of the configured instance. The thereby created image can then be reused to quickly boot additional machines for a large cluster setup.
 
 Credentials
 +++++++++++
@@ -297,17 +297,11 @@ Launch virtual machine instances in the cloud:
 
 The ``launch`` command calls the `instance.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/instance.yml>`_ playbook.
 
+.. note:: The ``tm_deploy`` program will by default look for a setup file at the following location: ``~/.tmaps/setup/setup.yml``. The location can be specified via the ``--setup-file`` flag.
+
 .. note:: An *SSH* key pair will be automatically created on the local machine and uploaded to the cloud. The generated key files will be placed into ``~/.ssh``. The name of the key pair is determined by :attr:`key_name <tmdeploy.config.CloudSection.key_name>`.
 
-.. note:: A private :attr:`network <tmdeploy.config.CloudSection.network>` and :attr:`subnetwork <tmdeploy.config.CloudSection.subnetwork>` will get automatically created. In addition, each node gets assigned to one or more security groups (firewall) rules based on the configured :attr:`tags <tmdeploy.config.AnsibleHostVariableSection.tags>`. Only machines tagged with ``web`` will get a public IP and can be directly accessed via *SSH*. The other machines are only accessible from within the private network. ``tm_deploy`` uses an *SSH* ``ProxyCommand`` to connect to machines within the private network using a ``web`` tagged machine as a *bastion host*. In case you encouter problems with host authentication, you may need to add the following lines to your ``~/.ssh/config`` file:
-
-        .. code-block:: none
-
-            Hosts *
-
-              StrictHostKeyChecking no
-              UserKnownHostsFile /dev/null
-
+.. note:: A private :attr:`network <tmdeploy.config.CloudSection.network>` and :attr:`subnetwork <tmdeploy.config.CloudSection.subnetwork>` will get automatically created. In addition, each node gets assigned to one or more security groups (firewall) rules based on the configured :attr:`tags <tmdeploy.config.AnsibleHostVariableSection.tags>`. Only machines tagged with ``web`` will get a public IP and can be directly accessed via *SSH*, ``HTTP`` and ``HTTPS`` on ports 22, 80 and 443, respectively. The other machines are only accessible from within the private network. ``tm_deploy`` uses an *SSH* ``ProxyCommand`` to connect to machines within the private network using a ``web`` tagged machine as a *bastion host*.
 
 
 Deploy *TissueMAPS* on virtual machine instances:
@@ -318,10 +312,9 @@ Deploy *TissueMAPS* on virtual machine instances:
 
 The ``deploy`` command runs the following playbooks:
 
-    - `site.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/elasticluster/site.yml>`_ of the `elasticluster <https://elasticluster.readthedocs.io/en/latest/>`_ package in case additional, non-core groups are specified in ``setup.yml``
+    - `site.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/elasticluster/site.yml>`_ for roles provided via the `elasticluster <https://elasticluster.readthedocs.io/en/latest/>`_ package in case additional, non-core groups are specified in the setup configuration
     - `site.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/tissuemaps/site.yml>`_ of the :mod:`tmdeploy` package
 
-.. note:: *TissueMAPS* uses `GC3Pie <http://gc3pie.readthedocs.io/en/latest/programmers/index.html>`_ for computational job management. When setting up a compute cluster, the configuration in ``~/.gc3/gc3pie.conf`` needs to be modified according to available computational resources. For more information please refer to the `GC3Pie documentation <http://gc3pie.readthedocs.org/en/latest/users/configuration.html>`_
 
 Terminate virtual machine instances:
 
@@ -329,5 +322,5 @@ Terminate virtual machine instances:
 
     tm_deploy -vv vm terminate
 
-.. note:: The ``terminate`` command will remove virtual machines, but created networks and security groups won't get deleted.
+.. note:: The ``terminate`` command will remove virtual machine instances and storage volumes, but networks and security groups won't get deleted.
 
