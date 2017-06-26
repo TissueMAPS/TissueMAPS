@@ -168,7 +168,9 @@ def _run_vm_commands(commands, setup_file):
     logger.debug('using Ansible config file: %s', config_file)
     env = dict(os.environ)
     env['ANSIBLE_CONFIG'] = os.path.abspath(config_file)
-    env['TM_SETUP'] = os.path.abspath(setup_file)
+    env['TM_SETUP'] = os.path.abspath(
+        os.path.expandvars(os.path.expanduser(setup_file))
+    )
     for cmd in commands:
         logger.debug('command: %s', ' '.join(cmd))
         _run_command(cmd, env)
@@ -320,8 +322,8 @@ if __name__ == '__main__':
     )
 
     vm_parser.add_argument(
-        '-s', '--setup-file', dest='setup_file', default='~/.tmaps/setup.yml',
-        help='path to the setup file'
+        '-s', '--setup-file', dest='setup_file',
+        default='~/.tmaps/setup/setup.yml', help='path to the setup file'
     )
     vm_subparsers = vm_parser.add_subparsers(dest='action', help='action')
     vm_subparsers.required = True

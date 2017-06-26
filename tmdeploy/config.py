@@ -749,6 +749,7 @@ class Setup(object):
     '''Description of the `TissueMAPS` setup.'''
 
     def __init__(self, setup_file):
+        setup_file = os.path.expanduser(os.path.expandvars(setup_file))
         description = self._load_description(setup_file)
         for k, v in description.items():
             if k not in dir(self):
