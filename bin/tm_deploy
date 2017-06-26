@@ -186,6 +186,7 @@ def deploy_vm(args):
         if group not in SUPPORTED_TM_GROUPS:
             use_elasticluster = True
     if use_elasticluster:
+        variables['cluster_mode'] = 'yes'
         # NOTE: This playbook also configures SSH host-based authentication,
         # so we shouldn't run this only on a subset of groups!
         elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
@@ -194,6 +195,8 @@ def deploy_vm(args):
         cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
         cmd.append('--become')
         commands.append(cmd)
+    else:
+        variables['cluster_mode'] = 'no'
     # Run the TissueMAPS-specific playbooks implemented in tmdeploy
     tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
     playbook = os.path.join(tmdeploy_playbooks_dir, 'site.yml')
