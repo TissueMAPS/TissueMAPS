@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Update db_host in TissueMAPS configuration
+- name: Update ``db_host`` in TissueMAPS configuration
   ini_file:
     dest: "{{ tm_config_file }}"
     section: DEFAULT
@@ -25,6 +25,18 @@
     group: "{{ tm_group }}"
   tags:
     - database
+    - tissuemaps
+
+- name: Update ``db_nodes`` in TissueMAPS configuration
+  ini_file:
+    dest: "{{ tm_config_file }}"
+    section: tmlib
+    state: present
+    option: db_nodes
+    value: "{{ db_nodes }}"
+    owner: "{{ tm_user }}"
+    mode: "u+rwx"
+  tags:
     - tissuemaps
 
 - name: Update bash_profile
