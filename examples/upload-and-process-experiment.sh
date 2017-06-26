@@ -23,8 +23,12 @@ is used as the experiment name.
 
 The script makes a few assumptions on how the files are laid out into DATADIR:
 
-* that DATADIR contains a file 'workflow_description.yaml' which defines the
+* that DATADIR contains a file 'workflow.yaml' which defines the
   TissueMAPS workflow to run;
+
+* that DATADIR contains a subdirectory 'jtproject' which in turn contains
+  a file 'pipeline.yaml' and a subdirectory 'handles' with the descriptions
+  of the jterator pipeline and each jterator module, respectively.
 
 * that DATADIR contains a subdirectory 'plates/' which in turn contains
   subdirectories, each of which contains files for a single plate. The
@@ -128,8 +132,17 @@ fi
 if ! [ -d "${datadir}"/plates ]; then
     die $EX_NOINPUT "Cannot enumerate plates: no directory `plates/` inside '${datadir}'."
 fi
-if ! [ -r "${datadir}/workflow_description.yaml" ]; then
+if ! [ -r "${datadir}/workflow.yaml" ]; then
     die $EX_NOINPUT "Missing workflow description file in directory '$datadir'"
+fi
+if ! [ -d "${datadir}/jtproject" ]; then
+    die $EX_NOINPUT "Missing jterator project directory in directory '$datadir'"
+fi
+if ! [ -r "${datadir}/jtproject/pipeline.yaml" ]; then
+    die $EX_NOINPUT "Missing jterator pipeline description file in directory '$datadir/jtproject'"
+fi
+if ! [ -d "${datadir}/jtproject/handles" ]; then
+    die $EX_NOINPUT "Missing jterator handles directory in directory '$datadir/jtproject'"
 fi
 
 name="$2"
@@ -179,7 +192,11 @@ done
 
 # Upload workflow description:
 
-tm_client workflow -e "${name}" upload --file "${datadir}/workflow_description.yaml"
+tm_client workflow -e "${name}" upload --file "${datadir}/workflow.yaml"
+
+# Upload jterator project description:
+
+tm_client jtproject -e "{$name}" upload --directory "${datadir}/jtproject"
 
 # Submit workflow:
 
