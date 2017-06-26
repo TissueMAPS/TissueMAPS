@@ -602,7 +602,7 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
             'create "run" jobs for submission %d', job_collection.submission_id
         )
 
-        if cores > cfg.cores_per_node:
+        if cores > cfg.resource.max_cores_per_job:
             logger.warn(
                 'requested cores exceed available cores per node:  %s',
                 cfg.resource.max_cores_per_job

@@ -530,7 +530,7 @@ class SubmissionArguments(ArgumentCollection):
     )
 
     memory = Argument(
-        type=int, default=cfg.resource.max_memory_per_core.amount(Memory.MB),
+        type=int, default=int(cfg.resource.max_memory_per_core.amount(Memory.MB)),
         meta='MB', help='''
             amount of memory in megabytes that should be allocated to each
             "run" job
