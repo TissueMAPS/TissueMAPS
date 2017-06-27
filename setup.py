@@ -51,16 +51,10 @@ except ImportError:
 
 import setuptools
 
-def find_scripts():
-    return [s for s in setuptools.findall('bin/')
-            if splitext(s)[1] != '.pyc']
-
 def get_version():
-    src_python_path = join(abspath(dirname(__file__)), 'src', 'python')
-    sys.path.insert(0, src_python_path)
+    sys.path.insert(0, abspath(dirname(__file__)))
     import jtlib
     return jtlib.__version__
-
 
 setuptools.setup(
     name='jtlibrary',
@@ -81,9 +75,8 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=[],
-    packages=setuptools.find_packages('src/python'),
-    package_dir={'': 'src/python'},
-    include_package_data=True,
+    packages=['jtlib'],
+    include_package_data=True,  # include files mentioned by MANIFEST.in
     install_requires=[
         'numpy>=1.12.0',
         'pandas>=0.19.2',
