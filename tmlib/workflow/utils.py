@@ -142,7 +142,7 @@ def create_gc3pie_engine(store):
         engine
     '''
     logger.debug('create GC3Pie engine')
-    n = 1000  # NOTE: match with number of db connections!!!
+    n = cfg.resource.max_cores * 2
     logger.debug('set maximum number of submitted jobs to %d', n)
     engine = gc3libs.create_engine(
         store=store, max_in_flight=n, max_submitted=n, forget_terminated=True
