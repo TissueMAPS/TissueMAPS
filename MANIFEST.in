@@ -1,2 +1,2 @@
-graft jtlib/src/matlab
-graft jtlib/src/r
+graft jtlib/src/matlab/+jtlib
+graft jtlib/src/r/jtlib
