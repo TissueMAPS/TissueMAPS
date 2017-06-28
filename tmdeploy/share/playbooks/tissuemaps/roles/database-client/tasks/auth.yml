@@ -30,7 +30,7 @@
 - name: Update ``db_nodes`` in TissueMAPS configuration
   ini_file:
     dest: "{{ tm_config_file }}"
-    section: tmlib
+    section: DEFAULT
     state: present
     option: db_nodes
     value: "{{ db_nodes }}"
