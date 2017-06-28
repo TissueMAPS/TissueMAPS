@@ -90,5 +90,7 @@ setuptools.setup(
         'plotly>=2.0.0',
         'pyasn1>=0.1.9',
         'ndg-httpsclient>=0.4.0',
+        'sep>=1.0.0',
+        'tox>=2.3.1',
     ]
 )
