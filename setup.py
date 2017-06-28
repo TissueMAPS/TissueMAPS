@@ -89,8 +89,8 @@ setuptools.setup(
         'colorlover>=0.2.1',
         'plotly>=2.0.0',
         'pyasn1>=0.1.9',
+        'pytest>=2.8.2',
         'ndg-httpsclient>=0.4.0',
         'sep>=1.0.0',
-        'tox>=2.3.1',
     ]
 )
