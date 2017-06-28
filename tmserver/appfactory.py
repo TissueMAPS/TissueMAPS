@@ -39,27 +39,6 @@ from tmlib import cfg as libcfg
 logger = logging.getLogger(__name__)
 
 
-def _get_interrupted_tasks():
-    """Gets the IDs of all tasks that are not in state ``STOPPED`` or
-    ``TERMINATED``. If tasks are have one of these states at server startup,
-    they have probably been interrupted by a previous shutdown and need to
-    be resubmitted.
-
-    Returns
-    -------
-    List[int]
-    """
-    with tm.utils.MainSession() as session:
-        top_task_ids = session.query(tm.Submission.top_task_id).all()
-        tasks = session.query(tm.Task.id).\
-            filter(
-                tm.Task.id.in_(top_task_ids),
-                ~tm.Task.state.in_({'STOPPED', 'TERMINATED', 'TERMINATING'})
-            ).\
-            all()
-        return [t.id for t in tasks]
-
-
 def create_app(verbosity=None):
     """Creates a Flask application object that registers all the blueprints on
     which the actual routes are defined.
@@ -201,14 +180,6 @@ def create_app(verbosity=None):
 
     from tmserver.jtui import jtui
     app.register_blueprint(jtui, url_prefix='/jtui')
-
-    # Restart all jobs that might have been accidentially stopped by
-    # a server shutdown.
-    with app.app_context():
-        task_ids = _get_interrupted_tasks()
-        for tid in task_ids:
-            task = gc3pie.retrieve_task(tid)
-            gc3pie.continue_task(task)
 
     # For uWSGI fork()
     engine.dispose()
