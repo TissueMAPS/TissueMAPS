@@ -1,2 +1,2 @@
-graft src/matlab/+jtmodules
-graft src/r/jtmodules
+graft jtmodules/src/matlab/+jtmodules
+graft jtmodules/src/r/jtmodules
