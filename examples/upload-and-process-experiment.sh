@@ -196,7 +196,7 @@ tm_client workflow -e "${name}" upload --file "${datadir}/workflow.yaml"
 
 # Upload jterator project description:
 
-tm_client jtproject -e "{$name}" upload --directory "${datadir}/jtproject"
+tm_client jtproject -e "${$name}" upload --directory "${datadir}/jtproject"
 
 # Submit workflow:
 
