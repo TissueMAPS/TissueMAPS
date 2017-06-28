@@ -1,1 +1,3 @@
+graft tmclient/src/matlab
+graft tmclient/src/r
 include examples *.sh

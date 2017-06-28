@@ -59,12 +59,9 @@ def build_console_scripts():
 
 
 def get_version():
-    src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'python', 'tmclient'
-    )
-    sys.path = [src_path] + sys.path
-    import version
-    return version.__version__
+    sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+    import tmclient
+    return tmclient.__version__
 
 
 setuptools.setup(
@@ -89,9 +86,7 @@ setuptools.setup(
         'Development Status :: 4 - Beta'
     ],
     entry_points={'console_scripts': build_console_scripts()},
-    packages=setuptools.find_packages(os.path.join('src', 'python')),
-    package_dir={'': os.path.join('src', 'python')},
-    package_data={'': ['*.rst']},
+    packages=['tmclient'],
     include_package_data=True,
     install_requires=[
         'opencv-contrib-python>=3.2',
