@@ -92,5 +92,9 @@ setuptools.setup(
         'pytest>=2.8.2',
         'ndg-httpsclient>=0.4.0',
         'sep>=1.0.0',
+    ],
+    setup_requires=[
+        'numpy>=1.12.0',
+        'cython>=0.24'
     ]
 )
