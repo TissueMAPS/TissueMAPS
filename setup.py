@@ -87,8 +87,6 @@ setuptools.setup(
         'opencv-contrib-python>=3.2',
         'pytest>=2.8.2',
         'scipy>=0.16.0',
-        'sep>=1.0.0',
-        'tox>=2.3.1',
         'jtlibrary>=0.2.0'
     ]
 )
