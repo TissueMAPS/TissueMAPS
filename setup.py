@@ -81,6 +81,7 @@ setuptools.setup(
         'numpy>=1.12.0',
         'pandas>=0.19.2',
         'scipy>=0.16.0',
+        'cached-property>=1.3.0',
         'cython>=0.24',
         'opencv-contrib-python>=3.2',
         'scikit-image>=0.11.3',
@@ -92,6 +93,7 @@ setuptools.setup(
         'pytest>=2.8.2',
         'ndg-httpsclient>=0.4.0',
         'sep>=1.0.0',
+        'simpleitk>=1.0.0'
     ],
     setup_requires=[
         'numpy>=1.12.0',
