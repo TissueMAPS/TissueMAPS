@@ -27,8 +27,8 @@
     chdir: "{{ tm_home }}"
     executable: /bin/bash
   with_items:
-    - cython
-    - numpy
+    - cython==0.25.2
+    - numpy==1.12.1
   tags:
     - tissuemaps
 
