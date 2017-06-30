@@ -50,8 +50,16 @@ except ImportError:
 
 import setuptools
 
+def find_scripts():
+    return [s for s in setuptools.findall('bin/')
+            if os.path.splitext(s)[1] != '.pyc']
+
 def get_version():
-    sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+    src_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)),
+        'src', 'python'
+    )
+    sys.path = [src_path] + sys.path
     import jtmodules
     return jtmodules.__version__
 
@@ -76,7 +84,8 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=[],
-    packages = ['jtmodules'],
+    packages = setuptools.find_packages('jtmodules'),
+    package_dir={'': 'src/python'},
     include_package_data=True,
     install_requires=[
         'numpy>=1.10.1',
