@@ -135,16 +135,6 @@ def expand_objects_watershed(seeds_image, background_image, intensity_image):
     lines = mh.labeled.borders(regions)
     regions[lines] = 0
 
-    # Close holes in objects.
-    foreground_mask = regions > 0
-    holes = mh.close_holes(foreground_mask) - foreground_mask
-    holes = mh.morph.dilate(holes)
-    holes_labeled, n_holes = mh.label(holes)
-    for i in range(1, n_holes+1):
-        fill_value = np.unique(regions[holes_labeled == i])[-1]
-        fill_value = fill_value[fill_value > 0][0]
-        regions[holes_labeled == i] = fill_value
-
     # Remove objects that are obviously too small, i.e. smaller than any of
     # the seeds (this could happen when we remove certain parts of objects
     # after the watershed region growing)
