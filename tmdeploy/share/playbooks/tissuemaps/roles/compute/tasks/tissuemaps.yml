@@ -82,26 +82,6 @@
   tags:
     - tissuemaps
 
-# NOTE: When including the GC3Pie dependency via --process-dependency-links
-# upon installation of tmlibrary, I get HTTP erros when installing on multiple
-# hosts simulatneously???
-- name: Clone GC3Pie repository
-  git:
-    repo: "{{ tm_github_url }}/gc3pie"
-    dest: "{{ tm_home }}/gc3pie"
-    version: master
-    force: yes
-  tags:
-    - tissuemaps
-
-- name: Install gc3pie package
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/gc3pie --user --no-cache-dir
-  args:
-    chdir: "{{ tm_home }}/gc3pie"
-    executable: /bin/bash
-  tags:
-    - tissuemaps
-
 - name: Clone TmLibrary repository
   git:
     repo: "{{ tm_github_url }}/tmlibrary"
