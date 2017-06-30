@@ -16,6 +16,7 @@
 
 ---
 tm_compute_autodiscover: yes  # autodiscovers resources (only on localhost)
+tm_compute_nodes: 1           # total number of nodes in the cluster
 tm_compute_cores: 2           # total number of CPU cores per node
 tm_compute_memory: 1750       # total memory of per node
 

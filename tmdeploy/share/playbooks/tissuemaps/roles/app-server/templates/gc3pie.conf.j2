@@ -12,7 +12,7 @@ max_cores={{ tm_compute_cores }}
 max_cores_per_job={{ tm_compute_cores }}
 max_memory_per_core={{ tm_compute_memory }} MB
 max_walltime=48 hours
-override={{ tm_compute_autodiscover }}
+override={{ (tm_compute_autodiscover)|lower }}
 
 [resource/cluster]
 enabled={{ cluster_mode|lower }}
