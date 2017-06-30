@@ -3,7 +3,6 @@
 ''' distribute- and pip-enabled setup.py '''
 from __future__ import print_function
 import os
-from os.path import abspath, dirname, join, splitext
 import re
 import sys
 import glob
@@ -51,10 +50,18 @@ except ImportError:
 
 import setuptools
 
+def find_scripts():
+    return [s for s in setuptools.findall('bin/')
+            if os.path.splitext(s)[1] != '.pyc']
+
 def get_version():
-    sys.path.insert(0, abspath(dirname(__file__)))
+    src_path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)), 'src', 'python'
+    )
+    sys.path = [src_path] + sys.path
     import jtlib
     return jtlib.__version__
+
 
 setuptools.setup(
     name='jtlibrary',
@@ -75,8 +82,9 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=[],
-    packages=['jtlib'],
-    include_package_data=True,  # include files mentioned by MANIFEST.in
+    packages=setuptools.find_packages(os.path.join('src', 'python')),
+    package_dir={'': 'src/python'},
+    include_package_data=True,
     install_requires=[
         'numpy>=1.12.0',
         'pandas>=0.19.2',
