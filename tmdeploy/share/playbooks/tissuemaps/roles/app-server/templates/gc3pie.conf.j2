@@ -21,8 +21,8 @@ frontend={{ ansible_hostname }}
 transport=local
 auth=noauth
 architecture=x86_64
-max_cores={{ tm_compute_cores * tm_compute_nodes }}
+max_cores={{ tm_compute_cores|int * tm_compute_nodes|int }}
 max_cores_per_job={{ tm_compute_cores }}
-max_memory_per_core={{ (tm_compute_memory / tm_compute_cores)|round(0, 'floor')|int }} MB
+max_memory_per_core={{ (tm_compute_memory|int / tm_compute_cores|int)|round(0, 'floor')|int }} MB
 max_walltime=10 days
 
