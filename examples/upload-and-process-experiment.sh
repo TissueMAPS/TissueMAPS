@@ -186,7 +186,7 @@ for plate_dir in "${datadir}"/plates/*; do
         fi
         acquisition_name=$(basename "$plate_name")
         tm_client acquisition -e "${name}" create -p "$plate_name" -n "$acquisition_name"
-        tm_client microscope-file -e "${name}" upload -p "$plate_name" -a "$acquisition_name" --directory "$acquisition_dir"
+        tm_client microscope-file -e "${name}" upload -p "$plate_name" -a "$acquisition_name" --directory "$acquisition_dir/microscope_images"
     done
 done
 
@@ -196,7 +196,7 @@ tm_client workflow -e "${name}" upload --file "${datadir}/workflow.yaml"
 
 # Upload jterator project description:
 
-tm_client jtproject -e "${$name}" upload --directory "${datadir}/jtproject"
+tm_client jtproject -e "${name}" upload --directory "${datadir}/jtproject"
 
 # Submit workflow:
 
