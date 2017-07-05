@@ -149,8 +149,9 @@ def expand_objects_watershed(seeds_image, background_image, intensity_image):
     # the seeds (this could happen when we remove certain parts of objects
     # after the watershed region growing)
     primary_sizes = mh.labeled.labeled_size(seeds_image)
-    min_size = np.min(primary_sizes[1:]) + 1
-    regions = mh.labeled.filter_labeled(regions, min_size=min_size)[0]
+    if len(primary_sizes) > 1:
+        min_size = np.min(primary_sizes[1:]) + 1
+        regions = mh.labeled.filter_labeled(regions, min_size=min_size)[0]
 
     # Remove regions that don't overlap with seed objects and assign
     # correct labels to the other regions, i.e. those of the corresponding seeds.
