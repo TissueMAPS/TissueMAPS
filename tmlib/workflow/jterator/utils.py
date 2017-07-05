@@ -14,15 +14,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import logging
+
+from tmlib import cfg
 
 
-def get_module_directories(repo_dir):
-    '''Gets the directories were module source code files are located.
+logger = logging.getLogger(__name__)
 
-    Parameters
-    ----------
-    repo_dir: str
-        value of the "lib" key in the pipeline descriptor file
+
+def get_package_directories():
+    '''Gets the language-specific package directories were module source
+    files are located.
 
     Returns
     -------
@@ -35,10 +37,10 @@ def get_module_directories(repo_dir):
         'Matlab': 'src/matlab/+jtmodules',
         'R': 'src/r/jtmodules'
     }
-    return {k: os.path.join(repo_dir, v) for k, v in dirs.iteritems()}
+    return {k: os.path.join(cfg.modules_home, v) for k, v in dirs.iteritems()}
 
 
-def get_module_path(module_file, repo_dir):
+def get_module_path(module_file):
     '''Gets the absolute path to a module file.
 
     Parameters
@@ -54,7 +56,7 @@ def get_module_path(module_file, repo_dir):
         absolute path to module file
     '''
     language = determine_language(module_file)
-    modules_dir = get_module_directories(repo_dir)[language]
+    modules_dir = get_package_directories()[language]
     return os.path.join(modules_dir, module_file)
 
 
@@ -77,7 +79,5 @@ def determine_language(filename):
         return 'R'
     elif suffix == '.py':
         return 'Python'
-    elif suffix == '.jl':
-        return 'Julia'
     else:
         raise Exception('Language could not be determined from filename.')
