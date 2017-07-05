@@ -165,7 +165,7 @@ class HttpClient(object):
                 func(*args)
 
         threads = []
-        for batch in arg_batches:
+        for i, batch in enumerate(arg_batches):
             logger.debug('start thread #%d', i)
             # TODO: use queue or generator?
             t = Thread(target=wrapper, args=(func, batch))
