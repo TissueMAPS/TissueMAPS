@@ -743,7 +743,7 @@ segmentation_upload_parser = segmentation_subparsers.add_parser(
     'upload',
     help='upload segmenations from image file',
     description=(
-        'Upload object segmentations in from a 16-bit PNG image file. '
+        'Upload object segmentations in from of a 16-bit PNG image file. '
         'The image must be labeled such that background pixels have zero '
         'values and pixels within objects have unsigned integer values. '
         'WARNING: This approach only works when the image contains less '
