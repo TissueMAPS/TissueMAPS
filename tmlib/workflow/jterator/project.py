@@ -23,7 +23,7 @@ import shutil
 from cached_property import cached_property
 from natsort import natsorted
 
-from tmlib.workflow.jterator.utils import get_module_directories
+from tmlib.workflow.jterator.utils import get_package_directories
 from tmlib.workflow.jterator.description import (
     PipelineDescription, HandleDescriptions
 )
@@ -384,7 +384,7 @@ class Project(object):
         self._update_pipe()
         self._update_handles()
 
-    def create(self, repo_dir=None, skel_dir=None):
+    def create(self, skel_dir=None):
         '''Creates a Jterator project:
         Creates an empty "handles" subfolder as well as a skeleton pipeline
         file, i.e. a pipeline descriptor file with all required main keys but
@@ -393,17 +393,11 @@ class Project(object):
 
         Parameters
         ----------
-        repo_dir: str, optional
-            path to repository directory where module files are located
         skel_dir: str, optional
             path to repository directory that represents a project skeleton,
             i.e. contains a *pipeline* and one or more *handles* files in a
             *handles* directory.
         '''
-        if repo_dir:
-            repo_dir = os.path.expandvars(repo_dir)
-            repo_dir = os.path.expanduser(repo_dir)
-            repo_dir = os.path.abspath(repo_dir)
         if skel_dir:
             skel_dir = os.path.expandvars(skel_dir)
             skel_dir = os.path.expanduser(skel_dir)
@@ -415,7 +409,7 @@ class Project(object):
         # os.mkdir(self.location)
         # TODO: handle creation of project based on provided pipe
         if skel_dir:
-            self._create_project_from_skeleton(skel_dir, repo_dir)
+            self._create_project_from_skeleton(skel_dir, cfg.modules_home)
         else:
             pipe_file_path = os.path.join(
                 self.location, self._pipe_filename
@@ -437,19 +431,20 @@ class Project(object):
 class AvailableModules(object):
 
     '''Container for information about Jterator modules available
-    in the `JtLibrary <https://github.com/TissueMAPS/JtLibrary>`_ repository.
+    in a local copy of the
+    `JtModules <https://github.com/TissueMAPS/JtModules>`_ repository.
+
+    See also
+    --------
+    :attr:`tmlib.config.LibraryConfig.modules_home`
     '''
 
-    def __init__(self, repo_dir):
-        '''
-        Initialize an instance of class AvailableModules.
-
-        Parameters
-        ----------
-        repo_dir: str
-            absolute path to the local clone of the repository
-        '''
-        self.repo_dir = repo_dir
+    def __init__(self):
+        if not os.path.exists(cfg.modules_home):
+            raise OSError(
+                'Local JtModules repository does not exist: %s'
+                % cfg.modules_home
+            )
 
     @property
     def module_files(self):
@@ -463,7 +458,7 @@ class AvailableModules(object):
         List[str]
             absolute paths to module files
         '''
-        dirs = get_module_directories(self.repo_dir)
+        dirs = get_package_directories()
         search_strings = {
             'Python': '^[^_]+.*\.py$',  # exclude _ files
             'Matlab': '\.m$',
@@ -516,7 +511,7 @@ class AvailableModules(object):
         return languages
 
     def _get_handles_file(self, module_name):
-        handles_dir = os.path.join(self.repo_dir, 'handles')
+        handles_dir = os.path.join(cfg.modules_home, 'handles')
         search_string = '^%s\%s$' % (module_name, HANDLES_SUFFIX)
         regexp_pattern = re.compile(search_string)
         handles_files = natsorted([
