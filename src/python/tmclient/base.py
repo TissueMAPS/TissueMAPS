@@ -17,7 +17,6 @@ from abc import ABCMeta
 from threading import Thread
 from itertools import chain
 
-import yaml
 import requests
 try:
     from urllib import urlencode
@@ -34,7 +33,7 @@ class HttpClient(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, host, port, user_name, password=None):
+    def __init__(self, host, port, username, password):
         '''
         Parameters
         ----------
@@ -42,11 +41,10 @@ class HttpClient(object):
             name of the TissueMAPS host
         port: int
             number of the port to which TissueMAPS server listens
-        user_name: str
+        username: str
             name of the TissueMAPS user
-        password: str, optional
-            password for `user_name` (may alternatively provided via the
-            ``tm_pass`` file)
+        password: str
+            password for `username`
         '''
         self._session = requests.Session()
         if port == 443:
@@ -56,11 +54,8 @@ class HttpClient(object):
             self._base_url = 'http://{host}:{port}'.format(host=host, port=port)
             self._adapter = self._session.adapters['http://']
         self._session.get(self._base_url)
-        if password is None:
-            logger.debug('no password provided')
-            password = self._load_credentials(user_name)
         self._session.headers.update({'Host': host})
-        self._login(user_name, password)
+        self._login(username, password)
 
     def _build_url(self, route, params={}):
         '''Builds the full URL based on the base URL (``http://<host>:<port>``)
@@ -85,53 +80,6 @@ class HttpClient(object):
         url = '{url}?{params}'.format(url=url, params=urlencode(params))
         logger.debug('url: %s', url)
         return url
-
-    def _load_credentials(self, username):
-        '''Loads password for `username` from file.
-
-        The file must be called ``~/.tm_pass`` and stored in
-        the home directory. It must provide a YAML mapping where
-        keys are usernames and the values the corresponding passwords.
-
-        Parameters
-        ----------
-        username: str
-            name of the TissueMAPS user
-
-        Returns
-        -------
-        str
-            password for the given user
-
-        Raises
-        ------
-        OSError
-            when the file does not exist
-        ValueError
-            when the file cannot be parsed
-        KeyError
-            when `username` is not found in file
-        '''
-        logger.debug('trying to obtain credentials from "~/.tm_pass" file')
-        cred_filepath = os.path.expandvars(os.path.join('$HOME', '.tm_pass'))
-        if not os.path.exists(cred_filepath):
-            raise IOError(
-                'No credentials provided and tm_pass file not found: {0}'.format(
-                    cred_filepath
-                )
-            )
-        try:
-            with open(cred_filepath) as f:
-                credentials = yaml.load(f.read())
-        except Exception as err:
-            raise IOError(
-                'Could not be read credentials from file:\n{0}'.format(str(err))
-            )
-        if username not in credentials:
-            raise ValueError(
-                'No credentials provided for user "{0}"'.format(username)
-            )
-        return credentials[username]
 
     def _login(self, username, password):
         '''Authenticates a TissueMAPS user.

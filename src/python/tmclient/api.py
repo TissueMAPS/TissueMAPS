@@ -37,6 +37,7 @@ from tmclient.base import HttpClient
 from tmclient.log import configure_logging
 from tmclient.log import map_logging_verbosity
 from tmclient.errors import ResourceError
+from tmclient.auth import prompt_for_credentials, load_credentials_from_file
 
 
 logger = logging.getLogger(__name__)
@@ -52,12 +53,12 @@ class TmClient(HttpClient):
         ----------
         host: str
             name or IP address of the machine that hosts the *TissueMAPS* server
-            (e.g. ``"localhost"`` or ``127.0.0.1``)
+            (e.g. ``"localhost"``, ``127.0.0.1`` or ``app.tissuemaps.org``)
         port: int
-            number of the port to which *TissueMAPS* server listens
-            (e.g. ``8002``)
+            number of the port to which server listens
+            (e.g. ``80``, ``443`` or ``8002``)
         username: str
-            name of the user
+            name of the *TissueMAPS* user
         password: str
             password for the user (can also be provided via the
             *tm_pass* file)
@@ -87,13 +88,13 @@ class TmClient(HttpClient):
     def experiment_name(self):
         '''str: name of the currently accessed experiment'''
         if self._experiment_name is None:
-            logger.warn('experiment name is not set')
+            logger.error('experiment name is not set')
             raise AttributeError('Attribute experiment_name is not set.')
         return self._experiment_name
 
     @experiment_name.setter
     def experiment_name(self, value):
-        self._experiment_name = value
+        self._experiment_name = str(value)
 
     def get_experiments(self):
         '''Gets information for all experiments.
@@ -170,6 +171,12 @@ class TmClient(HttpClient):
         logging.getLogger('tmclient').setLevel(logging_level)
         logger.setLevel(logging_level)
 
+        if args.password is None:
+            try:
+                args.password = load_credentials_from_file(args.username)
+            except OSError:
+                args.password = prompt_for_credentials(args.username)
+
         try:
             client = cls(
                 args.host, args.port, args.username, args.password
@@ -177,14 +184,8 @@ class TmClient(HttpClient):
             if hasattr(args, 'experiment_name'):
                 client.experiment_name = args.experiment_name
             client(args)
-        except requests.exceptions.HTTPError as err:
-            logger.error(str(err))
-            sys.exit(1)
-        except ResourceError as err:
-            logger.error(str(err).lower())
-            sys.exit(1)
         except Exception as err:
-            if args.verbosity < 3:
+            if args.verbosity < 4:
                 logger.error(str(err).lower())
                 sys.exit(1)
             else:
@@ -1413,7 +1414,7 @@ class TmClient(HttpClient):
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
             tpoint, zplane
         )
-        image = np.array(response)
+        image = np.array(response, np.int32)
         if np.max(image) >= 2**16:
             raise ValueError(
                 'Cannot store segmentation image as PNG file because it '
@@ -1442,7 +1443,7 @@ class TmClient(HttpClient):
             'well_pos_y': well_pos_y,
             'tpoint': tpoint,
             'zplane': zplane,
-            'image': image
+            'image': image.tolist()
         }
         mapobject_type_id = self._get_mapobject_type_id(mapobject_type_name)
         url = self._build_api_url(
