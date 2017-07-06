@@ -184,8 +184,11 @@ class TmClient(HttpClient):
             logger.error(str(err).lower())
             sys.exit(1)
         except Exception as err:
-            logger.error(str(err).lower())
-            sys.exit(1)
+            if args.verbosity < 3:
+                logger.error(str(err).lower())
+                sys.exit(1)
+            else:
+                raise
 
     def _build_api_url(self, route, params={}):
         if not route.startswith('/'):
@@ -1532,7 +1535,7 @@ class TmClient(HttpClient):
         logger.info('upload segmentation image file "%s"', filename)
         if not filename.endswith('png'):
             raise IOError('Filename must have "png" extension.')
-        filename = os.path.expanduser(os.path.exandvars(filename))
+        filename = os.path.expanduser(os.path.expandvars(filename))
         image = cv2.imread(filename, cv2.IMREAD_UNCHANGED | cv2.IMREAD_ANYDEPTH)
         self._upload_segmentation_image(
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
@@ -1599,6 +1602,33 @@ class TmClient(HttpClient):
         )
         res = self._session.delete(url)
         res.raise_for_status()
+
+    def create_mapobject_type(self, name):
+        '''Creates a mapobject type.
+
+        Parameters
+        ----------
+        name: str
+            name that should be given to the mapobject type
+
+        See also
+        --------
+        :func:`tmserver.api.mapobject.create_mapobject_type`
+        :class:`tmlib.models.mapobject.MapobjectType`
+        '''
+        logger.info(
+            'create object type "%s" for experiment "%s"', name,
+            self.experiment_name
+        )
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobject_types'.format(
+                experiment_id=self._experiment_id
+            )
+        )
+        content = {'name': name}
+        res = self._session.post(url, json=content)
+        res.raise_for_status()
+        return res.json()['data']
 
     def rename_mapobject_type(self, name, new_name):
         '''Renames a mapobject type.

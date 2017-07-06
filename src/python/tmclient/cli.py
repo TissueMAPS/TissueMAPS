@@ -153,12 +153,13 @@ abstract_channel_parser.add_argument(
 
 abstract_name_parser = argparse.ArgumentParser(add_help=False)
 abstract_name_parser.add_argument(
-    '-n', '--name', required=True, help='name'
+    '-n', '--name', metavar='NAME', required=True, help='name'
 )
 
 abstract_new_name_parser = argparse.ArgumentParser(add_help=False)
 abstract_new_name_parser.add_argument(
-    '--new-name', metavar='NAME', dest='new_name', required=True, help='new name'
+    '--new-name', metavar='NEW_NAME', dest='new_name', required=True,
+    help='new name'
 )
 
 abstract_description_parser = argparse.ArgumentParser(add_help=False)
@@ -644,6 +645,13 @@ object_type_list_parser = object_type_subparsers.add_parser(
 )
 object_type_list_parser.set_defaults(method='_list_mapobject_types')
 
+object_type_create_parser = object_type_subparsers.add_parser(
+    'create', help='create a new object type',
+    description='Create a new object type.',
+    parents=[abstract_name_parser]
+)
+object_type_create_parser.set_defaults(method='create_mapobject_type')
+
 object_type_rename_parser = object_type_subparsers.add_parser(
     'rename', help='rename an object type',
     description='Rename an object type.',
@@ -741,7 +749,7 @@ segmentation_subparsers.required = True
 
 segmentation_upload_parser = segmentation_subparsers.add_parser(
     'upload',
-    help='upload segmenations from image file',
+    help='upload segmentations from image file',
     description=(
         'Upload object segmentations in from of a 16-bit PNG image file. '
         'The image must be labeled such that background pixels have zero '
