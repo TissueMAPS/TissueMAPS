@@ -239,11 +239,73 @@ def get_mapobject_types(experiment_id):
 
 
 @api.route(
+    '/experiments/<experiment_id>/mapobject_types', methods=['POST']
+)
+@jwt_required()
+@assert_form_params('name')
+@decode_query_ids('write')
+def create_mapobject_type(experiment_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/mapobject_type
+
+        Create a :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "name": "Cells"
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": {
+                    "id": "MQ==",
+                    "name": "Cells",
+                    "features": [
+                        {
+                            "id": "MQ==",
+                            "name": "Cell_Area"
+                        },
+                        ...
+                    ]
+                }
+            }
+
+        :statuscode 400: malformed request
+        :statuscode 200: no error
+
+    """
+    data = request.get_json()
+    name = data.get('name')
+    logger.info(
+        'create mapobject type "%s" for experiment %d', name, experiment_id
+    )
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        # TODO: Should all these objects be created with reference type Site?
+        mapobject_type = session.get_or_create(
+            tm.MapobjectType, name=name, experiment_id=experiment_id,
+            ref_type=tm.Site.__name__
+        )
+        return jsonify(data=mapobject_type)
+
+
+@api.route(
     '/experiments/<experiment_id>/mapobject_types/<mapobject_type_id>',
     methods=['PUT']
 )
 @jwt_required()
-@decode_query_ids('read')
+@assert_form_params('name')
+@decode_query_ids('write')
 def update_mapobject_type(experiment_id, mapobject_type_id):
     """
     .. http:put:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)
