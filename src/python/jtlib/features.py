@@ -385,7 +385,10 @@ class Morphology(Features):
             convexity = area / area_convex_hull
             eccentricity = mh.features.eccentricity(mask)
             major_axis, minor_axis = mh.features.ellipse_axes(mask)
-            elongation = (major_axis - minor_axis) / major_axis
+            if major_axis == 0:
+                elongation = np.nan
+            else:
+                elongation = (major_axis - minor_axis) / major_axis
             values = [
                 area, eccentricity, convexity, circularity, perimeter,
                 elongation
