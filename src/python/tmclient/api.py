@@ -47,7 +47,8 @@ class TmClient(HttpClient):
 
     '''*TissueMAPS* RESTful API client.'''
 
-    def __init__(self, host, port, username, password=None, experiment_name=None):
+    def __init__(self, host, port, username, password,
+            experiment_name=None, ca_bundle=None):
         '''
         Parameters
         ----------
@@ -64,6 +65,8 @@ class TmClient(HttpClient):
             *tm_pass* file)
         experiment_name: str, optional
             name of the experiment that should be accessed
+        ca_bundle: str, optional
+            path to a CA bundle file in Privacy Enhanced Mail (PEM) format
 
         Examples
         --------
@@ -81,7 +84,7 @@ class TmClient(HttpClient):
         >>>client.experiment_name = 'test'
         >>>client.get_plates()
         '''
-        super(TmClient, self).__init__(host, port, username, password)
+        super(TmClient, self).__init__(host, port, username, password, ca_bundle)
         self.experiment_name = experiment_name
 
     @property
@@ -174,7 +177,7 @@ class TmClient(HttpClient):
         if args.password is None:
             try:
                 args.password = load_credentials_from_file(args.username)
-            except OSError:
+            except (OSError, KeyError):
                 args.password = prompt_for_credentials(args.username)
 
         try:

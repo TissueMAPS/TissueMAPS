@@ -33,7 +33,7 @@ class HttpClient(object):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, host, port, username, password):
+    def __init__(self, host, port, username, password, ca_bundle=None):
         '''
         Parameters
         ----------
@@ -45,12 +45,25 @@ class HttpClient(object):
             name of the TissueMAPS user
         password: str
             password for `username`
+        ca_bundle: str, optional
+            path to a CA bundle file in Privacy Enhanced Mail (PEM) format;
+            only used with HTTPS when `port` is set to ``443``
         '''
         self._session = requests.Session()
         if port == 443:
+            logger.debug('use HTTPS protocol')
             self._base_url = 'https://{host}:{port}'.format(host=host, port=port)
             self._adapter = self._session.adapters['https://']
+            if ca_bundle is not None:
+                logger.debug('use CA bundle: %s', ca_bundle)
+                ca_bundle = os.path.expanduser(os.path.expandvars(ca_bundle))
+                if not os.path.exists(ca_bundle):
+                    raise OSError(
+                        'CA bundle file does not exist: {0}'.format(ca_bundle)
+                    )
+                self._session.verify = ca_bundle
         else:
+            logger.debug('use HTTP protocol')
             self._base_url = 'http://{host}:{port}'.format(host=host, port=port)
             self._adapter = self._session.adapters['http://']
         self._session.get(self._base_url)
