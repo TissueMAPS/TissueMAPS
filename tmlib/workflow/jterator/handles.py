@@ -619,7 +619,7 @@ class SegmentedObjects(LabelImage):
             if len(val.index) < len(self.labels):
                 logger.warn(
                     'missing values for object type "%s" at time point %d',
-                    self.name, t
+                    self.key, t
                 )
                 for label in self.labels:
                     if label not in val.index:
@@ -639,7 +639,7 @@ class SegmentedObjects(LabelImage):
                 else:
                     logger.warn(
                         'too many values for object type "%s" at time point %d',
-                        self.name, t
+                        self.key, t
                     )
                     for i in val.index:
                         if i not in self.labels:
