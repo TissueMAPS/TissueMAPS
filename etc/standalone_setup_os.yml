@@ -20,10 +20,6 @@ architecture:
                 uwsgi_processes: 4
                 tm_compute_cores: 4
                 tm_compute_memory: 14500
-                tm_users:
-                  - name: mustermann
-                    password: t1zzu3maps
-                    email: mustermann@tissuemaps.org
             - name: tissuemaps_db_master
               vars:
                 db_master_cores: 1
