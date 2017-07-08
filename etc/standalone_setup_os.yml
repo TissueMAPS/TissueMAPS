@@ -1,0 +1,41 @@
+---
+cloud:
+  provider: os
+  region: RegionOne
+
+architecture:
+  name: standalone
+  clusters:
+
+    - name: tissuemaps
+      node_types:
+        - name: server
+          count: 1
+          groups:
+            - name: tissuemaps_server
+              vars:
+                tm_version: v0.3.1
+                tm_compute_autodiscover: no
+                nginx_processes: 4
+                uwsgi_processes: 4
+                tm_compute_cores: 4
+                tm_compute_memory: 14500
+                tm_users:
+                  - name: mustermann
+                    password: t1zzu3maps
+                    email: mustermann@tissuemaps.org
+            - name: tissuemaps_db_master
+              vars:
+                db_master_cores: 1
+                db_master_memory: 3625
+            - name: tissuemaps_db_worker
+              vars:
+                db_worker_cores: 1
+                db_worker_memory: 3625
+          instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            flavor: 8cpu-32ram-hpc
+            volume_size: 500
+            tags:
+              - web
