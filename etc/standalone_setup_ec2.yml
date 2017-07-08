@@ -4,10 +4,10 @@ cloud:
   region: eu-central-1
 
 architecture:
-  name: standalone
+  name: tm
   clusters:
 
-    - name: tissuemaps
+    - name: standalone
       node_types:
         - name: server
           count: 1

@@ -2,11 +2,11 @@
 cloud:
   provider: ec2
   region: eu-central-1
-  network: &name cluster-32
+  network: &architecture tm-cluster
   ip_range: 10.65.8.0/24
 
 architecture:
-  name: *name
+  name: *architecture
   clusters:
 
     - name: slurm
@@ -51,7 +51,7 @@ architecture:
 
     - name: postgresql
       node_types:
-        - name: master
+        - name: coordinator
           count: 1
           groups:
             - name: tissuemaps_db_master

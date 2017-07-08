@@ -4,10 +4,10 @@ cloud:
   region: RegionOne
 
 architecture:
-  name: standalone
+  name: tm
   clusters:
 
-    - name: tissuemaps
+    - name: standalone
       node_types:
         - name: server
           count: 1
