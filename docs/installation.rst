@@ -136,7 +136,7 @@ The :mod:`tmdeploy` Python package provides the ``tm_deploy`` program, which use
 * provisioning and deployment of remote virtual machines (VMs) in the cloud
 * building, running and shipping Linux containers
 
-The program uses `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_ and `Ansible container <https://docs.ansible.com/ansible-container/>` to install and configure server components in virtual Linux environments (supported distributions: `Ubuntu 16.04 Xenial <http://releases.ubuntu.com/16.04/>`_ and `CentOS-7 <https://wiki.centos.org/Manuals/ReleaseNotes/CentOS7>`). The same `Ansible roles <https://docs.ansible.com/ansible/playbooks_roles.html#roles>`_ are used for setting up cloud VMs and containers.
+The program uses `Ansible playbooks <http://docs.ansible.com/ansible/playbooks.html>`_ and `Ansible container <https://docs.ansible.com/ansible-container>`_ to install and configure server components in virtual Linux environments (supported distributions: `Ubuntu 16.04 Xenial <http://releases.ubuntu.com/16.04/>`_ and `CentOS-7 <https://wiki.centos.org/Manuals/ReleaseNotes/CentOS7>`_). The same `Ansible roles <https://docs.ansible.com/ansible/playbooks_roles.html#roles>`_ are used for setting up cloud VMs and containers.
 
 For more information on invididual roles, please refer to the `TmDeploy <https://github.com/TissueMAPS/TmDeploy/tree/master/tmdeploy/share/playbooks/roles>`_ repository.
 
