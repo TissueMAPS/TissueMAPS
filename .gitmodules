@@ -22,3 +22,6 @@
 	path = src/tmdeploy
 	url = https://github.com/TissueMAPS/tmdeploy
 	branch = master
+[submodule "src/tmui"]
+	path = src/tmui
+	url = https://github.com/TissueMAPS/tmui
