@@ -18,6 +18,7 @@
 - name: Install useful apt packages
   apt:
     name: "{{ item }}"
+    install_recommends: no
   with_items:
     - zlib1g-dev
     - cifs-utils
