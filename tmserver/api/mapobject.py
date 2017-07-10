@@ -291,7 +291,6 @@ def create_mapobject_type(experiment_id):
         'create mapobject type "%s" for experiment %d', name, experiment_id
     )
     with tm.utils.ExperimentSession(experiment_id) as session:
-        # TODO: Should all these objects be created with reference type Site?
         mapobject_type = session.get_or_create(
             tm.MapobjectType, name=name, experiment_id=experiment_id,
             ref_type=tm.Site.__name__
@@ -485,11 +484,12 @@ def add_segmentations(experiment_id, mapobject_type_id):
 
     # TODO: apply gzip compression filter
     array = np.array(data.get('image'), type=np.int32)
+    n_objects = len(np.unique(array[array > 0]))
 
     with tm.utils.ExperimentSession(experiment_id) as session:
         segmentation_layer = session.get_or_create(
             tm.SegmentationLayer,
-            mapobject_type_id=mapobject_type.id, tpoint=tpoint, zplane=zplane
+            mapobject_type_id=mapobject_type_id, tpoint=tpoint, zplane=zplane
         )
         segmentation_layer_id = segmentation_layer.id
 
@@ -501,7 +501,7 @@ def add_segmentations(experiment_id, mapobject_type_id):
                 tm.Site.y == well_pos_y, tm.Site.x == well_pos_x
             ).\
             one()
-        y_offset, y_offset = site.offset
+        y, x = site.offset
         site_id = site.id
 
         metadata = SegmentationImageMetadata(
@@ -511,14 +511,20 @@ def add_segmentations(experiment_id, mapobject_type_id):
 
     # We need to use a raw connection, since we insert into a distributed table.
     with tm.utils.ExperimentConnection(experiment_id) as connection:
-        for label, polygon in image.extract_polygons(y_offset, x_offset):
-            mapobject_id = tm.Mapobject.add(
-                connection, site_id, mapobject_type_id
+        mapobjects = [
+            tm.Mapobject(site_id, mapobject_type_id) for _ in xrange(n_objects)
+        ]
+        mapobjects = tm.Mapobject.add_multiple(connection, mapobjects)
+        segmentations = list()
+        for i, (label, polygon) in enumerate(image.extract_polygons(y, x)):
+            segmentations.append(
+                tm.MapobjectSegmentation(
+                    partition_key=site_id, mapobject_id=mapobjects[i].id,
+                    geom_polygon=polygon, geom_centroid=polygon.centroid,
+                    segmentation_layer_id=segmentation_layer_id, label=label
+                )
             )
-            tm.MapobjectSegmentation.add(
-                connection, site_id, mapobject_id, segmentation_layer_id,
-                polygon=polygon, label=label
-            )
+        tm.MapobjectSegmentation.add_multiple(connection, segmentation)
 
     return jsonify(message='ok')
 
