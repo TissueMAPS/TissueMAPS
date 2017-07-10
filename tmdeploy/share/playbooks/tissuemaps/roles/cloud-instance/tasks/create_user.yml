@@ -64,16 +64,6 @@
     - "{{ db_user }}"
     - "{{ web_user }}"
 
-- name: Add tm_user to sudoers
-  become: yes
-  lineinfile:
-    dest: /etc/sudoers.d/{{ tm_user }}
-    # TODO: Make sudo rights more restrictive
-    regexp: "{{ tm_user }} ALL=(ALL) NOPASSWD:ALL"
-    line: "{{ tm_user }} ALL=(ALL) NOPASSWD:ALL"
-    state: present
-    create: yes
-
 - name: Create SSH directory for tm_user
   become: yes
   file:
