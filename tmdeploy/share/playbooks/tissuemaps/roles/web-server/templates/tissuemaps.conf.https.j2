@@ -1,5 +1,7 @@
-uwsgi_read_timeout 3600;
+uwsgi_read_timeout 60s;
+uwsgi_send_timeout 60s;
 uwsgi_buffering off;
+uwsgi_request_buffering off;
 client_max_body_size 10000M;
 lingering_timeout 300s;
 
@@ -34,11 +36,6 @@ server {
     location @proxy {
         include uwsgi_params;
         uwsgi_pass {{ app_host }}:{{ app_port }};
-        # uwsgi may take more time to process requests
-        proxy_read_timeout 60s;
-        proxy_send_timeout 60s;
-        uwsgi_read_timeout 60s;
-        uwsgi_send_timeout 60s;
     }
 
 
