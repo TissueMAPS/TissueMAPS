@@ -102,7 +102,11 @@ def _get_host_ip_ec2(region, network, host_name, host_vars):
     )
     addresses = list()
     for inst in instances:
-        addresses.append(inst.public_ip_address)
+        if inst.public_ip_address is not None:
+            ip_address = inst.public_ip_address
+        else:
+            ip_address = inst.private_ip_address
+        addresses.append(ip_address)
     if len(addresses) > 1:
         logger.debug('more than one instance found with name "%s"', host_name)
     elif len(addresses) == 0:
