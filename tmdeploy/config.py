@@ -151,7 +151,7 @@ class CloudSection(_SetupSection):
     '''
 
     _OPTIONAL_ATTRS = {
-        'ip_range', 'network', 'subnetwork',
+        'ip_range', 'network', 'subnetwork', 'proxy',
         'key_name', 'key_file_public', 'key_file_private'
     }
 
@@ -159,6 +159,7 @@ class CloudSection(_SetupSection):
         self.ip_range = '10.65.4.0/24'
         self.network = 'tmaps'
         self.key_name = 'tmaps'
+        self.proxy = ''
         super(CloudSection, self).__init__(description)
 
     @property
@@ -262,6 +263,16 @@ class CloudSection(_SetupSection):
         self._key_name = value
 
     @property
+    def proxy(self):
+        '''str: URI and port of a HTTP(S) proxy'''
+        return self._proxy
+
+    @proxy.setter
+    def proxy(self, value):
+        self._check_value_type(value, 'proxy', str)
+        self._proxy = value
+
+    @property
     def key_file_private(self):
         '''str: path to the private key used by Ansible to connect to virtual
         machines (by default looks for a file with name
@@ -285,6 +296,7 @@ class CloudSection(_SetupSection):
             logger.warn('private key file "%s" does not exist', value)
             key_file_public = self.key_file_public
             logger.info('create SSH key pair')
+            logger.warn('SSH key is not protected by a passphrase')
             key = RSA.generate(2048)
             with open(value, 'w') as f:
                 os.chmod(value, 0o400)

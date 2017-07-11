@@ -88,6 +88,10 @@ def build_inventory(setup):
         'network': setup.cloud.network,
         'subnetwork': setup.cloud.subnetwork,
         'ip_range': setup.cloud.ip_range,
+        'proxy_env': {
+            'http_proxy': setup.cloud.proxy,
+            'https_proxy': setup.cloud.proxy
+        }
     }
     inventory['_meta'] = dict()
     inventory['_meta']['hostvars'] = dict()
