@@ -538,7 +538,7 @@ class SubmissionArguments(ArgumentCollection):
     )
 
     cores = Argument(
-        type=int, default=cfg.resource.max_cores_per_job,
+        type=int, default=1,
         meta='NUMBER', help='''
             number of cores that should be allocated to each "run" job
             (may be increased in case memory requirements of a job exceed
