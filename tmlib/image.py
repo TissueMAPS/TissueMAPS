@@ -619,10 +619,10 @@ class ChannelImage(Image):
         img_type = img.dtype
         # Do all computations with type float
         img = img.astype(np.float64)
-        is_zero = img == 0
         if log_transform:
+            img[img == 0] = 10**-10
             img = np.log10(img)
-            img[is_zero] = 0
+            img[img == 0] = 0
         img = (img - mean) / std
         img = (img * np.mean(std)) + np.mean(mean)
         if log_transform:
