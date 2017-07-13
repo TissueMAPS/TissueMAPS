@@ -629,7 +629,7 @@ class Mapobject(ExperimentModel):
     @classmethod
     def delete_cascade(cls, connection, mapobject_type_id=None,
             partition_key=None):
-        '''Deletes all instances as well as all "children" instances of
+        '''Deletes instances as well as all "children" instances of
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
         :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
         :class:`LabelValues <tmlib.models.feature.LabelValues>`.
@@ -713,13 +713,10 @@ class MapobjectSegmentation(ExperimentModel):
     geom_centroid = Column(Geometry('POINT'), nullable=False)
 
     #: int: label assigned to the object upon segmentation
-    label = Column(Integer)
+    label = Column(Integer, index=True)
 
     #: int: ID of parent mapobject
-    mapobject_id = Column(
-        BigInteger,
-        # ForeignKey('mapobjects.id', ondelete='CASCADE'),
-    )
+    mapobject_id = Column(BigInteger)
 
     #: int: ID of parent segmentation layer
     segmentation_layer_id = Column(Integer)
@@ -765,7 +762,7 @@ class MapobjectSegmentation(ExperimentModel):
         if not isinstance(mapobject_segmentation, cls):
             raise TypeError('Object must have type %s' % cls.__name__)
         connection.execute('''
-            INSERT INTO mapobject_segmentations (
+            INSERT INTO mapobject_segmentations AS s (
                 partition_key, mapobject_id, segmentation_layer_id,
                 geom_polygon, geom_centroid, label
             )
@@ -773,6 +770,13 @@ class MapobjectSegmentation(ExperimentModel):
                 %(partition_key)s, %(mapobject_id)s, %(segmentation_layer_id)s,
                 %(geom_polygon)s, %(geom_centroid)s, %(label)s
             )
+            ON CONFLICT
+            ON CONSTRAINT mapobject_segmentations_XXX
+            DO UPDATE
+            SET geom_polygon = %(geom_polygon)s, geom_centroid = %(geom_centroid)s
+            WHERE s.mapobject_id = %(mapobject_id)s
+            AND s.partition_key = %(partition_key)s
+            AND s.segmentation_layer_id = %(segmentation_layer_id)s
         ''', {
             'partition_key': mapobject_segmentation.partition_key,
             'mapobject_id': mapobject_segmentation.mapobject_id,
