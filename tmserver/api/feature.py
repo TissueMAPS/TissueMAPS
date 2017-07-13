@@ -130,7 +130,8 @@ def delete_feature(experiment_id, feature_id):
 )
 @jwt_required()
 @assert_form_params(
-    'plate_name'
+    'plate_name', 'well_name', 'well_pos_x', 'well_pos_y', 'tpoint',
+    'names', 'values', 'labels'
 )
 @decode_query_ids('write')
 def add_feature_values(experiment_id, mapobject_type_id):
@@ -140,12 +141,12 @@ def add_feature_values(experiment_id, mapobject_type_id):
         Add :class:`FeatureValues <tmlib.models.feature.FeatureValues>`
         for every :class:`Mapobject <tmlib.models.mapobject.Mapobject>` of the
         given :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` at a
-        given time point :class:`Site <tmlib.models.site.Site>`.
+        given :class:`Site <tmlib.models.site.Site>` and time point.
         Feature values must be provided in form of a *n*x*p* array, where
         *n* are the number of objects (rows) and *p* the number of features
-        (columns). Rows are identifiable by *segmentation_labels* and columns
-        by *feature_names*. The provided *segmentation_labels* must match the
-        :attr:`labels <tmlib.models.mapobject.MapobjectSegmentation.label>` of
+        (columns). Rows are identifiable by *labels* and columns by *names*.
+        Provided *labels* must match the
+        :attr:`label <tmlib.models.mapobject.MapobjectSegmentation.label>` of
         segmented objects.
 
         **Example request**:
@@ -160,9 +161,9 @@ def add_feature_values(experiment_id, mapobject_type_id):
                 "well_pos_y": 0,
                 "well_pos_x": 2,
                 "tpoint": 0
-                "feature_names": ["feature1", "feature2", "feature3"],
-                "segmentation_labels": [1, 2],
-                "feature_values" [
+                "names": ["feature1", "feature2", "feature3"],
+                "labels": [1, 2],
+                "values" [
                     [2.45, 8.83, 4.37],
                     [5.67, 7.21, 1.58]
                 ]
@@ -183,17 +184,16 @@ def add_feature_values(experiment_id, mapobject_type_id):
     well_pos_y = int(data.get('well_pos_y'))
     tpoint = int(data.get('tpoint'))
 
-    feature_names = data.get('feature_names')
-    feature_values = data.get('feature_values')
-    mapobject_segmentation_labels = data.get('segmentation_labels')
+    feature_names = data.get('names')
+    feature_values = data.get('values')
+    labels = data.get('labels')
 
     try:
-        data = pd.DataFrame(
-            feature_values, columns=feature_names,
-            index=mapobject_segmenation_labels
-        )
+        data = pd.DataFrame(feature_values, columns=feature_names, index=labels)
     except Exception as err:
-        logger.error('feature values where provided incorrectly: %s', str(err))
+        logger.error(
+            'feature values were not provided in correct format: %s', str(err)
+        )
         raise ResourceNotFoundError(
             'Feature values were not provided in the correct format.'
         )
@@ -202,41 +202,57 @@ def add_feature_values(experiment_id, mapobject_type_id):
         feature_lut = dict()
         for name in data.columns:
             feature = session.get_or_create(
-                tm.Feature,
-                name=name, mapobject_type_id=mapobject_type_id
+                tm.Feature, name=name, mapobject_type_id=mapobject_type_id
             )
             feature_lut[name] = str(feature.id)
+        data.rename(feature_lut, inplace=True)
 
     with tm.utils.ExperimentSession(experiment_id) as session:
-        results = _get_matching_sites(
-            session, plate_name, well_name, well_pos_y, well_pos_x
-        )
-        site_ids = [record.id for record in results]
-        if len(sites) == 0:
-            raise ResourceNotFoundError(tm.Site)
-        else:
-            site_id = sites[0].id
+        site = session.query(tm.Site).\
+            join(tm.Well).\
+            join(tm.Plate).\
+            filter(
+                tm.Plate.name == plate_name, tm.Well.name == well_name,
+                tm.Site.y == well_pos_y, tm.Site.x == well_pos_x
+            ).\
+            one()
+        site_id = site.id
 
-        segmentation_layers = _get_matching_layers(session, tpoint)
-        segmentation_layer_ids = [s.id for s in segmentation_layers]
+        layer = session.query(tm.SegmentationLayer.id).\
+            filter_by(mapobject_type_id=mapobject_type_id, tpoint=tpoint).\
+            first()
+        layer_id = layer.id
 
-        mapobjects = _get_mapobjects_at_site(
-            session, mapobject_type_id, site_mapobject_type.id,
-            site_id, segmentation_layer_ids
-        )
-        if len(mapobjects) == 0:
+        # This approach assumes that object segmentations have the same labels
+        # across different z-planes.
+        segmentations = session.query(
+                tm.MapobjectSegmentation.mapobject_id,
+                tm.MapobjectSegmentation.label
+            ).\
+            filter(
+                tm.MapobjectSegmentation.partition_key == site_id,
+                tm.MapobjectSegmentation.segmentation_layer_id == layer_id
+            ).\
+            all()
+        if len(segmentations) == 0:
             raise ResourceNotFoundError(tm.MapobjectSegmentation)
 
     with tm.utils.ExperimentConnection(experiment_id) as connection:
-        for mapobject_id, label, segmenation_layer_id in mapobjects:
+        feature_values = list()
+        for mapobject_id, label in segmentations:
             try:
-                values = data.iloc[label]
-            except IndexError as err:
-                raise ResourceNotFoundError(
-                    'No segmented object found for label {0}.'.format(label)
+                values = tm.FeatureValues(
+                    partition_key=site_id, mapobject_id=mapobject_id,
+                    values=data.loc[label], tpoint=tpoint
                 )
-            values.rename(feature_lut, inplace=True)
-            tm.FeatureValues.add(connection, values, mapobject_id, tpoint)
+            except IndexError:
+                raise ResourceNotFoundError(
+                    tm.MapobjectSegmentation, label=label
+                )
+            feature_values.append(values)
+        tm.FeatureValues.add_multiple(connection, feature_values)
+
+    return jsonify(message='ok')
 
 
 @api.route(

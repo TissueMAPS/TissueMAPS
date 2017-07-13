@@ -455,11 +455,11 @@ def add_segmentations(experiment_id, mapobject_type_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/mapobject_types/(string:mapobject_type_id)/segmentations
 
-        Provide segmentations in form of a labeled 2D array
+        Provide segmentations in form of a labeled 2D pixels array
         for a given :class:`Site <tmlib.models.site.Site>`.
         A :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-        will be created for each labeled object in the provided *image*.
+        will be created for each labeled connected pixel component in *image*.
 
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
@@ -481,10 +481,19 @@ def add_segmentations(experiment_id, mapobject_type_id):
     well_pos_y = int(data.get('well_pos_y'))
     zplane = int(data.get('zplane'))
     tpoint = int(data.get('tpoint'))
+    align = is_true(request.args.get('align')) # TODO
 
-    # TODO: apply gzip compression filter
-    array = np.array(data.get('image'), type=np.int32)
-    n_objects = len(np.unique(array[array > 0]))
+    logger.info(
+        'add segmentations for mapobject type %d of experiment %d at '
+        'plate "%s", well "%s", well position %d/%d, zplane %d, time point %d',
+        mapobject_type_id, experiment_id, plate_name, well_name, well_pos_y,
+        well_pos_x, zplane, tpoint
+    )
+
+    pixels = data.get('image')
+    array = np.array(pixels, dtype=np.int32)
+    labels = np.unique(array[array > 0])
+    n_objects = len(labels)
 
     with tm.utils.ExperimentSession(experiment_id) as session:
         segmentation_layer = session.get_or_create(
@@ -501,7 +510,15 @@ def add_segmentations(experiment_id, mapobject_type_id):
                 tm.Site.y == well_pos_y, tm.Site.x == well_pos_x
             ).\
             one()
-        y, x = site.offset
+
+        if align:
+            y_offset, x_offset = site.aligned_offset
+            if array.shape != site.aligned_image_size:
+                raise MalformedRequestError('Image has wrong dimensions')
+        else:
+            y_offset, x_offset = site.offset
+            if array.shape != site.image_size:
+                raise MalformedRequestError('Image has wrong dimensions')
         site_id = site.id
 
         metadata = SegmentationImageMetadata(
@@ -509,22 +526,39 @@ def add_segmentations(experiment_id, mapobject_type_id):
         )
         image = SegmentationImage(array, metadata)
 
-    # We need to use a raw connection, since we insert into a distributed table.
+        existing_segmentations_map = dict(
+            session.query(
+                tm.MapobjectSegmentation.label,
+                tm.MapobjectSegmentation.mapobject_id
+            ).\
+            join(tm.Mapobject).\
+            filter(
+                tm.MapobjectSegmentation.label.in_(labels),
+                tm.Mapobject.mapobject_type_id == mapobject_type_id,
+                tm.MapobjectSegmentation.partition_key == site_id
+            ).\
+            all()
+        )
+
     with tm.utils.ExperimentConnection(experiment_id) as connection:
-        mapobjects = [
-            tm.Mapobject(site_id, mapobject_type_id) for _ in xrange(n_objects)
-        ]
-        mapobjects = tm.Mapobject.add_multiple(connection, mapobjects)
         segmentations = list()
-        for i, (label, polygon) in enumerate(image.extract_polygons(y, x)):
-            segmentations.append(
-                tm.MapobjectSegmentation(
-                    partition_key=site_id, mapobject_id=mapobjects[i].id,
-                    geom_polygon=polygon, geom_centroid=polygon.centroid,
-                    segmentation_layer_id=segmentation_layer_id, label=label
-                )
+        for label, polygon in image.extract_polygons(y_offset, x_offset):
+            mapobject = tm.Mapobject(site_id, mapobject_type_id)
+            if label in existing_segmentations_map:
+                # A parent mapobject with the same label may already exist,
+                # because it got already created for another zplane/tpoint.
+                # The segmentation for the given zplane/tpoint must not yet
+                # exist, however. This will lead to an error upon insertion.
+                mapobject.id = existing_segmentations_map[label]
+            else:
+                mapobject = tm.Mapobject.add(connection, mapobject)
+            seg = tm.MapobjectSegmentation(
+                partition_key=site_id, mapobject_id=mapobject.id,
+                geom_polygon=polygon, geom_centroid=polygon.centroid,
+                segmentation_layer_id=segmentation_layer_id, label=label
             )
-        tm.MapobjectSegmentation.add_multiple(connection, segmentation)
+            segmentations.append(seg)
+        tm.MapobjectSegmentation.add_multiple(connection, segmentations)
 
     return jsonify(message='ok')
 
@@ -589,6 +623,13 @@ def get_segmentations(experiment_id, mapobject_type_id):
     tpoint = request.args.get('tpoint', type=int)
     align = is_true(request.args.get('align'))
 
+    logger.info(
+        'get segmentations for mapobject type %d of experiment %d at '
+        'plate "%s", well "%s", well position %d/%d, zplane %d, time point %d',
+        mapobject_type_id, experiment_id, plate_name, well_name, well_pos_y,
+        well_pos_x, zplane, tpoint
+    )
+
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         experiment_name = experiment.name
@@ -623,7 +664,6 @@ def get_segmentations(experiment_id, mapobject_type_id):
     img = SegmentationImage.create_from_polygons(
         polygons, y_offset, x_offset, (height, width)
     )
-    # TODO: apply gzip compression filter
     return jsonify(data=img.array.tolist())
 
 
