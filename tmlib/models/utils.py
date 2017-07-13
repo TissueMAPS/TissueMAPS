@@ -561,21 +561,23 @@ class _Session(object):
     This is *not* thread-safe!
     '''
 
-    def __init__(self, db_uri, schema=None):
+    def __init__(self, db_uri, schema=None, transaction=True):
         self._db_uri = db_uri
         self._schema = schema
+        self._transaction = transaction
         self._session_factory = create_db_session_factory()
 
     def __exit__(self, except_type, except_value, except_trace):
-        if except_value:
-            logger.debug('rollback session due to error')
-            self._session.rollback()
-        else:
-            try:
-                logger.debug('commit session')
-                self._session.commit()
-            except RuntimeError:
-                logger.error('commit failed due to RuntimeError???')
+        if self._transaction:
+            if except_value:
+                logger.debug('rollback session due to error')
+                self._session.rollback()
+            else:
+                try:
+                    logger.debug('commit session')
+                    self._session.commit()
+                except RuntimeError:
+                    logger.error('commit failed due to RuntimeError???')
         connection = self._session.get_bind()
         connection.close()
         self._session.close()
@@ -598,17 +600,19 @@ class MainSession(_Session):
     :class:`tmlib.models.base.MainModel`
     '''
 
-    def __init__(self, db_uri=None):
+    def __init__(self, db_uri=None, transaction=True):
         '''
         Parameters
         ----------
         db_uri: str, optional
             URI of the ``tissuemaps`` database; defaults to the value of
             :attr:`db_uri <tmlib.config.DefaultConfig.db_uri>`
+        transaction: bool, optional
+            whether a transaction should be used (default: ``True``)
         '''
         if db_uri is None:
             db_uri = cfg.db_master_uri
-        super(MainSession, self).__init__(db_uri)
+        super(MainSession, self).__init__(db_uri, transaction=transaction)
         self._schema = None
         self._engine = create_db_engine(db_uri)
         _assert_db_exists(self._engine)
@@ -639,7 +643,7 @@ class ExperimentSession(_Session):
     :class:`tmlib.models.base.ExperimentModel`
     '''
 
-    def __init__(self, experiment_id, db_uri=None):
+    def __init__(self, experiment_id, db_uri=None, transaction=True):
         '''
         Parameters
         ----------
@@ -648,6 +652,9 @@ class ExperimentSession(_Session):
         db_uri: str, optional
             URI of the ``tissuemaps`` database; defaults to the value of
             :attr:`db_uri <tmlib.config.LibraryConfig.db_uri>`
+        transaction: bool, optional
+            whether a transaction should be used; distributed tables cannot be 
+            modified within a transaction context (default: ``True``)
         '''
         if db_uri is None:
             db_uri = cfg.db_master_uri
@@ -658,7 +665,7 @@ class ExperimentSession(_Session):
             experiment_id=self.experiment_id
         )
         logger.debug('schema: "%s"', schema)
-        super(ExperimentSession, self).__init__(db_uri, schema)
+        super(ExperimentSession, self).__init__(db_uri, schema, transaction)
 
     def __enter__(self):
         connection = self._engine.connect()
@@ -666,6 +673,16 @@ class ExperimentSession(_Session):
         if not exists:
             _create_experiment_db_tables(connection, self._schema)
         _set_search_path(connection, self._schema)
+        if not self._transaction:
+            connection = connection.execution_options(
+                autocommit=True, isolation_level='AUTOCOMMIT'
+            )
+            # NOTE: SQLAlchemy docs say: "Executing queries outside of a
+            # demarcated transaction is a legacy mode of usage, and can in
+            # some cases lead to concurrent connection checkouts."
+            self._session_factory.configure(
+                autocommit=True, autoflush=False, expire_on_commit=False
+            )
         self._session_factory.configure(bind=connection)
         self._session = _SQLAlchemy_Session(
             self._session_factory(), self._schema
@@ -801,6 +818,7 @@ class ExperimentConnection(_Connection):
         ''')
         return self
 
+<<<<<<< HEAD
     def locate_partition(self, model, partition_key):
         '''Determines the location of a table partition (shard).
 
@@ -868,6 +886,13 @@ class ExperimentConnection(_Connection):
         })
         values = self._cursor.fetchall()
         return [v[0] for v in values]
+
+    def get_partition_placement(self, model_cls, partition_key):
+        '''Finds the location of a partition of a distributed table.
+        '''
+        # utility function: get_shard_id_for_distribution_column()
+        # metadata table: pg_dist_shard_placement
+        pass
 
 
 class MainConnection(_Connection):
