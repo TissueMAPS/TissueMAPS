@@ -1765,7 +1765,7 @@ class TmClient(HttpClient):
             t.add_row([f['id'], f['name']])
         print(t)
 
-    def _download_object_feature_values(self, mapobject_type_name,
+    def _download_feature_values(self, mapobject_type_name,
             plate_name=None, well_name=None, well_pos_y=None, well_pos_x=None,
             tpoint=None):
         logger.info(
@@ -1833,17 +1833,14 @@ class TmClient(HttpClient):
             well_pos_y, well_pos_x, tpoint
         )
         content = {
-            'metadata': {
-                'plate_name': plate_name, 'well_name': well_name,
-                'well_pos_y': well_pos_y, 'well_pos_x': well_pos_x,
-                'tpoint': tpoint
-            },
-            'data': {
-                'names': data.columns.tolist(),
-                'labels': data.index.tolist(),
-                'values': data.values.tolist()
-            }
+            'plate_name': plate_name, 'well_name': well_name,
+            'well_pos_y': well_pos_y, 'well_pos_x': well_pos_x,
+            'tpoint': tpoint,
+            'names': data.columns.tolist(),
+            'labels': data.index.tolist(),
+            'values': data.values.tolist()
         }
+        mapobject_type_id = self._get_mapobject_type_id(mapobject_type_name)
         url = self._build_api_url(
             '/experiments/{experiment_id}/mapobject_types/{mapobject_type_id}/feature-values'.format(
                 experiment_id=self._experiment_id,
@@ -1853,7 +1850,7 @@ class TmClient(HttpClient):
         res = self._session.post(url, json=content)
         res.raise_for_status()
 
-    def download_object_feature_values(self, mapobject_type_name,
+    def download_feature_values(self, mapobject_type_name,
             plate_name=None, well_name=None, well_pos_y=None, well_pos_x=None,
             tpoint=None):
         '''Downloads feature values for the given
@@ -1890,7 +1887,7 @@ class TmClient(HttpClient):
         This will try to load all data into memory, which may be problematic
         for large datasets.
         '''
-        res = self._download_object_feature_values(
+        res = self._download_feature_values(
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
             tpoint
         )
@@ -1915,7 +1912,7 @@ class TmClient(HttpClient):
 
         See also
         --------
-        :meth:`tmclient.api.TmClient.download_object_feature_values`
+        :meth:`tmclient.api.TmClient.download_feature_values`
         :meth:`tmclient.api.TmClient.download_object_metadata`
         '''
 
@@ -1926,7 +1923,7 @@ class TmClient(HttpClient):
                     plate=well['plate_name'], well=well['name'],
                 )
             )
-            res = self._download_object_feature_values(
+            res = self._download_feature_values(
                 mapobject_type_name, well['plate_name'], well['name']
             )
             filename = self._extract_filename_from_headers(res.headers)
