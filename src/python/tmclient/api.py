@@ -2232,6 +2232,8 @@ class TmClient(HttpClient):
                 data['id'],
                 data['name'],
                 data['type'],
+                data['created_at'],
+                data['updated_at'],
                 data['state'],
                 '{0:.2f}'.format(data['percent_done']),
                 data['exitcode'] if data['exitcode'] is not None else '',
@@ -2245,8 +2247,10 @@ class TmClient(HttpClient):
                 add_row_recursively(subtd, table, i+1)
 
         t = PrettyTable([
-                'ID', 'Name', 'Type', 'State', 'Done (%)', 'ExitCode',
-                'Time (HH:MM:SS)', 'CPU Time (HH:MM:SS)', 'Memory (MB)'
+            'ID', 'Name', 'Type', 'Created (YYYY-MM-DD HH:MM:SS)',
+            'Finished (YYYY-MM-DD HH:MM:SS)', 'State', 'Done (%)',
+            'Exitcode', 'Wall Time (HH:MM:SS)', 'CPU Time (HH:MM:SS)',
+            'Memory (MB)'
         ])
         t.align['ID'] = 'l'
         t.align['Name'] = 'l'
