@@ -51,6 +51,8 @@ class WorkflowService {
                 failed: false,
                 state: '',
                 done: false,
+                created_at: '',
+                updated_at: '',
                 percent_done: 0,
                 subtasks: [],
                 name: 'upload',
@@ -98,6 +100,8 @@ class WorkflowService {
             uploadStatus = new JobCollectionStatus({
                 failed: uploadFailed,
                 state: processingState,
+                created_at: '',
+                updated_at: '',
                 percent_done: uploadProgress,
                 done: uploadProgress == 100,
                 subtasks: [],
