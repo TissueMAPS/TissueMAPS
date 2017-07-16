@@ -247,7 +247,7 @@ def format_task_data(name, type, created_at, updated_at, state, exitcode,
         'done': state == gc3libs.Run.State.TERMINATED,
         'failed': failed,
         'created_at': str(created_at),
-        'upated_at': str(updated_at),
+        'updated_at': str(updated_at),
         'name': name,
         'state': state,
         'live': state in live_states,
@@ -297,9 +297,10 @@ def get_task_status_recursively(task_id, recursion_depth=None, id_encoder=None):
 
         with tm.utils.MainSession() as session:
             task = session.query(
-                tm.Task.name, tm.Task.type, tm.Task.state, tm.Task.exitcode,
-                tm.Task.memory, tm.Task.time, tm.Task.cpu_time,
-                tm.Task.is_collection
+                tm.Task.name, tm.Task.type,
+                tm.Task.created_at, tm.Task.updated_at, tm.Task.state,
+                tm.Task.exitcode, tm.Task.memory, tm.Task.time,
+                tm.Task.cpu_time, tm.Task.is_collection
             ).\
             filter_by(id=task_id_).\
             one()
@@ -319,9 +320,10 @@ def get_task_status_recursively(task_id, recursion_depth=None, id_encoder=None):
             with tm.utils.MainSession() as session:
                 subtasks = session.query(
                     tm.Task.id,
-                    tm.Task.name, tm.Task.type, tm.Task.state, tm.Task.exitcode,
-                    tm.Task.memory, tm.Task.time, tm.Task.cpu_time,
-                    tm.Task.is_collection
+                    tm.Task.name, tm.Task.type,
+                    tm.Task.created_at, tm.Task.updated_at, tm.Task.state,
+                    tm.Task.exitcode, tm.Task.memory, tm.Task.time,
+                    tm.Task.cpu_time, tm.Task.is_collection
                 ).\
                 filter_by(parent_id=task_id_).\
                 order_by(tm.Task.id).\
