@@ -441,8 +441,8 @@ def get_workflow_jobs(experiment_id):
                     status = []
                     for t in tasks:
                         s = format_task_data(
-                            t.name, t.type, t.state, t.exitcode, t.memory,
-                            t.time, t.cpu_time
+                            t.name, t.type, t.created_at, t.updated_at,
+                            t.state, t.exitcode, t.memory, t.time, t.cpu_time
                         )
                         s['id'] = encode_pk(t.id)
                         status.append(s)

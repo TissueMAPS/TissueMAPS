@@ -478,7 +478,7 @@ def get_tool_jobs(experiment_id):
         tool_job_status = list()
         for j in tool_jobs:
             status = format_task_data(
-                j.name, j.type, j.state, j.exitcode,
+                j.name, j.type, j.created_at, j.updated_at, j.state, j.exitcode,
                 j.memory, j.time, j.cpu_time
             )
             status['id'] = encode_pk(j.id)
