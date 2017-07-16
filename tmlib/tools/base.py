@@ -27,12 +27,15 @@ from abc import abstractmethod
 from abc import abstractproperty
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import FLOAT
+from psycopg2.extras import execute_values
+from psycopg2.sql import SQL, Identifier
 
 from tmlib import cfg
 import tmlib.models as tm
 from tmlib.config import DEFAULT_LIB, IMPLEMENTED_LIBS
 from tmlib.utils import (
-    same_docstring_as, autocreate_directory_property, assert_type
+    same_docstring_as, autocreate_directory_property, assert_type,
+    create_partitions
 )
 
 logger = logging.getLogger(__name__)
@@ -94,9 +97,9 @@ class Tool(object):
         '''
         self.experiment_id = experiment_id
 
-    def load_feature_values(self, mapobject_type_name, feature_names):
-        '''Selects all values for the each given features and
-        mapobject types.
+    def load_feature_values(self, mapobject_type_name, feature_names,
+            mapobject_ids=None):
+        '''Loads values for each given feature of the given mapobject type.
 
         Parameters
         ----------
@@ -106,6 +109,10 @@ class Tool(object):
         feature_names: List[str]
             name of each selected
             :class:`Feature <tmlib.models.feature.Feature>`
+        mapobject_ids: List[int], optional
+            ID of each :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
+            for which values should be selected; if ``None`` values for
+            all objects will be loaded (default: ``None``)
 
         Returns
         -------
@@ -114,9 +121,15 @@ class Tool(object):
             indexable by their ID
         '''
         logger.info(
-            'load values for objects of type "%s" and features: "%s"',
-            mapobject_type_name, '", "'.join(feature_names)
+            'load feature values for objects of type "%s"', mapobject_type_name
         )
+        logger.debug(
+            'load values for features: "%s"',  '", "'.join(feature_names)
+        )
+        if mapobject_ids is not None:
+            logger.debug('load values for %d objects', len(mapobject_ids))
+        else:
+            logger.debug('load values for all objects')
         # FIXME: Use ExperimentSession
         with tm.utils.ExperimentConnection(self.experiment_id) as conn:
             conn.execute('''
@@ -132,7 +145,7 @@ class Tool(object):
             records = conn.fetchall()
             mapobject_type_id = records[0].mapobject_type_id
             feature_map = {str(r.feature_id): r.name for r in records}
-            conn.execute('''
+            sql = '''
                 SELECT
                     v.mapobject_id, v.tpoint,
                     slice(v.values, %(feature_ids)s) AS values
@@ -140,9 +153,15 @@ class Tool(object):
                 JOIN mapobjects AS m
                 ON m.id = v.mapobject_id AND m.partition_key = v.partition_key
                 WHERE m.mapobject_type_id = %(mapobject_type_id)s
-            ''', {
+            '''
+            if mapobject_ids is not None:
+                sql += '''
+                AND m.id = ANY(%(mapobject_ids)s)
+                '''
+            conn.execute(sql, {
                 'feature_ids': feature_map.keys(),
-                'mapobject_type_id': mapobject_type_id
+                'mapobject_type_id': mapobject_type_id,
+                'mapobject_ids': mapobject_ids
             })
             records = conn.fetchall()
             values = list()
@@ -159,7 +178,10 @@ class Tool(object):
         column_map = {i: name for i, name in feature_map.iteritems()}
         df.rename(columns=column_map, inplace=True)
 
-        null_indices = self.get_features_with_null_values(df)
+        # TODO: How shall we deal with NaN values? Ideally we would expose
+        # the option to users to either filter rows (mapobjects) or columns
+        # (columns).
+        null_indices = self.identify_features_with_null_values(df)
         for name, count in null_indices:
             if count > 0:
                 logger.warn('feature "%s" contains %d null values', name, count)
@@ -167,8 +189,8 @@ class Tool(object):
         return df
 
     def calculate_extrema(self, mapobject_type_name, feature_name):
-        '''Calcultes the minimum and maximum over values of a given
-        feature and mapobject type.
+        '''Calculates minimum and maximum values of a given feature and
+        mapobject type.
 
         Parameters
         ----------
@@ -215,8 +237,65 @@ class Tool(object):
 
         return (lower, upper)
 
-    def get_features_with_null_values(self, feature_data):
-        '''Gets names of features with NULL values.
+    def get_random_mapobject_subset(self, mapobject_type_name, n):
+        '''Selects a random subset of mapobjects.
+
+        Parameters
+        ----------
+        mapobject_type_name: str
+            name of the selected
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        n: int
+            number of mapobjects that should be selected at random
+
+        Returns
+        -------
+        Tuple[int]
+            IDs of selected mapobject
+        '''
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            mapobject_type = session.query(tm.MapobjectType.id).\
+                filter_by(name=mapobject_type_name).\
+                one()
+            mapobjects = session.query(tm.Mapobject.id).\
+                filter_by(mapobject_type_id=mapobject_type.id).\
+                order_by(func.random()).\
+                limit(n).\
+                all()
+            return [m.id for m in mapobjects]
+
+    def partition_mapobjects(self, mapobject_type_name, n):
+        '''Splits mapobjects into partitions of size `n`.
+
+        Parameters
+        ----------
+        mapobject_type_name: str
+            name of the selected
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        n: int
+            number of mapobjects per partition
+
+        Returns
+        -------
+        List[List[int]]
+            mapobject IDs
+
+        Note
+        ----
+        Mapobjects are ordered by ID.
+        '''
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            mapobject_type = session.query(tm.MapobjectType.id).\
+                filter_by(name=mapobject_type_name).\
+                one()
+            mapobjects = session.query(tm.Mapobject.id).\
+                filter_by(mapobject_type_id=mapobject_type.id).\
+                order_by(tm.Mapobject.id).\
+                all()
+            return create_partitions([m.id for m in mapobjects], n)
+
+    def identify_features_with_null_values(self, feature_data):
+        '''Identifies features with NULL values (including NaNs).
 
         Parameters
         ----------
@@ -234,7 +313,7 @@ class Tool(object):
         return null_indices
 
     def save_result_values(self, mapobject_type_name, result_id, data):
-        '''Saves the generated label values.
+        '''Saves generated label values.
 
         Parameters
         ----------
@@ -252,6 +331,8 @@ class Tool(object):
         :class:`tmlib.models.result.LabelValues`
         '''
         logger.info('save label values for result %d', result_id)
+        mapobject_ids = data.index.levels[0].tolist()
+        tpoints = data.index.levels[1]
         with tm.utils.ExperimentConnection(self.experiment_id) as connection:
             connection.execute('''
                 SELECT id FROM mapobject_types
@@ -265,45 +346,61 @@ class Tool(object):
                 SELECT partition_key, array_agg(id) AS mapobject_ids
                 FROM mapobjects AS m
                 WHERE m.mapobject_type_id = %(mapobject_type_id)s
+                AND m.id = ANY(%(mapobject_ids)s)
                 GROUP BY partition_key
             ''', {
-                'mapobject_type_id': mapobject_type_id
+                'mapobject_type_id': mapobject_type_id,
+                'mapobject_ids': mapobject_ids
             })
             records = connection.fetchall()
 
-            # NOTE: Grouping mapobject IDs per partition_key would allow us
-            # to target individual shards of the label_values table directly
-            # on the worker nodes, which would give us full SQL support,
-            # including multi-row statements and transactions.
-            # This would probably give a hugh performance benefit for inserting
-            # or updating values.
-            for tpoint in data.index.levels[1]:
-                for partition_key, mapobject_ids in records:
+        # Grouping mapobject IDs per partition_key allows us
+        # to target individual shards of the label_values table directly
+        # on the worker nodes with full SQL support, including multi-row
+        # insert/update statements.
+        for tpoint in tpoints:
+            for partition_key, mapobject_ids in records:
+                with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+                    host, port, shard_id = conn.locate_partition(
+                        tm.LabelValues, partition_key
+                    )
+                worker_connection = tm.utils.ExperimentWorkerConnection(
+                    self.experiment_id, host, port
+                )
+                with worker_connection as connection:
                     logger.debug(
                         'upsert label values for partition %d', partition_key
                     )
-                    for mapobject_id in mapobject_ids:
-                        value = np.round(data.ix[(mapobject_id, tpoint)], 6)
-                        connection.execute('''
-                            INSERT INTO label_values AS v (
-                                partition_key, mapobject_id, values, tpoint
-                            )
-                            VALUES (
-                                %(partition_key)s, %(mapobject_id)s,
-                                %(values)s, %(tpoint)s
-                            )
-                            ON CONFLICT ON CONSTRAINT label_values_pkey
-                            DO UPDATE
-                            SET values = v.values || %(values)s
-                            WHERE v.mapobject_id = %(mapobject_id)s
-                            AND v.partition_key = %(partition_key)s
-                            AND v.tpoint = %(tpoint)s;
-                        ''', {
-                            'values': {str(result_id): str(value)},
-                            'mapobject_id': mapobject_id,
+                    sql = '''
+                        INSERT INTO label_values_{shard} AS v (
+                            partition_key, mapobject_id, values, tpoint
+                        )
+                        VALUES %s
+                        ON CONFLICT ON CONSTRAINT label_values_pkey_{shard}
+                        DO UPDATE
+                        SET values = v.values || EXCLUDED.values
+                    '''.format(shard=shard_id)
+                    template = '''
+                        (
+                            %(partition_key)s, %(mapobject_id)s,
+                            %(values)s, %(tpoint)s
+                        )
+                    '''
+                    args = [
+                        {
+                            'values': {
+                                str(result_id):
+                                    str(np.round(data.ix[(mid, tpoint)], 6))
+                            },
+                            'mapobject_id': mid,
                             'partition_key': partition_key,
                             'tpoint': tpoint
-                        })
+                        }
+                        for mid in mapobject_ids
+                    ]
+                    execute_values(
+                        connection, sql, args, template=template, page_size=500
+                    )
 
     def register_result(self, submission_id, mapobject_type_name,
             result_type, **result_attributes):
@@ -395,41 +492,14 @@ class Classifier(Tool):
     def __init__(self, experiment_id):
         super(Classifier, self).__init__(experiment_id)
 
-    def label(self, feature_data, labeled_mapobjects):
-        '''Adds labels to `feature_data` for supervised classification.
+    def train_supervised(self, feature_data, labels, method, n_fold_cv):
+        '''Trains a classifier for mapobjects based on `feature_data` and
+        known labels.
 
         Parameters
         ----------
         feature_data: pandas.DataFrame
-            data frame where columns are features and rows are mapobjects
-            as generated by
-            :meth:`Classifier.load <tmlib.tools.base.Classfier.load>`
-        labeled_mapobjects: Tuple[int]
-            ID and assigned label for each selected
-            :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
-
-        Returns
-        -------
-        pandas.DataFrame
-            subset of `feature_data` for selected mapobjects with additional
-            "label" column
-        '''
-        labeled_mapobjects = dict(labeled_mapobjects)
-        ids = labeled_mapobjects.keys()
-        labels = labeled_mapobjects.values()
-        labeled_feature_data = feature_data[feature_data.index.isin(ids)].copy()
-        labeled_feature_data['label'] = labels
-        return labeled_feature_data
-
-    def classify_supervised(self, feature_data, labels, method, n_fold_cv):
-        '''Trains a classifier for labeled mapobjects based on
-        `labeled_feature_data` and predicts labels for all mapobjects in
-        `unlabeled_feature_data`.
-
-        Parameters
-        ----------
-        feature_data: pandas.DataFrame
-            feature values that should be used for classification
+            feature values that should be used to train the classifier
         labels: Dict[int, int]
             mapping of :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
             ID to assigned label
@@ -440,8 +510,8 @@ class Classifier(Tool):
 
         Returns
         -------
-        pandas.Series
-            predicted labels for each entry in `feature_data`
+        Tuple[sklearn.base.BaseEstimator]
+            trained supervised classifier and scaler
         '''
         from sklearn.ensemble import RandomForestClassifier
         from sklearn.linear_model import SGDClassifier
@@ -449,8 +519,7 @@ class Classifier(Tool):
         from sklearn.preprocessing import RobustScaler
         from sklearn.model_selection import GridSearchCV, KFold
 
-        logger.info('perform classification using "%s" method', method)
-        models = {
+        classifiers = {
             'randomforest': {
                 # NOTE: RF could be parallelized.
                 'cls': RandomForestClassifier(n_jobs=1),
@@ -494,39 +563,32 @@ class Classifier(Tool):
             }
         }
 
+        logger.info('train "%s" classifier', method)
         # TODO: We may want to include tpoint into labels mapping.
-        train_index = feature_data.index.get_level_values('mapobject_id').isin(
-            labels.keys()
-        )
-        X_train = feature_data.iloc[train_index]
         y = list()
-        for i in X_train.index.get_level_values('mapobject_id'):
+        for i in feature_data.index.get_level_values('mapobject_id'):
             y.append(labels[i])
-        X_test = feature_data
-        scaler = models[method]['scaler']
+        scaler = classifiers[method]['scaler']
         # TODO: identify NaN and infinite values
+        X = feature_data
         if scaler:
-            # Fit scaler on the entire dataset.
-            scaler.fit(feature_data)
-            X_train = scaler.transform(X_train)
-            X_test = scaler.transform(X_test)
-        clf = models[method]['cls']
+            scaler.fit(X)
+            X = scaler.transform(X)
+        clf = classifiers[method]['cls']
         folds = KFold(n_splits=n_fold_cv)
         # TODO: Second, finer grid search
-        gs = GridSearchCV(clf, models[method]['search_space'], cv=folds)
-        logger.info('fit model')
-        gs.fit(X_train, y)
-        logger.info('predict labels')
-        predictions = gs.predict(X_test)
-        return pd.Series(predictions, index=feature_data.index)
+        model = GridSearchCV(clf, classifiers[method]['search_space'], cv=folds)
+        model.fit(X, y)
+        return (model, scaler)
 
-    def classify_unsupervised(self, feature_data, k, method):
-        '''Groups mapobjects based on `data` into `k` classes.
+    def train_unsupervised(self, feature_data, k, method):
+        '''Trains a classifier that groups mapobjects into `k` classes based
+        on `feature_data`.
 
         Parameters
         ----------
         feature_data: pandas.DataFrame
-            feature values
+            feature values that should be used to train the classifier
         k: int
             number of classes
         method: str
@@ -534,17 +596,49 @@ class Classifier(Tool):
 
         Returns
         -------
-        pandas.Series
-            label (class membership) for each entry in `feature_data`
+        Tuple[sklearn.base.BaseEstimator]
+            trained unsupervised classifier and scaler
         '''
         from sklearn.cluster import KMeans
         models = {
-            'kmeans': KMeans
+            'kmeans': {
+                'cls': KMeans,
+                'scaler': RobustScaler(quantile_range=(1.0, 99.0), copy=False)
+            }
         }
-        logger.info('perform clustering using "%s" method', method)
-        clf = models[method](n_clusters=k)
-        logger.info('fit model')
-        clf.fit(feature_data)
+        logger.info('train "%s" classifier for %d classes', method)
+        scaler = classifiers[method]['scaler']
+        X = feature_data
+        if scaler:
+            scaler.fit(X)
+            X = scaler.transform(X)
+        clf = classifiers[method]['cls']
+        model = clf(n_clusters=k)
+        model.fit(X)
+        return (model, scaler)
+
+    def predict(self, feature_data, model, scaler):
+        '''Predicts class labels for mapobjects based on `feature_values` and
+        pre-trained `model`.
+
+        Parameters
+        ----------
+        feature_data: pandas.DataFrame
+            feature values based on which labels should be predicted
+        model: sklearn.base.BaseEstimator
+            model fitted on training data
+        scaler: sklearn.preprocessing.data.RobustScaler
+            scaler fitted on training data (may also be ``None`` in case no
+            scaling of `feature_data` is required)
+
+        Returns
+        -------
+        pandas.Series
+            predicted labels for each mapobject
+        '''
         logger.info('predict labels')
-        labels = clf.labels_
-        return pd.Series(labels, index=feature_data.index)
+        X = feature_data
+        if scaler:
+            X = scaler.transform(X)
+        predictions = model.predict(X)
+        return pd.Series(predictions, index=feature_data.index)

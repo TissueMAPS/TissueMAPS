@@ -374,14 +374,14 @@ class _SQLAlchemy_Session(object):
     that manages persistence of database model objects.
 
     An instance of this class will be exposed via
-    :class:`MainSession <tmlib.models.utils.MainSession>` and
+    :class:`MainSession <tmlib.models.utils.MainSession>` or
     :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
 
     Examples
     --------
     >>> import tmlib.models as tm
     >>> with tm.utils.MainSession() as session:
-    >>>     print(session.drop_and_recreate(tm.Submission))
+    >>>     print(session.drop_table(tm.Submission))
 
     '''
 
@@ -477,9 +477,10 @@ class _SQLAlchemy_Session(object):
             raise
         return instance
 
-    def drop_and_recreate(self, model):
-        '''Drops a database table and re-creates it. Also removes
-        locations on disk for each row of the dropped table.
+    def drop_table(self, model):
+        '''Drops a database table for the given `model`. It also removes
+        locations on disk in case `model` is derived from
+        :class:`FileSytemModel <tmlib.models.base.FilesystemModel>`.
 
         Parameters
         ----------
@@ -500,6 +501,7 @@ class _SQLAlchemy_Session(object):
         experiment_specific_metadata = sqlalchemy.MetaData(schema=self._schema)
         for name, table in ExperimentModel.metadata.tables.iteritems():
             table_copy = table.tometadata(experiment_specific_metadata)
+        # FIXME: quote
         table_name = '{schema}.{table}'.format(
             schema=self._schema, table=model.__table__.name
         )
@@ -513,12 +515,33 @@ class _SQLAlchemy_Session(object):
             self._session.commit()  # circumvent locking
             table.drop(connection)
 
-        logger.info('create table "%s"', table.name)
-        table.create(connection)
         logger.info('remove "%s" locations on disk', model.__name__)
         for loc in locations_to_remove:
             logger.debug('remove "%s"', loc)
             delete_location(loc)
+
+    def create_table(self, model):
+        '''Creates a database table for the given `model`.
+
+        Parameters
+        ----------
+        model: tmlib.models.MainModel or tmlib.models.ExperimentModel
+            database model class
+        '''
+        connection = self._session.get_bind()
+        # We need to update the schema on each data model, such that tables
+        # will be created for the correct experiment-specific schema and not
+        # created for the "public" schema.
+        experiment_specific_metadata = sqlalchemy.MetaData(schema=self._schema)
+        for name, table in ExperimentModel.metadata.tables.iteritems():
+            table_copy = table.tometadata(experiment_specific_metadata)
+        # FIXME: quote
+        table_name = '{schema}.{table}'.format(
+            schema=self._schema, table=model.__table__.name
+        )
+        table = experiment_specific_metadata.tables[table_name]
+        logger.info('create table "%s"', table.name)
+        table.create(connection)
 
 
 class _Session(object):
@@ -682,6 +705,7 @@ class _Connection(object):
         self._connection = self._engine.raw_connection()
         if not self._transaction:
             self._connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+        _set_search_path(self._connection, self._schema)
         self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
         # NOTE: To achieve high throughput on UPDATE or DELETE, we
         # need to perform queries in parallel under the assumption that
@@ -724,7 +748,7 @@ class ExperimentConnection(_Connection):
     --------
     >>> import tmlib.models as tm
     >>> with tm.utils.ExperimentConnection(experiment_id=1) as connection:
-    >>>     connection.execute('SELECT mapobject_id, value FROM feature_values;')
+    >>>     connection.execute('SELECT mapobject_id, value FROM feature_values')
     >>>     print(connection.fetchall())
 
     Warning
@@ -743,6 +767,8 @@ class ExperimentConnection(_Connection):
         ----------
         experiment_id: int
             ID of the experiment that should be queried
+        transaction: bool, optional
+            whether a transaction should be began
         '''
         super(ExperimentConnection, self).__init__(
             cfg.db_master_uri, transaction
@@ -751,7 +777,6 @@ class ExperimentConnection(_Connection):
             experiment_id=experiment_id
         )
         self.experiment_id = experiment_id
-        self._shard_lut = dict()
         self._transaction = transaction
 
     def __enter__(self):
@@ -776,15 +801,49 @@ class ExperimentConnection(_Connection):
         ''')
         return self
 
-    def get_unique_ids(self, model_class, n):
+    def locate_partition(self, model, partition_key):
+        '''Determines the location of a table partition (shard).
+
+        Parameters
+        ----------
+        model: class
+            class derived from
+            :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
+        partition_key: int
+            value of the distribution column
+
+        Returns
+        -------
+        Tuple[Union[str, int]]
+            host and port of the worker server and the ID of the shard
+        '''
+        self._cursor.execute('''
+            SELECT get_shard_id_for_distribution_column(
+                %(table)s, %(partition_key)s
+            )
+        ''', {
+            'table': model.__table__.name,
+            'partition_key': partition_key
+        })
+        record = self._cursor.fetchone()
+        shard_id = record.get_shard_id_for_distribution_column
+        self._cursor.execute('''
+            SELECT nodename, nodeport FROM pg_dist_shard_placement
+            WHERE shardid = %(shard_id)s
+        ''', {
+            'shard_id': shard_id
+        })
+        node, port = self._cursor.fetchone()
+        return (node, port, shard_id)
+
+    def get_unique_ids(self, model, n):
         '''Gets a unique, but shard-specific value for the distribution column.
 
         Parameters
         ----------
-        model_class: class
-            class dervired from
+        model: class
+            class derived from
             :class:`ExperimentModel <tmlib.models.base.ExperimentModel>`
-            for which a shard should be selected
         n: int
             number of IDs that should be returned
 
@@ -796,15 +855,15 @@ class ExperimentConnection(_Connection):
         Raises
         ------
         ValueError
-            when the table of `model_class` is not distributed
+            when the table of `model` is not distributed
         '''
         logger.debug(
-            'get unique identifier for model "%s"', model_class.__name__
+            'get unique identifier for model "%s"', model.__name__
         )
         self._cursor.execute('''
             SELECT nextval(%(sequence)s) FROM generate_series(1, %(n)s);
         ''', {
-            'sequence': '{t}_id_seq'.format(t=model_class.__table__.name),
+            'sequence': '{t}_id_seq'.format(t=model.__table__.name),
             'n': n
         })
         values = self._cursor.fetchall()
@@ -820,13 +879,8 @@ class MainConnection(_Connection):
     --------
     >>> import tmlib.models as tm
     >>> with tm.utils.MainConnection() as connection:
-    >>>     connection.execute('SELECT name FROM plates;')
+    >>>     connection.execute('SELECT name FROM plates')
     >>>     print(connection.fetchall())
-
-    Warning
-    -------
-    Use raw connections only for modifying distributed tables. Otherwise use
-    :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
 
     See also
     --------
@@ -834,7 +888,13 @@ class MainConnection(_Connection):
     '''
 
     def __init__(self, transaction=False):
-        super(MainConnection, self).__init__(cfg.db_master_uri, False)
+        '''
+        Parameters
+        ----------
+        transaction: bool, optional
+            whether a transaction should be began
+        '''
+        super(MainConnection, self).__init__(cfg.db_master_uri, transaction)
 
 
 class ExperimentWorkerConnection(_Connection):
@@ -842,17 +902,12 @@ class ExperimentWorkerConnection(_Connection):
     '''Database connection for executing raw SQL statements on a database
     "worker" server to target individual shards of a distributed table.
 
-    Warning
-    -------
-    Use raw connections only for modifying distributed tables. Otherwise use
-    :class:`ExperimentSession <tmlib.models.utils.ExperimentSession>`.
-
     See also
     --------
     :class:`tmlib.models.base.ExperimentModel`
     '''
 
-    def __init__(self, experiment_id, host, port):
+    def __init__(self, experiment_id, host, port, transaction=False):
         '''
         Parameters
         ----------
@@ -862,30 +917,17 @@ class ExperimentWorkerConnection(_Connection):
             IP address or name of database worker server
         port: str
             port to which database worker server listens
+        transaction: bool, optional
+            whether a transaction should be began
         '''
         db_uri = cfg.build_db_worker_uri(host, port)
-        super(ExperimentWorkerConnection, self).__init__(db_uri)
+        super(ExperimentWorkerConnection, self).__init__(db_uri, transaction)
         self._schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=experiment_id
         )
         self._host = host
         self._port = port
         self.experiment_id = experiment_id
-
-    def __enter__(self):
-        self._connection = self._engine.raw_connection()
-        _set_search_path(self._connection, self._schema)
-        self._cursor = self._connection.cursor(cursor_factory=NamedTupleCursor)
-        return self
-
-    def __exit__(self, except_type, except_value, except_trace):
-        if except_value:
-            logger.error('transaction rolled back due to error')
-            self._connection.rollback()
-        else:
-            self._connection.commit()
-        self._cursor.close()
-        self._connection.close()
 
 
 def parallelize_query(func, args):

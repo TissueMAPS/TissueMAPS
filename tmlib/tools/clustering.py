@@ -58,6 +58,7 @@ class Clustering(Classifier):
         payload: dict
             description of the tool job
         '''
+        logger.info('perform unsupervised classification')
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
         k = payload['options']['k']
@@ -66,14 +67,31 @@ class Clustering(Classifier):
         if method not in self.__options__['method']:
             raise ValueError('Unknown method "%s".' % method)
 
-        feature_data = self.load_feature_values(
-            mapobject_type_name, feature_names
-        )
-        predicted_labels = self.classify_unsupervised(feature_data, k, method)
-        unique_labels = np.unique(predicted_labels)
-
         result_id = self.register_result(
             submission_id, mapobject_type_name,
-            result_type='ScalarToolResult', unique_labels=unique_labels
+            result_type='ScalarToolResult', unique_labels=np.arange(k)
         )
-        self.save_result_values(mapobject_type_name, result_id, predicted_labels)
+
+        n_train = 10**6
+        logger.debug('use %d objects for training', n_train)
+        mapobject_ids = self.get_random_mapobject_subset(
+            mapobject_type_name, n_train
+        )
+        logger.info('train classifier')
+        training_set = self.load_feature_values(
+            mapobject_type_name, feature_names, mapobject_ids
+        )
+        model, scaler = self.train_unsupervised(training_set, k, method)
+
+        n_test = 10**6
+        logger.debug('set batch size to %d', n_test)
+        batches = self.partition_mapobjects(mapobject_type_name, n_test)
+        for mapobject_ids in batches:
+            logger.info('predict labels for batch #%d', i)
+            test_set = self.load_feature_values(
+                mapobject_type_name, feature_names, mapobject_ids
+            )
+            predicted_labels = self.predict(test_set, model, scaler)
+            self.save_result_values(
+                mapobject_type_name, result_id, predicted_labels
+            )

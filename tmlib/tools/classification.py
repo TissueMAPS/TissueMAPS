@@ -72,6 +72,7 @@ class Classification(Classifier):
         payload: dict
             description of the tool job
         '''
+        logger.info('perform supervised classification')
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
         method = payload['options']['method']
@@ -86,17 +87,30 @@ class Classification(Classifier):
             labels.update({j: float(i) for j in cls['object_ids']})
             label_map[float(i)] = {'name': cls['name'], 'color': cls['color']}
 
-        feature_data = self.load_feature_values(
-            mapobject_type_name, feature_names
-        )
-        predicted_labels = self.classify_supervised(
-            feature_data, labels, method, n_fold_cv
-        )
-        unique_labels = np.unique(predicted_labels)
-
+        unique_labels = np.unique(labels.values())
         result_id = self.register_result(
             submission_id, mapobject_type_name,
             result_type='SupervisedClassifierToolResult',
             unique_labels=unique_labels, label_map=label_map
         )
-        self.save_result_values(mapobject_type_name, result_id, predicted_labels)
+
+        training_set = self.load_feature_values(
+            mapobject_type_name, feature_names, labels.keys()
+        )
+        logger.info('train classifier')
+        model, scaler = self.train_supervised(
+            training_set, labels, method, n_fold_cv
+        )
+
+        n_test = 10**6
+        logger.debug('set batch size to %d', n_test)
+        batches = self.partition_mapobjects(mapobject_type_name, n_test)
+        for i, mapobject_ids in enumerate(batches):
+            logger.info('predict labels for batch #%d', i)
+            test_set = self.load_feature_values(
+                mapobject_type_name, feature_names, mapobject_ids
+            )
+            predicted_labels = self.predict(test_set, model, scaler)
+            self.save_result_values(
+                mapobject_type_name, result_id, predicted_labels
+            )
