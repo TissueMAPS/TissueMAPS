@@ -16,6 +16,8 @@ interface JobStatusArgs {
     done: boolean;
     failed: boolean;
     state: string;
+    created_at: string;
+    updated_at: string;
     percent_done: number;
     subtasks: any[];
     live: boolean;
