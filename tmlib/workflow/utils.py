@@ -199,11 +199,15 @@ def format_timestamp(elapsed_time):
     )
 
 
-def format_task_data(name, type, state, exitcode, memory, time, cpu_time):
+def format_task_data(name, type, created_at, updated_at, state, exitcode,
+        memory, time, cpu_time):
     '''Formats task data in the way expected by clients:
 
         * ``name`` (*str*): name of task
-        * ``state`` (*g3clibs.Run.State*): state of the task
+        * ``type`` (*str*): type of the task object
+        * ``created_at`` (*str*): date and time when task was created
+        * ``updated_at`` (*str*): date and time when task was last updated
+        * ``state`` (*str*): state of the task
         * ``live`` (*bool*): whether the task is currently processed
         * ``done`` (*bool*): whether the task is done
         * ``failed`` (*bool*): whether the task failed, i.e. terminated
@@ -213,13 +217,14 @@ def format_task_data(name, type, state, exitcode, memory, time, cpu_time):
         * ``time`` (*str*): duration as "HH:MM:SS"
         * ``memory`` (*float*): amount of used memory in MB
         * ``cpu_time`` (*str*): used cpu time as "HH:MM:SS"
-        * ``type`` (*str*): type of the task object
 
     Parameters
     ----------
     name: str
     type: str
-    state: str
+    created_at: datetime.datetime
+    updated_at: datetime.datetime
+    state: g3clibs.Run.State
     exitcode: int
     memory: str
     time: str
@@ -241,6 +246,8 @@ def format_task_data(name, type, state, exitcode, memory, time, cpu_time):
     data = {
         'done': state == gc3libs.Run.State.TERMINATED,
         'failed': failed,
+        'created_at': str(created_at),
+        'upated_at': str(updated_at),
         'name': name,
         'state': state,
         'live': state in live_states,
@@ -298,7 +305,8 @@ def get_task_status_recursively(task_id, recursion_depth=None, id_encoder=None):
             one()
 
             data = format_task_data(
-                task.name, task.type, task.state, task.exitcode,
+                task.name, task.type, task.created_at, task.updated_at,
+                task.state, task.exitcode,
                 task.memory, task.time, task.cpu_time
             )
 
