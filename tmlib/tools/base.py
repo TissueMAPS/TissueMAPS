@@ -617,8 +617,8 @@ class Classifier(Tool):
         model.fit(X)
         return (model, scaler)
 
-    def predict(self, feature_data, model, scaler):
-        '''Predicts class labels for mapobjects based on `feature_values` and
+    def predict(self, feature_data, model, scaler=None):
+        '''Predicts class labels for mapobjects based on `feature_values` using
         pre-trained `model`.
 
         Parameters
@@ -627,9 +627,9 @@ class Classifier(Tool):
             feature values based on which labels should be predicted
         model: sklearn.base.BaseEstimator
             model fitted on training data
-        scaler: sklearn.preprocessing.data.RobustScaler
-            scaler fitted on training data (may also be ``None`` in case no
-            scaling of `feature_data` is required)
+        scaler: sklearn.preprocessing.data.RobustScaler, optional
+            scaler fitted on training data to rescale `feature_data` the same
+            way
 
         Returns
         -------
@@ -638,7 +638,7 @@ class Classifier(Tool):
         '''
         logger.info('predict labels')
         X = feature_data
-        if scaler:
+        if scaler is not None:
             X = scaler.transform(X)
         predictions = model.predict(X)
         return pd.Series(predictions, index=feature_data.index)
