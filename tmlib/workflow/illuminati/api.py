@@ -530,7 +530,7 @@ class PyramidBuilder(WorkflowStepAPI):
                                 channel_layer_id=layer_id, z=level+1, y=r, x=c
                             ).\
                             one_or_none()
-                        if pre_tile is None:
+                        if pre_tile is not None:
                             pre_tile = pre_tile.pixels
                         else:
                             # Tiles at maxzoom level might not exist in
