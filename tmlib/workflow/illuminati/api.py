@@ -654,7 +654,7 @@ class PyramidBuilder(WorkflowStepAPI):
 
                 logger.debug('delete existing mapobjects of type "%s"', name)
                 session.query(tm.Mapobject).\
-                    filter_by(mapobject_type_id).\
+                    filter_by(mapobject_type_id=mapobject_type_id).\
                     delete()
                 logger.debug('add new mapobjects of type "%s"', name)
                 for key, value in segmentations.iteritems():
@@ -662,11 +662,12 @@ class PyramidBuilder(WorkflowStepAPI):
                         partition_key=key, mapobject_type_id=mapobject_type_id
                     )
                     session.add(mapobject)
+                    session.flush()
                     logger.debug('add mapobject #%d', mapobject.id)
                     mapobject_segmentation = tm.MapobjectSegmentation(
                         partition_key=key, mapobject_id=mapobject.id,
-                        geom_polygon=value['polygon'],
-                        geom_centroid=value['polygon'].centroid,
+                        geom_polygon=value['polygon'].wkt,
+                        geom_centroid=value['polygon'].centroid.wkt,
                         segmentation_layer_id=value['segmentation_layer_id'],
                     )
                     session.add(mapobject_segmentation)

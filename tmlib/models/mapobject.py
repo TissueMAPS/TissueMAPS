@@ -568,7 +568,7 @@ class Mapobject(DistributedExperimentModel):
     def _add(cls, connection, instance):
         if not isinstance(instance, cls):
             raise TypeError('Object must have type %s' % cls.__name__)
-        mapobject.id = cls.get_unique_ids(connection, 1)[0]
+        instance.id = cls.get_unique_ids(connection, 1)[0]
         connection.execute('''
             INSERT INTO mapobjects (
                 partition_key, id, mapobject_type_id, ref_id
@@ -582,7 +582,7 @@ class Mapobject(DistributedExperimentModel):
             'mapobject_type_id': instance.mapobject_type_id,
             'ref_id': instance.ref_id
         })
-        return mapobject
+        return instance
 
     @classmethod
     def _bulk_ingest(cls, connection, instances):
@@ -701,12 +701,12 @@ class MapobjectSegmentation(DistributedExperimentModel):
             AND s.partition_key = %(partition_key)s
             AND s.segmentation_layer_id = %(segmentation_layer_id)s
         ''', {
-            'partition_key': intance.partition_key,
-            'mapobject_id': intance.mapobject_id,
-            'segmentation_layer_id': intance.segmentation_layer_id,
-            'geom_polygon': intance.geom_polygon.wkt,
-            'geom_centroid': intance.geom_centroid.wkt,
-            'label': intance.label
+            'partition_key': instance.partition_key,
+            'mapobject_id': instance.mapobject_id,
+            'segmentation_layer_id': instance.segmentation_layer_id,
+            'geom_polygon': instance.geom_polygon.wkt,
+            'geom_centroid': instance.geom_centroid.wkt,
+            'label': instance.label
         })
 
     @classmethod

@@ -515,13 +515,17 @@ class _SQLAlchemy_Session(object):
             try:
                 instance = model(**kwargs)
                 self._session.add(instance)
-                self._session.commit()
+                if not self._session.autocommit:
+                    self._session.commit()
+                else:
+                    self._session.flush()
                 logger.debug('created new instance: %r', instance)
             except sqlalchemy.exc.IntegrityError as err:
                 logger.error(
                     'creation of %s instance failed:\n%s', model, str(err)
                 )
-                self._session.rollback()
+                if not self._session.autocommit:
+                    self._session.rollback()
                 try:
                     instance = self._session.query(model).\
                         filter_by(**kwargs).\
