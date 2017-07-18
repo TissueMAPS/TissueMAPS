@@ -453,7 +453,7 @@ def get_tool_jobs(experiment_id):
     # TODO: batch_size, index - see workflow.get_jobs_status()
     with tm.utils.MainSession() as session:
         tool_jobs = session.query(
-                tm.Task.created_at,
+                tm.Task.created_at, tm.Task.update_at,
                 tm.Task.id, tm.Task.name, tm.Task.type, tm.Task.time,
                 tm.Task.cpu_time, tm.Task.memory,
                 tm.Task.state, tm.Task.submission_id, tm.Task.exitcode
