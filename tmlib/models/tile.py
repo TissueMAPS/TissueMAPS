@@ -31,7 +31,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.image import PyramidTile
 from tmlib.metadata import PyramidTileMetadata
-from tmlib.models import DistributedExperimentModel
+from tmlib.models.base import DistributedExperimentModel
 
 logger = logging.getLogger(__name__)
 
