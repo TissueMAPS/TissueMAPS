@@ -96,11 +96,10 @@ class MetadataConfigurator(WorkflowStepAPI):
         well as all children for the processed experiment.
         '''
         # Distributed tables cannot be dropped within a transaction
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+        with tm.utils.ExperimentSession(self.experiment_id, False) as session:
             logger.info('delete existing channel layers')
-            tm.ChannelLayer.delete_cascade(connection)
-
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            session.query(tm.ChannelLayerTile).delete()
+            session.query(tm.ChannelLayer).delete()
             logger.info('delete existing channels')
             session.query(tm.Channel).delete()
             logger.info('delete existing cycles')
