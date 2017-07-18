@@ -227,27 +227,28 @@ class MetadataConfigurator(WorkflowStepAPI):
         fmaps = mdhandler.create_image_file_mappings()
 
         logger.info('create database entries')
+
+        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            channels = dict()
+            bit_depth = md['bit_depth'][0]
+            for ch_name in np.unique(md['channel_name']):
+                logger.info('create channel "%s"', chn_name)
+                channels[ch_name] = session.get_or_create(
+                    tm.Channel, experiment_id=self.experiment_id,
+                    name=ch_name, wavelength=ch_name, bit_depth=bit_depth,
+                )
+
         for w in np.unique(md.well_name):
-            logger.info('create well "%s"', w)
 
             with tm.utils.ExperimentSession(self.experiment_id) as session:
                 acquisition = session.query(tm.Acquisition).\
                     get(batch['acquisition_id'])
 
+                logger.info('create well "%s"', w)
                 w_index = md.well_name == w
                 well = session.get_or_create(
-                    tm.Well,
-                    plate_id=acquisition.plate.id, name=w
+                    tm.Well, plate_id=acquisition.plate.id, name=w
                 )
-
-                channels = dict()
-                bit_depth = md['bit_depth'][0]
-                for ch_name in np.unique(md['channel_name']):
-                    channels[ch_name] = session.get_or_create(
-                        tm.Channel,
-                        name=ch_name, wavelength=ch_name, bit_depth=bit_depth,
-                        experiment_id=self.experiment_id
-                    )
 
                 channel_image_files = list()
                 for s in np.unique(md.loc[w_index, 'site']):
@@ -257,14 +258,12 @@ class MetadataConfigurator(WorkflowStepAPI):
                     x = md.loc[s_index, 'well_position_x'].values[0]
                     height = md.loc[s_index, 'height'].values[0]
                     width = md.loc[s_index, 'width'].values[0]
-
                     site = session.get_or_create(
-                        tm.Site,
-                        y=y, x=x, height=height, width=width, well_id=well.id
+                        tm.Site, y=y, x=x, height=height, width=width,
+                        well_id=well.id
                     )
 
                     for index, i in md.ix[s_index].iterrows():
-
                         channel_image_files.append(
                             tm.ChannelImageFile(
                                 tpoint=i.tpoint, zplane=i.zplane,

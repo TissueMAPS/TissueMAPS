@@ -20,7 +20,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy_utils.expressions import array_agg
 from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.schema import UniqueConstraint, PrimaryKeyConstraint
-# from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
+# from sqlalchemy.sql.expression import Delete
 
 from tmlib.errors import DataModelError
 from tmlib import cfg
@@ -110,6 +110,14 @@ def _compile_create_table(element, compiler, **kwargs):
     return sql
 
 
+@compiles(Delete, 'postgresql')
+def _compile_delete_elements(construct, compiler, **kwargs):
+    sql = compiler.visit_delete(construct, **kwargs)
+    if construct.table.info['is_distributed']:
+        sql = _compile_distributed_query(sql)
+    return sql
+
+
 @compiles(DropTable, 'postgresql')
 def _compile_drop_table(element, compiler, **kwargs):
     table = element.element
@@ -128,7 +136,7 @@ def _compile_array_agg(element, compiler, **kw):
     ).compile(compiler))
 
 
-def compile_distributed_query(query):
+def _compile_distributed_query(query):
     '''Compiles a *SQL* query for modification of a hash distributed Citus table.
 
     Parameters
@@ -142,7 +150,7 @@ def compile_distributed_query(query):
         compiled query
     '''
     # This is required for modification of distributed tables
-    # TODO: compile UPDATE and DELETE queries in dialect
+    # TODO: compile DELETE queries
     return '''
         SELECT master_modify_multiple_shards($dist$
             {query}

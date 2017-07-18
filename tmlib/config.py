@@ -233,7 +233,8 @@ class LibraryConfig(TmapsConfig):
     def __init__(self):
         super(LibraryConfig, self).__init__()
         self.modules_home = '~/jtmodules'
-        self.storage_home = '/storage/experiments'
+        self.formats_home = '~/tmformats'
+        self.storage_home = '/storage/filesystem'
         self._resource = None
         self.read()
 
@@ -260,8 +261,15 @@ class LibraryConfig(TmapsConfig):
 
     @property
     def modules_home(self):
-        '''str: absolute path to root directory of local copy of *JtModules*
-        repository (default: ``"~/jtmodules"``)
+        '''str: absolute path to root directory of local copy of
+        *TissueMAPS/JtModules* repository (default: ``"~/jtmodules"``)
+
+        Note
+        ----
+        Assumes a certain repository structure, where *jtmodules* packages
+        for different programming languages are placed into a
+        language-specific ``src`` subdirectory, such as ``src/python/jtmodules``
+        or ``src/matlab/+jtmodules``.
         '''
         return os.path.expandvars(os.path.expanduser(
             self._config.get(self._section, 'modules_home')
@@ -280,8 +288,7 @@ class LibraryConfig(TmapsConfig):
 
     @property
     def storage_home(self):
-        '''str: absolute path to root directory of file system storage
-        (default: ``"/data/experiments"``)'''
+        '''str: absolute path to root directory of file system storage'''
         return os.path.expandvars(os.path.expanduser(
             self._config.get(self._section, 'storage_home')
         ))
@@ -293,3 +300,26 @@ class LibraryConfig(TmapsConfig):
                 'Configuration parameter "storage_home" must have type str.'
             )
         self._config.set(self._section, 'storage_home', str(value))
+
+    @propery
+    def formats_home(self):
+        '''str: absolute path to the root directory of local copy of
+        *TissueMAPS/TmFormats* repository (default: ``"~/tmformats"``)
+
+        Note
+        ----
+        Assumes a certain repository structure, where *tmformats* package
+        is located in the root directory.
+        '''
+        return os.path.expandvars(os.path.expanduser(
+            self._config.get(self._section, 'formats_home')
+        ))
+
+    @formats_home.setter
+    def formats_home(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError(
+                'Configuration parameter "formats_home" must have '
+                'type str.'
+            )
+        self._config.set(self._section, 'formats_home', str(value))

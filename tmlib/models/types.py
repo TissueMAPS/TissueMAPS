@@ -80,6 +80,16 @@ class ST_Boundary(GenericFunction):
     type = Geometry
 
 
+class ST_IsValid(GenericFunction):
+
+    '''Implementation of the Postgis function
+    `ST_IsValid <http://postgis.net/docs/ST_IsValid.html>`_.
+    '''
+
+    name = 'ST_IsValid'
+    type = Geometry
+
+
 class ST_GeomFromText(GenericFunction):
 
     '''Implementation of the Postgis function
