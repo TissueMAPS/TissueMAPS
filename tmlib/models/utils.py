@@ -740,6 +740,16 @@ class ExperimentSession(_Session):
                 autocommit=True, autoflush=False, expire_on_commit=False
             )
         _set_search_path(connection, self._schema)
+        if not self._transaction:
+            connection = connection.execution_options(
+                autocommit=True, isolation_level='AUTOCOMMIT'
+            )
+            # NOTE: SQLAlchemy docs say: "Executing queries outside of a
+            # demarcated transaction is a legacy mode of usage, and can in
+            # some cases lead to concurrent connection checkouts."
+            self._session_factory.configure(
+                autocommit=True, autoflush=False, expire_on_commit=False
+            )
         self._session_factory.configure(bind=connection)
         self._session = _SQLAlchemy_Session(
             self._session_factory(), self._schema
@@ -875,6 +885,7 @@ class ExperimentConnection(_Connection):
         ''')
         return self
 
+<<<<<<< HEAD
     def locate_partition(self, model, partition_key):
         '''Determines the location of a table partition (shard).
 
