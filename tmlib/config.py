@@ -301,7 +301,7 @@ class LibraryConfig(TmapsConfig):
             )
         self._config.set(self._section, 'storage_home', str(value))
 
-    @propery
+    @property
     def formats_home(self):
         '''str: absolute path to the root directory of local copy of
         *TissueMAPS/TmFormats* repository (default: ``"~/tmformats"``)

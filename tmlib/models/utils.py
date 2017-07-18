@@ -885,7 +885,6 @@ class ExperimentConnection(_Connection):
         ''')
         return self
 
-<<<<<<< HEAD
     def locate_partition(self, model, partition_key):
         '''Determines the location of a table partition (shard).
 
