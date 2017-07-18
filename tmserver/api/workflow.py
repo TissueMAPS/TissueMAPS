@@ -424,8 +424,9 @@ def get_workflow_jobs(experiment_id):
                 if task_ids:
                     tasks = session.query(
                             tm.Task.id, tm.Task.name, tm.Task.type,
-                            tm.Task.state, tm.Task.exitcode, tm.Task.memory,
-                            tm.Task.time, tm.Task.cpu_time
+                            tm.Task.state, tm.Task.created_at,
+                            tm.Task.updated_at, tm.Task.exitcode,
+                            tm.Task.memory, tm.Task.time, tm.Task.cpu_time
                         ).\
                         filter(tm.Task.id.in_(task_ids)).\
                         order_by(tm.Task.name)
