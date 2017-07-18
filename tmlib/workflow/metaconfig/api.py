@@ -232,7 +232,7 @@ class MetadataConfigurator(WorkflowStepAPI):
             channels = dict()
             bit_depth = md['bit_depth'][0]
             for ch_name in np.unique(md['channel_name']):
-                logger.info('create channel "%s"', chn_name)
+                logger.info('create channel "%s"', ch_name)
                 channels[ch_name] = session.get_or_create(
                     tm.Channel, experiment_id=self.experiment_id,
                     name=ch_name, wavelength=ch_name, bit_depth=bit_depth,
