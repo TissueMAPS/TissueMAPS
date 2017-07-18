@@ -383,7 +383,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             store['objects'][item.name].save = True
             store['objects'][item.name].represent_as_polygons = as_polygons
 
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
+        with tm.utils.ExperimentSession(self.experiment_id, False) as session:
             layer = session.query(tm.ChannelLayer).first()
             mapobject_type_ids = dict()
             segmentation_layer_ids = dict()
@@ -427,8 +427,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             site = session.query(tm.Site).get(store['site_id'])
             y_offset, x_offset = site.aligned_offset
 
-        mapobject_ids = dict()
-        with tm.utils.ExperimentConnection(self.experiment_id) as conn:
+            mapobject_ids = dict()
             for obj_name, segm_objs in objects_to_save.iteritems():
                 if not assume_clean_state:
                     # Delete existing mapobjects for this site, which were
@@ -458,7 +457,8 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                     for _ in segm_objs.labels
                 ]
                 logger.info('insert objects into database')
-                mapobjects = tm.Mapobject.add_multiple(conn, mapobjects)
+                # FIXME: does this update the id attribute?
+                session.bulk_ingest(mapobjects)
                 mapobject_ids = {
                     label: mapobjects[i].id
                     for i, label in enumerate(segm_objs.labels)
@@ -518,9 +518,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                             )
                         )
                 logger.info('insert segmentations into database')
-                tm.MapobjectSegmentation.add_multiple(
-                    conn, mapobject_segmentations
-                )
+                session.bulk_ingest(mapobject_segmentations)
 
                 logger.info(
                     'add feature values for objects of type "%s"', obj_name
@@ -555,7 +553,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                             )
                         )
                 logger.debug('insert feature values into db table')
-                tm.FeatureValues.add_multiple(conn, feature_values)
+                session.bulk_ingest(feature_values)
 
     def create_debug_run_phase(self, submission_id):
         '''Creates a job collection for the debug "run" phase of the step.
@@ -678,7 +676,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         '''
 
         logger.info('compute zoom level thresholds for mapobjects')
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
+        with tm.utils.ExperimentSession(self.experiment_id, False) as session:
             experiment = session.query(tm.Experiment.pyramid_depth).one()
             maxzoom = experiment.pyramid_depth - 1
             segmentation_layers = session.query(tm.SegmentationLayer).all()
@@ -686,21 +684,57 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 o.name: o.as_polygons
                 for o in self.project.pipe.description.output.objects
             }
-            for segm_layer in segmentation_layers:
-                mapobject_type_name = segm_layer.mapobject_type.name
+            segmented_mapobject_types = list()
+            for layer in segmentation_layers:
+                mapobject_type_name = layer.mapobject_type.name
                 as_polygons = polygon_representation_lut.get(
                     mapobject_type_name, True
                 )
-                pt, ct = segm_layer.calculate_zoom_thresholds(
-                    maxzoom, as_polygons
-                )
-                segm_layer.polygon_thresh = pt
-                segm_layer.centroid_thresh = ct
+                pt, ct = layer.calculate_zoom_thresholds(maxzoom, as_polygons)
+                layer.polygon_thresh = pt
+                layer.centroid_thresh = ct
+                if (layer.tpoint is not None and
+                        layer.zplane is not None):
+                    segmented_mapobject_types.append(layer.mapobject_type)
 
-        logger.info('clean-up mapobjects with invalid or missing segmentations')
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            tm.Mapobject.delete_invalid_cascade(connection)
-            tm.Mapobject.delete_missing_cascade(connection)
+            logger.info(
+                'clean-up mapobjects with invalid or missing segmentations '
+                'or missing feature values'
+            )
+            # DELETE queries with complex WHERE clauses are not supported
+            # for distributed tables. We therefore need to determine the ids
+            # of mapobjects first and then use a simple WHERE clause with ANY.
+            for mapobject_type in segmented_mapobject_types:
+                mapobjects = session.query(tm.Mapobject.id).\
+                    outerjoin(tm.MapobjectSegmentation).\
+                    filter(
+                        tm.MapobjectSegmentation.mapobject_id == None,
+                        tm.Mapobject.mapobject_type_id == mapobject_type.id
+                    ).\
+                    all()
+                mapobjects += session.query(tm.Mapobject.id).\
+                    outerjoin(tm.MapobjectSegmentation).\
+                    filter(
+                        not tm.MapobjectSegmentation.geom_poly.ST_IsValid(),
+                        tm.Mapobject.mapobject_type_id == mapobject_type.id
+                    ).\
+                    all()
+                # When checking for objects with  missing feature values, we
+                # need to make sure that the mapobject type has any features
+                # at all, otherwise all mapobjects would get deleted when
+                # applying this logic.
+                if len(mapobject_type.features) > 0:
+                    mapobjects += session.query(tm.Mapobject.id).\
+                        outerjoin(tm.FeatureValues).\
+                        filter(
+                            tm.FeatureValues.mapobject_id == None,
+                            tm.Mapobject.mapobject_type_id == mapobject_type.id
+                        ).\
+                        all()
+                mapobject_ids = [m.id for m in mapobjects]
+                session.query(tm.Mapobject).\
+                    filter(tm.Mapobject.id.in_(mapobject_ids)).\
+                    delete()
 
     @staticmethod
     def _add_feature(conn, name, mapobject_type_id, is_aggregate):

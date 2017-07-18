@@ -42,7 +42,6 @@ from tmlib.models.base import (
 )
 from tmlib.models.utils import ExperimentConnection, ExperimentSession
 from tmlib.models.utils import remove_location_upon_delete
-from tmlib.models.dialect import compile_distributed_query
 from tmlib.errors import RegexError, DataError
 from tmlib.image import PyramidTile
 from tmlib.utils import autocreate_directory_property, create_directory
@@ -735,30 +734,6 @@ class ChannelLayer(ExperimentModel, IdMixIn):
             tile = tile.pad_with_background(n_right, 'right')
 
         return tile
-
-    @classmethod
-    def delete_cascade(cls, connection):
-        '''Deletes all instances for the given experiment as well as
-        "children" instances of
-        :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`.
-
-        Parameters
-        ----------
-        experiment_id: int
-            ID of the parent experiment
-
-        Note
-        ----
-        This is not possible via the standard *SQLAlchemy* approach, because the
-        table of :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`
-        is distributed.
-        '''
-        logger.debug('delete channel layer tiles')
-        connection.execute(
-            compile_distributed_query('DELETE FROM channel_layer_tiles')
-        )
-        logger.debug('delete channel layers')
-        connection.execute('DELETE FROM channel_layers;')
 
     def __repr__(self):
         return (

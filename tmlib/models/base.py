@@ -149,16 +149,85 @@ class IdMixIn(object):
 
 class MainModel(_MainBase, IdMixIn):
 
-    '''Abstract base class for models of the main database.'''
+    '''Abstract base class for models of the main ("public") schema.'''
 
     __abstract__ = True
 
 
 class ExperimentModel(_ExperimentBase):
 
-    '''Abstract base class for models of an experiment-specific database.'''
+    '''Abstract base class for models of an experiment-specific schema.'''
 
     __abstract__ = True
+
+
+class DistributedExperimentModel(ExperimentModel):
+
+    '''Abstract base class for models of an experiment-specific schema
+    that is partitioned and potentially distributed over multiple database
+    servers.
+
+    Warning
+    -------
+    Distributed models cannot be modified within a transaction.
+    '''
+
+    __abstract__ = True
+
+    @abstractmethod
+    def _bulk_ingest(cls, connection, instances):
+        '''Ingests multiple records in the database en bulk.
+
+        Parameters
+        ----------
+        connection: tmlib.models.utils.ExperimentConnection
+            experiment-specific database connection
+        instances: List[tmlib.models.base.DistributedExperimentModel]
+            instances of the derived class
+        '''
+        pass
+
+    @abstractmethod
+    def _add(cls, connection, instances):
+        '''Adds one records in the database, i.e. either inserts the record
+        or updates it in case it already exists.
+
+        Parameters
+        ----------
+        connection: tmlib.models.utils.ExperimentConnection
+            experiment-specific database connection
+        instances: List[tmlib.models.base.DistributedExperimentModel]
+            instances of the derived class
+        '''
+        pass
+
+    @classmethod
+    def get_unique_ids(self, cursor, n):
+        '''Gets unique, shard-specific values for the distribution column.
+
+        Parameters
+        ----------
+        cursor: psycopg2.extras.NamedTupleCursor
+            cursor object for database connection
+        n: int
+            number of IDs that should be returned
+
+        Returns
+        -------
+        List[int]
+            unique, shard-specific IDs
+
+        '''
+        logger.debug(
+            'get %d unique identifiers for distributed model "%s"',
+            n, cls.__name__
+        )
+        cursor.execute(
+            'SELECT nextval(%(sequence)s) FROM generate_series(1, %(n)s);',
+            {'sequence': '{t}_id_seq'.format(t=cls.__table__.name), 'n': n}
+        )
+        values = cursor.fetchall()
+        return [v[0] for v in values]
 
 
 class FileSystemModel(ExperimentModel, IdMixIn):

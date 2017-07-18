@@ -235,13 +235,22 @@ class PyramidBuilder(WorkflowStepAPI):
     def delete_previous_job_output(self):
         '''Deletes all instances of
         :class:`ChannelLayer <tmlib.models.layer.ChannelLayer>` and
-        :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>`.
+        :class:`ChannelLayerTile <tmlib.models.tile.ChannelLayerTile>` as well
+        as instances of
+        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`,
+        :class:`Mapobject <tmlib.models.mapobject.Mapobject>` and
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        for each :class:`Plate <tmlib.models.plate.Plate>`,
+        :class:`Well <tmlib.models.well.Well>` and
+        :class:`Site <tmlib.models.site.Site>`.
         '''
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+        with tm.utils.ExperimentSession(self.experiment_id, False) as session:
             logger.info('delete existing channel layers')
-            tm.ChannelLayer.delete_cascade(connection)
+            session.query(tm.ChannelLayerTile).delete()
+            session.query(tm.ChannelLayer).delete()
             logger.info('delete existing static mapobject types')
-            tm.MapobjectType.delete_cascade(connection, static=True)
+            session.query(tm.Mapobject).delete()
+            session.query(tm.MapobjectType).delete()
 
     def create_run_phase(self, submission_id, parent_id):
         '''Creates a job collection for the "run" phase of the step.
@@ -346,7 +355,7 @@ class PyramidBuilder(WorkflowStepAPI):
 
     def _create_maxzoom_level_tiles(self, batch, assume_clean_state):
         exp_id = self.experiment_id
-        with tm.utils.ExperimentSession(exp_id) as session:
+        with tm.utils.ExperimentSession(exp_id, transaction=False) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info(
                 'process layer: channel=%s, zplane=%d, tpoint=%d',
@@ -484,17 +493,16 @@ class PyramidBuilder(WorkflowStepAPI):
                                 'Tile shouldn\'t be in this batch!'
                             )
 
-                    with tm.utils.ExperimentConnection(exp_id) as connection:
-                        channel_layer_tile = tm.ChannelLayerTile(
-                            channel_layer_id=layer.id,
-                            z=level, y=row, x=column, pixels=tile
-                        )
-                        tm.ChannelLayerTile.add(connection, channel_layer_tile)
+                    channel_layer_tile = tm.ChannelLayerTile(
+                        channel_layer_id=layer.id,
+                        z=level, y=row, x=column, pixels=tile
+                    )
+                    session.add(channel_layer_tile)
 
 
     def _create_lower_zoom_level_tiles(self, batch, assume_clean_state):
         exp_id = self.experiment_id
-        with tm.utils.ExperimentSession(exp_id) as session:
+        with tm.utils.ExperimentSession(exp_id, transaction=False) as session:
             layer = session.query(tm.ChannelLayer).get(batch['layer_id'])
             logger.info('processing layer for channel %s', layer.channel.name)
             level = batch['level']
@@ -515,61 +523,54 @@ class PyramidBuilder(WorkflowStepAPI):
                 # (created in a previous run) and stitching them together
                 pre_rows = np.unique([c[0] for c in pre_coordinates])
                 pre_cols = np.unique([c[1] for c in pre_coordinates])
-                with tm.utils.ExperimentConnection(exp_id) as connection:
-                    for i, r in enumerate(pre_rows):
-                        for j, c in enumerate(pre_cols):
-                            connection.execute('''
-                                SELECT pixels FROM channel_layer_tiles
-                                WHERE channel_layer_id=%(channel_layer_id)s
-                                AND z=%(z)s AND y=%(y)s AND x=%(x)s;
-                            ''', {
-                                'z': level+1, 'y': r, 'x': c,
-                                'channel_layer_id': layer_id
-                            })
-                            pre_tile = connection.fetchone()
-                            if pre_tile:
-                                pre_tile = PyramidTile.create_from_buffer(
-                                    pre_tile.pixels
-                                )
-                            else:
-                                # Tiles at maxzoom level might not exist in
-                                # case they did not fall into a region of
-                                # the map occupied by an image.
-                                # They must exist at the lower zoom levels,
-                                # though, for subsampling.
-                                if batch['index'] > 1:
-                                    raise ValueError(
-                                        'Tile "%d-%d-%d" was not created.'
-                                        % (level+1, r, c)
-                                    )
-                                logger.debug(
-                                    'tile "%d-%d-%d" missing',
-                                     batch['level']+1, r, c
-                                )
-                                pre_tile = PyramidTile.create_as_background()
-                            # We have to temporally treat it as an "image",
-                            # since a tile can per definition not be larger
-                            # than 256x256 pixels.
-                            # FIXME: This can be done more efficiently using
-                            # a predefined array instead of these loops.
-                            img = Image(pre_tile.array)
-                            if j == 0:
-                                row_img = img
-                            else:
-                                row_img = row_img.join(img, 'x')
-                        if i == 0:
-                            mosaic_img = row_img
+                for i, r in enumerate(pre_rows):
+                    for j, c in enumerate(pre_cols):
+                        pre_tile = session.query(tm.ChannelLayerTile).\
+                            filter_by(
+                                channel_layer_id=layer_id, z=level+1, y=r, x=c
+                            ).\
+                            one_or_none()
+                        if pre_tile is None:
+                            pre_tile = pre_tile.pixels
                         else:
-                            mosaic_img = mosaic_img.join(row_img, 'y')
-                    # Create the tile at the current level by downsampling
-                    # the mosaic image, which is composed of the 4 tiles
-                    # of the next higher zoom level
-                    tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
-                    channel_layer_tile = tm.ChannelLayerTile(
-                        channel_layer_id=layer_id,
-                        z=level, y=row, x=column, pixels=tile
-                    )
-                    tm.ChannelLayerTile.add(connection, channel_layer_tile)
+                            # Tiles at maxzoom level might not exist in
+                            # case they did not fall into a region of
+                            # the map occupied by an image.
+                            # They must exist at the lower zoom levels,
+                            # though, for subsampling.
+                            if batch['index'] > 1:
+                                raise ValueError(
+                                    'Tile "%d-%d-%d" was not created.'
+                                    % (level+1, r, c)
+                                )
+                            logger.debug(
+                                'tile "%d-%d-%d" missing',
+                                 batch['level']+1, r, c
+                            )
+                            pre_tile = PyramidTile.create_as_background()
+                        # We have to temporally treat it as an "image",
+                        # since a tile can per definition not be larger
+                        # than 256x256 pixels.
+                        # FIXME: This can be done more efficiently using
+                        # a predefined array instead of these loops.
+                        img = Image(pre_tile.array)
+                        if j == 0:
+                            row_img = img
+                        else:
+                            row_img = row_img.join(img, 'x')
+                    if i == 0:
+                        mosaic_img = row_img
+                    else:
+                        mosaic_img = mosaic_img.join(row_img, 'y')
+                # Create the tile at the current level by downsampling
+                # the mosaic image, which is composed of the 4 tiles
+                # of the next higher zoom level
+                tile = PyramidTile(mosaic_img.shrink(zoom_factor).array)
+                channel_layer_tile = tm.ChannelLayerTile(
+                    channel_layer_id=layer_id,
+                    z=level, y=row, x=column, pixels=tile
+                )
+                session.add(channel_layer_tile)
 
     def run_job(self, batch, assume_clean_state=False):
         '''Creates 8-bit grayscale JPEG layer tiles.
@@ -606,7 +607,7 @@ class PyramidBuilder(WorkflowStepAPI):
             'Plates': tm.Plate, 'Wells': tm.Well, 'Sites': tm.Site
         }
         for name, cls in mapobject_mappings.iteritems():
-            with tm.utils.ExperimentSession(self.experiment_id) as session:
+            with tm.utils.ExperimentSession(self.experiment_id, transaction=False) as session:
                 logger.info(
                     'create static mapobject type "%s" for reference type "%s"',
                     name, cls.__name__
@@ -651,15 +652,16 @@ class PyramidBuilder(WorkflowStepAPI):
                         'polygon': polygon
                     }
 
-            with tm.utils.ExperimentConnection(self.experiment_id) as conn:
                 logger.debug('delete existing mapobjects of type "%s"', name)
-                tm.Mapobject.delete_cascade(conn, mapobject_type_id)
+                session.query(tm.Mapobject).\
+                    filter_by(mapobject_type_id).\
+                    delete()
                 logger.debug('add new mapobjects of type "%s"', name)
                 for key, value in segmentations.iteritems():
                     mapobject = tm.Mapobject(
                         partition_key=key, mapobject_type_id=mapobject_type_id
                     )
-                    mapobject = tm.Mapobject.add(conn, mapobject)
+                    session.add(mapobject)
                     logger.debug('add mapobject #%d', mapobject.id)
                     mapobject_segmentation = tm.MapobjectSegmentation(
                         partition_key=key, mapobject_id=mapobject.id,
@@ -667,4 +669,4 @@ class PyramidBuilder(WorkflowStepAPI):
                         geom_centroid=value['polygon'].centroid,
                         segmentation_layer_id=value['segmentation_layer_id'],
                     )
-                    tm.MapobjectSegmentation.add(conn, mapobject_segmentation)
+                    session.add(mapobject_segmentation)

@@ -32,11 +32,10 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib import cfg
-from tmlib.models.base import ExperimentModel, DateMixIn, IdMixIn
-from tmlib.models.dialect import compile_distributed_query
+from tmlib.models.dialect import _compile_distributed_query
 from tmlib.models.result import ToolResult, LabelValues
-from tmlib.models.utils import (
-    ExperimentConnection, ExperimentSession, ExperimentWorkerConnection
+from tmlib.models.base import (
+    ExperimentModel, DistributedExperimentModel, DateMixIn, IdMixIn
 )
 from tmlib.models.feature import Feature, FeatureValues
 from tmlib.models.types import ST_SimplifyPreserveTopology
@@ -114,9 +113,8 @@ class MapobjectType(ExperimentModel, IdMixIn):
 
         Parameters
         ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        connection: tmlib.models.utils.ExperimentConnection
+            experiment-specific database connection
         static: bool, optional
             if ``True`` static types ("Plates", "Wells", "Sites") will be
             deleted, if ``False`` non-static types will be delted, if ``None``
@@ -396,7 +394,7 @@ class MapobjectType(ExperimentModel, IdMixIn):
         return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
 
 
-class Mapobject(ExperimentModel):
+class Mapobject(DistributedExperimentModel):
 
     '''A *mapobject* represents a connected pixel component in an
     image. It has one or more 2D segmentations that can be used to represent
@@ -466,11 +464,11 @@ class Mapobject(ExperimentModel):
         '''
         for mids in mapobject_id_partitions:
             connection.execute(
-                compile_distributed_query(sql), {'mapobject_ids': mids}
+                _compile_distributed_query(sql), {'mapobject_ids': mids}
             )
 
     @classmethod
-    def delete_invalid_cascade(cls, connection):
+    def delete_objects_with_invalid_segmentation(cls, connection):
         '''Deletes all instances with invalid segmentations as well as all
         "children" instances of
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
@@ -479,9 +477,8 @@ class Mapobject(ExperimentModel):
 
         Parameters
         ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        connection: tmlib.models.utils.ExperimentConnection
+            experiment-specific database connection
 
         '''
         connection.execute('''
@@ -494,18 +491,17 @@ class Mapobject(ExperimentModel):
             cls._delete_cascade(connection, mapobject_ids)
 
     @classmethod
-    def delete_missing_cascade(cls, connection):
-        '''Deletes all instances with missing segmentations or feature values
-        as well as all "children" instances of
+    def delete_objects_with_missing_segmentations(cls, connection):
+        '''Deletes all instances that don't have a
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-        :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
-        :class:`LabelValues <tmlib.models.feature.LabelValues>`.
+        as well as their "children" instances of
+        :class:`FeatureValues <tmlib.models.feature.FeatureValues>`
+        and :class:`LabelValues <tmlib.models.feature.LabelValues>`.
 
         Parameters
         ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        connection: tmlib.models.utils.ExperimentConnection
+            experiment-specific database connection
 
         '''
         connection.execute('''
@@ -515,13 +511,28 @@ class Mapobject(ExperimentModel):
             WHERE s.mapobject_id IS NULL
         ''')
         mapobjects = connection.fetchall()
-        missing_segmentation_ids = [s.id for s in mapobjects]
-        if missing_segmentation_ids:
+        missing_ids = [s.id for s in mapobjects]
+        if missing_ids:
             logger.info(
                 'delete %d mapobjects with missing segmentations',
-                len(missing_segmentation_ids)
+                len(missing_ids)
             )
+            cls._delete_cascade(connection, missing_ids)
 
+    @classmethod
+    def delete_objects_with_missing_feature_values(cls, connection):
+        '''Deletes all instances that don't have
+        :class:`FeatureValues <tmlib.models.feature.FeatureValues>`
+        as well as their "children" instances of
+        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
+        and :class:`LabelValues <tmlib.models.feature.LabelValues>`.
+
+        Parameters
+        ----------
+        connection: tmlib.models.utils.ExperimentConnection
+            experiment-specific database connection
+
+        '''
         # Make sure only mapobject types are selected that have any features,
         # otherwise all mapobjects of that type would be deleted.
         connection.execute('''
@@ -532,7 +543,7 @@ class Mapobject(ExperimentModel):
             GROUP BY m.mapobject_type_id
         ''')
         results = connection.fetchall()
-        missing_feature_values_ids = []
+        missing_ids = []
         for mapobject_type_id, count in results:
             connection.execute('''
                 SELECT m.id FROM mapobjects AS m
@@ -544,37 +555,20 @@ class Mapobject(ExperimentModel):
                 'mapobject_type_id': mapobject_type_id
             })
             mapobjects = connection.fetchall()
-            missing_feature_values_ids = [s.id for s in mapobjects]
-            if missing_feature_values_ids:
-                logger.info(
-                    'delete %d mapobjects of type %d with missing feature '
-                    'values',
-                    len(missing_feature_values_ids), mapobject_type_id
-                )
+            missing_ids.extend([s.id for s in mapobjects])
 
-        mapobject_ids = missing_segmentation_ids + missing_feature_values_ids
-        if mapobject_ids:
-            cls._delete_cascade(connection, mapobject_ids)
+        if missing_ids:
+            logger.info(
+                'delete %d mapobjects of type %d with missing feature '
+                'values', len(missing_ids), mapobject_type_id
+            )
+            cls._delete_cascade(connection, missing_ids)
 
     @classmethod
-    def add(cls, connection, mapobject):
-        '''Adds a new object.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject: tmlib.models.mapobject.Mapobject
-
-        Returns
-        -------
-        tmlib.models.mapobject.Mapobject
-            object with assigned database ID
-        '''
-        if not isinstance(mapobject, cls):
+    def _add(cls, connection, instance):
+        if not isinstance(instance, cls):
             raise TypeError('Object must have type %s' % cls.__name__)
-        mapobject.id = connection.get_unique_ids(cls, 1)[0]
+        mapobject.id = cls.get_unique_ids(connection, 1)[0]
         connection.execute('''
             INSERT INTO mapobjects (
                 partition_key, id, mapobject_type_id, ref_id
@@ -583,35 +577,21 @@ class Mapobject(ExperimentModel):
                 %(partition_key)s, %(id)s, %(mapobject_type_id)s, %(ref_id)s
             )
         ''', {
-            'id': mapobject.id,
-            'partition_key': mapobject.partition_key,
-            'mapobject_type_id': mapobject.mapobject_type_id,
-            'ref_id': mapobject.ref_id
+            'id': instance.id,
+            'partition_key': instance.partition_key,
+            'mapobject_type_id': instance.mapobject_type_id,
+            'ref_id': instance.ref_id
         })
         return mapobject
 
     @classmethod
-    def add_multiple(cls, connection, mapobjects):
-        '''Adds multiple objects at once.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobjects: List[tmlib.models.mapobject.Mapobject]
-
-        Returns
-        -------
-        List[tmlib.models.mapobject.Mapobject]
-            objects with assigned database ID
-        '''
-        if not mapobjects:
+    def _bulk_ingest(cls, connection, instances):
+        if not instances:
             return []
         f = StringIO()
         w = csv.writer(f, delimiter=';')
-        ids = connection.get_unique_ids(cls, len(mapobjects))
-        for i, obj in enumerate(mapobjects):
+        ids = cls.get_unique_ids(connection, len(instances))
+        for i, obj in enumerate(instances):
             if not isinstance(obj, cls):
                 raise TypeError('Object must have type %s' % cls.__name__)
             obj.id = ids[i]
@@ -626,60 +606,13 @@ class Mapobject(ExperimentModel):
         f.close()
         return mapobjects
 
-    @classmethod
-    def delete_cascade(cls, connection, mapobject_type_id=None,
-            partition_key=None):
-        '''Deletes instances as well as all "children" instances of
-        :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`
-        :class:`FeatureValues <tmlib.models.feature.FeatureValues>`,
-        :class:`LabelValues <tmlib.models.feature.LabelValues>`.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_type_id: int, optional
-            ID of parent
-            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
-            by which mapobjects should be filtered
-        partition_key: int, optional
-            key of the partition column for which objects should be filtered
-
-        '''
-
-        sql = '''
-                    DELETE FROM mapobjects
-        '''
-        if mapobject_type_id is not None:
-            logger.debug(
-                'delete mapobjects with mapobject_type_id=%d',
-                mapobject_type_id
-            )
-            sql += '''
-                    WHERE mapobject_type_id = %(mapobject_type_id)s
-            '''
-            if partition_key is not None:
-                sql += '''
-                    AND partition_key = %(partition_key)s
-                '''
-        else:
-            if partition_key is not None:
-                sql += '''
-                    WHERE partition_key = %(partion_key)s
-                '''
-        connection.execute(compile_distributed_query(sql), {
-            'partition_key': partition_key,
-            'mapobject_type_id': mapobject_type_id
-        })
-
     def __repr__(self):
         return '<%s(id=%r, mapobject_type_id=%r)>' % (
             self.__class__.__name__, self.id, self.mapobject_type_id
         )
 
 
-class MapobjectSegmentation(ExperimentModel):
+class MapobjectSegmentation(DistributedExperimentModel):
 
     '''A *segmentation* provides the geometric representation
     of a :class:`Mapobject <tmlib.models.mapobject.Mapobject>`.
@@ -748,18 +681,8 @@ class MapobjectSegmentation(ExperimentModel):
         self.label = label
 
     @classmethod
-    def add(cls, connection, mapobject_segmentation):
-        '''Adds a new record.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_segmentation: tmlib.modeles.mapobject.MapobjectSegmentation
-
-        '''
-        if not isinstance(mapobject_segmentation, cls):
+    def _add(cls, connection, instance):
+        if not isinstance(instance, cls):
             raise TypeError('Object must have type %s' % cls.__name__)
         connection.execute('''
             INSERT INTO mapobject_segmentations AS s (
@@ -771,38 +694,28 @@ class MapobjectSegmentation(ExperimentModel):
                 %(geom_polygon)s, %(geom_centroid)s, %(label)s
             )
             ON CONFLICT
-            ON CONSTRAINT mapobject_segmentations_XXX
+            ON CONSTRAINT mapobject_segmentations_pkey
             DO UPDATE
             SET geom_polygon = %(geom_polygon)s, geom_centroid = %(geom_centroid)s
             WHERE s.mapobject_id = %(mapobject_id)s
             AND s.partition_key = %(partition_key)s
             AND s.segmentation_layer_id = %(segmentation_layer_id)s
         ''', {
-            'partition_key': mapobject_segmentation.partition_key,
-            'mapobject_id': mapobject_segmentation.mapobject_id,
-            'segmentation_layer_id': mapobject_segmentation.segmentation_layer_id,
-            'geom_polygon': mapobject_segmentation.geom_polygon.wkt,
-            'geom_centroid': mapobject_segmentation.geom_centroid.wkt,
-            'label': mapobject_segmentation.label
+            'partition_key': intance.partition_key,
+            'mapobject_id': intance.mapobject_id,
+            'segmentation_layer_id': intance.segmentation_layer_id,
+            'geom_polygon': intance.geom_polygon.wkt,
+            'geom_centroid': intance.geom_centroid.wkt,
+            'label': intance.label
         })
 
     @classmethod
-    def add_multiple(cls, connection, mapobject_segmentations):
-        '''Adds multiple new records at once.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        mapobject_segmentations: List[tmlib.modeles.mapobject.MapobjectSegmentation]
-
-        '''
-        if not mapobject_segmentations:
+    def _bulk_ingest(cls, connection, instances):
+        if not instances:
             return
         f = StringIO()
         w = csv.writer(f, delimiter=';')
-        for obj in mapobject_segmentations:
+        for obj in instances:
             if not isinstance(obj, cls):
                 raise TypeError('Object must have type %s' % cls.__name__)
             w.writerow((

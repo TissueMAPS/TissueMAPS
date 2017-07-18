@@ -31,12 +31,12 @@ from sqlalchemy.ext.hybrid import hybrid_property
 
 from tmlib.image import PyramidTile
 from tmlib.metadata import PyramidTileMetadata
-from tmlib.models import ExperimentModel
+from tmlib.models import DistributedExperimentModel
 
 logger = logging.getLogger(__name__)
 
 
-class ChannelLayerTile(ExperimentModel):
+class ChannelLayerTile(DistributedExperimentModel):
 
     '''A *channel layer tile* is a component of an image pyramid. Each tile
     holds a single 2D 8-bit pixel plane with pre-defined dimensions.
@@ -96,7 +96,7 @@ class ChannelLayerTile(ExperimentModel):
 
     @hybrid_property
     def pixels(self):
-        '''tmlib.image.PyramidTile: pixel array'''
+        '''tmlib.image.PyramidTile: pixel data and metadata'''
         # TODO: consider creating a custom SQLAlchemy column type
         metadata = PyramidTileMetadata(
             z=self.z, y=self.y, x=self.x,
@@ -122,22 +122,9 @@ class ChannelLayerTile(ExperimentModel):
             self._pixels = None
 
     @classmethod
-    def add(cls, connection, tile):
-        '''Adds a new tile.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        tile: tmlib.models.tile.ChannelLayerTile
-
-        Note
-        ----
-        This performs an *upsert* operation, i.e. *inserts* the tile in case
-        it doesn't exist yet and *updates* it otherwise.
-        '''
-        # Upsert the tile entry, i.e. insert or update if exists
+    def _add(cls, connection, instance):
+        # This is expensive because the pixels data array gets included twice
+        # in the query
         connection.execute('''
             INSERT INTO channel_layer_tiles AS t (
                 channel_layer_id, z, y, x, pixels
@@ -146,10 +133,16 @@ class ChannelLayerTile(ExperimentModel):
             ON CONFLICT ON CONSTRAINT channel_layer_tiles_pkey
             DO UPDATE SET pixels = %(pixels)s
         ''', {
-            'channel_layer_id': tile.channel_layer_id,
-            'z': tile.z, 'y': tile.y, 'x': tile.x,
-            'pixels': psycopg2.Binary(tile._pixels.tostring())
+            'channel_layer_id': instance.channel_layer_id,
+            'z': instance.z, 'y': instance.y, 'x': instance.x,
+            'pixels': psycopg2.Binary(instance._pixels.tostring())
         })
+
+    @classmethod
+    def _bulk_ingest(cls, connection, instances):
+        # TODO: figure out how to COPY the binary pixel data
+        for obj in instances:
+            cls._add(connection, obj)
 
     def __repr__(self):
         return '<%s(z=%r, y=%r, x=%r, channel_layer_id=%r)>' % (

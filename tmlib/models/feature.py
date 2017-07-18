@@ -23,9 +23,10 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import HSTORE
 from sqlalchemy.orm import relationship, backref
 
-from tmlib.models.base import ExperimentModel, IdMixIn
-from tmlib.models.utils import ExperimentConnection
-from tmlib.models.dialect import compile_distributed_query
+from tmlib.models.base import (
+    ExperimentModel, DistributedExperimentModel, IdMixIn
+)
+from tmlib.models.dialect import _compile_distributed_query
 from tmlib import cfg
 
 logger = logging.getLogger(__name__)
@@ -89,9 +90,8 @@ class Feature(ExperimentModel, IdMixIn):
 
         Parameters
         ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
+        connection: tmlib.models.utils.ExperimentConnection
+            connection for experiment-specific database connection
         mapobject_type_id: int, optional
             ID of parent
             :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` for
@@ -121,7 +121,7 @@ class Feature(ExperimentModel, IdMixIn):
                     SET values = delete(values, %(feature_ids)s)
                 '''
                 connection.execute(
-                    compile_distributed_query(sql),
+                    _compile_distributed_query(sql),
                     {'feature_ids': map(str, ids)}
                 )
                 connection.execute('''
@@ -131,14 +131,14 @@ class Feature(ExperimentModel, IdMixIn):
                 })
             else:
                 sql = "UPDATE feature_values SET values = $$' '$$;"
-                connection.execute(compile_distributed_query(sql))
+                connection.execute(_compile_distributed_query(sql))
                 connection.execute('DELETE FROM features;')
 
     def __repr__(self):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
 
 
-class FeatureValues(ExperimentModel):
+class FeatureValues(DistributedExperimentModel):
 
     '''An individual value of a :class:`Feature <tmlib.models.feature.Feature>`
     that was extracted for a given
@@ -195,18 +195,8 @@ class FeatureValues(ExperimentModel):
         self.values = values
 
     @classmethod
-    def add(cls, connection, feature_values):
-        '''Adds object to the database table.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        feature_values: tmlib.models.feature.FeatureValues
-
-        '''
-        if not isinstance(feature_values, FeatureValues):
+    def _add(cls, connection, instance):
+        if not isinstance(instance, FeatureValues):
             raise TypeError(
                 'Object must have type tmlib.models.feature.FeatureValues'
             )
@@ -224,26 +214,17 @@ class FeatureValues(ExperimentModel):
             WHERE v.mapobject_id = %(mapobject_id)s
             AND v.tpoint = %(tpoint)s
         ''', {
-            'partition_key': feature_values.partition_key,
-            'values': feature_values.values,
-            'mapobject_id': feature_values.mapobject_id,
-            'tpoint': feature_values.tpoint
+            'partition_key': instance.partition_key,
+            'values': instance.values,
+            'mapobject_id': instance.mapobject_id,
+            'tpoint': instance.tpoint
         })
 
     @classmethod
-    def add_multiple(cls, connection, feature_values):
-        '''Adds multiple new records at once.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        feature_values: List[tmlib.models.feature.FeatureValues]
-        '''
+    def _bulk_ingest(cls, connection, instances):
         f = StringIO()
         w = csv.writer(f, delimiter=';')
-        for obj in feature_values:
+        for obj in instances:
             w.writerow((
                 obj.partition_key, obj.mapobject_id, obj.tpoint,
                 ','.join([

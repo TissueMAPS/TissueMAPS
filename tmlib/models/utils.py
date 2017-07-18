@@ -35,7 +35,9 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extras import NamedTupleCursor
 from cached_property import cached_property
 
-from tmlib.models.base import MainModel, ExperimentModel, FileSystemModel
+from tmlib.models.base import (
+    MainModel, ExperimentModel, FileSystemModel, DistributedExperimentModel
+)
 from tmlib.models.dialect import *
 from tmlib.utils import create_partitions
 from tmlib import cfg
@@ -331,9 +333,10 @@ class Query(sqlalchemy.orm.query.Query):
         locations = list()
         for cls in classes:
             if cls.__table__.info['is_distributed']:
-                raise ValueError(
-                    'Records of distributed model "%s" cannot be deleted '
-                    'within a transaction.' % cls.__name__
+                # TODO: check if in transaction
+                logger.debug(
+                    'delete records of distributed table "%s"',
+                    cls.__table__.name
                 )
             if hasattr(cls, '_location'):
                 locations.extend(self.from_self(cls._location).all())
@@ -357,7 +360,7 @@ class Query(sqlalchemy.orm.query.Query):
         # For performance reasons delete all rows via raw SQL without updating
         # the session and then enforce the session to update afterwards.
         logger.debug(
-            'delete instances of class %s from database', cls.__name__
+            'delete instances of model class %s from database', cls.__name__
         )
         super(Query, self).delete(synchronize_session=False)
         self.session.expire_all()
@@ -366,6 +369,66 @@ class Query(sqlalchemy.orm.query.Query):
             for loc in locations:
                 if loc[0] is not None:
                     delete_location(loc[0])
+
+    def bulk_ingest(self, instances):
+        '''Ingests multiple instances of a distributed model class in bulk.
+
+        Parameters
+        ----------
+        instances: List[tmlib.models.base.DistributedExperimentModel]
+            instances of model class
+
+        Warning
+        -------
+        Assumes that all instances are of the same model class.
+        '''
+        cls = instances[0].__class__
+        if not isinstance(inst, DistributedExperimentModel):
+            raise TypeError(
+                'Bulk ingestion is only supported for instances of type "%s"' %
+                DistributedExperimentModel.__name__
+            )
+        connection = self.get_bind()
+        with connection.connection.cursor() as c:
+            cls._bulk_ingest(c, instances)
+
+    def add(self, instance):
+        '''Adds an instance of a model class.
+
+        Parameters
+        ----------
+        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
+            instance of a model class
+        '''
+        cls = instance.__class__
+        if isinstance(instance, DistributedExperimentModel):
+            connection = self.get_bind()
+            with connection.connection.cursor() as c:
+                cls._add(c, instance)
+        else:
+            super(Query, self).add(instance)
+
+    def add_all(self, instance):
+        '''Adds multiple instances of a model class.
+
+        Parameters
+        ----------
+        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
+            instances of a the same model class
+
+        Warning
+        -------
+        Assumes that all instances are of the same model class.
+        '''
+        instance = instances[0]
+        cls = inst.__class__
+        if isinstance(inst, DistributedExperimentModel):
+            connection = self.get_bind()
+            with connection.connection.cursor() as c:
+                for i in instances:
+                    cls._add(c, i)
+        else:
+            super(Query, self).add_all(instances)
 
 
 class _SQLAlchemy_Session(object):
@@ -578,6 +641,8 @@ class _Session(object):
                     self._session.commit()
                 except RuntimeError:
                     logger.error('commit failed due to RuntimeError???')
+        else:
+            self._session.flush()
         connection = self._session.get_bind()
         connection.close()
         self._session.close()
@@ -600,18 +665,14 @@ class MainSession(_Session):
     :class:`tmlib.models.base.MainModel`
     '''
 
-    def __init__(self, db_uri=None, transaction=True):
+    def __init__(self, transaction=True):
         '''
         Parameters
         ----------
-        db_uri: str, optional
-            URI of the ``tissuemaps`` database; defaults to the value of
-            :attr:`db_uri <tmlib.config.DefaultConfig.db_uri>`
         transaction: bool, optional
             whether a transaction should be used (default: ``True``)
         '''
-        if db_uri is None:
-            db_uri = cfg.db_master_uri
+        db_uri = cfg.db_master_uri
         super(MainSession, self).__init__(db_uri, transaction=transaction)
         self._schema = None
         self._engine = create_db_engine(db_uri)
@@ -643,21 +704,17 @@ class ExperimentSession(_Session):
     :class:`tmlib.models.base.ExperimentModel`
     '''
 
-    def __init__(self, experiment_id, db_uri=None, transaction=True):
+    def __init__(self, experiment_id, transaction=True):
         '''
         Parameters
         ----------
         experiment_id: int
             ID of the experiment that should be queried
-        db_uri: str, optional
-            URI of the ``tissuemaps`` database; defaults to the value of
-            :attr:`db_uri <tmlib.config.LibraryConfig.db_uri>`
         transaction: bool, optional
             whether a transaction should be used; distributed tables cannot be 
             modified within a transaction context (default: ``True``)
         '''
-        if db_uri is None:
-            db_uri = cfg.db_master_uri
+        db_uri = cfg.db_master_uri
         self.experiment_id = experiment_id
         logger.debug('create session for experiment %d', self.experiment_id)
         self._engine = create_db_engine(db_uri)
@@ -672,7 +729,6 @@ class ExperimentSession(_Session):
         exists = _create_schema_if_not_exists(connection, self._schema)
         if not exists:
             _create_experiment_db_tables(connection, self._schema)
-        _set_search_path(connection, self._schema)
         if not self._transaction:
             connection = connection.execution_options(
                 autocommit=True, isolation_level='AUTOCOMMIT'
@@ -683,6 +739,7 @@ class ExperimentSession(_Session):
             self._session_factory.configure(
                 autocommit=True, autoflush=False, expire_on_commit=False
             )
+        _set_search_path(connection, self._schema)
         self._session_factory.configure(bind=connection)
         self._session = _SQLAlchemy_Session(
             self._session_factory(), self._schema
@@ -818,7 +875,6 @@ class ExperimentConnection(_Connection):
         ''')
         return self
 
-<<<<<<< HEAD
     def locate_partition(self, model, partition_key):
         '''Determines the location of a table partition (shard).
 

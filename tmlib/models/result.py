@@ -355,16 +355,7 @@ class LabelValues(ExperimentModel):
         self.mapobject_id = mapobject_id
 
     @classmethod
-    def add(self, connection, label_values):
-        '''Adds a new record.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        label_values: tmlib.models.result.LabelValues
-        '''
+    def _add(self, connection, instance):
         connection.execute('''
             INSERT INTO label_values AS v (
                 partition_key, values, mapobject_id, tpoint
@@ -380,25 +371,16 @@ class LabelValues(ExperimentModel):
             AND v.tpoint = %(tpoint)s
             AND v.partition_key = %(partition_key)s
         ''', {
-            'values': label_values.values,
-            'mapobject_id': label_values.mapobject_id,
-            'tpoint': label_values.tpoint
+            'values': instance.values,
+            'mapobject_id': instance.mapobject_id,
+            'tpoint': instance.tpoint
         })
 
     @classmethod
-    def add_multiple(cls, connection, label_values):
-        '''Adds multiple new records at once.
-
-        Parameters
-        ----------
-        connection: psycopg2.extras.NamedTupleCursor
-            experiment-specific database connection created via
-            :class:`ExperimentConnection <tmlib.models.utils.ExperimentConnection>`
-        label_values: List[tmlib.models.result.LabelValues]
-        '''
+    def _bulk_ingest(cls, connection, instances):
         f = StringIO()
         w = csv.writer(f, delimiter=';')
-        for obj in label_values:
+        for obj in instances:
             w.writerow((
                 obj.partition_key, obj.mapobject_id, obj.tpoint,
                 ','.join([
