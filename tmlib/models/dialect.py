@@ -20,7 +20,7 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy_utils.expressions import array_agg
 from sqlalchemy.schema import DropTable, CreateTable
 from sqlalchemy.schema import UniqueConstraint, PrimaryKeyConstraint
-# from sqlalchemy.sql.expression import Delete
+from sqlalchemy.sql.expression import Delete
 
 from tmlib.errors import DataModelError
 from tmlib import cfg
