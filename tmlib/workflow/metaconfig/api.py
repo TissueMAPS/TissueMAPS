@@ -267,7 +267,7 @@ class MetadataConfigurator(WorkflowStepAPI):
                         channel_image_files.append(
                             tm.ChannelImageFile(
                                 tpoint=i.tpoint, zplane=i.zplane,
-                                channel_id=channels[i.channel_name].id,
+                                channel_id=channels[i.channel_name],
                                 site_id=site.id, acquisition_id=acquisition.id,
                                 file_map=fmaps[index],
                             )
