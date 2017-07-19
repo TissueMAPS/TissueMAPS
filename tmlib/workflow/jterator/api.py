@@ -231,7 +231,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             mapobject_types = session.query(tm.MapobjectType.id).\
                 filter(~tm.MapobjectType.ref_type.in_(static_types)).\
                 all()
-            mapobject_type_ids = [t.id for t in mapboject_type_ids]
+            mapobject_type_ids = [t.id for t in mapobject_type_ids]
             session.query(tm.Mapobject).\
                 filter(tm.Mapobject.mapobject_type_id.in_(mapobject_type_ids)).\
                 delete()
