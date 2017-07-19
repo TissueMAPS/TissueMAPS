@@ -370,66 +370,6 @@ class Query(sqlalchemy.orm.query.Query):
                 if loc[0] is not None:
                     delete_location(loc[0])
 
-    def bulk_ingest(self, instances):
-        '''Ingests multiple instances of a distributed model class in bulk.
-
-        Parameters
-        ----------
-        instances: List[tmlib.models.base.DistributedExperimentModel]
-            instances of model class
-
-        Warning
-        -------
-        Assumes that all instances are of the same model class.
-        '''
-        cls = instances[0].__class__
-        if not isinstance(inst, DistributedExperimentModel):
-            raise TypeError(
-                'Bulk ingestion is only supported for instances of type "%s"' %
-                DistributedExperimentModel.__name__
-            )
-        connection = self.get_bind()
-        with connection.connection.cursor() as c:
-            cls._bulk_ingest(c, instances)
-
-    def add(self, instance):
-        '''Adds an instance of a model class.
-
-        Parameters
-        ----------
-        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
-            instance of a model class
-        '''
-        cls = instance.__class__
-        if isinstance(instance, DistributedExperimentModel):
-            connection = self.get_bind()
-            with connection.connection.cursor() as c:
-                cls._add(c, instance)
-        else:
-            super(Query, self).add(instance)
-
-    def add_all(self, instance):
-        '''Adds multiple instances of a model class.
-
-        Parameters
-        ----------
-        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
-            instances of a the same model class
-
-        Warning
-        -------
-        Assumes that all instances are of the same model class.
-        '''
-        instance = instances[0]
-        cls = inst.__class__
-        if isinstance(inst, DistributedExperimentModel):
-            connection = self.get_bind()
-            with connection.connection.cursor() as c:
-                for i in instances:
-                    cls._add(c, i)
-        else:
-            super(Query, self).add_all(instances)
-
 
 class _SQLAlchemy_Session(object):
 
@@ -610,6 +550,65 @@ class _SQLAlchemy_Session(object):
         logger.info('create table "%s"', table.name)
         table.create(connection)
 
+    def bulk_ingest(self, instances):
+        '''Ingests multiple instances of a distributed model class in bulk.
+
+        Parameters
+        ----------
+        instances: List[tmlib.models.base.DistributedExperimentModel]
+            instances of model class
+
+        Warning
+        -------
+        Assumes that all instances are of the same model class.
+        '''
+        cls = instances[0].__class__
+        if not isinstance(inst, DistributedExperimentModel):
+            raise TypeError(
+                'Bulk ingestion is only supported for instances of type "%s"' %
+                DistributedExperimentModel.__name__
+            )
+        connection = self._session.get_bind()
+        with connection.connection.cursor() as c:
+            cls._bulk_ingest(c, instances)
+
+    def add(self, instance):
+        '''Adds an instance of a model class.
+
+        Parameters
+        ----------
+        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
+            instance of a model class
+        '''
+        cls = instance.__class__
+        if isinstance(instance, DistributedExperimentModel):
+            connection = self._session.get_bind()
+            with connection.connection.cursor() as c:
+                cls._add(c, instance)
+        else:
+            self._session.add(instance)
+
+    def add_all(self, instance):
+        '''Adds multiple instances of a model class.
+
+        Parameters
+        ----------
+        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
+            instances of a the same model class
+
+        Warning
+        -------
+        Assumes that all instances are of the same model class.
+        '''
+        instance = instances[0]
+        cls = inst.__class__
+        if isinstance(inst, DistributedExperimentModel):
+            connection = self._session.get_bind()
+            with connection.connection.cursor() as c:
+                for i in instances:
+                    cls._add(c, i)
+        else:
+            self._session.add_all(instance)
 
 class _Session(object):
 
