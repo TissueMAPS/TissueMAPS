@@ -562,7 +562,8 @@ class _SQLAlchemy_Session(object):
         -------
         Assumes that all instances are of the same model class.
         '''
-        cls = instances[0].__class__
+        inst = instances[0]
+        cls = inst.__class__
         if not isinstance(inst, DistributedExperimentModel):
             raise TypeError(
                 'Bulk ingestion is only supported for instances of type "%s"' %
@@ -600,7 +601,7 @@ class _SQLAlchemy_Session(object):
         -------
         Assumes that all instances are of the same model class.
         '''
-        instance = instances[0]
+        inst = instances[0]
         cls = inst.__class__
         if isinstance(inst, DistributedExperimentModel):
             connection = self._session.get_bind()

@@ -604,7 +604,7 @@ class Mapobject(DistributedExperimentModel):
             f, cls.__table__.name, sep=';', columns=columns, null=''
         )
         f.close()
-        return mapobjects
+        return instances
 
     def __repr__(self):
         return '<%s(id=%r, mapobject_type_id=%r)>' % (
