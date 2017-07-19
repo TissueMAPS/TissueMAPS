@@ -224,9 +224,17 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         children instances for the processed experiment.
         '''
         logger.info('delete existing mapobjects and mapobject types')
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
-            tm.MapobjectType.delete_cascade(connection, static=False)
-
+        with tm.utils.ExperimentSession(self.experiment_id, False) as session:
+            static_types = [
+                tm.Plate.__name__, tm.Well.__name__, tm.Site.__name__
+            ]
+            mapobject_types = session.query(tm.MapobjectType.id).\
+                filter(~tm.MapobjectType.ref_type.in_(static_types)).\
+                all()
+            mapobject_type_ids = [t.id for t in mapboject_type_ids]
+            session.query(tm.Mapobject).\
+                filter(tm.Mapobject.mapobject_type_id.in_(mapobject_type_ids)).\
+                delete()
 
     def _load_pipeline_input(self, site_id):
         logger.info('load pipeline inputs')
@@ -439,10 +447,12 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                             'delete segmentations for existing mapobjects of '
                             'type "%s"', obj_name
                         )
-                        tm.Mapobject.delete_cascade(
-                            conn, mapobject_type_ids[obj_name],
-                            partition_key=store['site_id']
-                        )
+                        session.query(tm.Mapobject).\
+                            filter_by(
+                                mapobject_type_id=mapobject_type_ids[obj_name],
+                                partition_key=store['site_id']
+                            ).\
+                            delete()
 
                 # Create a mapobject for each segmented object, i.e. each
                 # pixel component having a unique label.
