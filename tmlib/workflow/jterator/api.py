@@ -459,6 +459,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 logger.info('insert objects into database')
                 # FIXME: does this update the id attribute?
                 session.bulk_ingest(mapobjects)
+                session.flush()
                 mapobject_ids = {
                     label: mapobjects[i].id
                     for i, label in enumerate(segm_objs.labels)
