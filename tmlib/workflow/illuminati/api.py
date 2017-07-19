@@ -666,8 +666,8 @@ class PyramidBuilder(WorkflowStepAPI):
                     logger.debug('add mapobject #%d', mapobject.id)
                     mapobject_segmentation = tm.MapobjectSegmentation(
                         partition_key=key, mapobject_id=mapobject.id,
-                        geom_polygon=value['polygon'].wkt,
-                        geom_centroid=value['polygon'].centroid.wkt,
+                        geom_polygon=value['polygon'],
+                        geom_centroid=value['polygon'].centroid,
                         segmentation_layer_id=value['segmentation_layer_id'],
                     )
                     session.add(mapobject_segmentation)

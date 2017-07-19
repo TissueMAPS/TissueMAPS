@@ -23,6 +23,7 @@ import pandas as pd
 from cStringIO import StringIO
 from sqlalchemy import func, case
 from geoalchemy2 import Geometry
+from geoalchemy2.shape import to_shape
 from sqlalchemy.orm import Session
 from sqlalchemy import (
     Column, String, Integer, BigInteger, Boolean, ForeignKey, not_, Index,
@@ -661,10 +662,10 @@ class MapobjectSegmentation(DistributedExperimentModel):
         ----------
         partition_key: int
             key that determines on which shard the object will be stored
-        geom_polygon: str
-            EWKT POLYGON geometry representing the outline of the mapobject
-        geom_centroid: str
-            EWKT POINT geometry representing the centriod of the mapobject
+        geom_polygon: shapely.geometry.polygon.Polygon
+            polygon geometry of the mapobject contour
+        geom_centroid: shapely.geometry.point.Point
+            point geometry of the mapobject centroid
         mapobject_id: int
             ID of parent :class:`Mapobject <tmlib.models.mapobject.Mapobject>`
         segmentation_layer_id: int
@@ -674,8 +675,8 @@ class MapobjectSegmentation(DistributedExperimentModel):
             label assigned to the segmented object
         '''
         self.partition_key = partition_key
-        self.geom_polygon = geom_polygon
-        self.geom_centroid = geom_centroid
+        self.geom_polygon = getattr(geom_polygon, 'wkt', None)
+        self.geom_centroid = geom_centroid.wkt
         self.mapobject_id = mapobject_id
         self.segmentation_layer_id = segmentation_layer_id
         self.label = label
@@ -704,8 +705,8 @@ class MapobjectSegmentation(DistributedExperimentModel):
             'partition_key': instance.partition_key,
             'mapobject_id': instance.mapobject_id,
             'segmentation_layer_id': instance.segmentation_layer_id,
-            'geom_polygon': instance.geom_polygon.wkt,
-            'geom_centroid': instance.geom_centroid.wkt,
+            'geom_polygon': instance.geom_polygon,
+            'geom_centroid': instance.geom_centroid,
             'label': instance.label
         })
 
@@ -720,8 +721,8 @@ class MapobjectSegmentation(DistributedExperimentModel):
                 raise TypeError('Object must have type %s' % cls.__name__)
             w.writerow((
                 obj.partition_key,
-                getattr(obj.geom_polygon, 'wkt', None),
-                obj.geom_centroid.wkt,
+                obj.geom_polygon,
+                obj.geom_centroid,
                 obj.mapobject_id, obj.segmentation_layer_id, obj.label
             ))
         columns = (
