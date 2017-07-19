@@ -29,6 +29,13 @@ from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import FLOAT
 from psycopg2.extras import execute_values
 from psycopg2.sql import SQL, Identifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import SGDClassifier
+from sklearn.svm import SVC
+from sklearn.preprocessing import RobustScaler
+from sklearn.model_selection import GridSearchCV, KFold
+from sklearn.cluster import KMeans
+
 
 from tmlib import cfg
 import tmlib.models as tm
@@ -513,11 +520,6 @@ class Classifier(Tool):
         Tuple[sklearn.base.BaseEstimator]
             trained supervised classifier and scaler
         '''
-        from sklearn.ensemble import RandomForestClassifier
-        from sklearn.linear_model import SGDClassifier
-        from sklearn.svm import SVC
-        from sklearn.preprocessing import RobustScaler
-        from sklearn.model_selection import GridSearchCV, KFold
 
         classifiers = {
             'randomforest': {
@@ -599,7 +601,6 @@ class Classifier(Tool):
         Tuple[sklearn.base.BaseEstimator]
             trained unsupervised classifier and scaler
         '''
-        from sklearn.cluster import KMeans
         models = {
             'kmeans': {
                 'cls': KMeans,
