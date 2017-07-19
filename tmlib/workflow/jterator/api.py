@@ -225,11 +225,9 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         '''
         logger.info('delete existing mapobjects and mapobject types')
         with tm.utils.ExperimentSession(self.experiment_id, False) as session:
-            static_types = [
-                tm.Plate.__name__, tm.Well.__name__, tm.Site.__name__
-            ]
+            static_types = ['Plates', 'Wells', 'Sites']
             mapobject_types = session.query(tm.MapobjectType.id).\
-                filter(~tm.MapobjectType.ref_type.in_(static_types)).\
+                filter(~tm.MapobjectType.name.in_(static_types)).\
                 all()
             mapobject_type_ids = [t.id for t in mapobject_type_ids]
             session.query(tm.Mapobject).\
