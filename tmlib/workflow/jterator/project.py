@@ -23,6 +23,7 @@ import shutil
 from cached_property import cached_property
 from natsort import natsorted
 
+from tmlib import cfg
 from tmlib.workflow.jterator.utils import get_package_directories
 from tmlib.workflow.jterator.description import (
     PipelineDescription, HandleDescriptions
