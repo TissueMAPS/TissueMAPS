@@ -307,7 +307,7 @@ def register_step_submission_args(name):
 
 
 def get_step_args(name):
-    '''Gets the step-specific implementations of the
+    '''Gets step-specific implementations of
     :class:`ArgumentCollection <tmlib.workflow.args.ArgumentCollection>`
     classes.
 

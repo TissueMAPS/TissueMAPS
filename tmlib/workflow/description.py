@@ -338,7 +338,7 @@ class WorkflowStepDescription(object):
 
     @property
     def submission_args(self):
-        '''tmlib.workflow.args.BatchArguments: batch arguments instance'''
+        '''tmlib.workflow.args.SubmissionArguments: submission arguments'''
         return self._submission_args
 
     @submission_args.setter
@@ -362,8 +362,8 @@ class WorkflowStepDescription(object):
         description['fullname'] = self.fullname
         description['help'] = self.help
         description['active'] = self.active
-        description['batch_args'] = self.batch_args.as_list()
-        description['submission_args'] = self.submission_args.as_list()
+        description['batch_args'] = self.batch_args.to_list()
+        description['submission_args'] = self.submission_args.to_list()
         return description
 
     def jsonify(self):

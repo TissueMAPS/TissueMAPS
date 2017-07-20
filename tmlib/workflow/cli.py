@@ -42,7 +42,6 @@ from tmlib.workflow.utils import create_gc3pie_sql_store
 from tmlib.workflow.utils import create_gc3pie_session
 from tmlib.workflow.utils import create_gc3pie_engine
 from tmlib.workflow.submission import WorkflowSubmissionManager
-from tmlib.workflow.description import WorkflowStepDescription
 from tmlib.workflow.workflow import WorkflowStep
 from tmlib.workflow.jobs import IndependentJobCollection
 from tmlib.log import configure_logging
