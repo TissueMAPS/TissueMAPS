@@ -234,6 +234,7 @@ def format_task_data(name, type, created_at, updated_at, state, exitcode,
     -------
     Dict[str, Union[str, int, bool]]
     '''
+    datetime_format = '%Y-%m-%d %H:%M:%S'
     failed = (
         exitcode != 0 and exitcode is not None
     )
@@ -246,8 +247,8 @@ def format_task_data(name, type, created_at, updated_at, state, exitcode,
     data = {
         'done': state == gc3libs.Run.State.TERMINATED,
         'failed': failed,
-        'created_at': str(created_at),
-        'updated_at': str(updated_at),
+        'created_at': created_at.strftime(datetime_format),
+        'updated_at': updated_at.strftime(datetime_format),
         'name': name,
         'state': state,
         'live': state in live_states,
@@ -259,9 +260,9 @@ def format_task_data(name, type, created_at, updated_at, state, exitcode,
     }
     # Convert timedeltas to string to make it JSON serializable
     if data['time'] is not None:
-        data['time'] = str(data['time'])
+        data['time'] = data['time'].strftime(datetime_format)
     if data['cpu_time'] is not None:
-        data['cpu_time'] = str(data['cpu_time'])
+        data['cpu_time'] = data['cpu_time'].strftime(datetime_format)
     return data
 
 
