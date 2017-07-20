@@ -82,15 +82,13 @@ angular.module('tmaps.ui').directive('tmArgumentInput', function() {
             var argumentType = $scope.arg.type;
             var hasChoices = $scope.arg.choices !== null;
 
-            if (hasChoices && argumentType == 'bool') {
-                widgetType = 'checkbox';
-            } else if (hasChoices && argumentType !== 'bool') {
-                widgetType = 'dropdown';
-            } else if (!hasChoices && argumentType === 'float') {
-                widgetType = 'floatInput';
-            } else if (!hasChoices && argumentType === 'int') {
-                widgetType = 'integerInput';
-            } else if (!hasChoices && argumentType == 'str') {
+            if (hasChoices) {
+                if ($scope.arg.choices.indexOf(true) > -1 ) {
+                    widgetType = 'checkbox';
+                } else {
+                    widgetType = 'dropdown';
+                }
+            } else {
                 widgetType = 'textInput';
             }
 
