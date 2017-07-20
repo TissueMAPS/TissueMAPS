@@ -165,7 +165,7 @@ class WorkflowStageDescription(object):
     '''Description of a TissueMAPS workflow stage.'''
 
     @assert_type(name='basestring', mode='basestring')
-    def __init__(self, type, name, mode, active, steps=None):
+    def __init__(self, type, name, mode, active=True, steps=None):
         '''
         Parameters
         ----------
@@ -177,7 +177,7 @@ class WorkflowStageDescription(object):
             mode of workflow stage submission, i.e. whether steps are submitted
             simultaneously or one after another
             (options: ``{"sequential", "parallel"}``)
-        active: bool
+        active: bool, optional
             whether the stage should be processed
         steps: List[dict]
             description of steps in form of key-value pairs
@@ -264,8 +264,8 @@ class WorkflowStageDescription(object):
     def to_dict(self):
         '''Returns the attributes as key-value pairs.
 
-        Parameters
-        ----------
+        Returns
+        -------
         dict
         '''
         description = dict()
@@ -291,13 +291,13 @@ class WorkflowStepDescription(object):
 
     '''Description of a workflow step.'''
 
-    def __init__(self, name, active, batch_args=None, submission_args=None):
+    def __init__(self, name, active=True, batch_args=None, submission_args=None):
         '''
         Parameters
         ----------
         name: str
             name of the step
-        active: bool
+        active: bool, optional
             whether the step should be processed
         batch_args: tmlib.workflow.args.BatchArguments, optional
             batch arguments
@@ -338,7 +338,7 @@ class WorkflowStepDescription(object):
 
     @property
     def submission_args(self):
-        '''tmlib.workflow.args.BatchArguments: batch arguments instance'''
+        '''tmlib.workflow.args.SubmissionArguments: submission arguments'''
         return self._submission_args
 
     @submission_args.setter
@@ -362,8 +362,8 @@ class WorkflowStepDescription(object):
         description['fullname'] = self.fullname
         description['help'] = self.help
         description['active'] = self.active
-        description['batch_args'] = self.batch_args.as_list()
-        description['submission_args'] = self.submission_args.as_list()
+        description['batch_args'] = self.batch_args.to_list()
+        description['submission_args'] = self.submission_args.to_list()
         return description
 
     def jsonify(self):
