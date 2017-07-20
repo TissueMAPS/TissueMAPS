@@ -694,14 +694,26 @@ class MainSession(_Session):
 class ExperimentSession(_Session):
 
     '''Session scopes for interaction with an experiment-secific database.
-    All changes get automatically committed at the end of the interaction.
+    If ``transaction`` is set to ``True`` (default), all changes get
+    automatically committed at the end of the interaction.
     In case of an error, a rollback is issued.
+    If ``transaction`` is set to ``False``, the session will be in
+    autocomit mode and every query will be immediately flushed to the database.
 
     Examples
     --------
     >>> import tmlib.models as tm
     >>> with tm.utils.ExperimentSession(experiment_id=1) as session:
     >>>     print(session.query(tm.Plate).all())
+
+    Note
+    ----
+    Models derived from
+    :class:`ExperimentModel <tmlib.models.base.ExperimentModel>` reside in a
+    schema with name ``experiment_{id}``.
+    The session will automatically set the *search_path*, such that one can
+    refer to tables within the session scope without having to specifying the
+    schema.
 
     See also
     --------
