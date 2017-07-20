@@ -724,7 +724,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 mapobjects += session.query(tm.Mapobject.id).\
                     outerjoin(tm.MapobjectSegmentation).\
                     filter(
-                        not tm.MapobjectSegmentation.geom_poly.ST_IsValid(),
+                        not tm.MapobjectSegmentation.geom_polygon.ST_IsValid(),
                         tm.Mapobject.mapobject_type_id == mapobject_type.id
                     ).\
                     all()
