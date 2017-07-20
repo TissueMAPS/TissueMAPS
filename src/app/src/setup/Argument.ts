@@ -17,7 +17,6 @@ interface ArgumentDescription {
     default: any;
     choices: any[];
     help: string;
-    type: string;
     required: boolean;
     disabled: boolean;
 }
@@ -29,14 +28,12 @@ class Argument {
     default: any;
     choices: any[];
     help: string;
-    type: string;
     required: boolean;
     disabled: boolean;
 
     constructor(args: ArgumentDescription) {
         this.name = args.name;
         this.value = args.value;
-        this.type = args.type;
         this.default = args.default;
         this.choices = args.choices;
         this.help = args.help;
