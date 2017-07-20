@@ -433,7 +433,7 @@ class ArgumentCollection(object):
                 value.add_to_argparser(parser)
         return parser
 
-    def as_list(self):
+    def to_list(self):
         '''Returns class attributes of type
         :class:`Argument <tmlib.workflow.args.Argument>` as an array of
         key-value pairs.
@@ -449,7 +449,6 @@ class ArgumentCollection(object):
                 'name': arg.name,
                 'help': re.sub(r'\s+', ' ', arg.help).strip(),
                 'default': arg.default,
-                'type': arg.type.__name__,
                 'required': arg.required,
                 'disabled': arg.disabled
             }
