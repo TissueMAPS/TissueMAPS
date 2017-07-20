@@ -370,66 +370,6 @@ class Query(sqlalchemy.orm.query.Query):
                 if loc[0] is not None:
                     delete_location(loc[0])
 
-    def bulk_ingest(self, instances):
-        '''Ingests multiple instances of a distributed model class in bulk.
-
-        Parameters
-        ----------
-        instances: List[tmlib.models.base.DistributedExperimentModel]
-            instances of model class
-
-        Warning
-        -------
-        Assumes that all instances are of the same model class.
-        '''
-        cls = instances[0].__class__
-        if not isinstance(inst, DistributedExperimentModel):
-            raise TypeError(
-                'Bulk ingestion is only supported for instances of type "%s"' %
-                DistributedExperimentModel.__name__
-            )
-        connection = self.get_bind()
-        with connection.connection.cursor() as c:
-            cls._bulk_ingest(c, instances)
-
-    def add(self, instance):
-        '''Adds an instance of a model class.
-
-        Parameters
-        ----------
-        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
-            instance of a model class
-        '''
-        cls = instance.__class__
-        if isinstance(instance, DistributedExperimentModel):
-            connection = self.get_bind()
-            with connection.connection.cursor() as c:
-                cls._add(c, instance)
-        else:
-            super(Query, self).add(instance)
-
-    def add_all(self, instance):
-        '''Adds multiple instances of a model class.
-
-        Parameters
-        ----------
-        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
-            instances of a the same model class
-
-        Warning
-        -------
-        Assumes that all instances are of the same model class.
-        '''
-        instance = instances[0]
-        cls = inst.__class__
-        if isinstance(inst, DistributedExperimentModel):
-            connection = self.get_bind()
-            with connection.connection.cursor() as c:
-                for i in instances:
-                    cls._add(c, i)
-        else:
-            super(Query, self).add_all(instances)
-
 
 class _SQLAlchemy_Session(object):
 
@@ -515,13 +455,17 @@ class _SQLAlchemy_Session(object):
             try:
                 instance = model(**kwargs)
                 self._session.add(instance)
-                self._session.commit()
+                if not self._session.autocommit:
+                    self._session.commit()
+                else:
+                    self._session.flush()
                 logger.debug('created new instance: %r', instance)
             except sqlalchemy.exc.IntegrityError as err:
                 logger.error(
                     'creation of %s instance failed:\n%s', model, str(err)
                 )
-                self._session.rollback()
+                if not self._session.autocommit:
+                    self._session.rollback()
                 try:
                     instance = self._session.query(model).\
                         filter_by(**kwargs).\
@@ -606,6 +550,70 @@ class _SQLAlchemy_Session(object):
         logger.info('create table "%s"', table.name)
         table.create(connection)
 
+    def bulk_ingest(self, instances):
+        '''Ingests multiple instances of a distributed model class in bulk.
+
+        Parameters
+        ----------
+        instances: List[tmlib.models.base.DistributedExperimentModel]
+            instances of model class
+
+        Warning
+        -------
+        Assumes that all instances are of the same model class.
+        '''
+        if len(instances) == 0:
+            return
+        inst = instances[0]
+        cls = inst.__class__
+        if not isinstance(inst, DistributedExperimentModel):
+            raise TypeError(
+                'Bulk ingestion is only supported for instances of type "%s"' %
+                DistributedExperimentModel.__name__
+            )
+        connection = self._session.get_bind()
+        with connection.connection.cursor() as c:
+            cls._bulk_ingest(c, instances)
+
+    def add(self, instance):
+        '''Adds an instance of a model class.
+
+        Parameters
+        ----------
+        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
+            instance of a model class
+        '''
+        cls = instance.__class__
+        if isinstance(instance, DistributedExperimentModel):
+            connection = self._session.get_bind()
+            with connection.connection.cursor() as c:
+                cls._add(c, instance)
+        else:
+            self._session.add(instance)
+
+    def add_all(self, instance):
+        '''Adds multiple instances of a model class.
+
+        Parameters
+        ----------
+        instances: List[Union[tmlib.models.base.ExperimentModel, tmlib.models.base.MainModel]
+            instances of a the same model class
+
+        Warning
+        -------
+        Assumes that all instances are of the same model class.
+        '''
+        if len(instances) == 0:
+            return
+        inst = instances[0]
+        cls = inst.__class__
+        if isinstance(inst, DistributedExperimentModel):
+            connection = self._session.get_bind()
+            with connection.connection.cursor() as c:
+                for i in instances:
+                    cls._add(c, i)
+        else:
+            self._session.add_all(instance)
 
 class _Session(object):
 
@@ -624,9 +632,10 @@ class _Session(object):
     This is *not* thread-safe!
     '''
 
-    def __init__(self, db_uri, schema=None):
+    def __init__(self, db_uri, schema=None, transaction=True):
         self._db_uri = db_uri
         self._schema = schema
+        self._transaction = transaction
         self._session_factory = create_db_session_factory()
 
     def __exit__(self, except_type, except_value, except_trace):
@@ -689,14 +698,26 @@ class MainSession(_Session):
 class ExperimentSession(_Session):
 
     '''Session scopes for interaction with an experiment-secific database.
-    All changes get automatically committed at the end of the interaction.
+    If ``transaction`` is set to ``True`` (default), all changes get
+    automatically committed at the end of the interaction.
     In case of an error, a rollback is issued.
+    If ``transaction`` is set to ``False``, the session will be in
+    autocomit mode and every query will be immediately flushed to the database.
 
     Examples
     --------
     >>> import tmlib.models as tm
     >>> with tm.utils.ExperimentSession(experiment_id=1) as session:
     >>>     print(session.query(tm.Plate).all())
+
+    Note
+    ----
+    Models derived from
+    :class:`ExperimentModel <tmlib.models.base.ExperimentModel>` reside in a
+    schema with name ``experiment_{id}``.
+    The session will automatically set the *search_path*, such that one can
+    refer to tables within the session scope without having to specifying the
+    schema.
 
     See also
     --------
@@ -721,7 +742,7 @@ class ExperimentSession(_Session):
             experiment_id=self.experiment_id
         )
         logger.debug('schema: "%s"', schema)
-        super(ExperimentSession, self).__init__(db_uri, schema)
+        super(ExperimentSession, self).__init__(db_uri, schema, transaction)
 
     def __enter__(self):
         connection = self._engine.connect()
@@ -739,6 +760,16 @@ class ExperimentSession(_Session):
                 autocommit=True, autoflush=False, expire_on_commit=False
             )
         _set_search_path(connection, self._schema)
+        if not self._transaction:
+            connection = connection.execution_options(
+                autocommit=True, isolation_level='AUTOCOMMIT'
+            )
+            # NOTE: SQLAlchemy docs say: "Executing queries outside of a
+            # demarcated transaction is a legacy mode of usage, and can in
+            # some cases lead to concurrent connection checkouts."
+            self._session_factory.configure(
+                autocommit=True, autoflush=False, expire_on_commit=False
+            )
         self._session_factory.configure(bind=connection)
         self._session = _SQLAlchemy_Session(
             self._session_factory(), self._schema
@@ -941,6 +972,13 @@ class ExperimentConnection(_Connection):
         })
         values = self._cursor.fetchall()
         return [v[0] for v in values]
+
+    def get_partition_placement(self, model_cls, partition_key):
+        '''Finds the location of a partition of a distributed table.
+        '''
+        # utility function: get_shard_id_for_distribution_column()
+        # metadata table: pg_dist_shard_placement
+        pass
 
 
 class MainConnection(_Connection):

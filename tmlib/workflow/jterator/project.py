@@ -23,6 +23,7 @@ import shutil
 from cached_property import cached_property
 from natsort import natsorted
 
+from tmlib import cfg
 from tmlib.workflow.jterator.utils import get_package_directories
 from tmlib.workflow.jterator.description import (
     PipelineDescription, HandleDescriptions
@@ -148,10 +149,11 @@ class Handles(object):
 
 class Project(object):
 
-    '''A project is defined as a folder containing a `pipeline.yaml`
-    file. The class holds information about the project, in particular on
-    the content of the *pipeline.yaml* and *.handles.yaml* module descriptor
-    files and provides methods for retrieving and updating this information.
+    '''A project is defined as a folder containing a *pipeline.yaml*
+    file and a *handles* subfolder with zero or more *.handles.yaml* files.
+    The class holds information about the project, in particular on the content
+    of the *pipeline.yaml* and *.handles.yaml* module descriptor files and
+    provides methods for retrieving, updating and removing the project.
     '''
 
     def __init__(self, location, pipeline_description=None,

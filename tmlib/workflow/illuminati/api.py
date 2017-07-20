@@ -530,7 +530,7 @@ class PyramidBuilder(WorkflowStepAPI):
                                 channel_layer_id=layer_id, z=level+1, y=r, x=c
                             ).\
                             one_or_none()
-                        if pre_tile is None:
+                        if pre_tile is not None:
                             pre_tile = pre_tile.pixels
                         else:
                             # Tiles at maxzoom level might not exist in
@@ -654,7 +654,7 @@ class PyramidBuilder(WorkflowStepAPI):
 
                 logger.debug('delete existing mapobjects of type "%s"', name)
                 session.query(tm.Mapobject).\
-                    filter_by(mapobject_type_id).\
+                    filter_by(mapobject_type_id=mapobject_type_id).\
                     delete()
                 logger.debug('add new mapobjects of type "%s"', name)
                 for key, value in segmentations.iteritems():
@@ -662,6 +662,7 @@ class PyramidBuilder(WorkflowStepAPI):
                         partition_key=key, mapobject_type_id=mapobject_type_id
                     )
                     session.add(mapobject)
+                    session.flush()
                     logger.debug('add mapobject #%d', mapobject.id)
                     mapobject_segmentation = tm.MapobjectSegmentation(
                         partition_key=key, mapobject_id=mapobject.id,

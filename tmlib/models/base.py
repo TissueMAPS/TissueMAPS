@@ -202,13 +202,13 @@ class DistributedExperimentModel(ExperimentModel):
         pass
 
     @classmethod
-    def get_unique_ids(self, cursor, n):
+    def get_unique_ids(cls, connection, n):
         '''Gets unique, shard-specific values for the distribution column.
 
         Parameters
         ----------
-        cursor: psycopg2.extras.NamedTupleCursor
-            cursor object for database connection
+        connection: tmlib.models.utils.ExperimentConnection
+            experiment-specific database connection
         n: int
             number of IDs that should be returned
 
@@ -222,11 +222,11 @@ class DistributedExperimentModel(ExperimentModel):
             'get %d unique identifiers for distributed model "%s"',
             n, cls.__name__
         )
-        cursor.execute(
+        connection.execute(
             'SELECT nextval(%(sequence)s) FROM generate_series(1, %(n)s);',
             {'sequence': '{t}_id_seq'.format(t=cls.__table__.name), 'n': n}
         )
-        values = cursor.fetchall()
+        values = connection.fetchall()
         return [v[0] for v in values]
 
 

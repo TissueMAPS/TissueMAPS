@@ -96,11 +96,10 @@ class MetadataConfigurator(WorkflowStepAPI):
         well as all children for the processed experiment.
         '''
         # Distributed tables cannot be dropped within a transaction
-        with tm.utils.ExperimentConnection(self.experiment_id) as connection:
+        with tm.utils.ExperimentSession(self.experiment_id, False) as session:
             logger.info('delete existing channel layers')
-            tm.ChannelLayer.delete_cascade(connection)
-
-        with tm.utils.ExperimentSession(self.experiment_id) as session:
+            session.query(tm.ChannelLayerTile).delete()
+            session.query(tm.ChannelLayer).delete()
             logger.info('delete existing channels')
             session.query(tm.Channel).delete()
             logger.info('delete existing cycles')
@@ -232,11 +231,12 @@ class MetadataConfigurator(WorkflowStepAPI):
             channels = dict()
             bit_depth = md['bit_depth'][0]
             for ch_name in np.unique(md['channel_name']):
-                logger.info('create channel "%s"', chn_name)
-                channels[ch_name] = session.get_or_create(
+                logger.info('create channel "%s"', ch_name)
+                ch = session.get_or_create(
                     tm.Channel, experiment_id=self.experiment_id,
                     name=ch_name, wavelength=ch_name, bit_depth=bit_depth,
                 )
+                channels[ch_name] = ch.id
 
         for w in np.unique(md.well_name):
 
@@ -267,7 +267,7 @@ class MetadataConfigurator(WorkflowStepAPI):
                         channel_image_files.append(
                             tm.ChannelImageFile(
                                 tpoint=i.tpoint, zplane=i.zplane,
-                                channel_id=channels[i.channel_name].id,
+                                channel_id=channels[i.channel_name],
                                 site_id=site.id, acquisition_id=acquisition.id,
                                 file_map=fmaps[index],
                             )
