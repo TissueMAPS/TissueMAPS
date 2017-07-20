@@ -260,9 +260,9 @@ def format_task_data(name, type, created_at, updated_at, state, exitcode,
     }
     # Convert timedeltas to string to make it JSON serializable
     if data['time'] is not None:
-        data['time'] = data['time'].strftime(datetime_format)
+        data['time'] = str(data['time'])
     if data['cpu_time'] is not None:
-        data['cpu_time'] = data['cpu_time'].strftime(datetime_format)
+        data['cpu_time'] = str(data['cpu_time'])
     return data
 
 
