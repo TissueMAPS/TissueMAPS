@@ -562,6 +562,8 @@ class _SQLAlchemy_Session(object):
         -------
         Assumes that all instances are of the same model class.
         '''
+        if len(instances) == 0:
+            return
         inst = instances[0]
         cls = inst.__class__
         if not isinstance(inst, DistributedExperimentModel):
@@ -601,6 +603,8 @@ class _SQLAlchemy_Session(object):
         -------
         Assumes that all instances are of the same model class.
         '''
+        if len(instances) == 0:
+            return
         inst = instances[0]
         cls = inst.__class__
         if isinstance(inst, DistributedExperimentModel):
