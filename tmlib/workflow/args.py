@@ -224,21 +224,7 @@ class Argument(object):
             'set argument "%s" as attribute "%s" of instance of class "%s"',
             self.name, self._attr_name, instance.__class__.__name__
         )
-        if self.type == str:
-            if not isinstance(value, basestring) and value is not None:
-                raise TypeError(
-                    'Argument "%s" must have type basestring.' % self.name
-                )
-        elif self.type == float:
-            # Workaround decimal Javascript issue
-            value = float(value)
-        else:
-            if not isinstance(value, self.type) and value is not None:
-                raise TypeError(
-                    'Argument "%s" must have type %s.'
-                    % (self.name, self.type.__name__)
-                )
-        setattr(instance, self._attr_name, value)
+        setattr(instance, self._attr_name, self.type(value))
 
     def add_to_argparser(self, parser):
         '''Adds the argument to an argument parser for use in a command line
