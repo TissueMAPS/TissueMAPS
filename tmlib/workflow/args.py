@@ -224,7 +224,16 @@ class Argument(object):
             'set argument "%s" as attribute "%s" of instance of class "%s"',
             self.name, self._attr_name, instance.__class__.__name__
         )
-        setattr(instance, self._attr_name, self.type(value))
+        if value is not None:
+            try:
+                value = self.type(value)
+            except ValueError:
+                raise TypeError(
+                    'Value of argument "%s" cannot be casted to type %s: %s' % (
+                        self.name, self.type.__name__, str(value)
+                    )
+                )
+        setattr(instance, self._attr_name, value)
 
     def add_to_argparser(self, parser):
         '''Adds the argument to an argument parser for use in a command line
