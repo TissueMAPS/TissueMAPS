@@ -601,7 +601,7 @@ class Classifier(Tool):
         Tuple[sklearn.base.BaseEstimator]
             trained unsupervised classifier and scaler
         '''
-        models = {
+        classifiers = {
             'kmeans': {
                 'cls': KMeans,
                 'scaler': RobustScaler(quantile_range=(1.0, 99.0), copy=False)
