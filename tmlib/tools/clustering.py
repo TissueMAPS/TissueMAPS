@@ -86,8 +86,10 @@ class Clustering(Classifier):
         n_test = 10**6
         logger.debug('set batch size to %d', n_test)
         batches = self.partition_mapobjects(mapobject_type_name, n_test)
+        counter = 0
         for mapobject_ids in batches:
-            logger.info('predict labels for batch #%d', i)
+            logger.info('predict labels for batch #%d', counter)
+            counter += 1
             test_set = self.load_feature_values(
                 mapobject_type_name, feature_names, mapobject_ids
             )
