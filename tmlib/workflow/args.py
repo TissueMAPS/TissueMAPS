@@ -224,6 +224,10 @@ class Argument(object):
             'set argument "%s" as attribute "%s" of instance of class "%s"',
             self.name, self._attr_name, instance.__class__.__name__
         )
+        if value == '':
+            # This can be caused by an emtpy text input fields. We will
+            # interpret the value as unspecified.
+            value = None
         if value is not None:
             try:
                 value = self.type(value)
