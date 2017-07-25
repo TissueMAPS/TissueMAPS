@@ -82,58 +82,6 @@ class Feature(ExperimentModel, IdMixIn):
         self.mapobject_type_id = mapobject_type_id
         self.is_aggregate = is_aggregate
 
-    @classmethod
-    def delete_cascade(cls, connection, mapobject_type_id=None, ids=[]):
-        '''Deletes all instances for the given experiment as well as all
-        referencing fields in
-        :attr:`FeatureValues.values <tmlib.models.feature.FeatureValues.values>`.
-
-        Parameters
-        ----------
-        connection: tmlib.models.utils.ExperimentConnection
-            connection for experiment-specific database connection
-        mapobject_type_id: int, optional
-            ID of parent
-            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` for
-            which features should be deleted
-        ids: List[int], optional
-            IDs of features that should be deleted
-        '''
-        delete = True
-        if mapobject_type_id:
-            delete = False
-            connection.execute('''
-                SELECT id FROM features
-                WHERE mapobject_type_id = %(mapobject_type_id)s
-            ''', {
-                'mapobject_type_id': mapobject_type_id
-            })
-            records = connection.fetchall()
-            if records:
-                delete = True
-                ids = [r.id for r in records]
-        if delete:
-            logger.info('delete feature values')
-            if ids:
-                # TODO: Would it be worth indexing the HSTORE column?
-                sql = '''
-                    UPDATE feature_values
-                    SET values = delete(values, %(feature_ids)s)
-                '''
-                connection.execute(
-                    _compile_distributed_query(sql),
-                    {'feature_ids': map(str, ids)}
-                )
-                connection.execute('''
-                    DELETE FROM features where id = ANY(%(feature_ids)s);
-                ''', {
-                    'feature_ids': ids
-                })
-            else:
-                sql = "UPDATE feature_values SET values = $$' '$$;"
-                connection.execute(_compile_distributed_query(sql))
-                connection.execute('DELETE FROM features;')
-
     def __repr__(self):
         return '<Feature(id=%r, name=%r)>' % (self.id, self.name)
 
