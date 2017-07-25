@@ -381,8 +381,13 @@ def delete_mapobject_type(experiment_id, mapobject_type_id):
         'delete mapobject type %d of experiment %d',
         mapobject_type_id, experiment_id
     )
-    with tm.utils.ExperimentConnection(experiment_id) as connection:
-        tm.MapobjectType.delete_cascade(connection, id=mapobject_type_id)
+    with tm.utils.ExperimentSession(experiment_id, False) as session:
+        session.query(tm.Mapobject).\
+            filter_by(mapobject_type_id=mapobject_type_id).\
+            delete()
+        session.query(tm.MapobjectType).\
+            filter_by(id=mapobject_type_id).\
+            delete()
     return jsonify(message='ok')
 
 
@@ -540,7 +545,7 @@ def add_segmentations(experiment_id, mapobject_type_id):
             all()
         )
 
-    with tm.utils.ExperimentConnection(experiment_id) as connection:
+    with tm.utils.ExperimentSession(experiment_id, False) as session:
         segmentations = list()
         for label, polygon in image.extract_polygons(y_offset, x_offset):
             mapobject = tm.Mapobject(site_id, mapobject_type_id)
@@ -551,14 +556,15 @@ def add_segmentations(experiment_id, mapobject_type_id):
                 # exist, however. This will lead to an error upon insertion.
                 mapobject.id = existing_segmentations_map[label]
             else:
-                mapobject = tm.Mapobject.add(connection, mapobject)
-            seg = tm.MapobjectSegmentation(
+                session.add(mapobject)
+                session.flush()
+            s = tm.MapobjectSegmentation(
                 partition_key=site_id, mapobject_id=mapobject.id,
                 geom_polygon=polygon, geom_centroid=polygon.centroid,
                 segmentation_layer_id=segmentation_layer_id, label=label
             )
-            segmentations.append(seg)
-        tm.MapobjectSegmentation.add_multiple(connection, segmentations)
+            segmentations.append(s)
+        session.bulk_ingest(segmentations)
 
     return jsonify(message='ok')
 

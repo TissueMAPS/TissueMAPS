@@ -119,8 +119,9 @@ def delete_feature(experiment_id, feature_id):
 
     """
     logger.info('delete feature %d of experiment %d', feature_id, experiment_id)
-    with tm.utils.ExperimentConnection(experiment_id) as connection:
-        tm.Feature.delete_cascade(connection, id=feature_id)
+    with tm.utils.ExperimentSession(experiment_id, False) as session:
+        session.query(tm.FeatureValue.values.delete(str(feature_id)))
+        session.query(tm.Feature).filter_by(id=feature_id).delete()
     return jsonify(message='ok')
 
 
@@ -237,7 +238,7 @@ def add_feature_values(experiment_id, mapobject_type_id):
         if len(segmentations) == 0:
             raise ResourceNotFoundError(tm.MapobjectSegmentation)
 
-    with tm.utils.ExperimentConnection(experiment_id) as connection:
+    with tm.utils.ExperimentSession(experiment_id, False) as session:
         feature_values = list()
         for mapobject_id, label in segmentations:
             try:
@@ -250,7 +251,7 @@ def add_feature_values(experiment_id, mapobject_type_id):
                     tm.MapobjectSegmentation, label=label
                 )
             feature_values.append(values)
-        tm.FeatureValues.add_multiple(connection, feature_values)
+        session.bulk_ingest(feature_values)
 
     return jsonify(message='ok')
 
