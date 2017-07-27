@@ -209,15 +209,15 @@ The following `Ansible groups <http://docs.ansible.com/ansible/intro_inventory.h
 
 .. TODO: variables
 
-Example setup for the `Google Compute Engine (GCE) <https://cloud.google.com/compute/>`_ provider:
+Example setup for the `Elastic Compute Cloud (EC2) <https://aws.amazon.com/ec2/>`_ provider based on a `CentOS 7 image <https://aws.amazon.com/marketplace/pp/B00O7WM7QW?qid=1499510484247&sr=0-1&ref_=srh_res_product_title>`_:
 
-.. literalinclude:: ../src/tmdeploy/etc/singlenode_setup_gce.yml
+.. literalinclude:: ../src/tmdeploy/etc/singlenode_setup_ec2.yml
    :language: yaml
    :lines: 3-
 
 This configuration will set up a single machine with 4 CPU cores and 3.75 GB of RAM per virtual CPU and create a seprate storage volume of 500GB size. Depending on your needs you may want to choose a different `machine type <https://cloud.google.com/compute/docs/machine-types>`_ and/or volume size. Note that when you omit the ``volume_size`` variable, no additional volume will be used and only the boot disk will be available.
 
-.. note:: The resulting virtual machine instance will have the name ``tissuemaps-standalone-server-001``. This naming convention is a bit of an overkill for a single server. However, it becomes useful when building multiple clusters with different types of nodes. For consistency, we stick to this naming conventing also for standalone use case.
+.. note:: The resulting virtual machine instance will have the name ``tissuemaps-standalone-server-001``. This naming convention is a bit of an overkill for a single server. However, it becomes useful when building multiple clusters with different types of nodes. For consistency, we stick to this naming conventing also for simple standalone use case.
 
 
 Cluster (multi-node) setup
@@ -239,17 +239,17 @@ Additional components can be configured using playbooks provided by `Elasticlust
     * ``ganglia_master``
     * ``ganglia_monitor``
 
-Example setup for the `Google Compute Engine (GCE) <https://cloud.google.com/compute/>`_ provider:
+Example setup for the `Elastic Compute Cloud (EC2) <https://aws.amazon.com/ec2/>`_ provider based on a `CentOS 7 image <https://aws.amazon.com/marketplace/pp/B00O7WM7QW?qid=1499510484247&sr=0-1&ref_=srh_res_product_title>`_:
 
-.. literalinclude:: ../src/tmdeploy/etc/multinode_setup_gce.yml
+.. literalinclude:: ../src/tmdeploy/etc/cluster_setup_ec2.yml
    :language: yaml
    :lines: 4-
 
-This configuration will set up one *TissueMAPS* server instance, one database master server instance, two database worker server instances, two file system server instances, one monitoring server instance and ten compute instances. Depending on your needs, you may want to choose different number of nodes, machine types or volume sizes.
+This configuration will set up one *TissueMAPS* server instance, one database coordinator server instance, two database worker server instances, two file system server instances, one monitoring server instance and eight compute instances. Depending on your needs, you may want to choose different number of nodes, machine types or volume sizes.
 
 .. note:: *TissueMAPS* implements fair `scheduling <http://slurm.schedmd.com/sched_config.html>`_, based on `SLURM accounts <http://slurm.schedmd.com/accounting.html>`_. To enable this functionality, create *TissueMAPS* user accounts via the ``tm_add`` command line tool.
 
-.. tip:: When deploying houndreds of slurm worker nodes, it can be benefitial to use a pre-built image to speed up the cluster deployment process. To this end, configure a dedicated machine with only the ``tissuemaps_compute`` group and create a `snapshot <https://en.wikipedia.org/wiki/Snapshot_(computer_storage)>`_ of the configured instance. The thereby created image can then be reused to quickly boot additional machines for a large cluster setup.
+.. tip:: When deploying houndreds of compute nodes, it can be benefitial to use a pre-built image to speed up the cluster deployment process. To this end, configure a dedicated machine with only the ``tissuemaps_compute`` group and create a `snapshot <https://en.wikipedia.org/wiki/Snapshot_(computer_storage)>`_ of the configured instance. The thereby created image can then be reused to quickly boot additional machines for a large cluster setup.
 
 Credentials
 +++++++++++
@@ -278,9 +278,8 @@ To connect to the configured cloud, credentials are required, which must be prov
 
     .. code-block:: bash
 
-        export GCE_PROJECT=XXX
-        export GCE_EMAIL=XXX
-        export GCE_CREDENTIALS_FILE_PATH=XXX
+        export AWS_ACCESS_KEY_ID=XXX
+        export AWS_SECRET_ACCESS_KEY=XXX
 
     and source the file prior to running ``tm_deploy``::
 
@@ -297,7 +296,7 @@ Launch virtual machine instances in the cloud:
 
 The ``launch`` command calls the `instance.yml <https://github.com/TissueMAPS/TmDeploy/blob/master/tmdeploy/share/playbooks/instance.yml>`_ playbook.
 
-.. note:: The ``tm_deploy`` program will by default look for a setup file at the following location: ``~/.tmaps/setup/setup.yml``. The location can be specified via the ``--setup-file`` flag.
+.. note:: The ``tm_deploy`` program will by default look for a setup file at the following location: ``~/.tmaps/setup/setup.yml``. Alternatively, the path to the file can be specified via the ``--setup-file`` or ``-s`` flag.
 
 .. note:: An *SSH* key pair will be automatically created on the local machine and uploaded to the cloud. The generated key files will be placed into ``~/.ssh``. The name of the key pair is determined by :attr:`key_name <tmdeploy.config.CloudSection.key_name>`.
 
