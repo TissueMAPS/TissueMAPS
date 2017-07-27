@@ -261,18 +261,6 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         objects_input = self.project.pipe.description.input.objects
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             site = session.query(tm.Site).get(site_id)
-
-            records = session.query(tm.ChannelImageFile.tpoint).\
-                filter_by(site_id=site.id).\
-                distinct()
-            tpoints = [r.tpoint for r in records]
-            n_tpoints = len(tpoints)
-            records = session.query(tm.ChannelImageFile.zplane).\
-                filter_by(site_id=site.id).\
-                distinct()
-            zplanes = [r.zplane for r in records]
-            n_zplanes = len(zplanes)
-
             y_offset, x_offset = site.aligned_offset
             height = site.aligned_height
             width = site.aligned_width
@@ -287,6 +275,18 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                     dtype = np.uint16
                 elif channel.bit_depth == 8:
                     dtype = np.uint8
+
+                records = session.query(tm.ChannelImageFile.tpoint).\
+                    filter_by(site_id=site.id,channel_id=channel.id).\
+                    distinct()
+                tpoints = [r.tpoint for r in records]
+                n_tpoints = len(tpoints)
+                records = session.query(tm.ChannelImageFile.zplane).\
+                    filter_by(site_id=site.id,channel_id=channel.id).\
+                    distinct()
+                zplanes = [r.zplane for r in records]
+                n_zplanes = len(zplanes)
+
                 image_array = np.zeros(
                     (height, width, n_zplanes, n_tpoints), dtype
                 )
