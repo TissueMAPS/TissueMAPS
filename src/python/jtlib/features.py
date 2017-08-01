@@ -24,7 +24,7 @@ from skimage import measure
 from skimage import filters
 from scipy import ndimage as ndi
 # from mahotas.features import surf
-from scipy.spatial.distance import squareform, pdist
+from scipy.spatial.distance import squareform, cdist
 from centrosome.filter import gabor
 from jtlib import utils
 
@@ -173,7 +173,8 @@ class Features(object):
             if len(labels) == 0:
                 for name in features.columns:
                     for stat in self._aggregate_statistics.keys():
-                        values['%s_%s' % (stat, name)].append(np.nan)
+                        v = np.nan
+                        values['%s_%s' % (stat, name)].append(v)
             else:
                 index = np.union1d(features.index, labels)
                 diff = len(labels) - len(index)
@@ -182,12 +183,12 @@ class Features(object):
                 for name, vals in features.loc[index, :].iteritems():
                     if vals.empty:
                         for stat in self._aggregate_statistics.keys:
-                            values['%s_%s' % (stat, name)].append(np.nan)
+                            v = np.nan
+                            values['%s_%s' % (stat, name)].append(v)
                     else:
                         for stat, func in self._aggregate_statistics.iteritems():
-                            values['%s_%s' % (stat, name)].append(
-                                float(func(vals))
-                            )
+                            v = np.float64(func(vals))
+                            values['%s_%s' % (stat, name)].append(v)
         return pd.DataFrame(values, index=ref_object_ids)
 
     @abstractmethod
@@ -657,8 +658,8 @@ class PointPattern(Features):
             'absolute-distance-to-nearest-neighbor',
             'relative-distance-to-nearest-neighbor',
             'mean-absolute-distance-to-neighbors',
-            'std-absolute-distance-to-neighbors',
             'mean-relative-distance-to-neighbors',
+            'std-absolute-distance-to-neighbors',
             'std-relative-distance-to-neighbors',
         ]
 
@@ -685,8 +686,6 @@ class PointPattern(Features):
             rel_border_dist_img = abs_border_dist_img / size
             centroids = mh.center_of_mass(points_img, labels=points_img)
             centroids = centroids[1:, :].astype(int)
-            abs_distance_matrix = squareform(pdist(centroids))
-            rel_distance_matrix = abs_distance_matrix / size
 
             indexer = np.arange(centroids.shape[0])
             if len(indexer) == 0:
@@ -705,17 +704,20 @@ class PointPattern(Features):
                 ]
                 features[point_ids[0]] = values
                 continue
-            for i, (y, x) in enumerate(centroids):
+            for i, c in enumerate(centroids):
+                abs_distances = cdist([c], centroids)[0, :]
+                rel_distances = abs_distances / size
                 idx = indexer != i
+                y, x = c
                 values = [
                     abs_border_dist_img[y, x],
                     rel_border_dist_img[y, x],
-                    np.nanmin(abs_distance_matrix[i, idx]),
-                    np.nanmin(rel_distance_matrix[i, idx]),
-                    np.nanmean(abs_distance_matrix[i, idx]),
-                    np.nanstd(abs_distance_matrix[i, idx]),
-                    np.nanmean(rel_distance_matrix[i, idx]),
-                    np.nanstd(rel_distance_matrix[i, idx]),
+                    np.nanmin(abs_distances[idx]),
+                    np.nanmin(rel_distances[idx]),
+                    np.nanmean(abs_distances[idx]),
+                    np.nanmean(rel_distances[idx]),
+                    np.nanstd(abs_distances[idx]),
+                    np.nanstd(rel_distances[idx]),
                 ]
                 features[point_ids[i]] = values
 

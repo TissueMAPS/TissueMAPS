@@ -276,7 +276,7 @@ def create_float_image_plot(image, position, clip=True, clip_value=None):
 
     if clip:
         if clip_value is None:
-            clip_upper = np.percentile(image, 99.99)
+            clip_upper = np.percentile(image, 99)
         else:
             clip_upper = clip_value
     else:
@@ -431,7 +431,7 @@ def create_intensity_overlay_image_plot(image, mask, position,
 
     if clip:
         if clip_value is None:
-            clip_upper = round(np.percentile(image, 99.99))
+            clip_upper = round(np.percentile(image, 99))
         else:
             clip_upper = clip_value
     else:

@@ -225,7 +225,7 @@ classdef plotting
                 clip_value = varargin{clip_val_index+1};
             else
                 if clip
-                    clip_value = prctile(image(:), 99.99);
+                    clip_value = prctile(image(:), 99);
                 else
                     clip_value = max(image(:));
                 end
@@ -361,7 +361,7 @@ classdef plotting
                 clip_value = varargin{clip_val_index+1};
             else
                 if clip
-                    clip_value = prctile(image(:), 99.99);
+                    clip_value = prctile(image(:), 99);
                 else
                     clip_value = max(image(:));
                 end
