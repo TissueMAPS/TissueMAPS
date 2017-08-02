@@ -85,7 +85,7 @@
     - database
 
 - name: Initialize database cluster
-  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ db_node }}.log
+  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ db_node }}.log -o '--locale=C.UTF-8'
   args:
     chdir: "{{ db_data_directory }}"
   when:
