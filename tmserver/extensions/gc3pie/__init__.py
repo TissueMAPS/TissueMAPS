@@ -189,6 +189,36 @@ class GC3Pie(object):
         else:
             return None
 
+    def find_task_by_id(self, task_id):
+        """Return loaded task with given persistent ID.
+        If the task has not been loaded yet, raise `LookupError`.
+
+        Parameters
+        ----------
+        task_id: int
+            persistent task ID
+
+        Returns
+        -------
+        gc3libs.Task
+            computational task
+        """
+        return self._engine.find_task_by_id(task_id)
+
+    def manage_task(self, task_id):
+        """Add the task with the given ID to the running Engine.
+
+        Parameters
+        ----------
+        task_id: int
+            persistent task ID
+
+        Returns
+        -------
+        None
+        """
+        self._engine.add(self.retrieve_task(task_id))
+
     def retrieve_task(self, task_id):
         """Retrieves a task from the store.
 
