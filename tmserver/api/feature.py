@@ -589,7 +589,7 @@ def get_metadata(experiment_id, mapobject_type_id):
         data.truncate(0)
 
         for ref_id in ref_position_lut:
-            logger.info('collect metadata for %s %d', ref_type, ref_id)
+            logger.debug('collect metadata for %s %d', ref_type, ref_id)
             with tm.utils.ExperimentSession(experiment_id) as session:
                 mapobjects = _get_mapobjects_at_ref_position(
                     session, mapobject_type_id, ref_id, layer_lut.keys()
