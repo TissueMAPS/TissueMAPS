@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 _SUPPORTED__FIELDS = {'w', 'c', 'z', 't', 's'}
 
 
-_FIELD_DEFAULTS = {'w': 'A01', 'z': 0, 't': 0, 's': 0}
+_FIELD_DEFAULTS = {'w': 'A01', 'c': 1, 'z': 0, 't': 0, 's': 0}
 
 
 MetadataFields = collections.namedtuple(
