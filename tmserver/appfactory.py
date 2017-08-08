@@ -33,7 +33,6 @@ from tmserver.extensions import jwt
 from tmserver.serialize import TmJSONEncoder
 from tmserver.error import register_http_error_classes
 from tmserver import cfg
-from tmlib import cfg as libcfg
 
 
 logger = logging.getLogger(__name__)
