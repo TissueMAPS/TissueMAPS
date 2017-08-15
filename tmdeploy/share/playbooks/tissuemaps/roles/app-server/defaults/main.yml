@@ -15,12 +15,20 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-tm_compute_autodiscover: yes  # autodiscovers resources (only on localhost)
-tm_compute_nodes: 1           # total number of nodes in the cluster
-tm_compute_cores: 2           # total number of CPU cores per node
-tm_compute_memory: 1750       # total memory of per node
+# should GC3Pie autodiscover resource features? (only on localhost)
+tm_compute_autodiscover: yes
+
+# total number of nodes in the cluster
+tm_compute_nodes: "{{ groups.tissuemaps_compute|length|default(1) }}"
+
+# usable number of CPU cores per node, defaults to all available cores
+tm_compute_cores:  "{{ansible_processor_vcpus}}"
+
+# usable memory of a node, defaults to 80% of node memory
+tm_compute_memory: "{{ (ansible_memtotal_mb * 80 / 100) |int }}"
 
 uwsgi_processes: 4
 uwsgi_timeout: 300
 
-tm_admins: []                 # Github user names of administrators
+# Github user names of administrators
+tm_admins: []
