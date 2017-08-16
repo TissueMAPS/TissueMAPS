@@ -1,11 +1,11 @@
 # Copyright 2016 Markus D. Herrmann, University of Zurich
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,8 +14,8 @@
 import os
 import logging
 from abc import ABCMeta
-from threading import Thread
 from itertools import chain
+import multiprocessing as mp
 
 import requests
 try:
@@ -49,11 +49,31 @@ class HttpClient(object):
             path to a CA bundle file in Privacy Enhanced Mail (PEM) format;
             only used with HTTPS when `port` is set to ``443``
         '''
-        self._session = requests.Session()
+        # save parameters for late initialization (when `self._session` is first accessed)
+        self._host = host
+        self._port = port
+        self._username = username
+        self._password = password
+        self._ca_bundle = ca_bundle
+
+        self._real_session = None
+        self._real_adapter = None
+        self._real_base_url = None
+
+    def _init_session(self):
+        '''
+        Delayed initialization of Requests Session object.
+
+        This is done in order *not* to share the Session object across
+        a multiprocessing pool.
+        '''
+        self._real_session_obj = requests.Session()
+        # FIXME: this fails when one runs HTTPS on non-standard ports,
+        # e.g. https://tissuemaps.example.org:8443/
         if port == 443:
-            logger.debug('use HTTPS protocol')
-            self._base_url = 'https://{host}:{port}'.format(host=host, port=port)
-            self._adapter = self._session.adapters['https://']
+            logger.debug('initializing HTTPS session')
+            self._real_base_url = 'https://{host}:{port}'.format(host=host, port=port)
+            self._real_adapter = self._real_session.adapters['https://']
             if ca_bundle is not None:
                 logger.debug('use CA bundle: %s', ca_bundle)
                 ca_bundle = os.path.expanduser(os.path.expandvars(ca_bundle))
@@ -61,14 +81,36 @@ class HttpClient(object):
                     raise OSError(
                         'CA bundle file does not exist: {0}'.format(ca_bundle)
                     )
-                self._session.verify = ca_bundle
+                self._real_session.verify = ca_bundle
         else:
-            logger.debug('use HTTP protocol')
-            self._base_url = 'http://{host}:{port}'.format(host=host, port=port)
-            self._adapter = self._session.adapters['http://']
-        self._session.get(self._base_url)
-        self._session.headers.update({'Host': host})
+            logger.debug('initializing HTTP session')
+            self._real_base_url = 'http://{host}:{port}'.format(host=host, port=port)
+            self._real_adapter = self._real_session.adapters['http://']
+        self._real_session.get(self._real_base_url)
+        self._real_session.headers.update({'Host': host})
         self._login(username, password)
+
+    @property
+    def _session(self):
+        '''Return a Requests Session, creating it first if necessary.'''
+        if self._real_session is None:
+            self._init_session()
+        return self._real_session
+
+    @property
+    def _adapter(self):
+        '''Return a Requests Adapter, creating it first if necessary.'''
+        if self._real_adapter is None:
+            self._init_session()
+        return self._real_adapter
+
+    @property
+    def _base_url(self):
+        '''Return the base URL for HTTP(S) requests, creating session first if necessary.'''
+        if self._real_base_url is None:
+            self._init_session()
+        return self._real_base_url
+
 
     def _build_url(self, route, params={}):
         '''Builds the full URL based on the base URL (``http://<host>:<port>``)
@@ -114,26 +156,16 @@ class HttpClient(object):
             {'Authorization': 'JWT %s' % self._access_token}
         )
 
-    def _parallelize(self, func, args):
-        logger.debug('parallelize request')
-        pool_size = self._adapter.poolmanager.connection_pool_kw['maxsize']
-        n = len(args) // int(pool_size / 2)
-        n = max([n, 1])
-        arg_batches = [args[i:i + n] for i in range(0, len(args), n)]
+    def _parallelize(self, func, args_list, processes=2):
+        if not processes:
+            # use 2x number of available CPUs
+            processes = 2 * mp.cpu_count()
+        logger.debug('using %d parallel processes', processes)
 
-        def wrapper(func, batch):
-            for args in batch:
-                func(*args)
+        # compute chunk size
+        connection_pool_size = self._adapter.poolmanager.connection_pool_kw['maxsize']
+        chunksize = max(1, 2 * len(args_list) // int(connection_pool_size))
 
-        threads = []
-        for i, batch in enumerate(arg_batches):
-            logger.debug('start thread #%d', i)
-            # TODO: use queue or generator?
-            t = Thread(target=wrapper, args=(func, batch))
-            # TODO: use Event
-            t.start()
-            threads.append(t)
-
-        for t in threads:
-            t.join()
-
+        # create process pool and run `func` in parallel
+        pool = mp.Pool(processes)
+        pool.imap_unordered(func, args_list, chunksize)
