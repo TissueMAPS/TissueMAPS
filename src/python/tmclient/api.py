@@ -1,11 +1,11 @@
 # Copyright 2016 Markus D. Herrmann, University of Zurich
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -635,7 +635,7 @@ class TmClient(HttpClient):
         t.padding_width = 1
         for a in acquisitions:
             t.add_row([
-                a['id'], a['status'], a['name'], a['description'], 
+                a['id'], a['status'], a['name'], a['description'],
                 a['plate_name']
         ])
         print(t)
@@ -1011,7 +1011,8 @@ class TmClient(HttpClient):
         res.raise_for_status()
         return res.json()['data']
 
-    def upload_microscope_files(self, plate_name, acquisition_name, directory):
+    def upload_microscope_files(self, plate_name, acquisition_name,
+                                directory, parallel=1):
         '''Uploads microscope files contained in `directory`.
 
         Parameters
@@ -1023,6 +1024,8 @@ class TmClient(HttpClient):
         directory: int
             path to a directory on disk where the files that should be uploaded
             are located
+        parallel: int
+            number of parallel processes to use for upload
 
         Returns
         -------
@@ -1043,10 +1046,6 @@ class TmClient(HttpClient):
         )
         acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
 
-        def upload_file(filepath):
-            logger.info('upload file: %s', os.path.basename(filepath))
-            self._upload_file(acquisition_id, filepath)
-
         directory = os.path.expanduser(directory)
         directory = os.path.expandvars(directory)
         filenames = [
@@ -1058,8 +1057,32 @@ class TmClient(HttpClient):
         )
         logger.info('registered %d files', len(registered_filenames))
 
-        args = [(os.path.join(directory, name), ) for name in filenames]
-        self._parallelize(upload_file, args)
+        upload_url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions/{acquisition_id}/microscope-file'
+            .format(experiment_id=self._experiment_id, acquisition_id=acquisition_id)
+        )
+        paths = [os.path.join(directory, name) for name in filenames]
+        total = len(paths)
+        retry = 5
+        while retry > 0:
+            work = [
+                # function,         *args ...
+                (self._upload_file, upload_url, path)
+                for path in paths
+            ]
+            outcome = self._parallelize(work, parallel)
+            # report on failures
+            paths = [path for (ok, path) in outcome if not ok]
+            failed = len(paths)
+            successful = total - failed
+            logger.info('file uploads: %d successful, %d failed', successful, failed)
+            # try again?
+            if failed == 0:
+                break
+            else:
+                retry -= 1
+                total = failed
+                logger.info('trying again to upload failed files ...')
 
         return registered_filenames
 
@@ -1075,16 +1098,28 @@ class TmClient(HttpClient):
         res.raise_for_status()
         return res.json()['data']
 
-    def _upload_file(self, acquisition_id, filepath):
-        logger.debug('upload file: %s', filepath)
-        url = self._build_api_url(
-            '/experiments/{experiment_id}/acquisitions/{acquisition_id}/microscope-file'.format(
-                experiment_id=self._experiment_id, acquisition_id=acquisition_id
-            )
-        )
-        files = {'file': open(filepath, 'rb')}
-        res = self._session.post(url, files=files)
-        res.raise_for_status()
+    def _upload_file(self, upload_url, filepath):
+        logger.debug('uploading file `%s` ...', filepath)
+        with open(filepath, 'rb') as stream:
+            files = {'file': stream}
+            res = self._session.post(upload_url, files=files)
+        if res.ok:
+            logger.debug(
+                'successfully uploaded file `%s`, elapsed %.3fs',
+                filepath, res.elapsed.total_seconds())
+            return (True, filepath)
+        else:
+            logger.error('upload of file `%s` failed: %d %s',
+                          filepath, res.status_code, res.reason)
+            if __debug__:
+                logger.debug('=== Response data follows ===')
+                for k, v in res.headers.iteritems():
+                    logger.debug('%s: %s', k, v)
+                logger.debug('--- body ---')
+                for line in res.text.split('\n'):
+                    logger.debug(line)
+                logger.debug('=== Response data ends ===')
+            return (False, filepath)
 
     @classmethod
     def _extract_filename_from_headers(cls, headers):
@@ -1899,7 +1934,7 @@ class TmClient(HttpClient):
             return pd.DataFrame()
 
     def download_feature_values_and_metadata_files(self, mapobject_type_name,
-            directory):
+                                                   directory, parallel=1):
         '''Downloads all feature values for the given object type and stores the
         data as *CSV* files on disk.
 
@@ -1909,6 +1944,8 @@ class TmClient(HttpClient):
             type of the segmented objects
         directory: str
             absolute path to the directory on disk where the file should be
+        parallel: int
+            number of parallel processes to use for upload
 
         See also
         --------
@@ -1949,9 +1986,8 @@ class TmClient(HttpClient):
                 for c in res.iter_content(chunk_size=1000):
                     f.write(c)
 
-        wells = self.get_wells()
-        args = [(w, ) for w in wells]
-        self._parallelize(download_per_well, args)
+        work = [(download_per_well, well) for well in self.get_wells()]
+        self._parallelize(work, parallel)
         # TODO: Store site-specific files in temporary directory and afterwards
         # merge them into a single file in the directory sprecified by the user.
 
