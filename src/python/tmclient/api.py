@@ -1,11 +1,11 @@
 # Copyright 2016 Markus D. Herrmann, University of Zurich
-#
+# 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+# 
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
+# 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -635,7 +635,7 @@ class TmClient(HttpClient):
         t.padding_width = 1
         for a in acquisitions:
             t.add_row([
-                a['id'], a['status'], a['name'], a['description'],
+                a['id'], a['status'], a['name'], a['description'], 
                 a['plate_name']
         ])
         print(t)
@@ -1011,8 +1011,7 @@ class TmClient(HttpClient):
         res.raise_for_status()
         return res.json()['data']
 
-    def upload_microscope_files(self, plate_name, acquisition_name,
-                                directory, parallel=1):
+    def upload_microscope_files(self, plate_name, acquisition_name, directory):
         '''Uploads microscope files contained in `directory`.
 
         Parameters
@@ -1024,8 +1023,6 @@ class TmClient(HttpClient):
         directory: int
             path to a directory on disk where the files that should be uploaded
             are located
-        parallel: int
-            number of parallel processes to use for upload
 
         Returns
         -------
@@ -1047,9 +1044,8 @@ class TmClient(HttpClient):
         acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
 
         def upload_file(filepath):
-            logger.info('uploading file `%s` ...', os.path.basename(filepath))
+            logger.info('upload file: %s', os.path.basename(filepath))
             self._upload_file(acquisition_id, filepath)
-            logger.debug('uploaded file `%s`', os.path.basename(filepath))
 
         directory = os.path.expanduser(directory)
         directory = os.path.expandvars(directory)
@@ -1062,11 +1058,8 @@ class TmClient(HttpClient):
         )
         logger.info('registered %d files', len(registered_filenames))
 
-        # since `self._parallelize()` uses `multiprocessing.imap()` we
-        # can pass any iterable for the arguments -- no need to
-        # actually materialize it into a list
-        paths = ((os.path.join(directory, name), ) for name in filenames)
-        self._parallelize(upload_file, paths, parallel)
+        args = [(os.path.join(directory, name), ) for name in filenames]
+        self._parallelize(upload_file, args)
 
         return registered_filenames
 
@@ -1906,7 +1899,7 @@ class TmClient(HttpClient):
             return pd.DataFrame()
 
     def download_feature_values_and_metadata_files(self, mapobject_type_name,
-                                                   directory, parallel=1):
+            directory):
         '''Downloads all feature values for the given object type and stores the
         data as *CSV* files on disk.
 
@@ -1916,8 +1909,6 @@ class TmClient(HttpClient):
             type of the segmented objects
         directory: str
             absolute path to the directory on disk where the file should be
-        parallel: int
-            number of parallel processes to use for upload
 
         See also
         --------
@@ -1959,7 +1950,8 @@ class TmClient(HttpClient):
                     f.write(c)
 
         wells = self.get_wells()
-        self._parallelize(download_per_well, wells, parallel)
+        args = [(w, ) for w in wells]
+        self._parallelize(download_per_well, args)
         # TODO: Store site-specific files in temporary directory and afterwards
         # merge them into a single file in the directory sprecified by the user.
 
