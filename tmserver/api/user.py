@@ -21,51 +21,51 @@ import tmlib.models as tm
 from tmserver.api import api
 
 
-@api.route('/register', methods=['POST'])
-def register():
-    """
-    .. http:post:: /api/experiments/register
+# @api.route('/register', methods=['POST'])
+# def register():
+#     """
+#     .. http:post:: /api/experiments/register
 
-        Registers a new :class:`User <tmlib.models.user.User>` in the database.
+#         Registers a new :class:`User <tmlib.models.user.User>` in the database.
 
-        **Example request**:
+#         **Example request**:
 
-        .. sourcecode:: http
+#         .. sourcecode:: http
 
-            Content-Type: application/json
+#             Content-Type: application/json
 
-            {
-                "username": "testuser",
-                "password": "XXX",
-                "email": "testuser@gmail.com",
-            }
+#             {
+#                 "username": "testuser",
+#                 "password": "XXX",
+#                 "email": "testuser@gmail.com",
+#             }
 
-        **Example response**:
+#         **Example response**:
 
-        .. sourcecode:: http
+#         .. sourcecode:: http
 
-            Content-Type: application/json
+#             Content-Type: application/json
 
-            {
-                "id": "MQ==",
-                "name": "testuser",
-                "email": "testuser@gmail.com",
-            }
+#             {
+#                 "id": "MQ==",
+#                 "name": "testuser",
+#                 "email": "testuser@gmail.com",
+#             }
 
-        :statuscode 200: no error
+#         :statuscode 200: no error
 
-    """
-    data = json.loads(request.data)
-    password = data.get('password')
-    username = data.get('username')
-    email = data.get('email')
+#     """
+#     data = json.loads(request.data)
+#     password = data.get('password')
+#     username = data.get('username')
+#     email = data.get('email')
 
-    with tm.utils.MainSession() as session:
-        u = tm.User(name=username, password=password, email=email)
-        session.add(u)
+#     with tm.utils.MainSession() as session:
+#         u = tm.User(name=username, password=password, email=email)
+#         session.add(u)
 
-        return jsonify({
-            'id': u.id,
-            'name': username,
-            'email': email
-        })
+#         return jsonify({
+#             'id': u.id,
+#             'name': username,
+#             'email': email
+#         })
