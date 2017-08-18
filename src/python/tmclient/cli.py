@@ -601,6 +601,16 @@ microscope_file_upload_parser.add_argument(
         ' is proportional to the number of available CPUs.'
     )
 )
+microscope_file_upload_parser.add_argument(
+    '--retry', type=int, metavar='NUM', default=5,
+    help=('Retry failed uploads up to NUM times.'
+          ' If this option is omitted, `tm_client`'
+          ' will retry failed uploads up to %(default)s times.'),
+)
+microscope_file_upload_parser.add_argument(
+    '--no-retry', action='store_const', dest='retry', const=1,
+    help='Do not retry failed uploads.',
+)
 microscope_file_upload_parser.set_defaults(
     method='upload_microscope_files'
 )

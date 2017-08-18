@@ -1012,7 +1012,7 @@ class TmClient(HttpClient):
         return res.json()['data']
 
     def upload_microscope_files(self, plate_name, acquisition_name,
-                                directory, parallel=1):
+                                directory, parallel=1, retry=5):
         '''Uploads microscope files contained in `directory`.
 
         Parameters
@@ -1063,7 +1063,6 @@ class TmClient(HttpClient):
         )
         paths = [os.path.join(directory, name) for name in filenames]
         total = len(paths)
-        retry = 5
         while retry > 0:
             work = [
                 # function,         *args ...
