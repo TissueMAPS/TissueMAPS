@@ -1955,10 +1955,8 @@ class TmClient(HttpClient):
 
         def download_per_well(well):
             logger.info(
-                'download feature data at well: '
-                'plate={plate}, well={well}'.format(
-                    plate=well['plate_name'], well=well['name'],
-                )
+                'download feature data at well: plate=%s, well=%s',
+                well['plate_name'], well['name']
             )
             res = self._download_feature_values(
                 mapobject_type_name, well['plate_name'], well['name']
@@ -1971,10 +1969,8 @@ class TmClient(HttpClient):
                     f.write(c)
 
             logger.info(
-                'download feature metadata at well: '
-                'plate={plate}, well={well}'.format(
-                    plate=well['plate_name'], well=well['name'],
-                )
+                'download feature metadata at well: plate=%s, well=%s',
+                well['plate_name'], well['name']
             )
             res = self._download_object_metadata(
                 mapobject_type_name, well['plate_name'], well['name']
