@@ -1346,7 +1346,7 @@ class TmClient(HttpClient):
         )
         data = response.content
         filename = self._extract_filename_from_headers(response.headers)
-        self._write_file(directory, filename, data)
+        self._write_file(directory, os.path.basename(filename), data)
 
     def _download_segmentation_image(self, mapobject_type_name, plate_name,
             well_name, well_pos_y, well_pos_x, tpoint, zplane):
@@ -1962,7 +1962,7 @@ class TmClient(HttpClient):
                 mapobject_type_name, well['plate_name'], well['name']
             )
             filename = self._extract_filename_from_headers(res.headers)
-            filepath = os.path.join(directory, filename)
+            filepath = os.path.join(directory, os.path.basename(filename))
             logger.info('write feature values to file: %s', filepath)
             with open(filepath, 'wb') as f:
                 for c in res.iter_content(chunk_size=1000):
@@ -1976,7 +1976,7 @@ class TmClient(HttpClient):
                 mapobject_type_name, well['plate_name'], well['name']
             )
             filename = self._extract_filename_from_headers(res.headers)
-            filepath = os.path.join(directory, filename)
+            filepath = os.path.join(directory, os.path.basename(filename))
             logger.info('write metadata to file: %s', filepath)
             with open(filepath, 'wb') as f:
                 for c in res.iter_content(chunk_size=1000):
