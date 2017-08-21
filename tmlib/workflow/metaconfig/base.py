@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 _SUPPORTED__FIELDS = {'w', 'c', 'z', 't', 's'}
 
 
-_FIELD_DEFAULTS = {'w': 'A01', 'c': 1, 'z': 0, 't': 0, 's': 0}
+_FIELD_DEFAULTS = {'w': 'A01', 'c': '1', 'z': 0, 't': 0, 's': 0}
 
 
 MetadataFields = collections.namedtuple(
@@ -455,11 +455,11 @@ class MetadataHandler(object):
         for i, f in enumerate(filenames):
             # Not every microscope provides all the information in the filename.
             fields = self.extract_fields_from_filename(regex, f)
-            md.at[i, 'channel_name'] = fields.c
+            md.at[i, 'channel_name'] = str(fields.c)
             md.at[i, 'site'] = int(fields.s)
             md.at[i, 'zplane'] = int(fields.z)
             md.at[i, 'tpoint'] = int(fields.t)
-            md.at[i, 'well_name'] = fields.w
+            md.at[i, 'well_name'] = str(fields.w)
 
         return self.metadata
 
