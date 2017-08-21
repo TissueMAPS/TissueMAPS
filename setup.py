@@ -84,7 +84,7 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=[],
-    packages = setuptools.find_packages('jtmodules'),
+    packages = ('jtmodules', ),
     package_dir={'': 'src/python'},
     include_package_data=True,
     install_requires=[
