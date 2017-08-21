@@ -702,6 +702,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 pt, ct = layer.calculate_zoom_thresholds(maxzoom, as_polygons)
                 layer.polygon_thresh = pt
                 layer.centroid_thresh = ct
+                session.flush()
                 if (layer.tpoint is not None and
                         layer.zplane is not None):
                     segmented_mapobject_types.append(layer.mapobject_type)
