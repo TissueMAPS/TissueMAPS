@@ -1498,7 +1498,7 @@ class TmClient(HttpClient):
             raise TypeError('Image must be provided in form of a numpy array.')
         if image.dtype != np.int32:
             raise ValueError('Image must have 32-bit integer data type.')
-        self._upload_segmentation_image(self, mapobject_type_name,
+        self._upload_segmentation_image(mapobject_type_name,
             plate_name, well_name, well_pos_y, well_pos_x, tpoint, zplane,
             image
         )
