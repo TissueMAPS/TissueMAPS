@@ -82,7 +82,7 @@ setuptools.setup(
         'Operating System :: MacOS'
     ],
     scripts=[],
-    packages=setuptools.find_packages(os.path.join('src', 'python')),
+    packages=('jtlib', ),
     package_dir={'': 'src/python'},
     include_package_data=True,
     install_requires=[
