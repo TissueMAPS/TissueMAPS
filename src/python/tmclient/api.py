@@ -1063,6 +1063,7 @@ class TmClient(HttpClient):
         )
         paths = [os.path.join(directory, name) for name in filenames]
         total = len(paths)
+        retry += 1  # make usage here consistent with CLI usage
         while retry > 0:
             work = [
                 # function,         *args ...

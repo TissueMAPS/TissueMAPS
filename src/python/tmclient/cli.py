@@ -602,13 +602,13 @@ microscope_file_upload_parser.add_argument(
     )
 )
 microscope_file_upload_parser.add_argument(
-    '--retry', type=int, metavar='NUM', default=5,
+    '--retries', type=int, metavar='NUM', default=5,
     help=('Retry failed uploads up to NUM times.'
           ' If this option is omitted, `tm_client`'
           ' will retry failed uploads up to %(default)s times.'),
 )
 microscope_file_upload_parser.add_argument(
-    '--no-retry', action='store_const', dest='retry', const=1,
+    '--no-retry', action='store_const', dest='retry', const=0,
     help='Do not retry failed uploads.',
 )
 microscope_file_upload_parser.set_defaults(
@@ -751,7 +751,7 @@ feature_value_download_parser.add_argument(
     '--parallel', nargs='?', type=int, metavar='NUM',
     default=1, const=0,
     help=(
-        'Use NUM parallel processes for upload (default: %(default)s).'
+        'Use NUM parallel processes for download (default: %(default)s).'
         ' If NUM is omitted or 0, the degree of parallelism'
         ' is proportional to the number of available CPUs.'
     )
