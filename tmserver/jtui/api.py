@@ -220,7 +220,8 @@ def create_joblist(experiment_id):
             ).\
             join(tm.Well).\
             join(tm.Plate).\
-            order_by(tm.Site.id)
+            order_by(tm.Site.id).\
+            all()
         for index, record in enumerate(query):
             metadata[index+1] = {
                 'plate': record.plate,
