@@ -68,11 +68,11 @@ class Clustering(Classifier):
             raise ValueError('Unknown method "%s".' % method)
 
         result_id = self.register_result(
-            submission_id, mapobject_type_name,
-            result_type='ScalarToolResult', unique_labels=np.arange(k)
-        )
+                submission_id, mapobject_type_name,
+                result_type='ScalarToolResult', unique_labels=np.arange(k)
+                )
 
-        n_train = 10**6
+        n_train = 10**5
         logger.debug('use %d objects for training', n_train)
         mapobject_ids = self.get_random_mapobject_subset(
             mapobject_type_name, n_train
@@ -83,7 +83,7 @@ class Clustering(Classifier):
         )
         model, scaler = self.train_unsupervised(training_set, k, method)
 
-        n_test = 10**6
+        n_test = 10**5
         logger.debug('set batch size to %d', n_test)
         batches = self.partition_mapobjects(mapobject_type_name, n_test)
         counter = 0

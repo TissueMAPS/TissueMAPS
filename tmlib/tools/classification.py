@@ -102,7 +102,7 @@ class Classification(Classifier):
             training_set, labels, method, n_fold_cv
         )
 
-        n_test = 10**6
+        n_test = 10**5
         logger.debug('set batch size to %d', n_test)
         batches = self.partition_mapobjects(mapobject_type_name, n_test)
         for i, mapobject_ids in enumerate(batches):
