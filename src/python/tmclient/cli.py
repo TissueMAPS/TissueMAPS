@@ -602,7 +602,8 @@ microscope_file_upload_parser.add_argument(
     )
 )
 microscope_file_upload_parser.add_argument(
-    '--retries', type=int, metavar='NUM', default=5,
+    '--retries', action='store', dest='retry',
+    type=int, metavar='NUM', default=5,
     help=('Retry failed uploads up to NUM times.'
           ' If this option is omitted, `tm_client`'
           ' will retry failed uploads up to %(default)s times.'),
