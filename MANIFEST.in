@@ -1,1 +1,1 @@
-include examples *.sh
+include examples/*.sh

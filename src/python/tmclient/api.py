@@ -2227,7 +2227,7 @@ class TmClient(HttpClient):
     def _show_workflow_status(self, depth):
         status = self.get_workflow_status(depth)
 
-        def add_row_recursively(data, table, i):
+        def add_row_recursively(data, table):
             table.add_row([
                 data['id'],
                 data['name'],
@@ -2244,7 +2244,7 @@ class TmClient(HttpClient):
             for subtd in data.get('subtasks', list()):
                 if subtd is None:
                     continue
-                add_row_recursively(subtd, table, i+1)
+                add_row_recursively(subtd, table)
 
         t = PrettyTable([
             'ID', 'Name', 'Type', 'Created (YYYY-MM-DD HH:MM:SS)',
@@ -2260,7 +2260,7 @@ class TmClient(HttpClient):
         t.align['Memory (MB)'] = 'r'
         t.padding_width = 1
         if status:
-            add_row_recursively(status, t, 0)
+            add_row_recursively(status, t)
         print(t)
 
     def _get_workflow_job_id(self, step_name, name):
