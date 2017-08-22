@@ -121,16 +121,14 @@ with open(os.path.join(folderPath,'settings.yaml'),'w') as outfile:
 # Download feature values and metadata for all mapobject types
 for mapobject_type in mapobject_types:
     print 'Downloading ' + mapobject_type
-    # TODO: Update downloading such that it still downloads the data in one file, not per well. Use download_feature_values &
-    # download_object_metadata, then save the resulting pandas data frame to file, instead of renaming downloads
-    client.download_feature_values_and_metadata_files(mapobject_type,folderPath)
-    originalFileNameFeatures = os.path.join(folderPath, experimentName + '_' + mapobject_type + '_feature-values.csv')
-    originalFileNameMetadata = os.path.join(folderPath, experimentName + '_' + mapobject_type + '_metadata.csv')
-    newFileNameFeatures = os.path.join(folderPath, 'feature-values_' + mapobject_type + '.csv')
-    newFileNameMetadata = os.path.join(folderPath, 'metadata_' + mapobject_type + '.csv')
-    print originalFileNameFeatures
-    shutil.move(originalFileNameFeatures,newFileNameFeatures)
-    shutil.move(originalFileNameMetadata,newFileNameMetadata)
+    fileNameFeatures = os.path.join(folderPath, 'feature-values_' + mapobject_type + '.csv')
+    fileNameMetadata = os.path.join(folderPath, 'metadata_' + mapobject_type + '.csv')
+    
+    feature_values = client.download_feature_values(mapobject_type_name = mapobject_type)
+    feature_values.to_csv(fileNameFeatures, index = False)
+    
+    metadata = client.download_object_metadata(mapobject_type_name = mapobject_type)
+    metadata.to_csv(fileNameMetadata, index=False)
 
 # Download workflow description
 workflowFilename = os.path.join(folderPath, 'workflow_description.yaml')
