@@ -15,7 +15,7 @@ Quickstart
 Server
 ------
 
-The easiest way to set up your own server for development and testing is to use either the pre-build container images available on `Docker Hub <https://hub.docker.com/u/tissuemaps/dashboard/>`_ or the pre-build virtual machines images for `Amazon Web Services (AWS) <https://aws.amazon.com/>`_:
+The easiest way to set up your own server for development and testing is to use either the pre-build container images available on `Docker Hub <https://hub.docker.com/u/tissuemaps/>`_ or the pre-build virtual machines images for `Amazon Web Services (AWS) <https://aws.amazon.com/>`_:
 
 To run the containerized *TissueMAPS* server, clone the repository and bring up the containers using `Docker Compose <https://docs.docker.com/compose/>`_::
 
