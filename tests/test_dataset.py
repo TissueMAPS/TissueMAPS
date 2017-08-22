@@ -172,7 +172,7 @@ def test_site_count(client, experiment_info):
 
 def test_feature_values(client, experiment_info):
     for mapobject_type in client.get_mapobject_types():
-        response = client.download_object_feature_values(mapobject_type['name'])
+        response = client.download_feature_values(mapobject_type['name'])
         try:
             expected = experiment_info.get_expected_feature_values(mapobject_type['name'])
         except EmptyDataError:
