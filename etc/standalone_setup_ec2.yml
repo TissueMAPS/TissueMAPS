@@ -29,9 +29,9 @@ architecture:
                 db_worker_cores: 1
                 db_worker_memory: 3625
           instance:
-            image: ami-fa2df395
+            image: ami-7cbc6e13 #ami-fa2df395
             ssh_user: centos
-            flavor: M4.2xlarge
+            flavor: m4.2xlarge
             volume_size: 1000
             tags:
               - web

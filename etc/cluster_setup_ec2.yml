@@ -26,9 +26,9 @@ architecture:
             - name: glusterfs_client
             - name: ganglia_monitor
           instance:
-            image: ami-fa2df395
+            image: ami-7cbc6e13 #ami-fa2df395
             ssh_user: centos
-            flavor: M4.2xlarge
+            flavor: m4.2xlarge
             tags:
               - web
               - compute
@@ -43,9 +43,9 @@ architecture:
             - name: glusterfs_client
             - name: ganglia_monitor
           instance:
-            image: ami-fa2df395
+            image: ami-7cbc6e13 #ami-fa2df395
             ssh_user: centos
-            flavor: C4.xlarge
+            flavor: c4.xlarge
             tags:
               - compute
 
@@ -60,9 +60,9 @@ architecture:
                 db_master_memory: 29000
             - name: ganglia_monitor
           instance:
-            image: ami-fa2df395
+            image: ami-7cbc6e13 #ami-fa2df395
             ssh_user: centos
-            flavor: I3.xlarge
+            flavor: i3.xlarge
             volume_size: 950
             tags:
               - storage
@@ -76,9 +76,9 @@ architecture:
                 db_worker_memory: 29000
             - name: ganglia_monitor
           instance:
-            image: ami-fa2df395
+            image: ami-7cbc6e13 #ami-fa2df395
             ssh_user: centos
-            flavor: I3.xlarge
+            flavor: i3.xlarge
             volume_size: 950
             tags:
               - storage
@@ -91,9 +91,9 @@ architecture:
             - name: glusterfs_server
             - name: ganglia_monitor
           instance:
-            image: ami-fa2df395
+            image: ami-7cbc6e13 #ami-fa2df395
             ssh_user: centos
-            flavor: M4.xlarge
+            flavor: m4.xlarge
             volume_mountpoint: /srv/glusterfs
             volume_size: 2000
             tags:
@@ -106,9 +106,9 @@ architecture:
           groups:
             - name: ganglia_master
           instance:
-            image: ami-fa2df395
+            image: ami-7cbc6e13 #ami-fa2df395
             ssh_user: centos
-            flavor: 2cpu-2ram-server
+            flavor: t2.medium
             tags:
               - web
               - compute
