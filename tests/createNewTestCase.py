@@ -121,6 +121,8 @@ with open(os.path.join(folderPath,'settings.yaml'),'w') as outfile:
 # Download feature values and metadata for all mapobject types
 for mapobject_type in mapobject_types:
     print 'Downloading ' + mapobject_type
+    # TODO: Update downloading such that it still downloads the data in one file, not per well. Use download_feature_values &
+    # download_object_metadata, then save the resulting pandas data frame to file, instead of renaming downloads
     client.download_feature_values_and_metadata_files(mapobject_type,folderPath)
     originalFileNameFeatures = os.path.join(folderPath, experimentName + '_' + mapobject_type + '_feature-values.csv')
     originalFileNameMetadata = os.path.join(folderPath, experimentName + '_' + mapobject_type + '_metadata.csv')
