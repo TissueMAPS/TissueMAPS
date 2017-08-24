@@ -232,7 +232,7 @@ class LibraryConfig(TmapsConfig):
 
     def __init__(self):
         super(LibraryConfig, self).__init__()
-        self.modules_home = '~/jtmodules'
+        self.modules_home = '~/jtlibrary/modules'
         self.formats_home = '~/tmformats'
         self.storage_home = '/storage/filesystem'
         self._resource = None
@@ -261,15 +261,8 @@ class LibraryConfig(TmapsConfig):
 
     @property
     def modules_home(self):
-        '''str: absolute path to root directory of local copy of
-        *TissueMAPS/JtModules* repository (default: ``"~/jtmodules"``)
-
-        Note
-        ----
-        Assumes a certain repository structure, where *jtmodules* packages
-        for different programming languages are placed into a
-        language-specific ``src`` subdirectory, such as ``src/python/jtmodules``
-        or ``src/matlab/+jtmodules``.
+        '''str: absolute path to the directory that contains the jterator
+        module source code files (default: ``"~/jtlibrary/modules"``)
         '''
         return os.path.expandvars(os.path.expanduser(
             self._config.get(self._section, 'modules_home')
