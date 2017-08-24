@@ -24,7 +24,6 @@ from cached_property import cached_property
 from natsort import natsorted
 
 from tmlib import cfg
-from tmlib.workflow.jterator.utils import get_package_directories
 from tmlib.workflow.jterator.description import (
     PipelineDescription, HandleDescriptions
 )
@@ -450,34 +449,30 @@ class AvailableModules(object):
 
     @property
     def module_files(self):
-        '''
-        Module files are assumed to reside in a package called "modules"
-        as a subpackage of the "jtlib" package. Module files can have one of
-        the following extensions: ".py", ".m", ".jl", ".r" or ".R".
+        '''List[str]: absolute paths to module files
 
-        Returns
-        -------
-        List[str]
-            absolute paths to module files
+        Note
+        ----
+        Module files are assumed to reside in a package called "modules"
+        as a subpackage of the "jtlib" package. They can have one of
+        the following extensions: ".py", ".m", ".r" or ".R".
         '''
-        dirs = get_package_directories()
         search_strings = {
             'Python': '^[^_]+.*\.py$',  # exclude _ files
             'Matlab': '\.m$',
             'R': '\.(%s)$' % '|'.join(['r', 'R']),
         }
+        if not os.path.exists(cfg.modules_home):
+            logger.warn(
+                'modules directory does not exist: %s' % cfg.modules_home
+            )
+            continue
         modules = list()
-        for languange, d in dirs.iteritems():
-            if not os.path.exists(d):
-                logger.warn(
-                    'modules directory for language "%s" does not exist: %s' %
-                    (language, d)
-                )
-                continue
-            r = re.compile(search_strings[languange])
-            modules.extend([
-                os.path.join(d, f)
-                for f in os.listdir(d) if r.search(f)
+        for language, pattern in search_strings.iteritems():
+            r = re.compile(search_strings.values())
+            modules.extent([
+                os.path.join(cfg.modules_home, f)
+                for f in os.listdir(cfg.modules_home) if r.search(f)
             ])
         return natsorted(modules)
 
@@ -513,7 +508,7 @@ class AvailableModules(object):
         return languages
 
     def _get_handles_file(self, module_name):
-        handles_dir = os.path.join(cfg.modules_home, 'handles')
+        handles_dir = os.path.join(cfg.modules_home, '..', 'handles')
         search_string = '^%s\%s$' % (module_name, HANDLES_SUFFIX)
         regexp_pattern = re.compile(search_string)
         handles_files = natsorted([

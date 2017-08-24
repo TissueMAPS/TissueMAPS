@@ -116,24 +116,17 @@ class ImageAnalysisModule(object):
 
     def _exec_m_module(self, engine):
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        if os.path.exists(self.source_file):
-            logger.debug(
-                'import module "%s" from source file: %s', self.source_file
-            )
-            logger.debug(
-                'add module source file to Matlab path: "%s"', self.source_file
-            )
-            engine.eval(
-                'addpath(\'{0}\');'.format(os.path.dirname(self.source_file))
-            )
-            engine.eval('version = {0}.version'.format(module_name))
-            function_call_format_string = '[{outputs}] = {name}.main({inputs});'
-        else:
-            logger.debug('import module "%s" from "jtmodules" package')
-            engine.eval('import \'jtmodules.{0}\''.format(module_name))
-            engine.eval('version = jtmodules.{0}.VERSION'.format(module_name))
-            function_call_format_string = \
-                '[{outputs}] = jtmodules.{name}.main({inputs});'
+        logger.debug(
+            'import module "%s" from source file: %s', self.source_file
+        )
+        logger.debug(
+            'add module source file to Matlab path: "%s"', self.source_file
+        )
+        engine.eval(
+            'addpath(\'{0}\');'.format(os.path.dirname(self.source_file))
+        )
+        engine.eval('version = {0}.VERSION'.format(module_name))
+        function_call_format_string = '[{outputs}] = {name}.main({inputs});'
         # NOTE: Matlab doesn't add imported classes to the workspace. It access
         # the "VERSION" property, we need to assign it to a variable first.
         version = engine.get('version')
@@ -173,26 +166,11 @@ class ImageAnalysisModule(object):
 
     def _exec_py_module(self):
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        if os.path.exists(self.source_file):
-            logger.debug(
-                'import module "%s" from source file: %s',
-                module_name, self.source_file
-            )
-            module = imp.load_source(module_name, self.source_file)
-        else:
-            logger.debug('import module "%s" from "jtmodules" package')
-            try:
-                import jtmodules
-            except ImportError:
-                raise ImportError('Package "jtmodules" is not installed.')
-            try:
-                module = importlib.import_module('jtmodules.%s' % module_name)
-            except ImportError as err:
-                raise ImportError(
-                    'Module "%s" could not be imported:\n%s' % (
-                        module_name, str(err)
-                    )
-                )
+        logger.debug(
+            'import module "%s" from source file: %s',
+            module_name, self.source_file
+        )
+        module = imp.load_source(module_name, self.source_file)
         if module.VERSION != self.handles.version:
             raise PipelineRunError(
                 'Version of source and handles is not the same.'
@@ -238,17 +216,12 @@ class ImageAnalysisModule(object):
                 '"rpy2" package is not installed.'
             )
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
-        if os.path.exists(self.source_file):
-            logger.debug(
-                'import module "%s" from source file: %s', self.source_file
-            )
-            logger.debug('source module: "%s"', self.source_file)
-            rpy2.robjects.r('source("{0}")'.format(self.source_file))
-            module = rpy2.robjects.r[module_name]
-        else:
-            logger.debug('import module "%s" from "jtmodules" package')
-            rpackage = importr('jtmodules')
-            module = getattr(rpackage, module_name)
+        logger.debug(
+            'import module "%s" from source file: %s', self.source_file
+        )
+        logger.debug('source module: "%s"', self.source_file)
+        rpy2.robjects.r('source("{0}")'.format(self.source_file))
+        module = rpy2.robjects.r[module_name]
         version = module.get('VERSION')[0]
         if version != self.handles.version:
             raise PipelineRunError(
