@@ -1,0 +1,64 @@
+---
+version: 0.0.3
+
+input:
+
+  - name: primary_label_image
+    type: LabelImage
+    key:
+    help: >
+      Labeled image encoding primary objects that should be used as seeds for
+      the detection of secondary objects.
+
+  - name: intensity_image
+    type: IntensityImage
+    key:
+    help: >
+      Grayscale image that should be used to find the outlines of secondary
+      objects.
+
+  - name: contrast_threshold
+    type: Numeric
+    value: 5
+    help: >
+      Contrast threshold for automatic separation of foreground from
+      background based on locally adaptive thresholding (when 0 defaults to
+      manual threshold using "min_threshold" and "max_threshold").
+
+  - name: min_threshold
+    type: Numeric
+    value: 125
+    help: >
+      Minimal foreground value to default to; pixels below this value are
+      considered background.
+
+  - name: max_threshold
+    type: Numeric
+    value: 140
+    help: >
+      Maximal background value to default to; pixels above this value are
+      considered foreground.
+
+  - name: plot
+    type: Plot
+    value: false
+    help: Should a figure be created?
+
+output:
+
+  - name: secondary_label_image
+    type: LabelImage
+    key: segment_secondary.secondary_label_image
+    help: Labeled image encoding secondary objects.
+
+  - name: figure
+    type: Figure
+    help: >
+      Comparison of "primary_label_image" and "secondary_label_image". Also
+      shows outlines of objects in "secondary_label_image" on "intensity_image".
+
+
+
+
+
+

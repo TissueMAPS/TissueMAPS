@@ -1,0 +1,35 @@
+---
+version: 0.1.0
+
+input:
+
+    - name: mask
+      type: MaskImage
+      key:
+      help: Image that should be labeled.
+
+    - name: connectivity
+      type: Numeric
+      value: 8
+      help: >
+        Number of neighborhood pixels considered to decide whether components
+        are connected.
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+output:
+
+    - name: label_image
+      type: LabelImage
+      key: label.label_image
+      help: >
+        Labeled image with pixels of each connected component
+        having a unique non-zero value.
+
+    - name: figure
+      type: Figure
+
+
