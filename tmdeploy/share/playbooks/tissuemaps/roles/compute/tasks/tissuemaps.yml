@@ -57,31 +57,6 @@
   tags:
     - tissuemaps
 
-- name: Clone JtModules repository
-  git:
-    repo: "{{ tm_github_url }}/jtmodules"
-    dest: "{{ tm_home }}/jtmodules"
-    version: "{{ tm_version }}"
-    force: yes
-  tags:
-    - tissuemaps
-
-- name: Install jtmodules package dependencies
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/jtmodules/requirements.txt --user --no-cache-dir
-  args:
-    chdir: "{{ tm_home }}/jtmodules/"
-    executable: /bin/bash
-  tags:
-    - tissuemaps
-
-- name: Install jtmodules package
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/jtmodules --user --no-cache-dir
-  args:
-    chdir: "{{ tm_home }}/jtmodules/"
-    executable: /bin/bash
-  tags:
-    - tissuemaps
-
 - name: Clone TmLibrary repository
   git:
     repo: "{{ tm_github_url }}/tmlibrary"
