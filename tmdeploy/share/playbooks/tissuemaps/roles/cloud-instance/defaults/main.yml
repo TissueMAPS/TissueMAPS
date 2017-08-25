@@ -18,5 +18,5 @@
 security_groups: default
 network: default
 subnetwork: "{{ network }}-subnet"
-assign_public_ip: yes
+assign_public_ip: "{{ 'web' in tags }}"
 volume_mountpoint: /storage

@@ -32,6 +32,7 @@ architecture:
             tags:
               - web
               - compute
+            assign_public_ip: yes
 
         - name: worker
           count: 8
@@ -112,3 +113,4 @@ architecture:
             tags:
               - web
               - compute
+            assign_public_ip: yes
