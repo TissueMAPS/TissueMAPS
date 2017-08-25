@@ -64,6 +64,15 @@
     - "{{ db_user }}"
     - "{{ web_user }}"
 
+- name: Add tm_user to sudoers
+  become: yes
+  lineinfile:
+    dest: /etc/sudoers.d/{{ tm_user }}
+    # just enough rights to run `tm_add user`
+    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/sacctmgr"
+    state: present
+    create: yes
+
 - name: Create SSH directory for tm_user
   become: yes
   file:
