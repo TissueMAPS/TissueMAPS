@@ -26,7 +26,7 @@ server {
         uwsgi_pass {{ app_host }}:{{ app_port }};
         uwsgi_send_timeout 60s;
         # uwsgi may take more time to process requests
-        uwsgi_read_timeout 300s;
+        uwsgi_read_timeout {{ uwsgi_timeout }}s;
     }
 
 }

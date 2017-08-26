@@ -4,6 +4,7 @@ logto = /var/log/uwsgi/tissuemaps.log
 pidfile = /var/run/uwsgi/tissuemaps.pid
 http-socket = :8080
 uwsgi-socket = {{ uwsgi_socket }}
+socket-timeout = {{ uwsgi_timeout }}
 chmod-socket = 660
 vacuum = true
 master = true

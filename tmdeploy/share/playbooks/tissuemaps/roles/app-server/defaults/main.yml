@@ -21,5 +21,6 @@ tm_compute_cores: 2           # total number of CPU cores per node
 tm_compute_memory: 1750       # total memory of per node
 
 uwsgi_processes: 4
+uwsgi_timeout: 300
 
 tm_admins: []                 # Github user names of administrators
