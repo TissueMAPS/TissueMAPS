@@ -295,6 +295,10 @@ def push_container(args):
 
 
 def main(args):
+    # sanitize command-line args
+    args.setup_file = os.path.abspath(os.path.expanduser(args.setup_file))
+
+    # redirect to actual code
     context = globals()
     func = context.get(args.function)
     func(args)
