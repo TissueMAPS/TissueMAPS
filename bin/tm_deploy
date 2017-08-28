@@ -296,7 +296,8 @@ def push_container(args):
 
 def main(args):
     # sanitize command-line args
-    args.setup_file = os.path.abspath(os.path.expanduser(args.setup_file))
+    if args.env == 'vm':
+        args.setup_file = os.path.abspath(os.path.expanduser(args.setup_file))
 
     # redirect to actual code
     context = globals()
