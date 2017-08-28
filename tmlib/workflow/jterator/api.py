@@ -105,16 +105,20 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         for i, element in enumerate(self.project.pipe.description.pipeline):
             if not element.active:
                 continue
-            source_file = element.source
+            source_file = str(element.source)  # copy
             if '/' in source_file:
+                logger.debug('assume module resides outside %s', cfg.module_home)
                 source_file = os.path.expandvars(source_file)
                 source_file = os.path.expanduser(source_file)
                 if not os.path.isabs(source_file):
                     source_file = os.path.join(self.step_location, source_file)
-                if not os.path.exists(source_file):
-                    raise PipelineDescriptionError(
-                        'Module file does not exist: %s' % source_file
-                    )
+            else:
+                logger.debug('assume module resides in %s', cfg.module_home)
+                source_file = os.path.join(cfg.module_home, source_file)
+            if not os.path.exists(source_file):
+                raise PipelineDescriptionError(
+                    'Module source code file not found: %s' % element.source
+                )
             name = self.project.handles[i].name
             handles = self.project.handles[i].description
             module = ImageAnalysisModule(

@@ -145,7 +145,7 @@ setuptools.setup(
        'geoalchemy2>=0.3.0',
        'h5py>=2.5.0',
        'image-registration==0.2.1',
-       'jtmodules>=0.1.0',
+       'jtlib>=0.3.2',
        'mahotas>=1.4.1',
        'matplotlib>=2.0.0',
        'mock>=1.0.1',

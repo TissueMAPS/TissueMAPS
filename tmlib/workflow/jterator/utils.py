@@ -22,46 +22,8 @@ from tmlib import cfg
 logger = logging.getLogger(__name__)
 
 
-def get_package_directories():
-    '''Gets the language-specific package directories were module source
-    files are located.
-
-    Returns
-    -------
-    Dict[str, str]
-        paths to module directories for each language relative to the
-        repository directory
-    '''
-    dirs = {
-        'Python': 'src/python/jtmodules',
-        'Matlab': 'src/matlab/+jtmodules',
-        'R': 'src/r/jtmodules'
-    }
-    return {k: os.path.join(cfg.modules_home, v) for k, v in dirs.iteritems()}
-
-
-def get_module_path(module_file):
-    '''Gets the absolute path to a module file.
-
-    Parameters
-    ----------
-    module_file: str
-        name of the module file
-    repo_dir: str
-        absolute path to the local copy of the `jtlib` repository
-
-    Returns
-    -------
-    str
-        absolute path to module file
-    '''
-    language = determine_language(module_file)
-    modules_dir = get_package_directories()[language]
-    return os.path.join(modules_dir, module_file)
-
-
 def determine_language(filename):
-    '''Determines language form module filename suffix.
+    '''Determines language of a module from filename suffix.
 
     Parameters
     ----------
