@@ -466,7 +466,6 @@ class AvailableModules(object):
             logger.warn(
                 'modules directory does not exist: %s' % cfg.modules_home
             )
-            continue
         modules = list()
         for language, pattern in search_strings.iteritems():
             r = re.compile(search_strings.values())
