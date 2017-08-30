@@ -22,7 +22,7 @@ volume_user: root
 volume_device_mapping:
   os:
     name: /dev/vdb
-    mountpoint: /dev/vbd
+    mountpoint: /dev/vdb
   ec2:
     name: /dev/sdf
     mountpoint: /dev/xvdf
