@@ -422,6 +422,15 @@ if __name__ == '__main__':
     tmdeploy_logger = logging.getLogger('tmdeploy')
     tmdeploy_logger.setLevel(log_level)
 
+    if args.env == 'container':
+        try:
+            import container
+        except ImportError:
+            logger.error(
+                'Container deployment requires "ansible-container" package.'
+            )
+            sys.exit(1)
+
     try:
         main(args)
     except SetupDescriptionError as err:
