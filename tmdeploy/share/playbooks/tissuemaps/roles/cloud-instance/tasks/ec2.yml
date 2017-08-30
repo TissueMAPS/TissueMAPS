@@ -229,7 +229,7 @@
   local_action: ec2_vol
   args:
     state: "{{ instance_state }}"
-    device_name: "{{ volume_device_mapping[provider] }}"
+    device_name: "{{ volume_device_mapping[provider].name }}"
     instance: "{{ instance.tagged_instances[0].id if (instance.instances|length) == 0 else instance.instances[0].id }}"
     delete_on_termination: yes
     name: "{{ volume_name }}"

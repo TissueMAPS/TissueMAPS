@@ -295,7 +295,7 @@
     state: "{{ instance_state }}"
     server: "{{ instance_name }}"
     volume: "{{ volume_name }}"
-    device: "{{ volume_device_mapping[provider] }}"
+    device: "{{ volume_device_mapping[provider].name }}"
     wait: yes
     timeout: 300
   when:

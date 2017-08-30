@@ -20,8 +20,14 @@ instance_name: "{{ inventory_hostname }}"
 volume_name: "{{ instance_name }}-storage"
 volume_user: root
 volume_device_mapping:
-  os: /dev/vdb
-  ec2: /dev/sdf
-  gce: /dev/disk/by-id/google-{{ volume_name }}
+  os:
+    name: /dev/vdb
+    mountpoint: /dev/vbd
+  ec2:
+    name: /dev/sdf
+    mountpoint: /dev/xvdf
+  gce:
+    name: /dev/disk/by-id/google-{{ volume_name }}
+    mountpoint: /dev/disk/by-id/google-{{ volume_name }}
 tm_home: /home/{{ tm_user }}
 tm_config_file: "{{ tm_home }}/.tmaps/tissuemaps.cfg"
