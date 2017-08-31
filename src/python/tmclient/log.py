@@ -1,11 +1,11 @@
 # Copyright 2016 Markus D. Herrmann, University of Zurich
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -86,7 +86,7 @@ def configure_logging():
     Logging should only be configured once at the main entry point of the
     application!
     '''
-    fmt = '%(asctime)s | %(levelname)-8s | %(name)-40s | %(message)s'
+    fmt = '[%(process)6d/%(threadName)-12s] %(asctime)s | %(levelname)-8s | %(name)-40s | %(message)s'
     datefmt = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 
@@ -117,4 +117,3 @@ class Whitelist(logging.Filter):
 
     def filter(self, record):
         return any([f.filter(record) for f in self.whitelist])
-

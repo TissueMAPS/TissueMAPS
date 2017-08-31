@@ -1,11 +1,11 @@
 # Copyright 2016 Markus D. Herrmann, University of Zurich
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -592,6 +592,26 @@ microscope_file_upload_parser.add_argument(
     '--directory', required=True,
     help='path to directory where files are located'
 )
+microscope_file_upload_parser.add_argument(
+    '--parallel', nargs='?', type=int, metavar='NUM',
+    default=1, const=0,
+    help=(
+        'Use NUM parallel processes for upload (default: %(default)s).'
+        ' If NUM is omitted or 0, the degree of parallelism'
+        ' is proportional to the number of available CPUs.'
+    )
+)
+microscope_file_upload_parser.add_argument(
+    '--retries', action='store', dest='retry',
+    type=int, metavar='NUM', default=5,
+    help=('Retry failed uploads up to NUM times.'
+          ' If this option is omitted, `tm_client`'
+          ' will retry failed uploads up to %(default)s times.'),
+)
+microscope_file_upload_parser.add_argument(
+    '--no-retry', action='store_const', dest='retry', const=0,
+    help='Do not retry failed uploads.',
+)
 microscope_file_upload_parser.set_defaults(
     method='upload_microscope_files'
 )
@@ -728,6 +748,15 @@ feature_value_download_parser = feature_values_subparsers.add_parser(
     ),
     parents=[abstract_object_parser, abstract_download_directory_parser],
 )
+feature_value_download_parser.add_argument(
+    '--parallel', nargs='?', type=int, metavar='NUM',
+    default=1, const=0,
+    help=(
+        'Use NUM parallel processes for download (default: %(default)s).'
+        ' If NUM is omitted or 0, the degree of parallelism'
+        ' is proportional to the number of available CPUs.'
+    )
+)
 feature_value_download_parser.set_defaults(
     method='download_feature_values_and_metadata_files'
 )
@@ -821,5 +850,3 @@ channel_image_download_parser.add_argument(
     '--correct', action='store_true',
     help='whether image should be corrected for illumination artifacts'
 )
-
-
