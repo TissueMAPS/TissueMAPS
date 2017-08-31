@@ -17,6 +17,7 @@ import sys
 import os
 import cgi
 import re
+import errno
 import json
 import glob
 try:
@@ -1050,7 +1051,8 @@ class TmClient(HttpClient):
         directory = os.path.expandvars(directory)
         filenames = [
             f for f in os.listdir(directory)
-            if not os.path.isdir(f) and not f.startswith('.')
+            if not os.path.isdir(os.path.join(directory, f))
+            and not f.startswith('.')
         ]
         registered_filenames = self._register_files_for_upload(
             acquisition_id, filenames
