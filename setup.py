@@ -109,7 +109,6 @@ setuptools.setup(
        'apache-libcloud>=1.3.0',
        'boto>=2.48',
        'boto3>=1.4.1',
-       'docker-py>=1.10.6',
        'PyYAML>=3.11',
        'psycopg2>=2.6.1',
        'shade>=1.12.1',
@@ -119,10 +118,10 @@ setuptools.setup(
         # We still depend on ansible-container 0.3. They have made a major jump
         # to version 0.9 and we are still refactoring our repository.
         # For now, we make container deployment optional, because it causes
-        # multiple problems with package dependencies.
+        # multiple problems with package dependencies.  See e.g. #68
        'container': [
-           'ansible-container>=0.3.0,<=0.4'
+            'ansible-container>=0.3.0,<=0.4',
+            'docker-py>=1.10.6',
         ],
     },
 )
-
