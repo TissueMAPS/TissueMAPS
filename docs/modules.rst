@@ -9,4 +9,3 @@ Packages
     tmclient
     tmdeploy
     jtlib
-    jtmodules
