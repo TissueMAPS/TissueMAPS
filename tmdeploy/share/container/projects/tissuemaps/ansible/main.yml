@@ -21,6 +21,7 @@
     web_port: 8002
     app_host: app
     app_port: 5002
+    uwsgi_timeout: 300
     public_host_name: web
   roles:
     - web-server
