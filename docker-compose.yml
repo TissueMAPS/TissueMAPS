@@ -13,7 +13,7 @@ volumes:
 services:
 
   web:
-    image: tissuemaps/tissuemaps-web:latest
+    image: tissuemaps/tissuemaps-web:v0.3.3
     container_name: tissuemaps-web
     hostname: web
     depends_on:
@@ -28,7 +28,7 @@ services:
       - '8002:8002'
 
   app:
-    image: tissuemaps/tissuemaps-app:latest
+    image: tissuemaps/tissuemaps-app:v0.3.3
     container_name: tissuemaps-app
     hostname: app
     depends_on:
@@ -38,7 +38,7 @@ services:
       - storage-fs:/storage/tissuemaps/log
 
   db_master:
-    image: tissuemaps/tissuemaps-db_master:latest
+    image: tissuemaps/tissuemaps-db_master:v0.3.3
     container_name: tissuemaps-db-master
     hostname: db_master
     depends_on:
@@ -55,7 +55,7 @@ services:
 
   db_worker:
     # NOTE: The architecture is configured for one database worker only.
-    image: tissuemaps/tissuemaps-db_worker:latest
+    image: tissuemaps/tissuemaps-db_worker:v0.3.3
     container_name: tissuemaps-db-worker
     hostname: db_worker
     volumes:
