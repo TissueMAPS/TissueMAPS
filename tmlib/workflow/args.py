@@ -528,7 +528,17 @@ class SubmissionArguments(ArgumentCollection):
     )
 
     memory = Argument(
-        type=int, default=int(cfg.resource.max_memory_per_core.amount(Memory.MB)),
+        type=int, default=int(
+            # GC3Pie's `ShellcmdLrms` assumes that
+            # `max_memory_per_core` is the total amount of memory
+            # (i.e., you want to be able to run a single-core job
+            # using all the memory).  OTOH, for TM it is more
+            # important to be able to start many single-core
+            # low-memory jobs -- hence we set the default as 1/Nth of
+            # the total available memory when we have N cores.
+            (cfg.resource.max_memory_per_core / cfg.resource.max_cores)
+            .amount(Memory.MB)
+        ),
         meta='MB', help='''
             amount of memory in megabytes that should be allocated to each
             "run" job
