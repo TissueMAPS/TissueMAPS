@@ -455,25 +455,33 @@ class AvailableModules(object):
         ----
         Module files are assumed to reside in a package called "modules"
         as a subpackage of the "jtlib" package. They can have one of
-        the following extensions: ".py", ".m", ".r" or ".R".
+        the following extensions: ".py", ".m", ".r" or ".R", and must
+        start with an ASCII letter.
         '''
-        search_strings = {
-            'Python': '^[^_]+.*\.py$',  # exclude _ files
-            'Matlab': '\.m$',
-            'R': '\.(%s)$' % '|'.join(['r', 'R']),
-        }
         if not os.path.exists(cfg.modules_home):
             logger.warn(
-                'modules directory does not exist: %s' % cfg.modules_home
+                'modules directory does not exist: %s',
+                cfg.modules_home
             )
-        modules = list()
-        for language, pattern in search_strings.iteritems():
-            r = re.compile(search_strings.values())
-            modules.extent([
-                os.path.join(cfg.modules_home, f)
-                for f in os.listdir(cfg.modules_home) if r.search(f)
-            ])
+            # no point in continuing
+            return []
+        modules = [
+            os.path.join(cfg.modules_home, f)
+            for f in os.listdir(cfg.modules_home)
+            if self._MODULE_FILENAME_RE.search(f)
+        ]
         return natsorted(modules)
+
+    _MODULE_FILENAME_RE = re.compile(
+        '^[a-zA-Z].*' # modules names must start with an ASCII letter
+        '('
+        r'\.py$'   # Python
+        '|'
+        r'\.m$'    # MATLAB
+        '|'
+        r'\.[rR]$' # R
+        ')'
+    )
 
     @property
     def module_names(self):
