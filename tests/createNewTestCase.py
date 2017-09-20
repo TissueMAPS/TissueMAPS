@@ -3,7 +3,7 @@
 # joel.luethi@uzh.ch
 
 # LIMITATIONS
-# Currently is not written for multiplexing experiments 
+# Currently is not written for multiplexing experiments
 # (the way multiple acquisition & multiple original file paths are handled would need to be changed)
 # The experiment_description is also currently hard coded and would need to be changed manually if its different
 
@@ -60,7 +60,7 @@ if not os.path.exists(imageFolderName_1):
 imageFolderName_2 = os.path.join(imageFolderName_1,'acquisitions')
 if not os.path.exists(imageFolderName_2):
     os.makedirs(imageFolderName_2)
-    
+
 imageFolderName = os.path.join(imageFolderName_2,acquisition_name)
 if not os.path.exists(imageFolderName):
     os.makedirs(imageFolderName)
@@ -93,6 +93,9 @@ for mapobject in mapobject_download:
 # Get wells information
 wellDownload = client.get_wells()
 
+# Get wells information
+siteDownload = client.get_sites()
+
 # Get cycle information
 channelsDownload = client.get_channels()
 
@@ -103,12 +106,12 @@ expectations = dict(
     n_mapobject_types = len(mapobject_types),
     n_wells = len(wellDownload),
     well_dimensions = well_dimensions,
-    n_sites = well_dimensions[0]*well_dimensions[1],
-    n_cycles = len(acquisitionDownload) 
+    n_sites = len(siteDownload),
+    n_cycles = len(acquisitionDownload)
 )
 with open(os.path.join(folderPath,'expectations.yaml'),'w') as outfile:
     yaml.dump(expectations, outfile, explicit_start=True)
-    
+
 # Write settings file
 settings_dict = dict(
     workflow_timeout = estimatedRuntime
@@ -117,16 +120,16 @@ settings_dict = dict(
 with open(os.path.join(folderPath,'settings.yaml'),'w') as outfile:
     yaml.dump(settings_dict, outfile, default_flow_style=False, explicit_start=True)
 
-    
+
 # Download feature values and metadata for all mapobject types
 for mapobject_type in mapobject_types:
     print 'Downloading ' + mapobject_type
     fileNameFeatures = os.path.join(folderPath, 'feature-values_' + mapobject_type + '.csv')
     fileNameMetadata = os.path.join(folderPath, 'metadata_' + mapobject_type + '.csv')
-    
+
     feature_values = client.download_feature_values(mapobject_type_name = mapobject_type)
     feature_values.to_csv(fileNameFeatures, index = False)
-    
+
     metadata = client.download_object_metadata(mapobject_type_name = mapobject_type)
     metadata.to_csv(fileNameMetadata, index=False)
 
