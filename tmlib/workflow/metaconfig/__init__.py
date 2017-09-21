@@ -180,12 +180,10 @@ def metadata_handler_factory(microscope_type):
     '''
     module = import_microscope_type_module(microscope_type)
     handler_cls = None
-    for k, v in vars(module).iteritems():
-        if inspect.isclass(v):
-            if (MetadataHandler in inspect.getmro(v) and
-                    not inspect.isabstract(v)):
-                handler_cls = v
-                break
+    for k, v in inspect.getmembers(module):
+        if inspect.isclass(v) and MetadataHandler in v.__bases__:
+            handler_cls = v
+            break 
     if handler_cls is None:
         raise AttributeError(
             'Module "%s" does not implement a MetadataHandler class.' %
