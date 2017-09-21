@@ -34,7 +34,7 @@ from tmlib.workflow.metaconfig.omexml import XML_DECLARATION
 logger = logging.getLogger(__name__)
 
 #: Regular expression pattern to identify image files
-IMAGE_FILE_REGEX_PATTERN = r'[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)C0(?P<c>\d)\.'
+IMAGE_FILE_REGEX_PATTERN = r'[^_]+_(?P<w>[A-Z]\d{2})_T(?P<t>\d+)F(?P<s>\d+)L\d+A\d+Z(?P<z>\d+)(?P<c>[C]\d{2})\.'
 
 #: Supported extensions for metadata files
 METADATA_FILE_REGEX_PATTERN = r'.*\.(mlf|mrf)$'
@@ -65,6 +65,17 @@ class CellvoyagerMetadataHandler(MetadataHandler):
         return stitch.calc_grid_coordinates_from_positions(
             positions, n, reverse_rows=True
         )
+
+    @classmethod
+    def extract_fields_from_filename(cls, regex, filename, defaults=True):
+        MetadataFields = super (CellvoyagerMetadataHandler, cls).extract_fields_from_filename(regex, filename, defaults=True)
+        
+        # Specific for this class
+        action = re.search('L01(.+?)Z', filename) # Look for action and change the channel accordingly
+        action_number = action.group(1)
+        MetadataFields = MetadataFields._replace(c=action_number+"_"+MetadataFields.c)
+
+        return MetadataFields
 
 
 class CellvoyagerMetadataReader(MetadataReader):
