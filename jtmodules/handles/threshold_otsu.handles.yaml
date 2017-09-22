@@ -1,0 +1,43 @@
+---
+version: 0.0.2
+
+input:
+
+    - name: image
+      type: IntensityImage
+      key:
+      help: Grayscale image that should be thresholded.
+
+    - name: correction_factor
+      type: Scalar
+      value: 1
+      help: >
+        Threshold correction factor that is multiplied with the calculated
+        threshold level for manual fine-tuning.
+
+    - name: min_threshold
+      type: Scalar
+      value:
+      help: Minimal threshold level.
+
+    - name: max_threshold
+      type: Scalar
+      value:
+      help: Maximal threshold level.
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+output:
+
+    - name: mask
+      type: BinaryImage
+      key: threshold_otsu.mask
+      help: >
+        Binary image where pixels above threshold are assigned to foreground
+        and pixels below threshold to background.
+
+    - name: figure
+      type: Figure

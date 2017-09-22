@@ -1,0 +1,27 @@
+---
+version: 0.0.1
+
+input:
+
+    - name: label_image
+      type: LabelImage
+      key:
+      help: Label image that should be relabeled.
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+output:
+
+    - name: relabeled_image
+      type: LabelImage
+      key: relabel.relabeled_image
+      help: Relabeled image.
+
+    - name: figure
+      type: Figure
+
+
+

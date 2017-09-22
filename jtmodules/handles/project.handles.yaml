@@ -1,0 +1,33 @@
+---
+version: 0.1.0
+
+input:
+
+  - name: image
+    type: IntensityImage
+    key:
+    help: Image that should be projected.
+
+  - name: method
+    type: Character
+    value: max
+    options:
+      - max
+      - sum
+    help: Projection method.
+
+  - name: plot
+    type: Boolean
+    value: false
+    help: Do you want to plot the result?
+
+output:
+
+  - name: projected_image
+    type: IntensityImage
+    key: project.projected_image
+    help: Projected image.
+
+  - name: figure
+    type: Figure
+    help: Shows the projected image.

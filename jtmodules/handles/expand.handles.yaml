@@ -1,0 +1,31 @@
+---
+version: 0.0.1
+
+input:
+
+    - name: image
+      type: LabelImage
+      key: 
+      help: Labeled image with objects should be expanded.
+
+    - name: n
+      type: Numeric
+      value:
+      help: Number of pixel by which each object should be expanded.
+
+    - name: plot
+      type: Plot
+      value: false
+      options: [true, false]
+      help: Should a figure be created?
+
+output:
+
+    - name: expanded_image
+      type: LabelImage
+      key: expand_objects.expanded_image
+      help: Expanded image.
+
+    - name: figure
+      type: Figure
+      help: Comparison of "image" and "expanded_image".

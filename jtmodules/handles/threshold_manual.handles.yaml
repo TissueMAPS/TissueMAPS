@@ -1,0 +1,34 @@
+---
+version: 0.0.1
+
+input:
+
+    - name: image
+      type: Image
+      key:
+      help: Image that should be thresholded.
+
+    - name: threshold
+      type: Scalar
+      value:
+      help: >
+        Threshold level. Values above threshold will be assigned to foreground
+        and values below or equal to threshold to background.
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+output:
+
+    - name: mask
+      type: BinaryImage
+      key: threshold_manual.mask
+      help: >
+        Binary image where pixels above threshold are assigned to foreground
+        and pixels below threshold to background.
+
+    - name: figure
+      type: Figure
+
