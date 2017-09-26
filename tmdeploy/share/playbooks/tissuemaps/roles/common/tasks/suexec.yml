@@ -39,8 +39,3 @@
     group: root
     mode: 0700
     remote_src: yes
-
-- name: Remove su-exec repository
-  file:
-    path: /usr/local/src/su-exec
-    state: absent
