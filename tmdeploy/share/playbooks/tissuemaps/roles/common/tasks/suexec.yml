@@ -32,10 +32,7 @@
     chdir: /usr/local/src/su-exec
 
 - name: Install su-exec
-  copy:
+  file:
     src: /usr/local/src/su-exec/su-exec
     dest: /usr/local/sbin/su-exec
-    owner: root
-    group: root
-    mode: 0700
-    remote_src: yes
+    state: hard
