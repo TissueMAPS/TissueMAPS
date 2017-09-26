@@ -16,7 +16,7 @@
 ---
 # NOTE: We install all TissueMAPS python packages into the home folder because
 # we export this folder on the cluster. This is convenient, because packages
-# can then be updated on the frontend only and these changes become immediatly
+# can then be updated on the frontend only and these changes become immediately
 # effective on all compute nodes.
 
 # This shouldn't be necessary, but some packages don't build correctly when
@@ -32,55 +32,27 @@
   tags:
     - tissuemaps
 
-- name: Clone JtLibrary repository
-  git:
-    repo: "{{ tm_github_url }}/jtlibrary"
-    dest: "{{ tm_home }}/jtlibrary"
+- name: Install JtLibrary repository
+  tags:
+    - tissuemaps
+    - jtlibrary
+  include: _clone.yml
+  vars:
+    repo_url: "{{ tm_github_url }}/jtlibrary"
     version: "{{ tm_version }}"
-    force: yes
+    dest_dir: "{{ tm_home }}/jtlibrary"
+    pkg_dir: "{{ tm_home }}/jtlibrary/python/jtlib"
+
+- name: Install TmLibrary repository
   tags:
     - tissuemaps
-
-- name: Install jtlibrary package dependencies
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/jtlibrary/requirements.txt --user --no-cache-dir
-  args:
-    chdir: "{{ tm_home }}/jtlibrary/"
-    executable: /bin/bash
-  tags:
-    - tissuemaps
-
-- name: Install jtlibrary package
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/jtlibrary --user --no-cache-dir
-  args:
-    chdir: "{{ tm_home }}/jtlibrary/"
-    executable: /bin/bash
-  tags:
-    - tissuemaps
-
-- name: Clone TmLibrary repository
-  git:
-    repo: "{{ tm_github_url }}/tmlibrary"
-    dest: "{{ tm_home }}/tmlibrary"
+    - tmlibrary
+  include: _clone.yml
+  vars:
+    repo_url: "{{ tm_github_url }}/tmlibrary"
     version: "{{ tm_version }}"
-    force: yes
-  tags:
-    - tissuemaps
-
-- name: Install tmlibrary package dependencies
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/tmlibrary/requirements.txt --user --no-cache-dir
-  args:
-    chdir: "{{ tm_home }}/tmlibrary/"
-    executable: /bin/bash
-  tags:
-    - tissuemaps
-
-- name: Install tmlibrary package
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/tmlibrary --user --no-cache-dir
-  args:
-    chdir: "{{ tm_home }}/tmlibrary/"
-    executable: /bin/bash
-  tags:
-    - tissuemaps
+    dest_dir: "{{ tm_home }}/tmlibrary"
+    pkg_dir: "{{ tm_home }}/tmlibrary"
 
 - name: Create directory for TissueMAPS related files
   file:

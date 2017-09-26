@@ -1,0 +1,20 @@
+- name: Clone source code repository
+  git:
+    repo: "{{ repo_url }}"
+    dest: "{{ dest_dir }}"
+    version: "{{ version }}"
+    force: yes
+
+- name: Install source package dependencies
+  shell: |
+    env PYTHONUSERBASE="{{ tm_home }}/.local" pip install -r "{{ pkg_dir }}/requirements.txt" --user --no-cache-dir
+  args:
+    chdir: "{{ pkg_dir }}"
+    executable: /bin/bash
+
+- name: Install source package
+  shell: |
+    env PYTHONUSERBASE="{{ tm_home }}/.local" pip install -e "{{ pkg_dir }}" --user --no-cache-dir
+  args:
+    chdir: "{{ pkg_dir }}"
+    executable: /bin/bash
