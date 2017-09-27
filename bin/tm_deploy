@@ -49,7 +49,7 @@ def _get_playbooks_dir(name):
 def _get_host_groups(setup_file):
     logger.info('build Ansible commands')
     setup = Setup(setup_file)
-    groups_to_deploy = collections.defaultdict(list)
+    groups_to_deploy = {}
     for cluster in setup.architecture.clusters:
         for node_type in cluster.node_types:
             for group in node_type.groups:
@@ -59,7 +59,9 @@ def _get_host_groups(setup_file):
                     )
                     sys.exit(1)
                 logger.info('include Ansible host group: %s', group.name)
-                groups_to_deploy[group.name].append(group.vars)
+                groups_to_deploy[group.name] = []
+                if group.vars:
+                    groups_to_deploy[group.name].append(group.vars)
 
     for group_name in REQUIRED_TM_GROUPS:
         if group_name not in groups_to_deploy.keys():
