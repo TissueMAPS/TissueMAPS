@@ -331,6 +331,10 @@ if __name__ == "__main__":
         '--debug', action='store_true',
         help='enable debug output'
     )
+    parser.add_argument(
+        '--verbosity', '-v', action='count', default=0,
+        help='increase logging verbosity'
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         '--list', action='store_true',
@@ -348,8 +352,7 @@ if __name__ == "__main__":
     else:
         # NOTE: Logging to STDOUT breaks inventory functionality!!!
         # Ansible will raise an ERROR: Syntax Error while loading YAML.
-        # WARNING and ERROR messages are ok, because they get logged to STDERR.
-        verbosity = 0
+        verbosity = args.verbosity
     log_level = map_logging_verbosity(verbosity)
     logger.setLevel(log_level)
     tmdeploy_logger = logging.getLogger('tmdeploy')
