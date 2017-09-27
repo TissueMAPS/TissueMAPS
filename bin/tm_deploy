@@ -136,13 +136,7 @@ def _build_ansible_vm_command(verbosity, playbook, variables=None):
 
 
 def _run_command(command, environment):
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, env=environment)
-    while True:
-      line = process.stdout.readline()
-      if line != b'':
-        os.write(1, line)
-      else:
-        break
+    return os.spawnvpe(os.P_WAIT, command[0], command, environment)
 
 
 def _run_container_commands(commands):
