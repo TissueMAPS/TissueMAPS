@@ -118,14 +118,7 @@ def _build_ansible_container_command(verbosity, action_command):
     return cmd
 
 
-def _build_ansible_vm_command(verbosity, playbook, variables=dict()):
-    var_strings = list()
-    var_mappings = list()
-    for k, v in variables.items():
-        if type(v) in {list, dict}:
-            var_mappings.append(json.dumps({k: v}))
-        else:
-            var_strings.append('='.join([k, v]))
+def _build_ansible_vm_command(verbosity, playbook, variables=None):
     # The "tm_inventory" script should be on the path upon installation.
     inventory_file = which('tm_inventory')
     cmd = ['ansible-playbook', '-i', inventory_file, playbook]
@@ -134,9 +127,11 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict()):
         if verbosity > 0:
             cmd.append('-{0}'.format(verbosity * 'v'))
     if variables:
-        cmd.extend(['-e', '{0}'.format(' '.join(var_strings))])
-        for var_map in var_mappings:
-            cmd.extend(['-e', var_map])
+        for k, v in variables.items():
+            if type(v) in {list, dict}:
+                cmd.extend(['-e', json.dumps({k: v})])
+            else:
+                cmd.extend(['-e', '='.join([k, v])])
     return cmd
 
 
