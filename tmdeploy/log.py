@@ -65,16 +65,14 @@ def map_logging_verbosity(verbosity):
     return VERBOSITY_TO_LEVELS[verbosity]
 
 
-def configure_logging():
+def configure_logging(level=logging.DEBUG):
     '''Configures the root logger for command line applications.
 
-    Two stream handlers will be added to the logger:
+    A stream handler will be added to the logger that directs
+    messages to the standard error stream.
 
-        * "out" that will direct INFO & DEBUG messages to the standard output
-          stream
-        * "err" that will direct WARN, WARNING, ERROR, & CRITICAL messages to
-          the standard error stream
-
+    By default, *no* messages will be filtered out: set a higher
+    level on derived/child loggers to achieve filtering.
 
     Warning
     -------
@@ -89,20 +87,6 @@ def configure_logging():
 
     stderr_handler = logging.StreamHandler(stream=sys.stderr)
     stderr_handler.name = 'err'
-    stderr_handler.setLevel(logging.WARN)
+    stderr_handler.setLevel(level)
     stderr_handler.setFormatter(formatter)
     logger.addHandler(stderr_handler)
-
-    stdout_handler = logging.StreamHandler(stream=sys.stdout)
-    stdout_handler.name = 'out'
-    stdout_handler.setFormatter(formatter)
-    stdout_handler.setLevel(0)
-    stdout_handler.addFilter(InfoFilter())
-    logger.addHandler(stdout_handler)
-
-
-class InfoFilter(logging.Filter):
-    def filter(self, rec):
-        return rec.levelno in (logging.DEBUG, logging.INFO)
-
-
