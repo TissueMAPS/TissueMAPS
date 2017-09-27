@@ -170,7 +170,10 @@ def _run_vm_commands(commands, setup_file):
 def deploy_vm(args):
     variables = dict()
     commands = list()
-    commands.append(['tm_inventory', '--refresh-cache'])
+    tm_inventory_cmd = ['tm_inventory', '--refresh-cache']
+    if args.verbosity:
+        tm_inventory_cmd.append('-{0}'.format('v' * args.verbosity))
+    commands.append(tm_inventory_cmd)
     # Run playbooks implemented in elasticluster, but only in case groups
     # are provided that are not supported by tmdeploy.
     use_elasticluster = False
