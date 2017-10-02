@@ -17,7 +17,8 @@ import os
 import re
 import logging
 import subprocess
-from tmlib.readers import JavaBridge, BFOmeXmlReader
+
+from gc3libs.quantity import Duration, Memory
 
 import tmlib.models as tm
 from tmlib.workflow import register_step_api
@@ -25,6 +26,7 @@ from tmlib.utils import notimplemented
 from tmlib.utils import same_docstring_as
 from tmlib.errors import MetadataError
 from tmlib.errors import WorkflowError
+from tmlib.readers import JavaBridge, BFOmeXmlReader
 from tmlib.workflow.api import WorkflowStepAPI
 
 logger = logging.getLogger(__name__)
@@ -54,6 +56,19 @@ class MetadataExtractor(WorkflowStepAPI):
             r'(%s)$' % os.path.splitext(image_filename)[1],
             '.ome.xml', image_filename
         )
+
+    def _get_run_job_args(self, **args):
+        '''
+        Set the environment so that the JVM can run.
+
+        See `TmLibrary issue #34 <https://github.com/TissueMAPS/TmLibrary/issues/34>`_
+        for more information.
+        '''
+        args['environment'] = {
+                # *note:* the following flags require JVM >= 8
+                'BF_FLAGS': '-XX:+PrintGCDetails -XX:+PrintGCTimeStamps -XX:+UseSerialGC -XX:-UseCompressedOops -XX:-UseCompressedClassPointers',
+            }
+        return args
 
     def create_run_batches(self, args):
         '''Creates job descriptions for parallel computing.
@@ -175,4 +190,3 @@ class MetadataExtractor(WorkflowStepAPI):
     @notimplemented
     def collect_job_output(self, batch):
         pass
-

@@ -638,20 +638,38 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
 
         job_ids = self.get_run_job_ids()
         for j in job_ids:
-            job = RunJob(
-                step_name=self.step_name,
-                arguments=self._build_run_command(j, verbosity),
-                output_dir=self.log_location,
-                job_id=j,
-                submission_id=job_collection.submission_id,
-                user_name=user_name,
-                parent_id=job_collection.persistent_id
+            job_collection.add(
+                RunJob(
+                    **self._get_run_job_args(
+                        step_name=self.step_name,
+                        arguments=self._build_run_command(j, verbosity),
+                        output_dir=self.log_location,
+                        job_id=j,
+                        submission_id=job_collection.submission_id,
+                        user_name=user_name,
+                        parent_id=job_collection.persistent_id,
+                        requested_walltime = Duration(duration),
+                        requested_memory = Memory(memory, Memory.MB),
+                        requested_cores = cores,
+                    )
+                )
             )
-            job.requested_walltime = Duration(duration)
-            job.requested_memory = Memory(memory, Memory.MB)
-            job.requested_cores = cores
-            job_collection.add(job)
         return job_collection
+
+    # FIXME: the existence of this method proves that we're trying to
+    # re-implement class inheritance which was basically thrown out by
+    # having all these `create_*_jobs` methods conflated in a single
+    # class.  We should instead restructure code to use one class for
+    # each kind of Job/Task and use constructors and normal class
+    # inheritance to create objects, not generic factory methods!
+    def _get_run_job_args(self, **args):
+        '''
+        Build dictionary of arguments for constructing a "RunJob" instance.
+
+        Default implementation just passes input dict unchanged,
+        must be overridden in sub-classes.
+        '''
+        return args
 
     def create_init_job(self, user_name, job_collection,
             batch_args, verbosity, duration='12:00:00'):
@@ -743,4 +761,3 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
         job.requested_cores = cores
         job_collection.add(job)
         return job_collection
-
