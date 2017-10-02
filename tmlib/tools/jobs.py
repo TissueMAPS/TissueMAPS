@@ -11,7 +11,7 @@ class ToolJob(Job):
     '''
 
     def __init__(self, tool_name, arguments, output_dir,
-            submission_id, user_name):
+                 submission_id, user_name, **extra_args):
         '''
         Parameters
         ----------
@@ -26,14 +26,16 @@ class ToolJob(Job):
             ID of the corresponding submission
         user_name: str
             name of the submitting user
+        **extra_args
+            Any additional keyword arguments are passed unchanged
+            to the parent class constructor
         '''
         self.tool_name = tool_name
         super(ToolJob, self).__init__(
-            arguments, output_dir, submission_id, user_name
+            arguments, output_dir, submission_id, user_name, **extra_args
         )
 
     @property
     def name(self):
         '''str:name of the job'''
         return 'tool_%s' % self.tool_name
-

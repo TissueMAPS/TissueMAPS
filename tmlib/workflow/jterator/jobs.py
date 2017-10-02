@@ -25,7 +25,7 @@ class DebugRunJob(RunJob):
     '''Class for TissueMAPS debug jobs, which can be processed in parallel.'''
 
     def __init__(self, step_name, arguments, output_dir, job_id,
-                 submission_id, user_name, parent_id):
+                 submission_id, user_name, parent_id, **extra_args):
         '''
         Parameters
         ----------
@@ -52,7 +52,9 @@ class DebugRunJob(RunJob):
             job_id=job_id,
             submission_id=submission_id,
             user_name=user_name,
-            parent_id=parent_id
+            parent_id=parent_id,
+            # pass extra arguments up to superclass ctor
+            **extra_args
         )
 
     @property

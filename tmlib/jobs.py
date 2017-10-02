@@ -17,7 +17,7 @@ class Job(gc3libs.Application):
     __meta__ = ABCMeta
 
     def __init__(self, arguments, output_dir, submission_id, user_name,
-            parent_id=None):
+                 parent_id=None, **extra_args):
         '''
         Parameters
         ----------
@@ -32,6 +32,9 @@ class Job(gc3libs.Application):
             name of the submitting user
         parent_id: int, optional
             ID of the parent job collection
+        **extra_args
+            Any additional keyword arguments are passed unchanged
+            to the parent class constructor
         '''
         t = create_datetimestamp()
         self.user_name = user_name
@@ -46,6 +49,8 @@ class Job(gc3libs.Application):
             # Assumes that nodes have access to a shared file system.
             inputs=[],
             outputs=[],
+            # pass extra arguments up to superclass ctor
+            **extra_args
         )
 
     def sbatch(self, resource, **kwargs):
@@ -111,4 +116,3 @@ class Job(gc3libs.Application):
             '<%s(name=%r, submission_id=%r)>'
             % (self.__class__.__name__, self.name, self.submission_id)
         )
-

@@ -43,7 +43,7 @@ class WorkflowStepJob(Job):
     __metaclass__ = ABCMeta
 
     def __init__(self, step_name, arguments, output_dir,
-            submission_id, user_name, parent_id):
+                 submission_id, user_name, parent_id, **extra_args):
         '''
         Parameters
         ----------
@@ -73,7 +73,9 @@ class WorkflowStepJob(Job):
         '''
         self.step_name = step_name
         super(WorkflowStepJob, self).__init__(
-            arguments, output_dir, submission_id, user_name, parent_id
+            arguments, output_dir, submission_id, user_name, parent_id,
+            # pass extra arguments up to superclass ctor
+            **extra_args
         )
 
     @abstractproperty
@@ -88,7 +90,7 @@ class InitJob(WorkflowStepJob):
     '''
 
     def __init__(self, step_name, arguments, output_dir, submission_id,
-            user_name, parent_id):
+                 user_name, parent_id, **extra_args):
         '''
         Parameters
         ----------
@@ -105,6 +107,9 @@ class InitJob(WorkflowStepJob):
             name of the submitting user
         parent_id: int
             ID of the parent :class:`InitPhase <tmlib.workflow.jobs.InitPhase>`
+        **extra_args
+            Any additional keyword arguments are passed unchanged
+            to the parent class constructor
         '''
         super(self.__class__, self).__init__(
             step_name=step_name,
@@ -112,7 +117,9 @@ class InitJob(WorkflowStepJob):
             output_dir=output_dir,
             submission_id=submission_id,
             user_name=user_name,
-            parent_id=parent_id
+            parent_id=parent_id,
+            # pass extra arguments up to superclass ctor
+            **extra_args
         )
 
     @property
@@ -126,7 +133,8 @@ class RunJob(WorkflowStepJob):
     '''Class for TissueMAPS run jobs, which can be processed in parallel.'''
 
     def __init__(self, step_name, arguments, output_dir, job_id,
-                 submission_id, user_name, parent_id, index=None):
+                 submission_id, user_name, parent_id, index=None,
+                 **extra_args):
         '''
         Parameters
         ----------
@@ -146,6 +154,9 @@ class RunJob(WorkflowStepJob):
         index: int, optional
             index of the *run* job collection in case the step has multiple
             *run* phases
+        **extra_args
+            Any additional keyword arguments are passed unchanged
+            to the parent class constructor
         '''
         self.job_id = job_id
         if not isinstance(index, int) and index is not None:
@@ -157,7 +168,9 @@ class RunJob(WorkflowStepJob):
             output_dir=output_dir,
             submission_id=submission_id,
             user_name=user_name,
-            parent_id=parent_id
+            parent_id=parent_id,
+            # pass extra arguments up to superclass ctor
+            **extra_args
         )
 
     @property
@@ -178,7 +191,7 @@ class CollectJob(WorkflowStepJob):
     '''
 
     def __init__(self, step_name, arguments, output_dir, submission_id,
-            user_name, parent_id):
+                 user_name, parent_id, **extra_args):
         '''
         Parameters
         ----------
@@ -196,6 +209,9 @@ class CollectJob(WorkflowStepJob):
         parent_id: int
             ID of the parent
             :class:`CollectPhase <tmlib.workflow.jobs.CollectPhase>`
+        **extra_args
+            Any additional keyword arguments are passed unchanged
+            to the parent class constructor
         '''
         super(self.__class__, self).__init__(
             step_name=step_name,
@@ -203,7 +219,9 @@ class CollectJob(WorkflowStepJob):
             output_dir=output_dir,
             submission_id=submission_id,
             user_name=user_name,
-            parent_id=parent_id
+            parent_id=parent_id,
+            # pass extra arguments up to superclass ctor
+            **extra_args
         )
 
     @property
