@@ -67,7 +67,7 @@ class Job(gc3libs.Application):
         `SLURM accounting database <http://slurm.schedmd.com/accounting.html>`_.
         '''
         sbatch, cmdline = super(Job, self).sbatch(resource, **kwargs)
-        sbatch = sbatch[:1] + ['--account', self.user_name] + sbatch[1:]
+        sbatch += ['--account', self.user_name]
         return (sbatch, cmdline)
 
     @abstractproperty
