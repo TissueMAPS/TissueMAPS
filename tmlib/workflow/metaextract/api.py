@@ -169,6 +169,8 @@ class MetadataExtractor(WorkflowStepAPI):
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE
                 )
                 stdout, stderr = p.communicate()
+                logger.debug("showinf STDOUT: \n```%s```\n", stdout)
+                logger.debug("showinf STDERR: \n```%s```\n", stderr)
                 if p.returncode != 0 or not stdout:
                     raise MetadataError(
                         'Extraction of OMEXML failed! Error message:\n%s'
