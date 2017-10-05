@@ -176,15 +176,14 @@ class MetadataExtractor(WorkflowStepAPI):
                         'Extraction of OMEXML failed! Error message:\n%s'
                         % stderr
                     )
-                try:
-                    # We only want the XML. This will remove potential
-                    # warnings and other stuff we don't want.
-                    omexml = re.search(
-                        r'<(\w+).*</\1>', stdout, flags=re.DOTALL
-                    ).group()
-                except:
-                    raise RegexError('OMEXML metadata could not be extracted.')
-                img_file.omexml = unicode(omexml)
+                # the OME-XML data is contained within XML tags `<OME ...>` and `</OME>`
+                start = stdout.find("<OME")
+                if start == -1:
+                    raise ValueError("Cannot find OME-XML start tag in `showinf` output.")
+                end = stdout.rfind("</OME>", start)
+                if end == -1:
+                    raise ValueError("Cannot find OME-XML closing tag in `showinf` output.")
+                img_file.omexml = unicode(stdout[start : end+len('</OME>')])
                 session.add(img_file)
                 session.commit()
                 session.expunge(img_file)
