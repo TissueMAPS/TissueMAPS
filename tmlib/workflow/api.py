@@ -603,34 +603,24 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
 
         if cores > cfg.resource.max_cores_per_job:
             logger.warn(
-                'requested cores exceed available cores per node:  %s',
+                'requested cores exceed available cores per job:  %s',
                 cfg.resource.max_cores_per_job
             )
             logger.debug(
-                'setting number of cores to %d', cfg.resource.max_cores_per_job
+                'lowering number of requested cores to %d', cfg.resource.max_cores_per_job
             )
             cores = cfg.resource.max_cores_per_job
 
-        max_memory_per_node = (
-            cfg.resource.max_cores_per_job *
-            cfg.resource.max_memory_per_core.amount(Memory.MB)
-        )
-        max_memory_per_core = cfg.resource.max_memory_per_core.amount(Memory.MB)
-        if cores == 1:
-            if memory > max_memory_per_core:
-                logger.warn(
-                    'requested memory exceeds available memory per core: %d MB',
-                    max_memory_per_core
-                )
-                memory = max_memory_per_core
-        else:
-            if memory > max_memory_per_node:
-                logger.warn(
-                    'requested memory exceeds available memory per node: %d MB',
-                    max_memory_per_node
-                )
-                logger.debug('setting memory to %d MB', max_memory_per_node)
-                memory = max_memory_per_node
+        # Until issue gc3pie#624 is fixed, `max_memory_per_core`
+        # doubles up as "total memory per node"
+        max_memory_per_node = cfg.resource.max_memory_per_core.amount(Memory.MB)
+        if memory > max_memory_per_node:
+            logger.warn(
+                'requested memory exceeds available memory per node: %d MB',
+                max_memory_per_node
+            )
+            logger.debug('lowering requested memory to %d MB', max_memory_per_node)
+            memory = max_memory_per_node
 
         logger.debug('allocated time for run jobs: %s', duration)
         logger.debug('allocated memory for run jobs: %d MB', memory)
