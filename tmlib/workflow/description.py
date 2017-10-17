@@ -165,7 +165,7 @@ class WorkflowStageDescription(object):
     '''Description of a TissueMAPS workflow stage.'''
 
     @assert_type(name='basestring', mode='basestring')
-    def __init__(self, type, name, mode, active=True, steps=None):
+    def __init__(self, type, name, mode='sequential', active=True, steps=None):
         '''
         Parameters
         ----------
@@ -173,7 +173,7 @@ class WorkflowStageDescription(object):
             name of the workflow type
         name: str
             name of the stage
-        mode: str
+        mode: str, optional
             mode of workflow stage submission, i.e. whether steps are submitted
             simultaneously or one after another
             (options: ``{"sequential", "parallel"}``)
@@ -211,7 +211,7 @@ class WorkflowStageDescription(object):
                 # NOTE: not every step has extra arguments
                 self.add_step(
                     WorkflowStepDescription(
-                        step['name'], step['active'],
+                        step['name'], step.get('active', True),
                         batch_args, submission_args
                     )
                 )
