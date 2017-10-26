@@ -13,6 +13,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+try:
+    from collections.abc import Iterable  # Python 3
+except ImportError:
+    from collections import Iterable  # Python 2.7
 import os
 import re
 import glob
@@ -20,6 +24,7 @@ import ruamel.yaml
 import yaml
 import logging
 import shutil
+
 from cached_property import cached_property
 from natsort import natsorted
 
@@ -312,7 +317,7 @@ class Project(object):
         if not os.path.exists(handles_dir):
             os.mkdir(handles_dir)
 
-    def _create_project_from_skeleton(self, skel_dir):
+    def _copy_project_from_skeleton(self, skel_dir):
         skel_pipe_file = self._get_pipe_file(skel_dir)
         shutil.copy(skel_pipe_file, self.location)
         shutil.copytree(
@@ -397,20 +402,13 @@ class Project(object):
         skel_dir: str, optional
             path to repository directory that represents a project skeleton,
             i.e. contains a *pipeline* and one or more *handles* files in a
-            *handles* directory.
+            ``handles/`` directory.
         '''
         if skel_dir:
-            skel_dir = os.path.expandvars(skel_dir)
-            skel_dir = os.path.expanduser(skel_dir)
-            skel_dir = os.path.abspath(skel_dir)
-        # if os.path.exists(self.location):
-        #     raise PipelineOSError(
-        #         'Project already exists. Remove existing project first.'
-        #     )
-        # os.mkdir(self.location)
-        # TODO: handle creation of project based on provided pipe
-        if skel_dir:
-            self._create_project_from_skeleton(skel_dir, cfg.modules_home)
+            skel_dir = os.path.abspath(
+                os.path.expandvars(
+                    os.path.expanduser(skel_dir)))
+            self._copy_project_from_skeleton(skel_dir)
         else:
             pipe_file_path = os.path.join(
                 self.location, self._pipe_filename
@@ -429,48 +427,60 @@ class Project(object):
         shutil.rmtree(self.location)
 
 
+# FIXME: there's no local state saved in instances of this class. This
+# means we are using the `class` definition as a mere
+# container/namespace for functions. Consider making it a module.
 class AvailableModules(object):
-
-    '''Container for information about Jterator modules available
-    in a local copy of the
-    `JtModules <https://github.com/TissueMAPS/JtModules>`_ repository.
+    '''
+    Container for information about available Jterator modules.
+    A module is "available" if it has an accompanying "handles"
+    YAML file.
 
     See also
     --------
-    :attr:`tmlib.config.LibraryConfig.modules_home`
+    :attr:`tmlib.config.LibraryConfig.modules_path`
     '''
 
-    def __init__(self):
-        if not os.path.exists(cfg.modules_home):
-            raise OSError(
-                'Local JtModules repository does not exist: %s'
-                % cfg.modules_home
-            )
+    def find_module_by_name(self, name):
+        '''
+        Return absolute path to module with the given name.
 
+        If multiple modules match, only the first one is returned.
+        '''
+        for module_file in self.module_files:
+            if name == self._get_module_name_from_file(module_file):
+                return module_file
+
+    # FIXME: this gets called over and over again by `.modules_names`
+    # etc. -- every time we walk the filesystem to list available
+    # modules.  We should instead cache results per-directory, and
+    # only rebuild (a part of) the cache when a directory is changed
+    # (directory mtime > cache build epoch).
     @property
     def module_files(self):
-        '''List[str]: absolute paths to module files
+        '''
+        List[str]: absolute paths to module files
 
         Note
         ----
-        Module files are assumed to reside in a package called "modules"
-        as a subpackage of the "jtlib" package. They can have one of
-        the following extensions: ".py", ".m", ".r" or ".R", and must
-        start with an ASCII letter.
+        Module files are assumed to reside in any of the directories
+        listed in configuration value `modules_path`.  They can have
+        one of the following extensions: ".py", ".m", ".r" or ".R",
+        and must start with an ASCII letter.
         '''
-        if not os.path.exists(cfg.modules_home):
-            logger.warn(
-                'modules directory does not exist: %s',
-                cfg.modules_home
-            )
-            # no point in continuing
-            return []
-        modules = [
-            os.path.join(cfg.modules_home, f)
-            for f in os.listdir(cfg.modules_home)
-            if self._MODULE_FILENAME_RE.search(f)
-        ]
-        return natsorted(modules)
+        all_modules = []
+        for path in cfg.modules_path:
+            if not os.path.exists(path):
+                logger.warn(
+                    'modules directory `%s` does not exist;'
+                    ' ignoring it!', path)
+                continue
+            all_modules += [
+                os.path.join(path, f)
+                for f in os.listdir(path)
+                if self._MODULE_FILENAME_RE.search(f)
+            ]
+        return natsorted(all_modules)
 
     _MODULE_FILENAME_RE = re.compile(
         '^[a-zA-Z].*' # modules names must start with an ASCII letter
@@ -488,50 +498,47 @@ class AvailableModules(object):
         '''List[str]: names of the modules (determined from file names)
         '''
         return [
-            os.path.splitext(os.path.basename(f))[0]
+            self._get_module_name_from_file(f)
             for f in self.module_files
         ]
+
+    @staticmethod
+    def _get_module_name_from_file(module_file):
+        '''
+        Return the module name given the (absolute) filesystem path.
+        '''
+        return os.path.splitext(os.path.basename(f))[0]
 
     @property
     def module_languages(self):
         '''List[str]: languages of the modules (determined from file suffixes)
         '''
-        mapping = {
+        # FIXME: why is this a list? shouldn't it be a set?
+        suffixes = [
+            os.path.splitext(os.path.basename(f))[1]
+            for f in self.module_files
+        ]
+        try:
+            return [self._MODULE_LANGUAGE_FROM_EXT[item] for item in suffixes]
+        except KeyError:
+            # FIXME: this gives no hint what file/module the errors comes from!
+            # FIXME: should "ignore errors" be the default policy instead,
+            # and only raise an `AssertionError` when debugging/developing?
+            raise ValueError(
+                'Not a valid file extension: {0}'
+                .format(s))
+
+    _MODULE_LANGUAGE_FROM_EXT = {
             '.py': 'python',
             '.m': 'matlab',
             '.jl': 'julia',
             '.r': 'r',
             '.R': 'r'
         }
-        suffixes = [
-            os.path.splitext(os.path.basename(f))[1]
-            for f in self.module_files
-        ]
-        languages = list()
-        for s in suffixes:
-            if s not in mapping.keys():
-                raise ValueError('Not a valid file extension: %s', s)
-            languages.append(mapping[s])
-        return languages
 
-    def _get_handles_file(self, module_name):
-        handles_dir = os.path.join(cfg.modules_home, '..', 'handles')
-        search_string = '^%s\%s$' % (module_name, HANDLES_SUFFIX)
-        regexp_pattern = re.compile(search_string)
-        handles_files = natsorted([
-            os.path.join(handles_dir, f)
-            for f in os.listdir(handles_dir)
-            if re.search(regexp_pattern, f)
-        ])
-        if len(handles_files) == 0:
-            raise ValueError(
-                'No handles file found for module "%s"' % module_name
-            )
-        elif len(handles_files) == 1:
-            # NOTE: we assume that handles are stored within a subfolder of the
-            # project folder, which is called "handles"
-            return handles_files[0]
 
+    # FIXME: this also triggers reading back *all* `handles.yml` files;
+    # we should cache the results and only reload when handles have changed.
     @property
     def handles(self):
         '''
@@ -544,51 +551,39 @@ class AvailableModules(object):
             name and description for each handles file
         '''
         handles = list()
-        for name in self.module_names:
+        for module_file in self.module_files:
+            name = self._get_module_name_from_file(module_file)
             try:
-                with YamlReader(self._get_handles_file(name)) as f:
-                    handles.append({'name': name, 'description': f.read()})
-            except:
+                with YamlReader(self._get_handles_file(module_file)) as y:
+                    handles.append({
+                        # FIXME: why not a NamedTuple??
+                        'name': name,
+                        'description': y.read(),
+                    })
+            except Exception as err:
+                logging.warning("Cannot read handles file for module `%s`: %s", name, err)
                 continue
         return handles
 
-    @property
-    def pipe_registration(self):
-        '''Build pipeline elements for registration in the UI
-        in the format excepted in the "pipeline" section in the *pipeline* file.
-
-        Returns
-        -------
-        List[dict]
-            pipeline elements
+    def _get_handles_file(self, module_file):
         '''
-        # modules are "available" if there is a corresponding handles file
-        # TODO: some checks of handles content
-        available_modules = [h['name'] for h in self.handles]
-        self._pipe_registration = list()
-        for i, name in enumerate(self.module_names):
-            name = self.module_names[i]
-            filename = os.path.basename(self.module_files[i])
-            if name in available_modules:
-                try:
-                    repo_handles_path = self._get_handles_file(name)
-                except:
-                    logger.error('no handles file found for module "%s"', name)
-                    continue
-                # We have to provide the path to handles files for the
-                # currently processed project
-                new_handles_path = os.path.join(
-                    'handles', os.path.basename(repo_handles_path))
-                element = {
-                    'name': name,
-                    'description': {
-                        'handles': new_handles_path,
-                        'source': filename,
-                        'active': True
-                    }
-                }
-                self._pipe_registration.append(element)
-        return self._pipe_registration
+        Return handles file for the given module.
+
+        The "handles" file path is gotten from the (absolute) path
+        name of the module file by changing the extension with
+        ``.handles.yaml`` (see: `HANDLES_SUFFIX` in this Python module).
+        '''
+        assert os.path.isabs(module_file), (
+            "argument `module_file` to `AvailableModules._get_handles_file`"
+            " must be an absolute path")
+        stem, suffix = os.path.splitext(module_file)
+        handles_file = (stem + HANDLES_SUFFIX)
+        if not os.path.exists(handles_file):
+            raise LookupError(
+                "Handles file `{0}` does not exist!"
+                .format(handles_file))
+        return handles_file
+
 
     def to_dict(self):
         '''Returns attributes as key-value pairs
@@ -597,7 +592,52 @@ class AvailableModules(object):
         -------
         dict
         '''
-        attrs = dict()
-        attrs['modules'] = self.handles
-        attrs['registration'] = self.pipe_registration
-        return attrs
+        handles = self.handles  # only compute once
+        return {
+            'modules': handles,
+            'registration': self._make_pipe_registration(handles),
+        }
+
+    # FIXME: what the heck is a "pipe registration"?!
+    def _make_pipe_registration(self, handles):
+        '''Build pipeline elements for registration in the UI
+        in the format excepted in the "pipeline" section in the *pipeline* file.
+
+        Parameters
+        ----------
+        handles
+          Return value of `self.handles`:meth: (which see),
+          passed as argument to avoid recomputing.
+
+        Returns
+        -------
+        List[dict]
+            pipeline elements
+        '''
+        # modules are "available" if there is a corresponding handles file
+        available_modules = [h['name'] for h in handles]
+        result = []
+        for filename in self.module_files:
+            name = self._get_module_name_from_file(filename)
+            if name in available_modules:
+                try:
+                    # FIXME: check that contents of the "handles" file are valid
+                    handles_file = self._get_handles_file(filename)
+                except LookupError as err:
+                    logger.warning('No handles file found for module `%s`', name)
+                    continue
+                # We have to provide the path to handles files for the
+                # currently processed project
+                # FIXME: cross-check that "project" creation copies the "handles"
+                # files into a project-specific "handles" directory, and why is that needed?
+                new_handles_file = os.path.join('handles', os.path.basename(handles_file))
+                element = {
+                    'name': name,
+                    'description': {
+                        'handles': new_handles_file,
+                        'source': filename,
+                        'active': True
+                    }
+                }
+                result.append(element)
+        return result

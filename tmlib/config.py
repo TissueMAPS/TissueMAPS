@@ -20,6 +20,17 @@ from ConfigParser import SafeConfigParser
 from ConfigParser import NoOptionError
 from gc3libs.config import Configuration
 
+# XXX: we could probably use `six.string_types` for this but it makes
+# little sense to add another big dependency instead of two simple
+# lines of code...
+try:
+    # Python 2.x has `unicode` and `str` sting types,
+    # both of which are subclasses of `basestring`
+    basestring
+except NameError:
+    # `str` is the one and only string type in Py 3
+    basestring = str
+
 logger = logging.getLogger(__name__)
 
 
@@ -80,11 +91,24 @@ class TmapsConfig(object):
         --------
         :const:`tmlib.config.CONFIG_FILE`
         '''
-        logger.debug('read config file: "%s"', self._config_file)
+        logger.debug('Reading config file: `%s` ...', self._config_file)
         try:
             self._config.read(self._config_file)
-        except OSError:
-            logger.warn('no configuration file found')
+            self._post_process_configuration()
+        except Exception as err:
+            logger.error('Cannot read configuration file `%s`: %s', self._config_file, err)
+            logger.warn("No configuration file loaded; using built-in configuration defaults.")
+
+    def _post_process_configuration(self):
+        '''
+        Parse raw configuration values (strings) into internally-used objects.
+        '''
+        # cfg.modules_path must be a list of paths
+        raw_modules_path = self._config.get(self._section, 'modules_path')
+        self.modules_path = [
+            os.path.expandvars(os.path.expanduser(path.strip()))
+            for path in raw_modules_path.split(',')
+        ]
 
     def write(self):
         '''Writes the configuration to file.'''
@@ -232,7 +256,12 @@ class LibraryConfig(TmapsConfig):
 
     def __init__(self):
         super(LibraryConfig, self).__init__()
-        self.modules_home = '~/jtlibrary/modules'
+        self.modules_path = [
+            '~/jtlibrary/matlab/jtmodules',
+            '~/jtlibrary/python/jtmodules/src/jtmodules',
+            '~/jtlibrary/r/jtmodules',
+            '~/jtlibrary/modules',  # compat with TM <=0.3.3
+        ]
         self.formats_home = '~/tmformats'
         self.storage_home = '/storage/filesystem'
         self._resource = None
@@ -260,24 +289,26 @@ class LibraryConfig(TmapsConfig):
         return self._resource
 
     @property
-    def modules_home(self):
-        '''str: absolute path to the directory that contains the jterator
-        module source code files (default: ``"~/jtlibrary/modules"``)
+    def modules_path(self):
         '''
-        return os.path.expandvars(os.path.expanduser(
-            self._config.get(self._section, 'modules_home')
-        ))
+        List[str]: list of (absolute) paths to directories
+        that contain Jterator module source code files
+        (see `LibraryConfig.__init__` for the default value)
+        '''
+        return self._modules_path
 
-    @modules_home.setter
-    def modules_home(self, value):
-        if not isinstance(value, basestring):
-            raise TypeError(
-                'Configuration parameter "modules_home" must have type str.'
+    @modules_path.setter
+    def modules_path(self, value):
+        # FIXME: is caller code ready to handle `AssertionError`?
+        assert value, "`modules_path` cannot set to an empty value!"
+        assert isinstance(value, Iterable), \
+            "`modules_path` must be set to an iterable sequence!"
+        assert all(isinstance(path, basestring) for path in value), (
+                'Configuration parameter "modules_path"'
+                ' must be a sequence of strings.'
             )
-        self._config.set(
-            self._section, 'modules_home',
-            os.path.expandvars(os.path.expanduser(str(value)))
-        )
+        self._modules_path = list(value)  # copy
+
 
     @property
     def storage_home(self):

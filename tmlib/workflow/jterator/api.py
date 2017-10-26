@@ -42,7 +42,7 @@ from tmlib.models.types import ST_GeomFromText
 from tmlib.workflow.api import WorkflowStepAPI
 from tmlib.errors import PipelineDescriptionError
 from tmlib.errors import JobDescriptionError
-from tmlib.workflow.jterator.project import Project
+from tmlib.workflow.jterator.project import Project, AvailableModules
 from tmlib.workflow.jterator.module import ImageAnalysisModule
 from tmlib.workflow.jterator.handles import SegmentedObjects
 from tmlib.workflow.jobs import SingleRunPhase
@@ -101,30 +101,29 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         :class`PipelineDescription <tmlib.workflow.jterator.description.PipelineDescription>` and
         :class:`HandleDescriptions <tmlib.workflow.jterator.description.HandleDescriptions>`.
         '''
+        handles = self.project.handles  # only compute this once
         pipeline = list()
         for i, element in enumerate(self.project.pipe.description.pipeline):
             if not element.active:
                 continue
-            source_file = str(element.source)  # copy
-            if '/' in source_file:
-                logger.debug('assume module resides outside %s', cfg.modules_home)
-                source_file = os.path.expandvars(source_file)
-                source_file = os.path.expanduser(source_file)
+            if '/' in element.source:
+                logger.debug('assuming module `%s` resides outside the configured module path')
+                source_file = os.path.expanduser(os.path.expandvars(element.source))
                 if not os.path.isabs(source_file):
                     source_file = os.path.join(self.step_location, source_file)
             else:
-                logger.debug('assume module resides in %s', cfg.modules_home)
-                source_file = os.path.join(cfg.modules_home, source_file)
+                logger.debug('searching for module `%s` in configured module path %r ...', cfg.modules_path)
+                source_file = AvailableModules().find_module_by_name(element.source)
             if not os.path.exists(source_file):
                 raise PipelineDescriptionError(
-                    'Module source code file not found: %s' % element.source
-                )
-            name = self.project.handles[i].name
-            handles = self.project.handles[i].description
-            module = ImageAnalysisModule(
-                name=name, source_file=source_file, handles=handles
-            )
-            pipeline.append(module)
+                    'Module source `{0}` resolved to non-existing file `{1}`'
+                    .format(element.source, source_file))
+            pipeline.append(
+                ImageAnalysisModule(
+                    name=handles[i].name,
+                    source_file=source_file,
+                    handles=handles[i].description
+            ))
         return pipeline
 
     def start_engines(self):
