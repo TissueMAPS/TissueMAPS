@@ -22,7 +22,7 @@ def get_version():
 
 
 setuptools.setup(
-    name='jtlib',
+    name='jtlibrary',
     version=get_version(),
     description='Jterator library.',
     author='Markus D. Herrmann',
