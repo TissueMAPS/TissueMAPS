@@ -441,15 +441,37 @@ class AvailableModules(object):
     :attr:`tmlib.config.LibraryConfig.modules_path`
     '''
 
+    _MODULE_LANGUAGE_EXT = {
+        '.py': 'python',
+        '.m': 'matlab',
+        '.jl': 'julia',
+        '.r': 'r',
+        '.R': 'r',
+    }
+    '''
+    Map file suffix to corresponding programming language.
+    '''
+
+    def _strip_well_known_suffix(self, pathname):
+        stem, suffix = os.path.splitext(pathname)
+        if suffix in self._MODULE_LANGUAGE_EXT:
+            return stem
+        else:
+            return pathname
+
     def find_module_by_name(self, name):
         '''
         Return absolute path to module with the given name.
 
         If multiple modules match, only the first one is returned.
         '''
-        for module_file in self.module_files:
+        name = self._strip_well_known_suffix(name)
+        module_files = self.module_files  # compute once
+        for module_file in module_files:
             if name == self._get_module_name_from_file(module_file):
+                logger.debug("Using source file `%s` for module `%s`", module_file, name)
                 return module_file
+        logger.error("Could not find module `%s` among %r", module_file, module_files)
         raise LookupError("Cannot find module `{0}`".format(name))
 
 
@@ -504,12 +526,11 @@ class AvailableModules(object):
             for f in self.module_files
         ]
 
-    @staticmethod
-    def _get_module_name_from_file(module_file):
+    def _get_module_name_from_file(self, module_file):
         '''
         Return the module name given the (absolute) filesystem path.
         '''
-        return os.path.splitext(os.path.basename(module_file))[0]
+        return self._strip_well_known_suffix(os.path.basename(module_file))
 
     @property
     def module_languages(self):
@@ -521,7 +542,7 @@ class AvailableModules(object):
             for f in self.module_files
         ]
         try:
-            return [self._MODULE_LANGUAGE_FROM_EXT[item] for item in suffixes]
+            return [self._MODULE_LANGUAGE_EXT[item] for item in suffixes]
         except KeyError:
             # FIXME: this gives no hint what file/module the errors comes from!
             # FIXME: should "ignore errors" be the default policy instead,
@@ -529,14 +550,6 @@ class AvailableModules(object):
             raise ValueError(
                 'Not a valid file extension: {0}'
                 .format(s))
-
-    _MODULE_LANGUAGE_FROM_EXT = {
-            '.py': 'python',
-            '.m': 'matlab',
-            '.jl': 'julia',
-            '.r': 'r',
-            '.R': 'r'
-        }
 
 
     # FIXME: this also triggers reading back *all* `handles.yml` files;
