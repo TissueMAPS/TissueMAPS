@@ -450,6 +450,8 @@ class AvailableModules(object):
         for module_file in self.module_files:
             if name == self._get_module_name_from_file(module_file):
                 return module_file
+        raise LookupError("Cannot find module `{0}`".format(name))
+
 
     # FIXME: this gets called over and over again by `.modules_names`
     # etc. -- every time we walk the filesystem to list available
