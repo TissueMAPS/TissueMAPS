@@ -507,7 +507,7 @@ class AvailableModules(object):
         '''
         Return the module name given the (absolute) filesystem path.
         '''
-        return os.path.splitext(os.path.basename(f))[0]
+        return os.path.splitext(os.path.basename(module_file))[0]
 
     @property
     def module_languages(self):
