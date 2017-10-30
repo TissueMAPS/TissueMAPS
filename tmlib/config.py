@@ -256,7 +256,7 @@ class LibraryConfig(TmapsConfig):
 
     '''`TissueMAPS` configuration specific to the `tmlib` package.'''
 
-    __slots__ = ('_config', '_resource')
+    __slots__ = ('_config', '_modules_path', '_resource')
 
     def __init__(self):
         super(LibraryConfig, self).__init__()
