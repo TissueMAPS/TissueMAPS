@@ -110,8 +110,7 @@ class TmapsConfig(object):
         # cfg.modules_path must be a list of paths
         raw_modules_path = self._config.get(self._section, 'modules_path')
         self.modules_path = [
-            os.path.expandvars(os.path.expanduser(path.strip()))
-            for path in raw_modules_path.split(',')
+            path.strip() for path in raw_modules_path.split(',')
         ]
 
     def write(self):
@@ -311,7 +310,10 @@ class LibraryConfig(TmapsConfig):
                 'Configuration parameter "modules_path"'
                 ' must be a sequence of strings.'
             )
-        self._modules_path = list(value)  # copy
+        self._modules_path = [
+            os.path.expandvars(os.path.expanduser(path))
+            for path in value
+        ]
 
 
     @property
