@@ -372,7 +372,7 @@ def get_feature_values(experiment_id, mapobject_type_id):
                 filter_by(ref_type=ref_type, id=mapobject_type_id).\
                 one()
 
-        w.writerow(tuple(feature_names))
+        w.writerow(tuple(['mapobject_id'] + feature_names))
         yield data.getvalue()
         data.seek(0)
         data.truncate(0)
@@ -411,7 +411,7 @@ def get_feature_values(experiment_id, mapobject_type_id):
                             mapobject_id
                         )
                         w.writerow(tuple(
-                            [str(np.nan) for x in xrange(len(feature_names))]
+                            [str(np.nan) for x in xrange(len(feature_names) + 1)]
                         ))
                         yield data.getvalue()
                         data.seek(0)
@@ -424,7 +424,7 @@ def get_feature_values(experiment_id, mapobject_type_id):
                     # the corresponding column names.
                     # Feature IDs must be sorted as integers to get the
                     # desired order.
-                    w.writerow(tuple([
+                    w.writerow(tuple([mapobject_id] + [
                         vals[k] for k in sorted(vals, key=lambda k: int(k))
                     ]))
                 yield data.getvalue()
@@ -584,7 +584,7 @@ def get_metadata(experiment_id, mapobject_type_id):
                 order_by(tm.MapobjectType.id).\
                 first()
 
-        w.writerow(tuple(metadata_names + tool_result_names))
+        w.writerow(tuple(['mapobject_id'] + metadata_names + tool_result_names))
         yield data.getvalue()
         data.seek(0)
         data.truncate(0)
@@ -664,7 +664,7 @@ def get_metadata(experiment_id, mapobject_type_id):
                                 v = str(np.nan)
                             tool_result_values.append(v)
                         metadata_values += tool_result_values
-                    w.writerow(tuple(metadata_values))
+                    w.writerow(tuple([mapobject_id] + metadata_values))
                 yield data.getvalue()
                 data.seek(0)
                 data.truncate(0)
