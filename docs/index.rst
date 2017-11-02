@@ -19,6 +19,7 @@ Contents:
    support
    license
    modules
+   faq
 
 Indices and tables
 ==================
