@@ -16,6 +16,7 @@
 """API view functions for querying :mod:`feature <tmlib.models.feature>`
 resources.
 """
+from collections import OrderedDict
 import csv
 import json
 import logging
@@ -535,7 +536,7 @@ def get_metadata(experiment_id, mapobject_type_id):
             for r in results:
                 layer_lut[r.id] = {'tpoint': r.tpoint, 'zplane': r.zplane}
 
-            ref_position_lut = dict()
+            ref_position_lut = OrderedDict()
             if ref_type == 'Plate':
                 results = _get_matching_plates(session, plate_name)
                 for r in results:
