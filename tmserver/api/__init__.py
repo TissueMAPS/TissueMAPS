@@ -13,17 +13,16 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""RESTful API.
+"""
+RESTful API.
 
 """
-import logging
+
 from flask import Blueprint
 
 api = Blueprint('api', __name__)
 
-logger = logging.getLogger(__name__)
-
-
+# load all API entry points to register with Blueprint
 import tmserver.api.experiment
 import tmserver.api.plate
 import tmserver.api.acquisition
