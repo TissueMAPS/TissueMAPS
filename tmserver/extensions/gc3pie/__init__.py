@@ -35,7 +35,8 @@ logger = logging.getLogger(__name__)
 
 class GC3Pie(object):
 
-    """An extension that exposes a *GC3Pie* engine to manage computational tasks.
+    """
+    A Flask extension that exposes a *GC3Pie* engine to manage computational tasks.
     """
 
     def __init__(self, app=None):
