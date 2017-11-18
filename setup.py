@@ -105,13 +105,14 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
-       'ansible>=2.2.1',
+       'ansible>=2.4',
        'apache-libcloud>=1.3.0',
        'boto>=2.48',
        'boto3>=1.4.1',
        'PyYAML>=3.11',
        'psycopg2>=2.6.1',
        'pycrypto>=2.6.1',
+       'python-novaclient>=6.0.2',
        'shade>=1.12.1',
        'whichcraft>=0.4.0'
     ],
