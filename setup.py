@@ -111,6 +111,7 @@ setuptools.setup(
        'boto3>=1.4.1',
        'PyYAML>=3.11',
        'psycopg2>=2.6.1',
+       'pycrypto>=2.6.1',
        'shade>=1.12.1',
        'whichcraft>=0.4.0'
     ],
