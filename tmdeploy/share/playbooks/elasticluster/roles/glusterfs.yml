@@ -1,1 +1,29 @@
-../../../../../elasticluster/elasticluster/share/playbooks/roles/glusterfs.yml
+---
+#
+# Ensure roles `glusterfs-client` and `glusterfs-server` are called
+# with the configuration specified in the ElastiCluster manual.
+#
+
+- hosts: glusterfs_server
+  name: GlusterFS server configuration
+  any_errors_fatal: yes
+  roles:
+    - role: glusterfs-server
+      GLUSTERFS_VOLUMES:
+        - name: 'glusterfs'
+          path: '/srv/glusterfs'
+          replicas: '{{glusterfs_stripes|default(1)}}'
+          stripes: '{{glusterfs_replicas|default(1)}}'
+          transport: 'tcp'
+
+
+- hosts: glusterfs_client
+  name: Mount GlusterFS filesystem
+  any_errors_fatal: yes
+  roles:
+    - role: glusterfs-client
+      GLUSTERFS_MOUNTS:
+        - fs: '{{groups.glusterfs_server[0]}}:glusterfs'
+          mountpoint: '/glusterfs'
+          state: mounted
+
