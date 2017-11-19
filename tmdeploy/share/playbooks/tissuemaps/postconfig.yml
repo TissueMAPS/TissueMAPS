@@ -21,11 +21,13 @@
     db_host_master: "{{ hostvars[groups['tissuemaps_db_master'][0]].ansible_host }}"
     db_hosts_workers: "{{ groups['tissuemaps_db_worker']|map('extract', hostvars, ['ansible_host'])|list }}"
     db_nodes: "{{ groups['tissuemaps_db_worker']|length|int }}"
+  any_errors_fatal: yes
   roles:
     - database-client
 
 - name: Start TissueMAPS web and application servers
   hosts: tissuemaps_server
+  any_errors_fatal: yes
   tasks:
     - name: Start nginx service
       systemd:

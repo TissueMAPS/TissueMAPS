@@ -3,6 +3,7 @@
   hosts: all
   any_errors_fatal: true
   gather_facts: yes
+  any_errors_fatal: yes
   roles:
     - role: common
     - role: iptables
@@ -14,6 +15,8 @@
 
 # Run all other playbooks one by one, so they get a chance of doing
 # their setup depending on configured host groups
-- include: roles/slurm.yml
-- include: roles/ganglia.yml
-- include: roles/glusterfs.yml
+- import_playbook: roles/slurm.yml
+
+- import_playbook: roles/ganglia.yml
+
+- import_playbook: roles/glusterfs.yml
