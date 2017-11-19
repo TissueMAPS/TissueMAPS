@@ -105,7 +105,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
-       'ansible>=2.4',
+        # Ansible 2.4 introduces changes incompatible with elasticluster roles.
+       'ansible>=2.3,<2.4',
        'apache-libcloud>=1.3.0',
        'boto>=2.48',
        'boto3>=1.4.1',
