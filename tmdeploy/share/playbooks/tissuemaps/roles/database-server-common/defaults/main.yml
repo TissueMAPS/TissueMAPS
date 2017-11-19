@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-postgis_version: '2.3'
-citus_version: '6.2'
+postgis_version: '2.4'
+citus_version: '7.1'
 
 pg_max_files_per_process: 10000
 pg_max_connections: 500

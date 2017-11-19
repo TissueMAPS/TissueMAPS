@@ -20,7 +20,8 @@ db_master_memory: 1000
 
 pg_shared_buffers: "{{ (db_master_memory * 0.35)|int }}MB"
 pg_effective_cache_size: "{{ (db_master_memory * 0.75)|int }}MB"
-pg_max_worker_processes: "{{ db_master_cores * 2 }}"
+pg_max_worker_processes: "{{ db_master_cores * 4 }}"
+pg_max_parallel_workers: "{{ db_master_cores * 2 }}"
 pg_max_parallel_workers_per_gather: "{{ db_master_cores }}"
 
 pg_checkpoint_timeout: 30min

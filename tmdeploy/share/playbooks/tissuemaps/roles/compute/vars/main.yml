@@ -1,0 +1,5 @@
+# Unfortunately, this hack is necessary to determine the URL for download of
+# an RPM repository from https://yum.postgresql.org/repopackages.php
+postgresql_version_rpm_index_map:
+  '9.6': 3
+  '10': 2
