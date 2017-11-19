@@ -17,9 +17,9 @@
 ---
 # Playbook for deployment of all TissueMAPS components on already existing
 # virtual machine instance(s).
-- import_playbook: common.yml
-- import_playbook: compute.yml
-- import_playbook: server.yml
-- import_playbook: database.yml
-- import_playbook: init.yml
-- import_playbook: postconfig.yml
+- include: common.yml
+- include: compute.yml
+- include: server.yml
+- include: database.yml
+- include: init.yml
+- include: postconfig.yml

@@ -15,8 +15,8 @@
 
 # Run all other playbooks one by one, so they get a chance of doing
 # their setup depending on configured host groups
-- import_playbook: roles/slurm.yml
+- include: roles/slurm.yml
 
-- import_playbook: roles/ganglia.yml
+- include: roles/ganglia.yml
 
-- import_playbook: roles/glusterfs.yml
+- include: roles/glusterfs.yml
