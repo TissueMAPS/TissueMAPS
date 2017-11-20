@@ -14,7 +14,7 @@ import setuptools
 
 
 def get_version():
-    src_path = join(dirname(abspath(__file__))),
+    src_path = join(dirname(abspath(__file__)),
                     'src', 'jtlib', '__init__.py')
     ctx = {}
     execfile(src_path, ctx, ctx)
