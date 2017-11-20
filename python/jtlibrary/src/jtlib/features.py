@@ -176,11 +176,16 @@ class Features(object):
                         v = np.nan
                         values['%s_%s' % (stat, name)].append(v)
             else:
-                index = np.union1d(features.index, labels)
-                diff = len(labels) - len(index)
-                if diff > 0:
-                    logger.warn('%d objects got lost upon aggregation', diff)
-                for name, vals in features.loc[index, :].iteritems():
+                assert np.in1d(labels, features.index), (
+                    "Source objects with ID(s) [{srcs}] appear within"
+                    " area of destination object {dest}"
+                    " but have no associated feature values!"
+                    .format(
+                        dest=ref_label,
+                        srcs=(', '.join(np.setdiff1d(labels, features.index))),
+                    )
+                )
+                for name, vals in features.loc[labels, :].iteritems():
                     if vals.empty:
                         for stat in self._aggregate_statistics.keys:
                             v = np.nan
