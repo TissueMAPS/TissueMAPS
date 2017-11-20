@@ -38,7 +38,7 @@ def main(image, n, plot=False):
     '''
     # NOTE: code from CellProfiler module "expandorshrink"
     background = image == 0
-    distance, (i, j) = distance_transform_edt(background, return_indices=True)
+    distance, (i, j) = ndi.distance_transform_edt(background, return_indices=True)
     expanded_image = image.copy()
     mask = background & (distance < n)
     expanded_image[mask] = image[i[mask], j[mask]]
