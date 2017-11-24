@@ -237,6 +237,9 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             session.query(tm.Mapobject).\
                 filter(tm.Mapobject.mapobject_type_id.in_(mapobject_type_ids)).\
                 delete()
+            session.query(tm.MapobjectType).\
+                filter(tm.MapobjectType.id.in_(mapobject_type_ids)).\
+                delete()
 
     def _load_pipeline_input(self, site_id):
         logger.info('load pipeline inputs')
