@@ -107,7 +107,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             if not element.active:
                 continue
             if '/' in element.source:
-                logger.debug('assuming module `%s` resides outside the configured module path')
+                logger.debug('assuming module `%s` resides outside the configured module path', element.source)
                 source_file = os.path.expanduser(os.path.expandvars(element.source))
                 if not os.path.isabs(source_file):
                     source_file = os.path.join(self.step_location, source_file)
