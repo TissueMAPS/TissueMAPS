@@ -117,7 +117,8 @@ class ImageAnalysisModule(object):
     def _exec_m_module(self, engine):
         module_name = os.path.splitext(os.path.basename(self.source_file))[0]
         logger.debug(
-            'import module "%s" from source file: %s', self.source_file
+            'import module "%s" from source file: %s',
+            module_name, self.source_file
         )
         logger.debug(
             'add module source file to Matlab path: "%s"', self.source_file
