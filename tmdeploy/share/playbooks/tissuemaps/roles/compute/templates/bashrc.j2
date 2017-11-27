@@ -15,5 +15,11 @@ export PATH=/home/{{ tm_user }}/.local/bin:$PATH
 # Matlab
 export MATLABHOME=/usr/local/MATLAB/{{ matlab_version }}
 export MATLABROOT=${MATLABHOME}
+# stay compatible with v0.3.3 and before ...
+# (FIXME: this needs to go when we deprecate v0.3.3 and earlier)
 export MATLABPATH=/home/{{ tm_user }}/jtlibrary/src/matlab:$MATLABPATH
 export MATLABPATH=/home/{{ tm_user }}/jtmodules/src/matlab:$MATLABPATH
+# .. but use the correct MATLABPATH for v0.3.4 and following
+# (must come last so it has precedence)
+export MATLABPATH=/home/{{ tm_user }}/jtlibrary/matlab/jtlibrary:$MATLABPATH
+export MATLABPATH=/home/{{ tm_user }}/jtmodules/matlab/jtmodules:$MATLABPATH
