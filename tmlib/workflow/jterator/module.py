@@ -120,11 +120,17 @@ class ImageAnalysisModule(object):
             'import module "%s" from source file: %s',
             module_name, self.source_file
         )
+        # FIXME: this inserts the wrong directory if the MATLAB module
+        # has the form `+directory` or `@directory` -- let's allow
+        # this for the moment since the module discovery code only
+        # deals with single-file modules, but it needs to be revisited
+        source_dir = os.path.dirname(self.source_file)
         logger.debug(
-            'add module source file to Matlab path: "%s"', self.source_file
+            'adding module source directory `%s` to MATLAB path ...',
+            source_dir
         )
         engine.eval(
-            'addpath(\'{0}\');'.format(os.path.dirname(self.source_file))
+            "addpath('{0}');".format(source_dir)
         )
         engine.eval('version = {0}.VERSION'.format(module_name))
         function_call_format_string = '[{outputs}] = {name}.main({inputs});'
