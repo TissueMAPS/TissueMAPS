@@ -71,7 +71,7 @@ class CellvoyagerMetadataHandler(MetadataHandler):
         MetadataFields = super (CellvoyagerMetadataHandler, cls).extract_fields_from_filename(regex, filename, defaults=True)
         
         # Specific for this class
-        action = re.search('L01(.+?)Z', filename) # Look for action and change the channel accordingly
+        action = re.search('L\d{2}(.+?)Z', filename) # Look for action and change the channel accordingly
         action_number = action.group(1)
         MetadataFields = MetadataFields._replace(c=action_number+"_"+MetadataFields.c)
 
