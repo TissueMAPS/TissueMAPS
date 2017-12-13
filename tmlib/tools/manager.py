@@ -112,6 +112,18 @@ class ToolRequestManager(SubmissionManager):
         '''
         logger.info('create tool job for submission %d', submission_id)
 
+        try:
+            cores = int(cores)
+        except (ValueError, TypeError) as err:
+            raise TypeError(
+                'Argument "cores" cannot be converted to type `int`: {err}'
+                .format(err=err)
+            )
+        if not cores > 0:
+            raise ValueError(
+                'The value of "cores" must be positive.'
+            )
+
         if cores > cfg.resource.max_cores_per_job:
             logger.warn(
                 'requested cores exceed available cores per node:  %s',
@@ -148,14 +160,6 @@ class ToolRequestManager(SubmissionManager):
         )
         job.requested_walltime = Duration(duration)
         job.requested_memory = Memory(memory, Memory.MB)
-        if not isinstance(cores, int):
-            raise TypeError(
-                'Argument "cores" must have type int.'
-            )
-        if not cores > 0:
-            raise ValueError(
-                'The value of "cores" must be positive.'
-            )
         job.requested_cores = cores
         return job
 
