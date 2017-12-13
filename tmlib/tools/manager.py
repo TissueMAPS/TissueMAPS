@@ -82,10 +82,8 @@ class ToolRequestManager(SubmissionManager):
         return command
 
     def create_job(self, submission_id, user_name, duration='06:00:00',
-            memory=(
-                cfg.resource.max_cores_per_job *
-                cfg.resource.max_memory_per_core.amount(Memory.MB)
-            ),
+            # if all cores are used, we should allocate all available memory as well
+            memory=cfg.resource.max_memory_per_core.amount(Memory.MB),
             cores=cfg.resource.max_cores_per_job):
         '''Creates a job for asynchroneous processing of a client tool request.
 
@@ -101,7 +99,6 @@ class ToolRequestManager(SubmissionManager):
         memory: int, optional
             amount of memory in Megabyte that should be allocated for the job
             (defaults to
-            :attr:`resource.max_cores_per_job <tmlib.config.LibraryConfig.resource>` x
             :attr:`resource.max_memory_per_core <tmlib.config.LibraryConfig.resource>`)
         cores: int, optional
             number of CPU cores that should be allocated for the job
@@ -120,31 +117,24 @@ class ToolRequestManager(SubmissionManager):
                 'requested cores exceed available cores per node:  %s',
                 cfg.resource.max_cores_per_job
             )
-            logger.debug(
-                'setting number of cores to %d', cfg.resource.max_cores_per_job
+            logger.warn(
+                'lowering number of cores to %d (max available)',
+                cfg.resource.max_cores_per_job
             )
             cores = cfg.resource.max_cores_per_job
 
-        max_memory_per_node = (
-            cfg.resource.max_cores_per_job *
-            cfg.resource.max_memory_per_core.amount(Memory.MB)
-        )
-        max_memory_per_core = cfg.resource.max_memory_per_core.amount(Memory.MB)
-        if cores == 1:
-            if memory > max_memory_per_core:
-                # We just warn here, since this may still work.
-                logger.warn(
-                    'requested memory exceeds available memory per core: %d MB',
-                    max_memory_per_core
-                )
-        else:
-            if memory > max_memory_per_node:
-                logger.warn(
-                    'requested memory exceeds available memory per node: %d MB',
-                    max_memory_per_node
-                )
-                logger.debug('setting memory to %d MB', max_memory_per_node)
-                memory = max_memory_per_node
+        # FIXME: this needs to be revisited when GC3Pie issue #624 is fixed;
+        # for the moment, see https://github.com/uzh/gc3pie/issues/624#issuecomment-328122862
+        # as to why this is the right way to compute max memory
+        max_memory_per_node = cfg.resource.max_memory_per_core.amount(Memory.MB)
+        max_memory_per_core = max_memory_per_node / cfg.resource.max_cores_per_job
+        if memory > max_memory_per_node:
+            logger.warn(
+                'requested memory exceeds available memory per node: %d MB',
+                max_memory_per_node
+            )
+            logger.warn('lowering memory to %d MB', max_memory_per_node)
+            memory = max_memory_per_node
 
         logger.debug('allocated time for job: %s', duration)
         logger.debug('allocated memory for job: %d MB', memory)
@@ -313,4 +303,3 @@ class ToolRequestManager(SubmissionManager):
         tool.process_request(args.submission_id, payload)
 
         logger.info('done')
-
