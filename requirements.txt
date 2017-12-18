@@ -79,7 +79,7 @@ simplejson==3.11.1
 six==1.10.0
 stevedore==1.25.0
 texttable==0.8.8
-tmdeploy==0.3.3rc0
+tmdeploy
 unicodecsv==0.14.1
 warlock==1.2.0
 websocket-client==0.44.0
