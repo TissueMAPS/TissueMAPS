@@ -1072,6 +1072,8 @@ class TmClient(HttpClient):
             'and acquisition "%s"',
             self.experiment_name, plate_name, acquisition_name
         )
+        if convert:
+            logger.info("files will be converted to %s format", convert)
         acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
 
         path = os.path.expandvars(os.path.expanduser(path))
