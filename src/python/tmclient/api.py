@@ -25,6 +25,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
+from subprocess import check_call
 
 import requests
 import yaml
@@ -42,6 +43,15 @@ from tmclient.auth import prompt_for_credentials, load_credentials_from_file
 
 
 logger = logging.getLogger(__name__)
+
+
+def replace_ext(filename, ext):
+    """
+    """
+    if ext.startswith('.'):
+        ext = ext[1:]
+    stem, _ = os.path.splitext(filename)
+    return (stem + '.' + ext)
 
 
 class TmClient(HttpClient):
@@ -1014,7 +1024,7 @@ class TmClient(HttpClient):
 
     def upload_microscope_files(self, plate_name, acquisition_name,
                                 path, parallel=1, retry=5,
-                                delete_after_upload=False,
+                                convert=None, delete_after_upload=False,
                                 _deprecated_directory_option=False):
         '''
         Uploads microscope files contained in `path`.
@@ -1031,6 +1041,15 @@ class TmClient(HttpClient):
             are located
         parallel: int
             number of parallel processes to use for upload
+        retry: int
+            number of times to retry failed uploads
+        convert: str
+            Format to convert images to during the upload process.
+            Given as a string specifying the new file extension (e.g.,
+            ``png`` or ``jpg``).  If ``None`` or the empty string,
+            no conversion takes place and files are uploaded as-is.
+        delete_after_upload: bool
+            Delete source files after successful upload.
 
         Returns
         -------
@@ -1068,8 +1087,14 @@ class TmClient(HttpClient):
         else:
             filenames = [ os.path.basename(path) ]
             paths = [ path ]
+        if convert:
+            filenames_to_register = [
+                replace_ext(filename, convert) for filename in filenames
+            ]
+        else:
+            filenames_to_register = filenames
         registered_filenames = self._register_files_for_upload(
-            acquisition_id, filenames
+            acquisition_id, filenames_to_register
         )
         logger.info('registered %d files', len(registered_filenames))
 
@@ -1082,7 +1107,7 @@ class TmClient(HttpClient):
         while retry > 0:
             work = [
                 # function,         *args ...
-                (self._upload_file, upload_url, path, delete_after_upload)
+                (self._upload_file, upload_url, path, convert, delete_after_upload)
                 for path in paths
             ]
             outcome = self._parallelize(work, parallel)
@@ -1113,11 +1138,29 @@ class TmClient(HttpClient):
         res.raise_for_status()
         return res.json()['data']
 
-    def _upload_file(self, upload_url, filepath, delete=False):
-        logger.debug('uploading file `%s` ...', filepath)
-        with open(filepath, 'rb') as stream:
+    def _upload_file(self, upload_url, filepath,
+                     convert=None, delete=False):
+        if convert:
+            file_to_upload = replace_ext(filepath, convert)
+            logger.debug(
+                'converting source file `%s` to `%s` (%s format) ...',
+                filepath, file_to_upload, convert)
+            check_call(
+                ['convert', filepath, '-depth', '16',
+                 '-colorspace', 'gray', file_to_upload])
+        else:
+            file_to_upload = filepath
+        logger.debug('uploading file `%s` ...', file_to_upload)
+        with open(file_to_upload, 'rb') as stream:
             files = {'file': stream}
             res = self._session.post(upload_url, files=files)
+        if convert and (filepath != file_to_upload):
+            try:
+                os.remove(file_to_upload)
+            except Exception as err:
+                logger.warn(
+                    "Cannot delete temporary file `%s`: %s",
+                    file_to_upload, err)
         if res.ok:
             logger.debug(
                 'successfully uploaded file `%s`, elapsed %.3fs',
