@@ -592,7 +592,7 @@ microscope_file_upload_parser.add_argument(
     'path', help='path to file or directory to upload'
 )
 microscope_file_upload_parser.add_argument(
-    '--convert', dest='convert', metavar='FMT',
+    '--convert', dest='convert', nargs='?', metavar='FMT',
     action='store', default='png', const=None,
     help=(
         "Convert files to the specified format during upload."
