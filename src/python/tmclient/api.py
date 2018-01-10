@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
+# Copyright 2016-2018 University of Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1014,6 +1014,7 @@ class TmClient(HttpClient):
 
     def upload_microscope_files(self, plate_name, acquisition_name,
                                 path, parallel=1, retry=5,
+                                delete_after_upload=False,
                                 _deprecated_directory_option=False):
         '''
         Uploads microscope files contained in `path`.
@@ -1081,7 +1082,7 @@ class TmClient(HttpClient):
         while retry > 0:
             work = [
                 # function,         *args ...
-                (self._upload_file, upload_url, path)
+                (self._upload_file, upload_url, path, delete_after_upload)
                 for path in paths
             ]
             outcome = self._parallelize(work, parallel)
@@ -1112,7 +1113,7 @@ class TmClient(HttpClient):
         res.raise_for_status()
         return res.json()['data']
 
-    def _upload_file(self, upload_url, filepath):
+    def _upload_file(self, upload_url, filepath, delete=False):
         logger.debug('uploading file `%s` ...', filepath)
         with open(filepath, 'rb') as stream:
             files = {'file': stream}
@@ -1121,6 +1122,15 @@ class TmClient(HttpClient):
             logger.debug(
                 'successfully uploaded file `%s`, elapsed %.3fs',
                 filepath, res.elapsed.total_seconds())
+            if delete:
+                try:
+                    os.remove(filepath)
+                    logger.debug(
+                        "deleted successfully uploaded file `%s`",
+                        filepath)
+                except Exception as err:
+                    logger.warn("Could not remove file `%s`: %s",
+                                filepath, err)
             return (True, filepath)
         else:
             logger.error('upload of file `%s` failed: %d %s',

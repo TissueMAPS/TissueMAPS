@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
+# Copyright 2016, 2018 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -590,6 +590,11 @@ microscope_file_upload_parser = microscope_file_subparsers.add_parser(
 )
 microscope_file_upload_parser.add_argument(
     'path', help='path to file or directory to upload'
+)
+microscope_file_upload_parser.add_argument(
+    '--delete', dest='delete_after_upload',
+    action='store_true', default=False,
+    help=('Delete files after uploading. USE WITH CAUTION!')
 )
 microscope_file_upload_parser.add_argument(
     '--directory', dest='_deprecated_directory_option',
