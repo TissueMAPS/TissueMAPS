@@ -593,7 +593,8 @@ microscope_file_upload_parser.add_argument(
 )
 microscope_file_upload_parser.add_argument(
     '--convert', dest='convert', nargs='?', metavar='FMT',
-    action='store', default='png', const=None,
+    action='store', default=None, const='png',
+    choices=['png', 'jpg', 'tif'],
     help=(
         "Convert files to the specified format during upload."
         " The format is specified by giving the converted file's"
