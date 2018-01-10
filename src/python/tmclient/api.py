@@ -25,7 +25,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
-from subprocess import check_call
+from subprocess import check_call, check_output, CalledProcessError
 
 import requests
 import yaml
@@ -47,11 +47,33 @@ logger = logging.getLogger(__name__)
 
 def replace_ext(filename, ext):
     """
+    Return new pathname formed by replacing extension in `filename` with `ext`.
     """
     if ext.startswith('.'):
         ext = ext[1:]
     stem, _ = os.path.splitext(filename)
     return (stem + '.' + ext)
+
+
+def check_imagemagick_supported_format(fmt):
+    """
+    Return ``True`` if `convert` can be run and reports supporting image format `fmt`.
+    """
+    try:
+        convert_output = check_output(['convert', '--version'])
+        convert_data = dict(line.split(':', 1)
+                            for line in convert_output.split('\n'))
+        if fmt in convert_data['Delegates (built-in)']:
+            return True
+        else:
+            logger.error("Format `%s` no in ImageMagick's `convert` delegates.")
+            return False
+    except CalledProcessError as err:
+        logger.error(
+            "Cannot run ImageMgick's `convert` program."
+            " On Debian/Ubuntu, use `sudo apt-get install imagemagick`"
+            " to install it.")
+        return False
 
 
 class TmClient(HttpClient):
@@ -1073,6 +1095,11 @@ class TmClient(HttpClient):
             self.experiment_name, plate_name, acquisition_name
         )
         if convert:
+            if not check_imagemagick_supported_format(convert):
+                logger.fatal(
+                    "Aborting: conversion requested"
+                    " but ImageMagick's `convert` not available.")
+                return -1
             logger.info("files will be converted to %s format", convert)
         acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
 
