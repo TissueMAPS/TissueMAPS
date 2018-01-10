@@ -1013,8 +1013,11 @@ class TmClient(HttpClient):
         return res.json()['data']
 
     def upload_microscope_files(self, plate_name, acquisition_name,
-                                directory, parallel=1, retry=5):
-        '''Uploads microscope files contained in `directory`.
+                                path, parallel=1, retry=5,
+                                _deprecated_directory_option=False):
+        '''
+        Uploads microscope files contained in `path`.
+        If `path` is a directory, upload all files contained in it.
 
         Parameters
         ----------
@@ -1022,7 +1025,7 @@ class TmClient(HttpClient):
             name of the parent plate
         acquisition_name: str
             name of the parent acquisition
-        directory: int
+        path: str
             path to a directory on disk where the files that should be uploaded
             are located
         parallel: int
@@ -1039,6 +1042,10 @@ class TmClient(HttpClient):
         :class:`tmlib.models.file.MicroscopeImageFile`
         :class:`tmlib.models.file.MicroscopeMetadataFile`
         '''
+        if _deprecated_directory_option:
+            logger.warn(
+                "The `--directory` option is now superfluous."
+                " You can remove it from the command line.")
         # TODO: consider using os.walk() to screen subdirectories recursively
         logger.info(
             'upload microscope files for experiment "%s", plate "%s" '
@@ -1047,13 +1054,19 @@ class TmClient(HttpClient):
         )
         acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
 
-        directory = os.path.expanduser(directory)
-        directory = os.path.expandvars(directory)
-        filenames = [
-            f for f in os.listdir(directory)
-            if not os.path.isdir(os.path.join(directory, f))
-            and not f.startswith('.')
-        ]
+        path = os.path.expandvars(os.path.expanduser(path))
+        if os.path.isdir(path):
+            filenames = [
+                f for f in os.listdir(path)
+                if (not f.startswith('.')
+                    and not os.path.isdir(os.path.join(path, f)))
+            ]
+            paths = [
+                os.path.join(path, name) for name in filenames
+            ]
+        else:
+            filenames = [ os.path.basename(path) ]
+            paths = [ path ]
         registered_filenames = self._register_files_for_upload(
             acquisition_id, filenames
         )
@@ -1063,7 +1076,6 @@ class TmClient(HttpClient):
             '/experiments/{experiment_id}/acquisitions/{acquisition_id}/microscope-file'
             .format(experiment_id=self._experiment_id, acquisition_id=acquisition_id)
         )
-        paths = [os.path.join(directory, name) for name in filenames]
         total = len(paths)
         retry += 1  # make usage here consistent with CLI usage
         while retry > 0:

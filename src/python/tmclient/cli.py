@@ -589,8 +589,12 @@ microscope_file_upload_parser = microscope_file_subparsers.add_parser(
     parents=[abstract_acquisition_parser]
 )
 microscope_file_upload_parser.add_argument(
-    '--directory', required=True,
-    help='path to directory where files are located'
+    'path', help='path to file or directory to upload'
+)
+microscope_file_upload_parser.add_argument(
+    '--directory', dest='_deprecated_directory_option',
+    action='store_true', default=False,
+    help='Unused. Retained for backwards-compatibility only.'
 )
 microscope_file_upload_parser.add_argument(
     '--parallel', nargs='?', type=int, metavar='NUM',
