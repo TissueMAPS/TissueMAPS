@@ -85,7 +85,7 @@ def check_imagemagick_supported_format(fmt):
     for line in convert_output.split('\n'):
         line = line.lower()
         if line.startswith('delegates'):
-            supported += line.split(':', 1).split()
+            supported += line.split(':', 1)[1].split()
     # this test relies on `fmt` being the file extension *and*
     # ImageMagick's name for the format; hence we must ensure we use
     # e.g. `.jpeg` for JPEG files instead of `.jpg`
