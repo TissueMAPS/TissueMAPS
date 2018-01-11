@@ -61,18 +61,22 @@ def check_imagemagick_supported_format(fmt):
     """
     try:
         convert_output = check_output(['convert', '--version'])
-        convert_data = dict(line.split(':', 1)
-                            for line in convert_output.split('\n'))
-        if fmt in convert_data['Delegates (built-in)']:
-            return True
-        else:
-            logger.error("Format `%s` no in ImageMagick's `convert` delegates.")
-            return False
-    except CalledProcessError as err:
+    # `subprocess` raises `OSError` if the executable is not found
+    except (CalledProcessError, OSError) as err:
         logger.error(
             "Cannot run ImageMgick's `convert` program."
             " On Debian/Ubuntu, use `sudo apt-get install imagemagick`"
             " to install it.")
+        return False
+    convert_data = dict(line.split(':', 1)
+                        for line in convert_output.split('\n'))
+    # this test relies on `fmt` being the file extension *and*
+    # ImageMagick's name for the format; hence we must ensure we use
+    # e.g. `.jpeg` for JPEG files instead of `.jpg`
+    if fmt in convert_data['Delegates (built-in)']:
+        return True
+    else:
+        logger.error("Format `%s` no in ImageMagick's `convert` delegates.")
         return False
 
 
