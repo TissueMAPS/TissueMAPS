@@ -68,12 +68,28 @@ def check_imagemagick_supported_format(fmt):
             " On Debian/Ubuntu, use `sudo apt-get install imagemagick`"
             " to install it.")
         return False
-    convert_data = dict(line.split(':', 1)
-                        for line in convert_output.split('\n'))
+    # example `convert --version` output::
+    #
+    #     $ convert --version
+    #     Version: ImageMagick 6.9.7-4 Q16 x86_64 20170114 http://www.imagemagick.org
+    #     Copyright: © 1999-2017 ImageMagick Studio LLC
+    #     License: http://www.imagemagick.org/script/license.php
+    #     Features: Cipher DPC Modules OpenMP
+    #     Delegates (built-in): bzlib djvu fftw fontconfig freetype jbig jng jpeg lcms lqr ltdl lzma openexr pangocairo png tiff wmf x xml zlib
+    #
+    # the following loop will make it such that::
+    #
+    #     supported = ['bzlib', 'djvu', ...]
+    #
+    supported = []
+    for line in convert_output.split('\n'):
+        line = line.lower()
+        if line.startswith('delegates'):
+            supported += line.split(':', 1).split()
     # this test relies on `fmt` being the file extension *and*
     # ImageMagick's name for the format; hence we must ensure we use
     # e.g. `.jpeg` for JPEG files instead of `.jpg`
-    if fmt in convert_data['Delegates (built-in)']:
+    if fmt.lower() in supported:
         return True
     else:
         logger.error("Format `%s` no in ImageMagick's `convert` delegates.")
