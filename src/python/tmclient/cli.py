@@ -595,7 +595,7 @@ microscope_file_upload_parser.add_argument(
 microscope_file_upload_parser.add_argument(
     '--convert', dest='convert', nargs='?', metavar='FMT',
     action='store', default=None, const='png',
-    choices=tuple(SUPPORTED_IMAGE_FORMATS),
+    choices=tuple(ext[1:] for ext in SUPPORTED_IMAGE_FORMATS),
     help=(
         "Convert files to the specified format during upload."
         " The format is specified by giving the converted file's"

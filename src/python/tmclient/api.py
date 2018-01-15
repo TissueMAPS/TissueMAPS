@@ -47,7 +47,8 @@ logger = logging.getLogger(__name__)
 
 # The `SUPPORTED_IMAGE_FORMATS` dictionary serves two purposes:
 #
-# 1. Keys are file extensions that are recognized as image files (and
+# 1. Keys are file extensions (starting with a dot, as returned by
+#    `os.path.splitext`) that are recognized as image files (and
 #    thus converted upon request)
 #
 # 2. Values are the corresponding "delegate" name that must be present
@@ -57,12 +58,12 @@ logger = logging.getLogger(__name__)
 #    compiled with PNG support.)
 #
 SUPPORTED_IMAGE_FORMATS = {
-    # extension (w/o `.`)  ==> ImageMagick "delegate" name
-    'tif'  : 'tiff',
-    'tiff' : 'tiff',
-    'jpg'  : 'jpeg',
-    'jpeg' : 'jpeg',
-    'png'  : 'png',
+    # extension ==> ImageMagick "delegate" name
+    '.tif'  : 'tiff',
+    '.tiff' : 'tiff',
+    '.jpg'  : 'jpeg',
+    '.jpeg' : 'jpeg',
+    '.png'  : 'png',
 }
 
 
@@ -107,10 +108,11 @@ def check_imagemagick_supported_format(fmt):
         line = line.lower()
         if line.startswith('delegates'):
             supported += line.split(':', 1)[1].split()
-    # this test relies on `fmt` being the file extension *and*
-    # ImageMagick's name for the format; hence we must ensure we use
-    # e.g. `.jpeg` for JPEG files instead of `.jpg`
-    delegate = SUPPORTED_IMAGE_FORMATS[fmt.lower()]
+    # allow fmt to be ``png``, ``JPEG``, ``.TIF`` etc.
+    fmt = fmt.lower()
+    if not fmt.startswith('.'):
+        fmt = '.' + fmt
+    delegate = SUPPORTED_IMAGE_FORMATS[fmt]
     if delegate in supported:
         return True
     else:
@@ -1166,6 +1168,7 @@ class TmClient(HttpClient):
         if convert:
             filenames_to_register = []
             for filename in filenames:
+                # note: `ext` starts with a dot!
                 name, ext = os.path.splitext(filename)
                 if ext in SUPPORTED_IMAGE_FORMATS:
                     filenames_to_register.append(replace_ext(filename, convert))
@@ -1221,6 +1224,7 @@ class TmClient(HttpClient):
 
     def _upload_file(self, upload_url, filepath,
                      convert=None, delete=False):
+        # note: `ext` starts with a dot!
         _, ext = os.path.splitext(filepath)
         if convert and ext in SUPPORTED_IMAGE_FORMATS:
             file_to_upload = replace_ext(filepath, convert)
