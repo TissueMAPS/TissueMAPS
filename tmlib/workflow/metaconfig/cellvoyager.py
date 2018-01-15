@@ -161,6 +161,14 @@ class CellvoyagerMetadataReader(MetadataReader):
             # This microscope stores each plane in a separate file. Therefore,
             # we can use the filename to match images.
             name = e.text
+
+            # Check for .tif to .png/.jpg conversion
+            if microscope_image_filenames[0].endswith('.png'):
+                name = name.replace('.tif','.png')
+            elif microscope_image_filenames[0].endswith('.jpg'):
+                name = name.replace('.tif','.jpg')
+
+
             index = microscope_image_filenames.index(name)
             img = metadata.image(index)
             img.AcquisitionDate = e.attrib['{%s}Time' % mlf_ns]
