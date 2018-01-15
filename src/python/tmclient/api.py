@@ -45,6 +45,27 @@ from tmclient.auth import prompt_for_credentials, load_credentials_from_file
 logger = logging.getLogger(__name__)
 
 
+# The `SUPPORTED_IMAGE_FORMATS` dictionary serves two purposes:
+#
+# 1. Keys are file extensions that are recognized as image files (and
+#    thus converted upon request)
+#
+# 2. Values are the corresponding "delegate" name that must be present
+#    in the output of `convert --version` in order to be sure that
+#    ImageMagick's `convert` can actually handle that format. (For
+#    instance: it is possible, though unlikely, that ImageMagick is
+#    compiled with PNG support.)
+#
+SUPPORTED_IMAGE_FORMATS = {
+    # extension (w/o `.`)  ==> ImageMagick "delegate" name
+    'tif'  : 'tiff',
+    'tiff' : 'tiff',
+    'jpg'  : 'jpeg',
+    'jpeg' : 'jpeg',
+    'png'  : 'png',
+}
+
+
 def replace_ext(filename, ext):
     """
     Return new pathname formed by replacing extension in `filename` with `ext`.
@@ -72,7 +93,7 @@ def check_imagemagick_supported_format(fmt):
     #
     #     $ convert --version
     #     Version: ImageMagick 6.9.7-4 Q16 x86_64 20170114 http://www.imagemagick.org
-    #     Copyright: © 1999-2017 ImageMagick Studio LLC
+    #     Copyright: (c) 1999-2017 ImageMagick Studio LLC
     #     License: http://www.imagemagick.org/script/license.php
     #     Features: Cipher DPC Modules OpenMP
     #     Delegates (built-in): bzlib djvu fftw fontconfig freetype jbig jng jpeg lcms lqr ltdl lzma openexr pangocairo png tiff wmf x xml zlib
@@ -89,10 +110,11 @@ def check_imagemagick_supported_format(fmt):
     # this test relies on `fmt` being the file extension *and*
     # ImageMagick's name for the format; hence we must ensure we use
     # e.g. `.jpeg` for JPEG files instead of `.jpg`
-    if fmt.lower() in supported:
+    delegate = SUPPORTED_IMAGE_FORMATS[fmt.lower()]
+    if delegate in supported:
         return True
     else:
-        logger.error("Format `%s` no in ImageMagick's `convert` delegates.")
+        logger.error("Format `%s` not in ImageMagick's `convert` delegates.")
         return False
 
 
@@ -1115,6 +1137,11 @@ class TmClient(HttpClient):
             self.experiment_name, plate_name, acquisition_name
         )
         if convert:
+            # FIXME: This checks that `convert` can handle the
+            # *destination* image format, but it could be lack support
+            # for the *source* image format... But the source images
+            # are many and, in principle, they could be of many
+            # different formats...
             if not check_imagemagick_supported_format(convert):
                 logger.fatal(
                     "Aborting: conversion requested"
@@ -1137,9 +1164,14 @@ class TmClient(HttpClient):
             filenames = [ os.path.basename(path) ]
             paths = [ path ]
         if convert:
-            filenames_to_register = [
-                replace_ext(filename, convert) for filename in filenames
-            ]
+            filenames_to_register = []
+            for filename in filenames:
+                name, ext = os.path.splitext(filename)
+                if ext in SUPPORTED_IMAGE_FORMATS:
+                    filenames_to_register.append(replace_ext(filename, convert))
+                else:
+                    # no image, no change
+                    filenames_to_register.append(filename)
         else:
             filenames_to_register = filenames
         registered_filenames = self._register_files_for_upload(
@@ -1189,7 +1221,8 @@ class TmClient(HttpClient):
 
     def _upload_file(self, upload_url, filepath,
                      convert=None, delete=False):
-        if convert:
+        _, ext = os.path.splitext(filepath)
+        if convert and ext in SUPPORTED_IMAGE_FORMATS:
             file_to_upload = replace_ext(filepath, convert)
             logger.debug(
                 'converting source file `%s` to `%s` (%s format) ...',

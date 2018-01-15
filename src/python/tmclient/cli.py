@@ -14,6 +14,7 @@
 import argparse
 import tempfile
 
+from tmclient.api import SUPPORTED_IMAGE_FORMATS
 from tmclient.version import __version__
 
 
@@ -594,7 +595,7 @@ microscope_file_upload_parser.add_argument(
 microscope_file_upload_parser.add_argument(
     '--convert', dest='convert', nargs='?', metavar='FMT',
     action='store', default=None, const='png',
-    choices=['png', 'jpeg', 'tif'],
+    choices=tuple(SUPPORTED_IMAGE_FORMATS),
     help=(
         "Convert files to the specified format during upload."
         " The format is specified by giving the converted file's"
