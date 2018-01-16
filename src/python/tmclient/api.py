@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import atexit
 import inspect
 import logging
 import sys
@@ -20,12 +21,14 @@ import re
 import errno
 import json
 import glob
+import shutil
 try:
     # NOTE: Python3 no longer has the cStringIO module
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
 from subprocess import check_call, check_output, CalledProcessError
+import tempfile
 
 import requests
 import yaml
@@ -1224,10 +1227,15 @@ class TmClient(HttpClient):
 
     def _upload_file(self, upload_url, filepath,
                      convert=None, delete=False):
+        # make temporary directory and schedule its deletion
+        tmpdir = tempfile.mkdtemp(prefix='tm_client', suffix='.d')
+        atexit.register(shutil.rmtree, tmpdir, ignore_errors=True)
         # note: `ext` starts with a dot!
         _, ext = os.path.splitext(filepath)
         if convert and ext in SUPPORTED_IMAGE_FORMATS:
-            file_to_upload = replace_ext(filepath, convert)
+            file_to_upload = os.path.join(
+                tmpdir,
+                replace_ext(os.path.basename(filepath), convert))
             logger.debug(
                 'converting source file `%s` to `%s` (%s format) ...',
                 filepath, file_to_upload, convert)
