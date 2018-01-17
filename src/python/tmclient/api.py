@@ -1185,6 +1185,13 @@ class TmClient(HttpClient):
         )
         logger.info('registered %d files', len(registered_filenames))
 
+        if convert:
+            # make temporary directory and schedule its deletion
+            convert_dir = tempfile.mkdtemp(prefix='tm_client', suffix='.d')
+            atexit.register(shutil.rmtree, convert_dir, ignore_errors=True)
+        else:
+            convert_dir = None  # unused, but still have to provide it
+
         upload_url = self._build_api_url(
             '/experiments/{experiment_id}/acquisitions/{acquisition_id}/microscope-file'
             .format(experiment_id=self._experiment_id, acquisition_id=acquisition_id)
@@ -1194,7 +1201,8 @@ class TmClient(HttpClient):
         while retry > 0:
             work = [
                 # function,         *args ...
-                (self._upload_file, upload_url, path, convert, delete_after_upload)
+                (self._upload_file, upload_url, path, convert,
+                                    delete_after_upload, convert_dir)
                 for path in paths
             ]
             outcome = self._parallelize(work, parallel)
@@ -1226,15 +1234,16 @@ class TmClient(HttpClient):
         return res.json()['data']
 
     def _upload_file(self, upload_url, filepath,
-                     convert=None, delete=False):
-        # make temporary directory and schedule its deletion
-        tmpdir = tempfile.mkdtemp(prefix='tm_client', suffix='.d')
-        atexit.register(shutil.rmtree, tmpdir, ignore_errors=True)
+                     convert=None, delete=False, convert_dir=None):
+        if convert_dir is None:
+            # make temporary directory and schedule its deletion
+            convert_dir = tempfile.mkdtemp(prefix='tm_client', suffix='.d')
+            atexit.register(shutil.rmtree, convert_dir, ignore_errors=True)
         # note: `ext` starts with a dot!
         _, ext = os.path.splitext(filepath)
         if convert and ext in SUPPORTED_IMAGE_FORMATS:
             file_to_upload = os.path.join(
-                tmpdir,
+                convert_dir,
                 replace_ext(os.path.basename(filepath), convert))
             logger.debug(
                 'converting source file `%s` to `%s` (%s format) ...',
