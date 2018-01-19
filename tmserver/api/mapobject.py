@@ -538,7 +538,7 @@ def add_segmentations(experiment_id, mapobject_type_id):
             ).\
             join(tm.Mapobject).\
             filter(
-                tm.MapobjectSegmentation.label.in_(labels),
+                tm.MapobjectSegmentation.label.in_(labels.tolist()),
                 tm.Mapobject.mapobject_type_id == mapobject_type_id,
                 tm.MapobjectSegmentation.partition_key == site_id
             ).\
