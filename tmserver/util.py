@@ -1,5 +1,6 @@
 # TmServer - TissueMAPS server application.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -216,9 +217,7 @@ def decode_query_ids(permission='write'):
             for arg in url_args:
                 if arg.endswith('_id'):
                     encoded_model_id = request.view_args.get(arg)
-                    logger.debug('encoded model ID: %s', encoded_model_id)
                     model_id = decode_pk(encoded_model_id)
-                    logger.debug('decoded model ID: %d', model_id)
                     kwargs[arg] = model_id
                 if arg == 'experiment_id':
                     if permission is not None:
@@ -240,4 +239,3 @@ def decode_query_ids(permission='write'):
             return f(*args, **kwargs)
         return wrapped
     return decorator
-
