@@ -84,7 +84,7 @@ class Job(gc3libs.Application):
             whether job should be resubmitted
         '''
         # TODO
-        return super(self.__class__, self).retry()
+        return super(Job, self).retry()
 
     @property
     def is_terminated(self):

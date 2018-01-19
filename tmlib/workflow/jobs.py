@@ -1,5 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -111,7 +112,7 @@ class InitJob(WorkflowStepJob):
             Any additional keyword arguments are passed unchanged
             to the parent class constructor
         '''
-        super(self.__class__, self).__init__(
+        super(InitJob, self).__init__(
             step_name=step_name,
             arguments=arguments,
             output_dir=output_dir,
@@ -213,7 +214,7 @@ class CollectJob(WorkflowStepJob):
             Any additional keyword arguments are passed unchanged
             to the parent class constructor
         '''
-        super(self.__class__, self).__init__(
+        super(CollectJob, self).__init__(
             step_name=step_name,
             arguments=arguments,
             output_dir=output_dir,
@@ -269,7 +270,7 @@ class InitPhase(ParallelTaskCollection, JobCollection):
         self.parent_id = parent_id
         self.persistent_id = _idfactory.new(self)
         self.submission_id = submission_id
-        super(self.__class__, self).__init__(jobname=self.name, tasks=tasks)
+        super(InitPhase, self).__init__(jobname=self.name, tasks=tasks)
 
     def add(self, job):
         '''Adds a job to the phase.
@@ -293,7 +294,7 @@ class InitPhase(ParallelTaskCollection, JobCollection):
             )
         if len(self.tasks) > 0:
             raise ValueError('InitPhase can only contain a single job.')
-        super(self.__class__, self).add(job)
+        super(InitPhase, self).add(job)
 
     def __repr__(self):
         return (
@@ -335,7 +336,7 @@ class CollectPhase(ParallelTaskCollection, JobCollection):
         self.parent_id = parent_id
         self.persistent_id = _idfactory.new(self)
         self.submission_id = submission_id
-        super(self.__class__, self).__init__(jobname=self.name, tasks=tasks)
+        super(CollectPhase, self).__init__(jobname=self.name, tasks=tasks)
 
     def add(self, job):
         '''Adds a job to the phase.
@@ -359,7 +360,7 @@ class CollectPhase(ParallelTaskCollection, JobCollection):
             )
         if len(self.tasks) > 0:
             raise ValueError('CollectPhase can only contain a single job.')
-        super(self.__class__, self).add(job)
+        super(CollectPhase, self).add(job)
 
     def __repr__(self):
         return (
@@ -421,7 +422,7 @@ class SingleRunPhase(ParallelTaskCollection, RunPhase):
         self.parent_id = parent_id
         self.persistent_id = _idfactory.new(self)
         self.submission_id = submission_id
-        super(self.__class__, self).__init__(jobname=self.name, tasks=jobs)
+        super(SingleRunPhase, self).__init__(jobname=self.name, tasks=jobs)
 
     def add(self, job):
         '''Adds a job to the phase.
@@ -441,7 +442,7 @@ class SingleRunPhase(ParallelTaskCollection, RunPhase):
                 'Argument "job" must have type '
                 'tmlib.workflow.jobs.RunJob'
             )
-        super(self.__class__, self).add(job)
+        super(SingleRunPhase, self).add(job)
 
     def __repr__(self):
         return (
@@ -481,7 +482,7 @@ class MultiRunPhase(AbortOnError, SequentialTaskCollection, RunPhase):
         self.submission_id = submission_id
         if run_job_collections is None:
             run_job_collections = list()
-        super(self.__class__, self).__init__(
+        super(MultiRunPhase, self).__init__(
             jobname=self.name, tasks=run_job_collections
         )
 
@@ -503,7 +504,7 @@ class MultiRunPhase(AbortOnError, SequentialTaskCollection, RunPhase):
                 'Argument "run_job_collection" must have type '
                 'tmlib.workflow.jobs.SingleRunPhase'
             )
-        super(self.__class__, self).add(run_job_collection)
+        super(MultiRunPhase, self).add(run_job_collection)
 
     def __repr__(self):
         return (
@@ -538,4 +539,4 @@ class IndependentJobCollection(SequentialTaskCollection, JobCollection):
                     'tmlib.workflow.jobs.RunPhase.'
                 )
         self.persistent_id = _idfactory.new(self)
-        super(self.__class__, self).__init__(jobname=step_name, tasks=jobs)
+        super(IndependentJobCollection, self).__init__(jobname=step_name, tasks=jobs)
