@@ -1,5 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -15,7 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import logging
 import datetime
-import numpy as np
 from prettytable import PrettyTable
 from datetime import datetime
 from datetime import timedelta
@@ -36,9 +36,7 @@ def _get_task_time(task, attr):
     def get_recursive(_task, duration):
         if hasattr(_task, 'tasks'):
             if len(_task.tasks) > 0:
-                duration += np.sum([
-                    get_recursive(t, duration) for t in _task.tasks
-                ])
+                duration += sum(get_recursive(t, duration) for t in _task.tasks)
         else:
             if hasattr(_task.execution, attr):
                 duration += getattr(_task.execution, attr).to_timedelta()
@@ -50,9 +48,7 @@ def _get_task_memory(task, attr):
     def get_recursive(_task, memory):
         if hasattr(_task, 'tasks'):
             if len(_task.tasks) > 0:
-                memory += np.sum([
-                    get_recursive(t, memory) for t in _task.tasks
-                ])
+                memory += sum(get_recursive(t, memory) for t in _task.tasks)
         else:
             if hasattr(_task.execution, attr):
                 memory += getattr(_task.execution, attr).amount(Memory.MB)
