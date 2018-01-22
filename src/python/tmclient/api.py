@@ -2005,37 +2005,8 @@ class TmClient(HttpClient):
         res.raise_for_status()
         return res
 
-    def upload_feature_values(self, mapobject_type_name, plate_name,
+    def _upload_feature_values(self, mapobject_type_name, plate_name,
             well_name, well_pos_y, well_pos_x, tpoint, data):
-        '''Uploads feature values for the given
-        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` at the
-        specified :class:`Site <tmlib.models.site.Site>`.
-
-        Parameters
-        ----------
-        mapobject_type_name: str
-            type of the segmented objects
-        plate_name: str
-            name of the plate
-        well_name: str
-            name of the well
-        well_pos_y: int
-            y-position of the site relative to the well grid
-        well_pos_x: int
-            x-position of the site relative to the well grid
-        tpoint: int
-            zero-based time point index
-        data: pandas.DataFrame
-            *n*x*p* dataframe, where *n* are number of objects at this site
-            and *p* number of features (index must be site-specific one-based
-            labels that must match those of the corresponding segmentation
-            image)
-
-        See also
-        --------
-        :func:`tmserver.api.feature.add_feature_values`
-        :class:`tmlib.models.feature.FeatureValues`
-        '''
         logger.info(
             'upload feature values for experiment "%s", object type "%s" at '
             'plate "%s", well "%s", y %d, x %d, tpoint %d',
@@ -2059,6 +2030,47 @@ class TmClient(HttpClient):
         )
         res = self._session.post(url, json=content)
         res.raise_for_status()
+
+    def upload_feature_value_file(self, mapobject_type_name, plate_name,
+            well_name, well_pos_y, well_pos_x, tpoint, filename, index_col):
+        '''Uploads feature values for the given
+        :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>` at the
+        specified :class:`Site <tmlib.models.site.Site>`.
+
+        Parameters
+        ----------
+        mapobject_type_name: str
+            type of the segmented objects
+        plate_name: str
+            name of the plate
+        well_name: str
+            name of the well
+        well_pos_y: int
+            y-position of the site relative to the well grid
+        well_pos_x: int
+            x-position of the site relative to the well grid
+        tpoint: int
+            zero-based time point index
+        filename: str
+            path to the file on disk
+        index_col: str
+            column name containing the object labels
+
+        See also
+        --------
+        :func:`tmserver.api.feature.add_feature_values`
+        :class:`tmlib.models.feature.FeatureValues`
+        '''
+        logger.info('upload feature value file "%s"', filename)
+        if not filename.endswith('csv'):
+            raise IOError('Filename must have "csv" extension.')
+        filename = os.path.expanduser(os.path.expandvars(filename))
+        data = pd.read_csv(filename, index_col=index_col)
+        self._upload_feature_values(
+            mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
+            tpoint, data
+        )
+
 
     def download_feature_values(self, mapobject_type_name,
             plate_name=None, well_name=None, well_pos_y=None, well_pos_x=None,

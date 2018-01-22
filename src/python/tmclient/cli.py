@@ -786,6 +786,31 @@ feature_value_download_parser.set_defaults(
     method='download_feature_values_and_metadata_files'
 )
 
+feature_value_upload_parser = feature_values_subparsers.add_parser(
+    'upload',
+    help='upload feature values from CSV file',
+    description=(
+        'Upload feature values for segmented objects in from of a CSV file. '
+        'Feature values must be provided in form of a *n*x*p* array, where '
+        '*n* are the number of objects (rows) and *p* the number of features '
+        '(columns). Rows are identifiable by *labels* and columns by *names*.'
+    ),
+    parents=[
+        abstract_object_parser, abstract_site_parser,
+        abstract_tpoint_parser
+    ]
+)
+feature_value_upload_parser.add_argument(
+    '--filename', required=True, help='path to the file on disk'
+)
+feature_value_upload_parser.add_argument(
+    '--index-col', dest='index_col', default="object_number",
+    help='column name containing the object labels'
+)
+feature_value_upload_parser.set_defaults(
+    method='upload_feature_value_file'
+)
+
 
 ###########################
 # Mapobject segmentations #
