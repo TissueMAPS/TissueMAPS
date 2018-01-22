@@ -441,7 +441,7 @@ def get_features(experiment_id, mapobject_type_id):
             features = features.filter_by(name=name)
         features = features.order_by(tm.Feature.name).all()
         if not features:
-            logger.waring(
+            logger.warning(
                 'no features found for mapobject type %d', mapobject_type_id
             )
         return jsonify(data=features)
