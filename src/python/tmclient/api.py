@@ -1747,7 +1747,7 @@ class TmClient(HttpClient):
         :meth:`tmclient.api.TmClient.upload_segmentation_image`
         '''
         logger.info('upload segmentation image file "%s"', filename)
-        if not filename.endswith('png'):
+        if not filename.lower().endswith('png'):
             raise IOError('Filename must have "png" extension.')
         filename = os.path.expanduser(os.path.expandvars(filename))
         image = cv2.imread(filename, cv2.IMREAD_UNCHANGED | cv2.IMREAD_ANYDEPTH)
@@ -2062,7 +2062,7 @@ class TmClient(HttpClient):
         :class:`tmlib.models.feature.FeatureValues`
         '''
         logger.info('upload feature value file "%s"', filename)
-        if not filename.endswith('csv'):
+        if not filename.lower().endswith('csv'):
             raise IOError('Filename must have "csv" extension.')
         filename = os.path.expanduser(os.path.expandvars(filename))
         data = pd.read_csv(filename, index_col=index_col)
@@ -2328,7 +2328,10 @@ class TmClient(HttpClient):
         --------
         :meth:`tmclient.api.TmClient.upload_workflow_description`
         '''
-        if not filename.endswith('yml') and not filename.endswith('yaml'):
+        if (
+            not filename.lower().endswith('yml') and
+            not filename.lower().endswith('yaml')
+        ):
             raise ResourceError('filename must have "yaml" or "yml" extension')
         with open(filename) as f:
             logger.info('load workflow description from file: %s', filename)
