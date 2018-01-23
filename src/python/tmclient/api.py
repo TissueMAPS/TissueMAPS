@@ -2085,7 +2085,7 @@ class TmClient(HttpClient):
         :class:`tmlib.models.feature.FeatureValues`
         '''
         logger.info('upload feature value file "%s"', filename)
-        if not filename.endswith('csv'):
+        if not filename.lower().endswith('csv'):
             raise IOError('Filename must have "csv" extension.')
         filename = os.path.expanduser(os.path.expandvars(filename))
         data = pd.read_csv(filename, index_col=index_col)
