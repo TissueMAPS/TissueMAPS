@@ -10,6 +10,7 @@ port=8002
 username='devuser'
 password='123456'
 wait='n'
+analysis='n'
 
 ## usage help
 
@@ -44,6 +45,7 @@ Options:
   --port, -P PORT  TCP port to contact the TM REST API (default: ${port})
   --user, -u NAME  TM username to authenticate as (default: ${username})
   --pass, -p PASS  Password to use for authentication (default: ${password})
+  --analysis       Upload a jterator image analysis pipeline and submit
   --wait           Check workflow status after submitting
 
   --help, -h  Print this help text.
@@ -116,6 +118,7 @@ while [ $# -gt 0 ]; do
         --port|-P) shift; port="$1" ;;
         --user|-u) shift; username="$1" ;;
         --wait|-w) wait='y' ;;
+        --analysis|-a) analysis='y' ;;
         --help|-h) usage; exit 0 ;;
         --) shift; break ;;
     esac
@@ -135,14 +138,17 @@ fi
 if ! [ -r "${datadir}/workflow.yaml" ]; then
     die $EX_NOINPUT "Missing workflow description file in directory '$datadir'"
 fi
-if ! [ -d "${datadir}/jtproject" ]; then
-    die $EX_NOINPUT "Missing jterator project directory in directory '$datadir'"
-fi
-if ! [ -r "${datadir}/jtproject/pipeline.yaml" ]; then
-    die $EX_NOINPUT "Missing jterator pipeline description file in directory '$datadir/jtproject'"
-fi
-if ! [ -d "${datadir}/jtproject/handles" ]; then
-    die $EX_NOINPUT "Missing jterator handles directory in directory '$datadir/jtproject'"
+
+if [ "$analysis" = 'y']; then
+  if ! [ -d "${datadir}/jtproject" ]; then
+      die $EX_NOINPUT "Missing jterator project directory in directory '$datadir'"
+  fi
+  if ! [ -r "${datadir}/jtproject/pipeline.yaml" ]; then
+      die $EX_NOINPUT "Missing jterator pipeline description file in directory '$datadir/jtproject'"
+  fi
+  if ! [ -d "${datadir}/jtproject/handles" ]; then
+      die $EX_NOINPUT "Missing jterator handles directory in directory '$datadir/jtproject'"
+  fi
 fi
 
 name="$2"
@@ -196,7 +202,9 @@ tm_client workflow -e "${name}" upload --file "${datadir}/workflow.yaml"
 
 # Upload jterator project description:
 
-tm_client jtproject -e "${name}" upload --directory "${datadir}/jtproject"
+if [ "$analysis" = 'y']; then
+  tm_client jtproject -e "${name}" upload --directory "${datadir}/jtproject"
+fi
 
 # Submit workflow:
 
