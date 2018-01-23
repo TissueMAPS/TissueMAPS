@@ -6,7 +6,7 @@ me="$(basename $0)"
 ## defaults
 
 host='localhost'
-port=8002
+port=80
 username='devuser'
 password='123456'
 wait='n'
