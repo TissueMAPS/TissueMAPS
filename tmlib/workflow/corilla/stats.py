@@ -87,8 +87,17 @@ class OnlineStatistics(object):
             logger.warn('skip image because it contains infinite values')
         else:
             self.n += 1
-            delta_mean = array - self._mean
-            self._mean = self._mean + delta_mean / self.n
+            delta_mean = (array - self._mean).astype(np.float32)
+            try:
+                # update self._mean by memory efficiency in-place operations
+                norm_delta_mean = np.array(delta_mean, copy=True)
+                norm_delta_mean /= self.n
+                self._mean += norm_delta_mean
+            except Exception as ex:
+                raise MemoryError(
+                    "unsufficiant memory available for updating "
+                    "online statistics"
+                )
             self._M2 = self._M2 + delta_mean * (array - self._mean)
 
     @property
