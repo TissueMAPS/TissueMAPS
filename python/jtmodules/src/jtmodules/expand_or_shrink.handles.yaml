@@ -1,17 +1,17 @@
 ---
-version: 0.0.1
+version: 0.1.1
 
 input:
 
     - name: image
       type: LabelImage
-      key: 
-      help: Labeled image with objects should be expanded.
+      key:
+      help: Labeled image with objects should be expanded or shrunk.
 
     - name: n
       type: Numeric
       value:
-      help: Number of pixel by which each object should be expanded.
+      help: Number of pixel by which each object should be expanded (use negative values to shrink objects).
 
     - name: plot
       type: Plot
