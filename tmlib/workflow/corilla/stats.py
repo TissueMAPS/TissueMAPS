@@ -87,6 +87,7 @@ class OnlineStatistics(object):
             logger.warn('skip image because it contains infinite values')
         else:
             self.n += 1
+            array.resize(self._mean.shape)
             delta_mean = (array - self._mean).astype(np.float32)
             try:
                 # update self._mean by in-place operations (conserve memory)
