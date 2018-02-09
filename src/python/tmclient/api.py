@@ -1672,6 +1672,12 @@ class TmClient(HttpClient):
         npz_file = BytesIO()
         np.savez_compressed(npz_file, segmentation=image)
         npz_file_str = base64.b64encode(npz_file.getvalue())
+        # FIXME: upload npz_file directly as stream
+        # REF: https://github.com/TissueMAPS/TmClient/pull/25#issuecomment-372714157
+        if not isinstance(npz_file_str, str):
+            # turn npz_file_str into a `str` object on Python 3.x,
+            # otherwise JSON encoding below fails
+            npz_file_str = npz_file_str.decode('utf-8')
         content = {
             'plate_name': plate_name,
             'well_name': well_name,
