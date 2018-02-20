@@ -94,6 +94,6 @@ def main(image_1, image_2, weight_1, weight_2, plot=False):
     else:
         figure = str()
 
-    return Output(output_mask, figure)
+    return Output(combined_image, figure)
 
 
