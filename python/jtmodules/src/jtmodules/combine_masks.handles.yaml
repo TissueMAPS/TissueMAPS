@@ -1,17 +1,26 @@
 ---
-version: 0.0.1
+version: 0.0.2
 
 input:
 
     - name: mask_1
-      type: BinaryImage
+      type: MaskImage
       key:
-      help: First binary mask.
+      help: First mask.
 
     - name: mask_2
-      type: BinaryImage
+      type: MaskImage
       key:
-      help: Second binary mask.
+      help: Second mask.
+
+    - name: logical_operation
+      type: Scalar
+      value: 
+      options:
+        - AND
+        - OR
+        - EXCLUSIVE_OR
+      help: name of the logical operation to be applied. Use AND for only getting the overlap, OR for getting areas where either mask is or EXCLUSIVE_OR for getting a mask where there is one but not the other mask.
 
     - name: plot
       type: Plot
@@ -28,7 +37,6 @@ output:
     - name: figure
       type: Figure
       help: Comparison of input and output masks.
-
 
 
 
