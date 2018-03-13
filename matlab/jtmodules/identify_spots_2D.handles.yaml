@@ -1,0 +1,85 @@
+---
+version: 0.0.2
+
+input:
+
+    - name: image
+      type: IntensityImage
+      key:
+      help: >
+        Grayscale image in which spots should be detected.
+
+    - name: spot_size
+      type: Numeric
+      value: 5
+      help: >
+          Approximate size of spots (diameter in pixels). A Laplacian of
+          Gaussian filter of this size will be used to enhance the radial
+          signal of that size.
+
+    - name: rescale_quantiles
+      type: Sequence
+      value: [0.01, 0.99]
+      help: >
+          Prior to spot detection the images are rescaled according to their
+          intensity using quantiles. [0 1] would correspond to using the
+          single dimmest pixel for minimal intensity and the single brightest
+          pixel for maximal intensity. [0.01 0.90] would mean that the minimum
+          intensity is derived from the 1% brightest pixel and that the
+          maximum intensity is derived from the 90% brightest
+          pixel.
+
+    - name: rescale_thresholds
+      type: Sequence
+      value: [0, 120, 500, 0]
+      help: >
+          Most extreme values that the image intensity minimum and image
+          intensity maximum (as defined by the quanta) are allowed to
+          have [LowestPossibleGreyscaleValueForImageMinimum
+          HighestPossibleGreyscaleValueForImageMinimum
+          LowestPossibleGreyscaleValueForImageMaximum
+          HighestPossibleGreyscaleValueForImageMaximum].
+          To ignore an individual value, and use per-image quantile
+          rescaling, place 0.
+
+    - name: detection_threshold
+      type: Numeric
+      value: 0.02
+      help: >
+          Threshold for spot detection intensity in rescaled image on a scale
+          of 0-1 (default: 0.02). Spots in the rescaled / LoG-filtered image
+          with intensity below this value will not be detected.
+
+    - name: deblending_steps
+      type: Numeric
+      value: 30
+      help: >
+          The number of deblending steps used to separate adjacent spots.
+          Note that the number of deblending steps is the main determinant
+          of computational time for this module.
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+output:
+
+    - name: spots
+      type: LabelImage
+      key: identify_spots_2D.spots
+      help: >
+          Labelled spots from segmentation before deblending. Use as a
+          mask for measuring spot intensity.
+
+    - name: spots_deblend
+      type: LabelImage
+      key: identify_spots_2D.spots_deblend
+      help: >
+          Labelled centroids of spots identified in the image after
+          deblending. Use to count spots.
+
+    - name: figure
+      type: Figure
+      help: Plot created by identify_spots_2D jterator module.
+
