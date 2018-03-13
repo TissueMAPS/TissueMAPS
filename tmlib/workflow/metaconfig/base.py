@@ -613,7 +613,6 @@ class MetadataHandler(object):
 
         # Update metadata and file mapper objects
         self.metadata.drop(self.metadata.index[rows_to_drop], inplace=True)
-        del self.metadata['zplane']
         self._file_mapper_list = grouped_file_mapper_list
         self._file_mapper_lut =  grouped_file_mapper_lut
 

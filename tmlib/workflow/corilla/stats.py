@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -89,7 +89,7 @@ class OnlineStatistics(object):
             self.n += 1
             delta_mean = (array - self._mean).astype(np.float32)
             try:
-                # update self._mean by memory efficiency in-place operations
+                # update self._mean by in-place operations (conserve memory)
                 norm_delta_mean = np.array(delta_mean, copy=True)
                 norm_delta_mean /= self.n
                 self._mean += norm_delta_mean
