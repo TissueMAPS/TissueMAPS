@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -54,7 +54,7 @@ class MicroscopeImageFile(FileModel, DateMixIn):
     __table_args__ = (UniqueConstraint('name', 'acquisition_id'), )
 
     #: str: name given by the microscope
-    name = Column(String(100), index=True)
+    name = Column(String(256), index=True)
 
     #: str: OMEXML metadata
     omexml = Column(Text)
@@ -135,7 +135,7 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
     __table_args__ = (UniqueConstraint('name', 'acquisition_id'), )
 
     #: str: name given by the microscope
-    name = Column(String(100), index=True)
+    name = Column(String(256), index=True)
 
     #: str: upload status
     status = Column(String(20), index=True)
