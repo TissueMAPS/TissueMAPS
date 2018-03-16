@@ -271,7 +271,7 @@ class TmClient(HttpClient):
             client(args)
         except Exception as err:
             if args.verbosity < 4:
-                logger.error(str(err).lower())
+                logger.error(str(err))
                 sys.exit(1)
             else:
                 raise
