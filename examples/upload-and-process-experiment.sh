@@ -158,7 +158,13 @@ while [ $# -gt 0 ]; do
         --pass|-p) shift; password="$1" ;;
         --port|-P) shift; port="$1" ;;
         --user|-u) shift; username="$1" ;;
-        --wait|-w) wait='y' ;;
+        --wait|-w)
+            if have_command watch; then
+                wait=='y'
+            else
+                warn "Option '--wait' requires the 'watch' command, which is not available on this system. Ignoring it."
+            fi
+            ;;
         --analysis|-a) analysis='y' ;;
         --help|-h) usage; exit 0 ;;
         --) shift; break ;;
@@ -254,7 +260,5 @@ tm_client workflow -e "${name}" submit
 # Check workflow:
 
 if [ "$wait" = 'y' ]; then
-    while true; do
-        tm_client workflow -e "${name}" status
-    done
+    exec watch -d -n 60 "tm_client workflow -e '${name}' status"
 fi
