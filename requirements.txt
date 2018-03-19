@@ -8,7 +8,7 @@ cycler==0.10.0
 Cython==0.25.2
 decorator==4.0.11
 enum34==1.1.6
-FITS-tools==0.0.dev258
+FITS-tools==0.0.dev282
 funcsigs==1.0.2
 functools32==3.2.3.post2
 future==0.16.0
