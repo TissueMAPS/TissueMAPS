@@ -1,5 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016,  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018   University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -174,7 +175,7 @@ def _drop_schema(connection, schema_name):
     # NOTE: The tables are dropped on the worker nodes, but the schemas
     # persist. This is not a problem, however.
     cursor = connection.connection.cursor()
-    cursor.execute('DROP SCHEMA %s CASCADE;' % schema_name)
+    cursor.execute('DROP SCHEMA IF EXISTS %s CASCADE;' % schema_name)
     cursor.close()
 
 
@@ -731,7 +732,7 @@ class ExperimentSession(_Session):
         experiment_id: int
             ID of the experiment that should be queried
         transaction: bool, optional
-            whether a transaction should be used; distributed tables cannot be 
+            whether a transaction should be used; distributed tables cannot be
             modified within a transaction context (default: ``True``)
         '''
         db_uri = cfg.db_master_uri
