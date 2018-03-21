@@ -1,5 +1,6 @@
 # TmServer - TissueMAPS server application.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -251,9 +252,20 @@ def get_experiment(experiment_id):
 )
 def create_experiment():
     """
+    Create a new :class:`Experiment <tmlib.models.experiment.Experiment>`.
+
+    .. note::
+
+      The ``description`` parameter in this request is *not* the
+      "workflow description" YAML file: the latter is set to a default
+      value (depending on the ``workflow_type`` key) and can be later
+      changed with the ``update_workflow_description()``:func: API call; the
+      former is only used to set the ``description`` columnt in table
+      ``experiment_references`` which is used when listing existing
+      experiments in the UI.
+
     .. http:post:: /api/experiments
 
-        Create a new :class:`Experiment <tmlib.models.experiment.Experiment>`.
 
         **Example request**:
 
@@ -288,7 +300,6 @@ def create_experiment():
 
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
-
     """
     data = request.get_json()
     name = data.get('name')
@@ -296,6 +307,8 @@ def create_experiment():
     microscope_type = data.get('microscope_type')
     plate_format = int(data.get('plate_format'))
     plate_acquisition_mode = data.get('plate_acquisition_mode')
+    # WARNING: this description is just human-readable text,
+    # has no connection to the "workflow description" YAML file
     description = data.get('description', '')
     logger.info('create experiment "%s"', name)
     with tm.utils.MainSession() as session:
@@ -413,4 +426,3 @@ def delete_experiment(experiment_id):
             filter_by(id=experiment_id).\
             delete()
     return jsonify(message='ok')
-
