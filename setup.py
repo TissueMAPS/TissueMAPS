@@ -54,10 +54,6 @@ except ImportError:
 import setuptools
 
 
-def build_console_scripts():
-    return ['tm_client = tmclient.api:TmClient.__main__']
-
-
 def get_version():
     src_path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)), 'src', 'python', 'tmclient'
@@ -88,7 +84,11 @@ setuptools.setup(
         'Programming Language :: Python :: 3',
         'Development Status :: 4 - Beta'
     ],
-    entry_points={'console_scripts': build_console_scripts()},
+    entry_points={
+        'console_scripts': [
+            'tm_client = tmclient.api:TmClient.__main__',
+        ]
+    },
     packages=setuptools.find_packages(os.path.join('src', 'python')),
     package_dir={'': os.path.join('src', 'python')},
     package_data={'': ['*.rst']},
@@ -101,4 +101,3 @@ setuptools.setup(
         'requests>=2.11.0'
     ]
 )
-
