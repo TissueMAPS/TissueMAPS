@@ -1,5 +1,6 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016 Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018 University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -160,6 +161,10 @@ def resubmit_workflow(experiment_id):
     """
     logger.info('resubmit workflow for experiment %d', experiment_id)
     data = json.loads(request.data)
+    logger.debug(
+        "/experiments/<experiment_id>/workflow/resubmit:"
+        " Received data:\n" "========\n" "%s" "\n========",
+        request.data)
     index = data.get('index')
     stage_name = data.get('stage_name')
     with tm.utils.ExperimentSession(experiment_id) as session:
@@ -171,6 +176,10 @@ def resubmit_workflow(experiment_id):
         else:
             logger.info('load workflow description')
             workflow_description = experiment.workflow_description
+    logger.debug(
+        "/experiments/<experiment_id>/workflow/resubmit:"
+        " Using workflow description:\n" "========\n" "%r" "\n========",
+        workflow_description)
     if stage_name is None and index is None:
         index = 0
     elif index is not None:
