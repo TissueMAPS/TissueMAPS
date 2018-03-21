@@ -211,7 +211,7 @@ require_command watch
 
 # shortcut
 tm_client () {
-    echo "== Running: ${TXT_STANDOUT}tm_client -H '${host}' -P '${port}' -u '${username}' -p '${password}' $@ ${TXT_NORMAL}..."
+    echo "== Running: ${TXT_BOLD}tm_client -H '${host}' -P '${port}' -u '${username}' -p '${password}' $@ ${TXT_NORMAL}..."
     command \
         time --format="${TXT_DIM}... Summary: exitcode %x,  %E elapsed (%es = %Us user + %Ss system), max %MkB memory${TXT_NORMAL}" \
         tm_client -H "${host}" -P "${port}" -u "${username}" -p "${password}" "$@";
