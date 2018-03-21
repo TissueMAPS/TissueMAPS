@@ -24,10 +24,10 @@ is used as the experiment name.
 
 The script makes a few assumptions on how the files are laid out into DATADIR:
 
-* that DATADIR contains a file 'workflow.yaml' which defines the
+* that DATADIR contains a file 'workflow_description.yaml' which defines the
   TissueMAPS workflow to run;
 
-* that DATADIR contains a subdirectory 'jtproject' which in turn contains
+* that DATADIR contains a subdirectory 'jterator' which in turn contains
   a file 'pipeline.yaml' and a subdirectory 'handles' with the descriptions
   of the jterator pipeline and each jterator module, respectively.
 
@@ -182,19 +182,19 @@ fi
 if ! [ -d "${datadir}"/plates ]; then
     die $EX_NOINPUT "Cannot enumerate plates: no directory `plates/` inside '${datadir}'."
 fi
-if ! [ -r "${datadir}/workflow.yaml" ]; then
+if ! [ -r "${datadir}/workflow_description.yaml" ]; then
     die $EX_NOINPUT "Missing workflow description file in directory '$datadir'"
 fi
 
-if [ "$analysis" = 'y']; then
-  if ! [ -d "${datadir}/jtproject" ]; then
+if [ "$analysis" = 'y' ]; then
+  if ! [ -d "${datadir}/jterator" ]; then
       die $EX_NOINPUT "Missing jterator project directory in directory '$datadir'"
   fi
-  if ! [ -r "${datadir}/jtproject/pipeline.yaml" ]; then
-      die $EX_NOINPUT "Missing jterator pipeline description file in directory '$datadir/jtproject'"
+  if ! [ -r "${datadir}/jterator/pipeline.yaml" ]; then
+      die $EX_NOINPUT "Missing jterator pipeline description file in directory '$datadir/jterator'"
   fi
-  if ! [ -d "${datadir}/jtproject/handles" ]; then
-      die $EX_NOINPUT "Missing jterator handles directory in directory '$datadir/jtproject'"
+  if ! [ -d "${datadir}/jterator/handles" ]; then
+      die $EX_NOINPUT "Missing jterator handles directory in directory '$datadir/jterator'"
   fi
 fi
 
@@ -245,12 +245,12 @@ done
 
 # Upload workflow description:
 
-tm_client workflow -e "${name}" upload --file "${datadir}/workflow.yaml"
+tm_client workflow -e "${name}" upload --file "${datadir}/workflow_description.yaml"
 
 # Upload jterator project description:
 
-if [ "$analysis" = 'y']; then
-  tm_client jtproject -e "${name}" upload "${datadir}/jtproject"
+if [ "$analysis" = 'y' ]; then
+  tm_client jtproject -e "${name}" upload "${datadir}/jterator"
 fi
 
 # Submit workflow:
