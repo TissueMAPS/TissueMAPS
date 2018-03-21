@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
+import os
 import tempfile
 
 from tmclient.api import SUPPORTED_IMAGE_FORMATS
@@ -46,20 +47,25 @@ parser = argparse.ArgumentParser(
     )
 )
 parser.add_argument(
-    '-H', '--host', required=True,
-    help='name of TissueMAPS server host'
+    '-H', '--host', default=(os.environ.get('TM_HOST') or 'localhost'),
+    help='TissueMAPS server host (default: %(default)s)'
 )
 parser.add_argument(
-    '-P', '--port', type=int, default=80,
-    help='number of the port to which the server listens (default: 80)'
+    '-P', '--port', default=(os.environ.get('TM_PORT') or 80),
+    help=('TCP port number on which the server listens (default: %(default)s)')
 )
 parser.add_argument(
-    '-u', '--user', dest='username', required=True,
-    help='name of TissueMAPS user'
+    '-u', '--user', dest='username',
+    default=(os.environ.get('TM_USER')
+             or os.environ.get('USER')
+             or os.environ.get('LOGNAME')),
+    help='name of TissueMAPS user (default: %(default)s)'
 )
 parser.add_argument(
     '-p', '--password',
-    help='password of TissueMAPS user'
+    default=os.environ.get('TM_PASSWORD', None),
+    help=('password of TissueMAPS user'
+          ' (default is the value of environmental variable TM_PASSWORD)')
 )
 parser.add_argument(
     '-v', '--verbosity', action='count', default=0,

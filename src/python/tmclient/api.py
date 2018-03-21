@@ -260,7 +260,24 @@ class TmClient(HttpClient):
         logging.getLogger('tmclient').setLevel(logging_level)
         logger.setLevel(logging_level)
 
-        if args.password is None:
+        if not args.username:
+            logger.error(
+                "Please give a user name,"
+                " either via the `--user` command-line option,"
+                " or by setting the `TM_USER` environment variable.")
+            sys.exit(os.EX_USAGE)
+
+        try:
+            args.port = int(args.port)
+        except (ValueError, TypeError):
+            logger.error(
+                "Invalid value for server port: `%s`;"
+                " it should be an integer number in the range 1..65535."
+                " Plase set it either via the `--port` command-line option,"
+                " or by setting the `TM_PORT` environment variable.")
+            sys.exit(os.EX_USAGE)
+
+        if not args.password:
             try:
                 args.password = load_credentials_from_file(args.username)
             except (OSError, KeyError):
@@ -270,8 +287,10 @@ class TmClient(HttpClient):
             client = cls(
                 args.host, args.port, args.username, args.password
             )
-            if hasattr(args, 'experiment_name'):
+            try:
                 client.experiment_name = args.experiment_name
+            except AttributeError:
+                pass  # no `args.experiment_name`
             client(args)
         except Exception as err:
             if args.verbosity < 4:
