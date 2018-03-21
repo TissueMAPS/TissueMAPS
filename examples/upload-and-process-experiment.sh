@@ -219,6 +219,8 @@ tm_client () {
 
 # Create a new experiment and upload image files:
 
+set -e
+
 tm_client experiment create -n "${name}"
 
 for plate_dir in "${datadir}"/plates/*; do
@@ -258,6 +260,8 @@ fi
 tm_client workflow -e "${name}" submit
 
 # Check workflow:
+
+set +e
 
 if [ "$wait" = 'y' ]; then
     exec watch -d -n 60 "tm_client workflow -e '${name}' status"
