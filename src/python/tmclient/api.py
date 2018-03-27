@@ -1339,7 +1339,7 @@ class TmClient(HttpClient):
 
     def _download_channel_image(self, channel_name, plate_name,
             well_name, well_pos_y, well_pos_x,
-            cycle_index=0, tpoint=0, zplane=0, correct=True):
+            cycle_index=0, tpoint=0, zplane=0, correct=True, align = False):
         logger.info(
             'download image of experiment "%s" and channel "%s"',
             self.experiment_name, channel_name
@@ -1352,7 +1352,8 @@ class TmClient(HttpClient):
             'well_pos_y': well_pos_y,
             'tpoint': tpoint,
             'zplane': zplane,
-            'correct': correct
+            'correct': correct,
+            'align': align
         }
         channel_id = self._get_channel_id(channel_name)
         url = self._build_api_url(
@@ -1451,7 +1452,7 @@ class TmClient(HttpClient):
 
     def download_channel_image(self, channel_name, plate_name,
             well_name, well_pos_y, well_pos_x,
-            cycle_index=0, tpoint=0, zplane=0, correct=True):
+            cycle_index=0, tpoint=0, zplane=0, correct=True, align =False):
         '''Downloads a channel image.
 
         Parameters
@@ -1493,14 +1494,14 @@ class TmClient(HttpClient):
         response = self._download_channel_image(
             channel_name, plate_name, well_name, well_pos_y, well_pos_x,
             cycle_index=cycle_index, tpoint=tpoint, zplane=zplane,
-            correct=correct
+            correct=correct, align = align
         )
         data = np.frombuffer(response.content, np.uint8)
         return cv2.imdecode(data, cv2.IMREAD_UNCHANGED)
 
     def download_channel_image_file(self, channel_name, plate_name,
             well_name, well_pos_y, well_pos_x, cycle_index,
-            tpoint, zplane, correct, directory):
+            tpoint, zplane, correct, align, directory):
         '''Downloads a channel image and writes it to a `PNG` file on disk.
 
         Parameters
@@ -1523,6 +1524,8 @@ class TmClient(HttpClient):
             zero-based z-plane index
         correct: bool
             whether image should be corrected for illumination artifacts
+        align: bool
+            whether image should be aligned to the other cycles
         directory: str
             absolute path to the directory on disk where the file should be saved
 
@@ -1537,7 +1540,7 @@ class TmClient(HttpClient):
         response = self._download_channel_image(
             channel_name, plate_name, well_name, well_pos_y, well_pos_x,
             cycle_index=cycle_index, tpoint=tpoint, zplane=zplane,
-            correct=correct
+            correct=correct, align = align
         )
         data = response.content
         filename = self._extract_filename_from_headers(response.headers)

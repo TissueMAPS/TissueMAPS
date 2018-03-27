@@ -906,3 +906,7 @@ channel_image_download_parser.add_argument(
     '--correct', action='store_true',
     help='whether image should be corrected for illumination artifacts'
 )
+channel_image_download_parser.add_argument(
+    '--align', action='store_true',
+    help='whether image should be aligned to other cycles'
+)
