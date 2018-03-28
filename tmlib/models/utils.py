@@ -642,14 +642,16 @@ class _Session(object):
     def __exit__(self, except_type, except_value, except_trace):
         if self._transaction:
             if except_value:
-                logger.debug('rollback session due to error')
+                logger.debug(
+                    'rolling back DB session %s due to error: %s',
+                    self, except_value)
                 self._session.rollback()
             else:
                 try:
-                    logger.debug('commit session')
+                    logger.debug('committing DB session %s ...', self)
                     self._session.commit()
-                except RuntimeError:
-                    logger.error('commit failed due to RuntimeError???')
+                except RuntimeError as err:
+                    logger.error('commit of DB session %s failed: %s', self, err)
         else:
             self._session.flush()
         connection = self._session.get_bind()

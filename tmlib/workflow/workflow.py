@@ -1,5 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -19,7 +20,6 @@ import logging
 import importlib
 import copy
 import sys
-import traceback
 import gc3libs
 from cached_property import cached_property
 from gc3libs.workflow import (
@@ -453,7 +453,6 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
 
     def next(self, done):
         '''Progresses to next step.
-
         Parameters
         ----------
         done: int
@@ -495,17 +494,13 @@ class SequentialWorkflowStage(SequentialTaskCollection, WorkflowStage, State):
                 self.update_step(done+1)
                 return gc3libs.Run.State.RUNNING
             except Exception as error:
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                logger.error('transition to stage "%s" failed', error)
-                tb = traceback.extract_tb(exc_traceback)[-1]
-                logger.error('error in "%s" line %d', tb[0], tb[1])
-                tb_string = ''
-                for tb in traceback.format_tb(exc_traceback):
-                    tb_string += '\n'
-                    tb_string += tb
-                tb_string += '\n'
-                logger.debug('error traceback: %s', tb_string)
-                logger.info('terminating stage "%s" due to error', self.name)
+                logger.error(
+                    'workflow stage "%s":'
+                    ' transition to step "%s" failed -- terminating!',
+                    self.name, error)
+                logger.debug(
+                    'workflow stage "%s": detailed Python traceback follows',
+                    self.name, exc_info=True)
                 self.execution.state = gc3libs.Run.State.TERMINATED
                 raise
         else:
@@ -770,25 +765,19 @@ class Workflow(SequentialTaskCollection, State):
                 next_stage_name = self.description.stages[done+1].name
                 logger.info(
                     'transit to stage "{0}" of workflow "{1}" ({2} of {3})'.format(
-                        next_stage_name, self.name, done+2, self.n_stages 
+                        next_stage_name, self.name, done+2, self.n_stages
                     )
                 )
                 self.update_stage(done+1)
                 return gc3libs.Run.State.RUNNING
             except Exception as error:
-                logger.error('transition to next stage failed: %s', error)
-                exc_type, exc_value, exc_traceback = sys.exc_info()
-                tb = traceback.extract_tb(exc_traceback)[-1]
-                logger.error('error in "%s" line %d', tb[0], tb[1])
-                tb_string = str()
-                for tb in traceback.format_tb(exc_traceback):
-                    tb_string += '\n'
-                    tb_string += tb
-                tb_string += '\n'
-                logger.debug('error traceback: %s', tb_string)
-                logger.info(
-                    'terminating workflow "%s" due to error', self.name
-                )
+                logger.error(
+                    'workflow "%s":'
+                    ' transition to next stage failed: %s -- terminating!',
+                    self.name, error)
+                logger.debug(
+                    'workflow "%s": detailed Python traceback follows',
+                    self.name, exc_info=True)
                 self.execution.state = gc3libs.Run.State.TERMINATED
                 raise
         else:
