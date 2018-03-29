@@ -66,4 +66,4 @@ SQLAlchemy-Utils==0.32.14
 subprocess32==3.2.7
 tables==3.4.2
 whichcraft==0.4.0
-git+https://github.com/tissuemaps/gc3pie@47e262e2d528b8a4e439dd842f08e0f81aa7607b
+git+https://github.com/uzh/gc3pie@master
