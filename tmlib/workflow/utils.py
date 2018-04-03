@@ -19,6 +19,9 @@ import datetime
 from prettytable import PrettyTable
 from datetime import datetime
 from datetime import timedelta
+import os
+from random import random
+from time import sleep
 
 import gc3libs
 from gc3libs.quantity import Memory
@@ -439,3 +442,10 @@ def log_task_failure(task_info, logger):
         for subtd in data.get('subtasks', list()):
             log_recursive(subtd, i+1)
     log_recursive(task_info, 0)
+
+
+def start_job_daemon(delay=0):
+    session__url = cfg.db_master_uri + '#table=tasks'
+    jobdaemon = cfg.jobdaemon
+    sleep(delay * random())
+    os.spawnlp(os.P_NOWAIT, jobdaemon, jobdaemon, '-s', session_url)

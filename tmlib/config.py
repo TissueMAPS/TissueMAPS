@@ -1,5 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -47,7 +48,7 @@ class TmapsConfig(object):
 
     '''Abstract base class for `TissueMAPS` configuration settings.
 
-    `TissueMAPS` code is distributed across mutliple Python packages,
+    `TissueMAPS` code is distributed across multiple Python packages,
     but configuration settings are bundeled in one global config file
     (:attr:`CONFIG_FILE <tmlib.config.CONFIG_FILE>`)
     with an `INI <https://en.wikipedia.org/wiki/INI_file>`_-like file format.
