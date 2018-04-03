@@ -21,6 +21,8 @@ server application.
 """
 import functools
 import logging
+import os
+
 from flask import request, current_app
 from flask_jwt import current_identity
 
@@ -239,3 +241,30 @@ def decode_query_ids(permission='write'):
             return f(*args, **kwargs)
         return wrapped
     return decorator
+
+
+def is_exe(path):
+    """
+    Return true if *path* points to an executable file.
+    """
+    return (os.path.isfile(path) and os.access(path, os.X_OK))
+
+
+def which(program):
+    """
+    Return the full path to *program*, or ``None`` if it cannot be found.
+
+    See `<https://stackoverflow.com/a/377028/459543>`_ for the original code.
+    """
+    if os.path.isabs(program):
+        if is_exe(program):
+            return program
+    else:
+        search_path = (os.environ.get("PATH",
+                                      '/usr/local/bin:/bin:/usr/bin')
+                       .split(os.pathsep))
+        for path in search_path:
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+    return None

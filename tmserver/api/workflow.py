@@ -240,11 +240,6 @@ def get_workflow_status(experiment_id):
     depth = request.args.get('depth', 2, type=int)
     workflow_id = gc3pie.get_id_of_most_recent_task(experiment_id, 'workflow')
     if workflow_id is not None:
-        try:
-            gc3pie.find_task_by_id(workflow_id)
-        except LookupError:
-            logger.warning("workflow job %s for experiment %s is *not* here, trying to add back ...", workflow_id, experiment_id)
-            gc3pie.manage_task(workflow_id)
         status = gc3pie.get_task_status(workflow_id, depth)
     else:
         status = None

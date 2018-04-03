@@ -1,5 +1,6 @@
 # TmServer - TissueMAPS server application.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -13,6 +14,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import ConfigParser
 import os
 import logging
 import datetime
@@ -20,6 +22,8 @@ import datetime
 from gc3libs.quantity import Duration
 
 from tmlib.config import TmapsConfig
+
+from util import which
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +37,58 @@ class ServerConfig(TmapsConfig):
         self.secret_key = 'default_secret_key'
         self.jwt_expiration_delta = datetime.timedelta(hours=72)
         self.read()
+
+    @property
+    def jobdaemon(self):
+        try:
+            return self._config.get(self._section, 'jobdaemon')
+        except ConfigParser.NoOptionError:
+            # search it on the shell's $PATH
+            jobdaemon = which('tm_jobdaemon.py')
+            if jobdaemon is None:
+                raise LookupError(
+                    "No value specified for configuration option `[{0}]{1}`,"
+                    " and cannot find `tm_jobdaemon.py` on the shell search PATH."
+                    .format(self._section, 'jobdaemon'))
+            # remember it for next invocation
+            self._config.set(self._section, 'jobdaemon', jobdaemon)
+            return self._config.get(self._section, 'jobdaemon')
+
+    @property
+    def jobdaemon_host(self):
+        try:
+            return self._config.get(self._section, 'jobdaemon_host')
+        except ConfigParser.NoOptionError:
+            # remember it for next invocation
+            self._config.set(self._section, 'jobdaemon_host', 'localhost')
+            return self._config.get(self._section, 'jobdaemon_host')
+
+    @property
+    def jobdaemon_port(self):
+        try:
+            return self._config.get(self._section, 'jobdaemon_port')
+        except ConfigParser.NoOptionError:
+            # remember it for next invocation
+            self._config.set(self._section, 'jobdaemon_port', '9197')
+            return self._config.get(self._section, 'jobdaemon_port')
+
+    @property
+    def jobdaemon_session(self):
+        try:
+            return self._config.get(self._section, 'jobdaemon_session')
+        except ConfigParser.NoOptionError:
+            # remember it for next invocation
+            self._config.set(self._section, 'jobdaemon_session', os.getcwd())
+            return self._config.get(self._section, 'jobdaemon_session')
+
+    @property
+    def jobdaemon_url(self):
+        """
+        Build connection URL from ``jobdaemon_host`` and ``jobdaemon_port``.
+        """
+        return ('http://{host}:{port}'
+                .format(host=self.jobdaemon_host,
+                        port=self.jobdaemon_port))
 
     @property
     def logging_verbosity(self):
