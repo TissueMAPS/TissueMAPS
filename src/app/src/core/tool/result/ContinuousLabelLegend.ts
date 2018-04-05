@@ -1,4 +1,5 @@
 // Copyright 2016 Markus D. Herrmann, University of Zurich and Robin Hafen
+// Copyright 2018 University of Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,8 +25,8 @@ class ContinuousLabelLegend extends Legend {
         var imageData = [];
         var step = (max - min) / 100;
 
-        for (var i = min; i <= max; i += step) {
-            imageData.push([i]);
+        for (var i = 0; i < 100; i++) {
+            imageData.push([min + i*step]);
         }
 
         var colorscale = [
@@ -44,7 +45,8 @@ class ContinuousLabelLegend extends Legend {
 
        var i: number;
        var j: number;
-       for (i = min, j = 0; i <= max; i += step, j++) {
+       for (j = 0; j < 100; j++) {
+           i = min + j*step;
            if (j % 10 == 0) {
                var val = Math.floor(i * 100) / 100;
                var str = ('     ' + val).slice(-15);
