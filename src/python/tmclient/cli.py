@@ -872,6 +872,11 @@ segmentation_download_parser.set_defaults(
     method='download_segmentation_image_file'
 )
 
+segmentation_download_parser.add_argument(
+    '--align', action='store_true',
+    help='whether segmentation image should be aligned to other cycles'
+)
+
 #######################
 # Channel image files #
 #######################

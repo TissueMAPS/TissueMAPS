@@ -1547,12 +1547,12 @@ class TmClient(HttpClient):
         self._write_file(directory, os.path.basename(filename), data)
 
     def _download_segmentation_image(self, mapobject_type_name, plate_name,
-            well_name, well_pos_y, well_pos_x, tpoint, zplane):
+            well_name, well_pos_y, well_pos_x, tpoint, zplane, align):
         logger.info(
             'download segmentation image for experiment "%s", objects "%s" at '
-            'plate "%s", well "%s", y %d, x %d, tpoint %d, zplane %d',
+            'plate "%s", well "%s", y %d, x %d, tpoint %d, zplane %d, align %r',
             self.experiment_name, mapobject_type_name, plate_name, well_name,
-            well_pos_y, well_pos_x, tpoint, zplane
+            well_pos_y, well_pos_x, tpoint, zplane, align
         )
         params = {
             'plate_name': plate_name,
@@ -1560,7 +1560,8 @@ class TmClient(HttpClient):
             'well_pos_x': well_pos_x,
             'well_pos_y': well_pos_y,
             'tpoint': tpoint,
-            'zplane': zplane
+            'zplane': zplane,
+            'align': align
         }
         mapobject_type_id = self._get_mapobject_type_id(mapobject_type_name)
         url = self._build_api_url(
@@ -1575,7 +1576,7 @@ class TmClient(HttpClient):
         return res.json()['data']
 
     def download_segmentation_image(self, mapobject_type_name,
-            plate_name, well_name, well_pos_y, well_pos_x, tpoint=0, zplane=0):
+            plate_name, well_name, well_pos_y, well_pos_x, tpoint=0, zplane=0, align = False):
         '''Downloads a segmentation image.
 
         Parameters
@@ -1596,6 +1597,8 @@ class TmClient(HttpClient):
             zero-based time point index (default: ``0``)
         zplane: int, optional
             zero-based z-plane index (default: ``0``)
+        align: bool, optional
+            option to apply alignment to download
 
         Returns
         -------
@@ -1609,12 +1612,12 @@ class TmClient(HttpClient):
         '''
         response = self._download_segmentation_image(
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
-            tpoint, zplane
+            tpoint, zplane, align
         )
         return np.array(response, dtype=np.int32)
 
     def download_segmentation_image_file(self, mapobject_type_name,
-            plate_name, well_name, well_pos_y, well_pos_x, tpoint, zplane,
+            plate_name, well_name, well_pos_y, well_pos_x, tpoint, zplane, align,
             directory):
         '''Downloads a segmentation image and writes it to a *PNG* file on disk.
 
@@ -1634,6 +1637,8 @@ class TmClient(HttpClient):
             zero-based time point index
         zplane: int
             zero-based z-plane index
+        align: bool
+            option to apply alignment to download
         directory: str
             absolute path to the directory on disk where the file should be saved
 
@@ -1648,7 +1653,7 @@ class TmClient(HttpClient):
         '''
         response = self._download_segmentation_image(
             mapobject_type_name, plate_name, well_name, well_pos_y, well_pos_x,
-            tpoint, zplane
+            tpoint, zplane, align
         )
         image = np.array(response, np.int32)
         if np.max(image) >= 2**16:
