@@ -1,5 +1,6 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -88,6 +89,39 @@
     state: present
     option: storage_home
     value: "{{ fs_data_directory }}"
+    owner: "{{ tm_user }}"
+    mode: "u+rwx"
+  tags:
+    - tissuemaps
+
+- name: Create root directory for GC3Pie session files
+  file:
+    path: "{{ jobdaemon_directory | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0777
+  tags:
+    - tissuemaps
+
+- name: Create GC3Pie session directory
+  file:
+    path: "{{ jobdaemon_directory }}"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  tags:
+    - tissuemaps
+
+- name: Update ``jobdaemon_session`` in TissueMAPS configuration
+  ini_file:
+    dest: "{{ tm_config_file }}"
+    section: tmserver
+    state: present
+    option: jobdaemon_session
+    value: "{{ jobdaemon_directory }}"
     owner: "{{ tm_user }}"
     mode: "u+rwx"
   tags:
