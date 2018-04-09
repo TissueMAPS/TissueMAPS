@@ -121,7 +121,7 @@ class Task(MainModel, DateMixIn):
     #: datetime.timedelta: total time of task
     time = Column(Interval)
 
-    #: int: total memory in MG of task
+    #: int: total memory in MB of task
     memory = Column(Integer)
 
     #: datetime.timedelta: total CPU time of task
@@ -136,7 +136,7 @@ class Task(MainModel, DateMixIn):
     #: int: ID of the parent task
     parent_id = Column(BigInteger, index=True)
 
-    #: Pickeled Python `gc3libs.Task` object
+    #: "Pickled" Python `gc3libs.Task` object
     data = Column(LargeBinary)
 
     #: int: ID of parent submission
