@@ -1,6 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016,  Markus D. Herrmann, University of Zurich and Robin Hafen
-# Copyright (C) 2018   University of Zurich
+# Copyright (C) 2016, Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -210,30 +210,6 @@ def _create_experiment_db_tables(connection, schema_name):
 #         if table.info['is_distributed']:
 #             table_copy = table.tometadata(experiment_specific_metadata)
 #     experiment_specific_metadata.create_all(connection)
-
-
-@listens_for(sqlalchemy.pool.Pool, 'connect')
-def _on_pool_connect(dbapi_con, connection_record):
-    logger.debug(
-        'database connection created for pool: %d',
-        dbapi_con.get_backend_pid()
-    )
-
-
-@listens_for(sqlalchemy.pool.Pool, 'checkin')
-def _on_pool_checkin(dbapi_con, connection_record):
-    logger.debug(
-        'database connection returned to pool: %d',
-        dbapi_con.get_backend_pid()
-    )
-
-
-@listens_for(sqlalchemy.pool.Pool, 'checkout')
-def _on_pool_checkout(dbapi_con, connection_record, connection_proxy):
-    logger.debug(
-        'database connection retrieved from pool: %d',
-        dbapi_con.get_backend_pid()
-    )
 
 
 def create_db_session_factory():
