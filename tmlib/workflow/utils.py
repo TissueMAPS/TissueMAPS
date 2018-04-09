@@ -72,7 +72,6 @@ def create_gc3pie_sql_store():
     logger.debug('create GC3Pie store using "tasks" table')
     store_url = Url(cfg.db_master_uri)
     table_columns = tm.Task.__table__.columns
-    now = datetime.now()
     return make_sqlstore(
         url=store_url,
         table_name='tasks',
@@ -95,8 +94,14 @@ def create_gc3pie_sql_store():
                 lambda task: hasattr(task, 'tasks'),
             table_columns['type']:
                 lambda task: type(task).__name__,
+            # FIXME: this is still incorrect if the task's state gets
+            # reset to ``NEW`` (as happens in `.redo()`) but still
+            # better than the previous code which would use the
+            # timestamp of the time this `create_gc3pie_store()`
+            # function was invoked...
             table_columns['created_at']:
-                lambda task: now,
+                lambda task: datetime.fromtimestamp(
+                    task.execution.timestamp.get('NEW', 0)),
             table_columns['updated_at']:
                 lambda task: datetime.now()
         }
