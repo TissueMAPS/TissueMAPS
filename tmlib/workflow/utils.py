@@ -56,6 +56,34 @@ def _get_task_memory(task, attr):
     return get_recursive(task, 0)
 
 
+def get_gc3pie_store_extra_fields():
+    '''
+    Return the "extra fields" argument for constructing a `gc3libs.SqlStore`:class:.
+
+    This method has been factored out of `create_gc3pie_sql_store()`
+    to be used in contexts where we need additional flexibility in
+    creating the SQL store.
+    '''
+    table_columns = tm.Task.__table__.columns
+    return {
+        table_columns['name']: lambda task: task.jobname,
+        table_columns['exitcode']: lambda task: task.execution.exitcode,
+        table_columns['time']: lambda task: _get_task_time(task, 'duration'),
+        table_columns['memory']: lambda task: _get_task_memory(task, 'max_used_memory'),
+        table_columns['cpu_time']: lambda task: _get_task_time(task, 'used_cpu_time'),
+        table_columns['submission_id']: lambda task: task.submission_id,
+        table_columns['parent_id']: lambda task: task.parent_id,
+        table_columns['is_collection']: lambda task: hasattr(task, 'tasks'),
+        table_columns['type']: lambda task: type(task).__name__,
+        # FIXME: this is still incorrect if the task's state gets
+        # reset to ``NEW`` (as happens in `.redo()`) but still better
+        # than the previous code which would use the timestamp of the
+        # time this `create_gc3pie_store()` function was invoked...
+        table_columns['created_at']: lambda task: datetime.fromtimestamp(task.execution.timestamp.get('NEW', 0)),
+        table_columns['updated_at']: lambda task: datetime.now(),
+    }
+
+
 def create_gc3pie_sql_store():
     '''Creates a `Store` instance for job persistence in the PostgreSQL table
     :class:`Tasks <tmlib.models.submission.Tasks>`.
@@ -71,40 +99,10 @@ def create_gc3pie_sql_store():
     '''
     logger.debug('create GC3Pie store using "tasks" table')
     store_url = Url(cfg.db_master_uri)
-    table_columns = tm.Task.__table__.columns
     return make_sqlstore(
         url=store_url,
         table_name='tasks',
-        extra_fields={
-            table_columns['name']:
-                lambda task: task.jobname,
-            table_columns['exitcode']:
-                lambda task: task.execution.exitcode,
-            table_columns['time']:
-                lambda task: _get_task_time(task, 'duration'),
-            table_columns['memory']:
-                lambda task: _get_task_memory(task, 'max_used_memory'),
-            table_columns['cpu_time']:
-                lambda task: _get_task_time(task, 'used_cpu_time'),
-            table_columns['submission_id']:
-                lambda task: task.submission_id,
-            table_columns['parent_id']:
-                lambda task: task.parent_id,
-            table_columns['is_collection']:
-                lambda task: hasattr(task, 'tasks'),
-            table_columns['type']:
-                lambda task: type(task).__name__,
-            # FIXME: this is still incorrect if the task's state gets
-            # reset to ``NEW`` (as happens in `.redo()`) but still
-            # better than the previous code which would use the
-            # timestamp of the time this `create_gc3pie_store()`
-            # function was invoked...
-            table_columns['created_at']:
-                lambda task: datetime.fromtimestamp(
-                    task.execution.timestamp.get('NEW', 0)),
-            table_columns['updated_at']:
-                lambda task: datetime.now()
-        }
+        extra_fields=get_gc3pie_store_extra_fields(),
     )
 
 
