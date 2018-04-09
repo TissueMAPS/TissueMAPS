@@ -36,7 +36,9 @@ def _get_task_time(task, attr):
     def get_recursive(_task, duration):
         if hasattr(_task, 'tasks'):
             if len(_task.tasks) > 0:
-                duration += sum(get_recursive(t, duration) for t in _task.tasks)
+                duration += sum(
+                    (get_recursive(t, duration) for t in _task.tasks),
+                    timedelta())
         else:
             if hasattr(_task.execution, attr):
                 duration += getattr(_task.execution, attr).to_timedelta()
@@ -48,7 +50,9 @@ def _get_task_memory(task, attr):
     def get_recursive(_task, memory):
         if hasattr(_task, 'tasks'):
             if len(_task.tasks) > 0:
-                memory += sum(get_recursive(t, memory) for t in _task.tasks)
+                memory += sum(
+                    (get_recursive(t, memory) for t in _task.tasks),
+                    0)
         else:
             if hasattr(_task.execution, attr):
                 memory += getattr(_task.execution, attr).amount(Memory.MB)
