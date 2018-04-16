@@ -1,5 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -79,7 +80,7 @@ def create_directory(location):
         absolute path to the directory that should be created
     '''
     try:
-        os.mkdir(location)
+        os.makedirs(location)
     except OSError as err:
         if err.errno != 17:
             raise
@@ -475,8 +476,6 @@ class autocreate_directory_property(object):
         when the value of the property doesn't have type basestring
     ValueError
         when the value of the property is empty
-    OSError
-        when the parent directory does not exist
 
     Examples
     --------
@@ -510,11 +509,6 @@ class autocreate_directory_property(object):
             raise ValueError(
                 'Value of property "%s" cannot be empty.'
                 % self.func.__name__
-            )
-        if not os.path.exists(os.path.dirname(value)):
-            raise OSError(
-                'Value of property "%s" must be a valid path: %s'
-                % (self.func.__name__, value)
             )
         if not os.path.exists(value):
             logger.debug('create directory: %s', value)
@@ -572,4 +566,3 @@ def notimplemented(func):
     # NOTE: this is used by tmlib.workflow.api._ApiMeta!
     wrapper.is_implemented = False
     return wrapper
-
