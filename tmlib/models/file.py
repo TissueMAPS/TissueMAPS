@@ -178,6 +178,10 @@ class MicroscopeMetadataFile(FileModel, DateMixIn):
             )
         return self._location
 
+    @location.setter
+    def location(self, path_to_files):
+        self._location = path_to_files
+
     @notimplemented
     def get(self):
         pass

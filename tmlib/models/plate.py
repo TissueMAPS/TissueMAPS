@@ -149,6 +149,10 @@ class Plate(DirectoryModel, DateMixIn):
                 os.mkdir(self._location)
         return self._location
 
+    @location.setter
+    def location(self, path_to_files):
+        self._location = path_to_files
+
     @autocreate_directory_property
     def acquisitions_location(self):
         '''str: location where acquisitions are stored'''
