@@ -1246,6 +1246,49 @@ class TmClient(HttpClient):
 
         return registered_filenames
 
+
+
+    def register_microscope_files(self, plate_name, acquisition_name,
+                                path):
+        '''
+        Register microscope files contained in `path` (Server side).
+        If `path` is a directory, upload all files contained in it.
+
+        Parameters
+        ----------
+        plate_name: str
+            name of the parent plate
+        acquisition_name: str
+            name of the parent acquisition
+        path: str
+            path to a directory on disk where the files that should be uploaded
+            are located
+        Returns:
+        -------
+        List[str]
+            names of registered files
+        '''
+
+        logger.info(
+            'register microscope files for experiment "%s", plate "%s" '
+            'and acquisition "%s"',
+            self.experiment_name, plate_name, acquisition_name
+        )
+
+	acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
+        register_url = self._build_api_url(
+            '/experiments/{experiment_id}/acquisitions/{acquisition_id}/register'
+            .format(experiment_id=self._experiment_id, acquisition_id=acquisition_id)
+        )
+
+        logger.debug('register files for upload')
+        url = self._build_api_url('/experiments/{experiment_id}/acquisitions/{acquisition_id}/register'.format(experiment_id=self._experiment_id, acquisition_id=acquisition_id))
+        payload = {'path': path}
+        res = self._session.post(url, json=payload)
+        res.raise_for_status()
+        return res.json()['message']
+
+
     def _register_files_for_upload(self, acquisition_id, filenames):
         logger.debug('register files for upload')
         url = self._build_api_url(

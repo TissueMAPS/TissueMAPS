@@ -647,6 +647,19 @@ microscope_file_upload_parser.set_defaults(
     method='upload_microscope_files'
 )
 
+microscope_file_register_parser = microscope_file_subparsers.add_parser(
+    'register',
+    help='register microscope files',
+    description='Register microscope image and metadata files. It assumes a NFS has been mounted server side',
+    parents=[abstract_acquisition_parser]
+)
+microscope_file_upload_parser.add_argument(
+    'path', help='path to file or directory to upload'
+)
+
+microscope_file_register_parser.set_defaults(
+    method='register_microscope_files'
+)
 
 ############
 # Channels #
