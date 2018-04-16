@@ -34,7 +34,7 @@ from tmserver.util import (
 )
 from tmserver.api import api
 from tmserver.error import *
-
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -286,6 +286,109 @@ def get_acquisition(experiment_id, acquisition_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
         return jsonify(data=acquisition)
+
+
+@api.route(
+    '/experiments/<experiment_id>/acquisitions/<acquisition_id>/register',
+    methods=['POST']
+)
+@jwt_required()
+@assert_form_params('path')
+@jwt_required()
+@decode_query_ids('write')
+def register(experiment_id, acquisition_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/register
+
+        Pass the NFS path to the data to the server.
+        The client has to wait for this response before uploading files.
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "path": "/fullpath/to/serversidedata"
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": "/fullpath/to/serversidedata"
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 500: server error
+
+    """
+    logger.info('register microscope files')
+    data = request.get_json()
+    path = data['path']
+    
+    logger.info('path given by the client: %s', path)
+
+
+
+    filenames = [
+                f for f in os.listdir(path)
+                if (not f.startswith('.')
+                    and not os.path.isdir(os.path.join(path, f)))
+            ]
+
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        experiment = session.query(tm.Experiment).one()
+        microscope_type = experiment.microscope_type
+        img_regex, metadata_regex = get_microscope_type_regex(microscope_type)
+        acquisition = session.query(tm.Acquisition).get(acquisition_id)
+
+        # check for image files already registered
+        img_filenames = [f.name for f in acquisition.microscope_image_files]
+        logger.info('img_filenames %s', img_filenames)
+        img_files = [
+            tm.MicroscopeImageFile(
+                name=f, acquisition_id=acquisition.id
+            )
+            for f in filenames
+            if img_regex.search(f) and
+            f not in img_filenames
+        ]
+        # check for metadata already registered
+        meta_filenames = [f.name for f in acquisition.microscope_metadata_files]
+        meta_files = [
+            tm.MicroscopeMetadataFile(
+                name=secure_filename(f), acquisition_id=acquisition.id
+            )
+            for f in filenames
+            if metadata_regex.search(f) and
+            f not in meta_filenames
+        ]
+        
+
+        session.bulk_save_objects(img_files + meta_files)
+
+        
+        microscope_files = session.query(tm.MicroscopeImageFile).filter_by(acquisition_id=acquisition.id).all()
+        
+        for index,f in enumerate(microscope_files):
+            microscope_files[index].location = os.path.join(path,f.name)
+            microscope_files[index].status = 'COMPLETE'
+
+        
+        acquisition.location = path
+
+        plate = session.query(tm.Plate).all()          
+        plate[0].location = path
+
+    return jsonify(message='ok')
+
 
 
 @api.route(
