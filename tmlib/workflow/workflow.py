@@ -25,9 +25,11 @@ from cached_property import cached_property
 from gc3libs.workflow import (
     AbortOnError, SequentialTaskCollection, ParallelTaskCollection
 )
-from gc3libs.persistence.sql import IdFactory, IntId
+from gc3libs.persistence.idfactory import IdFactory
+from gc3libs.persistence.sql import IntId
 
 import tmlib.models
+from tmlib.models.utils import MainSession
 from tmlib.utils import assert_type
 from tmlib.workflow import get_step_api
 from tmlib.workflow.description import WorkflowDescription
@@ -40,7 +42,20 @@ from tmlib.workflow.jobs import (
 
 logger = logging.getLogger(__name__)
 
-_idfactory = IdFactory(id_class=IntId)
+def _postgresql_next_task_id(n=1):
+    """
+    Return the next object ID for the ``tasks`` table.
+
+    This function leverages PostgreSQL's sequence support, which makes
+    it safe against multi-threading and multi-process usage.
+    """
+    with MainSession() as db:
+        q = db.execute("SELECT nextval('tasks_id_seq');")
+        return q.fetchone()[0]
+
+_idfactory = IdFactory(
+    next_id_fn=_postgresql_next_task_id,
+    id_class=IntId)
 
 
 class State(object):
