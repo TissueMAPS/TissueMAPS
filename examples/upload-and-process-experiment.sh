@@ -11,6 +11,7 @@ username='devuser'
 password='123456'
 wait='n'
 analysis='n'
+workflow='y'
 
 ## usage help
 
@@ -25,7 +26,8 @@ is used as the experiment name.
 The script makes a few assumptions on how the files are laid out into DATADIR:
 
 * that DATADIR contains a file 'workflow_description.yaml' which defines the
-  TissueMAPS workflow to run;
+  TissueMAPS workflow to run. If not possible, script can be run with
+  --upload-only, to create experiment and upload the data without submission.
 
 * that DATADIR contains a subdirectory 'jterator' which in turn contains
   a file 'pipeline.yaml' and a subdirectory 'handles' with the descriptions
@@ -45,6 +47,7 @@ Options:
   --port, -P PORT  TCP port to contact the TM REST API (default: ${port})
   --user, -u NAME  TM username to authenticate as (default: ${username})
   --pass, -p PASS  Password to use for authentication (default: ${password})
+  --upload-only    Do not submit workflow (create and upload only)
   --analysis       Upload a jterator image analysis pipeline and submit
   --wait           Check workflow status after submitting
 
@@ -128,7 +131,7 @@ fi
 ## parse command-line
 
 short_opts='H:hP:p:u:w'
-long_opts='help,host:,pass:,port:,user:,wait'
+long_opts='help,host:,pass:,port:,user:,analysis,upload-only,wait'
 
 # test which `getopt` version is available:
 # - GNU `getopt` will generate no output and exit with status 4
@@ -166,6 +169,7 @@ while [ $# -gt 0 ]; do
             fi
             ;;
         --analysis|-a) analysis='y' ;;
+        --upload-only) workflow='n' ;;
         --help|-h) usage; exit 0 ;;
         --) shift; break ;;
     esac
@@ -182,8 +186,10 @@ fi
 if ! [ -d "${datadir}"/plates ]; then
     die $EX_NOINPUT "Cannot enumerate plates: no directory `plates/` inside '${datadir}'."
 fi
-if ! [ -r "${datadir}/workflow_description.yaml" ]; then
-    die $EX_NOINPUT "Missing workflow description file in directory '$datadir'"
+if [ "$workflow" = 'y']; then
+  if ! [ -r "${datadir}/workflow_description.yaml" ]; then
+      die $EX_NOINPUT "Missing workflow description file in directory '$datadir', run with --upload-only to upload data without submission."
+  fi
 fi
 
 if [ "$analysis" = 'y' ]; then
@@ -247,7 +253,9 @@ done
 
 # Upload workflow description:
 
-tm_client workflow -e "${name}" upload --file "${datadir}/workflow_description.yaml"
+if [ "$workflow" = 'y' ]; then
+  tm_client workflow -e "${name}" upload --file "${datadir}/workflow_description.yaml"
+fi
 
 # Upload jterator project description:
 
@@ -256,8 +264,9 @@ if [ "$analysis" = 'y' ]; then
 fi
 
 # Submit workflow:
-
-tm_client workflow -e "${name}" submit
+if [ "$workflow" = 'y' ]; then
+  tm_client workflow -e "${name}" submit
+fi
 
 # Check workflow:
 
