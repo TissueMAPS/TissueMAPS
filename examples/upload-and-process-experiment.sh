@@ -247,7 +247,7 @@ for plate_dir in "${datadir}"/plates/*; do
         fi
         acquisition_name=$(basename "$acquisition_dir")
         tm_client acquisition -e "${name}" create -p "$plate_name" -n "$acquisition_name"
-        tm_client -v microscope-file -e "${name}" upload -p "$plate_name" -a "$acquisition_name" "$acquisition_dir"
+        tm_client -v microscope-file -e "${name}" upload -p "$plate_name" -a "$acquisition_name" "$acquisition_dir" --parallel
     done
 done
 
