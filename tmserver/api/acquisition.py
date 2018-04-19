@@ -287,7 +287,6 @@ def get_acquisition(experiment_id, acquisition_id):
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
         return jsonify(data=acquisition)
 
-
 @api.route(
     '/experiments/<experiment_id>/acquisitions/<acquisition_id>/register',
     methods=['POST']
@@ -332,9 +331,9 @@ def register(experiment_id, acquisition_id):
     logger.info('register microscope files')
     data = request.get_json()
     path = data['path']
-    
     logger.info('path given by the client: %s', path)
 
+    path_to_link = '/storage/filesystem/experiment_{}/plates/plate_1/acquisitions/acquisition_{}/microscope_images' 
 
 
     filenames = [
@@ -348,10 +347,17 @@ def register(experiment_id, acquisition_id):
         microscope_type = experiment.microscope_type
         img_regex, metadata_regex = get_microscope_type_regex(microscope_type)
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
-
+        # single plate only
+        plate = session.query(tm.Plate).one()
+        
+        logger.info('path to link: %s', path_to_link.format(experiment.id, acquisition.id))
+        logger.info('experiment %s', experiment.id)
+        logger.info('acquisition %s', acquisition)
+        logger.info('plate %s', plate)
+ 
         # check for image files already registered
         img_filenames = [f.name for f in acquisition.microscope_image_files]
-        logger.info('img_filenames %s', img_filenames)
+        logger.debug('img_filenames %s', img_filenames)
         img_files = [
             tm.MicroscopeImageFile(
                 name=f, acquisition_id=acquisition.id
@@ -375,19 +381,23 @@ def register(experiment_id, acquisition_id):
         session.bulk_save_objects(img_files + meta_files)
 
         
+        # Trigger creation of directories
+        acquisition.location
+        acquisition.microscope_images_location
+        acquisition.microscope_metadata_location
+        
+        for image in filenames: 
+            os.symlink( os.path.join(path,image), os.path.join(path_to_link.format(experiment.id,acquisition.id),image) )
+
         microscope_files = session.query(tm.MicroscopeImageFile).filter_by(acquisition_id=acquisition.id).all()
         
         for index,f in enumerate(microscope_files):
-            microscope_files[index].location = os.path.join(path,f.name)
+            microscope_files[index].location = os.path.join(path_to_link.format(experiment.id,acquisition.id),f.name)
             microscope_files[index].status = 'COMPLETE'
 
-        
-        acquisition.location = path
-
-        plate = session.query(tm.Plate).all()          
-        plate[0].location = path
 
     return jsonify(message='ok')
+
 
 
 
