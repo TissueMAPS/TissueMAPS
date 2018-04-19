@@ -367,9 +367,9 @@ class MetadataConfigurator(WorkflowStepAPI):
                             if is_multiplexing:
                                 # In case of a multiplexing experiment
                                 # we create a separate channel for each
-                                # combination of plate, wavelength and tpoint.
-                                new_channel_name = '{p}_{c}_{w}'.format(
-                                    p=p, c=c_index, w=w
+                                # combination of wavelength and tpoint.
+                                new_channel_name = '{c}_{w}'.format(
+                                    c=c_index, w=w
                                 )
                             else:
                                 # In case of a time series experiment
@@ -381,7 +381,7 @@ class MetadataConfigurator(WorkflowStepAPI):
                             # "name" attribute should have been set to the
                             # value of the "wavelength" attribute).
                             channel = session.query(tm.Channel).\
-                                filter_by(name=new_channel_name, wavelength=w).\
+                                filter_by(name=w, wavelength=w).\
                                 one_or_none()
                             if channel is not None:
                                 channel.name = new_channel_name
