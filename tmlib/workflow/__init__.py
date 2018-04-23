@@ -1,5 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -359,14 +360,14 @@ def get_step_api(name):
         module = importlib.import_module(module_name)
     except ImportError as error:
         raise ImportError(
-            'Import of module "%s" failed: %s' % (module_name, str(error))
+            'Importing module "%s" failed: %s' % (module_name, error)
         )
     except:
         raise
     try:
         return _step_register[name]['api']
     except KeyError:
-        raise RegistryError('API is not registered for step "%s".' % name)
+        raise RegistryError('No API registered for step "%s".' % name)
 
 
 def get_step_information(name):
@@ -402,5 +403,3 @@ from workflow import Workflow
 from workflow import WorkflowStep
 from workflow import ParallelWorkflowStage
 from workflow import SequentialWorkflowStage
-
-
