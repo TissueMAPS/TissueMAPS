@@ -25,11 +25,9 @@ from cached_property import cached_property
 from gc3libs.workflow import (
     AbortOnError, SequentialTaskCollection, ParallelTaskCollection
 )
-from gc3libs.persistence.idfactory import IdFactory
-from gc3libs.persistence.sql import IntId
 
+from tmlib.globals import idfactory
 import tmlib.models
-from tmlib.models.utils import MainSession
 from tmlib.utils import assert_type
 from tmlib.workflow import get_step_api
 from tmlib.workflow.description import WorkflowDescription
@@ -41,21 +39,6 @@ from tmlib.workflow.jobs import (
 )
 
 logger = logging.getLogger(__name__)
-
-def _postgresql_next_task_id(n=1):
-    """
-    Return the next object ID for the ``tasks`` table.
-
-    This function leverages PostgreSQL's sequence support, which makes
-    it safe against multi-threading and multi-process usage.
-    """
-    with MainSession() as db:
-        q = db.execute("SELECT nextval('tasks_id_seq');")
-        return q.fetchone()[0]
-
-_idfactory = IdFactory(
-    next_id_fn=_postgresql_next_task_id,
-    id_class=IntId)
 
 
 class State(object):
@@ -129,7 +112,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         self.submission_id = submission_id
         self.user_name = user_name
         self.parent_id = parent_id
-        self.persistent_id = _idfactory.new(self)
+        self.persistent_id = idfactory.new(self)
         self.description = description
         self._current_task = 0
 
@@ -227,8 +210,8 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
 
     @cached_property
     def _api_instance(self):
-        logger.debug('load API for step "%s"', self.name)
         API = get_step_api(self.name)
+        logger.debug('Using API %s for step "%s"', API, self.name)
         return API(self.experiment_id)
 
     def _create_init_phase(self):
@@ -380,7 +363,7 @@ class WorkflowStage(State):
                 'tmlib.tmaps.description.WorkflowStageDescription'
             )
         self.description = description
-        self.persistent_id = _idfactory.new(self)
+        self.persistent_id = idfactory.new(self)
         self._add_steps()
 
     def _add_steps(self):
@@ -630,7 +613,7 @@ class Workflow(SequentialTaskCollection, State):
             super(Workflow, self).__init__(tasks=None, jobname=self.name)
         self.update_description(description)
         self.parent_id = None
-        self.persistent_id = _idfactory.new(self)
+        self.persistent_id = idfactory.new(self)
         self._current_task = 0
         self._add_stages()
         # Update the first stage and its first step to start the workflow
@@ -684,34 +667,25 @@ class Workflow(SequentialTaskCollection, State):
 
     def _create_stage(self, description):
         if description.mode == 'sequential':
-            logger.debug(
-                'create sequential stage "%s" of workflow "%s"',
-                description.name, self.name
-            )
-            stage = SequentialWorkflowStage(
-                name=description.name,
-                experiment_id=self.experiment_id,
-                verbosity=self.verbosity,
-                submission_id=self.submission_id,
-                user_name=self.user_name,
-                parent_id=self.persistent_id,
-                description=description,
-                waiting_time=self.waiting_time
-            )
+            ctor = SequentialWorkflowStage
+            extra = { 'waiting_time': self.waiting_time }
         elif description.mode == 'parallel':
-            logger.debug(
-                'create parallel stage "%s" of workflow "%s"',
-                description.name, self.name
-            )
-            stage = ParallelWorkflowStage(
-                name=description.name,
-                experiment_id=self.experiment_id,
-                verbosity=self.verbosity,
-                submission_id=self.submission_id,
-                user_name=self.user_name,
-                parent_id=self.persistent_id,
-                description=description
-            )
+            ctor = ParallelWorkflowStage
+            extra = {}
+        logger.debug(
+            'Creating %s stage "%s" of workflow "%s" ...',
+            description.mode, description.name, self.name
+        )
+        stage = ctor(
+            description=description,
+            experiment_id=self.experiment_id,
+            name=description.name,
+            parent_id=self.persistent_id,
+            submission_id=self.submission_id,
+            user_name=self.user_name,
+            verbosity=self.verbosity,
+            **extra
+        )
         return stage
 
     @property

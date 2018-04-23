@@ -3,6 +3,7 @@ import gc3libs
 from abc import ABCMeta
 from abc import abstractproperty
 
+from tmlib.globals import idfactory
 from tmlib.utils import create_datetimestamp
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ class Job(gc3libs.Application):
         self.user_name = user_name
         self.submission_id = submission_id
         self.parent_id = parent_id
+        self.persistent_id = idfactory.new(self)
         super(Job, self).__init__(
             jobname=self.name,
             arguments=arguments,

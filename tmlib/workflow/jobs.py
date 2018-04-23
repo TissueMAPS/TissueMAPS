@@ -21,13 +21,11 @@ from abc import abstractproperty
 from gc3libs.workflow import (
     AbortOnError, SequentialTaskCollection, ParallelTaskCollection
 )
-from gc3libs.persistence.sql import IdFactory, IntId
 
+from tmlib.globals import idfactory
 from tmlib.jobs import Job
 
 logger = logging.getLogger(__name__)
-
-_idfactory = IdFactory(id_class=IntId)
 
 
 class WorkflowStepJob(Job):
@@ -268,7 +266,7 @@ class InitPhase(ParallelTaskCollection, JobCollection):
             tasks.append(job)
         self.name = '%s_init' % self.step_name
         self.parent_id = parent_id
-        self.persistent_id = _idfactory.new(self)
+        self.persistent_id = idfactory.new(self)
         self.submission_id = submission_id
         super(InitPhase, self).__init__(jobname=self.name, tasks=tasks)
 
@@ -334,7 +332,7 @@ class CollectPhase(ParallelTaskCollection, JobCollection):
             tasks.append(job)
         self.name = '%s_collect' % self.step_name
         self.parent_id = parent_id
-        self.persistent_id = _idfactory.new(self)
+        self.persistent_id = idfactory.new(self)
         self.submission_id = submission_id
         super(CollectPhase, self).__init__(jobname=self.name, tasks=tasks)
 
@@ -420,7 +418,7 @@ class SingleRunPhase(ParallelTaskCollection, RunPhase):
                 raise TypeError('Argument "index" must have type int.')
             self.name = '%s_run-%.2d' % (self.step_name, index)
         self.parent_id = parent_id
-        self.persistent_id = _idfactory.new(self)
+        self.persistent_id = idfactory.new(self)
         self.submission_id = submission_id
         super(SingleRunPhase, self).__init__(jobname=self.name, tasks=jobs)
 
@@ -478,7 +476,7 @@ class MultiRunPhase(AbortOnError, SequentialTaskCollection, RunPhase):
         self.name = '%s_run' % step_name
         self.step_name = step_name
         self.parent_id = parent_id
-        self.persistent_id = _idfactory.new(self)
+        self.persistent_id = idfactory.new(self)
         self.submission_id = submission_id
         if run_job_collections is None:
             run_job_collections = list()
@@ -538,5 +536,5 @@ class IndependentJobCollection(SequentialTaskCollection, JobCollection):
                     'First job must have type '
                     'tmlib.workflow.jobs.RunPhase.'
                 )
-        self.persistent_id = _idfactory.new(self)
+        self.persistent_id = idfactory.new(self)
         super(IndependentJobCollection, self).__init__(jobname=step_name, tasks=jobs)
