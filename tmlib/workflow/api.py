@@ -1,5 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -72,33 +73,6 @@ def _is_model_class_attr(obj):
     )
 
 
-class BasicWorkflowStepAPI(object):
-
-    '''Abstract base class for cluster routines.'''
-
-    __metaclass__ = ABCMeta
-
-    @property
-    def datetimestamp(self):
-        '''
-        Returns
-        -------
-        str
-            datetime stamp in the form "year-month-day_hour:minute:second"
-        '''
-        return utils.create_datetimestamp()
-
-    @property
-    def timestamp(self):
-        '''
-        Returns
-        -------
-        str
-            time stamp in the form "hour:minute:second"
-        '''
-        return utils.create_timestamp()
-
-
 class _ApiMeta(ABCMeta):
 
     '''Metaclass for
@@ -124,7 +98,7 @@ class _ApiMeta(ABCMeta):
         setattr(cls, 'has_collect_phase', has_collect_phase)
 
 
-class WorkflowStepAPI(BasicWorkflowStepAPI):
+class WorkflowStepAPI(object):
 
     '''Abstract base class for API classes, which provide methods for
     for large-scale image processing on a batch cluster.
@@ -168,6 +142,27 @@ class WorkflowStepAPI(BasicWorkflowStepAPI):
                     'No experiment with ID %d found.' % self.experiment_id
                 )
             self.workflow_location = experiment.workflow_location
+
+
+    @property
+    def datetimestamp(self):
+        '''
+        Returns
+        -------
+        str
+            datetime stamp in the form "year-month-day_hour:minute:second"
+        '''
+        return utils.create_datetimestamp()
+
+    @property
+    def timestamp(self):
+        '''
+        Returns
+        -------
+        str
+            time stamp in the form "hour:minute:second"
+        '''
+        return utils.create_timestamp()
 
     @property
     def step_name(self):
