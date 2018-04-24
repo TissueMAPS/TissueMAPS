@@ -452,7 +452,7 @@ class _SQLAlchemy_Session(object):
                     raise
             except TypeError:
                 raise TypeError(
-                    'Wrong arugments for instantiation of model class "%s".'
+                    'Wrong arguments for instantiation of model class "%s".'
                     % model.__name__
                 )
             except:
