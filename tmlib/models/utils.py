@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016, Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
 # Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
@@ -568,7 +568,7 @@ class _SQLAlchemy_Session(object):
         else:
             self._session.add(instance)
 
-    def add_all(self, instance):
+    def add_all(self, instances):
         '''Adds multiple instances of a model class.
 
         Parameters
@@ -590,7 +590,7 @@ class _SQLAlchemy_Session(object):
                 for i in instances:
                     cls._add(c, i)
         else:
-            self._session.add_all(instance)
+            self._session.add_all(instances)
 
 class _Session(object):
 
