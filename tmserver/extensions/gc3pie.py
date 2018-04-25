@@ -193,7 +193,7 @@ class GC3Pie(object):
         task: gc3libs.Task
             computational task or collection of computational tasks
         """
-        logger.debug('insert task into tasks table')
+        logger.debug('insert task `%s` into tasks table', task)
         persistent_id = self._store.save(task)
         logger.debug('update submissions table')
         with tm.utils.MainSession() as session:
