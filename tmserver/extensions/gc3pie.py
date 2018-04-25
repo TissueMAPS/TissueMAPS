@@ -335,6 +335,17 @@ class GC3Pie(object):
             task.jobname, task.persistent_id)
         self._job_daemon_do('kill', str(task.persistent_id))
 
+    def kill_task_by_id(self, task_id):
+        """Kills submitted task.
+
+        Parameters
+        ----------
+        task: gc3libs.Task
+            computational task
+        """
+        logger.info('Killing task with ID %s ...', task_id)
+        self._job_daemon_do('kill', str(task_id))
+
     def resubmit_task(self, task, index=0):
         """Resubmits a task.
 

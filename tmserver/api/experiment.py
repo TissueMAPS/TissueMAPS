@@ -416,13 +416,25 @@ def delete_experiment(experiment_id):
         :statuscode 401: not authorized
 
     """
-    logger.info('delete experiment %d', experiment_id)
-    workflow = gc3pie.retrieve_most_recent_task(experiment_id, 'workflow')
-    if workflow is not None:
-        gc3pie.kill_task(workflow)
+    logger.info('Deleting experiment %d ...', experiment_id)
+    with tm.utils.MainSession() as session:
+        q = (session.query(tm.Submission)
+             .filter_by(experiment_id=experiment_id)
+             .all())
+        for row in q.all():
+            top_task_id = row.top_task_id
+            logger.debug(
+                "Killing task %s, belonging to submission %s of experiment %s",
+                top_task_id, row.id, experiment_id)
+            gc3pie.kill_task_by_id(top_task_id)
+        # now delete all references
+        q.delete(False)
+    # delete experiment reference
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        session.query(tm.ExperimentReference).\
-            filter_by(id=experiment_id).\
-            delete()
-    return jsonify(message='ok')
+        session.query(tm.ExperimentReference)\
+            .filter_by(id=experiment_id)\
+            .delete()
+    # FIXME: should delete schema `Experiment_XXX` as well!
+    return jsonify(message=('OK: deleted experiment {}'
+                            .format(experiment_id)))
