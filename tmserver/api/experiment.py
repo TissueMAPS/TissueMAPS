@@ -333,6 +333,7 @@ def create_experiment():
             plate_acquisition_mode=plate_acquisition_mode
         )
         session.add(experiment)
+        session.commit()
 
     return jsonify({
         'data': {
