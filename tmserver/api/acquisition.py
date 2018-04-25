@@ -35,6 +35,7 @@ from tmserver.util import (
 from tmserver.api import api
 from tmserver.error import *
 import os
+from ConfigParser import SafeConfigParser
 
 logger = logging.getLogger(__name__)
 
@@ -332,8 +333,13 @@ def register(experiment_id, acquisition_id):
     data = request.get_json()
     path = data['path']
     logger.info('path given by the client: %s', path)
-
-    path_to_link = '/storage/filesystem/experiment_{}/plates/plate_1/acquisitions/acquisition_{}/microscope_images' 
+    
+    # Parse storage_home variable from tissuemaps.cfg file
+    parser = SafeConfigParser()
+    parser.read('/home/tissuemaps/.tmaps/tissuemaps.cfg')
+    storage_home_path = parser.get('tmlib', 'storage_home')
+ 
+    path_to_link = os.path.join(storage_home_path,'experiment_{}/plates/plate_1/acquisitions/acquisition_{}/microscope_images') 
 
 
     filenames = [
@@ -377,24 +383,21 @@ def register(experiment_id, acquisition_id):
             f not in meta_filenames
         ]
         
-
         session.bulk_save_objects(img_files + meta_files)
 
         
         # Trigger creation of directories
         acquisition.location
-        acquisition.microscope_images_location
+        #acquisition.microscope_images_location
         acquisition.microscope_metadata_location
         
-        for image in filenames: 
-            os.symlink( os.path.join(path,image), os.path.join(path_to_link.format(experiment.id,acquisition.id),image) )
+        os.symlink(path ,path_to_link.format(experiment.id,acquisition.id) )
 
         microscope_files = session.query(tm.MicroscopeImageFile).filter_by(acquisition_id=acquisition.id).all()
         
-        for index,f in enumerate(microscope_files):
-            microscope_files[index].location = os.path.join(path_to_link.format(experiment.id,acquisition.id),f.name)
-            microscope_files[index].status = 'COMPLETE'
-
+        for microscope_file in microscope_files:
+            microscope_file.location
+            microscope_file.status = 'COMPLETE'
 
     return jsonify(message='ok')
 
