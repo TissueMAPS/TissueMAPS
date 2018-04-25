@@ -42,7 +42,20 @@ class AlignBatchArguments(BatchArguments):
 
     illumcorr = Argument(
         type=bool, default=False, short_flag='i',
-        help='wether images should be corrected for illumination artifacts'
+        help='whether images should be corrected for illumination artifacts'
+    )
+
+    robust_align = Argument(
+        type=bool, default=False, short_flag='r',
+        help='''whether pixel intensities are clipped to the specified percentile 
+             to avoid artefacts (dirt may be small but have a high intensity. 
+             Clipping its value stops it from distorting the alignment)'''
+    )
+
+    rescale_percentile = Argument(
+        type=float, default=99.90, flag='clip-percent',
+        help='''threshold percentile at which image intensities should be 
+             clipped if robust_align is selected'''
     )
 
 

@@ -140,7 +140,9 @@ class ImageRegistrator(WorkflowStepAPI):
                 yield {
                     'id': job_count,
                     'input_ids': input_ids,
-                    'illumcorr': args.illumcorr
+                    'illumcorr': args.illumcorr,
+                    'robust_align': args.robust_align,
+                    'rescale_percentile': args.rescale_percentile
                 }
 
     @same_docstring_as(WorkflowStepAPI.delete_previous_job_output)
@@ -174,7 +176,7 @@ class ImageRegistrator(WorkflowStepAPI):
         with tm.utils.ExperimentSession(self.experiment_id) as session:
             reference_file_ids = batch['input_ids']['reference_file_ids']
             target_file_ids = batch['input_ids']['target_file_ids']
-            if batch['illumcorr']:
+            if batch['illumcorr'] or batch['robust_align']:
                 logger.info('correct images for illumination artifacts')
 
                 rid = reference_file_ids[0]
@@ -215,6 +217,8 @@ class ImageRegistrator(WorkflowStepAPI):
                         )
                     target_stats[cycle_id] = illumstats_file.get()
 
+            
+
             for i, rid in enumerate(reference_file_ids):
                 reference_file = session.query(tm.ChannelImageFile).get(rid)
                 logger.info('register images at site %d', reference_file.site_id)
@@ -223,6 +227,16 @@ class ImageRegistrator(WorkflowStepAPI):
                 if batch['illumcorr']:
                     logger.debug('correct reference image')
                     reference_img = reference_img.correct(reference_stats)
+                
+                if batch['robust_align']:
+                    logger.debug('clip image for robust alignment')
+                    clip_max = reference_stats.get_closest_percentile(
+                                batch['rescale_percentile']
+                            )
+                    logger.info('clip value: %d', clip_max)
+                    clip_min = 0
+                    reference_img = reference_img.clip(clip_min, clip_max)
+
                 y_shifts = list()
                 x_shifts = list()
                 for cycle_id, tids in target_file_ids.iteritems():
@@ -233,6 +247,15 @@ class ImageRegistrator(WorkflowStepAPI):
                     if batch['illumcorr']:
                         logger.debug('correct target image')
                         target_img = target_img.correct(target_stats[cycle_id])
+
+                    if batch['robust_align']:
+                        logger.debug('clip image for robust alignment')
+                        clip_max = target_stats[cycle_id].get_closest_percentile(
+                                    batch['rescale_percentile']
+                                )
+                        logger.info('clip value: %d', clip_max)
+                        clip_min = 0
+                        target_img = target_img.clip(clip_min, clip_max)
 
                     y, x = reg.calculate_shift(
                         target_img.array, reference_img.array
