@@ -3,8 +3,6 @@
 # joel.luethi@uzh.ch
 
 # LIMITATIONS
-# Currently is not written for multiplexing experiments
-# (the way multiple acquisition & multiple original file paths are handled would need to be changed)
 # The experiment_description is also currently hard coded and would need to be changed manually if its different
 
 import os
@@ -20,7 +18,7 @@ port = "80"
 experimentName="NameOfExperiment"
 username="USERNAME"
 password="PASSWORD"
-folderContainingOriginalImages = "/PATH/TO/FOLDER/CONTAINING/ORIGINAL/IMAGES"
+folderContainingOriginalImages = ["/PATH/TO/FOLDER/CONTAINING/ORIGINAL/IMAGES"]  # List of all acquisitions
 estimatedRuntime = 7200  # In seconds. After that amount, the test will run into a timeout
 
 
@@ -45,7 +43,7 @@ plate_name = plateDownload[0]['name']
 
 # Get acquisition name
 acquisitionDownload = client.get_acquisitions()
-acquisition_name = acquisitionDownload[0]['name']
+nbAcquisitions = len(acquisitionDownload)
 
 # Make the folder where the images go
 print "Making folder structure"
@@ -61,17 +59,20 @@ imageFolderName_2 = os.path.join(imageFolderName_1,'acquisitions')
 if not os.path.exists(imageFolderName_2):
     os.makedirs(imageFolderName_2)
 
-imageFolderName = os.path.join(imageFolderName_2,acquisition_name)
-if not os.path.exists(imageFolderName):
-    os.makedirs(imageFolderName)
+# Copying all the acquisitions
+for i in range(nbAcquisitions):
+    acquisition_name = acquisitionDownload[i]['name']
+    imageFolderName = os.path.join(imageFolderName_2,acquisition_name)
+    if not os.path.exists(imageFolderName):
+        os.makedirs(imageFolderName)
 
-# Copy image files to directory
-src_files = os.listdir(folderContainingOriginalImages)
-for file_name in src_files:
-    full_file_name = os.path.join(folderContainingOriginalImages, file_name)
-    if (os.path.isfile(full_file_name)):
-        print "Copying " + file_name
-        shutil.copy(full_file_name, imageFolderName)
+    # Copy image files to directory
+    src_files = os.listdir(folderContainingOriginalImages[i])
+    for file_name in src_files:
+        full_file_name = os.path.join(folderContainingOriginalImages[i], file_name)
+        if (os.path.isfile(full_file_name)):
+            print "Copying " + file_name
+            shutil.copy(full_file_name, imageFolderName)
 
 # Make a folder for jterator
 jteratorFolderName = os.path.join(folderPath, "jterator")
