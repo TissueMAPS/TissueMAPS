@@ -71,10 +71,15 @@
   become: yes
   lineinfile:
     dest: /etc/sudoers.d/{{ tm_user }}
-    # just enough rights to run `tm_add user`
-    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/sacctmgr"
+    line: "{{ item }}"
     state: present
     create: yes
+  with_items:
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/sacctmgr"
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi start"
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi restart"
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi stop"
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi status"
 
 - name: Create SSH directory for tm_user
   become: yes
