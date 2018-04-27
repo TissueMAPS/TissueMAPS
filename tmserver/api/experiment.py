@@ -427,14 +427,14 @@ def delete_experiment(experiment_id):
                 "Killing task %s, belonging to submission %s of experiment %s",
                 top_task_id, row.id, experiment_id)
             gc3pie.kill_task_by_id(top_task_id)
-        # now delete all references
+        # now delete all submissions
         q.delete(synchronize_session=False)
-    # delete experiment reference
-    with tm.utils.MainSession() as session:
+        # delete experiment reference
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         session.query(tm.ExperimentReference)\
             .filter_by(id=experiment_id)\
             .delete()
+
     # FIXME: should delete schema `Experiment_XXX` as well!
     return jsonify(message=('OK: deleted experiment {}'
                             .format(experiment_id)))
