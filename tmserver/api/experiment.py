@@ -419,9 +419,8 @@ def delete_experiment(experiment_id):
     """
     logger.info('Deleting experiment %d ...', experiment_id)
     with tm.utils.MainSession() as session:
-        q = (session.query(tm.Submission)
-             .filter_by(experiment_id=experiment_id)
-             .all())
+        q = session.query(tm.Submission)\
+                   .filter_by(experiment_id=experiment_id)
         for row in q.all():
             top_task_id = row.top_task_id
             logger.debug(
