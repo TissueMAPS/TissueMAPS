@@ -428,7 +428,7 @@ def delete_experiment(experiment_id):
                 top_task_id, row.id, experiment_id)
             gc3pie.kill_task_by_id(top_task_id)
         # now delete all submissions
-        q.delete(synchronize_session=False)
+        q.delete()
         # delete experiment reference
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
         session.query(tm.ExperimentReference)\
