@@ -17,6 +17,8 @@ import os
 import logging
 import datetime
 
+from gc3libs.quantity import Duration
+
 from tmlib.config import TmapsConfig
 
 logger = logging.getLogger(__name__)
@@ -67,13 +69,11 @@ class ServerConfig(TmapsConfig):
     @property
     def jwt_expiration_delta(self):
         '''datetime.timedelta: time interval until JSON web token expires
-        (default: ``datetime.timedelta(hours=6)``)
+        (default: ``datetime.timedelta(hours=72)``)
         '''
-        t_string = self._config.get(self._section, 'jwt_expiration_delta')
-        t = datetime.datetime.strptime(t_string, '%H:%M:%S')
-        return datetime.timedelta(
-            hours=t.hour, minutes=t.minute, seconds=t.second
-        )
+        t = Duration(self._config.get(
+            self._section, 'jwt_expiration_delta'))
+        return datetime.timedelta(seconds=t.amount(Duration.second))
 
     @jwt_expiration_delta.setter
     def jwt_expiration_delta(self, value):
@@ -83,4 +83,3 @@ class ServerConfig(TmapsConfig):
                 'datetime.timedelta'
             )
         self._config.set(self._section, 'jwt_expiration_delta', str(value))
-
