@@ -29,7 +29,7 @@ class ServerConfig(TmapsConfig):
         super(ServerConfig, self).__init__()
         self.logging_verbosity = 2
         self.secret_key = 'default_secret_key'
-        self.jwt_expiration_delta = datetime.timedelta(hours=6)
+        self.jwt_expiration_delta = datetime.timedelta(hours=72)
         self.read()
 
     @property
