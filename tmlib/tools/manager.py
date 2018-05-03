@@ -149,7 +149,7 @@ class ToolRequestManager(SubmissionManager):
             memory = max_memory_per_node
 
         logger.debug('allocated time for job: %s', duration)
-        logger.debug('allocated memory for job: %d MB', memory)
+        logger.debug('allocated memory for job: %s MB', memory)
         logger.debug('allocated cores for job: %d', cores)
         job = ToolJob(
             tool_name=self.tool_name,

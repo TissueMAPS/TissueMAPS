@@ -101,7 +101,7 @@ class Argument(object):
 
         Note
         ----
-        Automatically adds a docstring in NumPy style to the instance based on 
+        Automatically adds a docstring in NumPy style to the instance based on
         the values of `type` and `help`.
 
         Warning
@@ -507,7 +507,7 @@ class SubmissionArguments(ArgumentCollection):
     jobs to the cluster.
 
     These arguments can be passed to a step-specific implementation of the
-    :meth:`submit <tmlib.workflow.cli.WorkflowStepCLI.submit>` *CLI* 
+    :meth:`submit <tmlib.workflow.cli.WorkflowStepCLI.submit>` *CLI*
     method and are parse to the
     :meth:`create_jobs <tmlib.workflow.api.WorkflowStepAPI.create_jobs>` *API*
     method.
@@ -563,4 +563,3 @@ class CliMethodArguments(ArgumentCollection):
     :class:`WorkflowStepCLI <tmlib.workflow.cli.WorkflowStepCLI>`,
     which are decoreated with :func:`climethod <tmlib.workflow.climethod>`.
     '''
-
