@@ -1,5 +1,6 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -536,7 +537,7 @@ class SubmissionArguments(ArgumentCollection):
             # important to be able to start many single-core
             # low-memory jobs -- hence we set the default as 1/Nth of
             # the total available memory when we have N cores.
-            (cfg.resource.max_memory_per_core / cfg.resource.max_cores)
+            (cfg.resource.max_memory_per_core / cfg.resource.max_cores_per_job)
             .amount(Memory.MB)
         ),
         meta='MB', help='''
