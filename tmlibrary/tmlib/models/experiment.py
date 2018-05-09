@@ -237,6 +237,8 @@ class Experiment(DirectoryModel):
         channels belonging to the experiment
     mapobject_types: List[tmlib.models.mapobject.MapobjectType]
         mapobject types belonging to the experiment
+    derivedimage_types: List[tmlib.models.derived.DerivedImageType]
+        derived image types belonging to the experiment
     '''
 
     __tablename__ = 'experiment'
@@ -362,6 +364,11 @@ class Experiment(DirectoryModel):
     def channels_location(self):
         '''str: location where channel data are stored'''
         return os.path.join(self.location, 'channels')
+
+    @autocreate_directory_property
+    def derived_images_location(self):
+        '''str: location where derived image data are stored'''
+        return os.path.join(self.location, 'derived_images')
 
     @cached_property
     def plate_spacer_size(self):

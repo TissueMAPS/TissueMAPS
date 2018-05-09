@@ -478,3 +478,96 @@ class IllumstatsFile(FileModel, DateMixIn):
             '<IllumstatsFile(id=%r, channel_id=%r)>'
             % (self.id, self.channel_id)
         )
+
+@remove_location_upon_delete
+class DerivedImageFile(FileModel, DateMixIn):
+
+    '''A *derived image file* holds a single 2D pixels plane that was
+    generated during a jterator pipeline. It represents a unique site.
+    '''
+
+    #: str: name of the corresponding database table
+    __tablename__ = 'derived_image_files'
+
+    __table_args__ = (
+        UniqueConstraint(
+            'site_id',
+            'derived_image_type_id',
+        ),
+    )
+
+    #: int: ID of the parent site
+    site_id = Column(
+        Integer,
+        ForeignKey('sites.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
+    #: tmlib.models.site.Site: parent site
+    site = relationship(
+        'Site',
+        backref=backref('derived_image_files', cascade='all, delete-orphan')
+    )
+
+    #: tmlib.models.derived.DerivedImage: parent channel
+    derived_image = relationship(
+        'DerivedImage',
+        backref=backref('image_files', cascade='all, delete-orphan')
+    )
+
+    #: Format string for filenames
+    FILENAME_FORMAT = 'derived_image_file_{id}.h5'
+
+    def __init__(self, site_id, derived_image_type_id):
+        '''
+        Parameters
+        ----------
+        site_id: int
+            ID of the parent :class:`Site <tmlib.models.site.Site>`
+        channel_id: int
+            ID of the parent :class:`DerivedImageType <tmlib.models.derived.DerivedImageType>`
+        '''
+
+        self.site_id = site_id
+        self.derived_image_type_id = derived_image_type_id
+
+    def get(self):
+        '''Gets stored image.
+
+        Returns
+        -------
+        tmlib.image.DerivedImage
+            image stored in the file
+        '''
+        with DatasetReader(self.location) as f:
+            array = f.read('array')
+        return DerivedImage(array)
+
+    @assert_type(image='tmlib.image.DerivedImage')
+    def put(self, image):
+        '''Puts image to storage.
+
+        Parameters
+        ----------
+        image: tmlib.image.ChannelImage
+            pixels data that should be stored in the image file
+        '''
+        with DatasetWriter(self.location, truncate=True) as f:
+            f.write('array', image.array, compression=True)
+
+    @hybrid_property
+    def location(self):
+        '''str: location of the file'''
+        if self._location is None:
+            self._location = os.path.join(
+                self.channel.get_image_file_location(self.id),
+                self.FILENAME_FORMAT.format(id=self.id)
+            )
+        return self._location
+
+    def __repr__(self):
+        return '<%s(id=%r, tpoint=%r, zplane=%r, site_id=%r, channel_id=%r)>' % (
+            self.__class__.__name__, self.id, self.tpoint, self.zplane,
+            self.site_id, self.channel_id
+        )
+

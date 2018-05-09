@@ -304,7 +304,8 @@ class Project(object):
             },
             'pipeline': list(),
             'output': {
-                'objects': list()
+                'objects': list(),
+                'images': list()
             }
         }
         with YamlWriter(filename) as f:

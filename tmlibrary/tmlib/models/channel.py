@@ -96,7 +96,7 @@ class Channel(DirectoryModel, DateMixIn, IdMixIn):
         backref=backref('channels', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, wavelength, bit_depth,  experiment_id):
+    def __init__(self, name, wavelength, bit_depth, experiment_id):
         '''
         Parameters
         ----------

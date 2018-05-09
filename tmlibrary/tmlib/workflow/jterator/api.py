@@ -240,6 +240,19 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 filter(tm.MapobjectType.id.in_(mapobject_type_ids)).\
                 delete()
 
+        logger.info('delete existing derived images and derived image types')
+        with tm.utils.ExperimentSession(self.experiment_id, False) as session:
+            derived_image_types = session.query(tm.DerivedImageType.id).\
+                all()
+            derived_image_type_ids = [t.id for t in derived_image_types]
+            session.query(tm.DerivedImage).\
+                filter(tm.DerivedImage.derived_image_type_id.in_(derived_image_type_ids)).\
+                delete()
+            session.query(tm.DerivedImageType).\
+                filter(tm.DerivedImageType.id.in_(derived_image_type_ids)).\
+                delete()
+
+
     def _load_pipeline_input(self, site_id):
         logger.info('load pipeline inputs')
         # Use an in-memory store for pipeline data and only insert outputs
@@ -390,10 +403,24 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
     def _save_pipeline_outputs(self, store, assume_clean_state):
         logger.info('save pipeline outputs')
         objects_output = self.project.pipe.description.output.objects
+        derived_images_output = self.project.pipe.description.output.images
         for item in objects_output:
             as_polygons = item.as_polygons
             store['objects'][item.name].save = True
             store['objects'][item.name].represent_as_polygons = as_polygons
+        for item in derived_images_output:
+            store['derived_images'][item.name].save = True
+
+        with tm.utils.ExperimentSession(self.experiment_id, False) as session:
+            derived_image_type_ids = dict()
+            derived_images_to_save = dict()
+            for img_name in store['derived_images'].iteritems():
+                logger.info('images with name "%s" are saved', img_name)
+                derived_image_type = session.get_or_create(
+                    tm.DerivedImageType, experiment_id=self.experiment_id,
+                    name=img_name, ref_type=tm.Site.__name__
+                )
+                derived_image_type_ids[img_name] = derived_image_type.id
 
         with tm.utils.ExperimentSession(self.experiment_id, False) as session:
             layer = session.query(tm.ChannelLayer).first()
@@ -653,6 +680,8 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
         successful completion of the pipeline, instances of
         :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`,
         :class:`Mapobject <tmlib.models.mapobject.Mapobject>`,
+        :class:`DerivedImageType <tmlib.models.derived.DerivedImageType>`,
+        :class:`DerivedImageFile <tmlib.models.file.DerivedImageFile>`,
         :class:`SegmentationLayer <tmlib.models.layer.SegmentationLayer>`,
         :class:`MapobjectSegmentation <tmlib.models.mapobject.MapobjectSegmentation>`,
         :class:`Feature <tmlib.models.feature.Feature>` and
