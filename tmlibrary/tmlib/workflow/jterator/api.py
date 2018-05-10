@@ -49,6 +49,7 @@ from tmlib.workflow.jobs import SingleRunPhase
 from tmlib.workflow.jterator.jobs import DebugRunJob
 from tmlib.workflow import register_step_api
 from tmlib import cfg
+from tmlib.image import ChannelImage
 
 logger = logging.getLogger(__name__)
 
@@ -240,13 +241,16 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 filter(tm.MapobjectType.id.in_(mapobject_type_ids)).\
                 delete()
 
-        logger.info('delete existing derived images and derived image types')
+        logger.info('delete existing derived image types and derived image files')
         with tm.utils.ExperimentSession(self.experiment_id, False) as session:
+            image_types = session.query(tm.DerivedImageType).all()
+            for im in image_types:
+                im.remove_image_files()
             derived_image_types = session.query(tm.DerivedImageType.id).\
                 all()
             derived_image_type_ids = [t.id for t in derived_image_types]
-            session.query(tm.DerivedImage).\
-                filter(tm.DerivedImage.derived_image_type_id.in_(derived_image_type_ids)).\
+            session.query(tm.DerivedImageFile).\
+                filter(tm.DerivedImageFile.derived_image_type_id.in_(derived_image_type_ids)).\
                 delete()
             session.query(tm.DerivedImageType).\
                 filter(tm.DerivedImageType.id.in_(derived_image_type_ids)).\
@@ -403,24 +407,30 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
     def _save_pipeline_outputs(self, store, assume_clean_state):
         logger.info('save pipeline outputs')
         objects_output = self.project.pipe.description.output.objects
-        derived_images_output = self.project.pipe.description.output.images
+        images_output = self.project.pipe.description.output.images
         for item in objects_output:
             as_polygons = item.as_polygons
             store['objects'][item.name].save = True
             store['objects'][item.name].represent_as_polygons = as_polygons
-        for item in derived_images_output:
-            store['derived_images'][item.name].save = True
+        for item in images_output:
+            store['images'][item.name].save = True
 
         with tm.utils.ExperimentSession(self.experiment_id, False) as session:
-            derived_image_type_ids = dict()
-            derived_images_to_save = dict()
-            for img_name in store['derived_images'].iteritems():
+            for img_name, img_array in store['images'].iteritems():  # Check "store"
                 logger.info('images with name "%s" are saved', img_name)
-                derived_image_type = session.get_or_create(
+                derived_image_type_id = session.get_or_create(
                     tm.DerivedImageType, experiment_id=self.experiment_id,
-                    name=img_name, ref_type=tm.Site.__name__
+                    name=img_name
                 )
-                derived_image_type_ids[img_name] = derived_image_type.id
+                derived_image_file = session.get_or_create(
+                    tm.DerivedImageFile,
+                    site_id=store['site_id'],
+                    derived_image_type_id=derived_image_type_id
+                )
+                # TODO: save images here!
+                img = ChannelImage(img_array)
+                logger.info('write pixels to file on disk')
+                derived_image_file.put(img)
 
         with tm.utils.ExperimentSession(self.experiment_id, False) as session:
             layer = session.query(tm.ChannelLayer).first()
