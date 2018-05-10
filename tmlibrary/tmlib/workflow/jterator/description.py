@@ -273,16 +273,19 @@ class PipelineOutputDescription(object):
 
     '''Description of the output of a *jterator* pipeline.'''
 
-    __slots__ = ('_objects', )
+    __slots__ = ('_objects', '_images')
 
-    def __init__(self, objects):
+    def __init__(self, objects, images):
         '''
         Parameters
         ----------
         objects: List[dict]
-            description of objects input
+            description of objects output
+        images: List[dict]
+            description of images output
         '''
         self.objects = self._create_object_descriptions(objects)
+        self.images = self._create_image_descriptions(images)
 
     def _create_object_descriptions(self, value):
         if not isinstance(value, list):
@@ -301,6 +304,23 @@ class PipelineOutputDescription(object):
             descriptions.append(obj)
         return descriptions
 
+    def _create_image_descriptions(self, value):
+        if not isinstance(value, list):
+            raise PipelineDescriptionError(
+                'Value of "images" in "output" section of pipeline descripion '
+                'must be an array.'
+            )
+        descriptions = list()
+        for i, v in enumerate(value):
+            if not isinstance(v, dict):
+                raise PipelineDescriptionError(
+                    'Value of item #%d of "images" in "output" section of '
+                    'pipeline description must be a mapping.' % i
+                )
+            img = PipelineImageOutputDescription(**v)
+            descriptions.append(img)
+        return descriptions
+
     @property
     def objects(self):
         '''List[tmlib.workflow.jterator.description.PipelineObjectOutputDescription]:
@@ -317,6 +337,25 @@ class PipelineOutputDescription(object):
                 raise TypeError(
                     'Items of attribute "objects" must have type '
                     'PipelineObjectOutputDescription.'
+                )
+        self._objects = value
+
+    @property
+    def images(self):
+        '''List[tmlib.workflow.jterator.description.PipelineImageOutputDescription]:
+        pipeline images output
+        '''
+        return self._images
+
+    @images.setter
+    def images(self, value):
+        if not isinstance(value, list):
+            raise TypeError('Attribute "images" must have type list.')
+        for v in value:
+            if not isinstance(v, PipelineImageOutputDescription):
+                raise TypeError(
+                    'Items of attribute "images" must have type '
+                    'PipelineImageOutputDescription.'
                 )
         self._objects = value
 
@@ -477,6 +516,46 @@ class PipelineObjectOutputDescription(object):
         dict
         '''
         return {'name': self.name, 'as_polygons': self.as_polygons}
+
+
+class PipelineImageOutputDescription(object):
+
+    '''
+    :class:`IntensityImage <tmlib.workflow.jterator.handles.IntensityImage>`
+    that should be persisted as
+    :class:`DerivedImageType <tmlib.models.derived.DerivedImageType>`.
+    '''
+
+    __slots__ = ('_name')
+
+    def __init__(self, name):
+        '''
+        Parameters
+        ----------
+        name: str
+            name of the image
+        '''
+        self.name = name
+
+    @property
+    def name(self):
+        '''str: name of the image'''
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if not isinstance(value, basestring):
+            raise TypeError('Attribute "name" must have type basestring.')
+        self._name = str(value)
+
+    def to_dict(self):
+        '''Returns attribute "name" as key-value pair.
+
+        Returns
+        -------
+        dict
+        '''
+        return {'name': self.name}
 
 
 class PipelineModuleDescription(object):
