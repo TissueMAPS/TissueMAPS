@@ -22,11 +22,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import relationship, backref
-from tmlib.models.base import (
-    ExperimentModel, IdMixIn
-)
 
 from tmlib.utils import autocreate_directory_property, create_directory
+from tmlib.models.base import (
+    DirectoryModel, IdMixIn
+)
+from tmlib.models.utils import remove_location_upon_delete
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +36,8 @@ logger = logging.getLogger(__name__)
 DERIVED_IMAGE_LOCATION_FORMAT = 'derived_image_{id}'
 
 
-class DerivedImageType(ExperimentModel, IdMixIn):
+@remove_location_upon_delete
+class DerivedImageType(DirectoryModel, IdMixIn):
 
     '''A *derived image type* represents a conceptual group of
     *derived images* that reflect different image types.
@@ -52,6 +55,9 @@ class DerivedImageType(ExperimentModel, IdMixIn):
     #: str: name given by user
     name = Column(String(50), index=True, nullable=False)
 
+    #: int: number of bytes used to encode intensity
+    bit_depth = Column(Integer)
+
     #: int: ID of parent experiment
     experiment_id = Column(
         Integer,
@@ -65,17 +71,20 @@ class DerivedImageType(ExperimentModel, IdMixIn):
         backref=backref('derived_image_types', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, experiment_id):
+    def __init__(self, name, bit_depth, experiment_id):
         '''
         Parameters
         ----------
         name: str
             name of the derived image type, e.g. "volume image"
+        bit_depth: int
+            number of bits used to indicate intensity of pixels
         experiment_id: int
             ID of the parent
             :class:`Experiment <tmlib.models.experiment.Experiment>`
         '''
         self.name = name
+        self.bit_depth = bit_depth
         self.experiment_id = experiment_id
 
     @hybrid_property

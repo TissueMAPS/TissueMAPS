@@ -500,7 +500,7 @@ class DerivedImageFile(FileModel, DateMixIn):
     #: int: ID of the parent channel
     derived_image_type_id = Column(
         Integer,
-        ForeignKey('derived_image_type.id', onupdate='CASCADE', ondelete='CASCADE'),
+        ForeignKey('derived_image_types.id', onupdate='CASCADE', ondelete='CASCADE'),
         index=True
     )
 

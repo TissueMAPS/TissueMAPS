@@ -147,9 +147,10 @@ from tmlib.models.cycle import Cycle
 from tmlib.models.submission import Submission, Task
 from tmlib.models.site import Site
 from tmlib.models.alignment import SiteShift
+from tmlib.models.derived import DerivedImageType
 from tmlib.models.file import (
     MicroscopeImageFile, MicroscopeMetadataFile, ChannelImageFile,
-    IllumstatsFile
+    IllumstatsFile, DerivedImageFile
 )
 from tmlib.models.result import (
     ToolResult, LabelValues,
