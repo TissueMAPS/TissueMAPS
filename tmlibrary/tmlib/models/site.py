@@ -36,6 +36,8 @@ class Site(ExperimentModel, IdMixIn):
         shifts belonging to the site
     channel_image_files: List[tmlib.models.file.ChannelImageFile]
         channel image files belonging to the site
+    derived_image_files: List[tmlib.models.file.DerivedImageFile]
+        derived image files belonging to the site
     '''
 
     __tablename__ = 'sites'

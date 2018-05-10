@@ -479,6 +479,7 @@ class IllumstatsFile(FileModel, DateMixIn):
             % (self.id, self.channel_id)
         )
 
+
 @remove_location_upon_delete
 class DerivedImageFile(FileModel, DateMixIn):
 
@@ -496,6 +497,13 @@ class DerivedImageFile(FileModel, DateMixIn):
         ),
     )
 
+    #: int: ID of the parent channel
+    derived_image_type_id = Column(
+        Integer,
+        ForeignKey('derived_image_type.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True
+    )
+
     #: int: ID of the parent site
     site_id = Column(
         Integer,
@@ -509,9 +517,9 @@ class DerivedImageFile(FileModel, DateMixIn):
         backref=backref('derived_image_files', cascade='all, delete-orphan')
     )
 
-    #: tmlib.models.derived.DerivedImage: parent channel
-    derived_image = relationship(
-        'DerivedImage',
+    #: tmlib.models.derived.DerivedImageType: parent derived image type
+    derived_image_type = relationship(
+        'DerivedImageType',
         backref=backref('image_files', cascade='all, delete-orphan')
     )
 
@@ -524,7 +532,7 @@ class DerivedImageFile(FileModel, DateMixIn):
         ----------
         site_id: int
             ID of the parent :class:`Site <tmlib.models.site.Site>`
-        channel_id: int
+        derived_image_type_id: int
             ID of the parent :class:`DerivedImageType <tmlib.models.derived.DerivedImageType>`
         '''
 
@@ -536,14 +544,14 @@ class DerivedImageFile(FileModel, DateMixIn):
 
         Returns
         -------
-        tmlib.image.DerivedImage
+        tmlib.image.ChannelImage
             image stored in the file
         '''
         with DatasetReader(self.location) as f:
             array = f.read('array')
-        return DerivedImage(array)
+        return ChannelImage(array)
 
-    @assert_type(image='tmlib.image.DerivedImage')
+    @assert_type(image='tmlib.image.ChannelImage')
     def put(self, image):
         '''Puts image to storage.
 
@@ -560,14 +568,14 @@ class DerivedImageFile(FileModel, DateMixIn):
         '''str: location of the file'''
         if self._location is None:
             self._location = os.path.join(
-                self.channel.get_image_file_location(self.id),
+                self.derived_image_type.get_image_file_location(self.id),
                 self.FILENAME_FORMAT.format(id=self.id)
             )
         return self._location
 
     def __repr__(self):
-        return '<%s(id=%r, tpoint=%r, zplane=%r, site_id=%r, channel_id=%r)>' % (
-            self.__class__.__name__, self.id, self.tpoint, self.zplane,
-            self.site_id, self.channel_id
+        return '<%s(id=%r, site_id=%r, derived_image_type_id=%r)>' % (
+            self.__class__.__name__, self.id,
+            self.site_id, self.derived_image_type_id
         )
 

@@ -38,9 +38,14 @@ class DerivedImageType(ExperimentModel, IdMixIn):
 
     '''A *derived image type* represents a conceptual group of
     *derived images* that reflect different image types.
+
+    Attributes
+    ----------
+    image_files: List[tmlib.models.file.DerivedImageFile]
+        images belonging to the derived image type
     '''
 
-    __tablename__ = 'derivedimage_types'
+    __tablename__ = 'derived_image_types'
 
     __table_args__ = (UniqueConstraint('name'), )
 
@@ -57,7 +62,7 @@ class DerivedImageType(ExperimentModel, IdMixIn):
     #: tmlib.models.experiment.Experiment: parent experiment
     experiment = relationship(
         'Experiment',
-        backref=backref('derivedimage_types', cascade='all, delete-orphan')
+        backref=backref('derived_image_types', cascade='all, delete-orphan')
     )
 
     def __init__(self, name, experiment_id):
@@ -65,42 +70,13 @@ class DerivedImageType(ExperimentModel, IdMixIn):
         Parameters
         ----------
         name: str
-            name of the map objects type, e.g. "cells"
+            name of the derived image type, e.g. "volume image"
         experiment_id: int
             ID of the parent
             :class:`Experiment <tmlib.models.experiment.Experiment>`
         '''
         self.name = name
         self.experiment_id = experiment_id
-
-    @classmethod
-    def delete_cascade(cls, connection):
-        '''Deletes all instances as well as "children"
-        instances of :class:`DerivedImage <tmlib.models.derived.DerivedImage>`
-
-        Parameters
-        ----------
-        connection: tmlib.models.utils.ExperimentConnection
-            experiment-specific database connection
-
-        '''
-        ids = list()
-
-        connection.execute('''
-                SELECT id FROM derivedimage_types
-        ''')
-        records = connection.fetchall()
-        ids.extend([r.id for r in records])
-
-        for id in ids:
-            logger.debug('delete derived images of type %d', id)
-            DerivedImage.delete_cascade(connection, id)
-            logger.debug('delete derived images type %d', id)
-            connection.execute('''
-                DELETE FROM derivedimage_types WHERE id = %(id)s;
-            ''', {
-                'id': id
-            })
 
     @hybrid_property
     def location(self):
@@ -129,6 +105,13 @@ class DerivedImageType(ExperimentModel, IdMixIn):
     def image_files_location(self):
         '''str: location where image files are stored'''
         return os.path.join(self.location, 'images')
+
+    def get_image_file_location(self, image_file_id):
+        # TODO: It's not ideal to store them all in one directory. While modern
+        # filesystems are able to handle this relatively well we should get
+        # better performance using subdirectories.
+        # Use a hash function to map image ID to subdirectory.
+        return self.image_files_location
 
     def remove_image_files(self):
         '''Removes all image files on disk'''
