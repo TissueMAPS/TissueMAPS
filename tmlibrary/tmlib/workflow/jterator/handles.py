@@ -300,6 +300,45 @@ class IntensityImage(Image):
         return '<IntensityImage(name=%r, key=%r)>' % (self.name, self.key)
 
 
+class DerivedImage(IntensityImage):
+
+    '''Class for a derived image handle, which represents a special type of
+    intensity image handle, which can be persisted in storage and ultimately 
+    visualized by `TissueMAPS`.
+    '''
+
+    def __init__(self, name, key, help=''):
+        '''
+        Parameters
+        ----------
+        name: str
+            name of the item, which must either match a parameter of the module
+            function in case the item represents an input argument or the key
+            of a key-value pair of the function's return value
+        key: str
+            unique and hashable identifier; it serves as
+            lookup identifier to retrieve the actual value of the item
+        help: str, optional
+            help message (default: ``""``)
+        '''
+        super(DerivedImage, self).__init__(name, key, help)
+        self.save = False
+
+    @property
+    def save(self):
+        '''bool: whether objects should be saved'''
+        return self._save
+
+    @save.setter
+    def save(self, value):
+        if not isinstance(value, bool):
+            raise TypeError('Attribute "save" must have type bool.')
+        self._save = value
+
+    def __str__(self):
+        return '<DerivedImage(name=%r, key=%r)>' % (self.name, self.key)
+
+
 class MaskImage(Image):
 
     '''Class for an image handle, where pixels of the image with zero values
