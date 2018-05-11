@@ -276,6 +276,40 @@ angular.module('jtui.project')
         return availableObjects;
     };
 
+    $scope.getSelectableImageNames = function(index) {
+        var availableImages = [];
+        var selectedImages = [];
+        for (var i in $scope.project.pipe.description.output.images) {
+            if (i != index) {
+                var imageName = $scope.project.pipe.description.output.images[i].name;
+                selectedImages.push(imageName);
+            }
+        }
+        var pipeline = $scope.project.pipe.description.pipeline;
+        var handles = $scope.project.handles;
+        var handleNames = handles.map(function(h) {return h.name});
+        for (var i in pipeline) {
+            var module = pipeline[i];
+            // Make sure we're dealing with the correct handles object
+            var index = handleNames.indexOf(module.name);
+            var handle = handles[index];
+            for (var j in handle.description.output) {
+                var upstreamOutputHandle = handle.description.output[j];
+                if ('key' in upstreamOutputHandle) {
+                    // Only handles with matching type
+                    if (upstreamOutputHandle.key != null &&
+                            upstreamOutputHandle.type == 'DerivedImage') {
+                            var objectName = handle.description.output[j].key;
+                        if (selectedImages.indexOf(imageName) == -1) {
+                            availableImages.push(imageName);
+                        }
+                    }
+                }
+            }
+        }
+        return availableImages;
+    };
+
     // Initialize empty array for selection of modules
     $scope.selectedModules = [];
 
@@ -521,6 +555,19 @@ angular.module('jtui.project')
 
     $scope.removeObject = function() {
         $scope.project.pipe.description.output.objects.pop();
+        // console.log('removed last object')
+    };
+
+    $scope.addImage = function() {
+        var newImage = {
+            name: ''
+        };
+        $scope.project.pipe.description.output.images.push(newImage);
+        // console.log('added new image')
+    };
+
+    $scope.removeImage = function() {
+        $scope.project.pipe.description.output.images.pop();
         // console.log('removed last object')
     };
 
