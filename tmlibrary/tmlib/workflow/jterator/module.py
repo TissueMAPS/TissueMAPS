@@ -429,6 +429,10 @@ class ImageAnalysisModule(object):
                 handle.measurements = []
                 store['objects'][handle.key] = handle
                 store['pipe'][handle.key] = handle.value
+            elif isinstance(handle, hdls.DerivedImage):
+                logger.debug('add value of DerivedImage handle to store')
+                store['images'][handle.key] = handle
+                store['pipe'][handle.key] = handle.value
             elif isinstance(handle, hdls.Measurement):
                 logger.debug('add value of Measurement handle to store')
                 ref_objects_name = self._get_reference_objects_name(handle)
