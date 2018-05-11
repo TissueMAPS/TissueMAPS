@@ -416,21 +416,23 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             store['images'][item.name].save = True
 
         with tm.utils.ExperimentSession(self.experiment_id, False) as session:
-            for img_name, img_array in store['images'].iteritems():  # Check "store"
-                logger.info('images with name "%s" are saved', img_name)
-                derived_image_type_id = session.get_or_create(
-                    tm.DerivedImageType, experiment_id=self.experiment_id,
-                    name=img_name
-                )
-                derived_image_file = session.get_or_create(
-                    tm.DerivedImageFile,
-                    site_id=store['site_id'],
-                    derived_image_type_id=derived_image_type_id
-                )
-                # TODO: save images here!
-                img = ChannelImage(img_array)
-                logger.info('write pixels to file on disk')
-                derived_image_file.put(img)
+            for img_name, derived_img in store['images'].iteritems():
+                if derived_img.save:
+                    logger.info('images with name "%s" are saved', img_name)
+                    derived_image_type_id = session.get_or_create(
+                        tm.DerivedImageType, experiment_id=self.experiment_id,
+                        name=img_name
+                    )
+                    derived_image_file = session.get_or_create(
+                        tm.DerivedImageFile,
+                        site_id=store['site_id'],
+                        derived_image_type_id=derived_image_type_id
+                    )
+                    img = ChannelImage(derived_img.value)
+                    logger.info('write pixels to file on disk')
+                    derived_image_file.put(img)
+                else:
+                    logger.info('images with name "%s" are not saved', img_name)
 
         with tm.utils.ExperimentSession(self.experiment_id, False) as session:
             layer = session.query(tm.ChannelLayer).first()
