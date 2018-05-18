@@ -403,24 +403,33 @@ class SingleRunPhase(ParallelTaskCollection, RunPhase):
             *run* phases
         '''
         self.step_name = step_name
+        self.parent_id = parent_id
+        self.persistent_id = idfactory.new(self)
+        self.submission_id = submission_id
         if jobs is not None:
             if not isinstance(jobs, list):
                 raise TypeError('Argument "jobs" must have type list.')
-            if not all([isinstance(j, RunJob) for j in jobs]):
+            if not all(isinstance(j, RunJob) for j in jobs):
                 raise TypeError(
                     'Elements of argument "jobs" must have type '
                     'tmlib.workflow.jobs.RunJob'
                 )
+            for j in jobs:
+                if not (submission_id == j.submission_id):
+                    raise ValueError(
+                        "Task {} ({}) belongs to submission {}"
+                        " but was passed to constructor of"
+                        " SingleRunPhase {} ({}) belonging to submission {}"
+                        .format(j.persistent_id, j, j.submission_id,
+                                self.persistent_id, self, submission_id)
+                    )
         if index is None:
             self.name = '%s_run' % self.step_name
         else:
             if not isinstance(index, int):
                 raise TypeError('Argument "index" must have type int.')
             self.name = '%s_run-%.2d' % (self.step_name, index)
-        self.parent_id = parent_id
-        self.persistent_id = idfactory.new(self)
-        self.submission_id = submission_id
-        super(SingleRunPhase, self).__init__(jobname=self.name, tasks=jobs)
+        super(self.__class__, self).__init__(jobname=self.name, tasks=jobs)
 
     def add(self, job):
         '''Adds a job to the phase.
