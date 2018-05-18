@@ -540,7 +540,8 @@ class WorkflowStepAPI(object):
             collection of "run" jobs
         '''
         return SingleRunPhase(
-            step_name=self.step_name, submission_id=submission_id,
+            step_name=self.step_name,
+            submission_id=submission_id,
             parent_id=parent_id
         )
 

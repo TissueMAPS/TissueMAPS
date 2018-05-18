@@ -668,7 +668,7 @@ class Scalar(InputHandle):
     __metaclass__ = ABCMeta
 
     @assert_type(value=['int', 'float', 'basestring', 'bool', 'types.NoneType'])
-    def __init__(self, name, value, help='', options=[]):
+    def __init__(self, name, value, help='', options=None):
         '''
         Parameters
         ----------
@@ -683,6 +683,8 @@ class Scalar(InputHandle):
         options: List[str or int or float or bool]
             possible values for `value`
         '''
+        if options is None:
+            options = []
         if options:
             if value is not None:
                 if value not in options:
@@ -699,7 +701,7 @@ class Boolean(Scalar):
     '''Handle for a boolean input argument.'''
 
     @assert_type(value='bool')
-    def __init__(self, name, value, help='', options=[True, False]):
+    def __init__(self, name, value, help='', options=None):
         '''
         Parameters
         ----------
@@ -714,6 +716,8 @@ class Boolean(Scalar):
         options: List[bool]
             possible values for `value`
         '''
+        if options is None:
+            options = [True, False]
         if not all([isinstance(o, bool) for o in options]):
             raise TypeError('Options for "Boolean" can only be boolean.')
         super(Boolean, self).__init__(name, value, help, options)
@@ -727,7 +731,7 @@ class Numeric(Scalar):
     '''Handle for a numeric input argument.'''
 
     @assert_type(value=['int', 'float', 'types.NoneType'])
-    def __init__(self, name, value, help='', options=[]):
+    def __init__(self, name, value, help='', options=None):
         '''
         Parameters
         ----------
@@ -742,6 +746,8 @@ class Numeric(Scalar):
         options: List[int or float]
             possible values for `value`
         '''
+        if options is None:
+            options = []
         super(Numeric, self).__init__(name, value, help, options)
 
     def __str__(self):
@@ -753,7 +759,7 @@ class Character(Scalar):
     '''Handle for a character input argument.'''
 
     @assert_type(value=['basestring', 'types.NoneType'])
-    def __init__(self, name, value, help='', options=[]):
+    def __init__(self, name, value, help='', options=None):
         '''
         Parameters
         ----------
@@ -768,6 +774,8 @@ class Character(Scalar):
         options: List[basestring]
             possible values for `value`
         '''
+        if options is None:
+            options = []
         super(Character, self).__init__(name, value, help, options)
 
     def __str__(self):
@@ -813,7 +821,7 @@ class Plot(InputHandle):
     '''
 
     @assert_type(value='bool')
-    def __init__(self, name, value=False, help='', options=[True, False]):
+    def __init__(self, name, value=False, help='', options=None):
         '''
         Parameters
         ----------
@@ -827,6 +835,8 @@ class Plot(InputHandle):
         options: List[bool]
             possible values for `value`
         '''
+        if options is None:
+            options = [True, False]
         if not all([isinstance(o, bool) for o in options]):
             raise TypeError('Options for "Plot" can only be boolean')
         super(Plot, self).__init__(name, value, help)

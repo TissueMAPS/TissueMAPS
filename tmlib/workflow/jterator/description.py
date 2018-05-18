@@ -168,7 +168,7 @@ class PipelineInputDescription(object):
 
     __slots__ = ('_channels', '_objects')
 
-    def __init__(self, channels=[], objects=[]):
+    def __init__(self, channels=None, objects=None):
         '''
         Parameters
         ----------
@@ -177,6 +177,10 @@ class PipelineInputDescription(object):
         objects: List[dict], optional
             description of objects input
         '''
+        if channels is None:
+            channels = []
+        if objects is None:
+            objects = []
         self.channels = self._create_channel_descriptions(channels)
         self.objects = self._create_object_descriptions(objects)
 

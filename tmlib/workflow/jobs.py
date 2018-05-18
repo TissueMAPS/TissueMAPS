@@ -466,7 +466,7 @@ class MultiRunPhase(AbortOnError, SequentialTaskCollection, RunPhase):
     '''
 
     def __init__(self, step_name, submission_id, parent_id,
-            run_job_collections=list()):
+                 run_job_collections=None):
         '''
         Parameters
         ----------

@@ -70,7 +70,7 @@ class Well(ExperimentModel, DateMixIn, IdMixIn):
         backref=backref('wells', cascade='all, delete-orphan')
     )
 
-    def __init__(self, name, plate_id, description={}):
+    def __init__(self, name, plate_id, description=None):
         '''
         Parameters
         ----------
@@ -95,7 +95,7 @@ class Well(ExperimentModel, DateMixIn, IdMixIn):
             )
         self.name = name
         self.plate_id = plate_id
-        self.description = description
+        self.description = (description if description is not None else {})
 
     @property
     def coordinate(self):
