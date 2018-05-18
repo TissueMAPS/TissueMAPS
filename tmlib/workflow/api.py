@@ -345,7 +345,7 @@ class WorkflowStepAPI(object):
             f.write(batch)
 
     def _build_init_command(self, batch_args, verbosity):
-        logger.debug('build "init" command')
+        logger.debug('build "init" command for step %s of experiment %s', self.step_name, self.experiment_id)
         command = [self.step_name]
         command.extend(['-v' for x in range(verbosity)])
         command.append(self.experiment_id)
@@ -362,7 +362,7 @@ class WorkflowStepAPI(object):
         return command
 
     def _build_run_command(self, job_id, verbosity):
-        logger.debug('build "run" command')
+        logger.debug('build "run" command for step %s of experiment %s', self.step_name, self.experiment_id)
         command = [self.step_name]
         command.extend(['-v' for x in range(verbosity)])
         command.append(self.experiment_id)
@@ -370,7 +370,7 @@ class WorkflowStepAPI(object):
         return command
 
     def _build_collect_command(self, verbosity):
-        logger.debug('build "collect" command')
+        logger.debug('build "collect" command for step %s of experiment %s', self.step_name, self.experiment_id)
         command = [self.step_name]
         command.extend(['-v' for x in range(verbosity)])
         command.append(self.experiment_id)
