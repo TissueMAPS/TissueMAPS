@@ -1,6 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
-# Copyright (C) 2018  University of Zurich
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -171,8 +170,9 @@ def decode_form_ids(*model_ids):
             for mid in model_ids:
                 if mid not in data.keys():
                     raise MalformedRequestError(
-                        'ID "%s" was not in the POST body even though '
-                        'the view was expected to receive it.' % mid
+                        'ID "{mid}" was not in the POST body even though '
+                        'the view was expected to receive it.'
+                        .format(mid=mid)
                     )
                 if not mid.endswith('_id'):
                     raise MalformedRequestError('IDs must end with "_id".')

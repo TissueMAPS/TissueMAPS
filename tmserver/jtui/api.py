@@ -1,5 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -125,7 +125,9 @@ def update_project(experiment_id):
         jt.project.save()
         return jsonify({'success': True})
     except Exception as err:
-        raise MalformedRequestError('Project could not be saved:\n%s', str(err))
+        raise MalformedRequestError(
+            'Project could not be saved: {err}'
+            .format(err=err))
 
 
 @jtui.route('/available_modules')
@@ -257,7 +259,9 @@ def check_project(experiment_id):
         )
         return jsonify(success=True)
     except Exception as err:
-        raise MalformedRequestError('Pipeline check failed:\n%s' % str(err))
+        raise MalformedRequestError(
+            'Pipeline check failed: {err}'
+            .format(err=err))
 
 
 @jtui.route('/experiments/<experiment_id>/project', methods=['DELETE'])
@@ -416,7 +420,9 @@ def run_jobs(experiment_id):
                 filter(tm.ChannelImageFile.site_id == site_id).\
                 count()
             if image_file_count == 0:
-                raise MalformedRequestError('No images found for job ID %s.' % j)
+                raise MalformedRequestError(
+                    'No images found for job ID {j}.'
+                    .format(j=j))
             job_descriptions.append({'site_id': site_id, 'plot': True})
 
     with tm.utils.MainSession() as session:
