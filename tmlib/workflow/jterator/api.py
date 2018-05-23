@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -112,7 +112,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 if not os.path.isabs(source_file):
                     source_file = os.path.join(self.step_location, source_file)
             else:
-                logger.debug('searching for module `%s` in configured module path %r ...', cfg.modules_path)
+                logger.debug('searching for module `%s` in configured module path %r ...', element.source, cfg.modules_path)
                 source_file = AvailableModules().find_module_by_name(element.source)
             if not os.path.exists(source_file):
                 raise PipelineDescriptionError(
