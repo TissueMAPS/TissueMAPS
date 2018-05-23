@@ -339,7 +339,7 @@ def register(experiment_id, acquisition_id):
     parser.read('/home/tissuemaps/.tmaps/tissuemaps.cfg')
     storage_home_path = parser.get('tmlib', 'storage_home')
  
-    path_to_link = os.path.join(storage_home_path,'experiment_{}/plates/plate_1/acquisitions/acquisition_{}/microscope_images') 
+    path_to_link = os.path.join(storage_home_path,'experiment_{}/plates/plate_{}/acquisitions/acquisition_{}/microscope_images') 
 
 
     filenames = [
@@ -356,7 +356,7 @@ def register(experiment_id, acquisition_id):
         # single plate only
         plate = session.query(tm.Plate).one()
         
-        logger.info('path to link: %s', path_to_link.format(experiment.id, acquisition.id))
+        logger.info('path to link: %s', path_to_link.format(experiment.id, plate.id, acquisition.id))
         logger.info('experiment %s', experiment.id)
         logger.info('acquisition %s', acquisition)
         logger.info('plate %s', plate)
@@ -391,7 +391,7 @@ def register(experiment_id, acquisition_id):
         #acquisition.microscope_images_location
         acquisition.microscope_metadata_location
         
-        os.symlink(path ,path_to_link.format(experiment.id,acquisition.id) )
+        os.symlink(path ,path_to_link.format(experiment.id,plate.id,acquisition.id) )
 
         microscope_files = session.query(tm.MicroscopeImageFile).filter_by(acquisition_id=acquisition.id).all()
         
