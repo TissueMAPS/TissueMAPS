@@ -145,19 +145,20 @@ class PyramidBuilder(WorkflowStepAPI):
                             # In this case we want to prevent that too extreme
                             # rescaling is applied, which would look shitty.
                             # The choice of the threshold level is arbitrary.
+                            clip_min = stats.get_closest_percentile(0.001)
                             if layer.channel.bit_depth == 8:
                                 if clip_max < 255:
                                     clip_max = 255
+                                    
                             else:
-                                if clip_max < 700:
-                                    clip_max = 700
+                                if clip_max < clip_min + 255:
+                                    clip_max = clip_min + 255
                             logger.info('clip value: %d', clip_max)
-                            clip_min = stats.get_closest_percentile(0.001)
                         else:
                             logger.info('use provided clip value')
                             clip_max = args.clip_value
                             logger.info('clip value: %d', clip_max)
-                            clip_min = 0
+                            clip_min = stats.get_closest_percentile(0.001)
                     else:
                         logger.debug('don\'t clip intensities')
                         clip_max = 2**layer.channel.bit_depth - 1
