@@ -1,0 +1,53 @@
+---
+
+# save defaults so we can re-use them later
+DEFAULT: &DEFAULT
+  # choices for microscope_type: cellvoyager, metamorph
+  microscope_type: cellvoyager
+  # choices for plate_acquisition_mode: basic, multiplexing
+  plate_acquisition_mode: basic
+  plate_format: 384
+  acquisitions:
+    - acquisition1
+  # choices for workflow_type: canonical, multiplexing
+  workflow_type: canonical
+  # this is correct for 1 plate, 1 acquisition, 1 cycle
+  nr_tests: 7
+
+
+##
+#
+# Actual experiment descriptions
+#
+##
+
+Cellvoyager_2D_Canonical:
+  <<: *DEFAULT
+
+MDtestdata:
+  <<: *DEFAULT
+  microscope_type: metamorph
+
+Cellvoyager_2D_SpotDetection_Scott:
+  <<: *DEFAULT
+
+Cellvoyager_2D_Multiplexing_Andi:
+  <<: *DEFAULT
+  plate_acquisition_mode: multiplexing
+  acquisitions:
+    - cycle1
+    - cycle2
+    - cycle3
+  workflow_type: multiplexing
+  nr_tests: 11
+
+Cellvoyager_2D_robust_align_test:
+  <<: *DEFAULT
+  plate_acquisition_mode: multiplexing
+  workflow_type: multiplexing
+  acquisitions:
+    - Cycle1
+    - Cycle10
+
+SyntheticData_2D_Canonical:
+  <<: *DEFAULT
