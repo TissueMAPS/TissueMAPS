@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -255,6 +255,16 @@ class WorkflowStepCLI(WorkflowSubmissionManager):
             gc3libs_logger.setLevel(logging.INFO)
         else:
             gc3libs_logger.setLevel(logging.ERROR)
+        # same for SQLAlchemy
+        sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
+        if arguments.verbosity > 3:
+            sqlalchemy_logger.setLevel(logging.DEBUG)
+        elif arguments.verbosity > 2:
+            sqlalchemy_logger.setLevel(logging.INFO)
+        elif arguments.verbosity > 1:
+            sqlalchemy_logger.setLevel(logging.WARNING)
+        else:
+            sqlalchemy_logger.setLevel(logging.ERROR)
 
         logger.debug('processing on node: %s', socket.gethostname())
         logger.debug('running program: %s' % cls.__name__.lower())
