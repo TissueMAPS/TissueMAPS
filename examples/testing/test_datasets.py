@@ -30,6 +30,7 @@ from __future__ import absolute_import, division, print_function
 import cPickle as pickle
 from datetime import datetime
 import logging
+from multiprocessing.dummy import Pool
 import os
 from os.path import basename, exists, isabs, isdir, join
 import subprocess
@@ -221,19 +222,38 @@ class Report(object):
         click.secho("  SKIP: {}".format(self.skipped),
                     fg='yellow', bold=True)
 
-    def testsuite(self, name, **properties):
-        suite = _Testsuite(self, name, id=len(self._suites), **properties)
+    def new_test_suite(self, name, **properties):
+        """
+        Return a new `_Testsuite`:class: instance.
+
+        The newly-created instance has this `Report`:class: object as
+        parent and will automatically update it as `_Testcase`'s are
+        marked with OK/error/etc.
+        """
+        suite = _Testsuite(name, id=len(self._suites),
+                           parent=name, **properties)
+        return self.add_test_suite(suite)
+
+    def add_test_suite(self, suite):
+        """
+        Add a `_Testsuite`:class: instance to the report.
+        """
         self._suites.append(suite)
+        suite._parent = self
+        self.ok += suite.ok
+        self.errored += suite.errored
+        self.failed += suite.failed
+        self.skipped += suite.skipped
         return suite
 
 
 class _Testsuite(timing):
 
-    def __init__(self, parent, name, **properties):
+    def __init__(self, name, **properties):
         self.name = name
         self.hostname = properties.pop('hostname', 'localhost')
         self._id = properties.pop('id', None)
-        self._parent = parent
+        self._parent = properties.pop('parent', None)
         self._properties = properties
         self._testcases = []
         self.ok = 0
@@ -244,19 +264,23 @@ class _Testsuite(timing):
 
     def error(self, case, msg):
         self.errored += 1
-        self._parent.error(self, case, msg)
+        if self._parent:
+            self._parent.error(self, case, msg)
 
     def fail(self, case, msg):
         self.failed += 1
-        self._parent.fail(self, case, msg)
+        if self._parent:
+            self._parent.fail(self, case, msg)
 
     def skip(self, case, msg):
         self.skipped += 1
-        self._parent.skip(self, case, msg)
+        if self._parent:
+            self._parent.skip(self, case, msg)
 
     def success(self, case, msg):
         self.ok += 1
-        self._parent.success(self, case, msg)
+        if self._parent:
+            self._parent.success(self, case, msg)
 
     def as_junit_xml(self):
         """
@@ -286,15 +310,19 @@ class _Testsuite(timing):
                     xml.asis(testcase.as_junit_xml())
         return xml.getvalue()
 
-    def testcase(self, name, **properties):
-        case = _Testcase(self, name, **properties)
+    def new_test_case(self, name, **properties):
+        case = _Testcase(name, parent=self, **properties)
+        return self.add_test_case(case)
+
+    def add_test_case(self, case):
+        # FIXME: should react on ok/error/whatever state
         self._testcases.append(case)
         return case
 
 
 class _Testcase(timing):
 
-    def __init__(self, parent, name, **properties):
+    def __init__(self, name, **properties):
         super(_Testcase, self).__init__(name)
         self.name = name
         self.classname = properties.pop('classname', None)
@@ -302,7 +330,7 @@ class _Testcase(timing):
         self.status = None
         self.stdout = None
         self.stderr = None
-        self._parent = parent
+        self._parent = properties.get('parent', None)
         self._properties = properties
 
     def error(self, msg):
@@ -567,7 +595,7 @@ class Runner(object):
             with open(self.server_log) as logfile:
                 logfile.seek(0, os.SEEK_END)
                 server_log_start = logfile.tell()
-        with self.suite.testcase(operation.description) as testcase:
+        with self.suite.new_test_case(operation.description) as testcase:
             testcase.classname = operation.command
             if self.just_print:
                 testcase.skip("Dry run.")
@@ -758,9 +786,13 @@ def run_workflow(case, host, port, user, password, experiment_name,
             # we capture all of it (for better reporting and for
             # debugging purposes).
             response = wkf_client.get_workflow_status(depth=8)
-            logging.debug("client.get_workflow_status() => %r", response)
+            logging.debug(
+                "client.get_workflow_status(%s) => %r",
+                experiment_name, response)
             percent_done = compute_workflow_progress(response)
-            logging.info("Workflow %.2f%% done.", percent_done)
+            logging.info(
+                "%s: Workflow %.2f%% done.",
+                experiment_name, percent_done)
         if response['failed']:
             case.fail('Workflow failed (%.2f%% done)' % percent_done)
         else:
@@ -839,6 +871,11 @@ def write_junit_xml(report, tests_file, dataset_dir, dataset_name=None):
               type=int, default=30,
               help=("How often to poll for status updates"
                     " when running workflows."))
+@click.option('-j', '--jobs', '--concurrent',
+              type=int, default=1,
+              help=("Test this many datasets in parallel."
+                    " Use '-j0' to run on as many threads"
+                    " as there are CPUs on the computer."))
 @click.option('-l', '--server-log', default=None,
               help="Path to server log to include in case of failed operations.")
 @click.option('-v', '--verbose', count=True,
@@ -858,7 +895,7 @@ def write_junit_xml(report, tests_file, dataset_dir, dataset_name=None):
 def main(dataset_dir, tests_file, only,
          host, port, user, password,
          client_opt='api', server_log=None, interval=30, force=False,
-         aggregate=False, verbose=0, just_print=False):
+         concurrent=1, aggregate=False, verbose=0, just_print=False):
 
     setup_logging(verbose)
 
@@ -879,10 +916,10 @@ def main(dataset_dir, tests_file, only,
         abort("No datasets to test!")
     logging.info("Will test datasets: %r", datasets_to_test)
 
-    report = Report(basename(dataset_dir))
     existing_experiments = list_experiment_names(host, port, user, password)
 
-    for dataset_path in datasets_to_test:
+    # actual code to run the tests
+    def do_test_dataset(dataset_path):
         name, params = get_experiment_data(dataset_path, test_params)
         experiment_name = params.pop('name')
         params['client'] = client_opt
@@ -901,10 +938,10 @@ def main(dataset_dir, tests_file, only,
                     "Experiment `%s` already exists."
                     " Remove it before re-running this test.",
                     experiment_name)
-                continue
+                return
 
         # start actual testing
-        with report.testsuite(name, **params) as suite:
+        with _Testsuite(name, **params) as suite:
             run = Runner(suite, just_print, server_log)
 
             try:
@@ -932,7 +969,7 @@ def main(dataset_dir, tests_file, only,
                 jterator_project_path = join(dataset_path, params.get('jterator_project_path', 'jterator'))
                 run(client.upload_jterator_project_files(jterator_project_path))
 
-                with suite.testcase("Running workflow") as case:
+                with suite.new_test_case("Running workflow") as case:
                     if not just_print:
                         run_workflow(
                             case, host, port, user, password,
@@ -940,14 +977,23 @@ def main(dataset_dir, tests_file, only,
 
             except Runner.Abort as err:
                 logging.warning("%s", err)
-                continue
 
+            return suite
+
+    # do (possibly) parallel processing
+    report = Report(basename(dataset_dir))
+    proc = Pool(processes=(concurrent or None))
+    suites = proc.imap_unordered(do_test_dataset, datasets_to_test)
+    for suite in suites:
+        if not suite:
+            # `do_test_dataset` errored out
+            continue
+        report.add_test_suite(suite)
         if not aggregate:
             if not just_print:
-                write_junit_xml(report, tests_file, dataset_dir, experiment_name)
+                write_junit_xml(report, tests_file, dataset_dir, suite.name)
             report.print_terminal_output()
             report.reset()
-
     if aggregate:
         if not just_print:
             write_junit_xml(report, tests_file, dataset_dir)
