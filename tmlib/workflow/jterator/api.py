@@ -621,7 +621,7 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             job_collection.submission_id
         )
         logger.debug('allocated time for debug run jobs: %s', duration)
-        logger.debug('allocated memory for debug run jobs: %d MB', memory)
+        logger.debug('allocated memory for debug run jobs: %s MB', memory)
         logger.debug('allocated cores for debug run jobs: %d', cores)
 
         for b in batches:

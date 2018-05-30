@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016, 2018  University of Zurich
 # Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
@@ -619,7 +619,7 @@ class WorkflowStepAPI(object):
             memory = max_memory_per_node
 
         logger.debug('allocated time for run jobs: %s', duration)
-        logger.debug('allocated memory for run jobs: %d MB', memory)
+        logger.debug('allocated memory for run jobs: %s', memory)
         logger.debug('allocated cores for run jobs: %d', cores)
 
         job_ids = self.get_run_job_ids()
@@ -688,7 +688,7 @@ class WorkflowStepAPI(object):
         memory = cfg.resource.max_memory_per_core
         cores = 1
         logger.debug('allocated time for "init" job: %s', duration)
-        logger.debug('allocated memory for "init" job: %d MB', memory)
+        logger.debug('allocated memory for "init" job: %s', memory)
         logger.debug('allocated cores for "init" job: %d', cores)
         job = InitJob(
             step_name=self.step_name,
@@ -732,7 +732,7 @@ class WorkflowStepAPI(object):
         memory = cfg.resource.max_memory_per_core
         cores = 1
         logger.debug('allocated time for "collect" job: %s', duration)
-        logger.debug('allocated memory for "collect" job: %d MB', memory)
+        logger.debug('allocated memory for "collect" job: %s', memory)
         logger.debug('allocated cores for "collect" job: %d', cores)
         job = CollectJob(
             step_name=self.step_name,

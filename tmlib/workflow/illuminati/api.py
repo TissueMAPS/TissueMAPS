@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -149,7 +149,7 @@ class PyramidBuilder(WorkflowStepAPI):
                             if layer.channel.bit_depth == 8:
                                 if clip_max < 255:
                                     clip_max = 255
-                                    
+
                             else:
                                 if clip_max < clip_min + 255:
                                     clip_max = clip_min + 255
@@ -307,7 +307,7 @@ class PyramidBuilder(WorkflowStepAPI):
             'create "run" jobs for submission %d', job_collection.submission_id
         )
         logger.debug('allocated time for "run" jobs: %s', duration)
-        logger.debug('allocated memory for "run" jobs: %d MB', memory)
+        logger.debug('allocated memory for "run" jobs: %s MB', memory)
         logger.debug('allocated cores for "run" jobs: %d', cores)
 
         multi_run_jobs = collections.defaultdict(list)
