@@ -1,4 +1,11 @@
 #!/bin/sh
-. $HOME/.bashrc
-uwsgi --ini {{ tm_home }}/.tmaps/uwsgi.ini
+. {{ tm_home }}/.bashrc
 
+export TMAPS_DB_HOST=localhost
+
+# start the GC3Pie "Job Daemon" if not already running
+{{ tm_home }}/.local/bin/gclient /storage/jobdaemon hello 1>/dev/null 2>/dev/null \
+  || {{ tm_home }}/.local/bin/tm_jobdaemon.py --working-dir /storage/jobdaemon --listen localhost:9197 -s /storage/jobdaemon -u "postgresql://tissuemaps@${TMAPS_DB_HOST}/tissuemaps"
+
+# start TM server
+exec uwsgi --ini {{ tm_home }}/.tmaps/uwsgi.ini
