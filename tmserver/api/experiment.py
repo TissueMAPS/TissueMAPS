@@ -1,6 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
-# Copyright (C) 2018  University of Zurich
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -426,7 +425,13 @@ def delete_experiment(experiment_id):
             logger.debug(
                 "Killing task %s, belonging to submission %s of experiment %s",
                 top_task_id, row.id, experiment_id)
-            gc3pie.kill_task_by_id(top_task_id)
+            try:
+                gc3pie.kill_task_by_id(top_task_id)
+            except Exception as err:
+                logger.error(
+                    "Could not kill top-level task %s of experiment %s: %s."
+                    " Ignoring error and proceeding with deletion anyway.",
+                    top_task_id, experiment_id, err)
         # now delete all submissions
         q.delete()
         # delete experiment reference
