@@ -1,6 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
-# Copyright (C) 2018  University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -360,7 +359,7 @@ class GC3Pie(object):
         logger.info(
             'Resubmit task "%s" (ID: %s) from sub-task #%d ...',
             task.jobname, task.persistent_id, index)
-        self._job_daemon_do('redo', str(task.persistent_id))
+        self._job_daemon_do('redo', str(task.persistent_id), str(index))
 
     def get_task_status(self, task_id, recursion_depth=None):
         '''Gets the status of submitted task.
