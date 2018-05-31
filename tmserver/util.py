@@ -215,7 +215,6 @@ def decode_query_ids(permission='write'):
                     'ID "experiment_id" was not in the URL even though '
                     'the view was expected to receive it.'
                 )
-
             for arg in url_args:
                 if arg.endswith('_id'):
                     encoded_model_id = request.view_args.get(arg)
@@ -224,11 +223,11 @@ def decode_query_ids(permission='write'):
                 if arg == 'experiment_id':
                     if permission is not None:
                         with tm.utils.MainSession() as session:
-                            experiment = session.query(tm.ExperimentReference).\
-                                get(model_id)
+                            experiment = session.query(
+                                tm.ExperimentReference).get(model_id)
                             if experiment is None:
                                 raise ResourceNotFoundError(
-                                    tm.Experiment, experiment_id=experiment_id
+                                    tm.Experiment, experiment_id=model_id
                                 )
                             granted = experiment.can_be_accessed_by(
                                 current_identity.id, permission
