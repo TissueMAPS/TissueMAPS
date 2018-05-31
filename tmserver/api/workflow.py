@@ -1,6 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016 Markus D. Herrmann, University of Zurich and Robin Hafen
-# Copyright (C) 2018 University of Zurich
+# Copyright (C) 2016-2018 University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -51,6 +50,23 @@ from tmserver import cfg as server_cfg
 logger = logging.getLogger(__name__)
 
 
+def _retrieve_experiment_or_abort(experiment_id, session):
+    """
+    Return the `Experiment`:class: instance corresponding to *experiment_id*.
+
+    Argument *session* must be an instance of
+    `tmlib.models.utils.ExperimentSession`:class: which is queried for
+    retrieving the `Experiment`:class: instance.
+
+    :raise tmserver.error.ResourceNotFoundError:
+      If no experiment with the given ID can be found.
+    """
+    experiment = session.query(tm.Experiment).get(experiment_id)
+    if experiment is None:
+        raise ResourceNotFoundError(tm.Experiment, experiment_id=experiment_id)
+    return experiment
+
+
 @api.route('/experiments/<experiment_id>/workflow/submit', methods=['POST'])
 @jwt_required()
 @decode_query_ids('write')
@@ -91,7 +107,7 @@ def submit_workflow(experiment_id):
     logger.info('submit workflow for experiment %d', experiment_id)
     data = request.get_json()
     with tm.utils.ExperimentSession(experiment_id) as session:
-        experiment = session.query(tm.Experiment).get(experiment_id)
+        experiment = _retrieve_experiment_or_abort(experiment_id, session)
         if 'description' in data:
             logger.info('use provided workflow description')
             workflow_description = WorkflowDescription(**data['description'])
@@ -168,7 +184,7 @@ def resubmit_workflow(experiment_id):
     index = data.get('index')
     stage_name = data.get('stage_name')
     with tm.utils.ExperimentSession(experiment_id) as session:
-        experiment = session.query(tm.Experiment).get(experiment_id)
+        experiment = _retrieve_experiment_or_abort(experiment_id, session)
         if 'description' in data:
             logger.info('use provided workflow description')
             workflow_description = WorkflowDescription(**data['description'])
@@ -489,7 +505,7 @@ def get_workflow_description(experiment_id):
     """
     logger.info('get workflow description for experiment %d', experiment_id)
     with tm.utils.ExperimentSession(experiment_id) as session:
-        experiment = session.query(tm.Experiment).get(experiment_id)
+        experiment = _retrieve_experiment_or_abort(experiment_id, session)
         description = experiment.workflow_description
     return jsonify(data=description.to_dict())
 
@@ -534,7 +550,7 @@ def update_workflow_description(experiment_id):
     data = request.get_json()
     workflow_description = WorkflowDescription(**data['description'])
     with tm.utils.ExperimentSession(experiment_id) as session:
-        experiment = session.query(tm.Experiment).get(experiment_id)
+        experiment = _retrieve_experiment_or_abort(experiment_id, session)
         experiment.persist_workflow_description(workflow_description)
     return jsonify(message='ok')
 
