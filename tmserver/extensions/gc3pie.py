@@ -150,7 +150,7 @@ class GC3Pie(object):
 
     def _job_daemon_do(self, cmd, *args):
         try:
-            func = getattr(self._client, cmd, *args)
+            func = getattr(self._client, cmd)
         except AttributeError:
             msg = ("Job daemon exports no command named `{cmd}`."
                    .format(cmd=cmd))
