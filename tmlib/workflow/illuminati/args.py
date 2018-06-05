@@ -35,7 +35,7 @@ class IlluminatiBatchArguments(BatchArguments):
 
     illumcorr = Argument(
         type=bool, default=False, short_flag='i',
-        help='wether images should be corrected for illumination artifacts'
+        help='whether images should be corrected for illumination artifacts'
     )
 
     clip = Argument(
@@ -54,6 +54,14 @@ class IlluminatiBatchArguments(BatchArguments):
     clip_percent = Argument(
         type=float, default=99.90, flag='clip-percent',
         help='''threshold percentile at which image intensities should be clipped
+        '''
+    )
+
+    illumcorr_exceptions = Argument(
+        type=str, flag='illumcorr_exceptions',
+        help='''A list of comma-separated channel names that will not be
+             illumination corrected. Useful when segmentation channels are
+             uploaded.
         '''
     )
 

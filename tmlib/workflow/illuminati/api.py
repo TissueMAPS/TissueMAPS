@@ -217,7 +217,8 @@ class PyramidBuilder(WorkflowStepAPI):
                                     'index': index,
                                     'image_file_ids': batch,
                                     'align': args.align,
-                                    'illumcorr': args.illumcorr
+                                    'illumcorr': args.illumcorr,
+                                    'illumcorr_exceptions': args.illumcorr_exceptions
                                 }
                             else:
                                 rows = np.arange(layer.dimensions[level][0])
@@ -364,6 +365,13 @@ class PyramidBuilder(WorkflowStepAPI):
             )
             logger.info('create tiles at zoom level %d', batch['level'])
 
+            # Read in input of illumination correction exceptions
+            non_illumcorr_channels = []
+            if batch['illumcorr_exceptions']:
+                non_illumcorr_inputs = batch['illumcorr_exceptions'].split(',')
+                for channel_name in non_illumcorr_inputs:
+                    non_illumcorr_channels.append(channel_name.strip())
+
             if batch['illumcorr']:
                 logger.info('correct images for illumination artifacts')
                 try:
@@ -396,8 +404,11 @@ class PyramidBuilder(WorkflowStepAPI):
                 image_store = dict()
                 image = file.get()
                 if batch['illumcorr']:
-                    logger.debug('correct image')
-                    image = image.correct(stats)
+                    if layer.channel.name in non_illumcorr_channels:
+                        logger.info('Not applying illumination correction for channel %s', layer.channel.name)
+                    else:
+                        logger.debug('correct image')
+                        image = image.correct(stats)
                 if batch['align']:
                     logger.debug('align image')
                     image = image.align(crop=False)
