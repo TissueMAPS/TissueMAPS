@@ -199,6 +199,24 @@ class GC3Pie(object):
             submission = session.query(tm.Submission).get(task.submission_id)
             submission.top_task_id = persistent_id
 
+    def update_task(self, task):
+        """
+        Update a task in the database.
+
+        The task should have already been saved in the database (i.e.,
+        have a `persistent_id` attribute), otherwise an
+        `AttributeError` exception will be raised.
+
+        Parameters
+        ----------
+        task: gc3libs.Task
+            computational task or collection of computational tasks
+        """
+        logger.debug(
+            'Updating task `%s` (ID: %s) in DB ...',
+            task, task.persistent_id)
+        self._store.replace(task.persistent_id, task)
+
     def get_id_of_most_recent_submission(self, experiment_id, program):
         """Gets the ID of the most recent
         :class:`Submission <tmlib.models.submission.Submission>`.
@@ -356,8 +374,9 @@ class GC3Pie(object):
             index of an individual task within a sequential collection of tasks
             from where all subsequent tasks should be resubmitted
         """
+        self.update_task(task)  # ensure task is up-to-date in DB
         logger.info(
-            'Resubmit task "%s" (ID: %s) from sub-task #%d ...',
+            'Resubmitting task "%s" (ID: %s) from sub-task #%d ...',
             task.jobname, task.persistent_id, index)
         self._job_daemon_do('redo', str(task.persistent_id), str(index))
 
