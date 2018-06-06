@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016-2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -273,7 +273,7 @@ class Experiment(DirectoryModel):
     #: horizontal axis in pixels
     horizontal_site_displacement = Column(Integer, nullable=False)
 
-    #: int: gab introduced between neighbooring wells in pixels
+    #: int: gap introduced between neighbooring wells in pixels
     well_spacer_size = Column(Integer, nullable=False)
 
     def __init__(self, id, microscope_type, plate_format, plate_acquisition_mode,
