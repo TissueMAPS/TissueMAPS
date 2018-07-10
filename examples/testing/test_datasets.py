@@ -984,6 +984,7 @@ def main(dataset_dir, tests_file, only,
     report = Report(basename(dataset_dir))
     proc = Pool(processes=(concurrent or None))
     suites = proc.imap_unordered(do_test_dataset, datasets_to_test)
+    errors = False
     for suite in suites:
         if not suite:
             # `do_test_dataset` errored out
@@ -993,13 +994,22 @@ def main(dataset_dir, tests_file, only,
             if not just_print:
                 write_junit_xml(report, tests_file, dataset_dir, suite.name)
             report.print_terminal_output()
+            if report.errored > 0 or report.failed > 0:
+                errors = True
             report.reset()
     if aggregate:
         if not just_print:
             write_junit_xml(report, tests_file, dataset_dir)
         report.print_terminal_output()
+        if report.errored > 0 or report.failed > 0:
+            errors = True
         report.reset()
+
+    if errors:
+        return 2
+    else:
+        return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
