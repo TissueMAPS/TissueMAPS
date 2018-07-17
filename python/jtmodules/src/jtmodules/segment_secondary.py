@@ -78,29 +78,41 @@ def main(primary_label_image, intensity_image, contrast_threshold,
         # i.e. regions in the intensity_image that should not be covered by
         # secondary objects.
         n_objects = len(np.unique(primary_label_image[1:]))
-        # TODO: consider using contrast_treshold as input parameter
-        background_mask = mh.thresholding.bernsen(
-            intensity_image, 5, contrast_threshold
+        logger.info(
+            'primary label image has %d objects',
+            n_objects - 1
         )
-        if min_threshold is not None:
-            logger.info(
-                'set lower threshold level to %d', min_threshold
+        # SB: Added a catch for images with no primary objects
+        # note that background is an 'object'
+        if n_objects > 1:
+            # TODO: consider using contrast_treshold as input parameter
+            background_mask = mh.thresholding.bernsen(
+                intensity_image, 5, contrast_threshold
             )
-            background_mask[intensity_image < min_threshold] = True
+            if min_threshold is not None:
+                logger.info(
+                    'set lower threshold level to %d', min_threshold
+                )
+                background_mask[intensity_image < min_threshold] = True
 
-        if max_threshold is not None:
-            logger.info(
-                'set upper threshold level to %d', max_threshold
+            if max_threshold is not None:
+                logger.info(
+                    'set upper threshold level to %d', max_threshold
+                )
+                background_mask[intensity_image > max_threshold] = False
+            # background_mask = mh.morph.open(background_mask)
+            background_label_image = mh.label(background_mask)[0]
+            background_label_image[background_mask] += n_objects
+
+            logger.info('detect secondary objects via watershed transform')
+            secondary_label_image = expand_objects_watershed(
+                primary_label_image, background_label_image, intensity_image
             )
-            background_mask[intensity_image > max_threshold] = False
-        # background_mask = mh.morph.open(background_mask)
-        background_label_image = mh.label(background_mask)[0]
-        background_label_image[background_mask] += n_objects
-
-        logger.info('detect secondary objects via watershed transform')
-        secondary_label_image = expand_objects_watershed(
-            primary_label_image, background_label_image, intensity_image
-        )
+        else:
+            logger.info('skipping secondary segmentation')
+            secondary_label_image = np.zeros(
+                primary_label_image.shape, dtype=np.int32
+            )
 
     n_objects = len(np.unique(secondary_label_image)[1:])
     logger.info('identified %d objects', n_objects)

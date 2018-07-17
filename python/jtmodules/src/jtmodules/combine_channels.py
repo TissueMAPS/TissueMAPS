@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
+# Copyright 2016, 2018  University of Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import collections
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 
 Output = collections.namedtuple('Output', ['combined_image', 'figure'])
 
@@ -95,5 +95,3 @@ def main(image_1, image_2, weight_1, weight_2, plot=False):
         figure = str()
 
     return Output(combined_image, figure)
-
-
