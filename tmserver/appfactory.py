@@ -1,5 +1,6 @@
 # TmServer - TissueMAPS server application.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -57,7 +58,7 @@ def create_app(verbosity=None):
 
     """
     log_formatter = logging.Formatter(
-        fmt='[%(process)6d] %(asctime)s | %(levelname)-8s | %(name)-40s | %(message)s',
+        fmt='[%(process)6d/%(threadName)-12s] %(asctime)s | %(levelname)-8s | %(name)-40s | %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     log_handler = logging.StreamHandler(stream=sys.stdout)
@@ -91,23 +92,18 @@ def create_app(verbosity=None):
     gc3pie_logger.addHandler(log_handler)
     wsgi_logger = logging.getLogger('wsgi')
     wsgi_logger.addHandler(log_handler)
-    apscheduler_logger = logging.getLogger('apscheduler')
-    apscheduler_logger.addHandler(log_handler)
     if verbosity > 4:
         gevent_logger.setLevel(logging.DEBUG)
         gc3pie_logger.setLevel(logging.DEBUG)
         wsgi_logger.setLevel(logging.DEBUG)
-        apscheduler_logger.setLevel(logging.DEBUG)
     elif verbosity > 3:
         gevent_logger.setLevel(logging.INFO)
         gc3pie_logger.setLevel(logging.INFO)
         wsgi_logger.setLevel(logging.INFO)
-        apscheduler_logger.setLevel(logging.INFO)
     else:
         gevent_logger.setLevel(logging.ERROR)
         gc3pie_logger.setLevel(logging.ERROR)
         wsgi_logger.setLevel(logging.ERROR)
-        apscheduler_logger.setLevel(logging.ERROR)
 
     app.json_encoder = TmJSONEncoder
 

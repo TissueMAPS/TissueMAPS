@@ -1,5 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016-2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -17,25 +17,63 @@ import os
 import logging
 import gc3libs
 import collections
+from random import random
 from sqlalchemy import func
+from time import sleep
+import xmlrpclib
+
 from flask import current_app
 
 import tmlib.models as tm
-from tmlib.workflow.utils import create_gc3pie_sql_store
-from tmlib.workflow.utils import create_gc3pie_session
-from tmlib.workflow.utils import create_gc3pie_engine
-from tmlib.workflow.utils import get_task_status_recursively
+from tmlib.workflow.utils import (
+    create_gc3pie_sql_store,
+    create_gc3pie_session,
+    create_gc3pie_engine,
+    get_task_status_recursively,
+)
 from tmlib.workflow.workflow import WorkflowStep, ParallelWorkflowStage
 
+from tmserver import cfg
 from tmserver.model import encode_pk
-from tmserver.extensions.gc3pie.engine import BgEngine
 
 logger = logging.getLogger(__name__)
 
 
+def start_job_daemon(max_delay=0, jobdaemon_program=None,
+                     jobdaemon_host=None, jobdaemon_port=None,
+                     store_url=None, session_dir=None):
+    """
+    Start the GC3Pie "job daemon".
+
+    Actual startup of the child process is delayed by a random amount
+    up to *max_delay* seconds.  By default *max_delay* is 0 (i.e. the
+    job daemon process is started immediately) but this can be used to
+    avoid multiple concurrent starts from separate threads.
+    """
+    # we cannot simply use `cfg.*` as default values, since Python
+    # evaluates default values when reading the function definition
+    jobdaemon = jobdaemon_program or cfg.jobdaemon
+    if jobdaemon_host is None:
+        jobdaemon_host = cfg.jobdaemon_host
+    if jobdaemon_port is None:
+        jobdaemon_port = cfg.jobdaemon_port
+    if store_url is None:
+        store_url = cfg.db_master_uri + '#table=tasks'
+    if session_dir is None:
+        session_dir = cfg.jobdaemon_session
+    sleep(max_delay * random())
+    logger.info("Trying to start GC3Pie job daemon.")
+    os.spawnlp(os.P_NOWAIT, jobdaemon,
+               jobdaemon,
+               '--session', session_dir,
+               '--store-url', store_url,
+               '--listen', (jobdaemon_host + ':' + jobdaemon_port))
+
+
 class GC3Pie(object):
 
-    """An extension that exposes a *GC3Pie* engine to manage computational tasks.
+    """
+    A Flask extension that exposes a *GC3Pie* engine to manage computational tasks.
     """
 
     def __init__(self, app=None):
@@ -58,38 +96,87 @@ class GC3Pie(object):
         if app is not None:
             self.init_app(app)
 
-    def init_app(self, app):
-        """Initializes the extension for a flask application. This will create
-        a *GC3Pie* engine and start it in the background using the "gevent"
-        scheduler.
+
+    def init_app(self, app, jobdaemon_url=None):
+        """
+        Start the GC3Pie job daemon process and connect to the DB.
 
         Parameters
         ----------
         app: flask.Flask
             flask application
-
-        See also
-        --------
-        :class:`tmserver.extensions.gc3pie.engine.BGEngine`
         """
-        logger.info('initialize GC3Pie extension')
-        logger.debug('create GC3Pie engine')
-        store = create_gc3pie_sql_store()
-        engine = create_gc3pie_engine(store)
-        bgengine = BgEngine('gevent', engine)
-        logger.debug('start GC3Pie engine in the background')
-        bgengine.start(10)
+        logger.info('initializing GC3Pie extension ...')
+        if jobdaemon_url:
+            if jobdaemon_url.startswith('http'):
+                self._jobdaemon_url = jobdaemon_url
+            else:
+                self._jobdaemon_url = 'http://' + jobdaemon_url
+        else:
+            # build it from host and port
+            self._jobdaemon_url = cfg.jobdaemon_url
         app.extensions['gc3pie'] = {
-            'engine': bgengine,
-            'store': store,
+            'store': create_gc3pie_sql_store(),
+            'client': self._connect_to_job_daemon(),
         }
 
+
+    def _connect_to_job_daemon(self, timeout=60, delay=0, max_pause=5):
+        sleep(delay * random())
+        waited = 0
+        while True:
+            try:
+                client = xmlrpclib.ServerProxy(self._jobdaemon_url)
+                logger.debug(
+                    "Connected to GC3Pie job daemon at %s",
+                    self._jobdaemon_url)
+                return client
+            except Exception as err:
+                logger.info(
+                    "Cannot connect to GC3Pie job daemon `%s`: %s",
+                    self._jobdaemon_url, err)
+                if waited > timeout:
+                    logger.debug(
+                        "Could not connect within %ds, giving up ...",
+                        timeout)
+                    break
+                start_job_daemon()
+                wait = max_pause * random()
+                logger.debug("Trying to connect again in %ds ...", wait)
+                sleep(wait)
+                waited += wait
+        return None
+
+
+    def _job_daemon_do(self, cmd, *args):
+        try:
+            func = getattr(self._client, cmd)
+        except AttributeError:
+            msg = ("Job daemon exports no command named `{cmd}`."
+                   .format(cmd=cmd))
+            self.log.error(msg)
+            raise AssertionError(msg)
+        try:
+            result = func(*args)
+        except xmlrpclib.Fault as err:
+            logger.error(
+                "Error running job daemon command `%s`: %s",
+                cmd, err.faultString)
+            raise
+        if result.startswith('ERROR'):
+            msg =("Error running job daemon command `{0}`: {1}"
+                  .format(cmd, result[len('ERROR: '):]))
+            logger.error(msg)
+            raise RuntimeError(msg)
+        return result
+
+
     @property
-    def _engine(self):
-        """tmserver.extensions.gc3pie.engine.BgEngine: engine running in the
-        background
+    def _client(self):
         """
-        return current_app.extensions.get('gc3pie', {}).get('engine')
+        Return XML-RPC client for communicating with the job daemon.
+        """
+        return current_app.extensions.get('gc3pie', {}).get('client')
 
     @property
     def _store(self):
@@ -105,12 +192,30 @@ class GC3Pie(object):
         task: gc3libs.Task
             computational task or collection of computational tasks
         """
-        logger.debug('insert task into tasks table')
+        logger.debug('insert task `%s` into tasks table', task)
         persistent_id = self._store.save(task)
         logger.debug('update submissions table')
         with tm.utils.MainSession() as session:
             submission = session.query(tm.Submission).get(task.submission_id)
             submission.top_task_id = persistent_id
+
+    def update_task(self, task):
+        """
+        Update a task in the database.
+
+        The task should have already been saved in the database (i.e.,
+        have a `persistent_id` attribute), otherwise an
+        `AttributeError` exception will be raised.
+
+        Parameters
+        ----------
+        task: gc3libs.Task
+            computational task or collection of computational tasks
+        """
+        logger.debug(
+            'Updating task `%s` (ID: %s) in DB ...',
+            task, task.persistent_id)
+        self._store.replace(task.persistent_id, task)
 
     def get_id_of_most_recent_submission(self, experiment_id, program):
         """Gets the ID of the most recent
@@ -189,6 +294,23 @@ class GC3Pie(object):
         else:
             return None
 
+    def manage_task(self, task_id):
+        """Add the task with the given ID to the running Engine.
+
+        Parameters
+        ----------
+        task_id: int
+            persistent task ID
+
+        Returns
+        -------
+        None
+        """
+        logger.debug(
+            'Handing over task ID %s to GC3Pie job daemon ...',
+            task_id)
+        self._job_daemon_do('manage', task_id)
+
     def retrieve_task(self, task_id):
         """Retrieves a task from the store.
 
@@ -212,9 +334,10 @@ class GC3Pie(object):
         task: gc3libs.Task
             computational task
         """
-        logger.info('submit task "%s"', task.jobname)
-        logger.debug('add task %d to engine', task.persistent_id)
-        self._engine.add(task)
+        logger.info(
+            'Submitting task "%s" (ID: %s) ...',
+            task.jobname, task.persistent_id)
+        self._job_daemon_do('manage', str(task.persistent_id))
 
     def kill_task(self, task):
         """Kills submitted task.
@@ -224,30 +347,21 @@ class GC3Pie(object):
         task: gc3libs.Task
             computational task
         """
-        logger.info('kill task "%s"', task.jobname)
-        logger.debug('kill task %d', task.persistent_id)
-        # NOTE: The engine requires the exact same task (same Python ID)!
-        try:
-            task = self._engine.find_task_by_id(task.persistent_id)
-        except KeyError:
-            logger.error(
-                'task "%s" cannot be killed because it is not '
-                'actively being processed', task.jobname
-            )
-            return
-        self._engine.kill(task)
+        logger.info(
+            'Killing task "%s" (ID: %s) ...',
+            task.jobname, task.persistent_id)
+        self._job_daemon_do('kill', str(task.persistent_id))
 
-    def continue_task(self, task):
-        """Continues interrupted task.
+    def kill_task_by_id(self, task_id):
+        """Kills submitted task.
 
         Parameters
         ----------
         task: gc3libs.Task
             computational task
         """
-        logger.info('continue task "%s"', task.jobname)
-        logger.debug('add task %d to engine', task.persistent_id)
-        self._engine.add(task)
+        logger.info('Killing task with ID %s ...', task_id)
+        self._job_daemon_do('kill', str(task_id))
 
     def resubmit_task(self, task, index=0):
         """Resubmits a task.
@@ -260,31 +374,11 @@ class GC3Pie(object):
             index of an individual task within a sequential collection of tasks
             from where all subsequent tasks should be resubmitted
         """
-        # We need to remove the task first, simple addition doesn't update them!
-        try:
-            self._engine.remove(task)
-        except:
-            pass
-        self._engine.add(task)
-        logger.info('resubmit task "%s" at %d', task.jobname, index)
-        self._engine.redo(task, index)
-
-    # def set_jobs_to_stopped(self, jobs):
-    #     '''Sets the state of jobs to ``STOPPED`` in a recursive manner.
-
-    #     Parameters
-    #     ----------
-    #     jobs: gc3libs.Task
-    #         computational task
-    #     '''
-    #     def stop_recursively(task_):
-    #         task_.execution.state = 'STOPPED'
-    #         if hasattr(task_, 'tasks'):
-    #             for t in task_.tasks:
-    #                 if t.execution.state != gc3libs.Run.State.TERMINATED:
-    #                     stop_recursively(t)
-
-    #     stop_recursively(jobs)
+        self.update_task(task)  # ensure task is up-to-date in DB
+        logger.info(
+            'Resubmitting task "%s" (ID: %s) from sub-task #%d ...',
+            task.jobname, task.persistent_id, index)
+        self._job_daemon_do('redo', str(task.persistent_id), str(index))
 
     def get_task_status(self, task_id, recursion_depth=None):
         '''Gets the status of submitted task.

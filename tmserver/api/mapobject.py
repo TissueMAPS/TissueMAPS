@@ -20,7 +20,8 @@ import json
 import logging
 import numpy as np
 import pandas as pd
-from cStringIO import StringIO
+import base64
+from io import BytesIO
 from flask_jwt import jwt_required
 from flask import jsonify, request, send_file, Response
 from sqlalchemy.orm.exc import NoResultFound
@@ -440,7 +441,7 @@ def get_features(experiment_id, mapobject_type_id):
             features = features.filter_by(name=name)
         features = features.order_by(tm.Feature.name).all()
         if not features:
-            logger.waring(
+            logger.warning(
                 'no features found for mapobject type %d', mapobject_type_id
             )
         return jsonify(data=features)
@@ -453,7 +454,7 @@ def get_features(experiment_id, mapobject_type_id):
 @jwt_required()
 @assert_form_params(
     'plate_name', 'well_name', 'well_pos_x', 'well_pos_y', 'zplane', 'tpoint',
-    'image'
+    'npz_file'
 )
 @decode_query_ids('write')
 def add_segmentations(experiment_id, mapobject_type_id):
@@ -470,7 +471,7 @@ def add_segmentations(experiment_id, mapobject_type_id):
         :statuscode 200: no error
         :statuscode 400: malformed request
 
-        :query image: 2D pixels array (required)
+        :query npz_file: npz file containing the segmentation image "segmentation" (required)
         :query plate_name: name of the plate (required)
         :query well_name: name of the well (required)
         :query well_pos_x: x-coordinate of the site within the well (required)
@@ -495,7 +496,8 @@ def add_segmentations(experiment_id, mapobject_type_id):
         well_pos_x, zplane, tpoint
     )
 
-    pixels = data.get('image')
+    npz_file = base64.b64decode(data.get('npz_file'))
+    pixels = np.load(BytesIO(npz_file))["segmentation"]
     array = np.array(pixels, dtype=np.int32)
     labels = np.unique(array[array > 0])
     n_objects = len(labels)
@@ -538,7 +540,7 @@ def add_segmentations(experiment_id, mapobject_type_id):
             ).\
             join(tm.Mapobject).\
             filter(
-                tm.MapobjectSegmentation.label.in_(labels),
+                tm.MapobjectSegmentation.label.in_(labels.tolist()),
                 tm.Mapobject.mapobject_type_id == mapobject_type_id,
                 tm.MapobjectSegmentation.partition_key == site_id
             ).\

@@ -1,5 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -251,9 +251,20 @@ def get_experiment(experiment_id):
 )
 def create_experiment():
     """
+    Create a new :class:`Experiment <tmlib.models.experiment.Experiment>`.
+
+    .. note::
+
+      The ``description`` parameter in this request is *not* the
+      "workflow description" YAML file: the latter is set to a default
+      value (depending on the ``workflow_type`` key) and can be later
+      changed with the ``update_workflow_description()``:func: API call; the
+      former is only used to set the ``description`` columnt in table
+      ``experiment_references`` which is used when listing existing
+      experiments in the UI.
+
     .. http:post:: /api/experiments
 
-        Create a new :class:`Experiment <tmlib.models.experiment.Experiment>`.
 
         **Example request**:
 
@@ -288,7 +299,6 @@ def create_experiment():
 
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
-
     """
     data = request.get_json()
     name = data.get('name')
@@ -296,6 +306,8 @@ def create_experiment():
     microscope_type = data.get('microscope_type')
     plate_format = int(data.get('plate_format'))
     plate_acquisition_mode = data.get('plate_acquisition_mode')
+    # WARNING: this description is just human-readable text,
+    # has no connection to the "workflow description" YAML file
     description = data.get('description', '')
     logger.info('create experiment "%s"', name)
     with tm.utils.MainSession() as session:
@@ -320,6 +332,7 @@ def create_experiment():
             plate_acquisition_mode=plate_acquisition_mode
         )
         session.add(experiment)
+        session.commit()
 
     return jsonify({
         'data': {
@@ -403,14 +416,30 @@ def delete_experiment(experiment_id):
         :statuscode 401: not authorized
 
     """
-    logger.info('delete experiment %d', experiment_id)
-    workflow = gc3pie.retrieve_most_recent_task(experiment_id, 'workflow')
-    if workflow is not None:
-        gc3pie.kill_task(workflow)
+    logger.info('Deleting experiment %d ...', experiment_id)
     with tm.utils.MainSession() as session:
+        q = session.query(tm.Submission)\
+                   .filter_by(experiment_id=experiment_id)
+        for row in q.all():
+            top_task_id = row.top_task_id
+            logger.debug(
+                "Killing task %s, belonging to submission %s of experiment %s",
+                top_task_id, row.id, experiment_id)
+            try:
+                gc3pie.kill_task_by_id(top_task_id)
+            except Exception as err:
+                logger.error(
+                    "Could not kill top-level task %s of experiment %s: %s."
+                    " Ignoring error and proceeding with deletion anyway.",
+                    top_task_id, experiment_id, err)
+        # now delete all submissions
+        q.delete()
+        # delete experiment reference
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
-        session.query(tm.ExperimentReference).\
-            filter_by(id=experiment_id).\
-            delete()
-    return jsonify(message='ok')
+        session.query(tm.ExperimentReference)\
+            .filter_by(id=experiment_id)\
+            .delete()
 
+    # FIXME: should delete schema `Experiment_XXX` as well!
+    return jsonify(message=('OK: deleted experiment {}'
+                            .format(experiment_id)))

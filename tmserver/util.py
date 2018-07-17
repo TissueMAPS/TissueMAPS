@@ -1,6 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich and Robin Hafen
-# Copyright (C) 2018  University of Zurich
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -21,6 +20,8 @@ server application.
 """
 import functools
 import logging
+import os
+
 from flask import request, current_app
 from flask_jwt import current_identity
 
@@ -169,8 +170,9 @@ def decode_form_ids(*model_ids):
             for mid in model_ids:
                 if mid not in data.keys():
                     raise MalformedRequestError(
-                        'ID "%s" was not in the POST body even though '
-                        'the view was expected to receive it.' % mid
+                        'ID "{mid}" was not in the POST body even though '
+                        'the view was expected to receive it.'
+                        .format(mid=mid)
                     )
                 if not mid.endswith('_id'):
                     raise MalformedRequestError('IDs must end with "_id".')
@@ -213,19 +215,16 @@ def decode_query_ids(permission='write'):
                     'ID "experiment_id" was not in the URL even though '
                     'the view was expected to receive it.'
                 )
-
             for arg in url_args:
                 if arg.endswith('_id'):
                     encoded_model_id = request.view_args.get(arg)
-                    logger.debug('encoded model ID: %s', encoded_model_id)
                     model_id = decode_pk(encoded_model_id)
-                    logger.debug('decoded model ID: %d', model_id)
                     kwargs[arg] = model_id
                 if arg == 'experiment_id':
                     if permission is not None:
                         with tm.utils.MainSession() as session:
-                            experiment = session.query(tm.ExperimentReference).\
-                                get(model_id)
+                            experiment = session.query(
+                                tm.ExperimentReference).get(model_id)
                             if experiment is None:
                                 raise ResourceNotFoundError(
                                     tm.Experiment, experiment_id=model_id
@@ -241,3 +240,30 @@ def decode_query_ids(permission='write'):
             return f(*args, **kwargs)
         return wrapped
     return decorator
+
+
+def is_exe(path):
+    """
+    Return true if *path* points to an executable file.
+    """
+    return (os.path.isfile(path) and os.access(path, os.X_OK))
+
+
+def which(program):
+    """
+    Return the full path to *program*, or ``None`` if it cannot be found.
+
+    See `<https://stackoverflow.com/a/377028/459543>`_ for the original code.
+    """
+    if os.path.isabs(program):
+        if is_exe(program):
+            return program
+    else:
+        search_path = (os.environ.get("PATH",
+                                      '/usr/local/bin:/bin:/usr/bin')
+                       .split(os.pathsep))
+        for path in search_path:
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+    return None

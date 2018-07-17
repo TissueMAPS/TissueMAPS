@@ -34,7 +34,8 @@ from tmserver.util import (
 )
 from tmserver.api import api
 from tmserver.error import *
-
+import os
+from ConfigParser import SafeConfigParser
 
 logger = logging.getLogger(__name__)
 
@@ -286,6 +287,121 @@ def get_acquisition(experiment_id, acquisition_id):
     with tm.utils.ExperimentSession(experiment_id) as session:
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
         return jsonify(data=acquisition)
+
+@api.route(
+    '/experiments/<experiment_id>/acquisitions/<acquisition_id>/register',
+    methods=['POST']
+)
+@jwt_required()
+@assert_form_params('path')
+@jwt_required()
+@decode_query_ids('write')
+def register(experiment_id, acquisition_id):
+    """
+    .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/register
+
+        Pass the NFS path to the data to the server.
+        The client has to wait for this response before uploading files.
+
+        **Example request**:
+
+        .. sourcecode:: http
+
+            Content-Type: application/json
+
+            {
+                "path": "/fullpath/to/serversidedata"
+            }
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+                "data": "/fullpath/to/serversidedata"
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 500: server error
+
+    """
+    logger.info('register microscope files')
+    data = request.get_json()
+    path = data['path']
+    logger.info('path given by the client: %s', path)
+    
+    # Parse storage_home variable from tissuemaps.cfg file
+    parser = SafeConfigParser()
+    parser.read('/home/tissuemaps/.tmaps/tissuemaps.cfg')
+    storage_home_path = parser.get('tmlib', 'storage_home')
+ 
+    path_to_link = os.path.join(storage_home_path,'experiment_{}/plates/plate_{}/acquisitions/acquisition_{}/microscope_images') 
+
+
+    filenames = [
+                f for f in os.listdir(path)
+                if (not f.startswith('.')
+                    and not os.path.isdir(os.path.join(path, f)))
+            ]
+
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        experiment = session.query(tm.Experiment).one()
+        microscope_type = experiment.microscope_type
+        img_regex, metadata_regex = get_microscope_type_regex(microscope_type)
+        acquisition = session.query(tm.Acquisition).get(acquisition_id)
+        # single plate only
+        plate = session.query(tm.Plate).one()
+        
+        logger.info('path to link: %s', path_to_link.format(experiment.id, plate.id, acquisition.id))
+        logger.info('experiment %s', experiment.id)
+        logger.info('acquisition %s', acquisition)
+        logger.info('plate %s', plate)
+ 
+        # check for image files already registered
+        img_filenames = [f.name for f in acquisition.microscope_image_files]
+        logger.debug('img_filenames %s', img_filenames)
+        img_files = [
+            tm.MicroscopeImageFile(
+                name=f, acquisition_id=acquisition.id
+            )
+            for f in filenames
+            if img_regex.search(f) and
+            f not in img_filenames
+        ]
+        # check for metadata already registered
+        meta_filenames = [f.name for f in acquisition.microscope_metadata_files]
+        meta_files = [
+            tm.MicroscopeMetadataFile(
+                name=secure_filename(f), acquisition_id=acquisition.id
+            )
+            for f in filenames
+            if metadata_regex.search(f) and
+            f not in meta_filenames
+        ]
+        
+        session.bulk_save_objects(img_files + meta_files)
+
+        
+        # Trigger creation of directories
+        acquisition.location
+        #acquisition.microscope_images_location
+        acquisition.microscope_metadata_location
+        
+        os.symlink(path ,path_to_link.format(experiment.id,plate.id,acquisition.id) )
+
+        microscope_files = session.query(tm.MicroscopeImageFile).filter_by(acquisition_id=acquisition.id).all()
+        
+        for microscope_file in microscope_files:
+            microscope_file.location
+            microscope_file.status = 'COMPLETE'
+
+    return jsonify(message='ok')
+
+
 
 
 @api.route(
