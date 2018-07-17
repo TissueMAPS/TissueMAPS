@@ -19,7 +19,9 @@ cluster_mode: no
 
 matlab_version: '2016b'
 
-postgresql_version: '9.6'
+# NOTE: Make sure this matches the PostgreSQL version provided by Citus
+# (see ../database-server-common/defaults/main.yml)
+postgresql_version: '10'
 
 storage_directory: /storage
 

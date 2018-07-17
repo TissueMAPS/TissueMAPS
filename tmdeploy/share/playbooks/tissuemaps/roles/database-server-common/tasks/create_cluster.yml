@@ -70,8 +70,14 @@
   when:
     - stat_db_data_directory.stat.exists
     - stat_db_pid.stat.exists
+  ignore_errors: yes
   tags:
     - database
+
+- name: Make sure postmaster.pid file does not exist
+  file:
+    path: "{{ db_data_directory }}/{{ db_node }}/postmaster.pid"
+    state: absent
 
 - name: Create log directory
   file:

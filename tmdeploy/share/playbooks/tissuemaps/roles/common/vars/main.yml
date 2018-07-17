@@ -1,5 +1,6 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
 # Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,3 +19,4 @@
 tm_home: /home/{{ tm_user }}
 tm_config_file: "{{ tm_home }}/.tmaps/tissuemaps.cfg"
 fs_data_directory: "{{ storage_directory }}/filesystem"
+jobdaemon_directory: "{{ storage_directory }}/jobdaemon"

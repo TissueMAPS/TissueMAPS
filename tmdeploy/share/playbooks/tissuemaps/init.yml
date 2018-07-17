@@ -20,6 +20,7 @@
 # Ansible-container.
 - name: Refresh tmpfiles.d
   hosts: all
+  any_errors_fatal: yes
   tasks:
     - name: Create directories defined in tmpfiles.d
       command: systemd-tmpfiles --create
@@ -31,6 +32,7 @@
 - name: Initialize database master server
   hosts:
     - tissuemaps_db_master
+  any_errors_fatal: yes
   tasks:
     - name: Enable and start postgresql service
       systemd:
@@ -42,6 +44,7 @@
 - name: Initialize database worker servers
   hosts:
     - tissuemaps_db_worker
+  any_errors_fatal: yes
   tasks:
     - name: Enable and start postgresql service
       systemd:

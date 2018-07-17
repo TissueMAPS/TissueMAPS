@@ -21,6 +21,7 @@
     app_host: unix                                                  # 127.0.0.1
     app_port: /var/run/uwsgi/tissuemaps.sock                        # 5002
     tm_compute_nodes: "{{ groups['tissuemaps_compute']|length|int if 'tissuemaps_compute' in groups else 1 }}"
+  any_errors_fatal: yes
   roles:
     - web-server
     - app-server
