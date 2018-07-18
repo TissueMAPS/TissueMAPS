@@ -42,7 +42,7 @@
     - tissuemaps
 
 - name: Install jtlibrary package dependencies
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/jtlibrary/requirements.txt --user --no-cache-dir
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/jtlibrary/python/jtlibrary/requirements.txt --user --no-cache-dir
   args:
     chdir: "{{ tm_home }}/jtlibrary/"
     executable: /bin/bash
@@ -50,7 +50,7 @@
     - tissuemaps
 
 - name: Install jtlibrary package
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/jtlibrary --user --no-cache-dir
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/jtlibrary/python/jtlibrary --user --no-cache-dir
   args:
     chdir: "{{ tm_home }}/jtlibrary/"
     executable: /bin/bash
