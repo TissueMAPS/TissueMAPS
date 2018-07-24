@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -41,7 +41,9 @@
     repo_url: "{{ tm_github_url }}/jtlibrary"
     version: "{{ tm_version }}"
     dest_dir: "{{ tm_home }}/jtlibrary"
-    pkg_dir: "{{ tm_home }}/jtlibrary/python/jtlib"
+    pkg_dirs:
+      - "{{ tm_home }}/jtlibrary/python/jtlibrary"
+      - "{{ tm_home }}/jtlibrary/python/jtmodules"
 
 - name: Install TmLibrary repository
   tags:
@@ -52,7 +54,8 @@
     repo_url: "{{ tm_github_url }}/tmlibrary"
     version: "{{ tm_version }}"
     dest_dir: "{{ tm_home }}/tmlibrary"
-    pkg_dir: "{{ tm_home }}/tmlibrary"
+    pkg_dirs:
+      - "{{ tm_home }}/tmlibrary"
 
 - name: Create directory for TissueMAPS related files
   file:

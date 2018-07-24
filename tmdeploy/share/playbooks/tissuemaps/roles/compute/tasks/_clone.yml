@@ -7,14 +7,16 @@
 
 - name: Install source package dependencies
   shell: |
-    env PYTHONUSERBASE="{{ tm_home }}/.local" pip install -r "{{ pkg_dir }}/requirements.txt" --user --no-cache-dir
+    env PYTHONUSERBASE="{{ tm_home }}/.local" pip install -r "{{ item }}/requirements.txt" --user --no-cache-dir
   args:
-    chdir: "{{ pkg_dir }}"
+    chdir: "{{ item }}"
     executable: /bin/bash
+  with_items: "{{ pkg_dirs }}"
 
 - name: Install source package
   shell: |
-    env PYTHONUSERBASE="{{ tm_home }}/.local" pip install -e "{{ pkg_dir }}" --user --no-cache-dir
+    env PYTHONUSERBASE="{{ tm_home }}/.local" pip install -e "{{ item }}" --user --no-cache-dir
   args:
-    chdir: "{{ pkg_dir }}"
+    chdir: "{{ item }}"
     executable: /bin/bash
+  with_items: "{{ pkg_dirs }}"
