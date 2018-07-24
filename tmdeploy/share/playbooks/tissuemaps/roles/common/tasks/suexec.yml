@@ -30,6 +30,7 @@
     LDFLAGS: ''
   args:
     chdir: /usr/local/src/su-exec
+    creates: /usr/local/src/su-exec/su-exec
 
 - name: Install su-exec
   file:
