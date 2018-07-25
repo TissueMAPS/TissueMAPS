@@ -176,11 +176,7 @@ def deploy_vm(args):
     commands.append(tm_inventory_cmd)
     # Run playbooks implemented in elasticluster, but only in case groups
     # are provided that are not supported by tmdeploy.
-    use_elasticluster = False
-    groups_to_deploy = _get_host_groups(args.setup_file)
-    for group in groups_to_deploy.keys():
-        if group not in SUPPORTED_TM_GROUPS:
-            use_elasticluster = True
+    use_elasticluster = (set(_get_host_groups(args.setup_file)) & SUPPORTED_TM_GROUPS)
     if use_elasticluster:
         # NOTE: This playbook also configures SSH host-based authentication,
         # so we shouldn't run this only on a subset of groups!
