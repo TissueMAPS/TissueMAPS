@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,37 +14,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Get Citus repository
-  command: wget https://install.citusdata.com/community/rpm.sh -O {{ tm_home }}/citus_rpm.sh
-  args:
-    executable=/bin/bash
-    chdir={{ tm_home }}
-  # get_url:
-  #   url: https://install.citusdata.com/community/rpm.sh
-  #   dest: "{{ tm_home}}/citus_rpm.sh"
-  #   validate_certs: no
-  #   unsafe_writes: yes
-  #   timeout: 60
-  #   mode: 0770
-  tags:
-    - database
 
-- name: Make Citus install script executable
-  file:
-    path={{ tm_home }}/citus_rpm.sh
-    mode=0770
+- name: Download Citus install script
+  get_url:
+    url: 'https://install.citusdata.com/community/rpm.sh'
+    dest: '{{ tm_home }}/citus.sh'
+    mode: 0755
   tags:
     - database
 
 - name: Add Citus repository
-  command: "{{ tm_home }}/citus_rpm.sh"
+  command: "{{ tm_home }}/citus.sh"
   args:
-    # FIXME
-    creates: /etc/rpm/sources.list.d/citusdata_community.list
+    creates: /etc/yum.repos.d/citusdata_community.repo
   tags:
     - database
 
-- name: Install Citus PostgreSQL
+- name: Install apt packages required by Citus PostgreSQL
   yum:
     state: installed
     name: "{{ item }}"
@@ -57,19 +43,14 @@
     - database
 
 - name: Install setfacl support
-  yum:
+  package:
     name: acl
   tags:
     - database
 
-- name: Set directory for PostgreSQL executables
+- name: Set directory paths for PostgreSQL executables
   set_fact:
     db_executable_directory: /usr/pgsql-{{ postgresql_version }}/bin
-  tags:
-    - database
-
-- name: Set directory for default PostgreSQL cluster
-  set_fact:
     db_default_cluster_data_directory: /var/lib/pgsql-{{ postgresql_version }}/data
   tags:
     - database
