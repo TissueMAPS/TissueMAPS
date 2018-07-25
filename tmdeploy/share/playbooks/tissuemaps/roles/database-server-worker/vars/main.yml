@@ -16,5 +16,5 @@
 ---
 # We use a different port and cluster name for worker nodes to prevent
 # conflicts when master and worker end up on the same machine (localhost).
-db_port: 9700
+db_port: '{{ db_port_worker|default(9700) }}'
 db_node: worker
