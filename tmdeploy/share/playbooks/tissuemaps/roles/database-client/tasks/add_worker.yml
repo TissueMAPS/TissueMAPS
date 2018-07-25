@@ -25,6 +25,6 @@
     then
       psql -d '{{ db_name }}' -c "SELECT * FROM master_add_node('{{ item }}', {{ db_port_worker }});"
     fi
-  with_items: "{{ db_worker_hosts }}"
+  with_items: "{{ groups.tissuemaps_db_worker }}"
   become: yes
   become_user: postgres
