@@ -25,27 +25,27 @@
   tags:
     - database
 
-- name: Allow unrestricted access by db_role from private IP range
+- name: Allow unrestricted access by db_role from cluster nodes
   lineinfile:
     dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
     state: present
     regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
-    line: 'host    {{ db_name }}   {{ db_role }}    {{ ip_range }}         trust'
+    line: 'host    {{ db_name }}   {{ db_role }}    {{ hostvars[item].ansible_default_ipv4.address }}/32         trust'
     owner: "{{ db_user }}"
     group: "{{ db_group }}"
-  when: ip_range is defined
+  with_items: "{{ groups.all }}"
   tags:
     - database
 
-- name: Allow unrestricted access by db_user from private IP range
+- name: Allow unrestricted access by db_user from cluster nodes
   lineinfile:
     dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
     state: present
     regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
-    line: 'host    all        {{ db_user }}    {{ ip_range }}         trust'
+    line: 'host    all        {{ db_user }}    {{ hostvars[item].ansible_default_ipv4.address }}/32         trust'
     owner: "{{ db_user }}"
     group: "{{ db_group }}"
-  when: ip_range is defined
+  with_items: "{{ groups.all }}"
   tags:
     - database
 
