@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,5 +16,5 @@
 ---
 # We use a different port and cluster name for worker nodes to prevent
 # conflicts when master and worker end up on the same machine (localhost).
-db_port: 9700
+db_port: '{{ db_port_worker|default(9700) }}'
 db_node: worker

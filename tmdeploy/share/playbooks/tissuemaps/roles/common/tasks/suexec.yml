@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,21 +26,15 @@
 - name: Compile su-exec
   command: make
   environment:
-    CFLAGS: '-Wall -Werror -g -pipe -O2'
-    LDFLAGS: '-Wl,--as-needed'
+    CFLAGS: '-Wall -Werror -static -pipe -O2'
+    LDFLAGS: ''
   args:
     chdir: /usr/local/src/su-exec
+    creates: /usr/local/src/su-exec/su-exec
 
 - name: Install su-exec
-  copy:
+  file:
     src: /usr/local/src/su-exec/su-exec
     dest: /usr/local/sbin/su-exec
-    owner: root
-    group: root
-    mode: 0700
-    remote_src: yes
-
-- name: Remove su-exec repository
-  file:
-    path: /usr/local/src/su-exec
-    state: absent
+    state: hard
+    force: yes

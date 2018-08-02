@@ -49,7 +49,7 @@ def _get_playbooks_dir(name):
 def _get_host_groups(setup_file):
     logger.info('build Ansible commands')
     setup = Setup(setup_file)
-    groups_to_deploy = collections.defaultdict(list)
+    groups_to_deploy = {}
     for cluster in setup.architecture.clusters:
         for node_type in cluster.node_types:
             for group in node_type.groups:
@@ -59,7 +59,9 @@ def _get_host_groups(setup_file):
                     )
                     sys.exit(1)
                 logger.info('include Ansible host group: %s', group.name)
-                groups_to_deploy[group.name].append(group.vars)
+                groups_to_deploy[group.name] = []
+                if group.vars:
+                    groups_to_deploy[group.name].append(group.vars)
 
     for group_name in REQUIRED_TM_GROUPS:
         if group_name not in groups_to_deploy.keys():
@@ -118,14 +120,7 @@ def _build_ansible_container_command(verbosity, action_command):
     return cmd
 
 
-def _build_ansible_vm_command(verbosity, playbook, variables=dict()):
-    var_strings = list()
-    var_mappings = list()
-    for k, v in variables.items():
-        if type(v) in {list, dict}:
-            var_mappings.append(json.dumps({k: v}))
-        else:
-            var_strings.append('='.join([k, v]))
+def _build_ansible_vm_command(verbosity, playbook, variables=None):
     # The "tm_inventory" script should be on the path upon installation.
     inventory_file = which('tm_inventory')
     cmd = ['ansible-playbook', '-i', inventory_file, playbook]
@@ -134,20 +129,16 @@ def _build_ansible_vm_command(verbosity, playbook, variables=dict()):
         if verbosity > 0:
             cmd.append('-{0}'.format(verbosity * 'v'))
     if variables:
-        cmd.extend(['-e', '{0}'.format(' '.join(var_strings))])
-        for var_map in var_mappings:
-            cmd.extend(['-e', var_map])
+        for k, v in variables.items():
+            if type(v) in {list, dict}:
+                cmd.extend(['-e', json.dumps({k: v})])
+            else:
+                cmd.extend(['-e', '='.join([k, v])])
     return cmd
 
 
 def _run_command(command, environment):
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, env=environment)
-    while True:
-      line = process.stdout.readline()
-      if line != b'':
-        os.write(1, line)
-      else:
-        break
+    return os.spawnvpe(os.P_WAIT, command[0], command, environment)
 
 
 def _run_container_commands(commands):
@@ -179,14 +170,13 @@ def _run_vm_commands(commands, setup_file):
 def deploy_vm(args):
     variables = dict()
     commands = list()
-    commands.append(['tm_inventory', '--refresh-cache'])
+    tm_inventory_cmd = ['tm_inventory', '--refresh-cache']
+    if args.verbosity:
+        tm_inventory_cmd.append('-{0}'.format('v' * args.verbosity))
+    commands.append(tm_inventory_cmd)
     # Run playbooks implemented in elasticluster, but only in case groups
     # are provided that are not supported by tmdeploy.
-    use_elasticluster = False
-    groups_to_deploy = _get_host_groups(args.setup_file)
-    for group in groups_to_deploy.keys():
-        if group not in SUPPORTED_TM_GROUPS:
-            use_elasticluster = True
+    use_elasticluster = (set(_get_host_groups(args.setup_file)) & SUPPORTED_TM_GROUPS)
     if use_elasticluster:
         # NOTE: This playbook also configures SSH host-based authentication,
         # so we shouldn't run this only on a subset of groups!

@@ -1,6 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
-# Copyright (C) 2018  University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,23 +24,27 @@
     - "{{ db_group }}"
     - "{{ web_group }}"
 
-- name: Add users
+- name: Add `tissuemaps` user
   become: yes
   user:
-    name: "{{ item.user }}"
-    group: "{{ item.group }}"
-    shell: /bin/sh
+    name: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    shell: /bin/bash
     system: yes
-    home: "{{ item.home }}"
+    home: '/home/tissuemaps'
     createhome: yes
     append: yes
-  with_items:
-    - group: "{{ tm_group }}"
-      user: "{{ tm_user }}"
-      home: '/home/tissuemaps'
-    - group: "{{ db_group }}"
-      user: "{{ db_user }}"
-      home: '/var/lib/postgresql'
+
+- name: Add `postgres` user
+  become: yes
+  user:
+    name: "{{ db_user }}"
+    group: "{{ db_group }}"
+    shell: /bin/sh
+    system: yes
+    home: '/var/lib/postgresql'
+    createhome: yes
+    append: yes
 
 # For security reasons, the web user doesn't get a shell
 - name: Add web user

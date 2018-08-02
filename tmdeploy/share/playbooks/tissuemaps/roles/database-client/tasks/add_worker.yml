@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,11 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Add remote worker nodes
-  command: psql -h {{ db_host_master }} -p {{ db_port_master }} -U {{ db_user }} {{ db_name }} -c "SELECT master_add_node('{{ item }}', {{ db_port_worker }});"
-  with_items: "{{ db_hosts_workers }}"
-  when: db_host_master != db_hosts_workers[0]
 
-- name: Add local worker node
-  command: psql -h localhost -p {{ db_port_master }} -U {{ db_user }} {{ db_name }} -c "SELECT master_add_node('localhost', {{ db_port_worker }});"
-  when: db_host_master == db_hosts_workers[0]
+- name: Add Citus worker nodes
+  shell: |
+    if ! (psql -d '{{ db_name }}' \
+            -t -P format=unaligned \
+            -c "SELECT * FROM master_get_active_worker_nodes();" \
+            | egrep -q '^{{ item }}|');
+    then
+      psql -d '{{ db_name }}' -c "SELECT * FROM master_add_node('{{ item }}', {{ db_port_worker }});"
+    fi
+  with_items: "{{ groups.tissuemaps_db_worker }}"
+  become: yes
+  become_user: postgres
