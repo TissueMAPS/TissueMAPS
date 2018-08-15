@@ -1,0 +1,80 @@
+#!/bin/bash
+
+set -e
+
+# Argument parsing
+OPTIND=1
+
+INPUT=""
+OUTPUT=""
+
+usage()
+{
+cat << EOF
+usage: extract_omexml -i [INPUT,...] -o [OUTPUT,...]
+
+Extract OMEXML metadata from an image file and write it to an xml file.
+
+Arguments:
+   -h      Show this message
+   -i      Comma separated list of input image files
+   -o      Comma separated list of output xml files
+EOF
+}
+
+while getopts "hi:o:" opt
+do
+    case "$opt" in
+    h)
+        usage
+        exit 0
+        ;;
+    i)  INPUT=$OPTARG
+        ;;
+    o)  OUTPUT=$OPTARG
+        ;;
+    \?) 
+        exit 1
+        ;;
+    :)
+        echo "Error: Option -$OPTARG requires an argument." >&2
+        usage
+        exit 1
+        ;;
+    esac
+done
+
+if [[ -z $INPUT ]] || [[ -z $OUTPUT ]]
+then
+     usage
+     exit 1
+fi
+
+shift $((OPTIND-1))
+
+[ "$1" = "--" ] && shift
+
+# Processing
+IFS=',' read -ra arrINPUT <<< "$INPUT"
+IFS=',' read -ra arrOUTPUT <<< "$OUTPUT"
+
+if [[ ${#arrINPUT[@]} != ${#arrOUTPUT[@]} ]]
+then
+    echo "Error: Number of input and output files must be the same." >&2
+    exit 1
+fi
+
+n=${#arrINPUT[@]}
+for (( i=0; i<${n}; i++ ))
+do
+    if [ ! -e ${arrINPUT[$i]} ]
+    then
+        echo "Error: Input image file does not exist: ${arrINPUT[$i]}" >&2
+        exit 1
+    fi
+    echo "extract OMEXML metadata from image file: ${arrINPUT[$i]}"
+    echo "write extracted OMEXML metadata to file: ${arrOUTPUT[$i]}"
+    ( showinf -omexml-only -nopix -novalid -no-sas -no-upgrade ${arrINPUT[$i]} ) > ${arrOUTPUT[$i]}
+done
+
+exit 0

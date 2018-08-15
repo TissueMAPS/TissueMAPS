@@ -1,0 +1,321 @@
+{
+    "FEI TIFF": [
+        ".tiff"
+    ],
+    "MRC (Medical Research Council)": [
+        ".mrc"
+    ],
+    "Gatan Digital Micrograph": [
+        ".dm3"
+    ],
+    "Lambert Instruments FLIM": [
+        ".fli"
+    ],
+    "Alicona 3D": [
+        ".al3d"
+    ],
+    "BD Pathway": [
+        ".exp",
+        ".tif"
+    ],
+    "Canon DNG": [
+        ".cr2",
+        ".crw"
+    ],
+    "Bio-Rad PIC": [
+        ".pic",
+        ".raw",
+        ".xml"
+    ],
+    "Amersham Biosciences Gel": [
+        ".gel"
+    ],
+    "Evotec/PerkinElmer Opera Flex": [
+        ".flex",
+        ".mea",
+        ".res"
+    ],
+    "Nikon NIS-Elements ND2": [
+        ".nd2"
+    ],
+    "Inveon": [
+        ".hdr"
+    ],
+    "Volocity Library Clipping": [
+        ".acff"
+    ],
+    "Nikon EZ-C1 TIFF": [
+        ".tiff"
+    ],
+    "Leica LAS AF LIF (Leica Image File Format)": [
+        ".lif"
+    ],
+    "IPLab": [
+        ".ipl"
+    ],
+    "SimplePCI & HCImage": [
+        ".cxd"
+    ],
+    "IMOD": [
+        ".mod"
+    ],
+    "CellH5": [
+        ".ch5"
+    ],
+    "Photoshop TIFF": [
+        ".tif",
+        ".tiff"
+    ],
+    "Targa": [
+        ".tga"
+    ],
+    "AVI (Audio Video Interleave)": [
+        ".avi"
+    ],
+    "Becker & Hickl SPCImage": [
+        ".sdt"
+    ],
+    "ImagePro Sequence": [
+        ".seq"
+    ],
+    "Andor Bio-Imaging Division (ABD) TIFF": [
+        ".tif"
+    ],
+    "PGM (Portable Gray Map)": [
+        ".pgm"
+    ],
+    "PCORAW": [
+        ".pcoraw",
+        ".rec"
+    ],
+    "MINC MRI": [
+        ".mnc"
+    ],
+    "Bitplane Imaris": [
+        ".ims"
+    ],
+    "DICOM": [
+        ".dcm",
+        ".dicom"
+    ],
+    "VisiTech XYS": [
+        ".xys",
+        ".html"
+    ],
+    "MetaMorph Stack (STK)": [
+        ".stk",
+        ".nd"
+    ],
+    "Improvision Openlab Raw": [
+        ".raw"
+    ],
+    "INR": [
+        ".inr"
+    ],
+    "Leica SCN": [
+        ".scn"
+    ],
+    "MNG (Multiple-image Network Graphics)": [
+        ".mng"
+    ],
+    "Windows Bitmap": [
+        ".bmp"
+    ],
+    "Micro-Manager": [
+        ".tif",
+        ".txt",
+        ".xml"
+    ],
+    "Improvision TIFF": [
+        ".tif"
+    ],
+    "SPIDER": [
+        ".spi",
+        ".stk"
+    ],
+    "Trestle": [
+        ".tif",
+        ".sld",
+        ".jpg"
+    ],
+    "IPLab-Mac": [
+        ".ipm"
+    ],
+    "MetaMorph 7.5 TIFF": [
+        ".tiff"
+    ],
+    "Olympus SIS TIFF": [
+        ".tiff"
+    ],
+    "CellVoyager": [
+        ".xml",
+        ".tif"
+    ],
+    "Kodak BIP": [
+        ".bip"
+    ],
+    "Imspector OBF": [
+        ".obf",
+        ".msr"
+    ],
+    "ICS (Image Cytometry Standard)": [
+        ".ics",
+        ".ids"
+    ],
+    "QuickTime Movie": [
+        ".mov"
+    ],
+    "Leica LCS LEI": [
+        ".lei",
+        ".tif"
+    ],
+    "Animated PNG": [
+        ".png"
+    ],
+    "Perkin Elmer Densitometer": [
+        ".pds"
+    ],
+    "Olympus FluoView FV1000": [
+        ".oib",
+        ".oif"
+    ],
+    "Hitachi S-4800": [
+        ".txt",
+        ".tif",
+        ".bmp",
+        ".jpg"
+    ],
+    "Aperio AFI": [
+        ".afi",
+        ".svs"
+    ],
+    "NIfTI": [
+        ".img",
+        ".hdr"
+    ],
+    "Olympus ScanR": [
+        ".xml",
+        ".dat",
+        ".tif"
+    ],
+    "I2I": [
+        ".i2i"
+    ],
+    "PerkinElmer UltraView": [
+        ".tif",
+        ".2",
+        ".3",
+        ".4",
+        "etc."
+    ],
+    "Analyze 7.5": [
+        ".img",
+        ".hdr"
+    ],
+    "Adobe Photoshop PSD": [
+        ".psd"
+    ],
+    "ECAT7": [
+        ".v"
+    ],
+    "Nikon Elements TIFF": [
+        ".tiff"
+    ],
+    "Zeiss AxioVision ZVI (Zeiss Vision Image)": [
+        ".zvi"
+    ],
+    "Amira Mesh": [
+        ".am",
+        ".amiramesh",
+        ".grey",
+        ".hx",
+        ".labels"
+    ],
+    "AIM": [
+        ".aim"
+    ],
+    "Aperio SVS TIFF": [
+        ".svs"
+    ],
+    "EPS (Encapsulated PostScript)": [
+        ".eps",
+        ".epsi",
+        ".ps"
+    ],
+    "Applied Precision CellWorX": [
+        ".htd",
+        ".pnl"
+    ],
+    "Hamamatsu VMS": [
+        ".vms"
+    ],
+    "NRRD (Nearly Raw Raster Data)": [
+        ".nrrd",
+        ".nhdr",
+        ".raw",
+        ".txt"
+    ],
+    "Zeiss LSM (Laser Scanning Microscope) 510/710": [
+        ".lsm",
+        ".mdb"
+    ],
+    "NEF (Nikon Electronic Format)": [
+        ".nef",
+        ".tif"
+    ],
+    "InCell 1000": [
+        ".xdce",
+        ".tif"
+    ],
+    "PerkinElmer Operetta": [
+        ".tiff",
+        ".xml"
+    ],
+    "GIF (Graphics Interchange Format)": [
+        ".gif"
+    ],
+    "Prairie Technologies TIFF": [
+        ".tif",
+        ".xml",
+        ".cfg"
+    ],
+    "Minolta MRW": [
+        ".mrw"
+    ],
+    "TIFF (Tagged Image File Format)": [
+        ".tif"
+    ],
+    "Volocity": [
+        ".mvd2"
+    ],
+    "DeltaVision": [
+        ".dv",
+        ".r3d"
+    ],
+    "PNG (Portable Network Graphics)": [
+        ".png"
+    ],
+    "Improvision Openlab LIFF": [
+        ".liff"
+    ],
+    "Olympus FluoView TIFF": [
+        ".tif"
+    ],
+    "IMAGIC": [
+        ".hed",
+        ".img"
+    ],
+    "ImagePro Workspace": [
+        ".ipw"
+    ],
+    "JPX": [
+        ".jpx"
+    ],
+    "SimplePCI & HCImage TIFF": [
+        ".tiff"
+    ],
+    "Zeiss AxioVision TIFF": [
+        ".xml",
+        ".tiff"
+    ]
+}

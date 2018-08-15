@@ -1,0 +1,344 @@
+#!/usr/bin/env python
+import os
+import sys
+import argparse
+import inspect
+import subprocess
+import sqlalchemy.orm.exc
+from werkzeug import secure_filename
+
+import tmlib.models as tm
+from tmlib.workflow.metaconfig import (
+    SUPPORTED_MICROSCOPE_TYPES, get_microscope_type_regex
+)
+from tmlib.models.plate import SUPPORTED_PLATE_FORMATS
+from tmlib.models.plate import SUPPORTED_PLATE_AQUISITION_MODES
+from tmlib import cfg
+
+# Don't trash the user with long tracebacks
+sys.tracebacklimit = 0
+
+
+def valid_dir(path):
+    if not os.path.exists(path):
+        raise OSError('Provided path does not exist: %s' % path)
+    return path
+
+
+def add_experiment(experiment_name, user_name, microscope_type, plate_format,
+                   plate_acquisition_mode):
+    with tm.utils.MainSession() as session:
+        try:
+            user = session.query(tm.User).\
+                filter_by(name=user_name).\
+                one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError('Unknown user "%s"!' % user_name)
+        except:
+            raise
+        try:
+            experiment = session.query(tm.ExperimentReference).\
+                filter_by(
+                    name=experiment_name, user_id=user.id,
+                    root_directory=cfg.storage_home
+                ).\
+                one()
+            already_exists = True
+        except sqlalchemy.orm.exc.NoResultFound:
+            already_exists = False
+            experiment = tm.ExperimentReference(
+                name=experiment_name, user_id=user.id,
+                root_directory=cfg.storage_home
+            )
+            session.add(experiment)
+            session.flush()
+        except:
+            raise
+        experiment_id = experiment.id
+        experiment_location = experiment.location
+
+    if not already_exists:
+
+        with tm.utils.ExperimentSession(experiment_id) as session:
+            experiment = tm.Experiment(
+                id=experiment_id,
+                microscope_type=microscope_type,
+                plate_format=plate_format,
+                plate_acquisition_mode=plate_acquisition_mode,
+                location=experiment_location
+            )
+            session.add(experiment)
+
+    print(
+        'EXPERIMENT ID: {id}\nYou will need the ID to process the '
+        'experiment via the command line!'.format(id=experiment_id)
+    )
+    return experiment_id
+
+
+def add_acquisition(experiment_name, plate_name, acquisition_name):
+    with tm.utils.MainSession() as session:
+        try:
+            experiment = session.query(tm.ExperimentReference).\
+                filter_by(name=experiment_name).\
+                one()
+            experiment_id = experiment.id
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Experiment "%s" does not exist!' % experiment_name
+            )
+
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        try:
+            plate = session.query(tm.Plate).\
+                filter_by(name=plate_name).\
+                one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Plate "%s" does not exist for experiment "%s"!'
+                % (plate_name, experiment_name)
+            )
+        acquisition = session.get_or_create(
+            tm.Acquisition, name=acquisition_name, plate_id=plate.id
+        )
+        return acquisition.id
+
+
+def add_plate(experiment_name, plate_name):
+    with tm.utils.MainSession() as session:
+        try:
+            experiment = session.query(tm.ExperimentReference).\
+                filter_by(name=experiment_name).\
+                one()
+            experiment_id = experiment.id
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Experiment "%s" does not exist!' % experiment_name
+            )
+
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        plate = session.get_or_create(
+            tm.Plate, name=plate_name, experiment_id=experiment_id
+        )
+        return plate.id
+
+
+def add_files(experiment_name, plate_name, acquisition_name, source_directory):
+    with tm.utils.MainSession() as session:
+        try:
+            experiment = session.query(tm.ExperimentReference).\
+                filter_by(name=experiment_name).\
+                one()
+            experiment_id = experiment.id
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Experiment "%s" does not exist!' % experiment_name
+            )
+
+    with tm.utils.ExperimentSession(experiment_id) as session:
+
+        try:
+            acquisition = session.query(tm.Acquisition).\
+                join(tm.Plate).\
+                filter(tm.Plate.name == plate_name).\
+                filter(tm.Acquisition.name == acquisition_name).\
+                one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise ValueError(
+                'Acquisition "%s" does not exist for plate "%s"!'
+                % (acquisition_name, plate_name)
+            )
+        except:
+            raise
+
+        # Register all files in the database.
+        # This will automatically set upload_status to "WAITING".
+        if not os.path.exists(source_directory):
+            raise OSError(
+                'Source directory does not exist: %s' % source_directory
+            )
+        microscope_type = acquisition.plate.experiment.microscope_type
+        r_image, r_metadata= get_microscope_type_regex(microscope_type)
+        image_file_names = [
+            f.name for f in acquisition.microscope_image_files
+        ]
+        metdata_file_names = [
+            f.name for f in acquisition.microscope_metadata_files
+        ]
+        files_to_add = []
+        for f in os.listdir(source_directory):
+            if r_image.search(f):
+                name = secure_filename(f)
+                # Skip already inserted files.
+                if name not in image_file_names:
+                    print 'register image file "%s"' % f
+                    file = tm.MicroscopeImageFile(
+                        name=name, acquisition_id=acquisition.id
+                    )
+                    files_to_add.append(file)
+            elif r_metadata.search(f):
+                name = secure_filename(f)
+                if name not in metdata_file_names:
+                    print 'register metadata file "%s"' % f
+                    file = tm.MicroscopeMetadataFile(
+                        name=name, acquisition_id=acquisition.id
+                    )
+                    files_to_add.append(file)
+            else:
+                print 'unknow file format: "%s"' % f
+        session.bulk_save_objects(files_to_add)
+
+
+def add_user(name, password, email):
+    with tm.utils.MainSession() as session:
+        try:
+            user = session.query(tm.User).filter_by(name=name).one()
+            user.email = email
+            user.password = password
+        except sqlalchemy.orm.exc.NoResultFound:
+            user = tm.User(name=name, password=password, email=email)
+            session.add(user)
+
+    # Create a Slurm account for the user, which is needed for submission of
+    # jobs to the cluster. This is only relevant of course if there is a Slurm
+    # cluster.
+    try:
+        exitcode = subprocess.check_call(
+            ['sinfo'],
+            stdout=open(os.devnull, 'wb')
+        )
+        is_slurm_installed = True
+    except OSError:
+        is_slurm_installed = False
+
+    if is_slurm_installed:
+        subprocess.call(
+            ['sudo', 'sacctmgr', '-i', 'add', 'account', name],
+            stdout=open(os.devnull, 'wb')
+        )
+        subprocess.call(
+            [
+                'sudo', 'sacctmgr', '-i', 'add', 'user', 'tissuemaps',
+                'Account=%s' % name
+            ],
+            stdout=open(os.devnull, 'wb')
+        )
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description='Add an entry to the TissueMAPS database.'
+    )
+
+    subparsers = parser.add_subparsers(dest='item_type', help='item type')
+    subparsers.required = True
+
+    user_subparser = subparsers.add_parser(
+        'user', help='add a new user'
+    )
+    user_subparser.set_defaults(function='add_user')
+    user_subparser.description = 'Add a user.'
+    user_subparser.add_argument('-n', '--name', help='name')
+    user_subparser.add_argument('-p', '--password', help='password')
+    user_subparser.add_argument('-e', '--email', help='email address')
+
+    experiment_subparser = subparsers.add_parser(
+        'experiment', help='add a new experiment'
+    )
+    experiment_subparser.set_defaults(function='add_experiment')
+    experiment_subparser.description = 'Add an experiment.'
+    experiment_subparser.add_argument(
+        '-e', '--experiment_name', required=True, type=str,
+        help='name of the experiment'
+    )
+    experiment_subparser.add_argument(
+        '-u', '--user_name', required=True, type=str,
+        help='user name'
+    )
+    experiment_subparser.add_argument(
+        '--plate_format', type=int, default=384,
+        choices=SUPPORTED_PLATE_FORMATS,
+        help='well plate format (default: 384)'
+    )
+    experiment_subparser.add_argument(
+        '--microscope_type', type=str, default='cellvoyager',
+        choices=SUPPORTED_MICROSCOPE_TYPES,
+        help='microscope type (default: cellvoyager)'
+    )
+    experiment_subparser.add_argument(
+        '--plate_acquisition_mode', type=str, default='basic',
+        choices=SUPPORTED_PLATE_AQUISITION_MODES,
+        help='''
+            whether multiple acquisitions of the same plate are interpreted 
+            as time points or multiplexing iterations (default: basic)
+        '''
+    )
+
+    plate_subparser = subparsers.add_parser(
+        'plate', help='add a new plate to an existing experiment'
+    )
+    plate_subparser.set_defaults(function='add_plate')
+    plate_subparser.description = 'Add a plate to an experiment.'
+    plate_subparser.add_argument(
+        '-e', '--experiment_name', required=True, type=str,
+        help='name of the parent experiment'
+    )
+    plate_subparser.add_argument(
+        '-p', '--plate_name', required=True, type=str,
+        help='name of the new plate'
+    )
+
+    acquisition_subparser = subparsers.add_parser(
+        'acquisition', help='add a new acquisition to an existing plate'
+    )
+    acquisition_subparser.set_defaults(function='add_acquisition')
+    acquisition_subparser.description = 'Add an acquisition to a plate.'
+    acquisition_subparser.add_argument(
+        '-e', '--experiment_name', required=True,
+        help='name of the parent experiment'
+    )
+    acquisition_subparser.add_argument(
+        '-p', '--plate_name', required=True,
+        help='name of the parent plate'
+    )
+    acquisition_subparser.add_argument(
+        '-a', '--acquisition_name', required=True,
+        help='name of the new acquisition'
+    )
+
+    files_subparser = subparsers.add_parser(
+        'files', help='add new files to an existing acquisition'
+    )
+    files_subparser.set_defaults(function='add_files')
+    files_subparser.description = 'Add files to an acquisition.'
+    files_subparser.add_argument(
+        '-e', '--experiment_name', required=True,
+        help='name of the parent experiment'
+    )
+    files_subparser.add_argument(
+        '-p', '--plate_name', required=True,
+        help='name of the parent plate'
+    )
+    files_subparser.add_argument(
+        '-a', '--acquisition_name', required=True,
+        help='name of the new acquisition'
+    )
+    files_subparser.add_argument(
+        '-s', '--source_directory', required=True,
+        help='path to directory that contains the microscope files'
+    )
+
+    args = parser.parse_args()
+
+    context = globals()
+    if args.function not in context:
+        raise ValueError('Unknown function "%s"' % args.function)
+    func = context[args.function]
+    kwargs = dict()
+    func_inputs = inspect.getargspec(func)
+    for param in func_inputs.args:
+        if param not in vars(args):
+            raise ValueError('Required argument "%s" not provided.' % param)
+        kwargs[param] = getattr(args, param)
+    func(**kwargs)

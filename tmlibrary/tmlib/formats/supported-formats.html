@@ -1,0 +1,1828 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Supported Formats &mdash; Bio-Formats 5.1.3 documentation</title>
+    
+    <link rel="stylesheet" href="_static/plonematch.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="//www.openmicroscopy.org/site/portal_css/Plone%20Default/drop_down.css" type="text/css" />
+    <link rel="stylesheet" href="//www.openmicroscopy.org/site/portal_css/Plone%20Default/ploneCustom.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '5.1.3',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/sorttable.js"></script>
+    <script type="text/javascript" src="//www.openmicroscopy.org/site/portal_javascripts/Plone%20Default/dropdown.js"></script>
+    <link rel="top" title="Bio-Formats 5.1.3 documentation" href="index.html" />
+    <link rel="up" title="Formats" href="formats/index.html" />
+    <link rel="next" title="3i SlideBook" href="formats/3i-slidebook.html" />
+    <link rel="prev" title="Dataset Structure Table" href="formats/dataset-table.html" /> 
+  </head>
+  <body>
+    <!-- INSERTED - START -->
+    <div id="portal-top">
+        <div id="portal-header">
+            <ul id="portal-siteactions">
+                <li id="siteaction-sitemap">
+                    <a href="/site/sitemap" accesskey="3" title="Site Map">Site Map</a>
+                </li>
+                <li id="siteaction-accessibility">
+                    <a href="/site/accessibility-info" accesskey="0" title="Accessibility">Accessibility</a>
+                </li>
+                <li id="siteaction-contact">
+                    <a href="/site/contact-info" accesskey="9" title="Contact">Contact</a>
+                </li>
+            </ul><a id="portal-logo" accesskey="1" href="/site" name="portal-logo"><img src="/site/logo.jpg" alt="" height="73" width="450" /></a>
+            <div id="portal-globalnav">
+                <div class="csshover">
+                    <ul>
+                        <!-- Access key hidden links -->
+                        <li style="display:none" class="plain">
+                            <a accesskey="4" href="/site/gsearch/">Search</a>
+                        </li>
+                        <li style="display:none" class="plain">
+                            <a accesskey="7" href="/site/products">Products</a>
+                        </li>
+                        <li style="display:none" class="plain">
+                            <a accesskey="8" href="/site/support">Documentation</a>
+                        </li>
+                        <!-- end -->
+                        <li id="portaltab-index_html" class="plain">
+                            <a href="/site">Home</a>
+                        </li>
+                        <li id="portaltab-Products" class="plain">
+                            <a href="/site/products">Products</a>
+                            <ul>
+                                <li>
+                                    <a href="/site/products/omero">OMERO</a>
+                                </li>
+                                <li>
+                                    <a href="/site/products/bio-formats">Bio-Formats</a>
+                                </li>
+                                <li>
+                                    <a href="/site/products/ome-tiff">OME-TIFF</a>
+                                </li>
+                                <li>
+                                    <a href="/site/products/partner">Partner Projects</a>
+                            </li>
+                            <li>
+                                    <a href="/site/products/legacy">Legacy</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li id="portaltab-support" class="plain">
+                            <a href="/site/support">Documentation</a>
+                            <ul>
+                                <li>
+                                    <a href="/site/support/omero5">OMERO</a>
+                                </li>
+                                <li>
+                                    <a href="/site/support/bio-formats5">Bio-Formats</a>
+                                </li>
+                                <li>
+                                    <a href="/site/support/ome-model">OME Model and Formats</a>
+                                </li>
+                                <li>
+                                    <a href="/site/support/contributing">Contributing to OME</a>
+                                </li>
+                                <li>
+                                    <a href="/site/support/partner">Partner Projects</a>
+                                </li>
+                                <li>
+                                    <a href="http://help.openmicroscopy.org">User Help Website</a>
+                                </li>
+                                <li>
+                                    <a href="/site/support/previous">Previous versions</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li id="portaltab-community" class="plain">
+                            <a href="/site/community">Community</a>
+                            <ul>
+                                <li>
+                                    <a href="/community">Forums</a>
+                                </li>
+                                <li>
+                                    <a href="/site/community/mailing-lists">Mailing Lists</a>
+                                </li>
+                                <li>
+                                    <a href="/site/news">News and Events</a>
+                                </li>
+                                <li>
+                                    <a href="/site/community/minutes">Minutes and Meetings</a>
+                                </li>
+                                <li>
+                                    <a href="/site/community/scripts">Script Sharing</a>
+                                </li>
+                                <li>
+                                    <a href="http://qa.openmicroscopy.org.uk/">Report an Issue</a>
+                                </li>
+                                <li>
+                                    <a href="/site/community/jobs">Job Openings with OME</a>
+                                </li>
+                                <li>
+                                    <a href="/site/support/ome-artwork/artwork-usage">Use Our Logos</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li id="portaltab-about" class="plain">
+                            <a href="/site/about/who-ome">About</a>
+                            <ul>
+                                <li>
+                                    <a href="/site/about/who-ome">The OME Teams</a>
+                                </li>
+                                <li>
+                                    <a href="/site/about/contributers">Contributors</a>
+                                </li>
+                                <li>
+                                    <a href="/site/about/partners">Commercial Partners</a>
+                                </li>
+                                <li>
+                                    <a href="/site/about/publications">Publications</a>
+                                </li>
+                                <li>
+                                    <a href="/site/about/roadmap">Roadmap</a>
+                                </li>
+                                <li>
+                                    <a href="/site/about/project-history">History</a>
+                                </li>
+                                <li>
+                                    <a href="/site/about/licensing-attribution">Licensing &amp; Attribution</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li id="portaltab-help" class="plain">
+                            <a href="http://help.openmicroscopy.org">Help</a>
+                        </li>
+                        <li id="portaltab-blog" class="plain">
+                            <a href="http://blog.openmicroscopy.org">Blog</a>
+                        </li>
+                        <li class="invisibleHeightKeeper">&nbsp;
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div id="portal-personaltools-wrapper">
+            <ul id="portal-personaltools" class="visualInline">
+                <!-- only show personal tools when you are already logged in -->
+                <!-- end of already logged in conditional -->
+                <!-- add a dummy list item to preserver the space on the page even when no options are displayed -->
+                <li>
+                    <br />
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="visualClear" id="clear-space-before-wrapper-table">
+        <!-- -->
+    </div>
+    
+    <!-- INSERTED - END -->
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="formats/3i-slidebook.html" title="3i SlideBook"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="formats/dataset-table.html" title="Dataset Structure Table"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">Bio-Formats 5.1.3 documentation</a> &raquo;</li>
+          <li><a href="formats/index.html" accesskey="U">Formats</a> &raquo;</li> 
+      </ul>
+    </div>
+
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper"><h3><a href="index.html">Bio-Formats</a></h3>
+
+<a href="http://downloads.openmicroscopy.org/latest/bio-formats5.1/">Main Downloads</a></br>
+<a href="http://downloads.openmicroscopy.org/latest/bio-formats-cpp5.1/">C++ Downloads</a></br>
+<a href="//www.openmicroscopy.org/site/about/licensing-attribution">Licensing</a>
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="formats/dataset-table.html"
+                        title="previous chapter">Dataset Structure Table</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="formats/3i-slidebook.html"
+                        title="next chapter">3i SlideBook</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/supported-formats.txt"
+           rel="nofollow">Show Source</a></li>
+    <li><a href="https://github.com/openmicroscopy/bioformats/blob/develop/docs/sphinx/supported-formats.txt"
+           rel="nofollow">Show on GitHub</a></li>
+    <li><a href="https://github.com/openmicroscopy/bioformats/edit/develop/docs/sphinx/supported-formats.txt"
+           rel="nofollow">Edit on GitHub</a></li>
+  </ul>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><strong>This documentation is for the new Bio-Formats 5.1 version.</strong>
+See the <a class="reference external" href="http://www.openmicroscopy.org/site/support/bio-formats5.0/">latest Bio-Formats 5.0.x version</a> or the
+<a class="reference external" href="http://www.openmicroscopy.org/site/support/legacy/">previous versions</a> page to find documentation for the
+version you are using.</p>
+</div>
+<div class="section" id="supported-formats">
+<h1>Supported Formats<a class="headerlink" href="#supported-formats" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference internal" href="#term-ratings-legend-and-definitions"><em class="xref std std-term">Ratings legend and definitions</em></a></p>
+<p>You can sort this table by clicking on any of the headings.</p>
+<table border="1" class="sortable docutils">
+<colgroup>
+<col width="47%" />
+<col width="31%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+<col width="3%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Format</th>
+<th class="head">Extensions</th>
+<th class="head"><img alt="_images/header-pixels.png" class="first last" src="_images/header-pixels.png" />
+</th>
+<th class="head"><img alt="_images/header-metadata.png" class="first last" src="_images/header-metadata.png" />
+</th>
+<th class="head"><img alt="_images/header-openness.png" class="first last" src="_images/header-openness.png" />
+</th>
+<th class="head"><img alt="_images/header-presence.png" class="first last" src="_images/header-presence.png" />
+</th>
+<th class="head"><img alt="_images/header-utility.png" class="first last" src="_images/header-utility.png" />
+</th>
+<th class="head"><img alt="_images/header-export.png" class="first last" src="_images/header-export.png" />
+</th>
+<th class="head">BSD</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="formats/3i-slidebook.html"><em>3i SlideBook</em></a></td>
+<td>.sld</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/3i-slidebook6.html"><em>3i SlideBook6</em></a></td>
+<td>.sld</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/abd-tiff.html"><em>Andor Bio-Imaging Division (ABD) TIFF</em></a></td>
+<td>.tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/aim.html"><em>AIM</em></a></td>
+<td>.aim</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/alicona-3d.html"><em>Alicona 3D</em></a></td>
+<td>.al3d</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/amersham-biosciences-gel.html"><em>Amersham Biosciences Gel</em></a></td>
+<td>.gel</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/amira-mesh.html"><em>Amira Mesh</em></a></td>
+<td>.am, .amiramesh, .grey, .hx, .labels</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/amnis-flowsight.html"><em>Amnis FlowSight</em></a></td>
+<td>.cif</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/analyze-75.html"><em>Analyze 7.5</em></a></td>
+<td>.img, .hdr</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/animated-png.html"><em>Animated PNG</em></a></td>
+<td>.png</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/aperio-afi.html"><em>Aperio AFI</em></a></td>
+<td>.afi, .svs</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/aperio-svs-tiff.html"><em>Aperio SVS TIFF</em></a></td>
+<td>.svs</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/applied-precision-cellworx.html"><em>Applied Precision CellWorX</em></a></td>
+<td>.htd, .pnl</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/avi.html"><em>AVI (Audio Video Interleave)</em></a></td>
+<td>.avi</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/axon-raw-format.html"><em>Axon Raw Format</em></a></td>
+<td>.arf</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/bd-pathway.html"><em>BD Pathway</em></a></td>
+<td>.exp, .tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/becker-hickl-spcimage.html"><em>Becker &amp; Hickl SPCImage</em></a></td>
+<td>.sdt</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/bio-rad-gel.html"><em>Bio-Rad Gel</em></a></td>
+<td>.1sc</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/bio-rad-pic.html"><em>Bio-Rad PIC</em></a></td>
+<td>.pic, .raw, .xml</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/bio-rad-scn.html"><em>Bio-Rad SCN</em></a></td>
+<td>.scn</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/bitplane-imaris.html"><em>Bitplane Imaris</em></a></td>
+<td>.ims</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/bruker-mri.html"><em>Bruker MRI</em></a></td>
+<td>&nbsp;</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/burleigh.html"><em>Burleigh</em></a></td>
+<td>.img</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/canon-dng.html"><em>Canon DNG</em></a></td>
+<td>.cr2, .crw</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/cellh5.html"><em>CellH5</em></a></td>
+<td>.ch5</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/cellomics.html"><em>Cellomics</em></a></td>
+<td>.c01</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/cellsens-vsi.html"><em>cellSens VSI</em></a></td>
+<td>.vsi</td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/cellvoyager.html"><em>CellVoyager</em></a></td>
+<td>.xml, .tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/deltavision.html"><em>DeltaVision</em></a></td>
+<td>.dv, .r3d</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/dicom.html"><em>DICOM</em></a></td>
+<td>.dcm, .dicom</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/ecat7.html"><em>ECAT7</em></a></td>
+<td>.v</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/eps.html"><em>EPS (Encapsulated PostScript)</em></a></td>
+<td>.eps, .epsi, .ps</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/evotecperkinelmer-opera-flex.html"><em>Evotec/PerkinElmer Opera Flex</em></a></td>
+<td>.flex, .mea, .res</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/fei.html"><em>FEI</em></a></td>
+<td>.img</td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/fei-tiff.html"><em>FEI TIFF</em></a></td>
+<td>.tiff</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/fits.html"><em>FITS (Flexible Image Transport System)</em></a></td>
+<td>.fits</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/gatan-digital-micrograph.html"><em>Gatan Digital Micrograph</em></a></td>
+<td>.dm3</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/gatan-digital-micrograph-2.html"><em>Gatan Digital Micrograph 2</em></a></td>
+<td>.dm2</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/gif.html"><em>GIF (Graphics Interchange Format)</em></a></td>
+<td>.gif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/hamamatsu-aquacosmos-naf.html"><em>Hamamatsu Aquacosmos NAF</em></a></td>
+<td>.naf</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/hamamatsu-his.html"><em>Hamamatsu HIS</em></a></td>
+<td>.his</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/hamamatsu-ndpi.html"><em>Hamamatsu ndpi</em></a></td>
+<td>.ndpi</td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/hamamatsu-vms.html"><em>Hamamatsu VMS</em></a></td>
+<td>.vms</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/hitachi-s-4800.html"><em>Hitachi S-4800</em></a></td>
+<td>.txt, .tif, .bmp, .jpg</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/i2i.html"><em>I2I</em></a></td>
+<td>.i2i</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/ics.html"><em>ICS (Image Cytometry Standard)</em></a></td>
+<td>.ics, .ids</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/imacon.html"><em>Imacon</em></a></td>
+<td>.fff</td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/imagepro-sequence.html"><em>ImagePro Sequence</em></a></td>
+<td>.seq</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/imagepro-workspace.html"><em>ImagePro Workspace</em></a></td>
+<td>.ipw</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/imagic.html"><em>IMAGIC</em></a></td>
+<td>.hed, .img</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/imod.html"><em>IMOD</em></a></td>
+<td>.mod</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/improvision-openlab-liff.html"><em>Improvision Openlab LIFF</em></a></td>
+<td>.liff</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/improvision-openlab-raw.html"><em>Improvision Openlab Raw</em></a></td>
+<td>.raw</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/improvision-tiff.html"><em>Improvision TIFF</em></a></td>
+<td>.tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/imspector-obf.html"><em>Imspector OBF</em></a></td>
+<td>.obf, .msr</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/incell-1000.html"><em>InCell 1000</em></a></td>
+<td>.xdce, .tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/incell-3000.html"><em>InCell 3000</em></a></td>
+<td>.frm</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/inr.html"><em>INR</em></a></td>
+<td>.inr</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/inveon.html"><em>Inveon</em></a></td>
+<td>.hdr</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/iplab.html"><em>IPLab</em></a></td>
+<td>.ipl</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/iplab-mac.html"><em>IPLab-Mac</em></a></td>
+<td>.ipm</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/jeol.html"><em>JEOL</em></a></td>
+<td>.dat, .img, .par</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/jpeg.html"><em>JPEG</em></a></td>
+<td>.jpg</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/jpeg-2000.html"><em>JPEG 2000</em></a></td>
+<td>.jp2</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/jpk.html"><em>JPK</em></a></td>
+<td>.jpk</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/jpx.html"><em>JPX</em></a></td>
+<td>.jpx</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/khoros-viff-bitmap.html"><em>Khoros VIFF (Visualization Image File Format) Bitmap</em></a></td>
+<td>.xv</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/kodak-bip.html"><em>Kodak BIP</em></a></td>
+<td>.bip</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/lambert-instruments-flim.html"><em>Lambert Instruments FLIM</em></a></td>
+<td>.fli</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/lavision-imspector.html"><em>LaVision Imspector</em></a></td>
+<td>.msr</td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/leica-lcs-lei.html"><em>Leica LCS LEI</em></a></td>
+<td>.lei, .tif</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/leica-lif.html"><em>Leica LAS AF LIF (Leica Image File Format)</em></a></td>
+<td>.lif</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/leica-scn.html"><em>Leica SCN</em></a></td>
+<td>.scn</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/leo.html"><em>LEO</em></a></td>
+<td>.sxm</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/li-cor-l2d.html"><em>Li-Cor L2D</em></a></td>
+<td>.l2d, .tif, .scn</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/lim.html"><em>LIM (Laboratory Imaging/Nikon)</em></a></td>
+<td>.lim</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/metamorph-75-tiff.html"><em>MetaMorph 7.5 TIFF</em></a></td>
+<td>.tiff</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/metamorph-stack-stk.html"><em>MetaMorph Stack (STK)</em></a></td>
+<td>.stk, .nd</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/mias-maia-scientific.html"><em>MIAS (Maia Scientific)</em></a></td>
+<td>.tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/micro-manager.html"><em>Micro-Manager</em></a></td>
+<td>.tif, .txt, .xml</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/minc-mri.html"><em>MINC MRI</em></a></td>
+<td>.mnc</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/minolta-mrw.html"><em>Minolta MRW</em></a></td>
+<td>.mrw</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/mng.html"><em>MNG (Multiple-image Network Graphics)</em></a></td>
+<td>.mng</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/molecular-imaging.html"><em>Molecular Imaging</em></a></td>
+<td>.stp</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/mrc.html"><em>MRC (Medical Research Council)</em></a></td>
+<td>.mrc</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/nef.html"><em>NEF (Nikon Electronic Format)</em></a></td>
+<td>.nef, .tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/nifti.html"><em>NIfTI</em></a></td>
+<td>.img, .hdr</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/nikon-elements-tiff.html"><em>Nikon Elements TIFF</em></a></td>
+<td>.tiff</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/nikon-ez-c1-tiff.html"><em>Nikon EZ-C1 TIFF</em></a></td>
+<td>.tiff</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/nikon-nis-elements-nd2.html"><em>Nikon NIS-Elements ND2</em></a></td>
+<td>.nd2</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/nrrd.html"><em>NRRD (Nearly Raw Raster Data)</em></a></td>
+<td>.nrrd, .nhdr, .raw, .txt</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/olympus-cellrapl.html"><em>Olympus CellR/APL</em></a></td>
+<td>.apl, .mtb, .tnb, .tif, .obsep</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/olympus-fluoview-fv1000.html"><em>Olympus FluoView FV1000</em></a></td>
+<td>.oib, .oif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/olympus-fluoview-tiff.html"><em>Olympus FluoView TIFF</em></a></td>
+<td>.tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/olympus-scanr.html"><em>Olympus ScanR</em></a></td>
+<td>.xml, .dat, .tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/olympus-sis-tiff.html"><em>Olympus SIS TIFF</em></a></td>
+<td>.tiff</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/ome-tiff.html"><em>OME-TIFF</em></a></td>
+<td><a class="reference external" href="http://www.openmicroscopy.org/site/support/ome-model/ome-tiff/index.html">.ome.tiff</a></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/ome-xml.html"><em>OME-XML</em></a></td>
+<td><a class="reference external" href="http://www.openmicroscopy.org/site/support/ome-model/ome-xml/index.html">.ome</a></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/oxford-instruments.html"><em>Oxford Instruments</em></a></td>
+<td>.top</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/pcoraw.html"><em>PCORAW</em></a></td>
+<td>.pcoraw, .rec</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/pcx-pc-paintbrush.html"><em>PCX (PC Paintbrush)</em></a></td>
+<td>.pcx</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/perkin-elmer-densitometer.html"><em>Perkin Elmer Densitometer</em></a></td>
+<td>.pds</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/perkinelmer-nuance.html"><em>PerkinElmer Nuance</em></a></td>
+<td>.im3</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/perkinelmer-operetta.html"><em>PerkinElmer Operetta</em></a></td>
+<td>.tiff, .xml</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/perkinelmer-ultraview.html"><em>PerkinElmer UltraView</em></a></td>
+<td>.tif, .2, .3, .4, etc.</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/pgm.html"><em>PGM (Portable Gray Map)</em></a></td>
+<td>.pgm</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/photoshop-psd.html"><em>Adobe Photoshop PSD</em></a></td>
+<td>.psd</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/photoshop-tiff.html"><em>Photoshop TIFF</em></a></td>
+<td>.tif, .tiff</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/picoquant-bin.html"><em>PicoQuant Bin</em></a></td>
+<td>.bin</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/pict-macintosh-picture.html"><em>PICT (Macintosh Picture)</em></a></td>
+<td>.pict</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/png.html"><em>PNG (Portable Network Graphics)</em></a></td>
+<td>.png</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/prairie-tech-tiff.html"><em>Prairie Technologies TIFF</em></a></td>
+<td>.tif, .xml, .cfg</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/quesant.html"><em>Quesant</em></a></td>
+<td>.afm</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/quicktime-movie.html"><em>QuickTime Movie</em></a></td>
+<td>.mov</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/rhk.html"><em>RHK</em></a></td>
+<td>.sm2, .sm3</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/sbig.html"><em>SBIG</em></a></td>
+<td>&nbsp;</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/seiko.html"><em>Seiko</em></a></td>
+<td>.xqd, .xqf</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/simplepci-hcimage.html"><em>SimplePCI &amp; HCImage</em></a></td>
+<td>.cxd</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/simplepci-hcimage-tiff.html"><em>SimplePCI &amp; HCImage TIFF</em></a></td>
+<td>.tiff</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/sm-camera.html"><em>SM Camera</em></a></td>
+<td>&nbsp;</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/spider.html"><em>SPIDER</em></a></td>
+<td>.spi, .stk</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/targa.html"><em>Targa</em></a></td>
+<td>.tga</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/text.html"><em>Text</em></a></td>
+<td>.txt</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/tiff.html"><em>TIFF (Tagged Image File Format)</em></a></td>
+<td>.tif</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/tillphotonics-tillvision.html"><em>TillPhotonics TillVision</em></a></td>
+<td>.vws</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/topometrix.html"><em>Topometrix</em></a></td>
+<td>.tfr, .ffr, .zfr, .zfp, .2fl</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/trestle.html"><em>Trestle</em></a></td>
+<td>.tif, .sld, .jpg</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/ubm.html"><em>UBM</em></a></td>
+<td>.pr3</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/unisoku.html"><em>Unisoku</em></a></td>
+<td>.dat, .hdr</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/varian-fdf.html"><em>Varian FDF</em></a></td>
+<td>.fdf</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/veeco-afm.html"><em>Veeco AFM</em></a></td>
+<td>.hdf</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/vg-sam.html"><em>VG SAM</em></a></td>
+<td>.dti</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/visitech-xys.html"><em>VisiTech XYS</em></a></td>
+<td>.xys, .html</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/volocity.html"><em>Volocity</em></a></td>
+<td>.mvd2</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/volocity-library-clipping.html"><em>Volocity Library Clipping</em></a></td>
+<td>.acff</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/wa-top.html"><em>WA-TOP</em></a></td>
+<td>.wat</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/windows-bitmap.html"><em>Windows Bitmap</em></a></td>
+<td>.bmp</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/woolz.html"><em>Woolz</em></a></td>
+<td>.wlz</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="Yes" src="_images/crystal-yes.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/zeiss-axio-csm.html"><em>Zeiss Axio CSM</em></a></td>
+<td>.lms</td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/zeiss-axiovision-tiff.html"><em>Zeiss AxioVision TIFF</em></a></td>
+<td>.xml, .tiff</td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/zeiss-axiovision-zvi.html"><em>Zeiss AxioVision ZVI (Zeiss Vision Image)</em></a></td>
+<td>.zvi</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-odd"><td><a class="reference internal" href="formats/zeiss-czi.html"><em>Zeiss CZI</em></a></td>
+<td><a class="reference external" href="http://www.zeiss.com/czi">.czi</a></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+<tr class="row-even"><td><a class="reference internal" href="formats/zeiss-lsm.html"><em>Zeiss LSM (Laser Scanning Microscope) 510/710</em></a></td>
+<td>.lsm, .mdb</td>
+<td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+<td><img alt="No" src="_images/crystal-no.png" /></td>
+</tr>
+</tbody>
+</table>
+<p>Bio-Formats currently supports <strong>143</strong> formats</p>
+<dl class="glossary docutils">
+<dt id="term-ratings-legend-and-definitions">Ratings legend and definitions</dt>
+<dd><table border="1" class="first last docutils">
+<colgroup>
+<col width="41%" />
+<col width="59%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">&nbsp;</th>
+<th class="head">&nbsp;</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><img alt="5 - Outstanding" src="_images/crystal-5.png" /></td>
+<td>Outstanding</td>
+</tr>
+<tr class="row-odd"><td><img alt="4 - Very Good" src="_images/crystal-4.png" /></td>
+<td>Very good</td>
+</tr>
+<tr class="row-even"><td><img alt="3 - Good" src="_images/crystal-3.png" /></td>
+<td>Good</td>
+</tr>
+<tr class="row-odd"><td><img alt="2 - Fair" src="_images/crystal-2.png" /></td>
+<td>Fair</td>
+</tr>
+<tr class="row-even"><td><img alt="1 - Poor" src="_images/crystal-1.png" /></td>
+<td>Poor</td>
+</tr>
+</tbody>
+</table>
+</dd>
+<dt id="term-pixels">Pixels</dt>
+<dd>Our estimation of Bio-Formats&#8217; ability to reliably extract complete
+and accurate pixel values from files in that format. The better this
+score, the more confident we are that Bio-Formats will successfully
+read your file without displaying an error message or displaying an
+erroneous image.</dd>
+<dt id="term-metadata">Metadata</dt>
+<dd>Our certainty in the thoroughness and correctness of Bio-Formats&#8217;
+metadata extraction and conversion from files of that format into
+standard OME-XML. The better this score, the more confident we are
+that all meaningful metadata will be parsed and populated as OME-XML.</dd>
+<dt id="term-openness">Openness</dt>
+<dd>This is not a direct expression of Bio-Formats&#8217; performance, but
+rather indicates the level of cooperation the format&#8217;s controlling
+interest has demonstrated toward the scientific community with respect
+to the format. The better this score, the more tools (specification
+documents, source code, sample files, etc.) have been made available.</dd>
+<dt id="term-presence">Presence</dt>
+<dd>This is also not directly related to Bio-Formats, but instead
+represents our understanding of the format&#8217;s popularity, and is also
+as a measure of compatibility between applications. The better this
+score, the more common the format and the more software packages
+include support for it.</dd>
+<dt id="term-utility">Utility</dt>
+<dd>Our opinion of the format&#8217;s suitability for storing metadata-rich
+microscopy image data. The better this score, the wider the variety of
+information that can be effectively stored in the format.</dd>
+<dt id="term-export">Export</dt>
+<dd>This indicates whether Bio-Formats is capable of writing the format
+(Bio-Formats can read every format on this list).</dd>
+<dt id="term-bsd">BSD</dt>
+<dd>This indicates whether format is BSD-licensed.  By default,
+format readers and writers are GPL-licensed.</dd>
+</dl>
+<div class="toctree-wrapper compound">
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="formats/3i-slidebook.html" title="3i SlideBook"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="formats/dataset-table.html" title="Dataset Structure Table"
+             >previous</a> |</li>
+        <li><a href="index.html">Bio-Formats 5.1.3 documentation</a> &raquo;</li>
+          <li><a href="formats/index.html" >Formats</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2000-2015, The Open Microscopy Environment .
+      Last generated on Jul 20, 2015.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

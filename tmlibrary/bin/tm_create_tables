@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+import os
+import argparse
+
+from tmlib.models.utils import create_db_engine, create_db_tables
+from tmlib.log import configure_logging
+from tmlib import cfg
+
+
+def create_tables(db_uri=None):
+    '''Creates all tables defined by declarative classes in
+    :py:package:`tmlib.models`.
+
+    Parameters
+    ----------
+    db_uri: str, optional
+        URI of the database
+    '''
+    if db_uri is None:
+        db_uri = cfg.db_master_uri
+    engine = create_db_engine(db_uri)
+    create_db_tables(engine)
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser('Create tables in TissueMAPS database.')
+    parser.add_argument(
+        '--uri', dest='db_uri', help='database URI', default=None
+    )
+
+    args = parser.parse_args()
+
+    configure_logging()
+
+    create_tables(args.db_uri)

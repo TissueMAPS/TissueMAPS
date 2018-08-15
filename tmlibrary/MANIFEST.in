@@ -1,0 +1,2 @@
+recursive-include etc *.cfg
+recursive-include tmlib/formats *

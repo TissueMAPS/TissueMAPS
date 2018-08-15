@@ -1,0 +1,28 @@
+---
+inputs:
+  channels: []
+  objects: []
+
+pipeline:
+- source: modules/initial_py_module.py
+  handles: handles/initial_py_module.handles.yaml
+  active: true
+
+- source: modules/py_module.py
+  handles: handles/py_module.handles.yaml
+  active: true
+
+- source: modules/m_module.m
+  handles: handles/m_module.handles.yaml
+  active: true
+
+- source: modules/r_module.r
+  handles: handles/r_module.handles.yaml
+  active: true
+
+- source: modules/final_py_module.py
+  handles: handles/finale_py_module.handles.yaml
+  active: true
+
+outputs:
+  objects: []

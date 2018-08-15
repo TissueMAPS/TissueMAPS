@@ -1,0 +1,7 @@
+input: []
+
+output:
+
+    - name: output_image
+      type: IntensityImage
+      key: initial_py_modules.output_image
