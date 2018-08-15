@@ -1,0 +1,51 @@
+---
+version: 0.2.0
+
+input:
+
+    - name: mask
+      type: MaskImage
+      key:
+      help: Image in which objects should be filtered.
+
+    - name: feature
+      type: Character
+      value:
+      options:
+        - area
+        - eccentricity
+        - circularity
+        - convexity
+      help: >
+        Name of the feature based on which objects in "mask" should be
+        filtered.
+
+    - name: lower_threshold
+      type: Numeric
+      value:
+      help: >
+        Minimal allowed feature value. Objects with values below this threshold
+        will be removed.
+
+    - name: upper_threshold
+      type: Numeric
+      value:
+      help: >
+        Maximal allowed feature value. Objects with values above this threshold
+        will be removed.
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+output:
+
+    - name: filtered_mask
+      type: MaskImage
+      key: filter.filtered_mask
+      help: Filtered mask image.
+
+    - name: figure
+      type: Figure
+      help: Comparison of "mask" and "filtered_mask".

@@ -1,0 +1,88 @@
+---
+version: 0.0.1
+
+input:
+
+    - name: image
+      type: IntensityImage
+      key:
+      help: >
+        Grayscale image in which spots should be detected.
+
+    - name: log_filter_type
+      type: Character
+      options:
+        - 2D
+        - 3D
+      value: 3D
+      help: >
+          You can either enhance spots only within their plane (2D)
+          or alternatively with the including information from adjacent
+          planes (3D), as described by Raj et al. 2009.
+
+    - name: spot_size
+      type: Numeric
+      value: 4
+      help: >
+          Approximate size of spots (diameter in pixels). A Laplacian of
+          Gaussian filter of this size will be used to enhance the radial
+          signal of that size.
+
+    - name: n_planes
+      type: Numeric
+      value: 3
+      help: >
+          Number of z-planes to use in image filter (in case of 3D filter).
+
+    - name: rescale_quantiles
+      type: Sequence
+      value: [0.01, 0.99]
+      help: >
+          Prior to spot detection the images are rescaled according to their
+          intensity using quantiles. [0 1] would correspond to using the
+          single dimmest pixel for minimal intensity and the single brightest
+          pixel for maximal intensity. [0.01 0.90] would mean that the minimum
+          intensity is derived from the 1% brightest pixel and that the
+          maximum intensity is derived from the 90% brightest
+          pixel.
+
+    - name: rescale_thresholds
+      type: Sequence
+      value: [0, 120, 500, 0]
+      help: >
+          Most extreme values that the image intensity minimum and image
+          intensity maximum (as defined by the quanta) are allowed to
+          have [LowestPossibleGreyscaleValueForImageMinimum
+          HighestPossibleGreyscaleValueForImageMinimum
+          LowestPossibleGreyscaleValueForImageMaximum
+          HighestPossibleGreyscaleValueForImageMaximum].
+          To ignore an individual value, and use per-image quantile
+          rescaling, place 0.
+
+    - name: detection_threshold
+      type: Numeric
+      value: 0.08
+      help: >
+          Threshold for spot detection intensity in rescaled image on a scale
+          of 0-1 (default: 0.02). Spots in the rescaled / LoG-filtered image
+          with intensity below this value will not be detected.
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+output:
+
+    - name: occupancy_image
+      type: IntensityImage
+      key: identify_spots_3D.occupancy_image
+      help: >
+          2D representation of 3D spots. Pixel values correspond to number
+          of spots detected at each x-y position. Image can be summed to get
+          spot-count.
+
+    - name: figure
+      type: Figure
+      help: Plot created by identify_spots_2D jterator module.
+

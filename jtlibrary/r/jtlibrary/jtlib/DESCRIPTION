@@ -1,0 +1,11 @@
+Package: jtlib
+Title: Jterator library
+Version: 0.1
+Authors@R: "Markus Herrmann <markus.herrmann@gmail.com> [aut, cre]"
+Description: A library for standard Jterator image analysis routines.
+Depends: R (>= 3.1.2)
+License: MIT
+LazyData: true
+Author: "Markus Herrmann" [aut, cre]
+Maintainer: "Markus Herrmann" <markus.herrmann@gmail.com>
+Built: R 3.1.3; ; 2015-07-14 23:45:23 UTC; unix

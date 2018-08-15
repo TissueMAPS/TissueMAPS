@@ -1,0 +1,104 @@
+---
+version: 0.0.1
+
+input:
+
+    - name: primary_objects
+      type: MaskImage
+      key:
+      help: >
+        Initial segmentation of primary objects.
+
+    - name: intensity_image
+      type: IntensityImage
+      key:
+      help: >
+        Grayscale image used to help in separating objects.
+
+    - name: cutting_passes
+      type: Numeric
+      value: 3
+      help: >
+        Number of cutting passes to perform to separate objects
+
+    - name: max_solidity
+      type: Numeric
+      value: 0.92
+      help: >
+        Object selection: maximal solidity (1 = solidity independent).
+
+    - name: min_form_factor
+      type: Numeric
+      value: 0.40
+      help: >
+        Object selection: minimum form factor (0 = form factor independent).
+
+    - name: min_area
+      type: Numeric
+      value: 5000
+      help: >
+        Object selection: minimum area (0 = area independent).
+
+    - name: max_area
+      type: Numeric
+      value: 500000
+      help: >
+        Object selection: maximum area (0 = area independent).
+
+    - name: min_area_cut
+      type: Numeric
+      value: 2000
+      help: >
+        Minimum area for an object after cutting.
+
+    - name: sliding_window
+      type: Numeric
+      value: 9
+      help: >
+        Perimeter analysis: sliding window size for curvature calculation
+
+    - name: filter_size
+      type: Numeric
+      value: 15
+      help: >
+        Perimeter analysis: filter size for smoothing objects
+
+    - name: max_concave_radius
+      type: Numeric
+      value: 20
+      help: >
+        Perimeter analysis: maximum concave region equivalent radius
+
+    - name: min_concave_circular_segment
+      type: Numeric
+      value: 6
+      help: >
+        Perimeter analysis: minimum concave region equivalent
+        circular segment (degrees).
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+    - name: plot_test_mode
+      type: Plot
+      value: false
+      help: Should selection criteria be displayed?
+
+    - name: plot_perimeter_analysis
+      type: Plot
+      value: false
+      help: Should perimeter analysis be displayed?
+
+output:
+
+    - name: separated_objects
+      type: LabelImage
+      key: identify_primary_iterative.label_image
+      help: Label image of separated primary objects.
+
+    - name: figure
+      type: Figure
+      help: Plot created by identify_primary_iterative jterator module.
+
