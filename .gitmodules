@@ -1,27 +1,4 @@
-[submodule "src/tmlibrary"]
-	path = src/tmlibrary
-	url = https://github.com/TissueMAPS/tmlibrary
-	branch = master
-[submodule "src/tmserver"]
-	path = src/tmserver
-	url = https://github.com/TissueMAPS/tmserver
-	branch = master
-[submodule "src/tmclient"]
-	path = src/tmclient
-	url = https://github.com/TissueMAPS/tmclient
-	branch = master
-[submodule "src/jtlibrary"]
-	path = src/jtlibrary
-	url = https://github.com/TissueMAPS/jtlibrary
-	branch = master
 [submodule "src/jtmodules"]
 	path = src/jtmodules
 	url = https://github.com/TissueMAPS/jtmodules
 	branch = master
-[submodule "src/tmdeploy"]
-	path = src/tmdeploy
-	url = https://github.com/TissueMAPS/tmdeploy
-	branch = master
-[submodule "src/tmui"]
-	path = src/tmui
-	url = https://github.com/TissueMAPS/tmui
