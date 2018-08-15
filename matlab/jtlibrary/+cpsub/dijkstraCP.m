@@ -125,6 +125,12 @@ function [costs,paths] = dijkstraCP(AorV,xyCorE,SID,FID,iswaitbar)
 % Email: jdkirk630@gmail.com
 % Release: 1.1
 % Date: 4/29/09
+%
+% This file was initially part of CellProfiler-1.0, which is
+% Copyright © 2003 - 2015 Broad Institute, Inc.
+%
+% The original list of conditions and disclaimers apply:
+% https://github.com/CellProfiler/CellProfiler-1.0/blob/master/LICENSE
 
 % Process Inputs
 error(nargchk(2,5,nargin));

@@ -1,4 +1,8 @@
 function imLabel = rplabel(imLogical, imIntensity, Property, logarithm)
+%
+% Copyright © 2014 University of Zurich.
+%
+
 
 %REGIONPROPS_LABEL_IMAGE creates a label image based on a measurement of
 %the regionprops function.

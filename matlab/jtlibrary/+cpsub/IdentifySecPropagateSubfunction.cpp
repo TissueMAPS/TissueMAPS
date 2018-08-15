@@ -6,6 +6,11 @@
  *   In Han Kang    <inthek@mit.edu>
  *   Kyungnam Kim   <kkim@broad.mit.edu>
  *
+ * This file was initially part of CellProfiler-1.0, which is
+ * Copyright © 2003 - 2015 Broad Institute, Inc.
+ *
+ * The original list of conditions and disclaimers apply:
+ * https://github.com/CellProfiler/CellProfiler-1.0/blob/master/LICENSE
  */
 
 #include <math.h>
