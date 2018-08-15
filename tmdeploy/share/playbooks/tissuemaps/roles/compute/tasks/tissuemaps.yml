@@ -45,6 +45,24 @@
       - "{{ tm_home }}/jtlibrary/python/jtlibrary"
       - "{{ tm_home }}/jtlibrary/python/jtmodules"
 
+- name: Compile MEX files in JtLibrary
+  tags:
+    - tissuemaps
+    - jtlibrary
+    - matlab
+  shell: |
+    if (command -v matlab > /dev/null); then
+      dirname=$(dirname "{{ item }}")
+      filename=$(basename "{{ item }}")
+      mexname=${filename%%.*}
+      cd "{{ tm_home }}/jtlibrary/matlab/$dirname"
+      matlab -r "mex ${mexname}"
+    else
+      echo "Cannot find 'matlab' executable on PATH - skipping MEX compilation"
+    fi
+  with_items:
+    - 'jtlibrary/+cpsub/IdentifySecPropagateSubfunction.cpp'
+
 - name: Install TmLibrary repository
   tags:
     - tissuemaps
