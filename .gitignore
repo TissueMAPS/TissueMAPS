@@ -5,6 +5,9 @@ __pycache__/
 # C extensions
 *.so
 
+# mex files
+*.mexa64
+
 # Distribution / packaging
 .Python
 env/
