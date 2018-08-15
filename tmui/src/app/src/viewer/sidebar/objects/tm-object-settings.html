@@ -1,0 +1,53 @@
+<div class="object-settings">
+
+  <tm-multi-selection-box items="objCtrl.mapobjectTypes" by-name="'mapobjectType'">
+    <tm-selectable-tabs>
+      <tm-selectable-tab ng-controller="ObjectLayerCtrl as layerCtrl">
+        <tm-selectable-tab-popup>
+          <h4>Stroke color</h4>
+            <ng-color-picker selected="layerCtrl.selectedColor.strokeColor" colors="layerCtrl.selectableColors"></ng-color-picker>
+          </p>
+
+          <h4>Opacity</h4>
+          <span class="output" ng-bind="layerCtrl.opacityInput"></span>
+          <div ui-slider
+               min="0" max="100"
+               ng-model="layerCtrl.opacityInput">
+          </div>
+
+        </tm-selectable-tab-popup>
+
+        <tm-selectable-tab-content>
+          <span class="inline-layer-control" tm-stop-click>
+              <i ng-show="mapobjectType.visible" ng-click="mapobjectType.visible = false" class="fa fa-eye"></i>
+              <i ng-hide="mapobjectType.visible" ng-click="mapobjectType.visible = true" class="fa fa-circle-thin"></i>
+          </span>
+
+          <span class="inline-layer-control"
+            ng-click="layerCtrl.toggleRenamingMode()"
+            ng-class="{'active': layerCtrl.inRenamingMode}"
+            tm-stop-click>
+            <i class="fa fa-pencil-square" aria-hidden="true"></i>
+          </span>
+
+          <input type="text" ng-model="mapobjectType.name"
+            ng-change="layerCtrl.changeName()"
+            ng-model-options="{ updateOn: 'blur' }"
+            ng-disabled="!layerCtrl.inRenamingMode" tm-stop-click>
+
+        </tm-selectable-tab-content>
+
+      </tm-selectable-tab>
+
+    </tm-selectable-tabs>
+
+    <tm-multi-selection-controls ng-controller="ObjectsControlsCtrl as controlsCtrl">
+      <button ng-click="controlsCtrl.removeSelectedMapobjectTypes()"
+              ng-show="selectionBox.hasSelectedItems()">
+        <i class="fa fa-trash"></i>
+      </button>
+    </tm-multi-selection-controls>
+
+  </tm-multi-selection-box>
+
+</div>

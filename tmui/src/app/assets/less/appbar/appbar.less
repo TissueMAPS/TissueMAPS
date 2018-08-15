@@ -1,0 +1,117 @@
+@import "../variables.less";
+@import "../ui.less";
+
+//== appbar
+.appbar:extend(.ui-panel all) {
+    // .lh-background-image(linear-gradient(
+    //     to bottom,
+    //     @panel-bg-color 0%,
+    //     @panel-bg-color 80%,
+    //     darken(@panel-bg-color, 8%) 100%,
+    // ));
+    // background-image: none;
+    .panel-horizontal();
+
+    height: @appbar-height + 2px;
+    line-height: @appbar-height + 2px;
+    margin: 0;
+
+//     // Spacers and button lists
+//     div {
+//         // Necessary for both ul elements to lie side by side
+//         display: inline-block;
+//         *display: inline;
+//         vertical-align: middle;
+//     }
+
+    .button-list {
+        font-size: 1.1em;
+
+        li:extend(.ui-button-flat all) {
+            border: none;
+            .panel-vertical();
+            float: left;
+            height: 100%;
+            width: @toolbar-width + 1px;
+            // Make line-height same height as parent, but keep these elements
+            // on 100% height
+            line-height: @appbar-height;
+            text-align: center;
+            @background-color: @topleft-button-color;
+        }
+
+        li.logo {
+            background-color: #ccc;
+            img {
+                margin-top: -3px;
+            }
+        }
+
+    }
+
+    .save-as-button {
+        letter-spacing: -1px;
+        .fa-pencil {
+            font-size: 0.65em;
+            vertical-align: text-top;
+        }
+    }
+
+    // .spacer {
+    //     // width: @gradient-spacer-width;
+    //     width: 10px;
+    //     height: @appbar-height;
+    //     .gradient-fader(left);
+    // }
+
+    .session-label, .session-info {
+        // same distance from left edge as the font in the leftmost tab
+        padding: 0 15px;
+    }
+
+    .session-info {
+        color: silver;
+    }
+
+    .user-indicator {
+        float: right;
+        height: 100%;
+        line-height: @appbar-height;
+        margin-right: 10px;
+
+        // Override bootstrap hover effect
+        a {
+            color: inherit;
+        }
+    }
+
+    .appbar-info {
+        margin-left: 50px;
+    }
+
+    // Bootstrap overrides
+    .form-group {
+        margin: 0;
+        display: inline-block;
+    }
+
+    .navbar-form {
+        display: inline-block;
+    }
+
+    .form-control {
+        height: 24px;
+        border: 1px solid black;
+        background-color: @panel-bg-color;
+        color: @font-color-light;
+    }
+
+    .btn {
+        padding: 0 12px;
+        vertical-align: baseline; // override
+    }
+}
+.top-container {
+
+    .lh-box-shadow(1px 1px 5 black);
+}

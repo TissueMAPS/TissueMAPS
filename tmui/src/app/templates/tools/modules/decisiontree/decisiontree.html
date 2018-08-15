@@ -1,0 +1,25 @@
+<div ng-controller="DecisionTreeCtrl">
+
+  <p>
+
+    <tm-class-selection-widget
+      selections="selections"
+      on-change="classes = classes">
+    </tm-class-selection-widget>
+
+  </p>
+
+  <p>
+    <label>Select features</label>
+    <tm-feature-selection-widget
+      on-change="selectedFeatures = selectedFeatures">
+
+    </tm-feature-selection-widget>
+
+  </p>
+
+  <p>
+    <button class="btn btn-primary" ng-click="sendRequest()">Classify</button>
+  </p>
+
+</div>

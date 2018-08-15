@@ -1,0 +1,110 @@
+@import "../libs/lesshat/lesshat-prefixed";
+@import "../variables.less";
+@import "../ui.less";
+
+.viewers-tabbar {
+    border-top: 1px solid black;
+    height: @viewers-tabbar-container-height;
+    background-image: url("/resources/img/diagonal-noise.png");
+
+    // the shadow container and the spacer are positioned absolutely to this
+    // div with "bottom = 0". In this way both stack on top of each other at
+    // the bottom of this div.
+    position: relative;
+
+    .inner-container {
+        // tabs are positioned absolutely w.r.t to this container
+        position: relative; 
+        border-bottom: 1px solid black;
+        height: @viewers-tabbar-container-height - @viewers-tabbar-spacer-height;
+        line-height: inherit;
+
+        .lh-background-image(linear-gradient(
+            to bottom,
+            darken(@panel-bg-color, 10%) 0%,
+            fade(silver, 70%) 15%,
+            fade(silver, 70%) 90%,
+            darken(@panel-bg-color, 8%) 100%
+        ));
+    }
+
+    ul {
+        position: absolute;
+        bottom: 0;
+        padding: 0;
+        margin: 0;
+        height: @viewers-tabbar-height;
+        line-height: @viewers-tabbar-height;
+    }
+
+    li {
+
+        &:extend(.ui-button all);
+
+        display: inline-block;
+
+        border-left: 1px solid black;
+        text-align: center;
+
+        border-top-left-radius: 2px;
+        border-top-right-radius: 2px;
+        border-bottom: 1px solid black;
+
+        height: @viewers-tabbar-tabs-height;
+        line-height: @viewers-tabbar-tabs-height;
+        vertical-align: bottom;
+
+        background: darken(@panel-bg-color, 10%);
+
+        padding: 0 15px;
+
+        // The currently active li
+        &.active {
+
+            .lh-background-image(linear-gradient(
+                to bottom,
+                lighten(@panel-bg-color, 10%) 0%,
+                @panel-bg-color 100%
+            ));
+
+            color: @font-color-on-selection;
+            border-top: 1px solid black;
+            border-bottom: none;
+            margin-bottom: -1px;
+            height: @viewers-tabbar-tabs-height + 2px;
+        }
+
+
+        &:last-child {
+            border-right: 1px solid black;
+        }
+
+        &:first-child.active {
+            border-left: none;
+        }
+    }
+
+    .viewers-tabbar-spacer {
+        height: @viewers-tabbar-spacer-height;
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        .lh-background-image(linear-gradient(
+            to bottom,
+            @panel-bg-color 0%,
+            @panel-bg-color 60%
+        ));
+    }
+
+    // A small dumy div that adds a shadow to the bottom of the 
+    // tabbar and has a z-index such that the shadow won't affect the sidebar
+    // etc.
+    .viewers-tabbar-spacer-shadow {
+        .lh-box-shadow(1px 2px 2 black);
+        z-index: -1;
+        height: 5px;
+        position: absolute;
+        width: 100%;
+        bottom: 0;
+    }
+}

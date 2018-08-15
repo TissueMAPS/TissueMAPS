@@ -1,0 +1,125 @@
+<div ng-init="aq = acquisitionDetailCtrl.acquisition">
+  <h3>
+    Acquisition: {{:: aq.name }}
+    (<span>{{aq.status}}: {{aq.nFiles}} files</span>)
+  </h3>
+
+  <div class="row">
+    <div class="col-md-12 file-drop-zone-container">
+      Upload new files:
+      <div class="file-drop-zone well"
+        ngf-drop="acquisitionDetailCtrl.dropFiles($files)"
+        ngf-drag-over-class="file-drop-zone-hover"
+        ngf-multiple="true"
+        ngf-allow-dir="true"
+        ngf-keep="false"
+        ngf-accept="'*'">
+
+        <div ng-show="!acquisitionDetailCtrl.newFiles.length">
+          <div ng-show="!acquisitionDetailCtrl.filesDropped">
+            <p>Drag your files here</p>
+            <i class="fa fa-file-o"></i>
+          </div>
+          <div ng-show="acquisitionDetailCtrl.filesDropped">
+            <i class="fa fa-spinner fa-spin"></i>
+          </div>
+        </div>
+        <div ng-show="acquisitionDetailCtrl.filesDropped && acquisitionDetailCtrl.newFiles.length">
+          <p>
+            You have added {{acquisitionDetailCtrl.newFiles.length}} files
+            to the upload queue.
+          </p>
+          <p>
+            You can add additional files by dragging them onto this area
+            (duplicates will be ignored).
+          </p>
+        </div>
+      </div>
+      <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
+
+      <button class="btn btn-primary"
+        ng-click="acquisitionDetailCtrl.uploadFiles()"
+        ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
+        <i class="fa fa-cloud-upload" aria-hidden="true"></i>
+        Upload files
+      </button>
+      <button class="btn btn-primary"
+        ngf-select="acquisitionDetailCtrl.dropFiles($files)"
+        ngf-multiple="true"
+        ngf-keep="false"
+        ngf-accept="'*'">
+        <i class="fa fa-folder-open-o" aria-hidden="true"></i>
+        Select files
+      </button>
+      <button class="btn"
+        ng-click="acquisitionDetailCtrl.clearFiles()"
+        ng-disabled="acquisitionDetailCtrl.newFiles.length == 0">
+        <i class="fa fa-trash-o" aria-hidden="true"></i>
+        Clear files
+      </button>
+    </div>
+    <!-- <div class="col-md-6 already-added-files-container"> -->
+    <!--   Successfully uploaded {{aq.files.length}} files: -->
+
+    <!--   <div class="already-added-files" perfect-scrollbar> -->
+    <!--     <ul> -->
+    <!--         <li ng-repeat="f in aq.files | filter:{status: 'COMPLETE'} | orderBy:'name'"> -->
+    <!--       {{:: f.name}} -->
+    <!--       </li> -->
+    <!--     </ul> -->
+    <!--   </div> -->
+    <!-- </div> -->
+  </div>
+
+  <div class="row">
+    <div class="col-xs-12">
+      <div id="upload-list" collapse="uploadListCollapsed" >
+        <!-- <div class="well"> -->
+        <h3>Upload queue:</h3>
+        Successfully uploaded {{aq.nFiles}} files
+
+        <!-- <div class="pull-right"> -->
+        <!--   <button type="button" class="btn btn-warning btn-s" ng-click="fileCtrl.cancelAllUploads()" ng-disabled="!newFiles.length" disabled="disabled"> -->
+        <!--     <i class="fa fa-ban"></i> Cancel all -->
+        <!--   </button> -->
+        <!--   <button type="button" class="btn btn-danger btn-s" ng-click="fileCtrl.removeAllFiles()" ng-disabled="!newFiles.length"> -->
+        <!--     <i class="fa fa-trash-o"></i> Remove all -->
+        <!--   </button> -->
+        <!-- </div> -->
+
+        <div class="upload-queue-container">
+          <table class="table upload-queue">
+            <thead>
+              <th width="30%">Name</th>
+              <th width="10%">Size</th>
+              <th width="10%">Progress</th>
+              <th width="10%">Status</th>
+            </thead>
+            <tbody>
+
+            <tr ng-repeat="f in acquisitionDetailCtrl.newFiles">
+              <td><b>{{ f.name }}</b></td>
+              <td>{{ f.size | fsize }}</td>
+              <td>
+                <span ng-show="f.progress">
+                  {{ f.progress }} %
+                </span>
+              </td>
+              <td>{{ f.status }}</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!--         <div class="progress" style=""> -->
+        <!--           <div class="progress-bar" role="progressbar" ng-style="{ 'width': acquisitionDetailCtrl.getProgressPercentage() + '%' }" style="width: 0%;"> -->
+        <!--           </div> -->
+        <!--         </div> -->
+
+        <!-- </div> -->
+      </div>
+    </div>
+  </div>
+
+
+</div>

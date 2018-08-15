@@ -1,0 +1,48 @@
+<div class="results-settings">
+
+  <tm-multi-selection-box items="resultsSettingsCtrl.results" by-name="'result'">
+    <tm-selectable-tabs>
+      <tm-selectable-tab ng-controller="ResultCtrl as resultCtrl">
+        <tm-selectable-tab-popup>
+          <h4>Opacity</h4>
+          <span class="output" ng-bind="resultCtrl.opacityInput"></span>
+          <div ui-slider
+               min="0" max="100"
+               ng-model="resultCtrl.opacityInput">
+          </div>
+        </tm-selectable-tab-popup>
+
+        <tm-selectable-tab-content>
+          <span class="inline-layer-control" tm-stop-click>
+              <i ng-show="result.visible" ng-click="result.visible = false" class="fa fa-eye"></i>
+              <i ng-hide="result.visible" ng-click="result.visible = true" class="fa fa-circle-thin"></i>
+          </span>
+
+          <span class="inline-layer-control"
+            ng-click="resultCtrl.toggleRenamingMode()"
+            ng-class="{'active': resultCtrl.inRenamingMode}"
+            tm-stop-click>
+            <i class="fa fa-pencil-square" aria-hidden="true"></i>
+          </span>
+
+          <input type="text" ng-model="result.name"
+            ng-change="resultCtrl.changeName()"
+            ng-model-options="{ updateOn: 'blur' }"
+            ng-disabled="!resultCtrl.inRenamingMode" tm-stop-click>
+
+        </tm-selectable-tab-content>
+
+      </tm-selectable-tab>
+
+    </tm-selectable-tabs>
+
+    <tm-multi-selection-controls ng-controller="ResultsControlsCtrl as controls">
+      <button ng-click="controls.removeSelectedResults()"
+        ng-show="selectionBox.hasSelectedItems()">
+        <i class="fa fa-trash"></i>
+      </button>
+    </tm-multi-selection-controls>
+
+  </tm-multi-selection-box>
+
+</div>

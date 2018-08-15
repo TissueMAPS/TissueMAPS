@@ -1,0 +1,32 @@
+@import "../variables.less";
+@import "../ui.less";
+
+.bottombar:extend(.ui-panel all) {
+    height: 100%;
+    color: #eee;
+    padding-right: @sidebar-width + 5px;
+    text-align: center;
+
+    .panel-horizontal();
+
+    line-height: @viewer-bottom-height;
+
+    .z-plane-indicator {
+        padding: 0 10px;
+    }
+    
+    position: absolute;
+    left: @toolbar-width;
+    width: 100%;
+}
+
+.viewer-bottom {
+    .corner {
+        background-color: @panel-bg-color;
+        width: @toolbar-width;
+        position: absolute;
+        height: 100%;
+        .ui-panel-gradient(bottom, @panel-bg-color, 0%, 90%);
+        border-left: none;
+    }
+}

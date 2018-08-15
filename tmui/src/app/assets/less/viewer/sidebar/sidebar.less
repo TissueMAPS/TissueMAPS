@@ -1,0 +1,65 @@
+@import "../../libs/lesshat/lesshat-prefixed";
+@import "../../variables.less";
+@import "../../ui.less";
+
+// The right side bar containing all settings
+.sidebar {
+    &:extend(.ui-panel all);
+    // shadow to the bottom left
+    .lh-box-shadow(-1px 1px 5 black);
+    // adjust percentages because panel is very wide
+    .ui-panel-gradient(right, @panel-bg-color, 2%, 98%);
+}
+
+.sidebar-section {
+    // The sections can't be resized below this height;
+    min-height: @sidebar-section-title-height + 2 * @sidebar-section-padding;
+
+    // A class that is added by the directive tm-resize-handle
+    .tm-resize-handle {
+        cursor: ns-resize;
+    }
+
+    &:first-child {
+        .sidebar-section-title {
+            border-top: none;
+        }
+    }
+}
+
+.sidebar-section-title {
+    font-weight: bold;
+    // Center vertically with same left-offset as other content in sidebar
+    height: @sidebar-section-title-height;
+    padding: 0 @sidebar-section-padding;
+    line-height: @sidebar-section-title-height;
+
+    .lh-background-image(linear-gradient(
+        to right,
+        lighten(@sidebar-section-title-color, 20%) 0%,
+        lighten(@sidebar-section-title-color, 8%) 4%,
+        @sidebar-section-title-color 40%,
+        @sidebar-section-title-color 96%,
+        darken(@sidebar-section-title-color, 12%) 100%,
+    ));
+
+    border-bottom: 1px solid black;
+    border-top: 1px solid darken(@panel-bg-color, 30%);
+
+    span {
+        font-size: 1.2em;
+    }
+}
+
+.sidebar-section-content {
+    border-top: 1px solid #626262;
+    border-bottom: 1px solid #222222;
+
+    height: calc(~'100% - @{sidebar-section-title-height}');
+    padding: @sidebar-section-padding;
+    // If the browser window is resized so that the content
+    // of the section would overflow (pushed onto the title bar of the
+    // next sextion, then hide it and just display a scrollbar.
+    overflow-y: hidden; // use perfect scrollbar for this
+    overflow-x: hidden;
+}

@@ -1,0 +1,125 @@
+@import "../../libs/lesshat/lesshat-prefixed";
+@import "../../variables.less";
+@import "../../ui.less";
+
+@multi-selection-controls-height: 25px;
+@distance-between-list-and-controls: 4px;
+@default-li-height: 34px;
+
+
+.tm-selectable-tabs {
+    height: calc(~'100% - @{multi-selection-controls-height} - @{distance-between-list-and-controls}');
+
+    // Needed for perfect scrollbar
+    overflow-y: hidden;
+    white-space: per-line;
+    position: relative;
+
+    border: 1px solid black;
+
+    .lh-box-shadow(0px 0px 6 black inset);
+    background-color: darken(@panel-bg-color, 5%);
+    margin-bottom: @distance-between-list-and-controls;
+
+    li {
+        // height: @default-li-height;
+        border-bottom: 1px solid black;
+
+        &:last-child {
+            border-bottom: none;
+            .lh-box-shadow(0px 1px 6 black);
+        }
+    }
+}
+
+// .tm-selectable-tab-li {
+//     height: @default-li-height;
+//     line-height: @default-li-height - 1px;
+// }
+
+.tm-multi-selection-controls {
+    height: @multi-selection-controls-height;
+    padding: 0;
+    font-size: 0.7em;
+
+    button:extend(.ui-button-flat all) {
+        padding: 0;
+        float: left;
+        // distance between two buttons:
+        margin-right: @distance-between-list-and-controls / 2;
+        height: @multi-selection-controls-height;
+        width: @multi-selection-controls-height;
+    }
+}
+
+.tm-selectable-tab-content {
+    .ui-panel-gradient(bottom, @panel-fg);
+    height: 100%;
+    transition: background 50ms ease;
+    &.selected {
+        .ui-panel-gradient(bottom, @panel-selection-color);
+    }
+}
+
+.tm-selectable-tab-popup-button {
+    &:extend(.ui-button all);
+    width: 15px;
+    height: 100%;
+    // line-height: @default-li-height - 1px; // minus the top-border
+    float: left;
+    text-align: center;
+    border-right: 1px solid black;
+
+    .ui-button-internal();
+}
+
+// TODO: maybe remove some of this stuff and put it into the less files
+// where the elements are styled that use these directives.
+// These rules may go beyond what could be considered default styles.
+.tm-selectable-tab-popup-window {
+    padding: 10px;
+
+    // Theoretically this window should be positioned
+    // with position 'absolute' relative to it's relative
+    // parent'. But since overflow is hidden in the
+    // container-div, this popup window can't be displayed
+    // like this and is positioned w.r.t. to the browser
+    // window using javascript. Hacky, but there doesn't
+    // seem to be another way.
+    // Note that this is only due to the scrollbar,
+    // otherwise this would be fine.
+    position: fixed;
+
+    z-index: 100;
+
+    .lh-box-shadow(-1px 1px 2px black);
+
+    background: @panel-bg-color; // no gradient
+
+    // This element is inside the li-item
+    // which has its line-height set to its height
+    // => switch back to normal
+    line-height: normal;
+    // The same goes for text-align
+    text-align: left;
+
+    h4 {
+        &:first-child { margin-top: 0; }
+        margin-top: 8px;
+        margin-bottom: 4px;
+    }
+
+    button {
+        margin-top: 10px;
+    }
+
+    span.output {
+        display: inline-block;
+        width: 35px;
+    }
+
+    button {
+        &:extend(.ui-button-flat);
+    }
+}
+

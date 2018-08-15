@@ -1,0 +1,36 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss('Cancel')" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+  <h2 class="modal-title">Add experiment</h2>
+</div>
+
+<div class="modal-body">
+  <p>Please select an experiment to add...</p>
+  <ul>
+
+    <li ng-repeat="exp in experiments">
+      <input type="checkbox" ng-model="exp.selected" ng-click="toggleAllSelected($index)">
+      <span style="font-weight: bold;">{{ exp.name }}</span>
+
+      <ul>
+        <li ng-repeat="layer in exp.layers">
+          <input type="checkbox" ng-model="layer.selected">
+          {{ layer.name }}
+        </li>
+      </ul>
+    </li>
+
+  </ul>
+</div>
+
+<div class="modal-footer">
+  <button type="button" ng-click="$dismiss('No')"
+          class="btn btn-default" data-dismiss="modal">
+     <i class="fa fa-times"></i>
+  </button>
+  <button type="button" ng-click="$close(getSelected())"
+          class="btn btn-primary" data-dismiss="modal">
+     <i class="fa fa-check"></i>
+  </button>
+</div>

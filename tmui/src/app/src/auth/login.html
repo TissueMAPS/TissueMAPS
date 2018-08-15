@@ -1,0 +1,24 @@
+<div class="login-view">
+  <div class="login-view-inner">
+    <div class="login">
+      <form class="form-signin" name="loginForm"
+            ng-controller="LoginCtrl as login"
+            ng-submit="login.login(login.form.username, login.form.password)"
+            novalidate>
+
+        <h3 class="form-signin-heading">Welcome to TissueMAPS</h3>
+
+        <!-- <label for="username">Username:</label> -->
+        <input class="form-control" type="text" id="username" placeholder="Username"
+               ng-model="login.form.username">
+
+        <!-- <label for="password">Password:</label> -->
+        <input class="form-control" type="password" id="password"
+               placeholder="Password"
+               ng-model="login.form.password">
+
+        <button class="btn btn-lg btn-block" type="submit">Login</button>
+      </form>
+    </div>
+  </div>
+</div>

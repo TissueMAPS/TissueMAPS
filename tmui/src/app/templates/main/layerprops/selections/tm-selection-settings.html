@@ -1,0 +1,65 @@
+<div class="selection-settings">
+
+  <div class="selection-controls">
+    <label>Object type: </label>
+    <select ng-model="selCtrl.selHandler.activeMapObjectType">
+      <option value="{{::t}}"
+      ng-repeat="t in selCtrl.selHandler.supportedMapObjectTypes">
+      {{::t}}
+      </option>
+    </select>
+  </div>
+
+  <div class="selection-container">
+    <tm-multi-selection-box items="selCtrl.selHandler.selectionsForActiveType" by-name="'sel'">
+      <tm-selectable-tabs>
+        <tm-selectable-tab
+          ng-controller="SelectionTabCtrl as selTabCtrl">
+          <tm-selectable-tab-content>
+
+            <span class="selection-flag inline-layer-control">
+              <i class="fa fa-flag" ng-style="{'color': sel.color.toRGBString()}"></i>
+            </span>
+
+            <span class="inline-layer-control"
+              ng-click="selCtrl.toggleActiveSelection(sel)"
+              ng-class="{'active': selCtrl.isActiveSelection(sel)}"
+              tm-stop-click>
+              <i ng-class="{'fa-toggle-on': selCtrl.isActiveSelection(sel), 'fa-toggle-off': !selCtrl.isActiveSelection(sel)}"
+                class="fa" aria-hidden="true"></i>
+            </span>
+
+            <span class="inline-layer-control"
+              ng-click="selTabCtrl.toggleRenamingMode()"
+              ng-class="{'active': selTabCtrl.inRenamingMode}"
+              tm-stop-click>
+              <i class="fa fa-pencil-square" aria-hidden="true"></i>
+            </span>
+
+            <input type="text" ng-model="sel.name"
+            ng-disabled="!selTabCtrl.inRenamingMode"tm-stop-click>
+
+          </tm-selectable-tab-content>
+        </tm-selectable-tab>
+      </tm-selectable-tabs>
+
+      <tm-multi-selection-controls ng-controller="SelectionControlsCtrl as controls">
+        <button ng-click="selCtrl.addSelection()">
+          <i class="fa fa-plus"></i>
+        </button>
+
+        <button ng-click="controls.deleteSelectedSelections()"
+          ng-show="selectionBox.hasSelectedItems()">
+          <i class="fa fa-trash"></i>
+        </button>
+
+        <button ng-click="controls.clearSelectedSelections()"
+          ng-show="selectionBox.hasSelectedItems()">
+          <i class="fa fa-circle-thin"></i>
+        </button>
+      </tm-multi-selection-controls>
+
+    </tm-multi-selection-box>
+  </div>
+
+</div>

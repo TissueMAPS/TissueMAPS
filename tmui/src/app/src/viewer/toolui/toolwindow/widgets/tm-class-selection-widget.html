@@ -1,0 +1,35 @@
+<div class="class-selection-widget panel panel-default">
+  <div class="panel-body">
+    <table class="table table-condensed">
+      <tr>
+        <th>Selection</th>
+        <th>Label</th>
+      </tr>
+      <tr ng-repeat="objSelection in classSelectionWidget.selections"
+          ng-controller="ClassSelectionCtrl as sel">
+        <td>
+          <span class="flag-label">
+            <i class="fa fa-flag" ng-style="{'color': objSelection.color.toRGBString()}"></i>
+          </span>
+          <span>
+            {{ objSelection.name }}
+          </span>
+        </td>
+
+        <td>
+          Use? <input type="checkbox" ng-model="sel.useAsClass">
+          Label:
+          <input type="text" ng-model="sel.className">
+        </td>
+      </tr>
+    </table>
+
+    <ul class="list-group">
+      <li ng-repeat="cls in classSelectionWidget.classes"
+        class="list-group-item">
+          {{cls.name}} <span class="badge">{{cls.mapobjectIds.length}}</span>
+      </li>
+    </ul>
+  </div>
+</div>
+

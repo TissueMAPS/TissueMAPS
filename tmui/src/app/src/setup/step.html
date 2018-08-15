@@ -1,0 +1,62 @@
+<form ng-init="step = stepCtrl.step">
+
+  <div class="col-md-12">
+    <h3>{{stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex].fullname}}</h3>
+
+    <p>{{stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex].help}}</p>
+  </div>
+
+  <div class="col-md-6">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4>Batch arguments</h4>
+        Arguments that control how data is partitioned into computational jobs.
+      </div>
+      <div class="panel-body">
+        <tm-argument-input arg="arg"
+            ng-repeat="arg in stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex].batch_args"
+            arg-collection="setupCtrl.args[stage.name][step.name].batch_args"></tm-argument-input>
+      </div>
+    </div>
+
+    <div ng-show="stepCtrl.hasExtraArgs()" class="panel panel-default">
+      <div class="panel-heading">
+        <h4>Extra arguments</h4>
+      </div>
+      <div class="panel-body">
+        <tm-argument-input arg="arg"
+            ng-repeat="arg in stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex].extra_args"
+            arg-collection="setupCtrl.args[stage.name][step.name].extra_args"></tm-argument-input>
+      </div>
+    </div>
+
+    <div ng-show="stepCtrl.workflow.stages[stepCtrl.currentStageIndex].name == 'image_analysis'">
+      <button class="btn btn-default"
+          ng-click="setupCtrl.editPipeline()"
+          ng-disabled="!setupCtrl.canModifyPipeline()">
+        <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+        Edit Pipeline
+      </button>
+    </div>
+
+  </div>
+
+  <div class="col-md-6">
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h4>Submission arguments</h4>
+        Arguments that control how computational jobs are submitted to the cluster.
+        <!-- <p> -->
+          <!-- <i class="fa fa-exclamation-triangle" aria-hidden="true"></i> -->
+          <!-- <i>Danger zone - hopefully, you know what you are doing!</i> -->
+        <!-- </p> -->
+      </div>
+      <div class="panel-body">
+        <tm-argument-input arg="arg"
+            ng-repeat="arg in stepCtrl.workflow.stages[stepCtrl.currentStageIndex].steps[stepCtrl.currentStepIndex].submission_args"
+            arg-collection="setupCtrl.args[stage.name][step.name].submission_args"></tm-argument-input>
+      </div>
+    </div>
+  </div>
+
+</form>

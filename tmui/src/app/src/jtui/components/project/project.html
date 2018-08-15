@@ -1,0 +1,247 @@
+<div class="header">
+
+  <div class="col-md-9">
+    <h3>Image Analysis Pipeline</h3>
+  </div>
+
+  <div class="col-md-3">
+    <i class="fa fa-cog fa-fw"
+       ng-hide="submission.state == 'RUNNING'">
+    </i>
+    <i class="fa fa-cog fa-spin fa-fw"
+       ng-show="submission.state == 'RUNNING'">
+    </i>
+    <i>{{submission.state}}</i>
+    <uib-progressbar max="100" style="height: 15px;" value="submission.percent_done"
+       type="{{submission.failed ? 'danger' : 'success'}}">
+    </uib-progressbar>
+  </div>
+
+</div>
+
+<div class="pipeline-pane">
+
+  <div class="pane-header">
+      Pipeline Settings
+  </div>
+
+  <div class="pane-content">
+    <div class="pane-subcontent" perfect-scrollbar>
+
+      <div class="panel panel-default">
+
+        <div class="panel-heading">
+            Input
+        </div>
+
+        <div class="panel-body">
+
+          <p>Select <b>channels</b> that should be available in the pipeline:</p>
+          <p></p>
+
+          <div class="col-sm-12">
+            <form class="form-horizontal">
+              <div class="form-group"
+                  ng-repeat="channel in project.pipe.description.input.channels">
+
+                <select class="form-control" id="channelName"
+                    ng-model="channel.name"
+                    ng-options="n for n in getSelectableChannelNames($index)">
+                </select>
+
+                <span>Correct illumination</span>
+                <input type="checkbox" ng-model="channel.correct">
+
+              </div>
+            </form>
+          </div>
+
+          <div btn-group role="group">
+            <button type="button" class="btn btn-default"
+                                  ng-click="addChannel()">
+              <i class="fa fa-plus"></i>
+              Add
+            </button>
+
+            <button type="button" class="btn btn-default"
+                                ng-click="removeChannel()">
+              <i class="fa fa-minus"></i>
+              Remove
+            </button>
+
+            <button type="button" class="btn btn-default"
+                                ng-click="listJobs()">
+              <i class="fa fa-list-ol"></i>
+              List jobs
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="panel panel-default">
+
+        <div class="panel-heading">
+            Pipeline
+        </div>
+
+        <div class="panel-body">
+
+          <p>
+            Define the <b>modules</b> and the order in which they should be processed:
+          </p>
+
+          <div class="list-group"
+              ui-sortable
+              ng-model="project.pipe.description.pipeline"
+              ng-drop="true"
+              ng-drop-success="onDropCompleteAdd($data, $event)">
+
+            <li ng-repeat="m in project.pipe.description.pipeline | filter:searchModules"
+                ui-sref="project.module({moduleName:m.name})"
+                class="list-group-item"
+                ng-class="{active: $stateParams.moduleName == m.name}">
+
+              <span type="button">
+                <span ng-show="m.active"
+                      ng-click="deactivateModule($index, $event)"
+                      class="fa fa-eye" aria-label="Left Align"
+                      tm-stop-click>
+                </span>
+                <span ng-hide="m.active"
+                      ng-click="activateModule($index, $event)"
+                      class="fa fa-eye-slash"
+                      aria-label="Left Align"
+                      tm-stop-click>
+                </span>
+                &nbsp;
+              </span>
+
+              <span editable-text="m.name"
+                    onbeforesave="storeModuleName(m.name, $data)"
+                    onaftersave="editModuleName($index, m.name)"
+                    buttons="no">
+                    {{ m.name }}
+              </span>
+
+              <!-- <i class="fa fa-pencil-square-o" aria-hidden="true" style="float: right" -->
+              <!--     ng-click="textBtnForm.$show()" ng-hide="textBtnForm.$visible" -->
+              <!--     tm-stop-click> -->
+              <!-- </i> -->
+              <i class="fa fa-trash-o" style="float: right"
+                  ng-click="removeModule(m, $parent, $event)"
+                  tm-stop-click>
+              </i>
+
+            </li>
+          </div>
+
+          <div class="list-group-item-dashed"
+             ui-sortable
+             ng-if="project.pipe.description.pipeline.length == 0"
+             ng-model="project.pipe.description.pipeline"
+             ng-drop="true"
+             ng-drop-success="onDropCompleteAdd($data, $event)">
+              <i>Empty pipeline:</i>
+              <p></p>
+              <i>Drag modules and drop them here.</i>
+          </div>
+
+          <div btn-group role="group" aria-label="...">
+              <button type="button" class="btn btn-primary"
+                  ng-click="run()">
+                  Submit
+              </button>
+
+              <button type="button" class="btn btn-default"
+                  ng-click="kill()">
+                  <i class="fa fa-stop"></i>
+                  Kill
+              </button>
+
+              <button type="button" class="btn btn-default"
+                  ng-click="saveProject()">
+                  <i class="fa fa-floppy-o"></i>
+                  Save
+              </button>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="panel panel-default">
+
+        <div class="panel-heading">
+            Output
+        </div>
+
+        <div class="panel-body">
+
+          <p>Select <b>objects</b> that should be saved:</p>
+          <p></p>
+
+          <div class="col-sm-12">
+            <form class="form-horizontal">
+              <div class="form-group"
+                  ng-repeat="object in project.pipe.description.output.objects">
+
+                <select class="form-control" id="objectName"
+                    ng-model="object.name"
+                    ng-options="n for n in getSelectableObjectNames($index)">
+                </select>
+
+                <span>Represent as polygons</span>
+                <input type="checkbox" ng-model="object.as_polygons">
+
+              </div>
+            </form>
+          </div>
+
+          <div btn-group role="group">
+            <button type="button" class="btn btn-default"
+                                  ng-click="addObject()">
+              <i class="fa fa-plus"></i>
+              Add
+            </button>
+
+            <button type="button" class="btn btn-default"
+                                ng-click="removeObject()">
+              <i class="fa fa-minus"></i>
+              Remove
+            </button>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="module-settings-pane">
+
+  <div class="pane-header">
+    Module Settings
+  </div>
+
+  <div class="pane-content">
+    <div class="pane-subcontent" perfect-scrollbar>
+        <div ui-view="handles"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="result-pane">
+
+  <div class="pane-header">
+      Results
+  </div>
+
+  <div class="pane-content">
+    <div class="pane-subcontent" perfect-scrollbar>
+      <div ui-view="runner" ng-show="submission.state == 'TERMINATED'"></div>
+    </div>
+</div>
+

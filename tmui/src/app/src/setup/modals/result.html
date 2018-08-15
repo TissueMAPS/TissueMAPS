@@ -1,0 +1,32 @@
+<div class="modal-header">
+
+  <button type="button" class="close" ng-click="result.cancel()" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">{{result.title}}</h2>
+
+</div>
+
+<div class="modal-body">
+
+  <div ng-show="result.response.success">
+    <uib-alert type="success">
+      <i class="fa fa-thumbs-o-up"></i>
+      Successfull
+    </uib-alert>
+  </div>
+
+  <div ng-hide="result.response.success">
+    <uib-alert type="danger">
+      <i class="fa fa-thumbs-o-down"></i>
+      Failed
+    </uib-alert>
+  </div>
+
+</div>
+
+<div class="modal-footer">
+
+</div>
+

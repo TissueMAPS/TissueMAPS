@@ -1,0 +1,191 @@
+{
+    "compilerOptions": {
+        "target": "ES5",
+        "module": "commonjs",
+        "sourceMap": true,
+        "declaration": true,
+        "noImplicitAny": false,
+        "preserveConstEnums": true,
+        "removeComments": true,
+        "out": "build/script.js"
+    },
+    "files": [
+        "app/src/core/globals.ts",
+
+        "app/typedefs/libs.d.ts",
+        "app/typedefs/DefinitelyTyped/underscore/underscore.d.ts",
+        "app/typedefs/DefinitelyTyped/angularjs/angular.d.ts",
+        "app/typedefs/DefinitelyTyped/bluebird/bluebird.d.ts",
+        "app/typedefs/DefinitelyTyped/jquery/jquery.d.ts",
+        "app/typedefs/DefinitelyTyped/openlayers/openlayers.d.ts",
+        "app/typedefs/DefinitelyTyped/angular-ui-bootstrap/angular-ui-bootstrap.d.ts",
+
+        "app/src/tmaps.module.ts",
+        "app/src/tmaps.routes.ts",
+        "app/src/uiState.ts",
+
+        "app/src/auth/constants/AUTH_EVENTS.ts",
+        "app/src/auth/constants/USER_ROLES.ts",
+        "app/src/auth/controllers/LoginCtrl.ts",
+        "app/src/auth/controllers/LoginDialogCtrl.ts",
+        "app/src/auth/services/authInterceptor.ts",
+        "app/src/auth/services/authService.ts",
+        "app/src/auth/services/jwtUtil.ts",
+        "app/src/auth/services/loginDialogService.ts",
+        "app/src/auth/services/session.ts",
+        "app/src/auth/services/User.ts",
+        "app/src/auth/tmInlineLoginForm.ts",
+
+        "app/src/util/uuid.ts",
+        "app/src/util/pad.ts",
+        "app/src/util/moment.ts",
+        "app/src/util/fsize.ts",
+
+        "app/src/core/util/Color.ts",
+        "app/src/core/util/Size.ts",
+        "app/src/core/util/MapPosition.ts",
+
+        "app/src/core/Viewer.ts",
+        "app/src/core/Viewport.ts",
+        "app/src/core/Application.ts",
+        "app/src/core/HTTPDataAccessObject.ts",
+
+        "app/src/core/appstate/Appstate.ts",
+        "app/src/core/appstate/AppstateService.ts",
+        "app/src/core/appstate/RestoreAppstateService.ts",
+        "app/src/core/appstate/ctrl/SaveAppstateAsDialogCtrl.ts",
+        "app/src/core/appstate/ctrl/ShareAppstateCtrl.ts",
+        "app/src/core/appstate/api.ts",
+
+        "app/src/core/experiment/Experiment.ts",
+        "app/src/core/experiment/ExperimentDAO.ts",
+        "app/src/core/experiment/Plate.ts",
+        "app/src/core/experiment/PlateDAO.ts",
+        "app/src/core/experiment/Acquisition.ts",
+        "app/src/core/experiment/AcquisitionDAO.ts",
+        "app/src/core/experiment/MapobjectType.ts",
+        "app/src/core/experiment/MapobjectTypeDAO.ts",
+        "app/src/core/experiment/Channel.ts",
+        "app/src/core/experiment/ChannelDAO.ts",
+        "app/src/core/experiment/ChannelLayer.ts",
+
+        "app/src/core/layer/Layer.ts",
+        "app/src/core/layer/VectorLayer.ts",
+        "app/src/core/layer/VectorTileLayer.ts",
+        "app/src/core/layer/ImageTileLayer.ts",
+
+        "app/src/core/visual/Visual.ts",
+        "app/src/core/visual/PolygonVisual.ts",
+        "app/src/core/visual/PointVisual.ts",
+
+        "app/src/core/mapobject/MapObject.ts",
+        "app/src/core/mapobject/Feature.ts",
+        "app/src/core/mapobject/MapObjectSelection.ts",
+        "app/src/core/mapobject/MapObjectSelectionHandler.ts",
+        "app/src/core/mapobject/SelectionLayer.ts",
+        "app/src/core/mapobject/SegmentationLayer.ts",
+
+        "app/src/core/serialize/typedefs.ts",
+
+        "app/src/core/tool/Tool.ts",
+        "app/src/core/tool/ToolSession.ts",
+        "app/src/core/tool/ToolCtrl.ts",
+        "app/src/core/tool/ToolResult.ts",
+        "app/src/core/tool/ToolResultDAO.ts",
+
+        "app/src/core/tool/LabelLayer.ts",
+        "app/src/core/tool/Plot.ts",
+        "app/src/core/tool/Legend.ts",
+        "app/src/core/tool/result/ContinuousLabelLegend.ts",
+        "app/src/core/tool/result/ContinuousLabelLayer.ts",
+        "app/src/core/tool/result/ScalarLabelLayer.ts",
+        "app/src/core/tool/result/ScalarLabelLegend.ts",
+        "app/src/core/tool/result/SupervisedClassifierLabelLayer.ts",
+        "app/src/core/tool/result/HeatmapLabelLayer.ts",
+
+        "app/src/AppCtrl.ts",
+        "app/src/tmAppbar.ts",
+
+        "app/src/dialog/DialogCtrl.ts",
+        "app/src/dialog/dialogService.ts",
+        "app/src/dialog/WaitingDialogCtrl.ts",
+        "app/src/dialog/waitingDialogService.ts",
+
+        "app/src/viewer/misc/tmAttachToParent.ts",
+        "app/src/viewer/misc/uiComponents.ts",
+
+        "app/src/viewer/tmViewerWindow.ts",
+        "app/src/viewer/tmViewersTabbar.ts",
+        "app/src/viewer/tmViewport.ts",
+        "app/src/viewer/tmViewer.ts",
+
+        "app/src/viewer/toolui/ToolUICtrl.ts",
+        "app/src/viewer/toolui/toolwindow/tmToolWindow.ts",
+
+        "app/src/viewer/toolui/toolwindow/widgets/tmMapobjectTypeWidget.ts",
+        "app/src/viewer/toolui/toolwindow/widgets/tmFeatureSelectionWidget.ts",
+        "app/src/viewer/toolui/toolwindow/widgets/tmClassSelectionWidget.ts",
+
+        "app/src/tools/Clustering/ClusteringCtrl.ts",
+        "app/src/tools/Classification/ClassificationCtrl.ts",
+        "app/src/tools/Heatmap/HeatmapCtrl.ts",
+
+        "app/src/viewer/toolui/toolbar/tmToolbar.ts",
+        "app/src/viewer/toolui/toolbar/ToolbarCtrl.ts",
+
+        "app/src/viewer/sidebar/tmViewerSidebar.ts",
+
+        "app/src/viewer/sidebar/channels/ChannelControlsCtrl.ts",
+        "app/src/viewer/sidebar/channels/ChannelCtrl.ts",
+        "app/src/viewer/sidebar/channels/tmChannelSettings.ts",
+        "app/src/viewer/sidebar/channels/ChannelSettingsCtrl.ts",
+
+        "app/src/viewer/sidebar/objects/ObjectsControlsCtrl.ts",
+        "app/src/viewer/sidebar/objects/ObjectSettingsCtrl.ts",
+        "app/src/viewer/sidebar/objects/tmObjectSettings.ts",
+        "app/src/viewer/sidebar/objects/ObjectLayerCtrl.ts",
+
+        "app/src/viewer/sidebar/selections/SelectionSettingsCtrl.ts",
+        "app/src/viewer/sidebar/selections/SelectionControlsCtrl.ts",
+        "app/src/viewer/sidebar/selections/tmSelectionSettings.ts",
+
+        "app/src/viewer/sidebar/results/CurrentResultCtrl.ts",
+        "app/src/viewer/sidebar/results/ResultsControlsCtrl.ts",
+        "app/src/viewer/sidebar/results/ResultsSettingsCtrl.ts",
+        "app/src/viewer/sidebar/results/ResultCtrl.ts",
+        "app/src/viewer/sidebar/results/tmResultsSettings.ts",
+
+        "app/src/viewer/sidebar/tmMultiSelectionBox.ts",
+        "app/src/viewer/sidebar/MultiSelectionBoxCtrl.ts",
+        "app/src/viewer/sidebar/SelectableTabCtrl.ts",
+        "app/src/viewer/sidebar/removeLayerService.ts",
+
+        "app/src/viewer/sidebar/tmResizeHandle.ts",
+
+        "app/src/userpanel/UserpanelWindowCtrl.ts",
+        "app/src/userpanel/CreateExperimentCtrl.ts",
+
+        "app/src/setup/Job.ts",
+        "app/src/setup/Workflow.ts",
+        "app/src/setup/WorkflowStage.ts",
+        "app/src/setup/WorkflowStep.ts",
+        "app/src/setup/Argument.ts",
+        "app/src/setup/Status.ts",
+        "app/src/setup/workflowService.ts",
+
+        "app/src/setup/SetupCtrl.ts",
+        "app/src/setup/StageCtrl.ts",
+        "app/src/setup/StepCtrl.ts",
+        "app/src/setup/modals/SetupResultCtrl.ts",
+        "app/src/setup/modals/SetupOutputCtrl.ts",
+        "app/src/setup/modals/SetupInputCtrl.ts",
+
+        "app/src/setup/uploadfiles/PlateListCtrl.ts",
+        "app/src/setup/uploadfiles/PlateCreateCtrl.ts",
+        "app/src/setup/uploadfiles/PlateDetailCtrl.ts",
+        "app/src/setup/uploadfiles/AcquisitionDetailCtrl.ts",
+        "app/src/setup/uploadfiles/AcquisitionCreateCtrl.ts",
+
+        "app/src/errorInterceptor.ts"
+    ]
+}

@@ -1,0 +1,103 @@
+@import "../libs/lesshat/lesshat-prefixed";
+@import "../variables.less";
+
+.setup-window {
+    height: 100%;
+
+    .header {
+        border-top: 1px solid #626262;
+        height: @setup-window-header-height;
+        background: #333;
+        border-bottom: 1px solid #222222;
+        color: @font-color-light;
+        padding-top: 5px;
+        padding-bottom: 5px;
+
+        h3 {
+            margin: 10px 0;
+        }
+    }
+
+    .stage-indicator-container {
+        border-top: 1px solid #626262;
+        height: @stage-indicator-container-height;
+        background: #444;
+        border-bottom: 1px solid #222222;
+        color: @font-color-light;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    ul.stage-indicators {
+        margin: 0;
+        padding: 0;
+    }
+
+    .stage-indicator {
+        display: inline-block;
+        background: #555555;
+        padding: 15px 20px;
+        border: 1px solid black;
+
+        &.active {
+            background-color: @flashy-blue;
+        }
+    }
+
+    .step-indicator-container {
+        border-top: 1px solid #626262;
+        height: @stage-indicator-container-height;
+        background: #444;
+        border-bottom: 1px solid #222222;
+        color: @font-color-light;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    ul.step-indicators {
+        margin: 0;
+        padding: 0;
+    }
+
+    .step-indicator {
+        display: inline-block;
+        background: #555555;
+        padding: 15px 20px;
+        border: 1px solid black;
+
+        &.active {
+            background-color: @flashy-blue;
+        }
+    }
+
+    .step-view-container {
+        padding-bottom: 15px;
+        // background: blue;
+        border-top: 1px solid #626262;
+        height: calc(~'100% - @{stage-indicator-container-height} - @{setup-window-header-height} - @{step-indicator-container-height} - @{stage-control-container-height}');
+        overflow-y: scroll;
+
+    }
+
+    .stage-control-container {
+        border-top: 1px solid #626262;
+        height: @stage-control-container-height;
+        background: #333;
+        border-bottom: 1px solid #222222;
+        color: @font-color-light;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+}
+
+.setup-window-content {
+    height: 100%;
+}
+
+.argument-input {
+    &.blank {
+        .alert();
+        .alert-danger();
+    }
+}
+

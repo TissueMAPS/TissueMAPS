@@ -1,0 +1,49 @@
+<div class="appbar">
+  <ul class="button-list" ng-show="appCtrl.isUserAuthenticated()">
+    <!-- <li class="logo"> -->
+    <!--   <img width=24 height=24 src="/resources/img/tmaps_logo.png" alt=""/> -->
+    <!-- </li> -->
+    <li ui-sref="userpanel">
+      <i class="fa fa-user"></i>
+    </li>
+    <!-- </li><li ui-sref="viewer"> -->
+    <!--   <i class="fa fa-eye"></i> -->
+    <!-- </li><li ui-sref="setup"> -->
+    <!--   <i class="fa fa-wrench"></i> -->
+    <!-- </li><li ui-sref="jtui"> -->
+    <!--   <i class="fa fa-cogs"></i> -->
+  </ul>
+
+  <!-- <div class="spacer"></div> -->
+
+  <!-- <span class="session-label"> -->
+  <!--   <b> -->
+  <!--     {{ appbarCtrl.appstateService.currentState.name || 'unnamed session' }} -->
+  <!--   </b> -->
+  <!-- </span> -->
+
+  <!-- <span class="session-info" -->
+  <!--       ng-show="appbarCtrl.appstateService.lastSavedAt"> -->
+  <!--   (saved {{ appbarCtrl.appstateService.lastSavedAt | moment: 'fromNow' }}) -->
+  <!-- </span> -->
+
+  <!-- <span class="session-info" ng-show="appbarCtrl.appstateService.currentState.isSnapshot"> -->
+  <!--   <b>VIEWING SNAPSHOT</b> -->
+  <!--   (session can't be saved) -->
+  <!-- </span> -->
+
+  <div class="user-indicator">
+
+    <div ng-show="appCtrl.isUserAuthenticated()">
+      <a ui-sref="userpanel">
+        <b>{{ appCtrl.getUser().name }}</b>
+      </a>
+      <a ng-click="appCtrl.logout()">(logout)</a>
+    </div>
+
+    <div ng-show="!appCtrl.isUserAuthenticated()">
+      <tm-inline-login-form></tm-inline-login-form>
+    </div>
+  </div>
+
+</div>

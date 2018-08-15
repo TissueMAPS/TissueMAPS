@@ -1,0 +1,79 @@
+@import "../less/variables.less";
+@import "bootstrap/variables.less";
+@import "bootstrap/mixins/border-radius.less";
+@import "bootstrap/mixins/list-group.less";
+
+@panel-bg2: #F2F2F2; // light background
+@jtui-pane-header-height: 20px;
+
+/******************************************************************************
+ *                                  TOOLBAR                                   *
+ ******************************************************************************/
+// Although there is no toolbar in JtUI, tm-toolbar wants to know how wide its
+// first button should be.
+@toolbar-width: 30px;
+
+/******************************************************************************
+ *                                  MODULE LIST                               *
+ ******************************************************************************/
+@module-list-pane-width: 20vw;
+
+/******************************************************************************
+ *                                  PIPELINE                                  *
+ ******************************************************************************/
+@pipeline-pane-width: 30vw;
+@pipeline-pane-bg: #f7f7f7;
+
+/******************************************************************************
+ *                                  MODULE SETTINGS                           *
+ ******************************************************************************/
+@module-settings-pane-width: 30vw;
+@module-settings-pane-bg: #f7f7f7;
+
+/******************************************************************************
+ *                                  RESULTS                                   *
+ ******************************************************************************/
+@results-pane-width: 20vw;
+
+
+// Customized bootstrap list group
+// -------------------------------
+
+//** Background color on `.jtui-list-group-item`
+@jtui-list-group-bg:                 @panel-bg2; // #fff;
+//** `.jtui-list-group-item` border color
+@jtui-list-group-border:             #ddd;
+
+//** Background color of single list items on hover
+@jtui-list-group-hover-bg:           #f5f5f5;
+//** Text color of active list items
+@jtui-list-group-active-color:       @component-active-color;
+//** Background color of active list items
+@jtui-list-group-active-bg:          @component-active-bg;
+//** Border color of active list elements
+@jtui-list-group-active-border:      @jtui-list-group-active-bg;
+//** Text color for content within active list items
+@jtui-list-group-active-text-color:  lighten(@jtui-list-group-active-bg, 40%);
+
+//** Text color of disabled list items
+@jtui-list-group-disabled-color:      @gray-light;
+//** Background color of disabled list items
+@jtui-list-group-disabled-bg:         @gray-lighter;
+//** Text color for content within disabled list items
+@jtui-list-group-disabled-text-color: @jtui-list-group-disabled-color;
+
+@jtui-list-group-link-color:         #555;
+@jtui-list-group-link-hover-color:   @jtui-list-group-link-color;
+@jtui-list-group-link-heading-color: #333;
+
+
+// Customized bootstrap button
+// ---------------------------
+
+@btn-jtui-bg:                       @panel-bg2;
+@btn-jtui-color:                    @btn-default-color;
+@btn-jtui-border:                   @btn-default-border;
+
+@btn-help-bg:                       @panel-bg2;
+@btn-help-color:                    @btn-default-color;
+@btn-help-border:                   @btn-default-border;

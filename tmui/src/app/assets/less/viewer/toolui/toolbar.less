@@ -1,0 +1,51 @@
+@import "../../libs/lesshat/lesshat-prefixed";
+@import "../../variables.less";
+@import "../../ui.less";
+
+.toolbar:extend(.ui-panel all) {
+    height: 100%;
+
+    width: @toolbar-width;
+
+    .panel-vertical();
+    border-left: none;
+
+    // shadow to the right
+    .lh-box-shadow(1px 2px 2px black);
+
+    .ui-panel-gradient(right, @panel-bg-color);
+
+    .spacer {
+        .gradient-fader(top);
+        height: @gradient-spacer-width;
+    }
+
+    ul {
+        height: 100%;
+
+        li {
+            width: 100%;
+            height: @toolbar-li-height;
+            background-color: @panel-fg;
+            text-align: center;
+
+            .panel-horizontal();
+
+            &:last-child {
+                border-bottom: 1px solid #222;
+            }
+            &:first-child {
+                border-top: 1px solid #222;
+            }
+        }
+    }
+
+    .toolbutton:extend(.ui-button all) {
+        line-height: @toolbar-li-height - 1px;
+        height: 100%;
+
+        span.toolid {
+            font-weight: bold;
+        }
+    }
+}

@@ -1,0 +1,96 @@
+<div class="row step-indicator-container">
+
+  <div class="col-md-9">
+    <ul class="step-indicators">
+      <li class="step-indicator"
+        ng-repeat="step in stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps"
+        ng-class="{active: stageCtrl.isInStep(step)}"
+        ng-click="stageCtrl.goToStep(step)">
+        <i class="fa fa-check-circle" aria-hidden="true"
+           ng-show="!step.status.failed && step.status.done" style="color: green;">
+        </i>
+        <i class="fa fa-exclamation-circle" aria-hidden="true"
+           ng-show="step.status.failed" style="color: red;">
+        </i>
+        <i class="fa fa-cog"
+           ng-show="step.isSubmitted()">
+        </i>
+        <i class="fa fa-cog fa-spin fa-fw"
+           ng-show="step.isRunning()">
+        </i>
+        <i class="fa fa-minus-circle" aria-hidden="true"
+           ng-show="!step.check()">
+        </i>
+        {{::step.name.replace('_', ' ')}}
+      </li>
+    </ul>
+  </div>
+
+  <div class="col-md-3">
+    <i class="fa fa-cog fa-fw"
+       ng-show="!stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].isRunning()">
+    </i>
+    <i class="fa fa-cog fa-spin fa-fw"
+       ng-show="stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].isRunning()">
+    </i>
+    <i>{{stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.state}}</i>
+    <uib-progressbar max="100" style="height: 15px;"
+       value="stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.percentDone"
+       type="{{stageCtrl.workflow.stages[stageCtrl.currentStageIndex].steps[stageCtrl.currentStepIndex].status.failed ? 'danger' : 'success'}}">
+    </uib-progressbar>
+  </div>
+
+</div>
+
+<div class="row step-view-container">
+  <div class="col-md-12">
+
+    <div class="row">
+      <ui-view name="step-settings-view"></ui-view>
+    </div>
+
+    <div class="row">
+      <ui-view name='step-jobs-view'></ui-view>
+    </div>
+
+  </div>
+</div>
+
+<div class="row stage-control-container">
+
+  <div class="col-md-12">
+    <button ng-click="setupCtrl.submit()"
+        ng-disabled="!setupCtrl.canSubmit()"
+        class="btn btn-primary">
+        Submit
+    </button>
+
+    <button ng-click="setupCtrl.resume()"
+        ng-disabled="!setupCtrl.canResubmit()"
+        class="btn btn-primary">
+        Resume
+    </button>
+
+    <button ng-click="setupCtrl.resubmit()"
+        ng-disabled="!setupCtrl.canResubmit()"
+        class="btn btn-primary">
+        Resubmit
+    </button>
+
+    <button ng-click="setupCtrl.kill()"
+        ng-disabled="setupCtrl.canSubmit()"
+        class="btn btn-default">
+        <i class="fa fa-stop"></i>
+        Kill
+    </button>
+
+    <button ng-click="setupCtrl.save()"
+        ng-disabled="!setupCtrl.canSubmit()"
+        class="btn btn-default">
+        <i class="fa fa-floppy-o"></i>
+        Save
+    </button>
+
+  </div>
+</div>
+

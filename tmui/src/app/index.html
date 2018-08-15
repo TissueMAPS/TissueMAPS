@@ -1,0 +1,51 @@
+<!doctype html>
+<html ng-app="tmaps"
+      ng-controller="AppCtrl as appCtrl"
+      ng-keydown="appCtrl.keyDown($event)">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>TissueMAPS</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width">
+  <link rel="shortcut icon" href="/resources/img/favicon.ico">
+
+  <!-- ================================================================
+       |                             JS                               |
+       ================================================================ -->
+  <script type="text/javascript" charset="utf-8">
+      // There are some vector layer render issues when loading the page on a HighDPI
+      // display like that of the MBP. In that case devicePixelRatio is set to 2, which will
+      // cause the vectors to appear twice as large.
+      // As a temp. workaround we set the pixelratio to 1 before openlayers is loaded.
+      devicePixelRatio = 1;
+  </script>
+  <script src="libs.js" type="text/javascript" charset="utf-8"></script>
+  <script src="script-jtui.js" type="text/javascript" charset="utf-8"></script>
+  <script src="script.js" type="text/javascript" charset="utf-8"></script>
+
+  <!-- ================================================================
+       |                             CSS                              |
+       ================================================================ -->
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-jtui.css">
+
+</head>
+
+<!-- Somehow the keyUp and keyDown events need to be on different elements (html and body in this case) in order for both of them to fire. -->
+<!-- This wasn't a problem up until switching to the newest angular version. -->
+<body>
+
+  <div class="app" ng-keyup="appCtrl.keyUp($event)">
+
+    <tm-appbar ng-show="appCtrl.isUserAuthenticated()"></tm-appbar>
+     <!-- The main view holding the viewer, the setup window or the userpanel. -->
+     <!-- Since the DOM of the viewers should not be reinserted by the UI router, its -->
+     <!-- container div is made invisible using a onLeave-event instead of using ui-view. --> 
+    <div class="main-window" id="viewer-window">
+      <div ng-include="'/src/viewer/viewer-window.html'"></div>
+    </div>
+    <div class="main-window" ui-view="logo-backdrop"></div>
+  </div>
+
+</body>
+</html>

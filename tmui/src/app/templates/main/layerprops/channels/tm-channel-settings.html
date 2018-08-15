@@ -1,0 +1,96 @@
+<div class="channel-settings">
+
+  <tm-multi-selection-box items="channelsCtrl.channels" by-name="'channel'">
+    <tm-selectable-tabs>
+
+      <tm-selectable-tab ng-controller="ChannelCtrl as ctrl">
+
+        <tm-selectable-tab-popup>
+
+          <h4>Minimum</h4>
+          <span class="output" ng-bind="ctrl.getActualChannelMin(channel)"></span>
+          <div ui-slider
+               min="0" max="255"
+               ng-model="ctrl.minInput"
+               ng-change="ctrl.setChannelMin(channel, ctrl.minInput / 255)">
+          </div>
+
+          <h4>Maximum</h4>
+          <span class="output" ng-bind="ctrl.getActualChannelMax(channel)"></span>
+          <div ui-slider
+               min="0" max="255"
+               ng-model="ctrl.maxInput"
+               ng-change="ctrl.setChannelMax(channel, ctrl.maxInput / 255)">
+          </div>
+
+          <h4>Brightness</h4>
+          <span class="output" ng-bind="ctrl.getBrightnessFormatted(channel)"></span>
+          <div ui-slider
+               min="-50" max="50"
+               ng-model="ctrl.brightnessInput"
+               ng-change="ctrl.setChannelBrightness(channel, ctrl.brightnessInput / 100)">
+          </div>
+
+          <h4>Opacity</h4>
+          <span class="output" ng-bind="ctrl.getOpacityFormatted(channel)"></span>
+          <div ui-slider
+               min="0" max="100"
+               ng-model="ctrl.opacityInput"
+               ng-change="ctrl.setChannelOpacity(channel, ctrl.opacityInput / 100)">
+          </div>
+
+          <button ng-click="ctrl.setDefaultSettings(channel)">Reset</button>
+
+        </tm-selectable-tab-popup>
+
+        <tm-selectable-tab-content>
+          <span class="inline-layer-control" tm-stop-click>
+              <i ng-show="channel.visible" ng-click="channel.visible = false" class="fa fa-eye"></i>
+              <i ng-hide="channel.visible" ng-click="channel.visible = true" class="fa fa-circle-thin"></i>
+          </span>
+
+          <div class="inline-color-switcher" tm-stop-click>
+            <button ng-click="ctrl.setColor(channel, ctrl.color.RED)"
+                    ng-class="{active: ctrl.isRed(channel)}"
+                    class="r">R
+            </button><button ng-click="ctrl.setColor(channel, ctrl.color.GREEN)"
+                             ng-class="{active: ctrl.isGreen(channel)}"
+                    class="g">G
+            </button><button ng-click="ctrl.setColor(channel, ctrl.color.BLUE)"
+                             ng-class="{active: ctrl.isBlue(channel)}"
+                    class="b">B
+            </button>
+          </div>
+
+          <!-- <input type="text" ng-model="channel.name" tm-stop-click></input> -->
+          <!-- <span contenteditable strip-br="true" ng-model="channel.name" -->
+          <!--      select-non-editable="true"> -->
+          <!-- </span> -->
+          <span class="inline-layer-control"
+            ng-click="ctrl.toggleRenamingMode()"
+            ng-class="{'active': ctrl.inRenamingMode}"
+            tm-stop-click>
+            <i class="fa fa-pencil-square" aria-hidden="true"></i>
+          </span>
+
+          <input type="text" ng-model="channel.name"
+            ng-change="ctrl.renameChannel(channel)"
+            ng-model-options="{ updateOn: 'blur' }"
+            ng-disabled="!ctrl.inRenamingMode" tm-stop-click>
+
+        </tm-selectable-tab-content>
+
+      </tm-selectable-tab>
+
+    </tm-selectable-tabs>
+
+    <!-- <tm-multi-selection-controls ng-controller="ChannelControlsCtrl as controlsCtrl"> -->
+    <!--   <button ng-click="controlsCtrl.removeSelectedChannels()" -->
+    <!--           ng-show="selectionBox.hasSelectedItems()"> -->
+    <!--     <i class="fa fa-trash"></i> -->
+    <!--   </button> -->
+    <!-- </tm-multi-selection-controls> -->
+
+  </tm-multi-selection-box>
+
+</div>

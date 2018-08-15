@@ -1,0 +1,16 @@
+.list-group-item:nth-child(even) {
+    background-color: rgb(247, 247, 247);
+}
+
+.panel-body {
+    > div, ul, table {
+        margin-bottom: @panel-body-padding;
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+}
+
+.panel {
+    margin-bottom: 5px;
+}

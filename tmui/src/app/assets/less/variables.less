@@ -1,0 +1,113 @@
+//== General UI
+
+/******************************************************************************
+ *                                   COLORS                                   *
+ ******************************************************************************/
+
+@lime-green: #b4d500;
+@flashy-blue: #0099FF;
+@dark-gray: #555;
+@dark-orange: #723122;
+@dark-bluegreen: #226465;
+
+@theme-color: #3a3f41;
+@theme-color-dk1: #232323;
+
+@viewport-bg: #282828; // main bg
+
+@panel-bg-color: #393939; // color for panels that are all the way to the back
+@panel-fg: #535353; // color for panels on top of the background
+@panel-fg2: #727272; // color for elements on panels
+// ...
+
+// the color when some ui element is selected and active
+@panel-selection-color: mix(lighten(@panel-fg, 5%), darkslategray, 30%);
+@font-color-on-selection: contrast(@panel-selection-color, @panel-bg-color, #dddddd);
+
+@font-color-light: #dddddd;
+@font-color-dark: #101010;
+@panel-font-color: contrast(@panel-fg, @font-color-light, @font-color-dark);
+
+/******************************************************************************
+ *                                   APPBAR                                   *
+ ******************************************************************************/
+//== appbar
+@appbar-height: 30px;
+@top-container-height: @viewers-tabbar-container-height + @appbar-height + 2px;
+//== Tabbar
+
+
+////////////////////////////////////////////////////////////////////////////////
+//                                   VIEWER                                   //
+////////////////////////////////////////////////////////////////////////////////
+/******************************************************************************
+ *                                   TABBAR                                   *
+ ******************************************************************************/
+@viewers-tabbar-height: 30px;
+@viewers-tabbar-spacer-height: 5px;
+@viewers-tabbar-tabs-height: @viewers-tabbar-height - 5px - 1px;
+@viewers-tabbar-container-height: @viewers-tabbar-height + @viewers-tabbar-spacer-height;
+/******************************************************************************
+ *                                  Tool UI                                   *
+ ******************************************************************************/
+// Toolbar
+@toolbar-width: 45px;
+@toolbar-li-height: 45px;
+// the spacer that separates the tabs from the buttons in the topleft
+@gradient-spacer-width: 30px;
+@topleft-button-color: @panel-fg2;
+// Tool window 
+@tool-window-header-height: 50px;
+
+/******************************************************************************
+ *                                  SIDEBAR                                   *
+ ******************************************************************************/
+@sidebar-width: 260px;
+@sidebar-section-title-height: 30px;
+@sidebar-section-title-color: @panel-fg2;
+@sidebar-section-padding: 5px;
+/********************
+ *  Settings boxes  *
+ ********************/
+// Channels
+@channel-section-height: 40%;
+@channel-settings-li-height: 34px;
+// Objects
+@object-section-height: 20%;
+@object-settings-li-height: 30px;
+// Selections
+@selection-section-height: 20%;
+@selection-settings-li-height: 30px;
+// Results
+//// Saved
+@saved-results-section-height: calc(~'20% - @{current-result-section-height}');
+@saved-results-settings-li-height: 30px;
+//// Current
+@current-result-settings-li-height: 30px;
+@current-result-section-height:
+    @current-result-settings-li-height +
+    2 * @sidebar-section-padding +
+    @sidebar-section-title-height;
+
+@map-container-width: calc(~'100% - @{toolbar-width} - @{sidebar-width}');
+
+////////////////////////////////////////////////////////////////////////
+//                             BOTTOMBAR                              //
+////////////////////////////////////////////////////////////////////////
+@viewer-bottom-height: 25px;
+/******************************************************************************
+ *                                   MODALS                                   *
+ ******************************************************************************/
+
+// Modals
+@modal-background-color: #F5F5F5;
+@modal-font-color: #3F3F3F;
+
+////////////////////////////////////////////////////////////////////////////////
+//                                   SETUP                                    //
+////////////////////////////////////////////////////////////////////////////////
+@stage-control-container-height: 50px;
+@stage-indicator-container-height: 64px;
+@step-indicator-container-height: 64px;
+@setup-window-header-height: 60px;
+@content-view-container-color: darken(white, 5%);

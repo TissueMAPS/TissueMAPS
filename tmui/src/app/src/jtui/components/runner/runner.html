@@ -1,0 +1,39 @@
+<div ng-repeat="j in jobs">
+
+  <div ng-class="j.failed ? 'panel panel-danger' : 'panel panel-success'">
+
+    <div class="panel-heading">
+        Job  {{ j.id }}
+    </div>
+
+    <div class="panel-body">
+
+      <div btn-group>
+
+        <button type="button"
+            class="btn btn-default"
+            ng-click="showFigure($index)">
+            <i class="fa fa-bar-chart" aria-hidden="true"></i>
+            Figure
+        </button>
+
+        <button type="button"
+            class="btn btn-default"
+            ng-click="showJobLog($index)">
+            <i class="fa fa-terminal"></i>
+            Log
+        </button>
+
+        <!-- <button type="button" -->
+        <!--     class="btn btn-default" -->
+        <!--     ng-click="showSourceCode(module)"> -->
+        <!--     <i class="fa fa-code" aria-hidden="true"></i> -->
+        <!--     Code -->
+        <!-- </button> -->
+
+      </div>
+
+    </div>
+
+  </div>
+</div>

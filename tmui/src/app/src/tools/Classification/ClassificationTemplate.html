@@ -1,0 +1,36 @@
+
+<div>
+  <p><tm-mapobject-type-widget></tm-mapobject-type-widget></p>
+
+  <p>
+    <label>Select objects used for training</label>
+    <tm-class-selection-widget></tm-class-selection-widget>
+  </p>
+
+  <p>
+    <label>Select features</label>
+    <tm-feature-selection-widget
+      selected-mapobject-type="mapobjectTypeWidget.selectedType">
+    </tm-feature-selection-widget>
+  </p>
+
+  <p class="form-group">
+    <label>Algorithm</label>
+    <select class="form-control" ng-model="toolCtrl.method">
+      <option value="randomforest">Random Forest</option>
+      <option value="svm">Support Vector Machine</option>
+      <option value="logisticregression">LogisticRegression</option>
+    </select>
+  </p>
+
+  <pclass="form-group">
+    <label>Number of crossvalidation iterations (n-fold)</label>
+    <input type="number" class="form-control" ng-model="toolCtrl.nCrossvalidations">
+  </p>
+
+  <p>
+    <button class="btn btn-primary"
+      ng-disabled="featureWidget.selectedFeatures.length == 0"
+      ng-click="toolCtrl.doClassify()">Classify</button>
+  </p>
+</div>

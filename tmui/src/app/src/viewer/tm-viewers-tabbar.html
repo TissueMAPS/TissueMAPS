@@ -1,0 +1,21 @@
+<div class="viewers-tabbar">
+  <!-- Inner container holds the tabs and displays a shadow in the background -->
+  <div class="inner-container">
+    <ul>
+      <li class="viewer-tab"
+           ng-repeat="viewer in viewerWindowCtrl.viewers"
+           ng-class="{active: viewer.active}">
+         <div> 
+           <span ng-click="viewersTabbarCtrl.clickTab(viewer)">
+             {{::viewer.experiment.name}}
+           </span>
+           <span ng-click="viewersTabbarCtrl.clickDelete(viewer)">
+             <i class="fa fa-times"></i>
+           </span>
+         </div>
+      </li>
+    </ul>
+  </div>
+  <div class="viewers-tabbar-spacer"></div>
+  <div class="viewers-tabbar-spacer-shadow"></div>
+</div>

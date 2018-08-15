@@ -1,0 +1,21 @@
+@import "variables.less";
+
+@sidebar-size: 5%;
+
+.jtui {
+
+    .result-pane {
+        background: white;
+        margin-left: calc(~'@{module-list-pane-width} + @{pipeline-pane-width} + @{module-settings-pane-width}');
+        position: absolute;
+        width: @results-pane-width;
+        height: 100%;
+
+    .logo {
+      height: 15px;
+      width: 15px;
+      float: left;
+    }
+  }
+}
+

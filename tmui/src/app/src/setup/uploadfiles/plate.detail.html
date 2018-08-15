@@ -1,0 +1,45 @@
+<h3>
+  Plate:
+  <a ui-sref="^.detail({plateid: plateDetailCtrl.plate.id})">
+    {{:: plateDetailCtrl.plate.name}}
+  </a>
+  <span class="plate-status-indicator">
+    <span ng-show="plateDetailCtrl.plate.isReadyForProcessing">
+      (READY FOR PROCESSING)
+    </span>
+    <span ng-hide="plateDetailCtrl.plate.isReadyForProcessing">
+      (NOT READY FOR PROCESSING)
+    </span>
+  </span>
+</h3>
+
+<div ui-view ng-init="plate = plateDetailCtrl.plate">
+  <div ng-show="plate.description" class="well">{{:: plate.description }}</div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading">Acquisitions</div>
+    <div class="panel-body">
+      <ul class="list-group">
+        <li class="list-group-item" ng-controller="AcquisitionTabCtrl" ng-repeat="aq in plate.acquisitions">
+
+          <a ui-sref="acquisition.detail({acquisitionid: aq.id})">{{aq.name}}</a>
+          <span ng-show="aq.description" style="color: gray;">- {{aq.description}}</span>
+
+          <span>({{aq.status}}) - {{nFiles}} files</span>
+
+          <button class="btn btn-danger pull-right"
+                ng-click="plateDetailCtrl.deleteAcquisition(aq)">
+            <i class="fa fa-trash-o" aria-hidden="true"></i>
+            Delete
+          </button>
+        </li>
+      </ul>
+    </div>
+    <div class="panel-footer">
+      <button ui-sref="acquisition.create" class="btn btn-default">
+          <i class="fa fa-plus" aria-hidden="true"></i>
+          Add acquisition
+      </button>
+    </div>
+  </div>
+</div>

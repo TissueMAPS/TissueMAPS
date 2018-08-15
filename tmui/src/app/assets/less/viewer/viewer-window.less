@@ -1,0 +1,80 @@
+@import "../variables.less";
+
+#viewer-window {
+    display: none;
+    background-image: url("/resources/img/mocha.png");
+    background-repeat: repeat;
+
+    > div {
+        height: 100%;
+    }
+}
+
+.legends {
+    position: absolute;
+    bottom: 20px;
+    z-index: 100;
+    right: 20px;
+    .legend {
+        overflow-x: hidden;
+        overflow-y: hidden;
+        margin-top: 5px;
+        width: 100px;
+        height: 300px;
+        border-radius: 5px;
+        background-color: fade(black, 70%);
+    }
+
+    .svg-container {
+        left: -70px;
+        top: -90px;
+    }
+}
+
+.viewers-container {
+    height: 100%;
+}
+
+.viewer-middle {
+    height: calc(~'100% - 25px');
+    position: relative;
+}
+
+.viewer-bottom {
+    height: @viewer-bottom-height;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+}
+
+.viewer {
+    height: 100%;
+    position: relative;
+}
+
+// == The following three divs float side by side
+// 1) The toolbar to the left
+.toolbar {
+    width: @toolbar-width;
+    height: 100%;
+    z-index: 10; // higher than map
+    float: left;
+}
+
+// 2) The map container is in the center
+.map-container {
+    position: relative;
+    left: 45px;
+    float: left;
+    height: 100%;
+    width: @map-container-width;
+}
+
+// 3) The panel to the right (does not float, but uses a left-margin)
+.sidebar {
+    position: absolute;
+    width: @sidebar-width;
+    top: 0;
+    right: 0;
+    height: 100%;
+}

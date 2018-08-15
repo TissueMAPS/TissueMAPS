@@ -1,0 +1,39 @@
+<h1>Your experiments</h1>
+<div class="panel panel-default">
+  <div class="panel-heading">
+    <span class="search form-inline pull-right">
+      <div class="input-group">
+        <div class="input-group-addon"><i class="fa fa-search"></i></div>
+        <input type="text" class="form-control" placeholder="Experiment name" ng-model="experimentQuery.name">
+      </div>
+    </span>
+  </div>
+  <div class="panel-body">
+    <ul class="list-group">
+      <li class="list-group-item" ng-repeat="e in userpanelCtrl.experiments | filter:experimentQuery">
+        {{ e.name }}
+
+        <button class="btn btn-primary"
+            ng-click="userpanelCtrl.modifyExperiment(e)">
+          <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+          Modify
+        </button>
+        <button class="btn btn-success"
+            ng-click="userpanelCtrl.viewExperiment(e)">
+          <i class="fa fa-eye" aria-hidden="true"></i>
+          View
+        </button>
+        <button class="btn btn-danger" ng-click="userpanelCtrl.deleteExperiment(e)">
+          <i class="fa fa-trash-o" aria-hidden="true"></i>
+          Delete
+        </button>
+        
+      </li>
+    </ul>
+  </div>
+
+  <div class="panel-footer">
+    <button ui-sref="^.create" class="btn btn-large">Create new experiment</button>
+  </div>
+</div>
+

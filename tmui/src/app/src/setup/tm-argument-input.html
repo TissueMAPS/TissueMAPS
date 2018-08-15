@@ -1,0 +1,14 @@
+<div class="form-group argument-input" ng-hide="{{arg.disabled}}" ng-class="{blank: shouldAlert()}">
+    <label>{{:: arg.name }}</label>
+    <input ng-if="widgetType == 'checkbox'" type="checkbox" ng-model="arg.value">
+    <p class="help-block">{{:: arg.help }}</p>
+    <span ng-hide="{{ arg.required }}">(optional)</span>
+    <input class="form-control" ng-if="widgetType == 'textInput'" type="text" ng-model="arg.value">
+    <input class="form-control" ng-if="widgetType == 'integerInput'" type="number" ng-model="arg.value">
+    <input class="form-control" ng-if="widgetType == 'floatInput'" type="number" step="0.01" ng-model="arg.value">
+    <div ng-if="widgetType == 'dropdown'">
+        <select class="form-control" ng-model="arg.value">
+            <option ng-repeat="choice in arg.choices" ng-value="choice">{{choice}}</option>
+        </select>
+    </div>
+</div>

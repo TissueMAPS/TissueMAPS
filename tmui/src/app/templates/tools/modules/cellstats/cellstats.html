@@ -1,0 +1,27 @@
+<div ng-controller="CellStatsCtrl" class="cell-stats">
+
+  <div class="panel panel-default">
+
+    <div class="panel-body">
+      <div class="input-group">
+        <div class="input-group-addon"><i class="fa fa-search"></i></div>
+        <input type="text" class="form-control" placeholder="Feature name" ng-model="featureQuery.feature">
+      </div>
+
+      <div class="list-container" perfect-scrollbar>
+        <ul class="list-group">
+          <li ng-repeat="feat in featureValues | filter:featureQuery"
+            class="list-group-item">
+
+            {{ feat.channel + '__' + feat.feature }}
+
+            <span class="value-indicator">{{ feat.value }}</span>
+
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,37 @@
+<div class="modal-header">
+
+  <button type="button" class="close" ng-click="$dismiss('Cancel')" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">Run pipeline for individual jobs</h2>
+
+</div>
+
+<div class="modal-body">
+
+  <p>
+    Enter job IDs (comma separated list, e.g. "1, 2, 3"):
+  </p>
+
+  <div>
+    <label>Job</label>
+      <input ng-list ng-model="$parent.subJobId" placeholder="job ID">
+  </div>
+
+  <uib-alert ng-show="$parent.subJobId.length > 10" type="danger">
+  Too many jobs selected! Restricted to maximally 10 jobs.
+  </uib-alert>
+
+  <!-- <i class="fa fa-random"></i> -->
+
+</div>
+
+<div class="modal-footer">
+
+  <button type="submit" ng-click="$close(subJobId)"
+          class="btn btn-primary" data-dismiss="modal">
+     <i class="fa fa-play"></i>
+  </button>
+
+</div>

@@ -1,0 +1,47 @@
+<div class="mask-settings">
+
+  <tm-multi-selection-box items="masksCtrl.layers" by-name="'layer'">
+    <tm-selectable-tabs>
+      <tm-selectable-tab ng-controller="MaskCtrl as ctrl">
+        <tm-selectable-tab-popup>
+
+          <ng-color-picker class="color-picker" selected="ctrl.colorInput" colors="ctrl.colors">
+          </ng-color-picker>
+
+        </tm-selectable-tab-popup>
+
+        <tm-selectable-tab-content>
+
+          <span class="inline-layer-control" tm-stop-click>
+            <i ng-show="layer.visible()" ng-click="layer.visible(false)" class="fa fa-eye"></i>
+            <i ng-hide="layer.visible()" ng-click="layer.visible(true)" class="fa fa-circle-thin"></i>
+          </span>
+
+          <div class="name-container">
+            <input type="text"
+              ng-style="{color: ctrl.colorInput}"
+              ng-model="layer.name" tm-stop-click>
+            </input>
+
+            <div class="slider-container">
+              <div ui-slider
+                min="0" max="100"
+                ng-model="ctrl.opacityInput"
+                ng-change="layer.opacity(ctrl.opacityInput / 100)">
+              </div>
+            </div>
+          </div>
+        </tm-selectable-tab-content>
+      </tm-selectable-tab>
+    </tm-selectable-tabs>
+
+    <tm-multi-selection-controls ng-controller="MaskControlsCtrl as controls">
+      <button class="add-layer"
+        ng-click="controls.removeSelectedLayers()"
+        ng-show="selectionBox.hasSelectedItems()">
+        <i class="fa fa-trash"></i>
+      </button>
+    </tm-multi-selection-controls>
+  </tm-multi-selection-box>
+
+</div>

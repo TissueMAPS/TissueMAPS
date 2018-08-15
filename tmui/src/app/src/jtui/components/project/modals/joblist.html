@@ -1,0 +1,61 @@
+<div class="modal-header">
+
+  <button type="button" class="close" ng-click="$dismiss('Cancel')" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">Jobs</h2>
+
+</div>
+
+<div class="modal-body">
+
+  <table st-table="joblist" class="table table-striped" ng-hide="error">
+
+    <thead>
+      <tr>
+        <th>job id</th>
+        <th>plate</th>
+        <th>well</th>
+        <th>y</th>
+        <th>x</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr ng-repeat="(job_id, metadata) in joblist">
+        <td>{{ job_id }}</td>
+        <td>{{ metadata.plate }}</td>
+        <td>{{ metadata.well }}</td>
+        <td>{{ metadata.y }}</td>
+        <td>{{ metadata.x }}</td>
+      </tr>
+    </tbody>
+    
+  </table>
+
+  <div ng-show="error">
+
+    <uib-alert type="danger">
+      <i class="fa fa-thumbs-o-down"></i>
+      Joblist creation failed!
+    </uib-alert>
+    <p>
+      Error message:
+    </p>
+    <pre>
+      {{ errorMessage }}
+    </pre>
+
+  </div>
+
+</div>
+
+<div class="modal-footer">
+
+  <button type="button" ng-click="$dismiss('No')"
+          class="btn btn-default" data-dismiss="modal">
+     <i class="fa fa-times"></i>
+  </button>
+
+</div>

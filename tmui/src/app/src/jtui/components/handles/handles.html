@@ -1,0 +1,87 @@
+<h4 ng-bind="source || ''"></h4>
+
+<div class="panel panel-default">
+
+  <div class="panel-heading">
+    Input
+  </div>
+
+  <div class="panel-body">
+
+    <div ng-repeat="inarg in module.description.input">
+
+      <div class="form-group">
+
+        <span><b>{{inarg.name}}</b></span>
+        <span class="help-block">{{inarg.help}}</span>
+        <span ng-show="isPipelineInput(inarg.name)" class="ng-hide">
+          <span class="help-block"><i>{{inarg.type}}</i></span>
+        </span>
+
+        <span ng-hide="isPipelineInput(inarg.name)">
+
+          <!-- constant -->
+          <span ng-show="hasOptions(inarg.name) && !(isBoolean(inarg.name))" class="ng-hide">
+            <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in inarg.options">
+            </select>
+          </span>
+
+          <span ng-show="isBoolean(inarg.name)" class="ng-hide">
+            <select class="form-control" id="inputArg" ng-model="inarg.value" ng-options="o for o in boolOptions">
+            </select>
+          </span>
+
+          <span ng-hide="hasOptions(inarg.name) || isBoolean(inarg.name)">
+            <input class="form-control" id="inputArg" ng-model="inarg.value" placeholder="{{inarg.type}}">
+          </span>
+
+        </span>
+
+        <!-- piped -->
+        <span ng-show="isPipelineInput(inarg.name)" class="ng-hide">
+
+          <select class="form-control" id="inputArg" ng-model="inarg.key" ng-options="a for a in getArgList(inarg.type)">
+            <option key="">
+            </option>
+          </select>
+
+        </span>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="panel panel-default">
+
+  <div class="panel-heading">
+    Output
+  </div>
+
+  <div class="panel-body">
+
+    <div ng-repeat="outarg in module.description.output">
+
+      <div ng-hide="outarg.type=='Figure'" class="form-group">
+
+        <span><b>{{outarg.name}}</b></span>
+        <span class="help-block">{{outarg.help}}</span>
+        <span ng-show="isPipelineOutput(outarg.name)" class="ng-hide">
+          <span class="help-block"><i>{{outarg.type}}</i></span>
+        </span>
+
+        <div ng-hide="!outarg.hasOwnProperty('key')">
+          <input  class="form-control"
+                  ng-class="{'error-input': isDuplicate(outarg)}"
+                  type="text" id="outputArg"
+                  ng-model="outarg.key">
+
+          <div ng-show="isDuplicate(outarg)" class="error-text">
+              Names of outputs must be unique!
+          </div>
+        </div>
+
+    </div>
+
+  </div>
+</div>

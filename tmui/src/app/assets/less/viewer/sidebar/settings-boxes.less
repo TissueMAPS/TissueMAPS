@@ -1,0 +1,241 @@
+@import "../../libs/lesshat/lesshat-prefixed";
+@import "../../variables.less";
+@import "../../ui.less";
+
+.inline-layer-control {
+    display: inline-block;
+    text-align: center;
+    width: 30px;
+    margin-left: -15px;
+
+    &:first-child {
+        margin-left: 0px;
+    }
+
+    &.active {
+        color: orange;
+    }
+}
+
+
+.inline-color-switcher:extend(.inline-layer-control) {
+
+    vertical-align: middle; // align div in middle of line
+    width: 55px;
+    height: 85%;
+    line-height: 85%; // align RGB in middle of div
+
+    // buttons should lie side by side
+    button {
+        &:focus { outline: 0; }
+        transition: background 500ms ease;
+        border: none;
+        background: @panel-bg-color;
+        font-size: 0.8em;
+        padding: 0px 2px;
+        height: 90%;
+        display: inline-block;
+
+        // Don't change even when selection on list item changes font colors
+        color: @font-color-light;
+    }
+    .r.active {
+        background-color: red;
+    }
+    .g.active {
+        background-color: green;
+    }
+    .b.active {
+        background-color: blue;
+    }
+}
+
+.no-input-style {
+    background: none;
+    padding: 0;
+    border: 0;
+    outline: 0;
+}
+
+.channel-section, .selection-section, .object-section, .saved-results-section {
+    .tm-selectable-tab-content {
+        white-space: nowrap;
+        overflow: hidden;
+        input[type=text] {
+            .no-input-style();
+        }
+    }
+}
+
+/******************************************************************************
+ *                              CHANNEL SETTNGS                               *
+ ******************************************************************************/
+.channel-section {
+
+    height: @channel-section-height;
+
+    // The inner div
+    .channel-settings {
+        height: 100%;
+    }
+
+
+    .tm-selectable-tabs {
+        li {
+            line-height: @channel-settings-li-height;
+            height: @channel-settings-li-height;
+        }
+    }
+
+    .tm-selectable-tab-popup-window {
+        width: 300px;
+        /*
+         * This is interpreted as offset from parent since this the box uses
+         * tmAttachToParent which updates the location of the popup window based
+         * on the position of the parent.
+         * Necessary hack due to overflow-behavior.
+         */
+        right: @sidebar-section-padding + 1;
+    }
+
+
+    .tm-selectable-tab-content {
+        span:last-child {
+            margin-left: -5px;
+        }
+    }
+}
+
+/******************************************************************************
+ *                             SELECTION SETTINGS                             *
+ ******************************************************************************/
+@activate-button-height: @selection-settings-li-height - 4px;
+@selection-controls-height: 50px;
+
+.selection-section {
+    height: @selection-section-height;
+
+    // The inner div
+    .selection-settings {
+        height: 100%;
+    }
+
+    select {
+        background-color: darken(@panel-bg-color, 10%);
+        border: 1px solid @panel-fg;
+    }
+
+    // The div holding the selection controls for the active map object etc.
+    .selection-controls {
+        height: @selection-controls-height;
+    }
+
+    button.marker-mode-switch {
+        // TODO: Use standard tmaps style
+        border: 1px solid black;
+        width: 30px;
+        &.active {
+            background: orange;
+            i {
+                color: black;
+            }
+        }
+    }
+
+    // Wrapper div around the selection tabs
+    .selection-container {
+        height: calc(~'100% - @{selection-controls-height}');
+    }
+
+    .tm-selectable-tabs {
+        li {
+            height: @selection-settings-li-height;
+            line-height: @selection-settings-li-height;
+        }
+    }
+
+    .activate-button {
+        font-size: 0.8em;
+        background: @panel-bg-color;
+        width: auto;
+        color: @font-color-light;
+        transition: color 500ms ease;
+
+        vertical-align: middle; // align div in middle of line
+
+        // center span inside
+        height: @activate-button-height;
+        line-height: @activate-button-height;
+
+        padding: 0px 2px;
+
+        &.currently-active {
+            span {
+                color: @flashy-blue;
+            }
+        }
+    }
+}
+
+.results-settings, .object-settings {
+    height: 100%;
+    .tm-selectable-tabs {
+        li {
+            height: @object-settings-li-height;
+            line-height: @object-settings-li-height;
+        }
+    }
+}
+
+.object-section {
+    height: @object-section-height;
+
+    .tm-selectable-tab-popup-window {
+        width: 300px;
+        /*
+         * This is interpreted as offset from parent since this the box uses
+         * tmAttachToParent which updates the location of the popup window based
+         * on the position of the parent.
+         * Necessary hack due to overflow-behavior.
+         */
+        right: @sidebar-section-padding + 1;
+    }
+}
+
+.saved-results-section {
+    height: @saved-results-section-height;
+
+    .tm-selectable-tab-popup-window {
+        width: 300px;
+        /*
+         * This is interpreted as offset from parent since this the box uses
+         * tmAttachToParent which updates the location of the popup window based
+         * on the position of the parent.
+         * Necessary hack due to overflow-behavior.
+         */
+        right: @sidebar-section-padding + 1;
+    }
+}
+
+.current-result-section {
+    height: @current-result-section-height;
+
+    .tm-selectable-tabs {
+        min-height: @current-result-settings-li-height;
+    }
+    .tm-selectable-tab-li {
+        height: @current-result-settings-li-height;
+        line-height: @current-result-settings-li-height;
+    }
+
+    .tm-selectable-tab-popup-window {
+        width: 300px;
+        /*
+         * This is interpreted as offset from parent since this the box uses
+         * tmAttachToParent which updates the location of the popup window based
+         * on the position of the parent.
+         * Necessary hack due to overflow-behavior.
+         */
+        right: @sidebar-section-padding + 1;
+    }
+}

@@ -1,0 +1,33 @@
+<div ng-controller="ScatterPlotCtrl as scatter">
+
+  <div class="row">
+    <div class="row">
+      <div class="col-md-12">
+        <tm-object-type-selection-widget></tm-object-type-selection-widget>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-12">
+        <div class="col-md-6">
+          Select the feature plotted on the X axis
+          <tm-feature-selection-widget name="featureWidgetX" max-selections="1"></tm-feature-selection-widget>
+        </div>
+        <div class="col-md-6">
+          Select the feature plotted on the Y axis
+          <tm-feature-selection-widget name="featureWidgetY" max-selections="1"></tm-feature-selection-widget>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-12">
+      <div class="panel panel-default">
+        <div class="panel-body">
+          <highchart id="chart1" config="scatter.highchartConfig"></highchart>
+        </div>
+       </div>
+    </div>
+  </div>
+
+</div>

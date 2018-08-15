@@ -1,0 +1,18 @@
+<div class="modal-header">
+  <button type="button" class="close" ng-click="$dismiss(false)" data-dismiss="modal" aria-hidden="true">
+    <i class="fa fa-times"></i>
+  </button>
+
+  <h2 class="modal-title">Share application state</h2>
+</div>
+
+<div class="modal-body">
+    <p>
+        Anyone with the following link may view your session.
+        Note that changes made to this session are also visible to people accessing this session via link.
+    </p>
+
+    <a href="{{share.link}}">{{ share.link }}</a>
+</div>
+
+

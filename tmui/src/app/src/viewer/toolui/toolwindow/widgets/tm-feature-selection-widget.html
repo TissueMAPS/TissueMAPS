@@ -1,0 +1,30 @@
+<div class="feature-selection-widget panel panel-default">
+
+  <div class="panel-body">
+    <div class="input-group">
+      <div class="input-group-addon"><i class="fa fa-search"></i></div>
+      <input type="text" class="form-control" placeholder="Feature name" ng-model="featureWidget.featureQuery.name">
+    </div>
+
+    <div class="list-container" perfect-scrollbar>
+      <form>
+        <ul class="list-group">
+          <li
+            ng-repeat="tab in featureWidget.featureTabsForChosenType | filter:featureWidget.featureQuery"
+            class="list-group-item" ng-class="{selected: tab.selected}"
+            ng-click="featureWidget.toggleFeatureSelection(tab)">
+
+            {{ tab.name }}
+
+          </li>
+        </ul>
+      </form>
+    </div>
+
+    <div class="input-group">
+      <button ng-click="featureWidget.setAll(true)" class="btn btn-default">Select all</button>
+      <button ng-click="featureWidget.setAll(false)" class="btn btn-default">Clear</button>
+    </div>
+
+  </div>
+</div>
