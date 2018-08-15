@@ -1,0 +1,145 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+# Playbook for creating a virtual machine instance on Gooble Compute Engine (GCE).
+#
+# Requires the following environment variables to be set:
+#  - GCE_EMAIL
+#  - GCE_PROJECT
+#  - GCE_CREDENTIALS_FILE_PATH: path to an credentials file in JSON format
+#    (https://developers.google.com/identity/protocols/application-default-credentials)
+- name: Create private network
+  local_action: gce_net
+  args:
+    state: present
+    name: "{{ network }}"
+    mode: custom
+    subnet_name: "{{ subnetwork }}"
+    # see https://cloud.google.com/compute/docs/regions-zones/regions-zones
+    subnet_region: "{{ region | regex_replace('^(.*)-[a-z]$', '\\1') }}"
+    ipv4_range: "{{ ip_range }}"
+  run_once: yes
+  register: network_facts
+  when: instance_state == "present"
+
+- name: Create web firewall
+  local_action: gce_net
+  args:
+    state: present
+    name: "{{ network }}"
+    fwname: web
+    allowed: tcp:22,80,443,8002,8649;icmp
+    ipv4_range: 0.0.0.0/0
+    target_tags:
+      - web
+  run_once: yes
+  # TODO: There seems to be a bug in Ansible with already existing firewalls
+  # and subnetworks
+  when:
+    - instance_state == "present"
+    - network_facts.changed
+
+- name: Create compute-storage firewall
+  local_action: gce_net
+  args:
+    state: present
+    name: "{{ network }}"
+    fwname: compute-storage
+    allowed: tcp:1-65535;icmp;udp:1-65535
+    src_tags:
+      - web
+      - compute
+      - storage
+    target_tags:
+      - compute
+      - storage
+  run_once: yes
+  when:
+    - instance_state == "present"
+    - network_facts.changed
+
+- name: Create boot disk
+  local_action: gce_pd
+  args:
+    disk_type: pd-standard
+    image: "{{ image }}"
+    name: "{{ instance_name }}"
+    size_gb: "{{ disk_size }}"
+    zone: "{{ region }}"
+  when: disk_size is defined
+
+- name: Use custom boot disk
+  set_fact:
+    instance_disks:
+      - name: "{{ instance_name }}"
+        mode: READ_WRITE
+  when: disk_size is defined
+
+- name: Use default boot disk
+  set_fact:
+    instance_disks: []
+  when: disk_size is not defined
+
+- name: Set public IP type
+  set_fact:
+    public_ip_type: ephemeral
+  when: assign_public_ip|bool
+
+- name: Set no public IP type
+  set_fact:
+    public_ip_type: none
+  when: not (assign_public_ip|bool)
+
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
+  vars:
+    ssh_key: "{{ lookup('file', key_file) }}"
+  local_action: gce
+  args:
+    state: "{{ instance_state }}"
+    name: "{{ instance_name }}"
+    image: "{{ image }}"
+    machine_type: "{{ flavor }}"
+    external_ip: "{{ public_ip_type }}"
+    network: "{{ network }}"
+    zone: "{{ region }}"
+    subnetwork: "{{ subnetwork }}"
+    disks: "{{ instance_disks }}"
+    metadata:
+      ssh-keys: "{{ ansible_user }}:{{ ssh_key }}"
+    disk_auto_delete: yes
+    tags: "{{ tags }}"
+  register: instance
+
+- name: Add new host to inventory
+  add_host:
+    groups: tmp
+    hostname: "{{ instance_name }}"
+    ansible_host: "{{ instance.instance_data[0].public_ip if assign_public_ip|bool else instance.instance_data[0].private_ip }}"
+    ansible_user: "{{ ansible_user }}"
+    ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
+  when: instance_state == 'present'
+
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume and attach it to instance"
+  local_action: gce_pd
+  args:
+    state: "{{ instance_state }}"
+    zone: "{{ region }}"
+    name: "{{ volume_name }}"
+    instance_name: "{{ instance_name }}"
+    size_gb: "{{ volume_size }}"
+    mode: READ_WRITE
+  when: volume_size is defined

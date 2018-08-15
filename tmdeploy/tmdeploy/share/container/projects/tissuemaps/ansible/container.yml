@@ -1,0 +1,92 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+version: '2'
+
+# NOTE: ansible-container doesn't support the "network" directive yet and the
+# "volume" directive also has issues. Therefore, we handle this in the
+# docker-compose.yml file.
+
+services:
+
+  web:
+    image: tissuemaps/base
+    user: tissuemaps
+    working_dir: /home/tissuemaps
+    ports:
+      - '8002:8002'
+    depends_on:
+      - app
+    command:
+      - 'dumb-init'
+      - 'nginx'
+      - '-g'
+      - 'daemon off;'
+    dev_overrides:
+      command:
+        - 'dumb-init'
+        - '/usr/bin/gulp'
+        - '--gulpfile'
+        - '/home/tissuemaps/tmui/src/gulpfile.js'
+
+  app:
+    image: tissuemaps/base
+    user: tissuemaps
+    working_dir: /home/tissuemaps
+    expose:
+      - '5002'
+    depends_on:
+      - db_master
+    command:
+      - 'dumb-init'
+      - '/home/tissuemaps/.tmaps/uwsgi.sh'
+    dev_overrides:
+      command:
+        - 'dumb-init'
+        - '/home/tissuemaps/.tmaps/tm_server.sh'
+        - '-vv'
+
+  db_master:
+    image: tissuemaps/base
+    user: postgres
+    expose:
+      - '5432'
+    depends_on:
+      - db_worker
+    command:
+      - 'dumb-init'
+      - '/usr/lib/postgresql/9.6/bin/postgres'
+      - '-p'
+      - '5432'
+      - '-D'
+      - '/storage/database/master'
+      - '-c'
+      - 'config_file=/storage/database/master/postgresql.conf'
+
+  db_worker:
+    image: tissuemaps/base
+    user: postgres
+    expose:
+      - '9700'
+    command:
+      - 'dumb-init'
+      - '/usr/lib/postgresql/9.6/bin/postgres'
+      - '-p'
+      - '9700'
+      - '-D'
+      - '/storage/database/worker'
+      - '-c'
+      - 'config_file=/storage/database/worker/postgresql.conf'

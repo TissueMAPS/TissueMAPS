@@ -1,0 +1,171 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+
+- name: Place postgresql.conf file
+  template:
+    src: postgresql.conf.j2
+    dest: "{{ db_data_directory }}/{{ db_node }}/postgresql.conf"
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+    mode: 0666
+  tags:
+    - database
+
+- name: Allow unrestricted access by db_role from cluster nodes
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
+    line: 'host    {{ db_name }}   {{ db_role }}    {{ hostvars[item].ansible_default_ipv4.address }}/32         trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  with_items: "{{ groups.all }}"
+  tags:
+    - database
+
+- name: Allow unrestricted access by db_user from cluster nodes
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    regexp: 'host\s+all\s+all\s+[a-z\.\/0-9]*\s+(?:trust|md5)'
+    line: 'host    all        {{ db_user }}    {{ hostvars[item].ansible_default_ipv4.address }}/32         trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  with_items: "{{ groups.all }}"
+  tags:
+    - database
+
+- name: Allow host unrestricted access by db_role to connect to itself I
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
+    line: 'host    {{ db_name }}   {{ db_role }}    127.0.0.1/32           trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  tags:
+    - database
+
+- name: Allow host unrestricted access by db_user to connect to itself I
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    regexp: 'host\s+all\s+all\s+127\.0\.0\.1\/32\s+(?:trust|md5)'
+    line: 'host    all        {{ db_user }}    127.0.0.1/32           trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  tags:
+    - database
+
+- name: Allow host unrestricted access by db_role to connect to itself II
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
+    line: 'host    {{ db_name }}   {{ db_role }}    ::1/128                trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  tags:
+    - database
+
+- name: Allow host unrestricted access by db_user to connect to itself II
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    regexp: 'host\s+all\s+all\s+::1\/128\s+(?:trust|md5)'
+    line: 'host    all        {{ db_user }}    ::1/128                trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  tags:
+    - database
+
+- name: Allow unrestricted host access by db_role from local private network (10.0.0.0/8)
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    line: 'host    {{ db_name }}   {{ db_role }}    10.0.0.0/8             trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - database
+
+- name: Allow unrestricted host access by db_user from local private network (10.0.0.0/8)
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    line: 'host    all        {{ db_user }}    10.0.0.0/8             trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - database
+
+- name: Allow unrestricted host access by db_role from local private network (172.16.0.0/12)
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    line: 'host    {{ db_name }}   {{ db_role }}    172.16.0.0/12          trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - database
+
+- name: Allow unrestricted host access by db_user from local private network (172.16.0.0/12)
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    line: 'host    all        {{ db_user }}    172.16.0.0/12          trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - database
+
+- name: Allow unrestricted host access by db_role from local private network (192.168.0.0/16)
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    line: 'host    {{ db_name }}   {{ db_role }}    192.168.0.0/16         trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - database
+
+- name: Allow unrestricted host access by db_user from local private network (192.168.0.0/16)
+  lineinfile:
+    dest: "{{ db_data_directory }}/{{ db_node }}/pg_hba.conf"
+    state: present
+    line: 'host    all        {{ db_user }}    192.168.0.0/16         trust'
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - database
+
+- name: Create directory for PostgreSQL lock file
+  file:
+    path: /var/run/postgresql
+    state: directory
+    recurse: yes
+    owner: "{{ db_user }}"
+    group: "{{ db_group }}"
+    mode: 0700
+  tags:
+    - database

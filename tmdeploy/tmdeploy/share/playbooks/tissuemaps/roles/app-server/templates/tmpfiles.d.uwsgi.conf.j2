@@ -1,0 +1,3 @@
+d /var/run/uwsgi 0750 {{ tm_user }} {{ web_group }} -
+a+ /var/run/uwsgi - - - - u:nginx:rx
+a+ /var/run/uwsgi - - - - default:u:nginx:rw

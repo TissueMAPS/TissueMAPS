@@ -1,0 +1,49 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+- name: Create csr file
+  openssl_csr:
+    path: "{{ ssl_certificate_csr_file }}"
+    privatekey_path: "{{ ssl_certificate_key_file }}"
+    commonName: "{{ public_host_name }}"
+    subjectAltName: "IP:{{ public_host_name }}"
+  tags:
+    - web-server
+    - nginx
+
+- name: Generate TLS certificate
+  letsencrypt:
+    account_key: "{{ ssl_certificate_key_file }}"
+    csr: "{{ ssl_certificate_csr_file }}"
+    dest: "{{ ssl_certificate_file | dirname }}/without_chain.crt"
+  tags:
+    - web-server
+    - nginx
+
+- name: Place chain crt file
+  template:
+    src: chain.j2
+    dest: "{{ ssl_certificate_file | dirname }}/full_chain.crt"
+  tags:
+    - web-server
+    - nginx
+
+- name: Create full chain crt file
+  shell: cat {{ ssl_certificate_file | dirname }}/without_chain.crt >> {{ ssl_certificate_file | dirname }}/full_chain.crt
+  tags:
+    - web-server
+    - nginx

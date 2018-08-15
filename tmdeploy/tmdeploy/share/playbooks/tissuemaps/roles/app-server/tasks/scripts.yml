@@ -1,0 +1,30 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+- name: Place convenience scripts
+  template:
+    src: "{{ item }}.j2"
+    dest: "{{ tm_home }}/{{ item }}"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  with_items:
+    - start_server.sh
+    - stop_server.sh
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+  tags:
+    - web
+

@@ -1,0 +1,72 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+# (Re)start services and enable them such that they will be automatically
+# started upon system startup.
+# We don't do this within the respective roles for compatibility with
+# Ansible-container.
+- name: Refresh tmpfiles.d
+  hosts: all
+  any_errors_fatal: yes
+  tasks:
+    - name: Create directories defined in tmpfiles.d
+      command: systemd-tmpfiles --create
+    - name: Restart ssh daemon service
+      systemd:
+        name: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
+        state: restarted
+
+- name: Initialize database master server
+  hosts:
+    - tissuemaps_db_master
+  any_errors_fatal: yes
+  tasks:
+    - name: Enable and start postgresql service
+      systemd:
+        name: postgresql@master
+        daemon_reload: yes
+        state: restarted
+        enabled: yes
+
+- name: Initialize database worker servers
+  hosts:
+    - tissuemaps_db_worker
+  any_errors_fatal: yes
+  tasks:
+    - name: Enable and start postgresql service
+      systemd:
+        name: postgresql@worker
+        daemon_reload: yes
+        state: restarted
+        enabled: yes
+
+- name: Initialize web and application servers
+  hosts:
+    - tissuemaps_server
+  tasks:
+    - name: Enable nginx service
+      systemd:
+        name: nginx
+        state: reloaded
+        daemon_reload: yes
+        enabled: yes
+    - name: Enable uwsgi service
+      systemd:
+        name: uwsgi
+        state: restarted
+        daemon_reload: yes
+        enabled: yes
+

@@ -1,0 +1,28 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+postgis_version: '2.4'
+citus_version: '7.1'
+
+pg_max_files_per_process: 10000
+pg_max_connections: 500
+pg_maintenance_work_mem: 64MB  # default
+pg_autovacuum_max_workers: 6
+
+db_log_level: WARNING
+
+db_user: postgres
+db_group: "{{ db_user }}"

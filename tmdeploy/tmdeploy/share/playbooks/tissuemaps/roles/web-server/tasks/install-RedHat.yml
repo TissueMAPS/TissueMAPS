@@ -1,0 +1,53 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+- name: Install yum package for NGINX
+  yum:
+    name: nginx
+    state: installed
+  tags:
+    - web-server
+    - nginx
+
+# FIXME: The EPEL package is currently broken, this represents a workaround
+# (at least for the moment), see https://bugs.centos.org/view.php?id=13669#c29866
+- name: Install NodeJS dependency (temporary fix)
+  yum:
+    name: https://kojipkgs.fedoraproject.org//packages/http-parser/2.7.1/3.el7/x86_64/http-parser-2.7.1-3.el7.x86_64.rpm
+  tags:
+    - web-server
+    - tissuemaps
+
+- name: Install yum package for NodeJS and NPM
+  yum:
+    name: "{{ item }}"
+  with_items:
+    - nodejs
+    - npm
+  tags:
+    - web-server
+    - tissuemaps
+
+- name: Install yum package for SSL
+  yum:
+    name: "{{ item }}"
+    state: installed
+  with_items:
+    - openssl
+    - pki-base
+  tags:
+    - web-server
+    - nginx

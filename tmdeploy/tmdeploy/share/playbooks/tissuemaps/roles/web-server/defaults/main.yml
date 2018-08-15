@@ -1,0 +1,33 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+web_port: 80
+nginx_processes: auto
+
+ssl_certificate_file: /etc/pki/tls/certs/fullchain.crt
+ssl_certificate_key_file: /etc/pki/tls/private/account.pem
+ssl_certificate_csr_file: /etc/pki/tls/certs/request.csr
+
+# Public (!) IP adress
+public_host_name: "{{ ansible_host }}"
+
+enable_https: no
+
+tm_www_directory: /var/www
+
+web_user: nginx
+web_group: "{{ web_user }}"

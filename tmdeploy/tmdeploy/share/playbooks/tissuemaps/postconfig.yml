@@ -1,0 +1,40 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+- name: Configure TissueMAPS application as database client
+  hosts: tissuemaps_server
+  vars:
+    db_host_master: "{{ hostvars[groups['tissuemaps_db_master'][0]].ansible_host }}"
+    db_hosts_workers: "{{ groups['tissuemaps_db_worker']|map('extract', hostvars, ['ansible_host'])|list }}"
+    db_nodes: "{{ groups['tissuemaps_db_worker']|length|int }}"
+  any_errors_fatal: yes
+  roles:
+    - database-client
+
+- name: Start TissueMAPS web and application servers
+  hosts: tissuemaps_server
+  any_errors_fatal: yes
+  tasks:
+    - name: Start nginx service
+      systemd:
+        name: nginx
+        state: restarted
+    - name: Start uwsgi service
+      systemd:
+        name: uwsgi
+        state: restarted
+

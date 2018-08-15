@@ -1,0 +1,54 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+- name: Ensure that group exists for storage volume
+  become: yes
+  group:
+    name: "{{ volume_user }}"
+  tags:
+    - volume
+
+- name: Ensure that user exist for storage volume
+  become: yes
+  user:
+      name: "{{ volume_user }}"
+      group: "{{ volume_user }}"
+      shell: /bin/bash
+  tags:
+    - volume
+
+- name: Ensure mount point for storage volume exists and has correct permissions
+  become: yes
+  file:
+    path: "{{ volume_mountpoint }}"
+    owner: "{{ volume_user }}"
+    group: "{{ volume_user }}"
+    state: directory
+  tags:
+    - volume
+
+- name: Mount storage volume
+  become: yes
+  mount:
+    name: "{{ volume_mountpoint }}"
+    fstype: "{{ volume_fstype }}"
+    passno: 0
+    src: "{{ volume_device_mapping[provider].mountpoint }}"
+    state: mounted
+    # opts: "{{ item.mount_options }}"
+  tags:
+    - volume

@@ -1,0 +1,147 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+- name: Place NGINX configuration file
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: 0700
+  tags:
+    - web-server
+    - nginx
+
+- name: Place site specific NGINX conf.d (HTTP)
+  template:
+    src: tissuemaps.conf.http.j2
+    dest: /etc/nginx/conf.d/tissuemaps.conf
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: 0700
+  when: not enable_https
+  tags:
+    - web-server
+    - nginx
+
+- name: Place site specific NGINX conf.d (HTTPS)
+  template:
+    src: tissuemaps.conf.https.j2
+    dest: /etc/nginx/conf.d/tissuemaps.conf
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: 0700
+  when: enable_https
+  tags:
+    - web-server
+    - nginx
+
+- name: Create directory for NGINX log files
+  file:
+    path: /var/log/nginx
+    state: directory
+    recurse: yes
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: 0700
+  tags:
+    - web-server
+    - nginx
+
+- name: Create NGINX site specific log files with correct permissions
+  file:
+    path: /var/log/nginx/{{ item }}
+    state: touch
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: 0600
+  with_items:
+    - tissuemaps-access.log
+    - tissuemaps-error.log
+  tags:
+    - web-server
+    - nginx
+
+- name: Create NGINX default log files with correct permissions
+  file:
+    path: /var/log/nginx/{{ item }}
+    state: touch
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: 0600
+  with_items:
+    - access.log
+    - error.log
+  tags:
+    - web-server
+    - nginx
+
+- name: Create directory for NGINX pid file
+  file:
+    path: /var/run/nginx
+    state: directory
+    recurse: yes
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - web-server
+    - nginx
+
+- name: Place tmpfiles.d config file for NGINX
+  template:
+    src: tmpfiles.d.nginx.conf.j2
+    dest: /etc/tmpfiles.d/nginx.conf
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+  tags:
+    - web-server
+    - nginx
+
+- name: Place NGINX systemd service file
+  template:
+    src: nginx.service.j2
+    dest: /etc/systemd/system/nginx.service
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+  when:
+    - ansible_env.ANSIBLE_CONTAINER is undefined
+  tags:
+    - web-server
+    - nginx
+
+# We may want to run nginx as a non-root user, e.g. within a container.
+- name: Give user permission to NGINX directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    recurse: yes
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: 0700
+  with_items:
+    - /var/lib/nginx
+    - /var/log/nginx
+    - /var/run/nginx
+    - /usr/share/nginx
+    - /etc/nginx
+    - "{{ tm_www_directory }}"
+  tags:
+    - web-server
+    - nginx

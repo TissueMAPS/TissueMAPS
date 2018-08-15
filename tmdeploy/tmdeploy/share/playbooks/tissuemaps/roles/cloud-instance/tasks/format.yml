@@ -1,0 +1,86 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+- name: Check if the volume has already been formatted and mounted
+  command: mountpoint -q {{ volume_mountpoint }}
+  failed_when: False
+  changed_when: False
+  register: mountpoint
+  tags:
+    - volume
+
+- debug:
+    msg: Mountpoint {{ volume_mountpoint }} is {{ (mountpoint.rc|int == 0) | ternary('', 'not') }} mounted!
+
+- name: Determine if device exists
+  stat:
+    path: "{{ volume_device_mapping[provider].mountpoint }}"
+  register: device
+  tags:
+    - volume
+
+- debug:
+    msg: Device {{ volume_device_mapping[provider].name }} does {{ (device.stat.exists) | ternary('', 'not') }} exist!
+  tags:
+    - volume
+
+- name: Set default volume device name
+  set_fact:
+    volume_device_name: "{{ volume_device_mapping[provider].mountpoint }}"
+  tags:
+    - volume
+
+# AWS states: "Depending on the block device driver of the kernel, the device
+# might be attached with a different name than what you specify. [...]
+# in most cases, the trailing letter remains the same."
+# http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
+# - name: Determine device name
+#   shell: ls /dev/*{{ volume_device_mapping[provider].name[-1] }}
+#   register: volume_device_list
+#   when:
+#     - provider == 'ec2'
+#     - ! device.stat.exists
+#   tags:
+#     - volume
+
+# - fail:
+#     msg: Volume device name could not be determined.
+#   when:
+#     - provider == 'ec2'
+#     - ! device.stat.exists
+#     - volume_device_list.stdout_lines|length != 1
+#   tags:
+#     - volume
+
+# - name: Override default volume device name
+#   set_fact:
+#     volume_device_name: "{{ volume_device_list.stdout_lines[0] }}"
+#   when:
+#     - provider == 'ec2'
+#     - ! device.stat.exists
+#     - volume_device_list.stdout_lines|length != 0
+#   tags:
+#     - volume
+
+- name: Format attached storage volume
+  become: yes
+  filesystem:
+    fstype: "{{ volume_fstype }}"
+    dev: "{{ volume_device_mapping[provider].mountpoint }}"
+  when: mountpoint.rc|int == 1
+  tags:
+    - volume

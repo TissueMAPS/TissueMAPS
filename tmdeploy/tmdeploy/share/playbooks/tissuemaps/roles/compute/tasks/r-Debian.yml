@@ -1,0 +1,50 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+# Make sure to have verison 3.2.1+ of R
+- name: Add apt key for R repo
+  apt_key:
+    id: E084DAB9
+    keyserver: keyserver.ubuntu.com
+    state: present
+  tags:
+    - r
+
+- name: Add R repo
+  apt_repository:
+    repo: "deb http://cran.rstudio.com/bin/linux/ubuntu {{ ansible_distribution_release|lower }}/"
+  tags:
+    - r
+
+- name: Update all packages to the latest version
+  apt:
+    upgrade: safe
+    update_cache: yes
+    cache_valid_time: 3600
+  tags:
+    - update
+    - r
+
+- name: Install latest R
+  apt:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - r-base
+    - r-base-dev
+  tags:
+    - r

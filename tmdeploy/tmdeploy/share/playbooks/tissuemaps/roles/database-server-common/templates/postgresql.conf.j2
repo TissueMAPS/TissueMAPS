@@ -1,0 +1,31 @@
+shared_preload_libraries = 'citus'
+
+shared_buffers = {{ pg_shared_buffers }}
+effective_cache_size = {{ pg_effective_cache_size }}
+max_connections = {{ pg_max_connections }}
+max_worker_processes = {{ pg_max_worker_processes }}
+max_parallel_workers_per_gather = {{ pg_max_parallel_workers_per_gather }}
+maintenance_work_mem = {{ pg_maintenance_work_mem }}
+max_wal_size = {{ pg_max_wal_size }}
+checkpoint_timeout = {{ pg_checkpoint_timeout }}
+
+fsync = {{ pg_fsync }}
+synchronous_commit = {{ pg_synchronous_commit }}
+
+# Where and how to log
+logging_collector = on
+log_directory = '{{ db_log_directory }}'
+log_filename = 'postgresql-{{ db_node }}-%Y-%m-%d_%H%M%S.log'
+log_destination = stderr
+
+# What to log
+log_min_messages = {{ db_log_level }}
+log_min_error_statement = INFO
+log_min_duration_statement = 1000
+log_connections = off
+log_disconnections = off
+log_duration = off
+log_error_verbosity = VERBOSE
+log_lock_waits = off
+
+listen_addresses = '*'

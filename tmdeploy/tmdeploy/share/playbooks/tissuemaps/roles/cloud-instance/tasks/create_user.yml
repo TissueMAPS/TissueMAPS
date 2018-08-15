@@ -1,0 +1,105 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016-2018  University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+- name: Add user groups
+  become: yes
+  group:
+    name: "{{ item }}"
+  with_items:
+    - "{{ tm_group }}"
+    - "{{ db_group }}"
+    - "{{ web_group }}"
+
+- name: Add `tissuemaps` user
+  become: yes
+  user:
+    name: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    shell: /bin/bash
+    system: yes
+    home: '/home/tissuemaps'
+    createhome: yes
+    append: yes
+
+- name: Add `postgres` user
+  become: yes
+  user:
+    name: "{{ db_user }}"
+    group: "{{ db_group }}"
+    shell: /bin/sh
+    system: yes
+    home: '/var/lib/postgresql'
+    createhome: yes
+    append: yes
+
+# For security reasons, the web user doesn't get a shell
+- name: Add web user
+  become: yes
+  user:
+    name: "{{ web_user }}"
+    group: "{{ web_group }}"
+    system: yes
+    shell: /bin/false
+    home: '/var/www'
+    createhome: no
+    append: yes
+  when: web_user != tm_user
+
+- name: Change permissions for user home directory
+  become: yes
+  file:
+    path: /home/{{ item }}
+    state: directory
+    mode: 0775
+  with_items:
+    - "{{ tm_user }}"
+    - "{{ db_user }}"
+    - "{{ web_user }}"
+
+- name: Add tm_user to sudoers
+  become: yes
+  lineinfile:
+    dest: /etc/sudoers.d/{{ tm_user }}
+    line: "{{ item }}"
+    state: present
+    create: yes
+  with_items:
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/sacctmgr"
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi start"
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi restart"
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi stop"
+    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi status"
+
+- name: Create SSH directory for tm_user
+  become: yes
+  file:
+    path: "{{ tm_home }}/.ssh"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+
+- name: Enable SSH access for tm_user
+  become: yes
+  copy:
+    src: /home/{{ ansible_user }}/.ssh/authorized_keys
+    remote_src: yes
+    dest: "{{ tm_home }}/.ssh/authorized_keys"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700

@@ -1,0 +1,32 @@
+uwsgi_buffering on;
+uwsgi_request_buffering off;
+client_max_body_size 10000M;
+lingering_timeout 300s;
+
+server {
+
+    listen {{ web_port }};
+    listen [::]:{{ web_port }};
+
+    server_name {{ public_host_name }};
+
+    access_log /var/log/nginx/tissuemaps-access.log;
+    error_log /var/log/nginx/tissuemaps-error.log warn;
+
+    # all non-api requests are file requests and should be served
+    # from the gulp built directory
+    root {{ tm_www_directory }}/tmui/src/build;
+    location / {
+        try_files $uri $uri/ @proxy;
+    }
+
+    # all other request (e.g. with /api or /auth prefix) are redirected to uwsgi
+    location @proxy {
+        include uwsgi_params;
+        uwsgi_pass {{ app_host }}:{{ app_port }};
+        uwsgi_send_timeout 60s;
+        # uwsgi may take more time to process requests
+        uwsgi_read_timeout {{ uwsgi_timeout }}s;
+    }
+
+}

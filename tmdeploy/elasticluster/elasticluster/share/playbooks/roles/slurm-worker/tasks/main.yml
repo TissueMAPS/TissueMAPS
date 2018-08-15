@@ -1,0 +1,16 @@
+# slurm-worker/tasks/main.yml
+---
+
+- name: Load distribution-specific parameters
+  include: 'init-{{ansible_os_family}}.yml'
+
+- name: Install SLURM worker packages
+  package:
+    name={{item}}
+    state=latest
+  with_items: '{{slurmd_packages}}'
+
+- name: Ensure SLURMd starts at boot
+  service:
+    name='{{slurmd_service}}'
+    enabled=yes

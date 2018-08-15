@@ -1,0 +1,116 @@
+---
+cloud:
+  provider: os
+  region: RegionOne
+  network: &architecture tm-cluster
+  ip_range: 10.65.8.0/24
+
+architecture:
+  name: *architecture
+  clusters:
+
+    - name: slurm
+      node_types:
+        - name: frontend
+          count: 1
+          groups:
+            - name: tissuemaps_server
+              vars:
+                tm_version: v0.3.2
+                nginx_processes: 4
+                uwsgi_processes: 4
+                tm_compute_cores: 4
+                tm_compute_memory: 24000
+                storage_directory: /glusterfs
+            - name: slurm_master
+            - name: glusterfs_client
+            - name: ganglia_monitor
+          instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            flavor: 4cpu-16ram-hpc
+            tags:
+              - web
+              - compute
+            assign_public_ip: yes
+
+        - name: worker
+          count: 8
+          groups:
+            - name: tissuemaps_compute
+              vars:
+                storage_directory: /glusterfs
+            - name: slurm_worker
+            - name: glusterfs_client
+            - name: ganglia_monitor
+          instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            flavor: 4cpu-16ram-hpc
+            tags:
+              - compute
+
+    - name: postgresql
+      node_types:
+        - name: coordinator
+          count: 1
+          groups:
+            - name: tissuemaps_db_master
+              vars:
+                db_master_cores: 4
+                db_master_memory: 14000
+            - name: ganglia_monitor
+          instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            flavor: 4cpu-16ram-hpc
+            volume_size: 950
+            tags:
+              - storage
+
+        - name: worker
+          count: 2
+          groups:
+            - name: tissuemaps_db_worker
+              vars:
+                db_worker_cores: 4
+                db_worker_memory: 14000
+            - name: ganglia_monitor
+          instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            flavor: 4cpu-16ram-hpc
+            volume_size: 950
+            tags:
+              - storage
+
+    - name: glusterfs
+      node_types:
+        - name: server
+          count: 2
+          groups:
+            - name: glusterfs_server
+            - name: ganglia_monitor
+          instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            flavor: 4cpu-16ram-hpc
+            volume_mountpoint: /srv/glusterfs
+            volume_size: 2000
+            tags:
+              - storage
+
+    - name: ganglia
+      node_types:
+        - name: server
+          count: 1
+          groups:
+            - name: ganglia_master
+          instance:
+            image: CentOS 7.3.1611 (2017-05-19)
+            ssh_user: centos
+            flavor: 2cpu-2ram-server
+            tags:
+              - web
+              - compute
+            assign_public_ip: yes

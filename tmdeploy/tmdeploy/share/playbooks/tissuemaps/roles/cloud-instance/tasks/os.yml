@@ -1,0 +1,303 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+# Playbook for creating a virtual machine instance on OpenStack (OS).
+#
+# Requires the following environment variables:
+#  - OS_AUTH_URL
+#  - ansible_userNAME
+#  - OS_PASSWORD
+#  - OS_PROJECT_NAME
+- name: Create network
+  local_action: os_network
+  args:
+    state: present
+    name: "{{ network }}"
+    region_name: "{{ region }}"
+    wait: yes
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create subnetwork
+  local_action: os_subnet
+  args:
+    state: present
+    name: "{{ subnetwork }}"
+    network_name: "{{ network }}"
+    ip_version: 4
+    enable_dhcp: yes
+    cidr: "{{ ip_range }}"
+    region_name: "{{ region }}"
+    wait: yes
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create router
+  local_action: os_router
+  args:
+    state: present
+    region_name: "{{ region }}"
+    name: "{{ network }}"
+    network: public
+    interfaces:
+      - "{{ subnetwork }}"
+    wait: yes
+  run_once: yes
+  when:
+    - instance_state == "present"
+    - network != "uzh-only"
+
+- name: Upload public SSH key
+  local_action: os_keypair
+  args:
+    state: present
+    name: "{{ key_name }}"
+    public_key_file: "{{ key_file }}"
+    region_name: "{{ region }}"
+    wait: yes
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create web security group
+  local_action: os_security_group
+  args:
+    state: present
+    name: web
+    region_name: "{{ region }}"
+    description: Security group for instances with "web" tag.
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress TCP (HTTP 8080) rule for web security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: tcp
+    direction: ingress
+    port_range_min: 8002
+    port_range_max: 8002
+    remote_ip_prefix: 0.0.0.0/0
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress TCP (HTTP 80) rule for web security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: tcp
+    direction: ingress
+    port_range_min: 80
+    port_range_max: 80
+    remote_ip_prefix: 0.0.0.0/0
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress TCP (HTTPS 443) rule for web security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: tcp
+    direction: ingress
+    port_range_min: 443
+    port_range_max: 443
+    remote_ip_prefix: 0.0.0.0/0
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress TCP (SSH 22) rule for web security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: tcp
+    direction: ingress
+    port_range_min: 22
+    port_range_max: 22
+    remote_ip_prefix: 0.0.0.0/0
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress ICMP (Ping) rule for web security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: web
+    protocol: icmp
+    direction: ingress
+    port_range_min: -1
+    port_range_max: -1
+    remote_ip_prefix: 0.0.0.0/0
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create compute-storage security group
+  local_action: os_security_group
+  args:
+    state: present
+    name: compute-storage
+    region_name: "{{ region }}"
+    description: Security group for instances with "compute" or "storage" tag.
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress TCP rule I for compute-storage security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: compute-storage
+    protocol: tcp
+    direction: ingress
+    port_range_min: 1
+    port_range_max: 65535
+    remote_group: web
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress TCP rule II for compute-storage security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: compute-storage
+    protocol: tcp
+    direction: ingress
+    port_range_min: 1
+    port_range_max: 65535
+    remote_group: compute-storage
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress UDP rule I for compute-storage security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: compute-storage
+    protocol: udp
+    direction: ingress
+    port_range_min: 1
+    port_range_max: 65535
+    remote_group: web
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress UDP rule II for compute-storage security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: compute-storage
+    protocol: udp
+    direction: ingress
+    port_range_min: 1
+    port_range_max: 65535
+    remote_group: compute-storage
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress ICMP (Ping) rule I for compute-storage security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: compute-storage
+    protocol: icmp
+    direction: ingress
+    port_range_min: -1
+    port_range_max: -1
+    remote_group: web
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: Create ingress ICMP (Ping) rule II for compute-storage security group
+  local_action: os_security_group_rule
+  args:
+    state: present
+    security_group: compute-storage
+    protocol: icmp
+    direction: ingress
+    port_range_min: -1
+    port_range_max: -1
+    remote_group: compute-storage
+    region_name: "{{ region }}"
+  run_once: yes
+  when: instance_state == "present"
+
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} instance"
+  local_action: os_server
+  args:
+    name: "{{ instance_name }}"
+    state: "{{ instance_state }}"
+    key_name: "{{ key_name }}"
+    security_groups: "{{ security_groups }}"
+    image: "{{ image }}"
+    flavor: "{{ flavor }}"
+    meta:
+      tags: "{{ tags }}"
+    auto_ip: "{{ assign_public_ip }}"
+    wait: yes
+    timeout: 300
+    boot_from_volume: "{{ disk_size is defined }}"
+    volume_size: "{{ disk_size|default(100) }}"
+    terminate_volume: yes
+    network: "{{ network }}"
+    region_name: "{{ region }}"
+  register: instance_facts
+
+- name: Add new host to inventory
+  add_host:
+    groups: tmp
+    hostname: "{{ instance_name }}"
+    ansible_host: "{{ instance_facts.openstack.public_v4 if assign_public_ip|bool else (instance_facts.openstack.private_v4 if instance_facts.openstack.private_v4 else instance_facts.openstack.accessIPv4) }}"
+    ansible_user: "{{ ansible_user }}"
+    ansible_ssh_private_key_file: "{{ ansible_ssh_private_key_file }}"
+  when: instance_state == 'present'
+
+- name: "{{ (instance_state == 'present') | ternary('Create','Remove') }} storage volume"
+  local_action: os_volume
+  args:
+    display_name: "{{ volume_name }}"
+    state: "{{ instance_state }}"
+    volume_type: default
+    wait: yes
+    timeout: 300
+    size: "{{ volume_size }}"
+    region_name: "{{ region }}"
+  register: volume
+  when: volume_size is defined
+
+- name: Attach storage volume to instance
+  local_action: os_server_volume
+  args:
+    state: "{{ instance_state }}"
+    server: "{{ instance_name }}"
+    volume: "{{ volume_name }}"
+    device: "{{ volume_device_mapping[provider].name }}"
+    wait: yes
+    timeout: 300
+  when:
+    - instance_state == 'present'
+    - volume_size is defined

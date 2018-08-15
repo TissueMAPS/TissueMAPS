@@ -1,0 +1,18 @@
+[Unit]
+Description=uWSGI application server
+After=syslog.target
+
+[Service]
+Type=notify
+User={{ tm_user }}
+Group={{ tm_group }}
+Environment="HOME={{ tm_home }}"
+ExecStart=/home/{{ tm_user }}/.tmaps/uwsgi.sh
+PIDFile=/var/run/uwsgi/tissuemaps.pid
+Restart=always
+KillSignal=SIGTERM + "die-on-term" UWSGI
+StandardError=syslog
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target

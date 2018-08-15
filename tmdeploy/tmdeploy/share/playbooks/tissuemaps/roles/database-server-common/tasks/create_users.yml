@@ -1,0 +1,77 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+- name: Change password of database superuser
+  postgresql_user:
+    db: postgres
+    port: "{{ db_port }}"
+    user: "{{ db_user }}"
+    login_user: "{{ db_user }}"
+    login_host: 127.0.0.1
+  tags:
+    - database
+
+- name: Create database user
+  postgresql_user:
+    db: "{{ db_name }}"
+    port: "{{ db_port }}"
+    user: "{{ db_role }}"
+    role_attr_flags: LOGIN
+    login_user: "{{ db_user }}"
+    login_host: 127.0.0.1
+  tags:
+    - database
+
+- name: Grant database user all permissions for tissuemaps database
+  postgresql_privs:
+    db: postgres
+    type: database
+    obj: "{{ db_name }}"
+    port: "{{ db_port }}"
+    role: "{{ db_role }}"
+    privs: ALL
+    login_user: "{{ db_user }}"
+    login_host: 127.0.0.1
+  tags:
+    - database
+
+- name: Grant database user permissions to select from citus metadata tables
+  postgresql_privs:
+    db: tissuemaps
+    type: table
+    schema: pg_catalog
+    objs: pg_dist_partition,pg_dist_shard,pg_dist_shard_placement
+    port: "{{ db_port }}"
+    role: "{{ db_role }}"
+    privs: SELECT
+    login_user: "{{ db_user }}"
+    login_host: 127.0.0.1
+  tags:
+    - database
+
+- name: Grant database user permissions to update pg_dist_partition metadata table
+  postgresql_privs:
+    db: tissuemaps
+    type: table
+    schema: pg_catalog
+    objs: pg_dist_partition,pg_dist_shard
+    port: "{{ db_port }}"
+    role: "{{ db_role }}"
+    privs: UPDATE
+    login_user: "{{ db_user }}"
+    login_host: 127.0.0.1
+  tags:
+    - database

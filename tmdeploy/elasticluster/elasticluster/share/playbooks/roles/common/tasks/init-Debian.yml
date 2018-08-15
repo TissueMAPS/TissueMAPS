@@ -1,0 +1,71 @@
+---
+#
+# Set up the package manager and its Ansible module for installing packages
+#
+
+- name: Ensure extra repositories are present (Ubuntu)
+  apt_repository:
+    repo="deb http://archive.ubuntu.com/ubuntu {{ansible_distribution_release}} universe multiverse"
+    state=present
+    mode=0444
+  when: is_ubuntu
+
+- name: Ensure the APT package cache is updated
+  apt:
+    update_cache=yes
+    cache_valid_time=0
+
+- name: Install Ansible `apt` module dependencies
+  # the `apt` module depends on both `aptitude` and `python-apt` to do
+  # package-level work, so we need to resort to a raw invocation of `apt-get`
+  command: |
+    apt-get install -y {{item.name}}
+  args:
+    creates: '{{item.creates}}'
+  become: yes
+  with_items:
+    - { name: 'aptitude', creates: '/usr/bin/aptitude' }
+    - { name: 'python-apt', creates: '/usr/share/doc/python-apt' }
+
+- name: Upgrade all installed packages to latest version
+  apt:
+    upgrade=safe
+
+- name: Ensure additional packages are installed
+  apt:
+    name={{item}}
+    state=present
+  with_items:
+    - apt-transport-https
+    # these are required by Ansible's `debconf` module
+    - debconf
+    - debconf-utils
+
+
+# Apparently some systemd commands (e.g., `hostnamectl` -- possibly others)
+# *require* D-Bus but the Debian 8 cloud VM image does not have it installed
+# (see issues #392, #393).  So, ensure it is installed.
+- name: Ensure additional packages are installed (Debian 8 "jessie")
+  apt:
+    name: '{{item}}'
+    state: present
+  with_items:
+    - dbus
+  when: 'is_debian_8'
+
+
+- name: Provide workaround for https://github.com/ansible/ansible-modules-core/issues/4472
+  set_fact:
+    __at__: '='
+
+- block:
+    - name: Install policy package for service autostart
+      apt:
+        name: 'policyrcd-script-zg2'
+        state: present
+    - name: Install policy script for service autostart
+      copy:
+        dest: '/etc/policy-rc.d'
+        src: 'etc/policy-rc.d'
+        mode: 0555
+  when: 'not {{init_is_systemd}}'

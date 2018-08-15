@@ -1,0 +1,57 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+- name: Ensure Ubuntu distribution in case of Debian OS family
+  fail:
+    msg: Requires Ubuntu distribution!
+  when:
+    - ansible_os_family == 'Debian'
+    - ansible_distribution != 'Ubuntu'
+
+- name: Ensure correct Ubuntu distribution version in case of Debian OS family
+  fail:
+    msg: Requires Ubuntu distribution version >= 16.04!
+  when:
+    - ansible_distribution == 'Ubuntu'
+    - ansible_distribution_version|int < 16
+
+- name: Ensure CentOS distribution in case of RedHat OS family
+  fail:
+    msg: Requires CentOS distribution!
+  when:
+    - ansible_os_family == 'RedHat'
+    - ansible_distribution != 'CentOS'
+
+- name: Ensure correct CentOS distribution version in case of RedHat OS family
+  fail:
+    msg: Requires CentOS distribution version >= 7!
+  when:
+    - ansible_distribution == 'CentOS'
+    - ansible_distribution_version[0]|int < 7
+
+- include: init-{{ ansible_os_family }}.yml
+
+- include: utils-{{ ansible_os_family }}.yml
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+
+- include: ssh.yml
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+
+- include: collectl.yml
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+
+- include: suexec.yml

@@ -1,0 +1,2 @@
+{{ db_host_master if db_host_master != client_host else 'localhost' }}:{{ db_port_master }}:{{ db_name }}:{{ db_role }}:{{ db_password }}
+{{ db_host_master if db_host_master != client_host else 'localhost' }}:{{ db_port_master }}:postgres:postgres:{{ db_password }}

@@ -1,0 +1,432 @@
+#!/usr/bin/env python
+import os
+import logging
+import argparse
+import subprocess
+import sys
+import json
+import yaml
+import collections
+from whichcraft import which
+from pkg_resources import resource_filename, resource_exists
+
+import tmdeploy
+from tmdeploy.config import Setup
+from tmdeploy.version import __version__
+from tmdeploy.inventory import build_inventory
+from tmdeploy.log import configure_logging, map_logging_verbosity
+from tmdeploy.inventory import HOSTNAME_FORMAT
+from tmdeploy.errors import SetupDescriptionError, SetupEnvironmentError
+from tmdeploy.utils import to_yaml, to_json
+
+logger = logging.getLogger(os.path.basename(__file__))
+
+REQUIRED_TM_GROUPS = {
+    'tissuemaps_server', 'tissuemaps_db_master', 'tissuemaps_db_worker'
+}
+
+SUPPORTED_TM_GROUPS = REQUIRED_TM_GROUPS.union({'tissuemaps_compute'})
+
+SUPPORTED_EC_GROUPS = {
+    'ganglia_master', 'ganglia_monitor',
+    'glusterfs_server', 'glusterfs_client',
+    'slurm_master', 'slurm_worker'
+}
+
+SUPPORTED_GROUPS = SUPPORTED_TM_GROUPS.union(SUPPORTED_EC_GROUPS)
+
+
+def _get_playbooks_dir(name):
+    logger.debug('get playbooks directory for "%s"', name)
+    rel_path = os.path.join('share', 'playbooks', name)
+    path = os.path.abspath(resource_filename('tmdeploy', rel_path))
+    if not os.path.exists(path):
+        logger.error('playbooks directory does not exist: %s', path)
+        sys.exit(1)
+    return path
+
+
+def _get_host_groups(setup_file):
+    logger.info('build Ansible commands')
+    setup = Setup(setup_file)
+    groups_to_deploy = {}
+    for cluster in setup.architecture.clusters:
+        for node_type in cluster.node_types:
+            for group in node_type.groups:
+                if group.name not in SUPPORTED_GROUPS:
+                    logger.error(
+                        'unsupported Ansible host group: %s', group.name
+                    )
+                    sys.exit(1)
+                logger.info('include Ansible host group: %s', group.name)
+                groups_to_deploy[group.name] = []
+                if group.vars:
+                    groups_to_deploy[group.name].append(group.vars)
+
+    for group_name in REQUIRED_TM_GROUPS:
+        if group_name not in groups_to_deploy.keys():
+            logger.error('missing required Ansible host group: %s', group_name)
+            sys.exit(1)
+
+    return groups_to_deploy
+
+
+def _get_roles_and_variables_directories(name):
+    logger.debug('get roles and group_vars directory for "%s"', name)
+    playbooks_dir = _get_playbooks_dir(name)
+    roles_dir = os.path.join(playbooks_dir, 'roles')
+    vars_dir = os.path.join(playbooks_dir, 'group_vars')
+    return (roles_dir, vars_dir)
+
+
+def _get_group_variables(vars_dir):
+    variables = collections.OrderedDict()
+    if os.path.exists(vars_dir):
+        group_dirs = os.listdir(vars_dir)
+        for group in group_dirs:
+            filename = os.path.abspath(
+                os.path.join(vars_dir, group, 'vars.yml')
+            )
+            with open(filename) as f:
+                for line in f.readlines():
+                    var_mapping = yaml.load(line)
+                    if var_mapping is None:
+                        continue
+                    for k, v in var_mapping.items():
+                        if type(v) in {list, dict}:
+                            raise TypeError(
+                                'Only simply key=value variables are supported.'
+                            )
+                        variables[k] = v
+    return variables
+
+
+def _build_ansible_container_command(verbosity, action_command):
+    playbooks_dir = _get_playbooks_dir('tissuemaps')
+    roles_dir, vars_dir = _get_roles_and_variables_directories('tissuemaps')
+    project_dir = os.path.join(
+        playbooks_dir, '../../container/projects/tissuemaps'
+    )
+    cmd = ['ansible-container', '--project', os.path.abspath(project_dir)]
+    if os.path.exists(vars_dir):
+        group_dirs = os.listdir(vars_dir)
+        # NOTE: Ansible variables {{ }} declared in files are not expanded!
+        for group in group_dirs:
+            filename = os.path.abspath(os.path.join(vars_dir, group, 'vars.yml'))
+            cmd.extend(['--var-file', filename])
+    if verbosity > 3:
+        cmd.append('--debug')
+    cmd.extend(action_command)
+    return cmd
+
+
+def _build_ansible_vm_command(verbosity, playbook, variables=None):
+    # The "tm_inventory" script should be on the path upon installation.
+    inventory_file = which('tm_inventory')
+    cmd = ['ansible-playbook', '-i', inventory_file, playbook]
+    if verbosity > 0:
+        verbosity -= 1
+        if verbosity > 0:
+            cmd.append('-{0}'.format(verbosity * 'v'))
+    if variables:
+        for k, v in variables.items():
+            if type(v) in {list, dict}:
+                cmd.extend(['-e', json.dumps({k: v})])
+            else:
+                cmd.extend(['-e', '='.join([k, v])])
+    return cmd
+
+
+def _run_command(command, environment):
+    return os.spawnvpe(os.P_WAIT, command[0], command, environment)
+
+
+def _run_container_commands(commands):
+    logger.info('run Ansible commands')
+    env = dict(os.environ)
+    env['DOCKER_CLIENT_TIMEOUT'] = str(600)
+    env['COMPOSE_HTTP_TIMEOUT'] = str(600)
+    for cmd in commands:
+        logger.debug('command: %s', ' '.join(cmd))
+        _run_command(cmd, env)
+
+
+def _run_vm_commands(commands, setup_file):
+    logger.info('run Ansible commands')
+    config_file = os.path.join(
+        _get_playbooks_dir('tissuemaps'), 'ansible.cfg'
+    )
+    logger.debug('using Ansible config file: %s', config_file)
+    env = dict(os.environ)
+    env['ANSIBLE_CONFIG'] = os.path.abspath(config_file)
+    env['TM_SETUP'] = os.path.abspath(
+        os.path.expandvars(os.path.expanduser(setup_file))
+    )
+    for cmd in commands:
+        logger.debug('command: %s', ' '.join(cmd))
+        _run_command(cmd, env)
+
+
+def deploy_vm(args):
+    variables = dict()
+    commands = list()
+    tm_inventory_cmd = ['tm_inventory', '--refresh-cache']
+    if args.verbosity:
+        tm_inventory_cmd.append('-{0}'.format('v' * args.verbosity))
+    commands.append(tm_inventory_cmd)
+    # Run playbooks implemented in elasticluster, but only in case groups
+    # are provided that are not supported by tmdeploy.
+    use_elasticluster = (set(_get_host_groups(args.setup_file)) & SUPPORTED_TM_GROUPS)
+    if use_elasticluster:
+        # NOTE: This playbook also configures SSH host-based authentication,
+        # so we shouldn't run this only on a subset of groups!
+        elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
+        playbook = os.path.join(elasticluster_playbooks_dir, 'site.yml')
+        logger.debug('build command for playbook: %s', playbook)
+        cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
+        cmd.append('--become')
+        commands.append(cmd)
+    # Run the TissueMAPS-specific playbooks implemented in tmdeploy
+    tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
+    playbook = os.path.join(tmdeploy_playbooks_dir, 'site.yml')
+    logger.debug('build command for playbook: %s', playbook)
+    cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
+    cmd.append('--become')
+    commands.append(cmd)
+    _run_vm_commands(commands, args.setup_file)
+
+
+def launch_vm(args):
+    logger.info('launch virtual machines')
+    variables = {'instance_state': 'present', 'tm_setup_file': args.setup_file}
+    commands = list()
+    commands.append(['tm_inventory', '--refresh-cache'])
+    tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
+    playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
+    cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
+    commands.append(cmd)
+    _run_vm_commands(commands, args.setup_file)
+
+
+def terminate_vm(args):
+    logger.info('terminate virtual machines')
+    variables = {'instance_state': 'absent', 'tm_setup_file': args.setup_file}
+    commands = list()
+    commands.append(['tm_inventory', '--refresh-cache'])
+    tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
+    playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
+    cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
+    commands.append(cmd)
+    _run_vm_commands(commands, args.setup_file)
+
+
+def show_vm_setup(args):
+    groups = _get_host_groups(args.setup_file)
+    setup = Setup(args.setup_file)
+    inventory = build_inventory(setup)
+    print(to_yaml(inventory))
+
+
+def build_container(args):
+    logger.info('build container images')
+    roles_dir, vars_dir = _get_roles_and_variables_directories('tissuemaps')
+    cmd = [
+        'build', '--from-scratch',
+        '--roles-path', os.path.abspath(roles_dir)
+    ]
+    # The following options are parsed to the "ansible-playbooks" command.
+    cmd.append('--')
+    verbosity = args.verbosity
+    if verbosity > 0:
+        verbosity -= 1
+        if verbosity > 0:
+            cmd.append('-{0}'.format(verbosity * 'v'))
+
+    variables = _get_group_variables(vars_dir)
+    for k, v in variables.items():
+        cmd.append('-e')
+        var_string = '='.join([k, str(v)])
+        # Values should not get quoted because this breaks the
+        # docker-compose.yml Jinja templating approach of ansible-container.
+        cmd.append(var_string)
+    command = _build_ansible_container_command(args.verbosity, cmd)
+    _run_container_commands([command])
+
+
+def start_container(args):
+    logger.info('start containers')
+    roles_dir, vars_dir = _get_roles_and_variables_directories('tissuemaps')
+    cmd = ['run']
+    if not args.dev:
+        cmd.append('--production')
+    if not args.foreground:
+        cmd.append('--detached')
+    cmd.extend(['--roles-path', os.path.abspath(roles_dir)])
+    command = _build_ansible_container_command(args.verbosity, cmd)
+    _run_container_commands([command])
+
+
+def stop_container(args):
+    logger.info('stop containers')
+    cmd = ['stop']
+    command = _build_ansible_container_command(args.verbosity, cmd)
+    _run_container_commands([command])
+
+
+def push_container(args):
+    roles_dir, vars_dir = _get_roles_and_variables_directories('tissuemaps')
+    logger.info('push container images to Docker Hub')
+    cmd = [
+        'push', '--push-to', args.account, '--tag', args.tag,
+        '--roles-path', os.path.abspath(roles_dir)
+    ]
+    command = _build_ansible_container_command(args.verbosity, cmd)
+    _run_container_commands([command])
+
+
+def main(args):
+    # sanitize command-line args
+    if args.env == 'vm':
+        args.setup_file = os.path.abspath(os.path.expanduser(args.setup_file))
+
+    # redirect to actual code
+    context = globals()
+    func = context.get(args.function)
+    func(args)
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(
+        description=(
+            'Deploy TissueMAPS on virtual machines or '
+            'containers (version: {version})'.format(version=__version__)
+        )
+    )
+    parser.add_argument(
+        '--verbosity', '-v', action='count', default=0,
+        help='increase logging verbosity'
+    )
+
+    subparsers = parser.add_subparsers(dest='env', help='environment')
+    subparsers.required = True
+
+    vm_parser = subparsers.add_parser(
+        'vm', help='virtual machines',
+        description='Deploy cloud virtual machines.'
+    )
+
+    vm_parser.add_argument(
+        '-s', '--setup-file', dest='setup_file',
+        default='~/.tmaps/setup/setup.yml', help='path to the setup file'
+    )
+    vm_subparsers = vm_parser.add_subparsers(dest='action', help='action')
+    vm_subparsers.required = True
+
+    vm_launch_subparser = vm_subparsers.add_parser(
+        'launch', help='launch new virtual machine (VM) instances',
+        description='Launch new virtual machine instances.',
+    )
+    vm_launch_subparser.set_defaults(function='launch_vm')
+
+    vm_terminate_subparser = vm_subparsers.add_parser(
+        'terminate', help='terminate existing virtual machine (VM) instances',
+        description='Terminate existing virtual machine instances.',
+    )
+    vm_terminate_subparser.set_defaults(function='terminate_vm')
+
+    # TODO: start/stop subparsers once this functionality is implemented in
+    # ansible modules os_server, ...
+
+    vm_deploy_subparser = vm_subparsers.add_parser(
+        'deploy',
+        help='deploy TissueMAPS on existing virtual machine (VM) instances',
+        description='Deploy TissueMAPS on existing virtual machine instances.',
+    )
+    vm_deploy_subparser.set_defaults(function='deploy_vm')
+
+    vm_show_subparser = vm_subparsers.add_parser(
+        'show',
+        help='show configured groups to hosts',
+        description='Show configured groups and hosts defined in setup file.',
+    )
+    vm_show_subparser.set_defaults(function='show_vm_setup')
+
+    container_parser = subparsers.add_parser(
+        'container', help='docker containers',
+        description='Setup Docker containers.'
+    )
+
+    container_subparsers = container_parser.add_subparsers(
+        dest='action', help='action'
+    )
+    container_subparsers.required = True
+
+    container_build_subparser = container_subparsers.add_parser(
+        'build', help='build container images',
+        description='Build container images.'
+    )
+    container_build_subparser.set_defaults(function='build_container')
+
+    container_start_subparser = container_subparsers.add_parser(
+        'start', help='create and run containers',
+        description='''
+            Create and run containers. By default, containers will run in the
+            background in production mode.
+        '''
+    )
+    container_start_subparser.add_argument(
+        '--foreground', action='store_true',
+        help='run containers in foreground without detaching them'
+    )
+    container_start_subparser.add_argument(
+        '--dev', action='store_true',
+        help='run containers in development mode (using dev servers)'
+    )
+    container_start_subparser.set_defaults(function='start_container')
+
+    container_stop_subparser = container_subparsers.add_parser(
+        'stop', help='stop running containers',
+        description='Stop running containers.'
+    )
+    container_stop_subparser.set_defaults(function='stop_container')
+
+    container_push_subparser = container_subparsers.add_parser(
+        'push', help='push container images to registry',
+        description='Push built container images to Docker Hub registry.'
+    )
+    container_push_subparser.add_argument(
+        '-a', '--account', default='tissuemaps',
+        help='name of Docker Hub account or organization'
+    )
+    container_push_subparser.add_argument(
+        '-t', '--tag', default='latest',
+        help='tag for container images'
+    )
+    container_push_subparser.set_defaults(function='push_container')
+
+    args = parser.parse_args()
+
+    configure_logging()
+    log_level = map_logging_verbosity(args.verbosity)
+    logger.setLevel(log_level)
+    tmdeploy_logger = logging.getLogger('tmdeploy')
+    tmdeploy_logger.setLevel(log_level)
+
+    if args.env == 'container':
+        try:
+            import container
+        except ImportError:
+            logger.error(
+                'Container deployment requires "ansible-container" package.'
+            )
+            sys.exit(1)
+
+    try:
+        main(args)
+    except SetupDescriptionError as err:
+        logger.error(str(err))
+        sys.exit(1)
+    except SetupEnvironmentError as err:
+        logger.error(str(err))
+        sys.exit(1)

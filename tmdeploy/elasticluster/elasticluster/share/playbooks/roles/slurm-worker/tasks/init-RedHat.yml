@@ -1,0 +1,19 @@
+---
+
+- name: Set SLURM worker playbook params (RHEL compatible)
+  set_fact:
+    slurmd_packages:
+      - slurm
+      - slurm-plugins
+      - slurm-sql
+  when: 'is_rhel_compatible'
+
+- name: Set SLURM worker service name (RHEL 7.x compatible)
+  set_fact:
+    slurmd_service: 'slurmd'
+  when: '{{is_rhel7_compatible}}'
+
+- name: Set SLURM worker service name (RHEL 6.x compatible)
+  set_fact:
+    slurmd_service: 'slurm'
+  when: '{{is_rhel6_compatible}}'

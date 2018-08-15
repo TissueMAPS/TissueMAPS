@@ -1,0 +1,128 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2018  University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+- name: Clone TmServer repository
+  git:
+    repo: "{{ tm_github_url }}/tmserver"
+    dest: "{{ tm_home }}/tmserver"
+    version: "{{ tm_version }}"
+    force: yes
+  tags:
+    - tissuemaps
+
+- name: Install tmserver package dependencies
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/tmserver/requirements.txt --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/tmserver"
+    executable: /bin/bash
+  tags:
+    - tissuemaps
+
+- name: Install tmserver package
+  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/tmserver --user --no-cache-dir
+  args:
+    chdir: "{{ tm_home }}/tmserver"
+    executable: /bin/bash
+  tags:
+    - tissuemaps
+
+- name: Set permissions for code directory
+  file:
+    path: "{{ tm_home }}/.local"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  tags:
+    - tissuemaps
+
+- name: Set permissions for code directory
+  file:
+    path: "{{ tm_home }}/tmserver"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  tags:
+    - tissuemaps
+
+- name: Create ~/.tmaps directory
+  file:
+    path: "{{ tm_home }}/.tmaps"
+    state: directory
+    owner: "{{ tm_user }}"
+  tags:
+    - tissuemaps
+
+- name: Place tm_server startup script
+  template:
+    src: tm_server.sh.j2
+    dest: "{{ tm_home }}/.tmaps/tm_server.sh"
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - tissuemaps
+
+- name: Update ``storage_home`` in TissueMAPS configuration
+  ini_file:
+    dest: "{{ tm_config_file }}"
+    section: tmlib
+    state: present
+    option: storage_home
+    value: "{{ fs_data_directory }}"
+    owner: "{{ tm_user }}"
+    mode: "u+rwx"
+  tags:
+    - tissuemaps
+
+- name: Create root directory for GC3Pie session files
+  file:
+    path: "{{ jobdaemon_directory | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0777
+  tags:
+    - tissuemaps
+
+- name: Create GC3Pie session directory
+  file:
+    path: "{{ jobdaemon_directory }}"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  tags:
+    - tissuemaps
+
+- name: Update ``jobdaemon_session`` in TissueMAPS configuration
+  ini_file:
+    dest: "{{ tm_config_file }}"
+    section: tmserver
+    state: present
+    option: jobdaemon_session
+    value: "{{ jobdaemon_directory }}"
+    owner: "{{ tm_user }}"
+    mode: "u+rwx"
+  tags:
+    - tissuemaps

@@ -1,0 +1,154 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+# When app_host is "unix", app_port is assumed to be the path to the socket file.
+- name: Set socket in case of a HTTP socket
+  set_fact:
+    uwsgi_socket: "{{ app_host }}:{{ app_port }}"
+  when: app_host != 'unix'
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Set socket in case of a UNIX socket
+  set_fact:
+    uwsgi_socket: "{{ app_port }}"
+  when: app_host == 'unix'
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Create directory for UNIX socket
+  file:
+    path: "{{ app_port | dirname }}"
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  when: app_host == 'unix'
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Set ACL to let NGINX access UNIX socket
+  acl:
+    path: "{{ app_port | dirname }}"
+    entity: "{{ web_user }}"
+    etype: user
+    permissions: rx
+    state: present
+    default: yes
+    recursive: yes
+  when: app_host == 'unix'
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Set ACL to let NGINX access UNIX socket
+  acl:
+    path: "{{ app_port | dirname }}"
+    entity: "{{ web_user }}"
+    etype: user
+    permissions: rw
+    state: present
+    recursive: yes
+  when: app_host == 'unix'
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Create log directory
+  file:
+    path: /var/log/uwsgi
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Create uwsgi log file with correct permissions
+  file:
+    path: /var/log/uwsgi/tissuemaps.log
+    state: touch
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Place uwsgi.ini
+  template:
+    src: uwsgi.ini.j2
+    dest: /home/{{ tm_user }}/.tmaps/uwsgi.ini
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Place uwsgi.sh startup script
+  template:
+    src: uwsgi.sh.j2
+    dest: /home/{{ tm_user }}/.tmaps/uwsgi.sh
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0550
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Create directory for uWSGI pid file
+  file:
+    path: /var/run/uwsgi
+    state: directory
+    recurse: yes
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is defined
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Place tmpfiles.d config file for uWSGI
+  template:
+    src: tmpfiles.d.uwsgi.conf.j2
+    dest: /etc/tmpfiles.d/uwsgi.conf
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+    mode: 0700
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+  tags:
+    - app-server
+    - uwsgi
+
+- name: Place UWSGI service file for serviced
+  template:
+    src: uwsgi.service.j2
+    dest: /etc/systemd/system/uwsgi.service
+    owner: "{{ tm_user }}"
+    group: "{{ tm_group }}"
+  when:
+    - ansible_env.ANSIBLE_CONTAINER is undefined
+  tags:
+    - app-server
+    - uwsgi
+

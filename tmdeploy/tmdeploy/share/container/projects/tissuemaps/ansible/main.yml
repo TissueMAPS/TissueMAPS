@@ -1,0 +1,95 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+- name: Setup web container
+  hosts: web
+  vars:
+    web_user: tissuemaps
+    web_port: 8002
+    app_host: app
+    app_port: 5002
+    uwsgi_timeout: 300
+    public_host_name: web
+  roles:
+    - web-server
+
+- name: Setup app container
+  hosts: app
+  vars:
+    app_host: app
+    app_port: 5002
+    uwsgi_processes: 1
+    uwsgi_timeout: 300
+  roles:
+    - app-server
+
+- name: Setup database worker container
+  hosts: db_worker
+  roles:
+    - database-server-worker
+
+- name: Setup database master container
+  hosts: db_master
+  roles:
+    - database-server-master
+
+- name: Start database server on workers
+  hosts: db_worker
+  remote_user: postgres
+  tasks:
+    - name: Start database cluster
+      command: /usr/lib/postgresql/9.6/bin/pg_ctl start -o "-p 9700" -D /storage/database/worker
+
+- name: Stop database server on master
+  hosts: db_master
+  remote_user: postgres
+  tasks:
+    - name: Start database cluster
+      command: /usr/lib/postgresql/9.6/bin/pg_ctl start -o "-p 5432" -D /storage/database/master
+
+- name: Configure app container as database client
+  hosts: app
+  vars:
+    db_host_master: db_master
+    db_hosts_workers:
+      - db_worker
+  roles:
+    - database-client
+
+# It is important for container to shut down the server in a clean mode, i.e.
+# wait for all backup processes to finish.
+# Otherwise, there will be problems when running the container afterwards.
+- name: Stop database server on workers
+  hosts: db_worker
+  remote_user: postgres
+  tasks:
+    - name: Stop database cluster
+      command: /usr/lib/postgresql/9.6/bin/pg_ctl stop -m smart -o "-p 9700" -D /storage/database/worker
+
+- name: Stop database server on master
+  hosts: db_master
+  remote_user: postgres
+  tasks:
+    - name: Stop database cluster
+      command: /usr/lib/postgresql/9.6/bin/pg_ctl stop -m smart -o "-p 5432" -D /storage/database/master
+
+- name: Clean up
+  hosts: all
+  tasks:
+    - name: Clean apt-get
+      raw: apt-get clean
+    - name: Remove apt package files
+      raw: rm -rf /var/lib/apt/lists/*
