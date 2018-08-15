@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+import argparse
+from gevent.pywsgi import WSGIServer
+from werkzeug.serving import run_with_reloader
+from werkzeug.debug import DebuggedApplication
+
+# This must be imported before Flask!!!
+# See http://www.gevent.org/gevent.monkey.html#patching
+from gevent import monkey
+monkey.patch_all()
+
+from tmserver.appfactory import create_app
+from tmlib.models.utils import set_pool_size
+
+
+LOGO = """
+  _____ _                    __  __    _    ____  ____
+ |_   _(_)___ ___ _   _  ___|  \/  |  / \  |  _ \/ ___|
+   | | | / __/ __| | | |/ _ \ |\/| | / _ \ | |_) \___ \\
+   | | | \__ \__ \ |_| |  __/ |  | |/ ___ \|  __/ ___) |
+   |_| |_|___/___/\__,_|\___|_|  |_/_/   \_\_|   |____/
+"""
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='TissueMAPS dev server')
+    parser.add_argument(
+        '--host', '-H', type=str, default='localhost',
+        help='the host on which the server should listen (default: localhost)'
+    )
+    parser.add_argument(
+        '--port', '-p', type=int, default=5002,
+        help='the port on which the server should listen (default: 5002)'
+    )
+    parser.add_argument(
+        '--verbosity', '-v', action='count', default=0,
+        help='increase logging verbosity'
+    )
+
+    args = parser.parse_args()
+
+    print LOGO
+
+    # NOTE: This configuration does not allow setting breakpoints!
+    @run_with_reloader
+    def run_server():
+        set_pool_size(5)
+        app = create_app(verbosity=args.verbosity)
+        app.debug = True
+        http_server = WSGIServer(
+            listener=(args.host, args.port),
+            application=DebuggedApplication(app, evalex=True)
+        )
+        http_server.serve_forever()
+
+    run_server()
