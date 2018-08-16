@@ -155,18 +155,25 @@ def get_available_channels(experiment_id):
 
 
 @jtui.route('/module_source_code')
-@assert_query_params('module_filename')
+@assert_query_params('module_name')
 @jwt_required()
 def get_module_source_code():
     '''Gets the source code for a given module.'''
-    module_filename = request.args.get('module_filename')
-    logger.info('get source code of module file "%s"', module_filename)
-    modules = AvailableModules()
-    files = [
-        f for i, f in enumerate(modules.module_files)
-        if os.path.basename(f) == module_filename
-    ]
-    return send_file(files[0])
+    name = request.args.get('module_name')
+    logger.info('get source code of module "%s"', module_name)
+    try:
+        modules = AvailableModules()
+        # XXX: this code relies on the fact that `.module_names` and
+        # `.module_files` return corresponding items at the same
+        # position in the list!  The `AvailableModules` class should
+        # be changed to provide a map name=>List[files] instead.
+        idx = modules.module_names.index(name)
+        return send_file(modules.module_files[idx])
+    except ValueError:
+        logger.error(
+            "Could not find module `%s` in available modules %r",
+            name, modules.module_names)
+        raise
 
 
 @jtui.route('/experiments/<experiment_id>/figure')

@@ -1,4 +1,4 @@
-// Copyright 2016 Markus D. Herrmann, University of Zurich and Robin Hafen
+// Copyright 2016, 2018 University of Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,10 +37,8 @@ angular.module('jtui.module')
     this.modules = modulesDef.promise;
 
     this.getModuleSourceCode = function(moduleName) {
-
-        // TODO: name of the source rather than name of the handle file
         var sourceDef = $q.defer();
-        var url = '/jtui/module_source_code?module_filename=' + moduleName;
+        var url = '/jtui/module_source_code?module_name=' + moduleName;
         $http.get(url).success(function (data) {
             sourceDef.resolve(data)
         });

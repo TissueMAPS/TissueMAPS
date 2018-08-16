@@ -1,4 +1,4 @@
-// Copyright 2016 Markus D. Herrmann, University of Zurich and Robin Hafen
+// Copyright 2016, 2018 University of Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,15 +15,15 @@ angular.module('jtui.module')
 .controller('ModuleCtrl', ['$scope', '$uibModal', 'moduleService',
             function ($scope, $uibModal, moduleService) {
 
-	moduleService.modules.then(function (modules) {
-		$scope.modules = modules;
+        moduleService.modules.then(function (modules) {
+                $scope.modules = modules;
         for (i in $scope.modules) {
             var filename = $scope.modules[i].pipeline.source;
             $scope.modules[i].language = filename.split('.').pop();
         }
-	});
+        });
 
-	$scope.onDragComplete = function (data, evt) {
+        $scope.onDragComplete = function (data, evt) {
        // console.log("drag success, data:", data);
     };
 
@@ -37,7 +37,7 @@ angular.module('jtui.module')
             resolve: {
                 code: ['moduleService', function(moduleService){
                     return moduleService.getModuleSourceCode(
-                        module.pipeline.source
+                        module.name
                     );
                 }],
                 language: function () {
