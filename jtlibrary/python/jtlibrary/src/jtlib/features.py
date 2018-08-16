@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
+# Copyright 2016-2018 University of Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -76,8 +76,10 @@ class Features(object):
                 )
             if self.label_image.shape != self.intensity_image.shape:
                 raise ValueError(
-                    'Images "label_image" and "intensity_image" must have '
-                    'the same dimensions.'
+                    'Images "label_image" and "intensity_image" must have'
+                    ' the same dimensions, but "label_image" has shape %r'
+                    ' and "intensity_image" has shape %r.'
+                    % (self.label_image.shape, self.intensity_image.shape)
                 )
 
     @cached_property
