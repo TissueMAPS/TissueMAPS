@@ -1,4 +1,4 @@
-// Copyright 2016 Markus D. Herrmann, University of Zurich and Robin Hafen
+// Copyright 2016, 2018 University of Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -568,14 +568,14 @@ angular.module('jtui.project')
 
     $scope.removeImage = function() {
         $scope.project.pipe.description.output.images.pop();
-        // console.log('removed last object')
+        // console.log('removed last image')
     };
 
     $scope.addedModuleNames = [];
 
     $scope.onDropCompleteAdd = function(addedModule, evt) {
         if (addedModule != null) {
-            var ixHandles = $scope.project.handles.map(function(e) { 
+            var ixHandles = $scope.project.handles.map(function(e) {
                     return e.name;
                 }).indexOf(addedModule.name);
             if (ixHandles == -1) {
@@ -652,4 +652,3 @@ angular.module('jtui.project')
     }
 
 }]);
-
