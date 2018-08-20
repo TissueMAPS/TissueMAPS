@@ -1,4 +1,0 @@
-[submodule "src/app/assets/libs/ol3"]
-        path = src/app/assets/libs/ol3
-        url = https://github.com/hafenr/ol3
-        branch = master
