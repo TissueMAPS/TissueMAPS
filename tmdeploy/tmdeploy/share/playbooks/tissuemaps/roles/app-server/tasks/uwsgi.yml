@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -129,8 +129,11 @@
     - uwsgi
 
 - name: Place tmpfiles.d config file for uWSGI
-  template:
-    src: tmpfiles.d.uwsgi.conf.j2
+  copy:
+    content: |
+      d /var/run/uwsgi 0750 {{ tm_user }} {{ web_group }} -
+      a+ /var/run/uwsgi - - - - u:nginx:rx
+      a+ /var/run/uwsgi - - - - default:u:nginx:rw
     dest: /etc/tmpfiles.d/uwsgi.conf
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
@@ -151,4 +154,3 @@
   tags:
     - app-server
     - uwsgi
-

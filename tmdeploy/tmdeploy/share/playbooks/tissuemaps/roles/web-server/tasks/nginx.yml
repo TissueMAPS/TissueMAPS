@@ -89,6 +89,7 @@
     - web-server
     - nginx
 
+# this is when running in containers, where systemd is not available
 - name: Create directory for NGINX pid file
   file:
     path: /var/run/nginx
@@ -96,19 +97,20 @@
     recurse: yes
     owner: "{{ web_user }}"
     group: "{{ web_group }}"
-    mode: 0700
+    mode: 0750
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - web-server
     - nginx
 
+# this is for VM instances, where systemd should be there already
 - name: Place tmpfiles.d config file for NGINX
-  template:
-    src: tmpfiles.d.nginx.conf.j2
+  copy:
+    content: |
+      d /var/run/nginx 0750 {{ web_user }} {{ web_group }} -
     dest: /etc/tmpfiles.d/nginx.conf
     owner: "{{ web_user }}"
     group: "{{ web_group }}"
-    mode: 0700
   when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - web-server
