@@ -1,4 +1,0 @@
-[submodule "src/jtmodules"]
-	path = src/jtmodules
-	url = https://github.com/TissueMAPS/jtmodules
-	branch = master
