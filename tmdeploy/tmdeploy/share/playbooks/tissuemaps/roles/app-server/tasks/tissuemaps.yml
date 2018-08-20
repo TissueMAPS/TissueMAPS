@@ -1,6 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
-# Copyright (C) 2018  University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,52 +15,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Clone TmServer repository
-  git:
-    repo: "{{ tm_github_url }}/tmserver"
-    dest: "{{ tm_home }}/tmserver"
-    version: "{{ tm_version }}"
-    force: yes
+
+- name: 'Install TM server {{ item.desc }}'
   tags:
     - tissuemaps
-
-- name: Install tmserver package dependencies
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -r {{ tm_home }}/tmserver/requirements.txt --user --no-cache-dir
+    - tmserver
+  shell: |
+    env PYTHONUSERBASE='{{ tm_home }}/.local' \
+        pip install --user --no-cache-dir {{ item.args }}
   args:
-    chdir: "{{ tm_home }}/tmserver"
-    executable: /bin/bash
-  tags:
-    - tissuemaps
-
-- name: Install tmserver package
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install -e {{ tm_home }}/tmserver --user --no-cache-dir
-  args:
-    chdir: "{{ tm_home }}/tmserver"
-    executable: /bin/bash
-  tags:
-    - tissuemaps
-
-- name: Set permissions for code directory
-  file:
-    path: "{{ tm_home }}/.local"
-    state: directory
-    recurse: yes
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
-    mode: 0700
-  tags:
-    - tissuemaps
-
-- name: Set permissions for code directory
-  file:
-    path: "{{ tm_home }}/tmserver"
-    state: directory
-    recurse: yes
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
-    mode: 0700
-  tags:
-    - tissuemaps
+    chdir: "{{ tmserver_dir }}"
+  with_items:
+    - { desc: "requirements", args: "-r '{{ tmserver_dir }}/requirements.txt'" }
+    - { desc: "sources",      args: "-e '{{ tmserver_dir }}'" }
 
 - name: Create ~/.tmaps directory
   file:

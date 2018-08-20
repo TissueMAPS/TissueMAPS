@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,31 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Create root directory for static www data
-  file:
-    path: "{{ tm_www_directory }}"
-    state: directory
-    mode: 0755
-  tags:
-    - web-server
-    - tissuemaps
-
-- name: Get the latest tmui code
-  git:
-    repo: "{{ tm_github_url }}/tmui"
-    version: "{{ tm_version }}"
-    recursive: yes
-    dest: "{{ tm_www_directory }}/tmui"
-    force: yes
-  tags:
-    - web-server
-    - tissuemaps
-
 - name: Install bower and gulp node packages
   npm:
     name: "{{ item }}"
     state: present
-    path: "{{ tm_www_directory }}/tmui/src"
+    path: "{{ tmui_dir }}/src"
     global: yes
   with_items:
     - bower
@@ -49,12 +29,8 @@
     - tissuemaps
 
 - name: Install node dependencies
-  # shell: npm install app --unsafe-perm
-  # args:
-  #   executable: /bin/bash
-  #   chdir: "{{ tm_www_directory }}/tmui/src"
   npm:
-    path: "{{ tm_www_directory }}/tmui/src/app"
+    path: "{{ tmui_dir }}/src/app"
     state: present
   tags:
     - web-server
@@ -62,7 +38,7 @@
 
 - name: Install bower dependencies
   bower:
-    path: "{{ tm_www_directory }}/tmui/src"
+    path: "{{ tmui_dir }}/src"
     state: present
   tags:
     - web-server
@@ -70,19 +46,14 @@
 
 - name: Update gulp proxy settings
   replace:
-    dest: "{{ tm_www_directory }}/tmui/src/tasks/server.js"
-    regexp: 'target:\s.http.*$'
-    replace: "target: 'http://{{ app_host }}:{{ app_port }}',"
-  when: app_host != 'unix'
-  tags:
-    - web-server
-    - tissuemaps
-
-- name: Update gulp proxy settings
-  replace:
-    dest: "{{ tm_www_directory }}/tmui/src/tasks/server.js"
-    regexp: 'changeOrigin:\s.*$'
-    replace: "xfwd: true"
+    dest: "{{ tmui_dir }}/src/tasks/server.js"
+    regexp: '{{ item.search }}'
+    replace: '{{ item.replace }}'
+  with_items:
+    - search: 'target:\s.http.*$'
+      replace: "target: 'http://{{ app_host }}:{{ app_port }}',"
+    - search: 'changeOrigin:\s.*$'
+      replace: "xfwd: true"
   when: app_host != 'unix'
   tags:
     - web-server
@@ -92,42 +63,19 @@
   shell: gulp build --prod
   args:
     executable: /bin/bash
-    chdir: "{{ tm_www_directory }}/tmui/src"
+    chdir: "{{ tmui_dir }}/src"
   tags:
     - web-server
     - tissuemaps
 
-- name: Set permissions for tmui/src directory
-  file:
-    path: "{{ tm_www_directory }}/tmui/src"
-    state: directory
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
-    mode: 0700
+- name: Allow web server to read TmUI JS files
   tags:
     - web-server
     - tissuemaps
-
-- name: Set permissions for tmui/src/build directory recursively
   file:
-    path: "{{ tm_www_directory }}/tmui/src/build"
+    path: "{{ tm_www_root }}"
     state: directory
     recurse: yes
     owner: "{{ web_user }}"
     group: "{{ web_group }}"
-    mode: 0700
-  tags:
-    - web-server
-    - tissuemaps
-
-- name: Set permissions for tmui/src/tasks directory recursively
-  file:
-    path: "{{ tm_www_directory }}/tmui/src/tasks"
-    state: directory
-    recurse: yes
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
-    mode: 0700
-  tags:
-    - web-server
-    - tissuemaps
+    mode: 'a+rX'

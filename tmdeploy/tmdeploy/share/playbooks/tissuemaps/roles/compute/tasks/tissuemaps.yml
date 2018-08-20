@@ -19,10 +19,12 @@
 # can then be updated on the frontend only and these changes become immediately
 # effective on all compute nodes.
 
-# This shouldn't be necessary, but some packages don't build correctly when
-# cython and numpy are not already installed.
+# This shouldn't be necessary, but some packages don't build correctly
+# unless Cython and NumPy are already installed.
 - name: Install cython and numpy packages
-  shell: PYTHONUSERBASE={{ tm_home }}/.local pip install {{ item }} --user --no-cache-dir
+  shell: |
+    env PYTHONUSERBASE={{ tm_home }}/.local \
+        pip install --user --no-cache-dir {{ item }}
   args:
     chdir: "{{ tm_home }}"
     executable: /bin/bash
@@ -32,18 +34,19 @@
   tags:
     - tissuemaps
 
-- name: Install JtLibrary repository
+- name: Install JtLibrary, JtModules, and TmLibrary
   tags:
     - tissuemaps
     - jtlibrary
-  include: _clone.yml
-  vars:
-    repo_url: "{{ tm_github_url }}/jtlibrary"
-    version: "{{ tm_version }}"
-    dest_dir: "{{ tm_home }}/jtlibrary"
-    pkg_dirs:
-      - "{{ tm_home }}/jtlibrary/python/jtlibrary"
-      - "{{ tm_home }}/jtlibrary/python/jtmodules"
+    - tmlibrary
+  include: _install_python_pkg.yml
+  loop_control:
+    loop_var: 'pkg_dir'
+  with_items:
+    # TmLibrary and JtModules both depend on JtLibrary, so install it 1st
+    - "{{ jtlibrary_dir }}/python/jtlibrary"
+    - "{{ jtlibrary_dir }}/python/jtmodules"
+    - "{{ tmlibrary_dir }}"
 
 - name: Compile MEX files in JtLibrary
   tags:
@@ -55,25 +58,13 @@
       dirname=$(dirname "{{ item }}")
       filename=$(basename "{{ item }}")
       mexname=${filename%%.*}
-      cd "{{ tm_home }}/jtlibrary/matlab/$dirname"
+      cd "{{ jtlibrary_dir }}/matlab/$dirname"
       matlab -r "mex ${mexname}"
     else
       echo "Cannot find 'matlab' executable on PATH - skipping MEX compilation"
     fi
   with_items:
     - 'jtlibrary/+cpsub/IdentifySecPropagateSubfunction.cpp'
-
-- name: Install TmLibrary repository
-  tags:
-    - tissuemaps
-    - tmlibrary
-  include: _clone.yml
-  vars:
-    repo_url: "{{ tm_github_url }}/tmlibrary"
-    version: "{{ tm_version }}"
-    dest_dir: "{{ tm_home }}/tmlibrary"
-    pkg_dirs:
-      - "{{ tm_home }}/tmlibrary"
 
 - name: Create directory for TissueMAPS related files
   file:

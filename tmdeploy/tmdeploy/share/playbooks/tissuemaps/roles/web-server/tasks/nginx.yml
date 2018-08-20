@@ -140,7 +140,6 @@
     - /var/run/nginx
     - /usr/share/nginx
     - /etc/nginx
-    - "{{ tm_www_directory }}"
   tags:
     - web-server
     - nginx

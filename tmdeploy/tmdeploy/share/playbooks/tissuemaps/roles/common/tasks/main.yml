@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016, 2018  Markus D. Herrmann, University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -55,3 +55,11 @@
   when: ansible_env.ANSIBLE_CONTAINER is undefined
 
 - include: suexec.yml
+
+- name: Clone TissueMAPS source code repository
+  git:
+    repo: "{{ tm_repo_url }}"
+    dest: "{{ tm_src_dir }}"
+    version: "{{ tm_version }}"
+    depth: 1
+    recursive: no

@@ -1,0 +1,9 @@
+- name: 'Install package {{ item.desc }}'
+  shell: |
+    env PYTHONUSERBASE='{{ tm_home }}/.local' \
+        pip install --user --no-cache-dir {{ item.args }}
+  args:
+    chdir: "{{ pkg_dir }}"
+  with_items:
+    - { desc: "requirements", args: "-r '{{ pkg_dir }}/requirements.txt'" }
+    - { desc: "sources",      args: "-e '{{ pkg_dir }}'" }

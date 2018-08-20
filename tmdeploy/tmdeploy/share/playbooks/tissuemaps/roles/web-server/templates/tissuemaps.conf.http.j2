@@ -15,7 +15,7 @@ server {
 
     # all non-api requests are file requests and should be served
     # from the gulp built directory
-    root {{ tm_www_directory }}/tmui/src/build;
+    root {{ tm_www_root }};
     location / {
         try_files $uri $uri/ @proxy;
     }
