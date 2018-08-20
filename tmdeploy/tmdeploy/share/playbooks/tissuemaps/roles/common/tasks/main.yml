@@ -54,8 +54,6 @@
 - include: collectl.yml
   when: ansible_env.ANSIBLE_CONTAINER is undefined
 
-- include: suexec.yml
-
 - name: Clone TissueMAPS source code repository
   git:
     repo: "{{ tm_repo_url }}"

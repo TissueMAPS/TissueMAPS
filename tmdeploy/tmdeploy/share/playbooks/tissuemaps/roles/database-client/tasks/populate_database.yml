@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016  Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2018  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,20 +15,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 - name: Create database tables
-  command: /usr/local/sbin/su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_create_tables
-  args:
-    chdir: "{{ tm_home }}"
-  when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - database
     - tissuemaps
+  command: |
+    {{ tm_home }}/.local/bin/tm_create_tables
+  args:
+    chdir: "{{ tm_home }}"
+  become: yes
+  become_user: '{{ tm_user }}'
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
 
 - name: Create TissueMAPS users
-  command: /usr/local/sbin/su-exec {{ tm_user }} {{ tm_home }}/.local/bin/tm_add user --name {{ item['name'] }} --password {{ item['password'] | string | quote }} --email {{ item['email'] }}
-  args:
-    chdir: "{{ tm_home }}"
-  with_items: "{{ tm_users }}"
-  when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - database
     - tissuemaps
+  command: |
+    {{ tm_home }}/.local/bin/tm_add user --name {{ item['name'] }} --password {{ item['password'] | string | quote }} --email {{ item['email'] }}
+  args:
+    chdir: "{{ tm_home }}"
+  become: yes
+  become_user: '{{ tm_user }}'
+  with_items: "{{ tm_users }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined

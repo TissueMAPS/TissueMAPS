@@ -31,14 +31,17 @@
     - database
 
 - name: Stop running default database server
-  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl stop -D {{ db_default_cluster_data_directory }}
+  tags:
+    - database
+  command: |
+    {{ db_executable_directory }}/pg_ctl stop -D {{ db_default_cluster_data_directory }}
   args:
     chdir: "{{ db_default_cluster_data_directory }}"
+  become: yes
+  become_user: '{{ db_user }}'
   when:
     - stat_default_db_data_directory.stat.exists
     - stat_default_db_pid.stat.exists
-  tags:
-    - database
 
 - name: Remove existing default data directory
   file:
@@ -64,15 +67,18 @@
     - database
 
 - name: Stop running database server
-  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl stop -D {{ db_data_directory }}/{{ db_node }} -o "-p {{ db_port }}" -m smart
+  tags:
+    - database
+  command: |
+    {{ db_executable_directory }}/pg_ctl stop -D {{ db_data_directory }}/{{ db_node }} -o "-p {{ db_port }}" -m smart
   args:
     chdir: "{{ db_data_directory }}"
+  become: yes
+  become_user: '{{ db_user }}'
   when:
     - stat_db_data_directory.stat.exists
     - stat_db_pid.stat.exists
   ignore_errors: yes
-  tags:
-    - database
 
 - name: Make sure postmaster.pid file does not exist
   file:
@@ -91,13 +97,16 @@
     - database
 
 - name: Initialize database cluster
-  command: /usr/local/sbin/su-exec {{ db_user }} {{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ db_node }}.log -o '--locale=en_US.UTF-8'
-  args:
-    chdir: "{{ db_data_directory }}"
-  when:
-    - not stat_db_data_directory.stat.exists
   tags:
     - database
+  command: |
+    {{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ db_node }} -l {{ db_log_directory }}/postgresql-{{ db_node }}.log -o '--locale=en_US.UTF-8'
+  args:
+    chdir: "{{ db_data_directory }}"
+  become: yes
+  become_user: '{{ db_user }}'
+  when:
+    - not stat_db_data_directory.stat.exists
 
 - name: Increase kernel limits for semaphores permanently
   template:
