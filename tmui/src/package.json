@@ -2,20 +2,20 @@
   "name": "TissueMAPS",
   "version": "1.0.0",
   "description": "Web based user interface for TissueMAPS.",
-  "main": "gruntfile.js",
+  "main": "gulpfile.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/tissuemaps/tmui"
+    "url": "https://github.com/TissueMAPS/TissueMAPS"
   },
   "author": "Robin Hafen <robin.hafen@gmail.com>",
   "license": "",
   "bugs": {
-    "url": "https://github.com/tissuemaps/tmui/issues"
+    "url": "https://github.com/TissueMAPS/TissueMAPS/issues"
   },
-  "homepage": "https://github.com/tissuemaps/tmui",
+  "homepage": "https://tissuemaps.org",
   "devDependencies": {
     "bower": "^1.4.1",
     "del": "^2.2.0",
