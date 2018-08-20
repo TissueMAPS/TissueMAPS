@@ -35,7 +35,6 @@
     option: db_nodes
     value: "{{ db_nodes }}"
     owner: "{{ tm_user }}"
-    mode: "u+rwx"
   tags:
     - tissuemaps
 

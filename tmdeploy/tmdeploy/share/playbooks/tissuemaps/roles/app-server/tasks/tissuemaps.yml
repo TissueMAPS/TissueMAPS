@@ -77,7 +77,7 @@
     dest: "{{ tm_home }}/.tmaps/tm_server.sh"
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
-    mode: 0700
+    mode: 0755
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - tissuemaps
@@ -90,7 +90,6 @@
     option: storage_home
     value: "{{ fs_data_directory }}"
     owner: "{{ tm_user }}"
-    mode: "u+rwx"
   tags:
     - tissuemaps
 
@@ -100,7 +99,7 @@
     state: directory
     owner: root
     group: root
-    mode: 0777
+    mode: 0770
   tags:
     - tissuemaps
 
@@ -123,6 +122,5 @@
     option: jobdaemon_session
     value: "{{ jobdaemon_directory }}"
     owner: "{{ tm_user }}"
-    mode: "u+rwx"
   tags:
     - tissuemaps

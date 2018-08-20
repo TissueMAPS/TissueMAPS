@@ -81,14 +81,3 @@
     state: directory
   tags:
     - tissuemaps
-
-- name: Set permissions for home folder
-  file:
-    path: "{{ tm_home }}"
-    state: directory
-    recurse: yes
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
-    mode: 0700
-  tags:
-    - tissuemaps

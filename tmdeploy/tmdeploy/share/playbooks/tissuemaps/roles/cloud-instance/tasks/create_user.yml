@@ -59,17 +59,6 @@
     append: yes
   when: web_user != tm_user
 
-- name: Change permissions for user home directory
-  become: yes
-  file:
-    path: /home/{{ item }}
-    state: directory
-    mode: 0775
-  with_items:
-    - "{{ tm_user }}"
-    - "{{ db_user }}"
-    - "{{ web_user }}"
-
 - name: Add tm_user to sudoers
   become: yes
   lineinfile:
