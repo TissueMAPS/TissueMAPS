@@ -1,8 +1,4 @@
-[submodule "src/app/typedefs/DefinitelyTyped"]
-	path = src/app/typedefs/DefinitelyTyped
-	url = https://github.com/hafenr/DefinitelyTyped
-	branch = master
 [submodule "src/app/assets/libs/ol3"]
-	path = src/app/assets/libs/ol3
-	url = https://github.com/hafenr/ol3
-	branch = master
+        path = src/app/assets/libs/ol3
+        url = https://github.com/hafenr/ol3
+        branch = master
