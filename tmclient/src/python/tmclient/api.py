@@ -1248,11 +1248,10 @@ class TmClient(HttpClient):
 
 
 
-    def register_microscope_files(self, plate_name, acquisition_name,
-                                path):
+    def register_microscope_files(self,
+                                  plate_name, acquisition_name, path):
         '''
         Register microscope files contained in `path` (Server side).
-        If `path` is a directory, upload all files contained in it.
 
         Parameters
         ----------
@@ -1270,12 +1269,12 @@ class TmClient(HttpClient):
         '''
 
         logger.info(
-            'register microscope files for experiment "%s", plate "%s" '
-            'and acquisition "%s"',
-            self.experiment_name, plate_name, acquisition_name
+            'register directory `%s` for experiment "%s",'
+            ' plate "%s" and acquisition "%s"',
+            path, self.experiment_name, plate_name, acquisition_name
         )
 
-	acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
+        acquisition_id = self._get_acquisition_id(plate_name, acquisition_name)
         register_url = self._build_api_url(
             '/experiments/{experiment_id}/acquisitions/{acquisition_id}/register'
             .format(experiment_id=self._experiment_id, acquisition_id=acquisition_id)

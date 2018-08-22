@@ -649,12 +649,17 @@ microscope_file_upload_parser.set_defaults(
 
 microscope_file_register_parser = microscope_file_subparsers.add_parser(
     'register',
-    help='register microscope files',
-    description='Register microscope image and metadata files. It assumes a NFS has been mounted server side',
+    help='register acquisition directory',
+    description=(
+        'Mark directory DIR as containing all files (image and meta-data)'
+        ' for the given acquisition.  Only one directory can be registered'
+        ' per acquisition and plate.  The directory must be visible'
+        ' to the TM server, otherwise an error will be thrown.'
+    ),
     parents=[abstract_acquisition_parser]
 )
 microscope_file_register_parser.add_argument(
-    'path', help='path to directory to register'
+    'path', metavar='DIR', help='path to directory to register'
 )
 
 microscope_file_register_parser.set_defaults(
