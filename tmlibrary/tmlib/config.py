@@ -261,10 +261,10 @@ class LibraryConfig(TmapsConfig):
     def __init__(self):
         super(LibraryConfig, self).__init__()
         self.modules_path = [
-            '~/jtlibrary/matlab/jtmodules',
-            '~/jtlibrary/python/jtmodules/src/jtmodules',
-            '~/jtlibrary/r/jtmodules',
-            '~/jtlibrary/modules',  # compat with TM <=0.3.3
+            '~/TissueMAPS/jtlibrary/matlab/jtmodules',
+            '~/TissueMAPS/jtlibrary/python/jtmodules/src/jtmodules',
+            '~/TissueMAPS/jtlibrary/r/jtmodules',
+            '~/TissueMAPS/jtlibrary/modules',  # compat with TM <=0.3.3
         ]
         self.formats_home = '~/tmformats'
         self.storage_home = '/storage/filesystem'
