@@ -31,7 +31,6 @@ import tmserver.api.cycle
 import tmserver.api.well
 import tmserver.api.site
 import tmserver.api.file
-import tmserver.api.user
 import tmserver.api.mapobject
 import tmserver.api.feature
 import tmserver.api.layer
