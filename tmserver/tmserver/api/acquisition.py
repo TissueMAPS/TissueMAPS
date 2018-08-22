@@ -301,8 +301,16 @@ def register(experiment_id, acquisition_id):
     """
     .. http:post:: /api/experiments/(string:experiment_id)/acquisitions/(string:acquisition_id)/register
 
-        Pass the NFS path to the data to the server.
-        The client has to wait for this response before uploading files.
+        Register a single directory (passed as parameter `path` in the
+        JSON request) as the directory containing all the files for
+        the given acquisition.
+
+        Calling this method twice with different `path` parameters
+        will result in an error (so you cannot combine the contents of
+        two directories by 'registering' them).  On the other hand,
+        the *same* directory can be registered over and over again
+        without adverse side-effects; the method is idempotent in this
+        sense.
 
         **Example request**:
 
@@ -328,7 +336,6 @@ def register(experiment_id, acquisition_id):
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
         :statuscode 500: server error
-
     """
     data = request.get_json()
     path = data['path']
