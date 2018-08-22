@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 
 class ServerConfig(TmapsConfig):
-    """`TissueMAPS` configuration specific to the `tmserver` package."""
+    """`TissueMAPS configuration specific to the `tmserver` package."""
 
     def __init__(self):
         super(ServerConfig, self).__init__()
