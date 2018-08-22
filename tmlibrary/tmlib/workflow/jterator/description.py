@@ -275,7 +275,7 @@ class PipelineOutputDescription(object):
 
     __slots__ = ('_objects', '_images')
 
-    def __init__(self, objects, images):
+    def __init__(self, objects, images=None):
         '''
         Parameters
         ----------
@@ -285,7 +285,8 @@ class PipelineOutputDescription(object):
             description of images output
         '''
         self.objects = self._create_object_descriptions(objects)
-        self.images = self._create_image_descriptions(images)
+        self.images = self._create_image_descriptions(
+            images if images is not None else [])
 
     def _create_object_descriptions(self, value):
         if not isinstance(value, list):
