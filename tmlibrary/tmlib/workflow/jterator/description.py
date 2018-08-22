@@ -369,6 +369,7 @@ class PipelineOutputDescription(object):
         '''
         attrs = dict()
         attrs['objects'] = [o.to_dict() for o in self.objects]
+        attrs['images'] = [i.to_dict() for i in self.images]
         return attrs
 
 
