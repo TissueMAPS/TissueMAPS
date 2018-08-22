@@ -358,7 +358,7 @@ class PipelineOutputDescription(object):
                     'Items of attribute "images" must have type '
                     'PipelineImageOutputDescription.'
                 )
-        self._objects = value
+        self._images = value
 
     def to_dict(self):
         '''Returns attributes "name" and "objects" as key-value pairs.
