@@ -16,14 +16,17 @@
 """API view functions for querying :mod:`acquisition <tmlib.models.acquisition>`
 resources.
 """
-import re
 import json
 import logging
+import os
+import re
+
 import numpy as np
 from flask import jsonify, send_file, request
 from flask_jwt import jwt_required
 from werkzeug import secure_filename
 
+from tmlib.config import LibraryConfig
 import tmlib.models as tm
 from tmlib.models.status import FileUploadStatus
 from tmlib.workflow.metaconfig import get_microscope_type_regex
@@ -34,8 +37,6 @@ from tmserver.util import (
 )
 from tmserver.api import api
 from tmserver.error import *
-import os
-from ConfigParser import SafeConfigParser
 
 logger = logging.getLogger(__name__)
 
@@ -329,24 +330,19 @@ def register(experiment_id, acquisition_id):
         :statuscode 500: server error
 
     """
-    logger.info('register microscope files')
     data = request.get_json()
     path = data['path']
-    logger.info('path given by the client: %s', path)
-    
-    # Parse storage_home variable from tissuemaps.cfg file
-    parser = SafeConfigParser()
-    parser.read('/home/tissuemaps/.tmaps/tissuemaps.cfg')
-    storage_home_path = parser.get('tmlib', 'storage_home')
- 
-    path_to_link = os.path.join(storage_home_path,'experiment_{}/plates/plate_{}/acquisitions/acquisition_{}/microscope_images') 
+    logger.info('Registering microscope files from path `%s` ...', path)
 
-
-    filenames = [
-                f for f in os.listdir(path)
-                if (not f.startswith('.')
-                    and not os.path.isdir(os.path.join(path, f)))
-            ]
+    try:
+        filenames = [
+            f for f in os.listdir(path)
+            if (not f.startswith('.')
+                and not os.path.isdir(os.path.join(path, f)))
+        ]
+    except OSError as err:
+        logger.error("Cannot list directory `%s`: %s", path, err)
+        raise
 
     with tm.utils.ExperimentSession(experiment_id) as session:
         experiment = session.query(tm.Experiment).one()
@@ -355,15 +351,9 @@ def register(experiment_id, acquisition_id):
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
         # single plate only
         plate = session.query(tm.Plate).one()
-        
-        logger.info('path to link: %s', path_to_link.format(experiment.id, plate.id, acquisition.id))
-        logger.info('experiment %s', experiment.id)
-        logger.info('acquisition %s', acquisition)
-        logger.info('plate %s', plate)
- 
+
         # check for image files already registered
         img_filenames = [f.name for f in acquisition.microscope_image_files]
-        logger.debug('img_filenames %s', img_filenames)
         img_files = [
             tm.MicroscopeImageFile(
                 name=f, acquisition_id=acquisition.id
@@ -382,19 +372,44 @@ def register(experiment_id, acquisition_id):
             if metadata_regex.search(f) and
             f not in meta_filenames
         ]
-        
+
         session.bulk_save_objects(img_files + meta_files)
 
-        
-        # Trigger creation of directories
+        # trigger creation of directories
         acquisition.location
-        #acquisition.microscope_images_location
         acquisition.microscope_metadata_location
-        
-        os.symlink(path ,path_to_link.format(experiment.id,plate.id,acquisition.id) )
+
+        # link root directory
+        path_to_link = os.path.join(
+            LibraryConfig().storage_home,
+            ('experiment_{}'
+             '/plates/plate_{}'
+             '/acquisitions/acquisition_{}'
+             '/microscope_images'
+            .format(experiment.id, plate.id, acquisition.id)))
+        if not os.path.exists(path_to_link):
+            try:
+                os.symlink(path, path_to_link)
+            except Exception as err:
+                logger.debug(
+                    "Error linking source directory `%s` to TM directory `%s`: %s",
+                    path, path_to_link, err)
+                raise
+        else:
+            # path exists, check if it is correct
+            p1 = os.path.realpath(path)
+            p2 = os.path.realpath(path_to_link)
+            if p1 != p2:
+                raise ValueError(
+                    "Acquisition {a} of plate {p} of experiment {e}"
+                    " is already linked to directory `{d}`"
+                    .format(
+                        a=acquisition.id,
+                        p=plate.id,
+                        e=epxeriment.id,
+                        d=p1))
 
         microscope_files = session.query(tm.MicroscopeImageFile).filter_by(acquisition_id=acquisition.id).all()
-        
         for microscope_file in microscope_files:
             microscope_file.location
             microscope_file.status = 'COMPLETE'
@@ -790,4 +805,3 @@ def get_microscope_metadata_file_information(experiment_id, acquisition_id):
         return jsonify({
             'data': acquisition.microscope_metadata_files
         })
-
