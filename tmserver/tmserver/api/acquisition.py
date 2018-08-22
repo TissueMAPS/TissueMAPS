@@ -295,7 +295,6 @@ def get_acquisition(experiment_id, acquisition_id):
 )
 @jwt_required()
 @assert_form_params('path')
-@jwt_required()
 @decode_query_ids('write')
 def register(experiment_id, acquisition_id):
     """
