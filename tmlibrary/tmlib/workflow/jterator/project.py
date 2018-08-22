@@ -471,7 +471,9 @@ class AvailableModules(object):
             if name == self._get_module_name_from_file(module_file):
                 logger.debug("Using source file `%s` for module `%s`", module_file, name)
                 return module_file
-        logger.error("Could not find module `%s` among %r", module_file, module_files)
+        logger.error(
+            "Could not find module `%s` among module files %r",
+            name, module_files)
         raise LookupError("Cannot find module `{0}`".format(name))
 
 
