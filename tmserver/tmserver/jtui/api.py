@@ -160,7 +160,7 @@ def get_available_channels(experiment_id):
 def get_module_source_code():
     '''Gets the source code for a given module.'''
     name = request.args.get('module_name')
-    logger.info('get source code of module "%s"', module_name)
+    logger.info('get source code of module "%s"', name)
     try:
         modules = AvailableModules()
         # XXX: this code relies on the fact that `.module_names` and
