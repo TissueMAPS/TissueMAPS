@@ -467,13 +467,16 @@ class AvailableModules(object):
         '''
         name = self._strip_well_known_suffix(name)
         module_files = self.module_files  # compute once
-        for module_file in module_files:
-            if name == self._get_module_name_from_file(module_file):
-                logger.debug("Using source file `%s` for module `%s`", module_file, name)
-                return module_file
-        logger.error(
-            "Could not find module `%s` among module files %r",
-            name, module_files)
+        if not module_files:
+            logger.error("Module file list is empty!")
+        else:
+            for module_file in module_files:
+                if name == self._get_module_name_from_file(module_file):
+                    logger.debug("Using source file `%s` for module `%s`", module_file, name)
+                    return module_file
+            logger.error(
+                "Could not find module `%s` among module files %r",
+                name, module_files)
         raise LookupError("Cannot find module `{0}`".format(name))
 
 
