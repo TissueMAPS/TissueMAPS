@@ -37,6 +37,3 @@ db_role: tissuemaps
 db_name: tissuemaps
 db_port_master: 5432
 db_port_worker: 9700
-
-collectl_log_directory: /var/log/collectl
-collectl_interval: 5
