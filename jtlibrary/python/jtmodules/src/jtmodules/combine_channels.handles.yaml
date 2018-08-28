@@ -1,5 +1,5 @@
 ---
-version: 0.0.1
+version: 0.0.2
 
 input:
 
@@ -38,8 +38,3 @@ output:
     - name: figure
       type: Figure
       help: Comparison of "image_1", "image_2" and "combined_image".
-
-
-
-
-
