@@ -223,6 +223,14 @@ def add_user(name, password, email):
             ],
             stdout=open(os.devnull, 'wb')
         )
+        subprocess.call([
+            'sudo', 'sacctmgr', '-i',
+            'update', 'account', name,
+            'where', 'user=tissuemaps',
+            'set', 'qos+=tissuemaps',
+        ],
+            stdout=open(os.devnull, 'wb')
+        )
 
 
 if __name__ == '__main__':
