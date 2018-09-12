@@ -90,19 +90,24 @@ def create_app(verbosity=None):
     gevent_logger.addHandler(log_handler)
     gc3pie_logger = logging.getLogger('gc3.gc3libs')
     gc3pie_logger.addHandler(log_handler)
+    sqlalchemy_logger = logging.getLogger('sqlalchemy.engine')
+    sqlalchemy_logger.addHandler(log_handler)
     wsgi_logger = logging.getLogger('wsgi')
     wsgi_logger.addHandler(log_handler)
     if verbosity > 4:
         gevent_logger.setLevel(logging.DEBUG)
         gc3pie_logger.setLevel(logging.DEBUG)
+        sqlalchemy_logger.setLevel(logging.DEBUG)
         wsgi_logger.setLevel(logging.DEBUG)
     elif verbosity > 3:
         gevent_logger.setLevel(logging.INFO)
         gc3pie_logger.setLevel(logging.INFO)
+        sqlalchemy_logger.setLevel(logging.INFO)
         wsgi_logger.setLevel(logging.INFO)
     else:
         gevent_logger.setLevel(logging.ERROR)
         gc3pie_logger.setLevel(logging.ERROR)
+        sqlalchemy_logger.setLevel(logging.ERROR)
         wsgi_logger.setLevel(logging.ERROR)
 
     app.json_encoder = TmJSONEncoder
