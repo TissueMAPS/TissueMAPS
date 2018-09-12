@@ -355,8 +355,7 @@ def register(experiment_id, acquisition_id):
         microscope_type = experiment.microscope_type
         img_regex, metadata_regex = get_microscope_type_regex(microscope_type)
         acquisition = session.query(tm.Acquisition).get(acquisition_id)
-        # single plate only
-        plate = session.query(tm.Plate).one()
+        plate = session.query(tm.Plate).get(acquisition.plate_id)
 
         # check for image files already registered
         img_filenames = [f.name for f in acquisition.microscope_image_files]
