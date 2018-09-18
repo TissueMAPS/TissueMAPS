@@ -1,15 +1,81 @@
 [uwsgi]
-module = tmserver.wsgi:app
-logto = /var/log/uwsgi/tissuemaps.log
+
+## main uWSGI master/worker setup
+master = true
+workers = {{ uwsgi_processes }}
 pidfile = /var/run/uwsgi/tissuemaps.pid
-http-socket = :8080
+uid = {{ tm_user }}
+gid = {{ tm_group }}
+need-app = true
+
+# this is used in /etc/logrotate.d/tissuemaps.conf to trigger log rotation
+master-fifo = /var/run/uwsgi/master.fifo
+
+
+{# NOTE: keep this in sync with `app-server/tasks/uwsgi.yml` #}
+{% if app_host == 'unix' %}
+# only talk to NginX over a local UNIX-domain socket
 uwsgi-socket = {{ uwsgi_socket }}
 socket-timeout = {{ uwsgi_timeout }}
 chmod-socket = 660
+{% else %}
+# talk HTTP to NginX
+http-socket = {{ uwsgi_socket }}
+{% endif %}
+
+# remove all of the generated file/sockets on exit
 vacuum = true
-master = true
-processes = {{ uwsgi_processes }}
+
+
+## TM application configuration
+module = tmserver.wsgi:app
 gevent = 100
-die-on-term = true
-uid = {{ tm_user }}
-gid = {{ tm_group }}
+
+
+## logging configuration
+
+# where to store uWSGI "metrics", see:
+metrics-dir = /var/log/uwsgi/metrics
+
+# prepend `uWSGI:` tag and timestamp to log lines
+log-encoder = format uWSGI: ${strftime:%%Y-%%m-%%d %%H:%%M:%%S}: ${msgnl}
+
+# log to file and force rotation after 30MB worth of logs (approx 1 month)
+logger = file:logfile=/var/log/uwsgi/tissuemaps.log,maxsize=30000000
+
+# use Apache "common" log format for requests
+log-format = %(addr) - %(user) [%(ltime)] "%(method) %(uri) %(proto)" %(status) %(size) "%(referer)" "%(uagent)"
+
+# re-open log if modified
+touch-logreopen = /var/log/uwsgi/tissuemaps.log
+
+# log responses without body
+#log-zero = true
+
+# log requests slower than the specified number of milliseconds
+#log-slow = true
+
+# log requests with a 4xx response
+#log-4xx = true
+
+# log requests with a 5xx response
+#log-5xx = true
+
+# log requests bigger than the specified size
+#log-big = true
+
+# log sendfile requests
+#log-sendfile = true
+
+# log requests with io errors
+#log-ioerror = true
+
+# use the ip from X-Forwarded-For header instead of REMOTE_ADDR
+#log-x-forwarded-for = true
+
+
+## use adaptive process spawning
+cheaper = 1
+cheaper-initial = 1
+# one of: busyness, spare, backlog, manual
+chaper-algo = spare

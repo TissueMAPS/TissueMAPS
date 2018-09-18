@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-# When app_host is "unix", app_port is assumed to be the path to the socket file.
-- name: Set socket in case of a HTTP socket
+
+- name: uWSGI listens on network port
   set_fact:
     uwsgi_socket: "{{ app_host }}:{{ app_port }}"
   when: app_host != 'unix'
@@ -23,94 +23,59 @@
     - app-server
     - uwsgi
 
-- name: Set socket in case of a UNIX socket
-  set_fact:
-    uwsgi_socket: "{{ app_port }}"
+- block:
+    # When app_host is "unix", app_port is the path to the socket file.
+    - name: uWSGI listens on UNIX-domain socket
+      set_fact:
+        uwsgi_socket: "{{ app_port }}"
+    - name: Create directory for UNIX socket
+      file:
+        path: "{{ app_port | dirname }}"
+        state: directory
+        recurse: yes
+        owner: "{{ tm_user }}"
+        group: "{{ tm_group }}"
+        mode: 0700
+    - name: Set ACL to let NginX access UNIX socket
+      acl:
+        path: "{{ app_port | dirname }}"
+        entity: "{{ web_user }}"
+        etype: user
+        permissions: rx
+        state: present
+        default: yes
+        recursive: yes
   when: app_host == 'unix'
   tags:
     - app-server
     - uwsgi
 
-- name: Create directory for UNIX socket
+- name: Create uWSGI log and metric directories
   file:
-    path: "{{ app_port | dirname }}"
+    path: '{{ item }}'
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
-    mode: 0700
-  when: app_host == 'unix'
+    mode: 0770
+  with_items:
+    - /var/log/uwsgi
+    - /var/log/uwsgi/metrics
+    - /var/run/uwsgi
   tags:
     - app-server
     - uwsgi
 
-- name: Set ACL to let NGINX access UNIX socket
-  acl:
-    path: "{{ app_port | dirname }}"
-    entity: "{{ web_user }}"
-    etype: user
-    permissions: rx
-    state: present
-    default: yes
-    recursive: yes
-  when: app_host == 'unix'
-  tags:
-    - app-server
-    - uwsgi
-
-- name: Set ACL to let NGINX access UNIX socket
-  acl:
-    path: "{{ app_port | dirname }}"
-    entity: "{{ web_user }}"
-    etype: user
-    permissions: rw
-    state: present
-    recursive: yes
-  when: app_host == 'unix'
-  tags:
-    - app-server
-    - uwsgi
-
-- name: Create log directory
-  file:
-    path: /var/log/uwsgi
-    state: directory
-    recurse: yes
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
-    mode: 0700
-  tags:
-    - app-server
-    - uwsgi
-
-- name: Create uwsgi log file with correct permissions
-  file:
-    path: /var/log/uwsgi/tissuemaps.log
-    state: touch
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
-    mode: 0700
-  tags:
-    - app-server
-    - uwsgi
-
-- name: Place uwsgi.ini
+- name: Deploy uWSGI configuration and startup script
   template:
-    src: uwsgi.ini.j2
-    dest: /home/{{ tm_user }}/.tmaps/uwsgi.ini
+    src: '{{ item.name }}.j2'
+    dest: '/home/{{ tm_user }}/.tmaps/{{ item.name }}'
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
-  tags:
-    - app-server
-    - uwsgi
-
-- name: Place uwsgi.sh startup script
-  template:
-    src: uwsgi.sh.j2
-    dest: /home/{{ tm_user }}/.tmaps/uwsgi.sh
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
-    mode: 0550
+    mode: '{{ item.mode }}'
+  with_items:
+    - { name: uwsgi.ini, mode: 0440 }
+    - { name: usgi.sh,   mode: 0550 }
   tags:
     - app-server
     - uwsgi
@@ -121,8 +86,8 @@
     state: directory
     recurse: yes
     owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
-    mode: 0700
+    group: "{{ web_group }}"
+    mode: 0770
   when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - app-server
@@ -132,23 +97,26 @@
   copy:
     content: |
       d /var/run/uwsgi 0750 {{ tm_user }} {{ web_group }} -
-      a+ /var/run/uwsgi - - - - u:nginx:rx
-      a+ /var/run/uwsgi - - - - default:u:nginx:rw
+      a+ /var/run/uwsgi - - - - u:{{ web_group }}:rx
+      a+ /var/run/uwsgi - - - - default:u:{{ web_group }}:rw
     dest: /etc/tmpfiles.d/uwsgi.conf
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
+    owner: root
+    group: root
     mode: 0700
   when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - app-server
     - uwsgi
 
-- name: Place UWSGI service file for serviced
+- name: Deploy system-level uWSGI config files
   template:
-    src: uwsgi.service.j2
-    dest: /etc/systemd/system/uwsgi.service
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
+    src: '{{ item.src }}'
+    dest: '{{ item.dest }}'
+    owner: root
+    group: root
+  with_items:
+    - { src: uwsgi.service.j2,   dest: /etc/systemd/system/uwsgi.service }
+    - { src: uwsgi.logrotate.j2, dest: /etc/logrotate.d/tissuemaps.conf }
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
