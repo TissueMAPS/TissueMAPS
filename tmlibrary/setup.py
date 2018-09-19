@@ -187,7 +187,7 @@ setuptools.setup(
        #    sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        'whichcraft>=0.4.0',
-       'gc3pie==2.5.dev',
+       'gc3pie>=2.5',
     ],
     extras_require = {
        'jterator_r_modules': [
