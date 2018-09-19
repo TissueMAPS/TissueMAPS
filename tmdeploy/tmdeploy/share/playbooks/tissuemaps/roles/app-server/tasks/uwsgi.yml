@@ -74,8 +74,11 @@
     group: "{{ tm_group }}"
     mode: '{{ item.mode }}'
   with_items:
-    - { name: uwsgi.ini, mode: 0440 }
-    - { name: usgi.sh,   mode: 0550 }
+    # Note: modes must be string, otherwise YAML will read them as
+    # decimal constants but Ansible will then complain that "modes
+    # must be symbolic or octal numbers"
+    - { name: uwsgi.ini, mode: '0440' }
+    - { name: usgi.sh,   mode: '0550' }
   tags:
     - app-server
     - uwsgi
