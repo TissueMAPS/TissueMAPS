@@ -77,8 +77,8 @@
     # Note: modes must be string, otherwise YAML will read them as
     # decimal constants but Ansible will then complain that "modes
     # must be symbolic or octal numbers"
-    - { name: uwsgi.ini, mode: '0440' }
-    - { name: uwsgi.sh,  mode: '0550' }
+    - { name: uwsgi.ini, mode: 'ug+r,o-rwx' }
+    - { name: uwsgi.sh,  mode: 'ug+rx,o-rwx' }
   tags:
     - app-server
     - uwsgi
