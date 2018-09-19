@@ -7,6 +7,7 @@ pidfile = /var/run/uwsgi/tissuemaps.pid
 uid = {{ tm_user }}
 gid = {{ tm_group }}
 need-app = true
+die-on-term = true
 
 # this is used in /etc/logrotate.d/tissuemaps.conf to trigger log rotation
 master-fifo = /var/run/uwsgi/master.fifo
