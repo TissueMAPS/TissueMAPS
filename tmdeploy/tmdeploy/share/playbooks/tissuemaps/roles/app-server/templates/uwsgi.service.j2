@@ -10,7 +10,7 @@ Environment="HOME={{ tm_home }}"
 ExecStart=/home/{{ tm_user }}/.tmaps/uwsgi.sh
 PIDFile=/var/run/uwsgi/tissuemaps.pid
 Restart=always
-KillSignal=SIGTERM + "die-on-term" UWSGI
+KillSignal=SIGTERM
 StandardError=syslog
 NotifyAccess=all
 
