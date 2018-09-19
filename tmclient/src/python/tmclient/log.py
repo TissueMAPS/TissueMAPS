@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016, 2018 University of Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ def configure_logging():
     Logging should only be configured once at the main entry point of the
     application!
     '''
-    fmt = '[%(process)6d/%(threadName)-12s] %(asctime)s | %(levelname)-8s | %(name)-40s | %(message)s'
+    fmt = '%(asctime)s | %(process)5d/%(threadName)-12s| %(levelname)-8s| %(name)32s@%(funcName)-36s| %(message)s',
     datefmt = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 

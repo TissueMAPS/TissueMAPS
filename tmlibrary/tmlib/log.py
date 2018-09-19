@@ -93,7 +93,7 @@ def configure_logging():
     Logging should only be configured once at the main entry point of the
     application!
     '''
-    fmt = '[%(process)6d/%(threadName)-12s] %(asctime)s | %(levelname)-8s | %(name)-40s | %(message)s'
+    fmt = '%(asctime)s | %(process)5d/%(threadName)-12s| %(levelname)-8s| %(name)32s@%(filename)-32s:%(lineno)-4d| %(message)s'
     datefmt = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(fmt=fmt, datefmt=datefmt)
 
