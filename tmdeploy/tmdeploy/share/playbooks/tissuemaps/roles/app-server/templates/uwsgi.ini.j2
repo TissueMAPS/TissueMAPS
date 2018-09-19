@@ -38,6 +38,9 @@ gevent = 100
 # where to store uWSGI "metrics", see:
 metrics-dir = /var/log/uwsgi/metrics
 
+# prepend timestamp to log lines
+log-encoder = format ${strftime:%%Y-%%m-%%d %%H:%%M:%%S}| ${msgnl}
+
 # log to file and force rotation after 30MB worth of logs (approx 1 month)
 logger = file:logfile=/var/log/uwsgi/tissuemaps.log,maxsize=30000000
 

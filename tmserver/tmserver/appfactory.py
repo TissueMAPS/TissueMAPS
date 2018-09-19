@@ -58,7 +58,7 @@ def create_app(verbosity=None):
 
     """
     log_formatter = logging.Formatter(
-        fmt='%(asctime)s | %(process)5d/%(threadName)-12s| %(levelname)-8s| %(message)s [from: %(name)s@%(pathname)s:%(lineno)d]',
+        fmt='%(process)5d/%(threadName)-12s| %(levelname)-8s| %(message)s [[%(name)s @ %(pathname)s:%(lineno)d]]',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     log_handler = logging.StreamHandler(stream=sys.stdout)
