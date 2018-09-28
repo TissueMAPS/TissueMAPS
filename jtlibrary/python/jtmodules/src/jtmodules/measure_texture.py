@@ -16,13 +16,17 @@ import collections
 import jtlib.features
 
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
 
 def main(extract_objects, assign_objects, intensity_image, aggregate,
-        measure_haralick=False, plot=False):
+         frequencies=[1,5,10],
+         measure_TAS=False,
+         measure_LBP=False, radii=[1,5,10],
+         measure_haralick=False, scales=[1,2],
+         plot=False):
     '''Measures texture features for objects in `extract_objects` based
     on grayscale values in `intensity_image` and assign them to `assign_objects`.
 
@@ -37,6 +41,18 @@ def main(extract_objects, assign_objects, intensity_image, aggregate,
     aggregate: bool, optional
         whether measurements should be aggregated in case `extract_objects`
         and `assign_objects` have a many-to-one relationship
+    frequencies: Set[int], optional
+        frequencies of the Gabor filters (default: ``{1, 5, 10}``)
+    measure_TAS: bool, optional
+        whether *Threshold Adjacency Statistics (TAS)* features should
+        be extracted
+    measure_LBP: bool, optional
+        whether *Local Binary Patterns (LBP)* should be extracted
+    radii: Set[int], optional
+        radii for defining pixel neighbourhood for Local Binary Patterns
+        (LBP) (default: ``{1, 5, 10}``)
+    scales: Set[int], optional
+        scales at which to compute the Haralick textures
     measure_haralick: bool, optional
         whether *Haralick* features should be extracted
     plot: bool, optional
@@ -51,8 +67,14 @@ def main(extract_objects, assign_objects, intensity_image, aggregate,
     :class:`jtlib.features.Texture`
     '''
     f = jtlib.features.Texture(
-        label_image=extract_objects, intensity_image=intensity_image,
-        compute_haralick=measure_haralick
+        label_image=extract_objects,
+        intensity_image=intensity_image,
+        frequencies=frequencies,
+        radius=radii,
+        scales=scales,
+        compute_haralick=measure_haralick,
+        compute_TAS=measure_TAS,
+        compute_LBP=measure_LBP
     )
 
     f.check_assignment(assign_objects, aggregate)

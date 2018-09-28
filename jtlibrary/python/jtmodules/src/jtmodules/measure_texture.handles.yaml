@@ -1,5 +1,5 @@
 ---
-version: 0.2.0
+version: 0.3.0
 
 input:
 
@@ -34,10 +34,35 @@ input:
         case "extract_objects" and "assign_objects" have a many-to-one
         relationship aggregation must be performed.
 
+    - name: frequencies
+      type: Sequence
+      value: [1, 5, 10]
+      help: List of frequencies for Gabor filters
+
+    - name: measure_TAS
+      type: Boolean
+      value: false
+      help: Should Threshold Adjacency Statistics be extracted?
+
+    - name: measure_LBP
+      type: Boolean
+      value: false
+      help: Should Local Binary Patterns be extracted?
+
+    - name: radii
+      type: Sequence
+      value: [1, 5, 10]
+      help: List of radii for Local Binary Patterns
+
     - name: measure_haralick
       type: Boolean
       value: false
       help: Should Haralick features be extracted?
+
+    - name: scales
+      type: Sequence
+      value: [1,2]
+      help: List of scales for the Haralick features
 
     - name: plot
       type: Plot
