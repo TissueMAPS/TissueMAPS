@@ -488,7 +488,7 @@ class Texture(Features):
             raise TypeError(
                 'Elements of argument "frequencies" must have type int.'
             )
-        if not all([isinstance(f, int) for s in self.scales]):
+        if not all([isinstance(s, int) for s in self.scales]):
             raise TypeError(
                 'Elements of argument "scales" must have type int.'
             )
