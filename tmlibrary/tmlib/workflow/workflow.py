@@ -710,11 +710,17 @@ class Workflow(SequentialTaskCollection, State):
         if index > len(self.tasks) - 1:
             stage = self._create_stage(stage_description)
             self.tasks.append(stage)
-        self.tasks[index].description = stage_description
-        if stage_description.mode == 'sequential':
-            self.tasks[index].update_step(0)
+        task = self.tasks[index]
+        task.description = stage_description
+        if isinstance(task, SequentialWorkflowStage):
+            task.update_step(0)
+        elif isinstance(task, ParallelWorkflowStage):
+            task._update_all_steps()
         else:
-            self.tasks[index]._update_all_steps()
+            raise AssertionError(
+                "Unhandled class %r of stage %s "
+                % (task.__class__, task)
+            )
 
     def next(self, done):
         '''Progresses to next stage.

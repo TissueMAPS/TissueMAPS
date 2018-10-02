@@ -97,7 +97,7 @@ class CanonicalWorkflowDependencies(WorkflowDependencies):
     #: steps of a stage should be submitted in parallel or sequentially
     STAGE_MODES = {
         'image_conversion': 'sequential',
-        'image_preprocessing': 'parallel',
+        'image_preprocessing': 'sequential',
         'pyramid_creation': 'sequential',
         'image_analysis': 'sequential'
     }
@@ -151,15 +151,6 @@ class MultiplexingWorkflowDependencies(CanonicalWorkflowDependencies):
     '''
 
     __type__ = 'multiplexing'
-
-    #: Dict[str, str]: mode for each workflow stage, i.e. whether setps of a stage
-    #: should be submitted in parallel or sequentially
-    STAGE_MODES = {
-        'image_conversion': 'sequential',
-        'image_preprocessing': 'sequential',
-        'pyramid_creation': 'sequential',
-        'image_analysis': 'sequential'
-    }
 
     #: Dict[str, List[str]]: names of steps within each stage
     STEPS_PER_STAGE = {
