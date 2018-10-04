@@ -47,6 +47,7 @@
     - "{{ jtlibrary_dir }}/python/jtlibrary"
     - "{{ jtlibrary_dir }}/python/jtmodules"
     - "{{ tmlibrary_dir }}"
+    - "{{ tmclient_dir }}"
 
 - name: Compile MEX files in JtLibrary
   tags:
