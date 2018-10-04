@@ -177,10 +177,6 @@ def resubmit_workflow(experiment_id):
     """
     logger.info('resubmit workflow for experiment %d', experiment_id)
     data = json.loads(request.data)
-    logger.debug(
-        "/experiments/%s/workflow/resubmit:"
-        " Received data:\n" "========\n" "%s" "\n========",
-        experiment_id, request.data)
     index = data.get('index')
     stage_name = data.get('stage_name')
     with tm.utils.ExperimentSession(experiment_id) as session:
@@ -192,10 +188,6 @@ def resubmit_workflow(experiment_id):
         else:
             logger.info('load workflow description')
             workflow_description = experiment.workflow_description
-    logger.debug(
-        "/experiments/%s/workflow/resubmit:"
-        " Using workflow description:\n" "========\n" "%r" "\n========",
-        experiment_id, workflow_description)
     if stage_name is None and index is None:
         index = 0
     elif index is not None:
