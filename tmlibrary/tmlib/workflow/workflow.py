@@ -610,10 +610,10 @@ class Workflow(SequentialTaskCollection, State):
             experiment = session.query(tmlib.models.ExperimentReference).\
                 get(self.experiment_id)
             self.name = experiment.name
-            super(Workflow, self).__init__(tasks=None, jobname=self.name)
-        self.update_description(description)
+        super(Workflow, self).__init__(tasks=[], jobname=self.name)
         self.parent_id = None
         self.persistent_id = idfactory.new(self)
+        self.update_description(description)
         self._current_task = 0
         self._add_stages()
         # Update the first stage and its first step to start the workflow
