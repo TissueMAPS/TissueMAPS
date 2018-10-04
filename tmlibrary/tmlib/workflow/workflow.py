@@ -648,14 +648,14 @@ class Workflow(SequentialTaskCollection, State):
                         steps_to_process.append(step)
                     else:
                         logger.debug(
-                            'ignore inactive step "%s" of workflow "%s"',
+                            'skipping inactive step "%s" of workflow "%s"',
                             step.name, self.name
                         )
                 stage.steps = steps_to_process
                 self.description.stages.append(stage)
             else:
                 logger.debug(
-                    'ignore inactive stage "%s" of workflow "%s"',
+                    'skipping inactive stage "%s" of workflow "%s"',
                     stage.name, self.name
                 )
 
