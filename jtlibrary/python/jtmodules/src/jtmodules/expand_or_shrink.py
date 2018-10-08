@@ -79,7 +79,7 @@ def main(image, n, plot=False):
         ]
         figure = plotting.create_figure(
             plots,
-            title='expanded image'
+            title=('expanded image' if n >= 0 else 'shrunk image')
         )
     else:
         figure = str()
