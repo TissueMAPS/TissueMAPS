@@ -599,6 +599,7 @@ class Texture(Features):
                             distance=scale
                         )
                     except ValueError:
+                        haralick_values = np.empty((13,),dtype=float)
                         haralick_values[:] = np.NAN
 
                     if not isinstance(haralick_values, np.ndarray):
