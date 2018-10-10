@@ -177,10 +177,6 @@ def resubmit_workflow(experiment_id):
     """
     logger.info('resubmit workflow for experiment %d', experiment_id)
     data = json.loads(request.data)
-    logger.debug(
-        "/experiments/%s/workflow/resubmit:"
-        " Received data:\n" "========\n" "%s" "\n========",
-        experiment_id, request.data)
     index = data.get('index')
     stage_name = data.get('stage_name')
     with tm.utils.ExperimentSession(experiment_id) as session:
@@ -192,10 +188,6 @@ def resubmit_workflow(experiment_id):
         else:
             logger.info('load workflow description')
             workflow_description = experiment.workflow_description
-    logger.debug(
-        "/experiments/%s/workflow/resubmit:"
-        " Using workflow description:\n" "========\n" "%r" "\n========",
-        experiment_id, workflow_description)
     if stage_name is None and index is None:
         index = 0
     elif index is not None:
@@ -217,6 +209,22 @@ def resubmit_workflow(experiment_id):
             'request body: "index", "stage_name"'
         )
     workflow = gc3pie.retrieve_most_recent_task(experiment_id, 'workflow')
+    # sanity check -- the job daemon will report the same error, but
+    # at that point it'd be too late to report to HTTP API clients
+    total_stages = len(workflow.tasks)
+    if index <= total_stages:
+        if (index > 0 and not workflow.tasks[index-1].is_terminated):
+            raise MalformedRequestError(
+                'Cannot resubmit workflow from stage %d:'
+                ' the preceding stage (task ID %s)'
+                ' has not completed running yet.'
+                % (index, workflow.tasks[index-1].persistent_id)
+            )
+    else:
+        raise MalformedRequestError(
+            'Workflow has only %d stages, cannot resubmit from stage %d'
+            % (total_stages, index)
+        )
     workflow.update_description(workflow_description)
     workflow.update_stage(index)
     gc3pie.resubmit_task(workflow, index)

@@ -1,4 +1,4 @@
-// Copyright 2016 Markus D. Herrmann, University of Zurich and Robin Hafen
+// Copyright (C) 2016-2018 University of Zurich.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -65,14 +65,14 @@ class Workflow extends JobCollection {
         });
     }
 
-    getDescription(index: number): WorkflowDescription {
+    getDescription(upto: number): WorkflowDescription {
         return {
             type: this.type,
             stages: this.stages.map((stage, idx) => {
                 if (idx > 0 && stage.name != 'upload') {
                     // skip "upload" stage
                     var stageDescription = stage.getDescription();
-                    if (idx <= index) {
+                    if (idx <= upto) {
                         stageDescription.active = true;
                     } else {
                         stageDescription.active = false;

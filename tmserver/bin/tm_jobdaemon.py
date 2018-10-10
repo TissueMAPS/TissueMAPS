@@ -48,7 +48,79 @@ class DbProcessingDaemon(SessionBasedDaemon):
 
     # setting `version` is required to instanciate the
     # `SessionBasedDaemon` class
-    version = '1.3'
+    version = '1.4.0'
+
+    class Commands(SessionBasedDaemon.Commands):
+        """
+        Override the `redo` command with a modified implementation.
+        """
+
+        def redo(self, jobid=None, from_stage=None):
+            """
+            Usage: redo JOBID [STAGE]
+
+            Resubmit the task identified by JOBID.  If task is a
+            `SequentialTaskCollection`, then resubmit it from the
+            given stage (identified by its integer index in the
+            collection; by default, sequential task collections resume
+            from the very first task).
+
+            Only tasks in TERMINATED state can be resubmitted;
+            if necessary kill the task first.
+
+            The load cache is cleared before loading the supplied task,
+            so we are guaranteed to load an up-to-date copy of it
+            from the DB.
+            """
+            if jobid is None:
+                return "Usage: redo JOBID [STAGE]"
+            if from_stage is None:
+                args = []
+                gc3libs.log.info("Daemon requested to redo job %s", jobid)
+            else:
+                try:
+                    args = [int(from_stage)]
+                except (TypeError, ValueError) as err:
+                    return (
+                        "ERROR: STAGE argument must be a non-negative integer,"
+                        " got {0!r} instead.".format(from_stage))
+                gc3libs.log.info(
+                    "Daemon requested to redo job %s from stage %s",
+                    jobid, from_stage)
+
+            # ensure we re-read task from the DB to pick up updates
+            try:
+                task = self._parent._controller.find_task_by_id(jobid)
+                gc3libs.log.debug(
+                    "Daemon unloading job %s (will re-load soon)", jobid)
+                self._parent._controller.remove(task)
+            except KeyError:
+                pass
+
+            try:
+                # FIXME: Invalidating the whole cache is the "nuclear
+                # option" and also possibly the *wrong* thing to do if
+                # the daemon is still running jobs, since it can load
+                # additional (and different) copies of tasks that are
+                # already in memory.  However, in the case of
+                # *single-user* TM, we know that only one workflow at
+                # a time will be running, so we're safe.  This needs
+                # to be revisited (and fixed!) as part of the effort
+                # to get TM safe for concurrent multi-user access.
+                self._parent.session.store.invalidate_cache()
+                task = self._parent.session.load(jobid, add=True)
+            except Exception as err:
+                return (
+                    "ERROR: Could not load task `%s` from session: %s"
+                    % (jobid, err))
+
+            try:
+                self._parent._controller.redo(task, *args)
+                self._parent.session.save(task)
+                return ("Task `%s` successfully resubmitted" % jobid)
+            except Exception as err:
+                return ("ERROR: could not resubmit task `%s`: %s" % (jobid, err))
+
 
     # set up processing of positional arguments on the command line
     def setup_args(self):

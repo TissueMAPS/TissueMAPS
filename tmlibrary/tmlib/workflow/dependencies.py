@@ -17,7 +17,7 @@ import collections
 from abc import ABCMeta
 
 
-_workflow_register = dict()
+_workflow_registry = {}
 
 
 class _WorkflowDependenciesMeta(ABCMeta):
@@ -51,7 +51,7 @@ class _WorkflowDependenciesMeta(ABCMeta):
                 )
             # TODO: check intra_stage_dependencies inter_stage_dependencies
             # based on __dependencies__
-        _workflow_register[getattr(self, '__type__')] = self
+        _workflow_registry[getattr(self, '__type__')] = self
 
 
 class WorkflowDependencies(object):
@@ -93,11 +93,11 @@ class CanonicalWorkflowDependencies(WorkflowDependencies):
         'pyramid_creation', 'image_analysis'
     ]
 
-    #: Dict[str, str]: mode for each workflow stage, i.e. whether setps of a stage
-    #: should be submitted in parallel or sequentially
+    #: Dict[str, str]: mode for each workflow stage, i.e. whether
+    #: steps of a stage should be submitted in parallel or sequentially
     STAGE_MODES = {
         'image_conversion': 'sequential',
-        'image_preprocessing': 'parallel',
+        'image_preprocessing': 'sequential',
         'pyramid_creation': 'sequential',
         'image_analysis': 'sequential'
     }
@@ -117,7 +117,7 @@ class CanonicalWorkflowDependencies(WorkflowDependencies):
     #: collections.OrderedDict[str, Set[str]]: dependencies between workflow stages
     INTER_STAGE_DEPENDENCIES = {
         'image_conversion': {
-
+            # no dependencies
         },
         'image_preprocessing': {
             'image_conversion'
@@ -133,7 +133,7 @@ class CanonicalWorkflowDependencies(WorkflowDependencies):
     #: Dict[str, Set[str]: dependencies between workflow steps within one stage
     INTRA_STAGE_DEPENDENCIES = {
         'metaextract': {
-
+            # no dependencies
         },
         'metaconfig': {
             'metaextract'
@@ -151,15 +151,6 @@ class MultiplexingWorkflowDependencies(CanonicalWorkflowDependencies):
     '''
 
     __type__ = 'multiplexing'
-
-    #: Dict[str, str]: mode for each workflow stage, i.e. whether setps of a stage
-    #: should be submitted in parallel or sequentially
-    STAGE_MODES = {
-        'image_conversion': 'sequential',
-        'image_preprocessing': 'sequential',
-        'pyramid_creation': 'sequential',
-        'image_analysis': 'sequential'
-    }
 
     #: Dict[str, List[str]]: names of steps within each stage
     STEPS_PER_STAGE = {
@@ -187,7 +178,7 @@ def get_workflow_type_information():
     --------
     :func:`tmlib.workflow.register_workflow_type`
     '''
-    return set(_workflow_register.keys())
+    return set(_workflow_registry.keys())
 
 
 def get_workflow_dependencies(name):
@@ -203,6 +194,4 @@ def get_workflow_dependencies(name):
     -------
     classobj
     '''
-    return _workflow_register[name]
-
-
+    return _workflow_registry[name]

@@ -25,6 +25,7 @@ tm_src_dir: "{{ tm_home }}/TissueMAPS"
 
 # short-hand paths to TM components
 jtlibrary_dir: "{{ tm_src_dir }}/jtlibrary"
+tmclient_dir: "{{ tm_src_dir }}/tmclient"
 tmlibrary_dir: "{{ tm_src_dir }}/tmlibrary"
 tmserver_dir: "{{ tm_src_dir }}/tmserver"
 tmui_dir: "{{ tm_src_dir }}/tmui"

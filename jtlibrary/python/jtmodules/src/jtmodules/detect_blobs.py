@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, Scott Berry, University of Zurich
+# Copyright (C) 2016 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.

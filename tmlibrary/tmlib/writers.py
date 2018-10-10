@@ -92,7 +92,7 @@ class TextWriter(Writer):
         data: str
             text that should be written to the file
         '''
-        logger.debug('write data to file: %s' % self.filename)
+        logger.debug('write text data to file: %s' % self.filename)
         self._stream.write(data)
 
 
@@ -112,7 +112,7 @@ class XmlWriter(Writer):
         data: lxml.etree._Element
             xml element that should be written to the file
         '''
-        logger.debug('write data to file: %s' % self.filename)
+        logger.debug('write XML data to file: %s' % self.filename)
         self._stream.write(lxml.etree.tostring(data))
 
 
@@ -136,7 +136,7 @@ class JsonWriter(Writer):
         ----
         `filename` will be truncated in case it already exists.
         '''
-        logger.debug('write data to file: %s' % self.filename)
+        logger.debug('write JSON data to file: %s' % self.filename)
         json.dump(data, self._stream, sort_keys=True)
 
 
@@ -160,7 +160,7 @@ class YamlWriter(Writer):
         ----
         `filename` will be truncated in case it already exists.
         '''
-        logger.debug('write data to file: %s' % self.filename)
+        logger.debug('write YAML data to file: %s' % self.filename)
         self._stream.write(
             ruamel.yaml.dump(
                 data, Dumper=ruamel.yaml.RoundTripDumper, explicit_start=True
@@ -198,7 +198,7 @@ class ImageWriter(Writer):
         ValueError
             when `data` has more than 2 dimensions
         '''
-        logger.debug('write data to file: %s' % self.filename)
+        logger.debug('write image data to file: %s' % self.filename)
         if not isinstance(data, np.ndarray):
             raise TypeError('Data must have type numpy.ndarray.')
         if data.ndim > 2:
@@ -209,7 +209,7 @@ class ImageWriter(Writer):
 
 class DataTableWriter(Writer):
 
-    '''Class for writing data to a HDF5 file using the 
+    '''Class for writing data to a HDF5 file using the
     `pytables <http://www.pytables.org/>`_ library.'''
 
     def __init__(self, filename, truncate=False):
@@ -658,7 +658,7 @@ class DatasetWriter(Writer):
 
         Note
         ----
-        Creates the dataset in case it doesn't yet exist. 
+        Creates the dataset in case it doesn't yet exist.
         '''
         data = np.array(data)
         if not self.exists(path):
@@ -711,7 +711,7 @@ class DatasetWriter(Writer):
         data = np.array(data)
         if not self.exists(path):
             logger.debug('create dataset "%s"', path)
-            # preallocate an empty dataset that can be extended along the 
+            # preallocate an empty dataset that can be extended along the
             # vertical axis
             if len(data.shape) > 1:
                 self.create(
@@ -771,7 +771,7 @@ class DatasetWriter(Writer):
         data = np.array(data)
         if not self.exists(path):
             logger.debug('create dataset "%s"', path)
-            # preallocate an empty dataset that can be extended along the 
+            # preallocate an empty dataset that can be extended along the
             # horizontal axis
             if len(data.shape) > 1:
                 self.create(
