@@ -1,0 +1,39 @@
+---
+version: 0.1.0
+
+input:
+
+  - name: intensity_image
+    type: IntensityImage
+    key:
+    help: >
+      Grayscale image to be enlarged
+
+  - name: border_size
+    type: Numeric
+    value: 0
+    help: >
+      size of border (default: 0)
+
+  - name: plot
+    type: Plot
+    value: false
+    help: Should a figure be created?
+
+output:
+
+  - name: enlarged_image
+    type: IntensityImage
+    key: image.enlarged_image
+    help: Enlarged image.
+
+  - name: figure
+    type: Figure
+    help: >
+      Rescaled image.
+
+
+
+
+
+
