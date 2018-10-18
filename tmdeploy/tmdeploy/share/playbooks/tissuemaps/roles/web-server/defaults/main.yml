@@ -27,5 +27,5 @@ public_host_name: "{{ ansible_host }}"
 
 enable_https: no
 
-web_user: nginx
+web_user: "{% if ansible_os_family == 'Debian' %}www-data{% else %}nginx{% endif %}"
 web_group: "{{ web_user }}"
