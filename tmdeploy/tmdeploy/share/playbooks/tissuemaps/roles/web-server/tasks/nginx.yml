@@ -18,9 +18,9 @@
   template:
     src: nginx.conf.j2
     dest: /etc/nginx/nginx.conf
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
-    mode: 0700
+    owner: root
+    group: root
+    mode: 0644
   tags:
     - web-server
     - nginx
@@ -29,9 +29,9 @@
   template:
     src: tissuemaps.conf.http.j2
     dest: /etc/nginx/conf.d/tissuemaps.conf
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
-    mode: 0700
+    owner: root
+    group: root
+    mode: 0644
   when: not enable_https
   tags:
     - web-server
@@ -41,9 +41,9 @@
   template:
     src: tissuemaps.conf.https.j2
     dest: /etc/nginx/conf.d/tissuemaps.conf
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
-    mode: 0700
+    owner: root
+    group: root
+    mode: 0644
   when: enable_https
   tags:
     - web-server
@@ -56,35 +56,23 @@
     recurse: yes
     owner: "{{ web_user }}"
     group: "{{ web_group }}"
-    mode: 0700
+    mode: 0755
   tags:
     - web-server
     - nginx
 
-- name: Create NGINX site specific log files with correct permissions
+- name: Create NGINX log files with correct permissions
   file:
     path: /var/log/nginx/{{ item }}
     state: touch
     owner: "{{ web_user }}"
     group: "{{ web_group }}"
-    mode: 0600
-  with_items:
-    - tissuemaps-access.log
-    - tissuemaps-error.log
-  tags:
-    - web-server
-    - nginx
-
-- name: Create NGINX default log files with correct permissions
-  file:
-    path: /var/log/nginx/{{ item }}
-    state: touch
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
-    mode: 0600
+    mode: 0640
   with_items:
     - access.log
     - error.log
+    - tissuemaps-access.log
+    - tissuemaps-error.log
   tags:
     - web-server
     - nginx
@@ -109,8 +97,8 @@
     content: |
       d /var/run/nginx 0750 {{ web_user }} {{ web_group }} -
     dest: /etc/tmpfiles.d/nginx.conf
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: root
+    group: root
   when: ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - web-server
@@ -120,28 +108,10 @@
   template:
     src: nginx.service.j2
     dest: /etc/systemd/system/nginx.service
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
+    owner: root
+    group: root
   when:
     - ansible_env.ANSIBLE_CONTAINER is undefined
-  tags:
-    - web-server
-    - nginx
-
-# We may want to run nginx as a non-root user, e.g. within a container.
-- name: Give user permission to NGINX directories
-  file:
-    path: "{{ item }}"
-    state: directory
-    recurse: yes
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
-  with_items:
-    - /var/lib/nginx
-    - /var/log/nginx
-    - /var/run/nginx
-    - /usr/share/nginx
-    - /etc/nginx
   tags:
     - web-server
     - nginx
