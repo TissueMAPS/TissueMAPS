@@ -39,7 +39,7 @@ from tmlib.models.base import (
     ExperimentModel, DistributedExperimentModel, DateMixIn, IdMixIn
 )
 from tmlib.models.feature import Feature, FeatureValues
-from tmlib.models.types import ST_SimplifyPreserveTopology
+from tmlib.models.types import ST_GeomFromText, ST_SimplifyPreserveTopology
 from tmlib.models.site import Site
 from tmlib.utils import autocreate_directory_property, create_partitions
 
@@ -919,10 +919,14 @@ class SegmentationLayer(ExperimentModel, IdMixIn):
         maxzoom = self.mapobject_type.experiment.pyramid_depth - 1
         minx, miny, maxx, maxy = self.get_tile_bounding_box(x, y, z, maxzoom)
         tile = (
-            'POLYGON(('
-                '{maxx} {maxy}, {minx} {maxy}, {minx} {miny}, {maxx} {miny}, '
-                '{maxx} {maxy}'
-            '))'.format(minx=minx, maxx=maxx, miny=miny, maxy=maxy)
+            "POLYGON(("
+                "{maxx} {maxy}, "
+                "{minx} {maxy}, "
+                "{minx} {miny}, "
+                "{maxx} {miny}, "
+                "{maxx} {maxy}"
+            "))"
+            .format(minx=minx, maxx=maxx, miny=miny, maxy=maxy)
         )
 
         do_simplify = self.centroid_thresh <= z < self.polygon_thresh
@@ -938,7 +942,7 @@ class SegmentationLayer(ExperimentModel, IdMixIn):
             )
             outlines = query.filter(
                 MapobjectSegmentation.segmentation_layer_id == self.id,
-                MapobjectSegmentation.geom_centroid.ST_Intersects(tile)
+                MapobjectSegmentation.geom_centroid.ST_Intersects(ST_GeomFromText(tile))
             ).\
             all()
         else:
@@ -969,4 +973,3 @@ class SegmentationLayer(ExperimentModel, IdMixIn):
             '<%s(id=%d, mapobject_type_id=%r)>'
             % (self.__class__.__name__, self.id, self.mapobject_type_id)
         )
-
