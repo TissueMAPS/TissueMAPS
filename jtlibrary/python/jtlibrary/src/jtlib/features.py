@@ -360,7 +360,7 @@ class Morphology(Features):
     @property
     def _feature_names(self):
         names = [
-            'Area', 'Eccentricity', 'Convexity', 'Circularity', 'Perimeter',
+            'Local_Centroid_x', 'Local_Centroid_y', 'Area', 'Eccentricity', 'Convexity', 'Circularity', 'Perimeter',
             'Elongation'
         ]
         if self.compute_zernike:
@@ -380,8 +380,11 @@ class Morphology(Features):
         '''
         logger.info('extract morphology features')
         features = list()
+        cm = mh.center_of_mass(img=self.label_image > 0,labels=self.label_image)
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
+            local_centroid_x = cm[obj][1]
+            local_centroid_y = cm[obj][0]
             area = np.float64(np.count_nonzero(mask))
             perimeter = mh.labeled.perimeter(mask)
             if perimeter == 0:
@@ -398,7 +401,7 @@ class Morphology(Features):
             else:
                 elongation = (major_axis - minor_axis) / major_axis
             values = [
-                area, eccentricity, convexity, circularity, perimeter,
+                local_centroid_x, local_centroid_y, area, eccentricity, convexity, circularity, perimeter,
                 elongation
             ]
             if self.compute_zernike:
