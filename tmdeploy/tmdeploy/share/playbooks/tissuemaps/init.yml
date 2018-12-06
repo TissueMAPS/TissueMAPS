@@ -20,6 +20,7 @@
 # Ansible-container.
 - name: Refresh tmpfiles.d
   hosts: all
+  gather_facts: yes
   any_errors_fatal: yes
   tasks:
     - name: Create directories defined in tmpfiles.d
@@ -32,6 +33,7 @@
 - name: Initialize database master server
   hosts:
     - tissuemaps_db_master
+  gather_facts: yes
   any_errors_fatal: yes
   tasks:
     - name: Enable and start postgresql service
@@ -44,6 +46,7 @@
 - name: Initialize database worker servers
   hosts:
     - tissuemaps_db_worker
+  gather_facts: yes
   any_errors_fatal: yes
   tasks:
     - name: Enable and start postgresql service
@@ -56,6 +59,7 @@
 - name: Initialize web and application servers
   hosts:
     - tissuemaps_server
+  gather_facts: yes
   tasks:
     - name: Enable nginx service
       systemd:
@@ -69,4 +73,3 @@
         state: restarted
         daemon_reload: yes
         enabled: yes
-

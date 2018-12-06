@@ -17,6 +17,7 @@
 ---
 - name: Configure TissueMAPS application as database client
   hosts: tissuemaps_server
+  gather_facts: yes
   vars:
     db_host_master: "{{ hostvars[groups['tissuemaps_db_master'][0]].ansible_host }}"
     db_hosts_workers: "{{ groups['tissuemaps_db_worker']|map('extract', hostvars, ['ansible_host'])|list }}"
@@ -27,6 +28,7 @@
 
 - name: Start TissueMAPS web and application servers
   hosts: tissuemaps_server
+  gather_facts: yes
   any_errors_fatal: yes
   tasks:
     - name: Start nginx service
@@ -37,4 +39,3 @@
       systemd:
         name: uwsgi
         state: restarted
-

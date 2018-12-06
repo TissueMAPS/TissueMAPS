@@ -17,6 +17,7 @@
 ---
 - name: Install web and application servers
   hosts: tissuemaps_server
+  gather_facts: yes
   vars:
     app_host: unix                                                  # 127.0.0.1
     app_port: /var/run/uwsgi/tissuemaps.sock                        # 5002
