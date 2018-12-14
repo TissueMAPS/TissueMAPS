@@ -12,14 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 angular.module('jtui.project')
-.controller('ProjectCtrl', ['$scope', '$state', '$stateParams', '$interval', 'project', 'channels', 'projectService', 'runnerService', '$uibModal', 'hotkeys',
-            function ($scope, $state, $stateParams, $interval, project, channels, projectService, runnerService, $uibModal, hotkeys) {
+.controller('ProjectCtrl', ['$scope', '$state', '$stateParams', '$interval', 'project', 'channels', 'objects', 'projectService', 'runnerService', '$uibModal', 'hotkeys',
+            function ($scope, $state, $stateParams, $interval, project, channels, objects, projectService, runnerService, $uibModal, hotkeys) {
 
     // console.log('project: ', project)
     $scope.project = project;
 
     // console.log('channels: ', channels)
     $scope.channels = channels;
+
+    // console.log('objects: ', objects)
+    $scope.objects = objects;
 
     $scope.project.viewProps = {
         selected: true,
@@ -242,7 +245,25 @@ angular.module('jtui.project')
         return availableChannels;
     };
 
-    $scope.getSelectableObjectNames = function(index) {
+    $scope.getSelectableInputObjectNames = function(index) {
+        availableObjects = [];
+        selectedObjects = [];
+        for (var i in $scope.project.pipe.description.input.objects) {
+            if (i != index) {
+                var objectName = $scope.project.pipe.description.input.objects[i].name;
+                selectedObjects.push(objectName);
+            }
+        }
+        for (var i in $scope.objects) {
+            var objectName = $scope.objects[i];
+            if (selectedObjects.indexOf(objectName) == -1) {
+                availableObjects.push(objectName);
+            }
+        }
+        return availableObjects;
+    };
+
+    $scope.getSelectableOutputObjectNames = function(index) {
         var availableObjects = [];
         var selectedObjects = [];
         for (var i in $scope.project.pipe.description.output.objects) {
@@ -510,7 +531,20 @@ angular.module('jtui.project')
         // console.log('removed last channel')
     };
 
-    $scope.addObject = function() {
+    $scope.addInputObject = function() {
+        var newObject = {
+            name: ''
+        };
+        $scope.project.pipe.description.input.objects.push(newObject);
+        // console.log('added new channel')
+    };
+
+    $scope.removeInputObject = function() {
+        $scope.project.pipe.description.input.objects.pop();
+        // console.log('removed last channel')
+    };
+
+    $scope.addOutputObject = function() {
         var newObject = {
             name: '',
             as_polygons: true
@@ -519,7 +553,7 @@ angular.module('jtui.project')
         // console.log('added new object')
     };
 
-    $scope.removeObject = function() {
+    $scope.removeOutputObject = function() {
         $scope.project.pipe.description.output.objects.pop();
         // console.log('removed last object')
     };

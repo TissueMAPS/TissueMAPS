@@ -97,6 +97,12 @@ angular.module('jtui.handles')
                 availableArguments.push(channels[i].name);
             }
         }
+        if (type === 'SegmentedObjects') {
+            var objects = $scope.project.pipe.description.input.objects;
+            for (var i in objects) {
+                availableArguments.push(objects[i].name);
+            }
+        }
         return availableArguments;
     }
 
@@ -121,7 +127,15 @@ angular.module('jtui.handles')
             }
         );
 
-        return identicalOutputs.length > 1 || isChannel;
+        // Objects (pipline inputs) have to be considered as well, because
+        // they can also be piped.
+        var isObject = $scope.project.pipe.description.input.objects.some(
+            function(object) {
+                return object.name == output_arg.key
+            }
+        );
+
+        return identicalOutputs.length > 1 || isChannel || isObject;
 
     }
 

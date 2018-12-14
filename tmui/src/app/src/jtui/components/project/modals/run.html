@@ -11,7 +11,7 @@
 <div class="modal-body">
 
   <p>
-    Enter job IDs (comma separated list, e.g. "1, 2, 3"):
+    Enter job IDs (comma separated list of integers >= 1, e.g. "1, 2, 3"):
   </p>
 
   <div>
@@ -21,6 +21,9 @@
 
   <uib-alert ng-show="$parent.subJobId.length > 10" type="danger">
   Too many jobs selected! Restricted to maximally 10 jobs.
+  </uib-alert>
+  <uib-alert ng-show="containsNegativeValue($parent.subJobId)" type="danger">
+  Job ID out of range! ID has to be >= 1.
   </uib-alert>
 
   <!-- <i class="fa fa-random"></i> -->

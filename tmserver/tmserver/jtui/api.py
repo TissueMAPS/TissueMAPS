@@ -154,6 +154,19 @@ def get_available_channels(experiment_id):
         return jsonify(channels=[c.name for c in channels])
 
 
+@jtui.route('/experiments/<experiment_id>/available_object_types')
+@jwt_required()
+@decode_query_ids()
+def get_available_object_types(experiment_id):
+    '''Lists all object types for a given experiment.'''
+    logger.info(
+        'get list of available object types for experiment %d', experiment_id
+    )
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        object_types = session.query(tm.MapobjectType)
+        return jsonify(object_types=[ot.name for ot in object_types])
+
+
 @jtui.route('/module_source_code')
 @assert_query_params('module_name')
 @jwt_required()
@@ -414,16 +427,29 @@ def run_jobs(experiment_id):
     channel_names = [
         ch.name for ch in jt.project.pipe.description.input.channels
     ]
+    object_names = [
+        ob.name for ob in jt.project.pipe.description.input.objects
+    ]
     job_descriptions = list()
     with tm.utils.ExperimentSession(experiment_id) as session:
         sites = session.query(tm.Site.id).\
             order_by(tm.Site.id).\
             all()
         for j in job_ids:
-            site_id = sites[j].id
-            image_file_count = session.query(tm.ChannelImageFile.id).\
+            site_id = sites[j-1].id  # user-input is expected between [1..]
+            image_file_count = 0
+            image_file_count += session.query(tm.ChannelImageFile.id).\
                 join(tm.Channel).\
                 filter(tm.Channel.name.in_(channel_names)).\
+                filter(tm.ChannelImageFile.site_id == site_id).\
+                count()
+            image_file_count += session.query(tm.ChannelImageFile.id).\
+                join(tm.Site).\
+                join(tm.Well).\
+                join(tm.Plate).\
+                join(tm.Experiment).\
+                join(tm.MapobjectType).\
+                filter(tm.MapobjectType.name.in_(object_names)).\
                 filter(tm.ChannelImageFile.site_id == site_id).\
                 count()
             if image_file_count == 0:

@@ -326,6 +326,14 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
                 mapobject_type = session.query(tm.MapobjectType).\
                     filter_by(name=obj.name).\
                     one()
+                records = session.query(tm.ChannelImageFile.tpoint).\
+                    filter_by(site_id=site.id).\
+                    distinct()
+                tpoints = [r.tpoint for r in records]
+                records = session.query(tm.ChannelImageFile.zplane).\
+                    filter_by(site_id=site.id).\
+                    distinct()
+                zplanes = [r.zplane for r in records]
                 polygons = list()
                 for t in sorted(tpoints):
                     zpolys = list()

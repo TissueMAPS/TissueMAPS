@@ -15,6 +15,21 @@ angular.module('jtui.project')
 .controller('RunCtrl', ['$scope', '$uibModalInstance',
     function($scope, $uibModalInstance) {
 
+    $scope.containsNegativeValue = function(arr) {
+        if (arr == null) {
+            return false
+        }
+        var foundNegativeValue = false;
+        for(var i = 0; i < arr.length; i++) {
+            var value = parseInt(arr[i], 10);
+            if (isNaN(value) || value < 0) {
+                foundNegativeValue = true;
+                break;
+            }
+        }
+        return foundNegativeValue;
+    };
+
     $scope.close = function(result) {
         // close, but give 500ms for bootstrap to animate
         close(result, 500);
