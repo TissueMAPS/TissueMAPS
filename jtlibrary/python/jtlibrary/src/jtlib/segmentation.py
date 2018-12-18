@@ -242,7 +242,10 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     '''
 
     logger.info('separate clumped objects')
-    label_image, n_objects = mh.label(clumps_image)
+    
+    # All the labeling is done with 8-connectivity (not the default 4 of mahotas)
+    se = np.ones((3,3), np.bool)
+    label_image, n_objects = mh.label(clumps_image, Bc = se)
     if n_objects == 0:
         logger.debug('no objects')
         return label_image
@@ -253,7 +256,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     while True:
         logger.info('cutting pass #%d', cutting_pass)
         cutting_pass += 1
-        label_image = mh.label(label_image > 0)[0]
+        label_image = mh.label(label_image > 0, Bc = se)[0]
 
         f = Morphology(label_image)
         values = f.extract()
@@ -315,7 +318,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
             se = np.ones((3,3), np.bool)
             line = mh.labeled.borders(regions, Bc=se)
             line[~obj_image] = 0
-            line = mh.morph.dilate(line)
+            line = mh.morph.dilate(line, Bc=se)
 
             # Ensure that cut is reasonable given user-defined criteria
             test_cut_image = obj_image.copy()
@@ -342,4 +345,4 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
                 logger.debug('don\'t cut object #%d', oid)
                 mh.labeled.remove_regions(label_image, oid, inplace=True)
 
-    return mh.label(separated_image)[0]
+    return mh.label(separated_image, Bc = se)[0]
