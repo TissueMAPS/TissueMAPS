@@ -34,7 +34,7 @@ Output = collections.namedtuple('Output', ['separated_mask', 'figure'])
 
 def main(mask, intensity_image, min_area, max_area,
         min_cut_area, max_circularity, max_convexity,
-        plot=False, selection_test_mode=False, 
+        plot=False, selection_test_mode=False,
         selection_test_show_remaining=False):
     '''Detects clumps in `mask` given criteria provided by the user
     and cuts them along the borders of watershed regions, which are determined
@@ -67,9 +67,9 @@ def main(mask, intensity_image, min_area, max_area,
         the selected "clumps" based on the criteria provided by the user
     selection_test_show_remaining: bool, optional
         whether the selection test plot should be made on the remaining image
-        after the cuts were performed (helps to see why some objects were not 
+        after the cuts were performed (helps to see why some objects were not
         cut, especially if there are complicated clumps that require multiple
-        cuts). Defaults to false, thus showing the values in the original image    
+        cuts). Defaults to false, thus showing the values in the original image
 
     Returns
     -------
@@ -132,8 +132,11 @@ def main(mask, intensity_image, min_area, max_area,
             figure = plotting.create_figure(
                 plots,
                 title=(
-                    'Selection criteria: "area" (top left), "convexity" (top-right) '
-                    'and "circularity" (bottom-left). Cuts made (bottom right)'
+                    'Selection criteria:'
+                    ' "area" (top left),'
+                    ' "convexity" (top-right),'
+                    ' and "circularity" (bottom-left);'
+                    ' cuts made (bottom right).'
                 )
             )
         else:
