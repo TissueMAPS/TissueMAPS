@@ -1,4 +1,4 @@
-# Copyright (C) 2016 University of Zurich.
+# Copyright (C) 2016-2018 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -83,13 +83,15 @@ def main(mask, intensity_image, min_area, max_area,
 
     if plot:
         from jtlib import plotting
-        cut_mask = (mask > 0) - (separated_mask > 0)
+
         clumps_mask = np.zeros(mask.shape, bool)
         initial_objects_label_image, n_initial_objects = mh.label(mask > 0)
-        for i in range(1, n_initial_objects+1):
-            index = initial_objects_label_image == i
-            if len(np.unique(separated_mask[index])) > 1:
-                clumps_mask[index] = True
+        for n in range(1, n_initial_objects+1):
+            obj = (initial_objects_label_image == n)
+            if len(np.unique(separated_mask[obj])) > 1:
+                clumps_mask[obj] = True
+
+        cut_mask = (mask > 0) & (separated_mask == 0)
         cutlines = mh.morph.dilate(mh.labeled.bwperim(cut_mask))
 
         if selection_test_mode:
