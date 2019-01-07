@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016, 2018  University of Zurich
+# Copyright (C) 2016, 2018, 2019  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ matlab_version: '2016b'
 
 # NOTE: Make sure this matches the PostgreSQL version provided by Citus
 # (see ../database-server-common/defaults/main.yml)
-postgresql_version: '10'
+postgresql_version: '11'
 
 storage_directory: /storage
 
