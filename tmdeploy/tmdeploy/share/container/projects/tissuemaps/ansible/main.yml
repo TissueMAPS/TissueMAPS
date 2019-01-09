@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,8 +17,7 @@
 - name: Setup web container
   hosts: web
   vars:
-    web_user: tissuemaps
-    web_port: 8002
+    web_port: 80
     app_host: app
     app_port: 5002
     uwsgi_timeout: 300
