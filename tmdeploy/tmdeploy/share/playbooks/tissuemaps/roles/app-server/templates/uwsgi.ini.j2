@@ -31,7 +31,7 @@ offload-threads = {{ uwsgi_offload_threads|default("%k") }}
 
 ## TM application configuration
 module = tmserver.wsgi:app
-gevent = 100
+gevent = 10
 
 
 ## logging configuration
