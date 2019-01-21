@@ -37,7 +37,8 @@ gevent = 10
 ## logging configuration
 
 # log requests and stderr to file
-logger = file:logfile=/var/log/uwsgi/tissuemaps.log
+logger = file:/var/log/uwsgi/tissuemaps.log
+req-logger = file:/var/log/uwsgi/access.log
 
 # re-open log if modified
 touch-logreopen = /var/log/uwsgi/tissuemaps.log
