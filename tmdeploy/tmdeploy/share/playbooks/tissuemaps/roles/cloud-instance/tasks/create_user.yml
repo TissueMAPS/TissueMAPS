@@ -22,7 +22,6 @@
   with_items:
     - "{{ tm_group }}"
     - "{{ db_group }}"
-    - "{{ web_group }}"
 
 - name: Add `tissuemaps` user
   become: yes

@@ -31,11 +31,15 @@
   gather_facts: yes
   any_errors_fatal: yes
   tasks:
-    - name: Start nginx service
+    - name: Start web server socket at boot
       systemd:
-        name: nginx
-        state: restarted
-    - name: Start uwsgi service
+        name: uwsgi.socket
+        state: started
+        daemon_reload: yes
+        enabled: yes
+    - name: Enable uWSGI at boot
       systemd:
         name: uwsgi
         state: restarted
+        daemon_reload: yes
+        enabled: yes

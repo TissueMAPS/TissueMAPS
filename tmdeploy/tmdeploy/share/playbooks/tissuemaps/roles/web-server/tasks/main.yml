@@ -17,15 +17,3 @@
 - include: install-{{ ansible_os_family }}.yml
 
 - include: tissuemaps.yml
-
-# - include: ssl.yml
-#   when: enable_https
-
-- include: nginx.yml
-
-- name: Stop nginx web server
-  command: nginx -s stop
-  ignore_errors: True
-  tags:
-    - web-server
-    - nginx

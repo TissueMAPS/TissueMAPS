@@ -1,0 +1,11 @@
+[Unit]
+Description=Web serving socket for TissueMAPS/uWSGI
+After=network.target remote-fs.target basic.target
+
+[Socket]
+ListenStream={{ web_port }}
+SocketUser={{ tm_user }}
+SocketGroup={{ tm_group }}
+
+[Install]
+WantedBy=multi-user.target

@@ -16,8 +16,6 @@
 
 ---
 web_port: 80
-nginx_processes: auto
-
 ssl_certificate_file: /etc/pki/tls/certs/fullchain.crt
 ssl_certificate_key_file: /etc/pki/tls/private/account.pem
 ssl_certificate_csr_file: /etc/pki/tls/certs/request.csr

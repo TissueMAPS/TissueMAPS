@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018  University of Zurich
+# Copyright (C) 2016-2019  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,41 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-
-- name: uWSGI listens on network port
-  set_fact:
-    uwsgi_socket: "{{ app_host }}:{{ app_port }}"
-  when: app_host != 'unix'
-  tags:
-    - app-server
-    - uwsgi
-
-- block:
-    # When app_host is "unix", app_port is the path to the socket file.
-    - name: uWSGI listens on UNIX-domain socket
-      set_fact:
-        uwsgi_socket: "{{ app_port }}"
-    - name: Create directory for UNIX socket
-      file:
-        path: "{{ app_port | dirname }}"
-        state: directory
-        recurse: yes
-        owner: "{{ tm_user }}"
-        group: "{{ tm_group }}"
-        mode: 0700
-    - name: Set ACL to let NginX access UNIX socket
-      acl:
-        path: "{{ app_port | dirname }}"
-        entity: "{{ web_user }}"
-        etype: user
-        permissions: rx
-        state: present
-        default: yes
-        recursive: yes
-  when: app_host == 'unix'
-  tags:
-    - app-server
-    - uwsgi
 
 - name: Create uWSGI log and metric directories
   file:
@@ -91,7 +56,6 @@
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
     mode: 0770
-  when: ansible_env.ANSIBLE_CONTAINER is defined
   tags:
     - app-server
     - uwsgi
@@ -99,14 +63,14 @@
 - name: Place tmpfiles.d config file for uWSGI
   copy:
     content: |
-      d /var/run/uwsgi 0750 {{ tm_user }} {{ web_group }} -
-      a+ /var/run/uwsgi - - - - u:{{ web_group }}:rx
-      a+ /var/run/uwsgi - - - - default:u:{{ web_group }}:rw
+      d /var/run/uwsgi 0750 {{ tm_user }} {{ tm_group }} -
+      a+ /var/run/uwsgi - - - - u:{{ tm_group }}:rx
+      a+ /var/run/uwsgi - - - - default:u:{{ tm_group }}:rw
     dest: /etc/tmpfiles.d/uwsgi.conf
     owner: root
     group: root
     mode: 0700
-  when: ansible_env.ANSIBLE_CONTAINER is undefined
+  when: ansible_env.ANSIBLE_CONTAINER is not defined
   tags:
     - app-server
     - uwsgi
@@ -118,10 +82,9 @@
     owner: root
     group: root
   with_items:
+    - { src: uwsgi.socket.j2,   dest: /etc/systemd/system/uwsgi.socket }
     - { src: uwsgi.service.j2,   dest: /etc/systemd/system/uwsgi.service }
     - { src: uwsgi.logrotate.j2, dest: /etc/logrotate.d/tissuemaps.conf }
-  when:
-    - ansible_env.ANSIBLE_CONTAINER is undefined
   tags:
     - app-server
     - uwsgi

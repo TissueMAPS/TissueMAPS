@@ -12,20 +12,21 @@ die-on-term = true
 # this is used in /etc/logrotate.d/tissuemaps.conf to trigger log rotation
 master-fifo = /var/run/uwsgi/master.fifo
 
-
-{# NOTE: keep this in sync with `app-server/tasks/uwsgi.yml` #}
-{% if app_host == 'unix' %}
-# only talk to NginX over a local UNIX-domain socket
-uwsgi-socket = {{ uwsgi_socket }}
-socket-timeout = {{ uwsgi_timeout }}
-chmod-socket = 660
-{% else %}
-# talk HTTP to NginX
-http-socket = {{ uwsgi_socket }}
-{% endif %}
-
 # remove all of the generated file/sockets on exit
 vacuum = true
+
+
+## HTTP serving config
+{% if (web_port is not defined) or (web_port|int < 1024) %}
+# assume the network socket has been opened by SystemD,
+# and passed on to uWSGI as fd 3 (which might not always be the case?)
+http-socket = fd://3
+{% else %}
+http-socket = :{{ app_port }}
+{% endif %}
+static-map = /={{ tm_www_root }}
+static-index = index.html
+offload-threads = {{ uwsgi_offload_threads|default("%k") }}
 
 
 ## TM application configuration
