@@ -19,7 +19,7 @@
   vars:
     web_port: 80
     app_host: app
-    app_port: 5002
+    app_port: 4852
     uwsgi_timeout: 300
     public_host_name: web
   roles:
@@ -29,7 +29,7 @@
   hosts: app
   vars:
     app_host: app
-    app_port: 5002
+    app_port: 4852
     uwsgi_processes: 1
     uwsgi_timeout: 300
   roles:

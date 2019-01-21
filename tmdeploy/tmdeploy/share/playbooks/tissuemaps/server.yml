@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
   gather_facts: yes
   vars:
     app_host: unix                                                  # 127.0.0.1
-    app_port: /var/run/uwsgi/tissuemaps.sock                        # 5002
+    app_port: /var/run/uwsgi/tissuemaps.sock                        # 4852
     tm_compute_nodes: "{{ groups['tissuemaps_compute']|length|int if 'tissuemaps_compute' in groups else 1 }}"
   any_errors_fatal: yes
   roles:

@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -101,8 +101,8 @@
         to_port: 443
         cidr_ip: 0.0.0.0/0
       - proto: tcp
-        from_port: 8002
-        to_port: 8002
+        from_port: 4852
+        to_port: 4852
         cidr_ip: 0.0.0.0/0
       - proto: icmp
         from_port: -1
