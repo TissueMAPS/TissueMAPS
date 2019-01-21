@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,6 +15,48 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+# (Re)start services and enable them such that they will be automatically
+# started upon system startup.
+# We don't do this within the respective roles for compatibility with
+# Ansible-container.
+- name: Refresh tmpfiles.d
+  hosts: all
+  gather_facts: yes
+  any_errors_fatal: yes
+  tasks:
+    - name: Create directories defined in tmpfiles.d
+      command: systemd-tmpfiles --create
+    - name: Restart ssh daemon service
+      systemd:
+        name: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
+        state: restarted
+
+- name: Initialize database master server
+  hosts:
+    - tissuemaps_db_master
+  gather_facts: yes
+  any_errors_fatal: yes
+  tasks:
+    - name: Enable and start postgresql service
+      systemd:
+        name: postgresql@master
+        daemon_reload: yes
+        state: restarted
+        enabled: yes
+
+- name: Initialize database worker servers
+  hosts:
+    - tissuemaps_db_worker
+  gather_facts: yes
+  any_errors_fatal: yes
+  tasks:
+    - name: Enable and start postgresql service
+      systemd:
+        name: postgresql@worker
+        daemon_reload: yes
+        state: restarted
+        enabled: yes
+
 - name: Configure TissueMAPS application as database client
   hosts: tissuemaps_server
   gather_facts: yes
