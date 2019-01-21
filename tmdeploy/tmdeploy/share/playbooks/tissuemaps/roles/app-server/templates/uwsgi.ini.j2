@@ -2,7 +2,7 @@
 
 ## main uWSGI master/worker setup
 master = true
-workers = {{ uwsgi_processes }}
+workers = {{ uwsgi_processes|default("%k") }}
 pidfile = /var/run/uwsgi/tissuemaps.pid
 uid = {{ tm_user }}
 gid = {{ tm_group }}
