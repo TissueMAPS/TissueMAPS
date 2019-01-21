@@ -28,14 +28,3 @@
   tags:
     - web-server
     - tissuemaps
-
-- name: Install apt package for SSL
-  apt:
-    name: "{{ item }}"
-    state: installed
-  with_items:
-    - openssl
-    - pki-base
-  tags:
-    - web-server
-    - nginx

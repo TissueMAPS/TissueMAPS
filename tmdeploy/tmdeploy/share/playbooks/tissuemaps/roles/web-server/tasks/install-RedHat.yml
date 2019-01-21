@@ -32,14 +32,3 @@
   tags:
     - web-server
     - tissuemaps
-
-- name: Install yum package for SSL
-  yum:
-    name: "{{ item }}"
-    state: installed
-  with_items:
-    - openssl
-    - pki-base
-  tags:
-    - web-server
-    - nginx
