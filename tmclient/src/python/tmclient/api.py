@@ -1,4 +1,4 @@
-# Copyright 2016-2018 University of Zurich
+# Copyright 2016-2019 University of Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -280,7 +280,7 @@ class TmClient(HttpClient):
         if not args.password:
             try:
                 args.password = load_credentials_from_file(args.username)
-            except (OSError, KeyError):
+            except (RuntimeError, KeyError):
                 args.password = prompt_for_credentials(args.username)
 
         try:
