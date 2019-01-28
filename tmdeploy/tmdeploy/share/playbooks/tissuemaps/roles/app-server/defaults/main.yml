@@ -32,3 +32,13 @@ uwsgi_timeout: 300
 
 # Github user names of administrators
 tm_admins: []
+
+# contact data for the database server
+#
+# FIXME: I'm not sure it makes much sense to go through hoops just to
+# have connections go to `localhost` or a UNIX-domain socket; this
+# only applies to the master, the real data connections are to the
+# workers, which are always contacted via TCP...
+#
+app_host: "{{ hostvars[inventory_hostname].ansible_host }}"
+tm_db_host: "{{ db_host_master if db_host_master != app_host else 'localhost' }}"

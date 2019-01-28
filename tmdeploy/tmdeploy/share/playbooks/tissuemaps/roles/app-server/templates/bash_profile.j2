@@ -10,6 +10,6 @@ export SQUEUE_FORMAT="%.12a %.16i %.40j %.8T %.10M %.10l %.4C %.10m %R"
 export SACCT_FORMAT="Account,JobId,JobName%30,State,Exitcode,DerivedExitCode,Submit,Elapsed,CPUTime,MaxRSS,AveCPU,AveDiskRead,AveDiskWrite"
 
 # Postgres database
-export TMAPS_DB_HOST=localhost
-alias db="psql -h $TMAPS_DB_HOST tissuemaps tissuemaps"
-alias sudb="psql -h $TMAPS_DB_HOST postgres postgres"
+export TMAPS_DB_HOST='{{ tm_db_host }}'
+alias db="psql -h '{{ tm_db_host }}' tissuemaps tissuemaps"
+alias sudb="psql -h '{{ tm_db_host }}' postgres postgres"

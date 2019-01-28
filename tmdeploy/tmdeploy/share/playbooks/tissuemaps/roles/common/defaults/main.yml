@@ -25,15 +25,30 @@ postgresql_version: '11'
 
 storage_directory: /storage
 
+
 tm_repo_url: https://github.com/TissueMAPS/TissueMAPS
 tm_version: master
 
 tm_user: tissuemaps
 tm_group: "{{ tm_user }}"
 
+# user account to populate the DB with; array of mappings with keys
+# "name", "password" and "email"
+tm_users: []
+
+
+# connection parameters of DB master and workers
+db_host_master: "{{ hostvars[groups.tissuemaps_db_master[0]].ansible_host }}"
+db_port_master: 5432
+
+db_hosts_workers: "{{ groups.tissuemaps_db_worker|map('extract', hostvars, ['ansible_host'])|list }}"
+db_port_worker: 9700
+
+# PostGreSQL DB auth parameters
 db_user: postgres
 db_group: "{{ db_user }}"
 db_role: tissuemaps
 db_name: tissuemaps
-db_port_master: 5432
-db_port_worker: 9700
+
+# number of worker nodes in the cluster
+db_nodes: "{{ db_host_workers|length|default(1)|int }}"
