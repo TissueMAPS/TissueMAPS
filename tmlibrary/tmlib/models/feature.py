@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -26,7 +26,6 @@ from sqlalchemy.orm import relationship, backref
 from tmlib.models.base import (
     ExperimentModel, DistributedExperimentModel, IdMixIn
 )
-from tmlib.models.dialect import _compile_distributed_query
 from tmlib import cfg
 
 logger = logging.getLogger(__name__)
