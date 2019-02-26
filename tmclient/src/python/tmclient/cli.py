@@ -1,4 +1,4 @@
-# Copyright 2016, 2018 University of Zurich.
+# Copyright 2016-2019 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -140,10 +140,17 @@ abstract_zplane_parser.add_argument(
     help='zero-based z-plane index'
 )
 
+# FIXME: should be renamed to `abstract_object_type_parser` for consistency
 abstract_object_parser = argparse.ArgumentParser(add_help=False)
 abstract_object_parser.add_argument(
     '-o', '--object-type', metavar='OBJECT-TYPE', dest='mapobject_type_name',
     required=True, help='name of the objects type'
+)
+
+abstract_mapobject_parser = argparse.ArgumentParser(add_help=False)
+abstract_mapobject_parser.add_argument(
+    'mapobject_ids', metavar='ID', nargs='+',
+    help='MapObject numeric IDs (separated by spaces)'
 )
 
 abstract_feature_parser = argparse.ArgumentParser(add_help=False)
@@ -734,6 +741,28 @@ object_type_delete_parser = object_type_subparsers.add_parser(
     parents=[abstract_name_parser]
 )
 object_type_delete_parser.set_defaults(method='delete_mapobjects_type')
+
+
+###################
+#    Mapobjects   #
+###################
+
+mapobject_parser = subparsers.add_parser(
+    'mapobject', help='mapobject resources',
+    description='Access "mapobject" resources.',
+    parents=[abstract_experiment_parser]
+)
+mapobject_subparsers = mapobject_parser.add_subparsers(
+    dest='mapobject_methods', help='access methods'
+)
+mapobject_subparsers.required = True
+
+mapobject_locate_parser = mapobject_subparsers.add_parser(
+    'locate', help='Print mapobject location information.',
+    description='Show mapobject location information',
+    parents=[abstract_mapobject_parser]
+)
+mapobject_locate_parser.set_defaults(method='_locate_mapobjects')
 
 
 ############

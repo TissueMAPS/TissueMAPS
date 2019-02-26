@@ -2012,6 +2012,58 @@ class TmClient(HttpClient):
             t.add_row([o['id'], o['name']])
         print(t)
 
+    def _locate_mapobjects(self, mapobject_ids):
+        t = PrettyTable([
+            'ID',
+            'Plate Name',
+            'Well Name',
+            'Site X-pos',
+            'Site Y-pos',
+            'Time point',
+            'Z plane',
+            'Label',
+        ])
+        t.align['Plate Name'] = 'l'
+        t.align['Well Name'] = 'l'
+        t.padding_width = 1
+        for mapobject_id in mapobject_ids:
+            try:
+                data = self.locate_mapobject(mapobject_id)
+            except Exception as err:  # pylint: disable=broad-exception
+                logger.error(
+                    "Could not download location info for mapobject %s: %s",
+                    mapobject_id, err)
+                continue  # to next `mapobject_id`
+            t.add_row([
+                mapobject_id,
+                data['plate_name'],
+                data['well_name'],
+                data['well_pos_x'],
+                data['well_pos_y'],
+                data['tpoint'],
+                data['zplane'],
+                data['label'],
+            ])
+        print(t)
+
+    def locate_mapobject(self, mapobject_id):
+        """
+        Return information about a MapObject (specified by ID).
+        """
+        logger.info(
+            'Getting location info for mapobject %s of experiment "%s" ...',
+            mapobject_id, self.experiment_name
+        )
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobjects/{mapobject_id}/locate'.format(
+                experiment_id=self._experiment_id,
+                mapobject_id=mapobject_id
+            )
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        return res.json()['data']
+
     def get_features(self, mapobject_type_name):
         '''Gets features for a given object type.
 

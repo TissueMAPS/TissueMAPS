@@ -729,6 +729,7 @@ def locate(experiment_id, mapobject_id):
         loc = session.query(tm.SegmentationLayer).get(segmentation.segmentation_layer_id)
 
         return jsonify(data={
+            'id': mapopbject_id,
             'experiment_name': experiment_name,
             'plate_name': plate.name,
             'well_name': well.name,
