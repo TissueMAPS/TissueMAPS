@@ -1,6 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
-# Copyright (C) 2018  University of Zurich
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -40,8 +39,6 @@ logger = logging.getLogger(__name__)
 
 
 CONFIG_FILE = os.path.expanduser('~/.tmaps/tissuemaps.cfg')
-DEFAULT_LIB = 'pandas'
-IMPLEMENTED_LIBS = {DEFAULT_LIB, 'spark'}
 
 
 class TmapsConfig(object):
