@@ -765,6 +765,48 @@ mapobject_locate_parser = mapobject_subparsers.add_parser(
 mapobject_locate_parser.set_defaults(method='_locate_mapobjects')
 
 
+mapobject_exhibit_parser = mapobject_subparsers.add_parser(
+    'exhibit', help='Save or show mapobject neighborhood',
+    description='Save or show mapobject neighborhood.',
+    parents=[abstract_mapobject_parser]
+)
+mapobject_exhibit_parser.set_defaults(method='_exhibit_mapobjects')
+mapobject_exhibit_parser.add_argument(
+    '--object-types', dest='object_types', required=True,
+    help=('Show segmentation contour for these MapObject types'
+          ' (comma-separated list of MapObject type names)'))
+mapobject_exhibit_parser.add_argument(
+    '--channels', dest='channel_names', required=True,
+    help=('Overlay segmentation info on these channel images'
+          ' (comma-separated list of channel names)'))
+mapobject_exhibit_parser.add_argument(
+    '--save', dest='save', action='store_true',
+    help=('Save images to files. (Default)'))
+mapobject_exhibit_parser.add_argument(
+    '--no-save', dest='save', action='store_false',
+    help=('Do not save images to files.'))
+mapobject_exhibit_parser.add_argument(
+    '--show', dest='show', action='store_true',
+    help=('Show images interactively.'))
+mapobject_exhibit_parser.add_argument(
+    '--no-show', dest='show', action='store_false',
+    help=('Do not show images. (Default)'))
+mapobject_exhibit_parser.add_argument(
+    '--margin', dest='extra_margin', type=int, default=0,
+    help=('Ensure a margin this many pixel wide'
+          ' encloses the objects of interest'))
+mapobject_exhibit_parser.add_argument(
+    '--file-name-format', dest='file_name_format',
+    default='{mapobject_id}_{channel_name}.png',
+    help=('File name pattern for saving images.'
+          ' The strings `{mapobject_id}` and `{channel_name}`'
+          ' will be replaced by the corresponding values.'))
+mapobject_exhibit_parser.add_argument(
+    '--columns', dest='grid_columns', type=int, default=1,
+    help=('When showing, arrange figures'
+          ' in a grid with this many columns.'))
+
+
 ############
 # Features #
 ############
