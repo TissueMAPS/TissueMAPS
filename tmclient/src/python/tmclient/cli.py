@@ -757,12 +757,12 @@ mapobject_subparsers = mapobject_parser.add_subparsers(
 )
 mapobject_subparsers.required = True
 
-mapobject_locate_parser = mapobject_subparsers.add_parser(
-    'locate', help='Print mapobject location information.',
-    description='Show mapobject location information',
+mapobject_info_parser = mapobject_subparsers.add_parser(
+    'info', help='Print information about mapobject.',
+    description='Print information about mapobject',
     parents=[abstract_mapobject_parser]
 )
-mapobject_locate_parser.set_defaults(method='_locate_mapobjects')
+mapobject_info_parser.set_defaults(method='_info_mapobjects')
 
 
 mapobject_exhibit_parser = mapobject_subparsers.add_parser(

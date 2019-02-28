@@ -2013,7 +2013,7 @@ class TmClient(HttpClient):
             t.add_row([o['id'], o['name']])
         print(t)
 
-    def _locate_mapobjects(self, mapobject_ids):
+    def _info_mapobjects(self, mapobject_ids):
         t = PrettyTable([
             'ID',
             'Plate Name',
@@ -2029,7 +2029,7 @@ class TmClient(HttpClient):
         t.padding_width = 1
         for mapobject_id in mapobject_ids:
             try:
-                data = self.locate_mapobject(mapobject_id)
+                data = self.get_mapobject(mapobject_id)
             except Exception as err:  # pylint: disable=broad-exception
                 logger.error(
                     "Could not download location info for mapobject %s: %s",
@@ -2047,7 +2047,7 @@ class TmClient(HttpClient):
             ])
         print(t)
 
-    def locate_mapobject(self, mapobject_id):
+    def get_mapobject(self, mapobject_id):
         """
         Return information about a MapObject (specified by ID).
         """
@@ -2056,7 +2056,7 @@ class TmClient(HttpClient):
             mapobject_id, self.experiment_name
         )
         url = self._build_api_url(
-            '/experiments/{experiment_id}/mapobjects/{mapobject_id}/locate'.format(
+            '/experiments/{experiment_id}/mapobjects/{mapobject_id}/info'.format(
                 experiment_id=self._experiment_id,
                 mapobject_id=mapobject_id
             )
@@ -2109,7 +2109,7 @@ class TmClient(HttpClient):
         from skimage import img_as_ubyte
         from skimage.exposure import rescale_intensity
 
-        metadata = self.locate_mapobject(mapobject_id)
+        metadata = self.get_mapobject(mapobject_id)
         # unpack metadata for (minimal) added efficiency
         plate_name = metadata['plate_name']
         well_name = metadata['well_name']

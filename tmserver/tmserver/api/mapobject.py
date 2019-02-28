@@ -676,15 +676,15 @@ def get_segmentations(experiment_id, mapobject_type_id):
 
 
 @api.route(
-    '/experiments/<experiment_id>/mapobjects/<mapobject_id>/locate',
+    '/experiments/<experiment_id>/mapobjects/<mapobject_id>/info',
     methods=['GET']
 )
 @jwt_required()
-def locate(experiment_id, mapobject_id):
+def get_info(experiment_id, mapobject_id):
     """
-    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_id)/locate
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_id)/info
 
-        Return site ID, well ID and name, and X- and Y-coordinates of site in well.
+        Return miscellaneous information about a MapObject (given its ID).
 
         **Example response**:
 
@@ -694,22 +694,27 @@ def locate(experiment_id, mapobject_id):
             Content-Type: application/json
 
             {
-               ... FIXME: add example!
+              id: 109362,
+              type: 'nuclei',
+              experiment_name: 'example_exper',
+              plate_name: 'plate01',
+              well_name: 'A08',
+              well_pos_x: 0,
+              well_pos_y: 2,
+              tpoint: null,
+              zplane: null,
+              label: 15
             }
 
         :reqheader Authorization: JWT token issued by the server
         :statuscode 200: no error
         :statuscode 400: malformed request
 
-        :query plate_name: name of the plate (required)
-        :query well_name: name of the well (required)
-        :query well_pos_x: x-coordinate of the site within the well (required)
-        :query well_pos_y: y-coordinate of the site within the well (required)
-        :query tpoint: time point (required)
-        :query zplane: z-plane (required)
-
+        :query experiment_id: database ID of the experiment
+        :query mapoject_id: database ID of the target MapObject
     """
-    logger.info('locating mapobject %s in experiment %s ...', mapobject_id, experiment_id)
+    logger.info('gathering info on mapobject %s in experiment %s ...',
+                mapobject_id, experiment_id)
 
     with tm.utils.MainSession() as session:
         experiment = session.query(tm.ExperimentReference).get(experiment_id)
@@ -719,6 +724,8 @@ def locate(experiment_id, mapobject_id):
         mapobject = session.query(tm.Mapobject)\
                            .filter_by(id=mapobject_id)\
                            .first()
+        mapobject_type = session.query(tm.MapobjectType)\
+                                .get(mapobject.mapobject_type_id)
         site_id = mapobject.partition_key
         site = session.query(tm.Site).get(site_id)
         well = session.query(tm.Well).get(site.well_id)
@@ -726,10 +733,12 @@ def locate(experiment_id, mapobject_id):
         segmentation = session.query(tm.MapobjectSegmentation)\
                               .filter_by(mapobject_id=mapobject_id)\
                               .first()
-        loc = session.query(tm.SegmentationLayer).get(segmentation.segmentation_layer_id)
+        loc = session.query(tm.SegmentationLayer)\
+                     .get(segmentation.segmentation_layer_id)
 
         return jsonify(data={
             'id': mapopbject_id,
+            'type': mapobject_type.name,
             'experiment_name': experiment_name,
             'plate_name': plate.name,
             'well_name': well.name,
