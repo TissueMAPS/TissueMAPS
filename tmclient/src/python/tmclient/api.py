@@ -2065,7 +2065,7 @@ class TmClient(HttpClient):
         res.raise_for_status()
         return res.json()['data']
 
-    def exhibit_mapobject(self, mapobject_id, ooi, channel_names,
+    def exhibit_mapobject(self, mapobject_id, channel_names, ooi=None,
                        extra_margin=0, palette_name="colorblind"):
         """
         Generate images of the neighborhood of a given MapObject.
@@ -2082,13 +2082,13 @@ class TmClient(HttpClient):
         ----------
         mapobject_id: int
             Database ID of the MapObject of interest
-        ooi: List[str]
-            Objects of interest: show segmentation for these objects.
-            (List of "mapobject type" names.)
-            **Note:** The *ooi* list cannot be empty!
         channel_names: List[str]
             Channels of interest: show these channels only.
             **Note:** The *channel_names* list cannot be empty!
+        ooi: List[str]
+            Objects of interest: show segmentation countours of these
+            object types.  (List of "mapobject type" names.)
+            If empty, show countours for just the target MapObject.
         extra_margin: int
             Ensure there is a margin this number of pixels wide
             around the "region of interest" which contains the
@@ -2121,6 +2121,8 @@ class TmClient(HttpClient):
             label_id = int(metadata['label'])
         except (ValueError, TypeError):
             raise RuntimeError("MapObject %s has no label!" % mapobject_id)
+        if not ooi:
+            ooi = [metadata['type']]
 
         # determine height and width of a site containing the mapobject
         for site in self.get_sites(plate_name, well_name):

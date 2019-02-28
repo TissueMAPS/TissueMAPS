@@ -772,7 +772,7 @@ mapobject_exhibit_parser = mapobject_subparsers.add_parser(
 )
 mapobject_exhibit_parser.set_defaults(method='_exhibit_mapobjects')
 mapobject_exhibit_parser.add_argument(
-    '--object-types', dest='object_types', required=True,
+    '--object-types', dest='object_types', default=None,
     help=('Show segmentation contour for these MapObject types'
           ' (comma-separated list of MapObject type names)'))
 mapobject_exhibit_parser.add_argument(
