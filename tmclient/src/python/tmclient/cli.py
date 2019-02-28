@@ -776,7 +776,7 @@ mapobject_exhibit_parser.add_argument(
     help=('Show segmentation contour for these MapObject types'
           ' (comma-separated list of MapObject type names)'))
 mapobject_exhibit_parser.add_argument(
-    '--channels', dest='channel_names', required=True,
+    '--channels', dest='channel_names', default=None,
     help=('Overlay segmentation info on these channel images'
           ' (comma-separated list of channel names)'))
 mapobject_exhibit_parser.add_argument(

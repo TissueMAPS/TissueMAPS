@@ -2299,7 +2299,7 @@ class TmClient(HttpClient):
           should be shown on the images.  Cannot be empty.
         channel_names: str
           Comma-separated list of channels names to save and/or show.
-          Cannot be empty.
+          If empty (or any other ``False`` value), use all channels.
         extra_margin: int
           Select displayed region by allowing this number of pixels
           around all objects of interest.
@@ -2334,11 +2334,19 @@ class TmClient(HttpClient):
         assert save or show, (
             "At least one of the two parameters"
             " `save` and `show` should be true!")
-        result = []
+
         if isinstance(object_types, basestring):
             object_types = object_types.split(',')
+
         if isinstance(channel_names, basestring):
             channel_names = channel_names.split(',')
+        if not channel_names:
+            channel_names = [
+                channel_info['name']
+                for channel_info in self.get_channels()
+            ]
+
+        result = []
         for mapobject_id in mapobject_ids:
             images = self.exhibit_mapobject(
                 mapobject_id, object_types, channel_names, extra_margin)
