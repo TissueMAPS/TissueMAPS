@@ -2066,7 +2066,7 @@ class TmClient(HttpClient):
         return res.json()['data']
 
     def exhibit_mapobject(self, mapobject_id, channel_names, ooi=None,
-                       extra_margin=0, palette_name="colorblind"):
+                          extra_margin=0, palette_name="colorblind"):
         """
         Generate images of the neighborhood of a given MapObject.
 
@@ -2188,7 +2188,7 @@ class TmClient(HttpClient):
             Return X- and Y-coordinate ranges that enclose all nonzero points
             in 2D array `mask`.
             """
-            x_range, y_range = np.where(mask != 0)
+            y_range, x_range = np.where(mask != 0)
             x_min= (np.amin(x_range) - margin)
             if x_min < 0:
                 x_min = 0
@@ -2201,7 +2201,7 @@ class TmClient(HttpClient):
             y_max= (np.amax(y_range) + margin)
             if y_max > mask.shape[0]:
                 y_max = mask.shape[0]
-            return [x_min, x_max, y_min, y_max]
+            return [y_min, y_max, x_min, x_max]
         def encasing_rectangle(r1, r2):
             """
             Return X- and Y-coordinate ranges that enclose both rectangles
@@ -2217,9 +2217,9 @@ class TmClient(HttpClient):
                       map(partial(find_bounding_box, margin=extra_margin), obj_masks))
 
         # crop the images to the defined ROI
-        def crop(images, x_min, x_max, y_min, y_max):
+        def crop(images, y_min, y_max, x_min, x_max):
             def crop1(image):
-                return image[x_min:x_max, y_min:y_max]
+                return image[y_min:y_max, x_min:x_max]
             return map(crop1, images)
         cropped_obj_masks = crop(obj_masks, *lims)
 
@@ -2270,11 +2270,11 @@ class TmClient(HttpClient):
                           channel_image)
 
         # make list of np arrays containing all channels overlayed with the mask of all OOIs
-        x_min, x_max, y_min, y_max = lims
+        y_min, y_max, x_min, x_max = lims
         def overlay_segmentation_contours_on_layer(layer_idx):
             return all_objects_overlay(
                 segmentation_contours,
-                layers[x_min:x_max, y_min:y_max, layer_idx])
+                layers[y_min:y_max, x_min:x_max, layer_idx])
         channels_with_overlaid_segmentation = map(
             overlay_segmentation_contours_on_layer, range(len(channel_names)))
 
@@ -2351,7 +2351,7 @@ class TmClient(HttpClient):
         result = []
         for mapobject_id in mapobject_ids:
             images = self.exhibit_mapobject(
-                mapobject_id, object_types, channel_names, extra_margin)
+                mapobject_id, channel_names, object_types, extra_margin)
             n = len(images)
             assert n == len(channel_names), (
                 "BUG: More images ({}) were returned by `self.show_mapobject()`"
