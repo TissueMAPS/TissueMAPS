@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -425,7 +425,12 @@ class Mapobject(DistributedExperimentModel):
     ref_id = Column(BigInteger, index=True)
 
     #: int: ID of parent mapobject type
-    mapobject_type_id = Column(Integer, index=True, nullable=False)
+    mapobject_type_id = Column(
+        Integer,
+        ForeignKey('mapobject_types.id', onupdate='CASCADE', ondelete='CASCADE'),
+        index=True,
+        nullable=False,
+    )
 
     def __init__(self, partition_key, mapobject_type_id, ref_id=None):
         '''
