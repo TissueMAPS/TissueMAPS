@@ -1,0 +1,16 @@
+#
+# Control (auto)start of JupyterHub through `supervisor`
+# (http://supervisord.org/)
+#
+
+[program:tm_server]
+command=uwsgi --ini {{ tm_home }}/.tmaps/uwsgi.ini
+# user switching is done by uWSGI
+user=root
+
+directory={{ tm_home }}
+autostart=true
+autorestart=true
+
+redirect_stderr=true
+stdout_logfile=/var/log/tm_server.supervisord.log

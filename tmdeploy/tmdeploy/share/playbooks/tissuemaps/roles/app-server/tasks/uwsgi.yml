@@ -33,17 +33,11 @@
 
 - name: Deploy uWSGI configuration and startup script
   template:
-    src: '{{ item.name }}.j2'
-    dest: '/home/{{ tm_user }}/.tmaps/{{ item.name }}'
+    src: 'uwsgi.ini.j2'
+    dest: '/home/{{ tm_user }}/.tmaps/uwsgi.ini'
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
-    mode: '{{ item.mode }}'
-  with_items:
-    # Note: modes must be string, otherwise YAML will read them as
-    # decimal constants but Ansible will then complain that "modes
-    # must be symbolic or octal numbers"
-    - { name: uwsgi.ini, mode: 'ug+r,o-rwx' }
-    - { name: uwsgi.sh,  mode: 'ug+rx,o-rwx' }
+    mode: 'ug+r,o-rwx'
   tags:
     - app-server
     - uwsgi
@@ -55,7 +49,7 @@
     recurse: yes
     owner: "{{ tm_user }}"
     group: "{{ tm_group }}"
-    mode: 0770
+    mode: 0750
   tags:
     - app-server
     - uwsgi
@@ -82,9 +76,14 @@
     owner: root
     group: root
   with_items:
-    - { src: uwsgi.socket.j2,   dest: /etc/systemd/system/uwsgi.socket }
-    - { src: uwsgi.service.j2,   dest: /etc/systemd/system/uwsgi.service }
-    - { src: uwsgi.logrotate.j2, dest: /etc/logrotate.d/tissuemaps.conf }
+    - src: uwsgi.logrotate.j2
+      dest: '/etc/logrotate.d/tissuemaps.conf'
+    # FIXME: we are using internal details of the `supervisord` role,
+    # this may break if Ansible changes the visibility of role variables
+    - src: tm_server.supervisord.j2
+      dest: '{{ supervisor_conf_dir }}/tm_server.{{ supervisor_conf_suffix }}'
+    - src: tm_jobdaemon.supervisord.j2
+      dest: '{{ supervisor_conf_dir }}/tm_jobdaemon.{{ supervisor_conf_suffix }}'
   tags:
     - app-server
     - uwsgi

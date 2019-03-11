@@ -18,8 +18,8 @@
 
 - include: env.yml
 
+- include: gc3pie.yml
+
 - include: uwsgi.yml
 
 - include: tissuemaps.yml
-
-- include: gc3pie.yml

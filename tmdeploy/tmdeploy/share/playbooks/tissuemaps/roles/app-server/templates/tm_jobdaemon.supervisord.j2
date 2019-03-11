@@ -1,0 +1,15 @@
+#
+# Control (auto)start of JupyterHub through `supervisor`
+# (http://supervisord.org/)
+#
+
+[program:tm_server]
+command={{ tm_home }}/.local/bin/tm_jobdaemon.py --working-dir {{jobdaemon_directory}} --listen localhost:9197 -s {{jobdaemon_directory}} -u "postgresql://tissuemaps@{{ tm_db_host }}/tissuemaps#table=tasks"
+user={{ tm_user }}
+
+directory={{ tm_home }}
+autostart=true
+autorestart=true
+
+redirect_stderr=true
+stdout_logfile=/var/log/tm_server.supervisord.log
