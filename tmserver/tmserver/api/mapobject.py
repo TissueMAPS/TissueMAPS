@@ -737,7 +737,7 @@ def get_info(experiment_id, mapobject_id):
                      .get(segmentation.segmentation_layer_id)
 
         return jsonify(data={
-            'id': mapopbject_id,
+            'id': mapobject_id,
             'type': mapobject_type.name,
             'experiment_name': experiment_name,
             'plate_name': plate.name,
