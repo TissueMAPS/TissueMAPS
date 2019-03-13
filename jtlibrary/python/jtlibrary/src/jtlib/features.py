@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -500,34 +500,41 @@ class Texture(Features):
     def _feature_names(self):
         names = ['Gabor-frequency-%d' % f for f in self.frequencies]
         if self.compute_TAS:
-            names.extend(['TAS-center-%d' % i for i in xrange(9)])
-            names.extend(['TAS-n-center-%d' % i for i in xrange(9)])
-            names.extend(['TAS-mu-margin-%d' % i for i in xrange(9)])
-            names.extend(['TAS-n-mu-margin-%d' % i for i in xrange(9)])
-            names.extend(['TAS-mu-%d' % i for i in xrange(9)])
-            names.extend(['TAS-n-mu-%d' % i for i in xrange(9)])
-        names.extend(['Hu-%d' % i for i in xrange(7)])
+            for i in xrange(9):
+                for name in [
+                        'center',
+                        'n-center',
+                        'mu-margin',
+                        'n-mu-margin',
+                        'mu',
+                        'n-mu',
+                ]:
+                    names.append('TAS-{name}-{i:d}'.format(name=name, i=i))
+        names.extend('Hu-%d' % i
+                     for i in xrange(7))
         if self.compute_LBP:
             for r in self.radius:
-                names.extend(['LBP-radius-%d-%d' % (r, i) for i in xrange(36)])
+                names.extend('LBP-radius-%d-%d' % (r, i)
+                             for i in xrange(36))
         if self.compute_haralick:
-            haralick_names = [
-                'Haralick-angular-second-moment',
-                'Haralick-contrast',
-                'Haralick-correlation',
-                'Haralick-sum-of-squares',
-                'Haralick-inverse-diff-moment',
-                'Haralick-sum-avg',
-                'Haralick-sum-var',
-                'Haralick-sum-entropy',
-                'Haralick-entropy',
-                'Haralick-diff-var',
-                'Haralick-diff-entropy',
-                'Haralick-info-measure-corr-1',
-                'Haralick-info-measure-corr-2'
-            ]
-            for s in self.scales:
-                names.extend([h + "-" + str(s) for h in haralick_names])
+            for name in [
+                    'angular-second-moment',
+                    'contrast',
+                    'correlation',
+                    'sum-of-squares',
+                    'inverse-diff-moment',
+                    'sum-avg',
+                    'sum-var',
+                    'sum-entropy',
+                    'entropy',
+                    'diff-var',
+                    'diff-entropy',
+                    'info-measure-corr-1',
+                    'info-measure-corr-2'
+            ]:
+                for scale in self.scales:
+                    names.append("Haralick-{name}-{scale}"
+                                 .format(name=name, scale=scale))
         return names
 
     def extract(self):
@@ -599,14 +606,13 @@ class Texture(Features):
                             distance=scale
                         )
                     except ValueError:
-                        haralick_values = np.empty((13,),dtype=float)
-                        haralick_values[:] = np.NAN
+                        # FIXME: hard-coded size!
+                        haralick_values = np.full(13, np.NaN, dtype=float)
 
                     if not isinstance(haralick_values, np.ndarray):
                         # NOTE: setting `ignore_zeros` to True creates problems for some
                         # objects, when all values of the adjacency matrices are zeros
-                        haralick_values = np.empty((len(self.names), ), dtype=float)
-                        haralick_values[:] = np.NAN
+                        haralick_values = np.full(len(self.names), np.NaN, dtype=float)
                     values.extend(haralick_values)
             features.append(values)
         return pd.DataFrame(features, columns=self.names, index=self.object_ids)
