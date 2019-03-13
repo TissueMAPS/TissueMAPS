@@ -794,9 +794,6 @@ class Sequence(InputHandle):
         name: str
             name of the item, which must match a parameter of the module
             function
-        mode: str
-            mode of the item, which defines the way it can be handled by the
-            program
         value: List[str or int or float]
             value of the item, i.e. the actual argument of the function
             parameter

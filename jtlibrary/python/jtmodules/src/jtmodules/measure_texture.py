@@ -1,4 +1,4 @@
-# Copyright (C) 2016 University of Zurich.
+# Copyright (C) 2016, 2019 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,16 +16,16 @@ import collections
 import jtlib.features
 
 
-VERSION = '0.3.0'
+VERSION = '0.3.1'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
 
 def main(extract_objects, assign_objects, intensity_image, aggregate,
-         frequencies=[1,5,10],
+         frequencies={1, 5, 10},
          measure_TAS=False,
-         measure_LBP=False, radii=[1,5,10],
-         measure_haralick=False, scales=[1,2],
+         measure_LBP=False, radii={1, 5, 10},
+         measure_haralick=False, scales={1, 2},
          plot=False):
     '''Measures texture features for objects in `extract_objects` based
     on grayscale values in `intensity_image` and assign them to `assign_objects`.

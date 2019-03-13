@@ -1,5 +1,5 @@
 ---
-version: 0.3.0
+version: 0.3.1
 
 input:
 
@@ -35,7 +35,7 @@ input:
         relationship aggregation must be performed.
 
     - name: frequencies
-      type: Sequence
+      type: Set
       value: [1, 5, 10]
       help: List of frequencies for Gabor filters
 
@@ -50,7 +50,7 @@ input:
       help: Should Local Binary Patterns be extracted?
 
     - name: radii
-      type: Sequence
+      type: Set
       value: [1, 5, 10]
       help: List of radii for Local Binary Patterns
 
@@ -60,7 +60,7 @@ input:
       help: Should Haralick features be extracted?
 
     - name: scales
-      type: Sequence
+      type: Set
       value: [1,2]
       help: List of scales for the Haralick features
 
@@ -81,5 +81,3 @@ output:
 
     - name: figure
       type: Figure
-
-

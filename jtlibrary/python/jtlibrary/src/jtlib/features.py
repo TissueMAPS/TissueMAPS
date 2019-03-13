@@ -440,8 +440,8 @@ class Texture(Features):
     '''
 
     def __init__(self, label_image, intensity_image,
-                 theta_range=4, frequencies=[1, 5, 10], radius=[1, 5, 10],
-                 scales=[1], threshold=None, compute_haralick=False,
+                 theta_range=4, frequencies={1, 5, 10}, radius={1, 5, 10},
+                 scales={1}, threshold=None, compute_haralick=False,
                  compute_TAS=False, compute_LBP=False):
         '''
         Parameters
@@ -454,16 +454,16 @@ class Texture(Features):
         theta_range: int, optional
             number of angles to define the orientations of the Gabor
             filters (default: ``4``)
-        frequencies: List[int], optional
-            frequencies of the Gabor filters (default: ``[1, 5, 10]``)
-        scales: List[int], optional
-            scales at which to compute the Haralick textures (default: ``[1]``)
+        frequencies: Set[int], optional
+            frequencies of the Gabor filters (default: ``{1, 5, 10}``)
+        scales: Set[int], optional
+            scales at which to compute the Haralick textures (default: ``{1}``)
         threshold: int, optional
             threshold value for Threshold Adjacency Statistics (TAS)
             (defaults to value computed by Otsu's method)
-        radius: List[int], optional
+        radius: Set[int], optional
             radius for defining pixel neighbourhood for Local Binary Patterns
-            (LBP) (default: ``[1, 5, 10]``)
+            (LBP) (default: ``{1, 5, 10}``)
         compute_haralick: bool, optional
             whether Haralick features should be computed
             (the computation is computationally expensive) (default: ``False``)
