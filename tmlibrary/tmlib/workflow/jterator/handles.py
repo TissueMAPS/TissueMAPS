@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -812,6 +812,35 @@ class Sequence(InputHandle):
 
     def __str__(self):
         return '<Sequence(name=%r)>' % self.name
+
+
+class Set(InputHandle):
+
+    '''Unordered set of values. Discards all repeated values.'''
+
+    @assert_type(value='set')
+    def __init__(self, name, value, help=''):
+        '''
+        Parameters
+        ----------
+        name: str
+            name of the item, which must match a parameter of the module
+            function
+        value: Set[str or int or float]
+            value of the item, i.e. the actual argument of the function
+            parameter
+        help: str, optional
+            help message (default: ``""``)
+        '''
+        for v in value:
+            if all([not isinstance(v, t) for t in {int, float, basestring}]):
+                raise TypeError(
+                    'Elements of argument "value" must have type '
+                        'int, float, or basestring.')
+        super(Sequence, self).__init__(name, set(value), help)
+
+    def __str__(self):
+        return '<Set(name=%r)>' % self.name
 
 
 class Plot(InputHandle):
