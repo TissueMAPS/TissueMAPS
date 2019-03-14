@@ -815,7 +815,7 @@ class Set(InputHandle):
 
     '''Unordered set of values. Discards all repeated values.'''
 
-    @assert_type(value='set')
+    @assert_type(value='list')
     def __init__(self, name, value, help=''):
         '''
         Parameters
@@ -834,7 +834,7 @@ class Set(InputHandle):
                 raise TypeError(
                     'Elements of argument "value" must have type '
                         'int, float, or basestring.')
-        super(Sequence, self).__init__(name, set(value), help)
+        super(Set, self).__init__(name, set(value), help)
 
     def __str__(self):
         return '<Set(name=%r)>' % self.name
