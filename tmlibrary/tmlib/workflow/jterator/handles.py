@@ -815,7 +815,7 @@ class Set(InputHandle):
 
     '''Unordered set of values. Discards all repeated values.'''
 
-    @assert_type(value='list')
+    @assert_type(value=['list', 'set'])
     def __init__(self, name, value, help=''):
         '''
         Parameters
