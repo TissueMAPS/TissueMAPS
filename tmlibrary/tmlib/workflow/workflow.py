@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 # Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
@@ -619,7 +619,7 @@ class Workflow(SequentialTaskCollection, State):
         # Update the first stage and its first step to start the workflow
         self.update_stage(0)
 
-    @assert_type(description='tmlib.workflow.description.WorkflowDescription')
+    @assert_type(description=WorkflowDescription)
     def update_description(self, description):
         '''Updates the workflow description by removing *inactive* stages/steps
         from the description that will ultimately be used to dynamically
