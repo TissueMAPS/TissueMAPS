@@ -1,0 +1,6 @@
+---
+
+dependencies:
+  - role: iptables
+    default_input_policy: 'ACCEPT'
+  - role: hpc-common

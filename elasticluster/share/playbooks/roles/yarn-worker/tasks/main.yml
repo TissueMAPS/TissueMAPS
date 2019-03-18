@@ -1,0 +1,27 @@
+# yarn-slave/tasks/main.yml
+---
+
+- name: Install Hadoop packages (YARN Worker)
+  tags:
+    - hadoop
+    - yarn
+    - worker
+    - nodemanager
+  package:
+    name:
+    - hadoop-mapreduce # The Hadoop MapReduce (MRv2)
+    - hadoop-yarn # The Hadoop NextGen MapReduce (YARN)
+    - hadoop-yarn-nodemanager # YARN Node Manager
+    state: '{{pkg_install_state}}'
+
+
+- name: Start YARN worker services (NodeManager)
+  tags:
+    - hadoop
+    - yarn
+    - worker
+    - nodemanager
+  service:
+    name: "hadoop-yarn-nodemanager"
+    state: started
+    enabled: yes

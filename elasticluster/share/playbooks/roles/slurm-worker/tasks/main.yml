@@ -1,0 +1,35 @@
+# slurm-worker/tasks/main.yml
+---
+
+- name: Load distribution-specific parameters
+  include_tasks: 'init-{{ansible_os_family}}.yml'
+
+- name: Deploy SLURM configuration files
+  tags:
+    - slurm
+  template:
+    src: '{{item}}.j2'
+    dest: '/etc/slurm/{{item}}'
+    owner: root
+    group: root
+    mode: 0444
+  loop:
+    - gres.conf
+
+- name: Deploy SLURM cgroup configuration
+  tags:
+    - slurm
+    - slurm-worker
+    - cgroups
+  import_tasks: cgroup.yml
+  when: '"cgroup" in slurm_taskplugin or "cgroup" in slurm_proctracktype or "cgroup" in slurm_jobacctgathertype'
+
+- name: Install SLURM worker packages
+  package:
+    name: '{{slurmd_packages}}'
+    state: '{{ pkg_install_state }}'
+
+- name: Ensure SLURMd starts at boot
+  service:
+    name: '{{slurmd_service}}'
+    enabled: yes

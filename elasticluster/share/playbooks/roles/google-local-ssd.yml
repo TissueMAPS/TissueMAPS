@@ -1,0 +1,12 @@
+---
+
+- name: Mount Google local SSD storage
+  hosts: all
+  tags:
+    - google
+    - storage
+    - google-local-ssd
+
+  roles:
+    - role: google-local-ssd
+      when: 'elasticluster.nodes[inventory_hostname].local_ssd_count|default(0) > 0'

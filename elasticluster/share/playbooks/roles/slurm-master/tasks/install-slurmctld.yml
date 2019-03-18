@@ -1,0 +1,6 @@
+---
+
+- name: Install SLURM master packages
+  package:
+    name: '{{ slurmctld_packages }}'
+    state: '{{ pkg_install_state }}'

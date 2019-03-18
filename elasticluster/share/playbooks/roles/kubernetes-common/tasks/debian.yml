@@ -1,0 +1,42 @@
+---
+
+- name: Add Google key to apt
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Add Kubernetes apt repo
+  apt_repository:
+    repo: 'deb http://apt.kubernetes.io/ kubernetes-{{ansible_distribution_release|lower}} main'
+    filename: kubernetes
+    state: present
+
+- name: Install packages
+  apt:
+    name:
+      - docker.io
+      - kubelet
+      - kubeadm
+      - kubectl
+      - kubernetes-cni
+    state: '{{ pkg_install_state }}'
+    allow_unauthenticated: '{{ not insecure_https_downloads|default("no")|bool }}'
+  when: not kubernetes_version.apt.install
+
+- name: Install packages - fixed version
+  apt:
+    name:
+      - docker.io
+      - kubelet={{ kubernetes_version.apt.label }}
+      - kubeadm={{ kubernetes_version.apt.label }}
+      - kubectl={{ kubernetes_version.apt.label }}
+    allow_unauthenticated: '{{ insecure_https_downloads|default("no")|bool }}'
+  when: kubernetes_version.apt.install
+
+- name: Enable and start kubeadm services
+  service:
+    name:
+      - docker
+      - kubelet
+    enabled: true
+    state: started

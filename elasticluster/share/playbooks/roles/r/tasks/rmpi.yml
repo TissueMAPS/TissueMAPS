@@ -1,0 +1,76 @@
+---
+
+#
+# Support for running parallel computations with OpenMPI in R
+#
+
+- name: Install OpenMPI
+  include_role:
+    name: hpc-common
+
+
+- name: Install R MPI library with OpenMPI
+  shell: |
+    # load the MPI environment
+    . /etc/profile.d/modules.sh
+    export MODULEPATH=${MODULEPATH:-/etc/modulefiles}
+    module load mpi
+    # install Rmpi; note it is assumed that env vars MPI_HOME etc. are
+    # defined in the module file above
+    R --slave --no-save --no-restore-history <<-__EOF__
+        if ('Rmpi' %in% installed.packages()[,'Package']) {
+          # nothing to do, successful exit
+          quit(save='no', status=0);
+        } else {
+          install.packages('Rmpi',
+                           repos='https://cloud.r-project.org/',
+                           configure.args=c('--with-Rmpi-type=OPENMPI',
+                                            '--with-mpi=${MPI_HOME}',
+                                            '--with-Rmpi-include=${MPI_INCLUDE}',
+                                            '--with-Rmpi-libpath=${MPI_LIB}'));
+          # 'install.packages' may fail but does not throw an error
+          # condition so check whether the package was actually
+          # installed and exit accordingly
+          if (require('Rmpi')) {
+              # successful exit
+              quit(save='no', status=0);
+          } else {
+              # error exit
+              quit(save='no', status=1);
+          };
+        };
+    __EOF__
+
+
+- name: Install parallel R libraries
+  shell: |
+    # load the MPI environment (in case Rmpi is a dependency)
+    . /etc/profile.d/modules.sh
+    export MODULEPATH=${MODULEPATH:-/etc/modulefiles}
+    module load mpi
+    # install packages
+    R --slave --no-save --no-restore-history <<-__EOF__
+        if ('{{item}}' %in% installed.packages()[,'Package']) {
+          # nothing to do, successful exit
+          quit(save='no', status=0);
+        } else {
+          install.packages(pkgs='{{item}}',
+                           repos=c('https://cloud.r-project.org/'));
+          # 'install.packages' may fail but does not throw an error
+          # condition so check whether the package was actually
+          # installed and exit accordingly
+          if (require('{{item}}')) {
+              # successful exit
+              quit(save='no', status=0);
+          } else {
+              # error exit
+              quit(save='no', status=1);
+          };
+        };
+    __EOF__
+  loop:
+    - parallel
+    - doParallel
+    - snow
+    - snowfall
+    - doSNOW

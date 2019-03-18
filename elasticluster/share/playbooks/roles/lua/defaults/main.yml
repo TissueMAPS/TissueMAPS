@@ -1,0 +1,8 @@
+---
+
+# Whether this Lua interpreter should be made
+# the first match in users' shell $PATH
+lua_add_to_path: False
+
+
+### No customization should be necessary or useful below this line ###

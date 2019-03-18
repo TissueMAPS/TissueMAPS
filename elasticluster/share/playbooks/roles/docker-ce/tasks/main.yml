@@ -1,0 +1,68 @@
+---
+#
+# Install Docker Community Edition
+# See: https://docs.docker.com/install/
+#
+# Initially contributed by Manuele Simi
+#
+
+
+- name: Perform distribution-dependent steps
+  include_tasks: 'init-{{ansible_os_family}}.yml'
+
+
+- name: 'Create Docker configuration directory'
+  file:
+    dest: '/etc/docker'
+    state: directory
+
+
+- name: 'Deploy default Docker daemon configuration'
+  copy:
+    src: 'etc/docker/daemon.json'
+    dest: '/etc/docker/daemon.json'
+
+
+- name: 'Install Docker Community Edition'
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+    state: '{{ pkg_install_state }}'
+
+
+- name: 'Enable Docker service and ensure it (re)starts at boot'
+  service:
+    name: 'docker'
+    state: 'started'
+    enabled: 'yes'
+
+
+# Prune dangling containers by setting a cron job to clean thing ups
+#
+# FIXME: we should allow a way to customize cron job schedule
+#
+- name: 'set periodic docker system prune'
+  cron:
+    name: 'docker-prune'
+    minute: '0'
+    hour: '*/2'
+    job: 'docker container prune -f'
+
+
+
+# always allow default OS user to use `docker`
+- name: 'add default OS user to group `docker`'
+  user:
+    name: '{{ ansible_user }}'
+    groups: 'docker'
+    append: 'yes'
+
+
+# Add more users to the `docker` group
+- name: 'Add users to docker group'
+  user:
+    name: '{{ item }}'
+    groups: 'docker'
+    append: 'yes'
+  loop: '{{ docker_group_members }}'

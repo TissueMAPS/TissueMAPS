@@ -1,0 +1,65 @@
+---
+
+- name: Check if the Python executable {{python_exe}} is installed
+  tags:
+    - jupyter
+    - kernels
+    - python
+  stat:
+    path: '{{python_exe}}'
+    get_attributes: no
+    get_checksum: no
+    get_mime: no
+  register: python_exe_path
+
+
+- name: Determine version of Python interpreter {{python_exe}}
+  tags:
+    - jupyter
+    - kernels
+    - python
+  command:
+    '{{python_exe}} -c "import sys; sys.stdout.write(str(sys.version_info.major))"'
+  register: python_version
+  when: python_exe_path.stat.exists
+
+
+- name: Install Python{{python_version.stdout}} Jupyter kernel
+  tags:
+    - jupyter
+    - kernels
+    - python
+  command:
+    '{{python_exe}} -m ipykernel install'
+  become: yes
+  when: python_exe_path.stat.exists
+
+
+- name: Load additional package names
+  set_fact:
+    jupyter_additional_os_packages:
+      Debian:
+        # PostGreSQL
+        - libpq-dev
+        # MySQL compatible
+        - '{% if ansible_distribution == "Debian" %}default-libmysqlclient-dev{% else %}libmysqlclient-dev{% endif %}'
+      RedHat:
+        - postgresql-devel
+    jupyter_additional_python_packages:
+      - ipython-sql
+      - psycopg2
+      - mysqlclient
+
+
+- name: Install additional %-magic modules and plugins (OS dependencies)
+  package:
+    name: '{{jupyter_additional_os_packages[ansible_os_family]}}'
+    state: '{{ pkg_install_state }}'
+
+
+- name: Install additional %-magic modules and plugins (Python package)
+  pip:
+    name: '{{item}}'
+    state: '{{ pkg_install_state }}'
+    executable: '{{python_exe|dirname}}/pip'
+  loop: '{{jupyter_additional_python_packages}}'
