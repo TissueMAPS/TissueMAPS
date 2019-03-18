@@ -1,0 +1,47 @@
+---
+- include_tasks: init-{{ ansible_os_family }}.yml
+
+# for once, package names are the same on Debian/Ubuntu and RHEL/CentOS
+- name: Install GlusterFS server packages
+  package:
+    name:
+      - glusterfs-server
+      - glusterfs-client
+    state: '{{ pkg_install_state }}'
+  tags:
+    - gluster
+    - glusterfs-server
+
+
+- name: Ensure the GlusterFS service is running
+  service:
+    name: '{{ item }}'
+    state: 'started'
+  # Service names are different across GlusterFS versions.
+  #
+  # This is implemented as a two-level hash table: the `init-XXX.yml`
+  # files define `glusterfs_server_services` as a mapping from
+  # `glusterfs_version` (string) to list of service names.
+  #
+  loop: '{{ glusterfs_server_services }}'
+  tags:
+    - gluster
+    - glusterfs-server
+
+
+- name: Configure peers (only on the first host)
+  shell: |
+    gluster peer probe '{{item}}'
+  loop: '{{groups.glusterfs_server}}'
+  when: is_glusterfs_main_server_node
+  tags:
+    - gluster
+    - glusterfs-server
+
+
+# build and export volumes
+- include_tasks: export.yml
+  loop: '{{GLUSTERFS_VOLUMES}}'
+  tags:
+    - gluster
+    - glusterfs-server

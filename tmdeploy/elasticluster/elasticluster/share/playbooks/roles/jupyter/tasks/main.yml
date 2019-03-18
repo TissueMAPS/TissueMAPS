@@ -1,0 +1,42 @@
+# jupyter/tasks/main.yml
+---
+
+- name: Install Jupyter
+  tags:
+    - jupyter
+  conda:
+    name: jupyter
+    state: '{{ pkg_install_state }}'
+    executable: '{{jupyter_python|dirname}}/conda'
+
+# install BASH kernel
+- import_tasks: bash.yml
+
+# install Python kernels (for Python version 2 and 3)
+- include_tasks: python.yml
+  vars:
+    python_exe: '{{PYTHON2_EXE}}'
+- include_tasks: python.yml
+  vars:
+    python_exe: '{{PYTHON3_EXE}}'
+
+# install PySpark kernels (for Python version 2 and 3)
+- include_tasks: pyspark.yml
+  vars:
+    python_exe: '{{PYTHON2_EXE}}'
+- include_tasks: pyspark.yml
+  vars:
+    python_exe: '{{PYTHON3_EXE}}'
+
+# install R kernel
+- include_tasks: irkernel.yml
+
+
+# install MATLAB kernel (if MATLAB available)
+- name: Check that MATLAB_EXE can run MATLAB
+  command: |
+    {{MATLAB_EXE}} -n
+  ignore_errors: yes
+  register: matlab_run
+- include_tasks: matlab.yml
+  when: matlab_run is successful

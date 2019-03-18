@@ -1,0 +1,25 @@
+---
+
+#
+# Install Lmod
+#
+
+
+# try installing from OS packages first...
+- name: Install Lmod from the OS repository (Debian-compatible)
+  package:
+    name: 'lmod{{__at__}}{{ LMOD_VERSION }}*'
+    state: '{{ pkg_install_state }}'
+  ignore_errors: True
+  register: lmod_pkg_install
+
+
+# ...if installing from OS packages failed, download and build sources
+- name: Build Lmod from source
+  include_tasks: build.yml
+  when: '(lmod_pkg_install is failed)'
+
+
+# run post-install regardless of installation method
+- name: Post-installation configuration
+  import_tasks: post-install.yml

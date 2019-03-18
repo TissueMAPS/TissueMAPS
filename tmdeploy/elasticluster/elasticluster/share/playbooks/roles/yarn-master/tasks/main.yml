@@ -1,0 +1,32 @@
+# yarn-master/tasks/main.yml
+---
+
+- name: Install Hadoop packages (YARN Master)
+  tags:
+    - hadoop
+    - yarn
+    - master
+    - resourcemanager
+  package:
+    name:
+      - hadoop-mapreduce # The Hadoop MapReduce (MRv2)
+      - hadoop-mapreduce-historyserver # MapReduce History Server
+      - hadoop-yarn # The Hadoop NextGen MapReduce (YARN)
+      - hadoop-yarn-proxyserver # YARN Web Proxy
+      - hadoop-yarn-resourcemanager # YARN Resource Manager
+    state: '{{ pkg_install_state }}'
+
+
+- name: Start YARN master services
+  tags:
+    - hadoop
+    - yarn
+    - master
+    - resourcemanager
+  service:
+    name="{{item}}"
+    state=started
+    enabled=yes
+  loop:
+    - hadoop-yarn-resourcemanager
+    - hadoop-mapreduce-historyserver

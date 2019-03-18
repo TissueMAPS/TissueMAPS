@@ -1,0 +1,50 @@
+---
+
+- name: Load distribution-specific parameters
+  include_tasks: 'init-{{ansible_os_family}}.yml'
+
+
+- name: Pre-load debconf answer to questions (Debian/Ubuntu)
+  debconf:
+    name: nis
+    question: nis/domain
+    answer: '{{NIS_DOMAIN}}'
+    vtype: string
+  when: 'is_debian_compatible'
+
+
+# since both ypbind *and* ypserv are shipped in the same package, it's the init
+# script params `/etc/default/nis` which decide what servers to start
+- name: Deploy additional NIS configuration (Debian/Ubuntu)
+  template:
+    dest: '/{{item}}'
+    src: '{{item}}.j2'
+    mode: 0444
+  loop:
+    - etc/default/nis
+    - etc/defaultdomain
+  when: 'is_debian_compatible'
+
+
+- name: Set NIS domain (CentOS/RHEL)
+  lineinfile:
+    dest: "/etc/sysconfig/network"
+    line: "NISDOMAIN='{{NIS_DOMAIN}}'"
+    regexp: "^NISDOMAIN=(?!'{{NIS_DOMAIN}}').*"
+    state: present
+    create: yes
+  when: 'is_rhel_compatible'
+
+
+- name: Install NIS common packages
+  package:
+    name: '{{nis_common_packages}}'
+    state: '{{ pkg_install_state }}'
+
+
+- import_tasks: ypserv.yml
+  when: 'is_nis_server'
+
+
+- import_tasks: ypbind.yml
+  when: 'is_nis_client'

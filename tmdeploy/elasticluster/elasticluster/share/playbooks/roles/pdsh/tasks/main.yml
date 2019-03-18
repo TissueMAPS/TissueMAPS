@@ -1,0 +1,34 @@
+---
+
+- name: Install pdsh packages (Debian-family)
+  apt:
+    name: pdsh
+    state: '{{ pkg_install_state }}'
+    allow_unauthenticated: '{{ not insecure_https_downloads|default("no")|bool }}'
+  when: is_debian_or_ubuntu
+
+  # note: the following requires EPEL repos
+- name: Install pdsh packages (RHEL-family)
+  package:
+    name:
+      - pdsh
+      - pdsh-rcmd-ssh
+      - pdsh-mod-genders
+    state: '{{ pkg_install_state }}'
+  when: is_centos
+
+- name: Create genders file for PDSH
+  template:
+    src=etc/genders.j2
+    dest=/etc/genders
+    mode=0444
+    owner=root
+    group=root
+
+- name: Make SSH the default exec method for PDSH
+  copy:
+    src=etc/profile.d/pdsh.sh
+    dest=/etc/profile.d/pdsh.sh
+    mode=0444
+    owner=root
+    group=root

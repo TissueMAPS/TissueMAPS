@@ -1,0 +1,86 @@
+---
+# This task is used to set very simple firewall rules, allowing
+# everything from a set of hosts and denying everything but ssh
+# connections from any other host.
+#
+# Mandatory variables:
+#
+#
+# Optional variables:
+#
+# trusted_hosts:  list of ip addresses. By default, all the hosts in
+#                 the group `all`.
+#
+# default_accept: if equal to `1` or `true`, all connection *from
+#                 internet* are accepted (but not from the internal
+#
+
+- name: Load distribution-specific data
+  include_tasks: 'init-{{ansible_os_family}}.yml'
+  tags: iptables
+
+
+- name: Temporarily put SELinux in "permissive" mode (RHEL-family)
+  when: 'is_rhel_compatible and ansible_selinux.status == "enabled" and not disable_selinux|default("no")|bool'
+  selinux:
+    policy: targeted
+    state: permissive
+
+
+- name: Install iptables packages
+  tags: iptables
+  package:
+    name: '{{ packages }}'
+    state: '{{ pkg_install_state }}'
+
+
+- name: Deploy netfilter rules
+  tags:
+    - iptables
+  template:
+    dest: "{{configfile[item]}}"
+    src: "{{item}}.j2"
+    owner: root
+    group: root
+    mode: 0444
+  become: yes
+  become_user: root
+  notify: '{{reload}}'
+  loop:
+    - 'etc/iptables/rules.v4'
+    - 'etc/iptables/rules.v6'
+
+
+- name: Ensure netfilter rules are loaded at boot
+  tags:
+    - iptables
+  service:
+    name: '{{service[item]}}'
+    enabled: yes
+    state: started
+  # line `ignore_errors:` is here to handle the case in issue #609
+  # when reboots are not allowed yet we want the playbook to continue
+  # despite possibly failing installing ip6tables...
+  ignore_errors: '{{ is_debian_9_or_later and debian_kernel_upgraded }}'
+  become: yes
+  become_user: root
+  loop:
+    - 'iptables'
+    - 'ip6tables'
+
+
+- name: Possibly reload iptables
+  meta: flush_handlers
+
+
+- name: Enable SELinux (RHEL-family)
+  when: 'is_rhel_compatible and ansible_selinux.status == "enabled" and not disable_selinux|default("no")|bool'
+  selinux:
+    policy: targeted
+    state: enforcing
+
+
+- name: Restore SELinux labels on `/` (RHEL-family)
+  command: |
+    restorecon -r /
+  when: 'is_rhel_compatible and ansible_selinux.status == "enabled" and not disable_selinux|default("no")|bool'

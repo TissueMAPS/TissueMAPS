@@ -1,0 +1,25 @@
+# hdfs-datanode/tasks/main.yml
+---
+
+- name: Install Hadoop packages (HDFS DataNode)
+  tags:
+    - hadoop
+    - hdfs
+    - datanode
+  package:
+    name:
+      - hadoop-hdfs-datanode # Hadoop Data Node
+    state: '{{ pkg_install_state }}'
+
+
+- name: Start HDFS services (DataNode)
+  tags:
+    - hadoop
+    - hdfs
+    - datanode
+  service:
+    name="{{item}}"
+    state=started
+    enabled=yes
+  loop:
+    - hadoop-hdfs-datanode

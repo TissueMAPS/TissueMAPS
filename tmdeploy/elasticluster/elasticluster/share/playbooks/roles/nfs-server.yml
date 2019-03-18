@@ -1,0 +1,10 @@
+---
+
+
+- name: Configure nfs servers
+  tags:
+    - nfs
+  hosts: nfs-server
+  become: yes
+  roles:
+    - role: nfs-server

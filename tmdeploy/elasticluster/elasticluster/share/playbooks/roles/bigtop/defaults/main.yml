@@ -1,0 +1,8 @@
+# bigtop/defaults/main.yml
+---
+
+# What release of Apache Bigtop to get packages from
+bigtop_release: '1.3.0'
+
+# Where to get BigTop files from
+bigtop_mirror: 'http://www.nic.funet.fi/pub/mirrors/apache.org'

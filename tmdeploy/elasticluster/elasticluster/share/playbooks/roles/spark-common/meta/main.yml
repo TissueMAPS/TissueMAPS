@@ -1,0 +1,7 @@
+# spark-common/meta/main.yml
+---
+
+dependencies:
+  - { role: anaconda }
+  - { role: bigtop }
+  - { role: r }

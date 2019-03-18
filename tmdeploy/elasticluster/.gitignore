@@ -1,0 +1,60 @@
+# ElastiCluster-specific patterns
+.agignore
+elasticluster.egg-info/
+elasticluster/share/playbooks/private/
+.noseids
+.tox/
+
+# Python-specific
+*.py[co]
+.cache
+.coverage
+.eggs
+build
+dist
+docs/doctrees
+docs/html
+docs/latex
+.local
+.pypirc
+.python-version
+setuptools-*.egg
+.venv
+.workon
+__pycache__
+
+# Ansible-specific
+*.retry
+
+# general exclusion patterns
+*.a
+*.o
+*.so
+*.sw[nop]
+*~
+.#*
+[#]*#
+*.bak
+*.old
+.gitignore
+
+# Final documents - ignore by default
+*.dvi
+*.pdf
+*.ps
+
+# Emacs byte-compiled files
+*.elc
+
+# archive formats - ignore by default
+*.tar
+*.tar.bz2
+*.tar.gz
+*.zip
+
+# IntelliJ IDEA / PyCharm - Ignore everything in the `.idea` directory and the
+# `.iml` for now. This can be removed later, since it will make sharing of
+# configuration easier if more developers use these IDEs.
+.idea/*
+*.iml
+*.iws

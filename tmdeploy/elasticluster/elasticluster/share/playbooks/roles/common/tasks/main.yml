@@ -1,0 +1,13 @@
+---
+
+- include_tasks: pre.yml
+- include_tasks: 'init-{{ansible_os_family}}.yml'
+- include_tasks: hosts.yml
+  vars:
+    hosts: '{{groups.all}}'
+- include_tasks: hostname.yml
+- include_tasks: netgroup.yml
+- include_tasks: 'software-{{ansible_os_family}}.yml'
+- include_tasks: ssh_auth.yml
+- include_role:
+    name: autofs
