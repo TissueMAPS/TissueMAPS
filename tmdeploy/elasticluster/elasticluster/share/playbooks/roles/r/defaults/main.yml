@@ -1,5 +1,0 @@
-# r/defaults/main.yml
----
-
-# preferred CRAN mirror, see: https://cran.r-project.org/mirrors.html
-r_cran_mirror_url: 'http://cloud.r-project.org/'

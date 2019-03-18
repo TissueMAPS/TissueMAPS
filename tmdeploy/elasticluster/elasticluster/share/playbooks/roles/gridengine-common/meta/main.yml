@@ -1,5 +1,0 @@
----
-
-dependencies:
-  - role: iptables
-    default_input_policy: 'ACCEPT'

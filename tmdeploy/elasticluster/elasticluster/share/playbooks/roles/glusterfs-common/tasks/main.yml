@@ -1,7 +1,0 @@
----
-
-- include: debian.yml
-  when: is_debian_compatible
-
-- include: rhel.yml
-  when: is_rhel_compatible

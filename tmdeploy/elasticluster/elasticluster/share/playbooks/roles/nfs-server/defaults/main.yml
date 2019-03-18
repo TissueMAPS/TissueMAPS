@@ -1,6 +1,0 @@
----
-
-NFS_EXPORTS:
-  - path: '/home'
-    clients: 'localhost'
-    options: 'rw,no_root_squash'

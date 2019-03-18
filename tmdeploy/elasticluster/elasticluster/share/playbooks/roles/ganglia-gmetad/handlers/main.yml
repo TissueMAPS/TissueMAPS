@@ -1,5 +1,0 @@
----
-
-- name: restart gmetad
-  command: |
-    service gmetad restart

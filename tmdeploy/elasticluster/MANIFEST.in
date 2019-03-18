@@ -1,4 +1,0 @@
-recursive-include elasticluster/share *
-recursive-include docs *
-include elasticluster README.rst version.txt
-
