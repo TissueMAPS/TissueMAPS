@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -17,13 +17,14 @@ import logging
 
 from tmlib.utils import assert_type
 from tmlib.workflow.cli import WorkflowStepCLI
+from tmlib.workflow.illuminati.api import PyramidBuilder
 
 logger = logging.getLogger(__name__)
 
 
 class Illuminati(WorkflowStepCLI):
 
-    @assert_type(api_instance='tmlib.workflow.illuminati.api.PyramidBuilder')
+    @assert_type(api_instance=PyramidBuilder)
     def __init__(self, api_instance, verbosity):
         '''
         Parameters
@@ -34,4 +35,3 @@ class Illuminati(WorkflowStepCLI):
             logging level
         '''
         super(Illuminati, self).__init__(api_instance, verbosity)
-

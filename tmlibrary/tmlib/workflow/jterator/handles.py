@@ -25,6 +25,7 @@ The object's attributes are specified as a mapping in a
 '''
 import re
 import sys
+import types
 import json
 import numpy as np
 import pandas as pd
@@ -54,7 +55,7 @@ class Handle(object):
 
     __metaclass__ = ABCMeta
 
-    @assert_type(name='basestring', help='basestring')
+    @assert_type(name=basestring, help=basestring)
     def __init__(self, name, help):
         '''
         Parameters
@@ -667,7 +668,7 @@ class Scalar(InputHandle):
 
     __metaclass__ = ABCMeta
 
-    @assert_type(value=['int', 'float', 'basestring', 'bool', 'types.NoneType'])
+    @assert_type(value=[int, float, basestring, bool, types.NoneType])
     def __init__(self, name, value, help='', options=None):
         '''
         Parameters
@@ -700,7 +701,7 @@ class Boolean(Scalar):
 
     '''Handle for a boolean input argument.'''
 
-    @assert_type(value='bool')
+    @assert_type(value=bool)
     def __init__(self, name, value, help='', options=None):
         '''
         Parameters
@@ -730,7 +731,7 @@ class Numeric(Scalar):
 
     '''Handle for a numeric input argument.'''
 
-    @assert_type(value=['int', 'float', 'types.NoneType'])
+    @assert_type(value=[int, float, types.NoneType])
     def __init__(self, name, value, help='', options=None):
         '''
         Parameters
@@ -758,7 +759,7 @@ class Character(Scalar):
 
     '''Handle for a character input argument.'''
 
-    @assert_type(value=['basestring', 'types.NoneType'])
+    @assert_type(value=[basestring, types.NoneType])
     def __init__(self, name, value, help='', options=None):
         '''
         Parameters
@@ -786,7 +787,7 @@ class Sequence(InputHandle):
 
     '''Class for a sequence input argument handle.'''
 
-    @assert_type(value='list')
+    @assert_type(value=list)
     def __init__(self, name, value, help=''):
         '''
         Parameters
@@ -815,7 +816,7 @@ class Set(InputHandle):
 
     '''Unordered set of values. Discards all repeated values.'''
 
-    @assert_type(value=['list', 'set'])
+    @assert_type(value=[list, set])
     def __init__(self, name, value, help=''):
         '''
         Parameters
@@ -846,7 +847,7 @@ class Plot(InputHandle):
     generate a figure or rather run in headless mode.
     '''
 
-    @assert_type(value='bool')
+    @assert_type(value=bool)
     def __init__(self, name, value=False, help='', options=None):
         '''
         Parameters
@@ -884,8 +885,9 @@ class Measurement(OutputHandle):
     _NAME_PATTERN = re.compile(r'^[A-Za-z0-9_-]+$')
 
     @assert_type(
-        objects='basestring',
-        objects_ref='basestring', channel_ref=['basestring', 'types.NoneType']
+        objects=basestring,
+        objects_ref=basestring,
+        channel_ref=[basestring, types.NoneType]
     )
     def __init__(self, name, objects, objects_ref, channel_ref=None, help=''):
         '''
