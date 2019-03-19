@@ -95,7 +95,10 @@ class Neighbours(jtlib.features.Features):
             neighbour_count = len(unique_values)
 
             # save these unique values as a string
-            neighbour_string = '.'.join(str(x) for x in unique_values)
+            if neighbour_count == 0:
+                neighbour_string = '.'
+            else:
+                neighbour_string = '.'.join(str(x) for x in unique_values)
 
             # create an inverted image of the surrounding cells
             neighbours = np.zeros_like(object_image)
