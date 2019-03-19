@@ -12,7 +12,7 @@ export JAVA_HOME=/usr/lib/jvm/java-1.{{ java_version }}-openjdk
 # Python
 export PATH=/home/{{ tm_user }}/.local/bin:$PATH
 
-{% if matlab_run|success %}
+{% if matlab_run is success %}
 ## MATLAB
 export MATLABROOT={{ matlab_root.stdout }}
 export MATLABHOME="${MATLABROOT}"
