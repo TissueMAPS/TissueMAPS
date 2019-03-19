@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2019 University of Zurich.
+# Copyright (C) 2016-2018 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
-import types
 import numpy as np
 import scipy.ndimage as ndi
 import cv2
@@ -27,8 +26,8 @@ from geoalchemy2.shape import to_shape
 from abc import ABCMeta
 import logging
 
-from tmlib.utils import assert_type, add_assert_type
-from tmlib.metadata import IllumstatsImageMetadata, ImageMetadata, PyramidTileMetadata
+from tmlib.utils import assert_type
+from tmlib.metadata import ImageMetadata, PyramidTileMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ class Image(object):
         ----------
         array: numpy.ndarray
             2D pixels array
-        metadata: tmlib.metadata.ImageMetadata, optionalh
+        metadata: tmlib.metadata.ImageMetadata, optional
             image metadata (default: ``None``)
         '''
         self.array = array
@@ -153,9 +152,7 @@ class Image(object):
         array = self.array[y_offset:(y_offset+height), x_offset:(x_offset+width)]
         return self.__class__(array, self.metadata)
 
-    # we cannot simply decorate this function with
-    # `@assert_type(image=Image)` since class `Image` is not yet
-    # defined at this point; use `add_assert_type` later
+    @assert_type(image='tmlib.image.Image')
     def insert(self, image, y_offset, x_offset, inplace=True):
         '''Inserts a continuous, hyperrectangular volume of pixels into
         an image.
@@ -191,9 +188,7 @@ class Image(object):
         else:
             return self.__class__(array, self.metadata)
 
-    # we cannot simply decorate this function with
-    # `@assert_type(image=Image)` since class `Image` is not yet
-    # defined at this point; use `add_assert_type` later
+    @assert_type(image='tmlib.image.Image')
     def merge(self, image, axis, offset, inplace=True):
         '''Merges pixels arrays of two images into one.
 
@@ -230,10 +225,7 @@ class Image(object):
         else:
             return self.__class__(array, self.metadata)
 
-    # we cannot simply decorate this function with
-    # `@assert_type(image=Image)` since class
-    # `ArgumentCollection` is not yet defined at this point; use
-    # `add_assert_type` later
+    @assert_type(image='tmlib.image.Image')
     def join(self, image, axis):
         '''Joins two pixels arrays.
 
@@ -461,9 +453,244 @@ class Image(object):
             new_object.metadata.is_aligned = True
             return new_object
 
-add_assert_type(Image, 'insert', image=Image)
-add_assert_type(Image, 'merge',  image=Image)
-add_assert_type(Image, 'join',   image=Image)
+
+class ChannelImage(Image):
+
+    '''Class for a channel image: a grayscale image.'''
+
+    def __init__(self, array, metadata=None):
+        '''
+        Parameters
+        ----------
+        array: numpy.ndarray[uint16]
+            2D pixels array
+        metadata: tmlib.metadata.ChannelImageMetadata, optional
+            image metadata (note that some methods need to access metadata)
+        '''
+        super(ChannelImage, self).__init__(array, metadata)
+        if not self.is_uint:
+            raise TypeError('Image must have unsigned integer type.')
+
+    @property
+    def array(self):
+        '''numpy.ndarray[numpy.uint16]: 2D pixels array'''
+        return self._array
+
+    @array.setter
+    def array(self, value):
+        if not isinstance(value, np.ndarray):
+            raise TypeError(
+                'Argument "array" must have type numpy.ndarray.'
+            )
+        if value.ndim != 2:
+            raise ValueError('Argument "array" must be two dimensional.')
+        if not(value.dtype == np.uint16 or value.dtype == np.uint8):
+            raise ValueError(
+                'Argument "array" must have numpy.uint8 or numpy.uint16 data type.'
+            )
+        self._array = value
+
+    @staticmethod
+    def _map_to_uint8(img, lower_bound=None, upper_bound=None):
+        '''Maps a 16-bit image trough a lookup table to convert it to 8-bit.
+
+        Parameters
+        ----------
+        img: numpy.ndarray[np.uint16]
+            image that should be mapped
+        lower_bound: int, optional
+            lower bound of the range that should be mapped to ``[0, 255]``,
+            value must be in the range ``[0, 65535]``
+            (defaults to ``numpy.min(img)``)
+        upper_bound: int, optional
+            upper bound of the range that should be mapped to ``[0, 255]``,
+            value must be in the range ``[0, 65535]``
+            (defaults to ``numpy.max(img)``)
+
+        Returns
+        -------
+        numpy.ndarray[uint8]
+            mapped image
+        '''
+        if img.dtype != np.uint16:
+            raise TypeError('"img" must have 16-bit unsigned integer type.')
+        if not(0 <= lower_bound < 2**16) and lower_bound is not None:
+                raise ValueError('"lower_bound" must be in the range [0, 65535]')
+        if not(0 <= upper_bound < 2**16) and upper_bound is not None:
+            raise ValueError('"upper_bound" must be in the range [0, 65535]')
+        if lower_bound is None:
+            lower_bound = np.min(img)
+        if upper_bound is None:
+            upper_bound = np.max(img)
+        if lower_bound >= upper_bound:
+            raise ValueError('"lower_bound" must be smaller than "upper_bound"')
+        lut = np.concatenate([
+            np.zeros(lower_bound, dtype=np.uint16),
+            np.linspace(0, 255, upper_bound - lower_bound).astype(np.uint16),
+            np.ones(2**16 - upper_bound, dtype=np.uint16) * 255
+        ])
+        return lut[img].astype(np.uint8)
+
+    def scale(self, lower, upper, inplace=True):
+        '''Scales values to 8-bit such that the range [`lower`, `upper`]
+        will be mapped to the range [0, 255].
+
+        Parameters
+        ----------
+        lower: int
+            value below which pixel values will be set to 0
+        upper: int
+            value above which pixel values will be set to 255
+        inplace: bool, optional
+            whether values should be rescaled in place rather than creating
+            a new image object (default: ``True``)
+
+        Returns
+        -------
+        tmlib.image.Image
+            image with rescaled pixels
+        '''
+        if self.is_uint16:
+            array = self._map_to_uint8(self.array, lower, upper)
+            if inplace:
+                self.array = array
+                self.metadata.is_rescaled = True
+                return self
+            else:
+                new_image = self.__class__(array, self.metadata)
+                new_image.metadata.is_rescaled = True
+                return new_image
+        elif self.is_uint8:
+            return self
+        else:
+            TypeError(
+                'Only pixels with unsigned integer type can be scaled.'
+            )
+
+    def clip(self, lower, upper, inplace=True):
+        '''Clips intensity values below `lower` and above `upper`, i.e. set all
+        pixel values below `lower` to `lower` and all above `upper` to `upper`.
+
+        Parameters
+        ----------
+        lower: int
+            value below which pixel values should be clippe
+        upper: int
+            value above which pixel values should be clipped
+        inplace: bool, optional
+            whether values should be clipped in place rather than creating
+            a new image object (default: ``True``)
+
+        Returns
+        -------
+        tmlib.image.ChannelImage
+            image with clipped pixels
+        '''
+        array = np.clip(self.array, lower, upper)
+        if inplace:
+            self.array = array
+            self.metadata.is_clipped = True
+            return self
+        else:
+            new_image = self.__class__(array, self.metadata)
+            new_image.metadata.is_clipped = True
+            return new_image
+
+    @staticmethod
+    def _correct_illumination(img, mean, std, log_transform=True):
+        '''Corrects an image for illumination artifacts.
+
+        Parameters
+        ----------
+        img: numpy.ndarray[numpy.uint8 or numpy.uint16]
+            image that should be corrected
+        mean: numpy.ndarray[numpy.float64]
+            matrix of mean values (same dimensions as `img`)
+        std: numpy.ndarray[numpy.float64]
+            matrix of standard deviation values (same dimensions as `img`)
+        log_transform: bool, optional
+            log10 transform `img` (default: ``True``)
+
+        Returns
+        -------
+        numpy.ndarray
+            corrected image (same data type as `img`)
+        '''
+        img_type = img.dtype
+        # Do all computations with type float
+        img = img.astype(np.float64)
+        if log_transform:
+            img[img == 0] = 10**-10
+            img = np.log10(img)
+            img[img == 0] = 0
+        img = (img - mean) / std
+        img = (img * np.mean(std)) + np.mean(mean)
+        if log_transform:
+            img = 10 ** img
+        # Cast back to original type.
+        return img.astype(img_type)
+
+    @assert_type(stats='tmlib.image.IllumstatsContainer')
+    def correct(self, stats, inplace=True):
+        '''Corrects the image for illumination artifacts.
+
+        Parameters
+        ----------
+        stats: tmlib.image.IllumstatsContainer
+            mean and standard deviation statistics at each pixel position
+            calculated over all images of the same channel
+        inplace: bool, optional
+            whether values should be corrected in place rather than creating
+            a new image object (default: ``True``)
+
+        Returns
+        -------
+        tmlib.image.ChannelImage
+            image with pixels corrected for illumination
+
+        Raises
+        ------
+        ValueError
+            when channel doesn't match between illumination statistics and
+            image
+        '''
+        if (stats.mean.metadata.channel_id != self.metadata.channel_id or
+                stats.std.metadata.channel_id != self.metadata.channel_id):
+            raise ValueError('Channels don\'t match!')
+        array = self._correct_illumination(
+            self.array, stats.mean.array, stats.std.array
+        )
+        if inplace:
+            self.array = array
+            self.metadata.is_corrected = True
+            return self
+        else:
+            new_object = ChannelImage(array, self.metadata)
+            new_object.metadata.is_corrected = True
+            return new_object
+
+    def png_encode(self):
+        '''Encodes pixels of the image in *PNG* format.
+
+        Returns
+        -------
+        numpy.ndarray[numpy.uint8]
+            encoded pixels array
+
+        '''
+        logger.info('encode image as PNG')
+        return cv2.imencode('.png', self.array)[1]
+
+    def tiff_encode(self):
+        '''Encodes pixels of the image in *TIFF* format.
+
+        Returns
+        -------
+        numpy.ndarray[numpy.uint8]
+            encoded pixels array
+        '''
+        logger.info('encode image as TIFF')
+        return cv2.imencode('.tif', self.array)[1]
 
 
 class SegmentationImage(Image):
@@ -706,7 +933,7 @@ class PyramidTile(Image):
     TILE_SIZE = 256
 
     @assert_type(
-        metadata=[PyramidTileMetadata, types.NoneType]
+        metadata=['tmlib.metadata.PyramidTileMetadata', 'types.NoneType']
     )
     def __init__(self, array, metadata=None):
         '''
@@ -874,7 +1101,7 @@ class IllumstatsImage(Image):
     '''
 
     @assert_type(
-        metadata=[IllumstatsImageMetadata, types.NoneType]
+        metadata=['tmlib.metadata.IllumstatsImageMetadata', 'types.NoneType']
     )
     def __init__(self, array, metadata=None):
         '''
@@ -924,7 +1151,7 @@ class IllumstatsContainer(object):
     '''
 
     @assert_type(
-        mean=IllumstatsImage, std=IllumstatsImage
+        mean='tmlib.image.IllumstatsImage', std='tmlib.image.IllumstatsImage'
     )
     def __init__(self, mean, std, percentiles):
         '''
@@ -986,240 +1213,3 @@ class IllumstatsContainer(object):
         return self.percentiles[keys[idx]]
 
 
-class ChannelImage(Image):
-
-    '''Class for a channel image: a grayscale image.'''
-
-    def __init__(self, array, metadata=None):
-        '''
-        Parameters
-        ----------
-        array: numpy.ndarray[uint16]
-            2D pixels array
-        metadata: tmlib.metadata.ChannelImageMetadata, optional
-            image metadata (note that some methods need to access metadata)
-        '''
-        super(ChannelImage, self).__init__(array, metadata)
-        if not self.is_uint:
-            raise TypeError('Image must have unsigned integer type.')
-
-    @property
-    def array(self):
-        '''numpy.ndarray[numpy.uint16]: 2D pixels array'''
-        return self._array
-
-    @array.setter
-    def array(self, value):
-        if not isinstance(value, np.ndarray):
-            raise TypeError(
-                'Argument "array" must have type numpy.ndarray.'
-            )
-        if value.ndim != 2:
-            raise ValueError('Argument "array" must be two dimensional.')
-        if not(value.dtype == np.uint16 or value.dtype == np.uint8):
-            raise ValueError(
-                'Argument "array" must have numpy.uint8 or numpy.uint16 data type.'
-            )
-        self._array = value
-
-    @staticmethod
-    def _map_to_uint8(img, lower_bound=None, upper_bound=None):
-        '''Maps a 16-bit image trough a lookup table to convert it to 8-bit.
-
-        Parameters
-        ----------
-        img: numpy.ndarray[np.uint16]
-            image that should be mapped
-        lower_bound: int, optional
-            lower bound of the range that should be mapped to ``[0, 255]``,
-            value must be in the range ``[0, 65535]``
-            (defaults to ``numpy.min(img)``)
-        upper_bound: int, optional
-            upper bound of the range that should be mapped to ``[0, 255]``,
-            value must be in the range ``[0, 65535]``
-            (defaults to ``numpy.max(img)``)
-
-        Returns
-        -------
-        numpy.ndarray[uint8]
-            mapped image
-        '''
-        if img.dtype != np.uint16:
-            raise TypeError('"img" must have 16-bit unsigned integer type.')
-        if not(0 <= lower_bound < 2**16) and lower_bound is not None:
-                raise ValueError('"lower_bound" must be in the range [0, 65535]')
-        if not(0 <= upper_bound < 2**16) and upper_bound is not None:
-            raise ValueError('"upper_bound" must be in the range [0, 65535]')
-        if lower_bound is None:
-            lower_bound = np.min(img)
-        if upper_bound is None:
-            upper_bound = np.max(img)
-        if lower_bound >= upper_bound:
-            raise ValueError('"lower_bound" must be smaller than "upper_bound"')
-        lut = np.concatenate([
-            np.zeros(lower_bound, dtype=np.uint16),
-            np.linspace(0, 255, upper_bound - lower_bound).astype(np.uint16),
-            np.ones(2**16 - upper_bound, dtype=np.uint16) * 255
-        ])
-        return lut[img].astype(np.uint8)
-
-    def scale(self, lower, upper, inplace=True):
-        '''Scales values to 8-bit such that the range [`lower`, `upper`]
-        will be mapped to the range [0, 255].
-
-        Parameters
-        ----------
-        lower: int
-            value below which pixel values will be set to 0
-        upper: int
-            value above which pixel values will be set to 255
-        inplace: bool, optional
-            whether values should be rescaled in place rather than creating
-            a new image object (default: ``True``)
-
-        Returns
-        -------
-        tmlib.image.Image
-            image with rescaled pixels
-        '''
-        if self.is_uint16:
-            array = self._map_to_uint8(self.array, lower, upper)
-            if inplace:
-                self.array = array
-                self.metadata.is_rescaled = True
-                return self
-            else:
-                new_image = self.__class__(array, self.metadata)
-                new_image.metadata.is_rescaled = True
-                return new_image
-        elif self.is_uint8:
-            return self
-        else:
-            TypeError(
-                'Only pixels with unsigned integer type can be scaled.'
-            )
-
-    def clip(self, lower, upper, inplace=True):
-        '''Clips intensity values below `lower` and above `upper`, i.e. set all
-        pixel values below `lower` to `lower` and all above `upper` to `upper`.
-
-        Parameters
-        ----------
-        lower: int
-            value below which pixel values should be clippe
-        upper: int
-            value above which pixel values should be clipped
-        inplace: bool, optional
-            whether values should be clipped in place rather than creating
-            a new image object (default: ``True``)
-
-        Returns
-        -------
-        tmlib.image.ChannelImage
-            image with clipped pixels
-        '''
-        array = np.clip(self.array, lower, upper)
-        if inplace:
-            self.array = array
-            self.metadata.is_clipped = True
-            return self
-        else:
-            new_image = self.__class__(array, self.metadata)
-            new_image.metadata.is_clipped = True
-            return new_image
-
-    @staticmethod
-    def _correct_illumination(img, mean, std, log_transform=True):
-        '''Corrects an image for illumination artifacts.
-
-        Parameters
-        ----------
-        img: numpy.ndarray[numpy.uint8 or numpy.uint16]
-            image that should be corrected
-        mean: numpy.ndarray[numpy.float64]
-            matrix of mean values (same dimensions as `img`)
-        std: numpy.ndarray[numpy.float64]
-            matrix of standard deviation values (same dimensions as `img`)
-        log_transform: bool, optional
-            log10 transform `img` (default: ``True``)
-
-        Returns
-        -------
-        numpy.ndarray
-            corrected image (same data type as `img`)
-        '''
-        img_type = img.dtype
-        # Do all computations with type float
-        img = img.astype(np.float64)
-        if log_transform:
-            img[img == 0] = 10**-10
-            img = np.log10(img)
-            img[img == 0] = 0
-        img = (img - mean) / std
-        img = (img * np.mean(std)) + np.mean(mean)
-        if log_transform:
-            img = 10 ** img
-        # Cast back to original type.
-        return img.astype(img_type)
-
-    @assert_type(stats=IllumstatsContainer)
-    def correct(self, stats, inplace=True):
-        '''Corrects the image for illumination artifacts.
-
-        Parameters
-        ----------
-        stats: tmlib.image.IllumstatsContainer
-            mean and standard deviation statistics at each pixel position
-            calculated over all images of the same channel
-        inplace: bool, optional
-            whether values should be corrected in place rather than creating
-            a new image object (default: ``True``)
-
-        Returns
-        -------
-        tmlib.image.ChannelImage
-            image with pixels corrected for illumination
-
-        Raises
-        ------
-        ValueError
-            when channel doesn't match between illumination statistics and
-            image
-        '''
-        if (stats.mean.metadata.channel_id != self.metadata.channel_id or
-                stats.std.metadata.channel_id != self.metadata.channel_id):
-            raise ValueError('Channels don\'t match!')
-        array = self._correct_illumination(
-            self.array, stats.mean.array, stats.std.array
-        )
-        if inplace:
-            self.array = array
-            self.metadata.is_corrected = True
-            return self
-        else:
-            new_object = ChannelImage(array, self.metadata)
-            new_object.metadata.is_corrected = True
-            return new_object
-
-    def png_encode(self):
-        '''Encodes pixels of the image in *PNG* format.
-
-        Returns
-        -------
-        numpy.ndarray[numpy.uint8]
-            encoded pixels array
-
-        '''
-        logger.info('encode image as PNG')
-        return cv2.imencode('.png', self.array)[1]
-
-    def tiff_encode(self):
-        '''Encodes pixels of the image in *TIFF* format.
-
-        Returns
-        -------
-        numpy.ndarray[numpy.uint8]
-            encoded pixels array
-        '''
-        logger.info('encode image as TIFF')
-        return cv2.imencode('.tif', self.array)[1]

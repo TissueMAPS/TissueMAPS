@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016, 2018, 2019  University of Zurich
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -28,7 +28,6 @@ import logging
 
 from tmlib.utils import assert_type
 from tmlib.image import IllumstatsImage
-from tmlib.image import ChannelImage
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +61,7 @@ class OnlineStatistics(object):
         self._percentiles = np.zeros((precision, ), dtype=np.float)
         self._keys = [round(x, decimals) for x in self._q]
 
-    @assert_type(image=ChannelImage)
+    @assert_type(image='tmlib.image.ChannelImage')
     def update(self, image, log_transform=True):
         '''Update statistics with additional image.
 

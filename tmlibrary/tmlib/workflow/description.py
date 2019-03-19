@@ -165,7 +165,7 @@ class WorkflowStageDescription(object):
 
     '''Description of a TissueMAPS workflow stage.'''
 
-    @assert_type(name=basestring, mode=basestring)
+    @assert_type(name='basestring', mode='basestring')
     def __init__(self, type, name, mode='sequential', active=True, steps=None):
         '''
         Parameters
