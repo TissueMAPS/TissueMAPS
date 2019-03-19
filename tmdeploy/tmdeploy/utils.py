@@ -1,5 +1,5 @@
 # TmDeploy - Automated deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@ def read_yaml_file(filename):
     if not os.path.exists(filename):
         raise OSError('File does not exist: {0}'.format(filename))
     with open(filename) as f:
-        return yaml.load(f)
+        return yaml.safe_load(f)
 
 
 def write_yaml_file(filename, content):
