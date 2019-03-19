@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016, 2018, 2019  University of Zurich
+# Copyright (C) 2016, 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -358,7 +358,7 @@ class ChannelImageFile(FileModel, DateMixIn):
             metadata.y_shift = shifts.y
         return ChannelImage(array, metadata)
 
-    @assert_type(image=ChannelImage)
+    @assert_type(image='tmlib.image.ChannelImage')
     def put(self, image):
         '''Puts image to storage.
 
@@ -445,7 +445,7 @@ class IllumstatsFile(FileModel, DateMixIn):
             percentiles = dict(zip(keys, values))
         return IllumstatsContainer(mean, std, percentiles).smooth()
 
-    @assert_type(data=IllumstatsContainer)
+    @assert_type(data='tmlib.image.IllumstatsContainer')
     def put(self, data):
         '''Put illumination statistics images to store.
 

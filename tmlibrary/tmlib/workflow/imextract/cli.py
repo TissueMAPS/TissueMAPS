@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2019 University of Zurich.
+# Copyright (C) 2016-2018 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -18,14 +18,13 @@ import logging
 from tmlib.utils import notimplemented
 from tmlib.utils import assert_type
 from tmlib.workflow.cli import WorkflowStepCLI
-from tmlib.workflow.imextract.api import ImageExtractor
 
 logger = logging.getLogger(__name__)
 
 
 class Imextract(WorkflowStepCLI):
 
-    @assert_type(api_instance=ImageExtractor)
+    @assert_type(api_instance='tmlib.workflow.imextract.api.ImageExtractor')
     def __init__(self, api_instance, verbosity):
         '''
         Parameters
@@ -36,3 +35,4 @@ class Imextract(WorkflowStepCLI):
             logging level
         '''
         super(Imextract, self).__init__(api_instance, verbosity)
+

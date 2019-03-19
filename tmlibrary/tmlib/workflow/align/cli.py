@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2019 University of Zurich.
+# Copyright (C) 2016-2018 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -19,14 +19,13 @@ from tmlib.utils import assert_type
 from tmlib.workflow.cli import WorkflowStepCLI
 from tmlib.workflow.align.args import AlignBatchArguments
 from tmlib.workflow.align.args import AlignSubmissionArguments
-from tmlib.workflow.align.api import ImageRegistrator
 
 logger = logging.getLogger(__name__)
 
 
 class Align(WorkflowStepCLI):
 
-    @assert_type(api_instance=ImageRegistrator)
+    @assert_type(api_instance='tmlib.workflow.align.api.ImageRegistrator')
     def __init__(self, api_instance, verbosity):
         '''
         Parameters
@@ -37,3 +36,4 @@ class Align(WorkflowStepCLI):
             logging verbosity
         '''
         super(Align, self).__init__(api_instance, verbosity)
+
