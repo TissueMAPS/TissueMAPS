@@ -1,5 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""API view functions for querying :mod:`mapobject <tmlib.models.mapobject>` 
+"""API view functions for querying :mod:`mapobject <tmlib.models.mapobject>`
 resources.
 """
 import json
@@ -675,3 +675,76 @@ def get_segmentations(experiment_id, mapobject_type_id):
     return jsonify(data=img.array.tolist())
 
 
+@api.route(
+    '/experiments/<experiment_id>/mapobjects/<mapobject_id>/info',
+    methods=['GET']
+)
+@jwt_required()
+def get_info(experiment_id, mapobject_id):
+    """
+    .. http:get:: /api/experiments/(string:experiment_id)/mapobjects/(string:mapobject_id)/info
+
+        Return miscellaneous information about a MapObject (given its ID).
+
+        **Example response**:
+
+        .. sourcecode:: http
+
+            HTTP/1.1 200 OK
+            Content-Type: application/json
+
+            {
+              id: 109362,
+              type: 'nuclei',
+              experiment_name: 'example_exper',
+              plate_name: 'plate01',
+              well_name: 'A08',
+              well_pos_x: 0,
+              well_pos_y: 2,
+              tpoint: null,
+              zplane: null,
+              label: 15
+            }
+
+        :reqheader Authorization: JWT token issued by the server
+        :statuscode 200: no error
+        :statuscode 400: malformed request
+
+        :query experiment_id: database ID of the experiment
+        :query mapoject_id: database ID of the target MapObject
+    """
+    logger.info('gathering info on mapobject %s in experiment %s ...',
+                mapobject_id, experiment_id)
+
+    with tm.utils.MainSession() as session:
+        experiment = session.query(tm.ExperimentReference).get(experiment_id)
+        experiment_name = experiment.name
+
+    with tm.utils.ExperimentSession(experiment_id) as session:
+        mapobject = session.query(tm.Mapobject)\
+                           .filter_by(id=mapobject_id)\
+                           .first()
+        mapobject_type = session.query(tm.MapobjectType)\
+                                .get(mapobject.mapobject_type_id)
+        site_id = mapobject.partition_key
+        site = session.query(tm.Site).get(site_id)
+        well = session.query(tm.Well).get(site.well_id)
+        plate = session.query(tm.Plate).get(well.plate_id)
+        segmentation = session.query(tm.MapobjectSegmentation)\
+                              .filter_by(mapobject_id=mapobject_id)\
+                              .first()
+        loc = session.query(tm.SegmentationLayer)\
+                     .get(segmentation.segmentation_layer_id)
+
+        return jsonify(data={
+            'id': mapobject_id,
+            'type': mapobject_type.name,
+            'experiment_name': experiment_name,
+            'plate_name': plate.name,
+            'well_name': well.name,
+            'well_pos_x': site.x,
+            'well_pos_y': site.y,
+            'tpoint': loc.tpoint,
+            'zplane': loc.zplane,
+            'label': segmentation.label,
+        })

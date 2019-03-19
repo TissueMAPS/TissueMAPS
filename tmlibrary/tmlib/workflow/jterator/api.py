@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016, 2018  University of Zurich
+# Copyright (C) 2016-2019  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -231,13 +231,6 @@ class ImageAnalysisPipelineEngine(WorkflowStepAPI):
             static_types = ['Plates', 'Wells', 'Sites']
             mapobject_types = session.query(tm.MapobjectType.id).\
                 filter(~tm.MapobjectType.name.in_(static_types)).\
-                all()
-            mapobject_type_ids = [t.id for t in mapobject_types]
-            session.query(tm.Mapobject).\
-                filter(tm.Mapobject.mapobject_type_id.in_(mapobject_type_ids)).\
-                delete()
-            session.query(tm.MapobjectType).\
-                filter(tm.MapobjectType.id.in_(mapobject_type_ids)).\
                 delete()
 
     def _load_pipeline_input(self, site_id):

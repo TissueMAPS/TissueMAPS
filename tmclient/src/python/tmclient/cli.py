@@ -1,4 +1,4 @@
-# Copyright 2016, 2018 University of Zurich.
+# Copyright 2016-2019 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -140,10 +140,17 @@ abstract_zplane_parser.add_argument(
     help='zero-based z-plane index'
 )
 
+# FIXME: should be renamed to `abstract_object_type_parser` for consistency
 abstract_object_parser = argparse.ArgumentParser(add_help=False)
 abstract_object_parser.add_argument(
     '-o', '--object-type', metavar='OBJECT-TYPE', dest='mapobject_type_name',
     required=True, help='name of the objects type'
+)
+
+abstract_mapobject_parser = argparse.ArgumentParser(add_help=False)
+abstract_mapobject_parser.add_argument(
+    'mapobject_ids', metavar='ID', nargs='+',
+    help='MapObject numeric IDs (separated by spaces)'
 )
 
 abstract_feature_parser = argparse.ArgumentParser(add_help=False)
@@ -734,6 +741,70 @@ object_type_delete_parser = object_type_subparsers.add_parser(
     parents=[abstract_name_parser]
 )
 object_type_delete_parser.set_defaults(method='delete_mapobjects_type')
+
+
+###################
+#    Mapobjects   #
+###################
+
+mapobject_parser = subparsers.add_parser(
+    'mapobject', help='mapobject resources',
+    description='Access "mapobject" resources.',
+    parents=[abstract_experiment_parser]
+)
+mapobject_subparsers = mapobject_parser.add_subparsers(
+    dest='mapobject_methods', help='access methods'
+)
+mapobject_subparsers.required = True
+
+mapobject_info_parser = mapobject_subparsers.add_parser(
+    'info', help='Print information about mapobject.',
+    description='Print information about mapobject',
+    parents=[abstract_mapobject_parser]
+)
+mapobject_info_parser.set_defaults(method='_info_mapobjects')
+
+
+mapobject_exhibit_parser = mapobject_subparsers.add_parser(
+    'exhibit', help='Save or show mapobject neighborhood',
+    description='Save or show mapobject neighborhood.',
+    parents=[abstract_mapobject_parser]
+)
+mapobject_exhibit_parser.set_defaults(method='_exhibit_mapobjects')
+mapobject_exhibit_parser.add_argument(
+    '--object-types', dest='object_types', default=None,
+    help=('Show segmentation contour for these MapObject types'
+          ' (comma-separated list of MapObject type names)'))
+mapobject_exhibit_parser.add_argument(
+    '--channels', dest='channel_names', default=None,
+    help=('Overlay segmentation info on these channel images'
+          ' (comma-separated list of channel names)'))
+mapobject_exhibit_parser.add_argument(
+    '--save', dest='save', action='store_true',
+    help=('Save images to files. (Default)'))
+mapobject_exhibit_parser.add_argument(
+    '--no-save', dest='save', action='store_false',
+    help=('Do not save images to files.'))
+mapobject_exhibit_parser.add_argument(
+    '--show', dest='show', action='store_true',
+    help=('Show images interactively.'))
+mapobject_exhibit_parser.add_argument(
+    '--no-show', dest='show', action='store_false',
+    help=('Do not show images. (Default)'))
+mapobject_exhibit_parser.add_argument(
+    '--margin', dest='extra_margin', type=int, default=0,
+    help=('Ensure a margin this many pixel wide'
+          ' encloses the objects of interest'))
+mapobject_exhibit_parser.add_argument(
+    '--file-name-format', dest='file_name_format',
+    default='{mapobject_id}_{channel_name}.png',
+    help=('File name pattern for saving images.'
+          ' The strings `{mapobject_id}` and `{channel_name}`'
+          ' will be replaced by the corresponding values.'))
+mapobject_exhibit_parser.add_argument(
+    '--columns', dest='grid_columns', type=int, default=1,
+    help=('When showing, arrange figures'
+          ' in a grid with this many columns.'))
 
 
 ############

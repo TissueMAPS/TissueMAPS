@@ -374,10 +374,15 @@ class GC3Pie(object):
             index of an individual task within a sequential collection of tasks
             from where all subsequent tasks should be resubmitted
         """
-        self.update_task(task)  # ensure task is up-to-date in DB
         logger.info(
             'Resubmitting task "%s" (ID: %s) from sub-task #%d ...',
             task.jobname, task.persistent_id, index)
+        # ensure task is up-to-date in DB
+        try:
+            self.unmanage_task(str(task.persistent_id))
+        except Exception as err:
+            logger.warning("Ignoring error '%s' gotten from GC3Pie job daemon", err)
+        self.update_task(task)
         self._job_daemon_do('redo', str(task.persistent_id), str(index))
 
     def get_task_status(self, task_id, recursion_depth=None):
@@ -402,3 +407,20 @@ class GC3Pie(object):
         return get_task_status_recursively(
             task_id, recursion_depth, encode_pk
         )
+
+    def unmanage_task(self, task_id):
+        """Add the task with the given ID to the running Engine.
+
+        Parameters
+        ----------
+        task_id: int
+            persistent task ID
+
+        Returns
+        -------
+        None
+        """
+        logger.debug(
+            'Stopping GC3Pie job daemon updates to task ID %s ...',
+            task_id)
+        self._job_daemon_do('unmanage', task_id)

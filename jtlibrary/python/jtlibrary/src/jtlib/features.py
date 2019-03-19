@@ -1,4 +1,4 @@
-# Copyright 2016-2018 University of Zurich
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -360,7 +360,7 @@ class Morphology(Features):
     @property
     def _feature_names(self):
         names = [
-            'Area', 'Eccentricity', 'Convexity', 'Circularity', 'Perimeter',
+            'Local_Centroid_x', 'Local_Centroid_y', 'Area', 'Eccentricity', 'Convexity', 'Circularity', 'Perimeter',
             'Elongation'
         ]
         if self.compute_zernike:
@@ -380,8 +380,11 @@ class Morphology(Features):
         '''
         logger.info('extract morphology features')
         features = list()
+        cm = mh.center_of_mass(img=self.label_image > 0,labels=self.label_image)
         for obj in self.object_ids:
             mask = self.get_object_mask_image(obj)
+            local_centroid_x = cm[obj][1]
+            local_centroid_y = cm[obj][0]
             area = np.float64(np.count_nonzero(mask))
             perimeter = mh.labeled.perimeter(mask)
             if perimeter == 0:
@@ -398,7 +401,7 @@ class Morphology(Features):
             else:
                 elongation = (major_axis - minor_axis) / major_axis
             values = [
-                area, eccentricity, convexity, circularity, perimeter,
+                local_centroid_x, local_centroid_y, area, eccentricity, convexity, circularity, perimeter,
                 elongation
             ]
             if self.compute_zernike:
@@ -437,8 +440,9 @@ class Texture(Features):
     '''
 
     def __init__(self, label_image, intensity_image,
-            theta_range=4, frequencies={1, 5, 10}, radius={1, 5, 10},
-            threshold=None, compute_haralick=False):
+                 theta_range=4, frequencies={1, 5, 10}, radius={1, 5, 10},
+                 scales={1}, threshold=None, compute_haralick=False,
+                 compute_TAS=False, compute_LBP=False):
         '''
         Parameters
         ----------
@@ -452,6 +456,8 @@ class Texture(Features):
             filters (default: ``4``)
         frequencies: Set[int], optional
             frequencies of the Gabor filters (default: ``{1, 5, 10}``)
+        scales: Set[int], optional
+            scales at which to compute the Haralick textures (default: ``{1}``)
         threshold: int, optional
             threshold value for Threshold Adjacency Statistics (TAS)
             (defaults to value computed by Otsu's method)
@@ -466,6 +472,7 @@ class Texture(Features):
         self.theta_range = theta_range
         self.frequencies = frequencies
         self.radius = radius
+        self.scales = scales
         if threshold is None:
             self._threshold = mh.otsu(intensity_image)
         else:
@@ -481,36 +488,53 @@ class Texture(Features):
             raise TypeError(
                 'Elements of argument "frequencies" must have type int.'
             )
+        if not all([isinstance(s, int) for s in self.scales]):
+            raise TypeError(
+                'Elements of argument "scales" must have type int.'
+            )
         self.compute_haralick = compute_haralick
+        self.compute_TAS = compute_TAS
+        self.compute_LBP = compute_LBP
 
     @property
     def _feature_names(self):
         names = ['Gabor-frequency-%d' % f for f in self.frequencies]
-        names.extend(['TAS-center-%d' % i for i in xrange(9)])
-        names.extend(['TAS-n-center-%d' % i for i in xrange(9)])
-        names.extend(['TAS-mu-margin-%d' % i for i in xrange(9)])
-        names.extend(['TAS-n-mu-margin-%d' % i for i in xrange(9)])
-        names.extend(['TAS-mu-%d' % i for i in xrange(9)])
-        names.extend(['TAS-n-mu-%d' % i for i in xrange(9)])
-        names.extend(['Hu-%d' % i for i in xrange(7)])
-        for r in self.radius:
-            names.extend(['LBP-radius-%d-%d' % (r, i) for i in xrange(36)])
+        if self.compute_TAS:
+            for i in xrange(9):
+                for name in [
+                        'center',
+                        'n-center',
+                        'mu-margin',
+                        'n-mu-margin',
+                        'mu',
+                        'n-mu',
+                ]:
+                    names.append('TAS-{name}-{i:d}'.format(name=name, i=i))
+        names.extend('Hu-%d' % i
+                     for i in xrange(7))
+        if self.compute_LBP:
+            for r in self.radius:
+                names.extend('LBP-radius-%d-%d' % (r, i)
+                             for i in xrange(36))
         if self.compute_haralick:
-            names.extend([
-                'Haralick-angular-second-moment',
-                'Haralick-contrast',
-                'Haralick-correlation',
-                'Haralick-sum-of-squares',
-                'Haralick-inverse-diff-moment',
-                'Haralick-sum-avg',
-                'Haralick-sum-var',
-                'Haralick-sum-entropy',
-                'Haralick-entropy',
-                'Haralick-diff-var',
-                'Haralick-diff-entropy',
-                'Haralick-info-measure-corr-1',
-                'Haralick-info-measure-corr-2'
-            ])
+            for name in [
+                    'angular-second-moment',
+                    'contrast',
+                    'correlation',
+                    'sum-of-squares',
+                    'inverse-diff-moment',
+                    'sum-avg',
+                    'sum-var',
+                    'sum-entropy',
+                    'entropy',
+                    'diff-var',
+                    'diff-entropy',
+                    'info-measure-corr-1',
+                    'info-measure-corr-2'
+            ]:
+                for scale in self.scales:
+                    names.append("Haralick-{name}-{scale}"
+                                 .format(name=name, scale=scale))
         return names
 
     def extract(self):
@@ -549,37 +573,47 @@ class Texture(Features):
                     best_score = np.max([best_score, score])
                 values.append(best_score)
             # Threshold Adjacency Statistics
-            logger.debug('extract TAS features for object #%d', obj)
-            tas_values = mh.features.pftas(img, T=self._threshold)
-            values.extend(tas_values)
+            if self.compute_TAS:
+                logger.debug('extract TAS features for object #%d', obj)
+                tas_values = mh.features.pftas(img, T=self._threshold)
+                values.extend(tas_values)
             # Hu
             logger.debug('extract Hu moments for object #%d', obj)
             region = self.object_properties[obj]
             hu_values = region.weighted_moments_hu
             values.extend(hu_values)
             # Local Binary Pattern
-            logger.debug('extract Local Binary Patterns for object #%d', obj)
-            for r in self.radius:
-                # We may want to use more points, but the number of features
-                # increases exponentially with the number of neighbourhood
-                # points.
-                vals = mh.features.lbp(img, radius=r, points=8)
-                values.extend(vals)
+            if self.compute_LBP:
+                logger.debug('extract Local Binary Patterns for object #%d', obj)
+                for r in self.radius:
+                    # We may want to use more points, but the number of features
+                    # increases exponentially with the number of neighbourhood
+                    # points.
+                    vals = mh.features.lbp(img, radius=r, points=8)
+                    values.extend(vals)
             if self.compute_haralick:
                 # Haralick
-                logger.debug('extract Haralick features for object #%d', obj)
-                # NOTE: Haralick features are computed on 8-bit images.
-                clipped_img = np.clip(img, 0, self._clip_value)
-                rescaled_img = mh.stretch(clipped_img)
-                haralick_values = mh.features.haralick(
-                    img, ignore_zeros=False, return_mean=True
-                )
-                if not isinstance(haralick_values, np.ndarray):
-                    # NOTE: setting `ignore_zeros` to True creates problems for some
-                    # objects, when all values of the adjacency matrices are zeros
-                    haralick_values = np.empty((len(self.names), ), dtype=float)
-                    haralick_values[:] = np.NAN
-                values.extend(haralick_values)
+                for scale in self.scales:
+                    logger.debug('extract Haralick features for object #%d at scale %d', obj, scale)
+                    # NOTE: Haralick features are computed on 8-bit images.
+                    clipped_img = np.clip(img, 0, self._clip_value)
+                    rescaled_img = mh.stretch(clipped_img)
+                    try:
+                        haralick_values = mh.features.haralick(
+                            rescaled_img,
+                            ignore_zeros=True,
+                            return_mean=True,
+                            distance=scale
+                        )
+                    except ValueError:
+                        # FIXME: hard-coded size!
+                        haralick_values = np.full(13, np.NaN, dtype=float)
+
+                    if not isinstance(haralick_values, np.ndarray):
+                        # NOTE: setting `ignore_zeros` to True creates problems for some
+                        # objects, when all values of the adjacency matrices are zeros
+                        haralick_values = np.full(len(self.names), np.NaN, dtype=float)
+                    values.extend(haralick_values)
             features.append(values)
         return pd.DataFrame(features, columns=self.names, index=self.object_ids)
 

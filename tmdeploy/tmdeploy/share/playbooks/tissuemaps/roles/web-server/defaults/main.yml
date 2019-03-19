@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018  University of Zurich
+# Copyright (C) 2016-2019  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,16 +16,6 @@
 
 ---
 web_port: 80
-nginx_processes: auto
-
-ssl_certificate_file: /etc/pki/tls/certs/fullchain.crt
-ssl_certificate_key_file: /etc/pki/tls/private/account.pem
-ssl_certificate_csr_file: /etc/pki/tls/certs/request.csr
 
 # Public (!) IP adress
 public_host_name: "{{ ansible_host }}"
-
-enable_https: no
-
-web_user: nginx
-web_group: "{{ web_user }}"

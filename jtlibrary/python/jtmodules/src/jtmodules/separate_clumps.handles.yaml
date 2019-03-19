@@ -1,5 +1,5 @@
 ---
-version: 0.2.0
+version: 0.2.2
 
 input:
 
@@ -57,6 +57,13 @@ input:
     help: >
       Should an alternative figure be created, which shows values for each
       of the selection criteria (area, convexity, circularity)?
+
+  - name: selection_test_show_remaining
+    type: Boolean
+    value: false
+    help: >
+      Should the values of the selection criteria of the remaining objects
+      (after performing the cuts) be shown?
 
 output:
 

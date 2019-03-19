@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 # Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@ from abc import ABCMeta
 from gc3libs.quantity import Memory
 
 from tmlib import cfg
-from tmlib.utils import assert_type
+from tmlib.utils import add_assert_type, assert_type
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +54,12 @@ class Argument(object):
     '''Descriptor class for an argument.'''
 
     @assert_type(
-        type='type', help='basestring',
-        choices=['set', 'list', 'types.NoneType'],
-        flag=['basestring', 'types.NoneType'],
-        short_flag=['basestring', 'types.NoneType'],
-        dependency=['tuple'],
-        meta=['basestring', 'types.NoneType']
+        type=type, help=basestring,
+        choices=[set, list, types.NoneType],
+        flag=[basestring, types.NoneType],
+        short_flag=[basestring, types.NoneType],
+        dependency=[tuple],
+        meta=[basestring, types.NoneType]
     )
     def __init__(self, type, help, default=None, choices=None, flag=None,
             short_flag=None, required=False, disabled=False,
@@ -465,7 +465,10 @@ class ArgumentCollection(object):
             description.append(argument)
         return description
 
-    @assert_type(collection='tmlib.workflow.args.ArgumentCollection')
+    # we cannot simply decorate this function with
+    # `@assert_type(collection=ArgumentCollection)` since class
+    # `ArgumentCollection` is not yet defined at this point; use
+    # `add_assert_type` later
     def union(self, collection):
         '''Adds all arguments contained in another `collection`.
 
@@ -480,6 +483,8 @@ class ArgumentCollection(object):
             value = getattr(self.__class__, name)
             if isinstance(value, Argument):
                 setattr(self.__class__, name, value)
+
+add_assert_type(ArgumentCollection, 'union', collection=ArgumentCollection)
 
 
 class BatchArguments(ArgumentCollection):

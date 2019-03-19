@@ -14,14 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Install yum package for NGINX
-  yum:
-    name: nginx
-    state: installed
-  tags:
-    - web-server
-    - nginx
-
 # FIXME: The EPEL package is currently broken, this represents a workaround
 # (at least for the moment), see https://bugs.centos.org/view.php?id=13669#c29866
 - name: Install NodeJS dependency (temporary fix)
@@ -40,14 +32,3 @@
   tags:
     - web-server
     - tissuemaps
-
-- name: Install yum package for SSL
-  yum:
-    name: "{{ item }}"
-    state: installed
-  with_items:
-    - openssl
-    - pki-base
-  tags:
-    - web-server
-    - nginx

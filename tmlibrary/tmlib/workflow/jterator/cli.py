@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -20,13 +20,14 @@ from tmlib.log import map_logging_verbosity
 from tmlib.workflow.cli import WorkflowStepCLI
 from tmlib.workflow.cli import climethod
 from tmlib.workflow.args import Argument
+from tmlib.workflow.jterator.api import ImageAnalysisPipelineEngine
 
 logger = logging.getLogger(__name__)
 
 
 class Jterator(WorkflowStepCLI):
 
-    @assert_type(api_instance='tmlib.workflow.jterator.api.ImageAnalysisPipelineEngine')
+    @assert_type(api_instance=ImageAnalysisPipelineEngine)
     def __init__(self, api_instance, verbosity):
         '''
         Parameters
@@ -112,4 +113,3 @@ class Jterator(WorkflowStepCLI):
         self._print_logo()
         logger.info('check pipe and handle descriptor files')
         self.api_instance.check_pipeline()
-

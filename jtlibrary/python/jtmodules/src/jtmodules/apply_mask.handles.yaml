@@ -1,0 +1,39 @@
+---
+version: 0.2.0
+
+input:
+
+    - name: image
+      type: Image
+      key:
+      help: Image to be masked
+
+    - name: mask
+      type: MaskImage
+      key:
+      help: Mask to apply
+
+    - name: plot
+      type: Plot
+      value: false
+      help: Should a figure be created?
+
+    - name: plot_type
+      type: Scalar
+      value: objects
+      options:
+        - objects
+        - intensity
+      help: Should objects or intensities by displayed?
+
+output:
+
+    - name: masked_image
+      type: Image
+      key: masked_image.masked_image
+      help: Masked image
+
+    - name: figure
+      type: Figure
+
+

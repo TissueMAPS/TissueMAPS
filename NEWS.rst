@@ -34,6 +34,28 @@
 v0.5.x (*in development*)
 =========================
 
+v0.4.2
+======
+
+New features
+------------
+
+* `identify_primary_iterative` module from (Pelkmans' Lab fork of
+  CellProfiler 1.x) is now available as a Jterator module (thanks to
+  @scottberry)
+
+Important bug fixes
+-------------------
+
+* Workflow resubmission is again possible, with the same semantics it
+  used to have before release 0.4.0 (#118)
+* Source code of Jterator modules can be viewed online again (#102)
+  and the module name is correct (#101).
+
+
+v0.4.1
+======
+
 Incompatible changes
 --------------------
 
@@ -42,19 +64,8 @@ Incompatible changes
   not introduce incompatibilities for end-users, but is an important
   change for developers.
 
-New features
-------------
 
-No new features have been added.
-
-Important bug fixes
--------------------
-
-* Source code of Jterator modules can be viewed online again (#102)
-  and the module name is correct (#101).
-
-
-v0.4.x
+v0.4.0
 ======
 
 Incompatible changes

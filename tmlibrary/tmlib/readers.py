@@ -40,7 +40,7 @@ class Reader(object):
 
     '''Abstract base class for reading data from files.
 
-    Readers make use of the 
+    Readers make use of the
     `with statement context manager <https://docs.python.org/2/reference/datamodel.html#context-managers>`_.
     and thus follow a similar syntax::
 
@@ -102,7 +102,7 @@ class TextReader(Reader):
         lxml.etree._Element
             xml
         '''
-        logger.debug('read from file: %s', self.filename)
+        logger.debug('read text from file: %s', self.filename)
         return self._stream.read()
 
 
@@ -123,7 +123,7 @@ class XmlReader(Reader):
         lxml.etree._Element
             xml
         '''
-        logger.debug('read from file: %s', self.filename)
+        logger.debug('read XML data from file: %s', self.filename)
         return lxml.etree.fromstring(self._stream.read())
 
 
@@ -159,7 +159,7 @@ class JsonReader(Reader):
         dict or list
             file content
         '''
-        logger.debug('read from file: %s', self.filename)
+        logger.debug('read JSON data from file: %s', self.filename)
         return load_json(self._stream.read())
 
 
@@ -194,7 +194,7 @@ class YamlReader(Reader):
         dict or list
             file content
         '''
-        logger.debug('read from file: %s', self.filename)
+        logger.debug('read YAML data from file: %s', self.filename)
         return load_yaml(self._stream.read())
 
 
@@ -620,7 +620,7 @@ class BFImageReader(object):
             (only relevant if the file contains more than one *Image* elements)
         plane: int, optional
             zero-based plane index within a series
-            (only relevant if *Image* elements within the file contain 
+            (only relevant if *Image* elements within the file contain
             more than one *Plane* element)
 
         Returns

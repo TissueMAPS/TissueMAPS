@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -25,6 +25,7 @@ The object's attributes are specified as a mapping in a
 '''
 import re
 import sys
+import types
 import json
 import numpy as np
 import pandas as pd
@@ -54,7 +55,7 @@ class Handle(object):
 
     __metaclass__ = ABCMeta
 
-    @assert_type(name='basestring', help='basestring')
+    @assert_type(name=basestring, help=basestring)
     def __init__(self, name, help):
         '''
         Parameters
@@ -667,7 +668,7 @@ class Scalar(InputHandle):
 
     __metaclass__ = ABCMeta
 
-    @assert_type(value=['int', 'float', 'basestring', 'bool', 'types.NoneType'])
+    @assert_type(value=[int, float, basestring, bool, types.NoneType])
     def __init__(self, name, value, help='', options=None):
         '''
         Parameters
@@ -700,7 +701,7 @@ class Boolean(Scalar):
 
     '''Handle for a boolean input argument.'''
 
-    @assert_type(value='bool')
+    @assert_type(value=bool)
     def __init__(self, name, value, help='', options=None):
         '''
         Parameters
@@ -730,7 +731,7 @@ class Numeric(Scalar):
 
     '''Handle for a numeric input argument.'''
 
-    @assert_type(value=['int', 'float', 'types.NoneType'])
+    @assert_type(value=[int, float, types.NoneType])
     def __init__(self, name, value, help='', options=None):
         '''
         Parameters
@@ -758,7 +759,7 @@ class Character(Scalar):
 
     '''Handle for a character input argument.'''
 
-    @assert_type(value=['basestring', 'types.NoneType'])
+    @assert_type(value=[basestring, types.NoneType])
     def __init__(self, name, value, help='', options=None):
         '''
         Parameters
@@ -786,7 +787,7 @@ class Sequence(InputHandle):
 
     '''Class for a sequence input argument handle.'''
 
-    @assert_type(value='list')
+    @assert_type(value=list)
     def __init__(self, name, value, help=''):
         '''
         Parameters
@@ -794,9 +795,6 @@ class Sequence(InputHandle):
         name: str
             name of the item, which must match a parameter of the module
             function
-        mode: str
-            mode of the item, which defines the way it can be handled by the
-            program
         value: List[str or int or float]
             value of the item, i.e. the actual argument of the function
             parameter
@@ -814,13 +812,42 @@ class Sequence(InputHandle):
         return '<Sequence(name=%r)>' % self.name
 
 
+class Set(InputHandle):
+
+    '''Unordered set of values. Discards all repeated values.'''
+
+    @assert_type(value=[list, set])
+    def __init__(self, name, value, help=''):
+        '''
+        Parameters
+        ----------
+        name: str
+            name of the item, which must match a parameter of the module
+            function
+        value: Set[str or int or float]
+            value of the item, i.e. the actual argument of the function
+            parameter
+        help: str, optional
+            help message (default: ``""``)
+        '''
+        for v in value:
+            if all([not isinstance(v, t) for t in {int, float, basestring}]):
+                raise TypeError(
+                    'Elements of argument "value" must have type '
+                        'int, float, or basestring.')
+        super(Set, self).__init__(name, set(value), help)
+
+    def __str__(self):
+        return '<Set(name=%r)>' % self.name
+
+
 class Plot(InputHandle):
 
     '''Handle for a plot that indicates whether the module should
     generate a figure or rather run in headless mode.
     '''
 
-    @assert_type(value='bool')
+    @assert_type(value=bool)
     def __init__(self, name, value=False, help='', options=None):
         '''
         Parameters
@@ -858,8 +885,9 @@ class Measurement(OutputHandle):
     _NAME_PATTERN = re.compile(r'^[A-Za-z0-9_-]+$')
 
     @assert_type(
-        objects='basestring',
-        objects_ref='basestring', channel_ref=['basestring', 'types.NoneType']
+        objects=basestring,
+        objects_ref=basestring,
+        channel_ref=[basestring, types.NoneType]
     )
     def __init__(self, name, objects, objects_ref, channel_ref=None, help=''):
         '''

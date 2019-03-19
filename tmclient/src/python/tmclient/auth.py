@@ -1,11 +1,11 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
-# 
+# Copyright 2016, 2019  University of Zurich
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,17 +54,15 @@ def load_credentials_from_file(username):
     try:
         with open(filename) as f:
             credentials = yaml.load(f.read())
-    except OSError as err:
-        raise OSError(
-            'No credentials file:\n{0}'.format(filename)
-        )
     except Exception as err:
-        raise SyntaxError(
-            'Could not be read credentials from file:\n{0}'.format(str(err))
+        raise RuntimeError(
+            'Cannot read credentials from file `{0}`: {1}'
+            .format(filename, err)
         )
     if username not in credentials:
         raise KeyError(
-            'No credentials provided for user "{0}"'.format(username)
+            'No credentials provided for user `{0}` in file `{1}`'
+            .format(username, filename)
         )
     return credentials[username]
 

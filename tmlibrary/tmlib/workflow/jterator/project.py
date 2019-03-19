@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -265,18 +265,16 @@ class Project(object):
         handles = list()
         for name in self._module_names:
             h_file = self._get_handles_file(name)
-            with YamlReader(h_file) as f:
-                content = f.read()
             try:
+                with YamlReader(h_file) as f:
+                    content = f.read()
                 description = HandleDescriptions(**content)
-            except TypeError as err:
-                raise PipelineDescription(
-                    'Incorrect handles description of module "%s": %s' % (
-                        name, str(err)
-                    )
-                )
-            h = Handles(name, description)
-            handles.append(h)
+                h = Handles(name, description)
+                handles.append(h)
+            except Exception as err:
+                logger.error(
+                    "Cannot instanciate module `%s`: %s: %s",
+                    name, err.__class__.__name__, err)
         return handles
 
     @cached_property

@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 # Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''Decorators and other utility functions.'''
+from functools import wraps
 import importlib
 import itertools
 import time
@@ -342,7 +343,7 @@ def assert_type(**expected):
 
         class TypeCheckExample(object):
 
-            @assert_type(value1='str', value2=['int', 'float', 'types.NoneType'])
+            @assert_type(value1=str, value2=[int, float, types.NoneType])
             def test(self, value1, value2=None):
                 print 'value1: "%s"' % value1
                 if value2:
@@ -356,72 +357,58 @@ def assert_type(**expected):
         example.test('blabla', '2')  # raises TypeError
 
     '''
-
-    @decorator
-    def wrapper(func, *args, **kwargs):
-        inputs = inspect.getargspec(func)
-        for expected_name, expected_type in expected.iteritems():
-            if expected_name not in inputs.args:
-                raise ValueError('Unknown argument "%s"' % expected_name)
-            index = inputs.args.index(expected_name)
-            if index >= len(args):
-                continue
-            if isinstance(expected_type, str):
-                et_strings = [expected_type]
-            elif isinstance(expected_type, list):
-                et_strings = expected_type
-            else:
-                raise TypeError(
-                    'Expected types for function "%s" have to provided as '
-                    'either a string of a list of strings.'
-                    % func.__name__
-                )
-
-            # Users provide the types as strings. The advantage is that
-            # the corresponding object doesn't have to be imported by the
-            # user. But we have to convert the strings into types and
-            # import custom type objects in order to be able to check their
-            # type.
-            et_types = list()
-            for ets in et_strings:
-                try:
-                    # First, let's deal with built-in types
-                    ett = eval(ets)
-                except NameError:
-                    try:
-                        # It's not a built-in type. So we may deal with a
-                        # custom type.
-                        # Let's import the corresponding module and get
-                        # the object for which we want to check the type.
-                        path_parts = ets.split('.')
-                        fullname = '.'.join(path_parts[:-1])
-                        module = importlib.import_module(fullname)
-                        try:
-                            ett = getattr(module, path_parts[-1])
-                        except AttributeError:
-                            raise AttributeError(
-                                'Custom type %s does not exist.' % fullname
-                            )
-                    except ImportError:
-                        raise ImportError(
-                            'Import of custom type "%s" failed.' % ets
-                        )
-                if not isinstance(ett, type):
+    # this function returns a decorator which does the actual work
+    def deco(fn):
+        argnames, _, _, _ = inspect.getargspec(fn)
+        checks = []
+        for expected_name, expected_types in expected.iteritems():
+            try:
+                index = argnames.index(expected_name)
+            except ValueError:
+                raise ValueError(
+                    "Function {funcname} has no argument named `{argname}`"
+                    .format(funcname=fn.__name__, argname=expected_name))
+            if not isinstance(expected_types, (list, tuple)):
+                expected_types = [expected_types]
+            expected_types = tuple(expected_types)
+            checks.append((expected_name, index, expected_types))
+        # define the wrapped function with typechecking capability
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            # perform checks
+            for name, index, expected_types in checks:
+                if index < len(args):
+                    value = args[index]
+                elif name in kwargs:
+                    value = kwargs[name]
+                else:
+                    # parameter was not explicitly given, skip checks
+                    continue
+                if not isinstance(value, expected_types):
                     raise TypeError(
-                        'Type of "%s" could not be determined' % ett
-                    )
-                et_types.append(ett)
+                        "Argument `{0}` to function {1} must have type {2};"
+                        " gotten {3} {4} instead"
+                        .format(
+                            name, fn.__name__,
+                            ' or '.join(t.__name__ for t in expected_types),
+                            value, type(value)))
+            return fn(*args, **kwargs)
+        return wrapper
+    return deco
 
-            # No we have a type object that we can use for the check
-            if not any([isinstance(args[index], ett) for ett in et_types]):
-                options = ' or '.join([ets for ets in et_strings])
-                raise TypeError(
-                    'Argument "%s" must have type %s.'
-                    % (expected_name, options)
-                )
-        return func(*args, **kwargs)
 
-    return wrapper
+def add_assert_type(cls, name, **expected):
+    """
+    Decorate method *name* of class *cls*, with `assert_type`.
+
+    The *expected* key/value set is passed unchanged to
+    `assert_type`:func: (which see).
+
+    This is provided for the cases where a method has to force some
+    arguments to be of the same class that is being defined.
+    """
+    setattr(cls, name,
+            assert_type(**expected)(getattr(cls, name)))
 
 
 def assert_path_exists(*expected):

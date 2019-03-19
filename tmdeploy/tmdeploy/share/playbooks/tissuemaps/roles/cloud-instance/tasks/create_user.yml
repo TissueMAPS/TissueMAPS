@@ -22,7 +22,6 @@
   with_items:
     - "{{ tm_group }}"
     - "{{ db_group }}"
-    - "{{ web_group }}"
 
 - name: Add `tissuemaps` user
   become: yes
@@ -45,19 +44,6 @@
     home: '/var/lib/postgresql'
     createhome: yes
     append: yes
-
-# For security reasons, the web user doesn't get a shell
-- name: Add web user
-  become: yes
-  user:
-    name: "{{ web_user }}"
-    group: "{{ web_group }}"
-    system: yes
-    shell: /bin/false
-    home: '/var/www'
-    createhome: no
-    append: yes
-  when: web_user != tm_user
 
 - name: Add tm_user to sudoers
   become: yes

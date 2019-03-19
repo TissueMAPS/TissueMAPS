@@ -715,7 +715,7 @@ class ExperimentSession(_Session):
         '''
         db_uri = cfg.db_master_uri
         self.experiment_id = experiment_id
-        logger.debug('create session for experiment %d', self.experiment_id)
+        logger.debug('create DB session for experiment %d', self.experiment_id)
         self._engine = create_db_engine(db_uri)
         schema = _SCHEMA_NAME_FORMAT_STRING.format(
             experiment_id=self.experiment_id

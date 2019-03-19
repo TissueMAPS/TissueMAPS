@@ -1,4 +1,4 @@
-// Copyright 2016 Markus D. Herrmann, University of Zurich and Robin Hafen
+// Copyright 2016, 2018 University of Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -224,15 +224,15 @@ class WorkflowService {
         });
     }
 
-    submit(experiment: Experiment, index: number) {
+    submit(experiment: Experiment, uptoIndex: number) {
         var data = {
-            description: this.workflow.getDescription(index)
+            description: this.workflow.getDescription(uptoIndex)
         };
         this._$rootScope.$emit('updateJobStatus')
         return this._$http.post('/api/experiments/' + experiment.id + '/workflow/submit', data)
         .then((resp) => {
             // console.log(resp);
-            // data.description.stages[index-1].steps.map((step, stepIndex) => {
+            // data.description.stages[uptoIndex-1].steps.map((step, stepIndex) => {
             //     console.log('UPDATE JOBS for step ', step.name)
             //     return this._$rootScope.$emit('updateJobStatus', step.name);
             // });
@@ -245,9 +245,9 @@ class WorkflowService {
         });
     }
 
-    resubmit(experiment: Experiment, index: number, startIndex: number) {
+    resubmit(experiment: Experiment, uptoIndex: number, startIndex: number) {
         var data = {
-            description: this.workflow.getDescription(index),
+            description: this.workflow.getDescription(uptoIndex),
             index: startIndex
         };
         this._$rootScope.$emit('updateJobStatus')
@@ -293,4 +293,3 @@ class WorkflowService {
 }
 
 angular.module('tmaps.ui').service('workflowService', WorkflowService);
-

@@ -66,4 +66,4 @@ SQLAlchemy-Utils==0.32.14
 subprocess32==3.2.7
 tables==3.4.2
 whichcraft==0.4.0
-git+https://github.com/uzh/gc3pie@master
+git+https://github.com/uzh/gc3pie@v2.5.1#egg=gc3pie-2.5.1

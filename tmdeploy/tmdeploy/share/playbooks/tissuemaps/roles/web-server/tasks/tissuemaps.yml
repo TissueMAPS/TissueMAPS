@@ -76,6 +76,4 @@
     path: "{{ tm_www_root }}"
     state: directory
     recurse: yes
-    owner: "{{ web_user }}"
-    group: "{{ web_group }}"
     mode: 'a+rX'

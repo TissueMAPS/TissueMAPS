@@ -1,4 +1,3 @@
-
 Developer guide
 ***************
 
@@ -507,6 +506,7 @@ The following *handle* types are implemented:
     - :class:`Character <tmlib.workflow.jterator.handles.Character>`: string (``basestring``)
     - :class:`Boolean <tmlib.workflow.jterator.handles.Boolean>`: boolean (``bool``)
     - :class:`Sequence <tmlib.workflow.jterator.handles.Sequence>`: atomic array (``List[Union[int, float, basestring, bool]]``)
+    - :class:`Set <tmlib.workflow.jterator.handles.Set>`: set of values (``Set[Union[int, float, basestring]]``), duplicates values are discarded
     - :class:`Plot <tmlib.workflow.jterator.handles.Plot>`: boolean (``bool``)
 
 * **Pipe** input and output *handle* types: parameters that specify a "key" to retrieve the actual argument value (derived from :class:`PipeHandle <tmlib.workflow.jterator.handles.PipeHandle>`)
@@ -574,5 +574,3 @@ We use `sphinx <http://www.sphinx-doc.org/en/stable/>`_ with the `numpydoc <http
 For *Matlab* code, use the `Sphinx Matlab domain <https://pypi.python.org/pypi/sphinxcontrib-matlabdomain>`_.
 
 Each module must have a docstring that describes its functionality and purpuse. In addition, a dosctring must be provided for the ``main()`` function that describes input parameters and return values.
-
-

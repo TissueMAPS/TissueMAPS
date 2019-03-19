@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018  University of Zurich
+# Copyright (C) 2016-2019  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
   tags:
     - database
 
-- name: Install apt packages required by Citus PostgreSQL
+- name: Install RPM packages required by Citus PostgreSQL
   yum:
     state: installed
     name: "{{ item }}"

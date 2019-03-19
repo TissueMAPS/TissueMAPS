@@ -18,6 +18,7 @@
 - name: Configure PostgreSQL workers
   hosts:
     - tissuemaps_db_worker
+  gather_facts: yes
   any_errors_fatal: yes
   roles:
     - database-server-worker
@@ -27,6 +28,7 @@
 - name: Configure PostgreSQL master
   hosts:
     - tissuemaps_db_master
+  gather_facts: yes
   any_errors_fatal: yes
   roles:
     - database-server-master

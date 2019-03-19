@@ -1,4 +1,4 @@
-# Copyright 2016-2018 University of Zurich
+# Copyright 2016-2019 University of Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,17 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import atexit
-import inspect
-import logging
-import sys
-import os
-import cgi
-import re
-import errno
-import json
-import glob
-import shutil
 import base64
+import cgi
+import errno
+from functools import partial
+import glob
+import inspect
+import json
+import logging
+import os
+import re
+import shutil
+import sys
 from io import BytesIO
 try:
     # NOTE: Python3 no longer has the cStringIO module
@@ -32,13 +33,13 @@ except ImportError:
 from subprocess import check_call, check_output, CalledProcessError
 import tempfile
 
-import requests
-import yaml
 import cv2
+from prettytable import PrettyTable
+import numpy as np
 import pandas as pd
 from pandas.io.common import EmptyDataError
-import numpy as np
-from prettytable import PrettyTable
+import requests
+import yaml
 
 from tmclient.base import HttpClient
 from tmclient.log import configure_logging
@@ -280,7 +281,7 @@ class TmClient(HttpClient):
         if not args.password:
             try:
                 args.password = load_credentials_from_file(args.username)
-            except (OSError, KeyError):
+            except (RuntimeError, KeyError):
                 args.password = prompt_for_credentials(args.username)
 
         try:
@@ -2011,6 +2012,395 @@ class TmClient(HttpClient):
         for o in object_types:
             t.add_row([o['id'], o['name']])
         print(t)
+
+    def _info_mapobjects(self, mapobject_ids):
+        t = PrettyTable([
+            'ID',
+            'Plate Name',
+            'Well Name',
+            'Site X-pos',
+            'Site Y-pos',
+            'Time point',
+            'Z plane',
+            'Label',
+        ])
+        t.align['Plate Name'] = 'l'
+        t.align['Well Name'] = 'l'
+        t.padding_width = 1
+        for mapobject_id in mapobject_ids:
+            try:
+                data = self.get_mapobject(mapobject_id)
+            except Exception as err:  # pylint: disable=broad-exception
+                logger.error(
+                    "Could not download location info for mapobject %s: %s",
+                    mapobject_id, err)
+                continue  # to next `mapobject_id`
+            t.add_row([
+                mapobject_id,
+                data['plate_name'],
+                data['well_name'],
+                data['well_pos_x'],
+                data['well_pos_y'],
+                data['tpoint'],
+                data['zplane'],
+                data['label'],
+            ])
+        print(t)
+
+    def get_mapobject(self, mapobject_id):
+        """
+        Return information about a MapObject (specified by ID).
+        """
+        logger.info(
+            'Getting location info for mapobject %s of experiment "%s" ...',
+            mapobject_id, self.experiment_name
+        )
+        url = self._build_api_url(
+            '/experiments/{experiment_id}/mapobjects/{mapobject_id}/info'.format(
+                experiment_id=self._experiment_id,
+                mapobject_id=mapobject_id
+            )
+        )
+        res = self._session.get(url)
+        res.raise_for_status()
+        return res.json()['data']
+
+    def exhibit_mapobject(self, mapobject_id, channel_names, ooi=None,
+                          extra_margin=0, palette_name="colorblind"):
+        """
+        Generate images of the neighborhood of a given MapObject.
+
+        One image per channel (as given in *channel_names*) is
+        generated and returned; the image contains the specified
+        channel data, overlaid with segmentation contour lines for the
+        MapObject types given in *ooi*.
+
+        Idea and nitial implementation provided by Micha Mueller,
+        Feb. 2019
+
+        Parameters
+        ----------
+        mapobject_id: int
+            Database ID of the MapObject of interest
+        channel_names: List[str]
+            Channels of interest: show these channels only.
+            **Note:** The *channel_names* list cannot be empty!
+        ooi: List[str]
+            Objects of interest: show segmentation countours of these
+            object types.  (List of "mapobject type" names.)
+            If empty, show countours for just the target MapObject.
+        extra_margin: int
+            Ensure there is a margin this number of pixels wide
+            around the "region of interest" which contains the
+            given MapObject
+        palette_name: str
+            A Seaborn palette to choose colors from.
+            See :func:`seaborn.color_palette` for details.
+
+        Returns
+        -------
+        List[np.array]
+            Channel images overlaid with segmentation contours.
+        """
+        # these imports are only used in this function, so it makes
+        # more sense to gather them all here instead of at top-level,
+        # where they would just slow-down every invocation of the module
+        from seaborn import color_palette
+        from skimage import img_as_ubyte
+        from skimage.exposure import rescale_intensity
+
+        metadata = self.get_mapobject(mapobject_id)
+        # unpack metadata for (minimal) added efficiency
+        plate_name = metadata['plate_name']
+        well_name = metadata['well_name']
+        well_pos_x = int(metadata['well_pos_x'])
+        well_pos_y = int(metadata['well_pos_y'])
+        tpoint = metadata['tpoint'] or 0
+        zplane = metadata['zplane'] or 0
+        try:
+            label_id = int(metadata['label'])
+        except (ValueError, TypeError):
+            raise RuntimeError("MapObject %s has no label!" % mapobject_id)
+        if not ooi:
+            ooi = [metadata['type']]
+
+        # determine height and width of a site containing the mapobject
+        for site in self.get_sites(plate_name, well_name):
+            if (well_pos_x == site['x'] and well_pos_y == site['y']):
+                height = int(site['height'])
+                width = int(site['width'])
+                break
+        else:
+            raise RuntimeError(
+                "No site in experiment `%s`, plate %s, well %s"
+                " has the given in-well coordinates x=%d, y=%d"
+                % (self.experiment, plate_name, well_name,
+                   well_pos_x, well_pos_y))
+
+        # download all channel-images and then all segmentation-images
+        # for the required site into a numpy array
+        # (x,y,numberofchannels)
+        layers = np.zeros(
+            (height, width, len(channel_names)+len(ooi)),
+            dtype=np.uint16)
+
+        for i, v in enumerate(channel_names):
+            layers[:, :, i] = self.download_channel_image(
+                channel_name=v,
+                correct=True,
+                cycle_index=0,
+                # this is all extracted from metadata
+                plate_name=plate_name,
+                well_name=well_name,
+                well_pos_x=well_pos_x,
+                well_pos_y=well_pos_y,
+                tpoint=tpoint,
+                zplane=zplane,
+            )
+
+        # download all segmentation images for objects of interest
+        for i, v in enumerate(ooi):
+            layers[:, :, i+len(channel_names)] = self.download_segmentation_image(
+                mapobject_type_name=v,
+                align=False,
+                # this is all extracted from metadata
+                plate_name=plate_name,
+                well_name=well_name,
+                well_pos_x=well_pos_x,
+                well_pos_y=well_pos_y,
+                tpoint=tpoint,
+                zplane=zplane,
+            )
+
+        # find the objects of interest based on the site-specific
+        # label id (label_id is equal to the grayscale value of the
+        # object in the downloaded segmentation image)
+        def find_objects_mask(obj_type_name):
+            idx = ooi.index(obj_type_name) + len(channel_names)
+            return (label_id == layers[:, :, idx])
+        obj_masks = map(find_objects_mask, ooi)
+
+        # choose a ROI by discarding rows and columns that are
+        # identically zero close to the border; ensure that a
+        # user-specified margin is anyway kept
+        def find_bounding_box(mask, margin):
+            """
+            Return X- and Y-coordinate ranges that enclose all nonzero points
+            in 2D array `mask`.
+            """
+            y_range, x_range = np.where(mask != 0)
+            x_min= (np.amin(x_range) - margin)
+            if x_min < 0:
+                x_min = 0
+            x_max= (np.amax(x_range) + margin)
+            if x_max > mask.shape[1]:
+                x_max = mask.shape[1]
+            y_min= (np.amin(y_range) - margin)
+            if y_min < 0:
+                y_min = 0
+            y_max= (np.amax(y_range) + margin)
+            if y_max > mask.shape[0]:
+                y_max = mask.shape[0]
+            return [y_min, y_max, x_min, x_max]
+        def encasing_rectangle(r1, r2):
+            """
+            Return X- and Y-coordinate ranges that enclose both rectangles
+            *r1* and *r2*.
+            """
+            return [
+                which(a, b)
+                for (which, a, b)
+                in zip((min, max, min, max), r1, r2)
+            ]
+        # FIXME: this breaks if `obj_masks` has length 0
+        lims = reduce(encasing_rectangle,
+                      map(partial(find_bounding_box, margin=extra_margin), obj_masks))
+
+        # crop the images to the defined ROI
+        def crop(images, y_min, y_max, x_min, x_max):
+            def crop1(image):
+                return image[y_min:y_max, x_min:x_max]
+            return map(crop1, images)
+        cropped_obj_masks = crop(obj_masks, *lims)
+
+        # find edges of segmentation of whole cell to get a line of
+        # the border of the segmented object
+        def find_segmentation_contours(cropped_obj_masks):
+            kernel = np.ones((3,3), np.uint8)
+            def outline(binary_image):
+                # FIXME: this can fail with `cv2.error`, e.g.::
+                #
+                #     Traceback (most recent call last):
+                #       [...]
+                #       File ".../TissueMAPS/tmclient/src/python/tmclient/api.py", line 2214, in find_segmentation_contours
+                #         return map(gradient, cropped_obj_masks)
+                #       File ".../TissueMAPS/tmclient/src/python/tmclient/api.py", line 2213, in gradient
+                #         kernel)
+                #     cv2.error: /io/opencv/modules/core/src/matrix.cpp:991: error: (-215) dims <= 2 && step[0] > 0 in function locateROI
+                #
+                return cv2.morphologyEx(
+                    img_as_ubyte(binary_image),
+                    cv2.MORPH_GRADIENT,
+                    kernel)
+            return map(outline, cropped_obj_masks)
+        segmentation_contours = find_segmentation_contours(cropped_obj_masks)
+
+        # function to overlay the mask and the channel-images
+        def imoverlay(img, mask, color, alpha=0.6):
+            if img.ndim == 2:
+                img = np.stack((img, img, img), axis=2)
+            img = img_as_ubyte(rescale_intensity(img))
+            overlay = img.copy()
+            overlay[mask] = np.array(color) * np.max([255, np.max(img)])
+            return cv2.addWeighted(img, 1-alpha, overlay, alpha, 0)
+
+        # make the overlays of the mask of all the objects passed as
+        # OOIs (object of interest)
+        def all_objects_overlay(segmentation_contours, channel_image):
+            colors = color_palette(palette_name, len(segmentation_contours))
+            def overlay_countour_with_color(img, cc):
+                countour, color = cc
+                return imoverlay(img, countour.astype(np.bool), color)
+            return reduce(overlay_countour_with_color,
+                          zip(segmentation_contours, colors),
+                          # according to Python'd doc for `reduce()`,
+                          # this extra argument is prepended to the
+                          # list to be reduced and serves as the `x`
+                          # parameter in the first calculation
+                          channel_image)
+
+        # make list of np arrays containing all channels overlayed with the mask of all OOIs
+        y_min, y_max, x_min, x_max = lims
+        def overlay_segmentation_contours_on_layer(layer_idx):
+            return all_objects_overlay(
+                segmentation_contours,
+                layers[y_min:y_max, x_min:x_max, layer_idx])
+        channels_with_overlaid_segmentation = map(
+            overlay_segmentation_contours_on_layer, range(len(channel_names)))
+
+        return channels_with_overlaid_segmentation
+
+    def _exhibit_mapobjects(self, mapobject_ids, object_types, channel_names,
+                        extra_margin=0, save=True, show=False,
+                        file_name_format='{mapobject_id}_{channel_name}.png',
+                        grid_columns=1):
+        """
+        Save and interactively display images
+        of the neighborhood of a given MapObject.
+
+        This method is meant to be the command-line interface for
+        :func:`exhibit_mapobjects` and should likely not be used in
+        Python programming.
+
+        Parameters
+        ----------
+        mapobject_ids: List[str]
+          List of database IDs of the MapObjects of interest
+        object_types: str
+          Comma-separated list of MapObject types whose segmentation
+          should be shown on the images.  Cannot be empty.
+        channel_names: str
+          Comma-separated list of channels names to save and/or show.
+          If empty (or any other ``False`` value), use all channels.
+        extra_margin: int
+          Select displayed region by allowing this number of pixels
+          around all objects of interest.
+        save: bool
+          Whether images should be saved to file(s).
+          At least one among this and *show* should be true.
+          Use *file_name_format* to specify the output file names.
+        show: bool
+          Whether to interactively show images.
+          At least one among this and *save* should be true.
+        file_name_format: str
+          Format string for specifying output file names.
+          The following substrings will be substituted with
+          actual values in the format string:
+          - ``{mapobject_id}``: Database ID of the MapObject,
+            as given by the *mapobject_id* argument
+          - ``{channel_name}``: Name of the channel on which
+            segmentation contours are overlaid.
+          - ``{index}``: Index (0-based) of images being saved.
+          - ``{total}``: Total number of images to save.
+        grid_columns: int
+          If showing images, arrange them in a grid with this
+          many columns. (Default 1, meaning display all images
+          in a vertical strip.)
+        """
+        # these imports are only used in this function, so it makes
+        # more sense to gather them all here instead of at top-level,
+        # where they would just slow-down every invocation of the module
+        import matplotlib.pyplot as plt
+        from scipy.misc import imsave
+
+        assert save or show, (
+            "At least one of the two parameters"
+            " `save` and `show` should be true!")
+
+        if isinstance(object_types, basestring):
+            object_types = object_types.split(',')
+
+        if isinstance(channel_names, basestring):
+            channel_names = channel_names.split(',')
+        if not channel_names:
+            channel_names = [
+                channel_info['name']
+                for channel_info in self.get_channels()
+            ]
+
+        result = []
+        for mapobject_id in mapobject_ids:
+            images = self.exhibit_mapobject(
+                mapobject_id, channel_names, object_types, extra_margin)
+            n = len(images)
+            assert n == len(channel_names), (
+                "BUG: More images ({}) were returned by `self.show_mapobject()`"
+                " than channels were requested ({})."
+                .format(n, len(channel_names))
+            )
+
+            # save the channel images and name them with the channel and the mapobject_id
+            if save:
+                logger.debug("Saving images ...")
+                for i in range(n):
+                    img_file_name = file_name_format.format(
+                        # make parameter names available in fmt string
+                        mapobject_id=mapobject_id,
+                        channel_name=channel_names[i],
+                        index=i,
+                        total=n,
+                        # shortcut aliases
+                        mapobject=mapobject_id,
+                        channel=channel_names[i],
+                        i=i,
+                        tot=n,
+                    )
+                    logger.info("Saving channel %s into file `%s` ...",
+                                channel_names[i], img_file_name)
+                    imsave(img_file_name, images[i])
+
+            # show all the channel images
+            if show:
+                ncols = grid_columns
+                nrows = int(n / ncols)
+                logger.info("Showing %d images on a %dx%d grid...", n, nrows, ncols)
+                fig, axes = plt.subplots(
+                    nrows, ncols, sharex=True, sharey=True,
+                    squeeze=False, figsize=[4*ncols, 3*nrows])
+                for row in range(nrows):
+                    for col in range(ncols):
+                        idx = row*ncols + col
+                        if idx >= n:
+                            break
+                        ax = axes[row][col]
+                        image = images[idx]
+                        if image.ndim == 2:
+                            plt.gray()
+                        ax.imshow(image)
+                        ax.set_title(channel_names[idx])
+                result.append(plt.show())
+
+        return result
 
     def get_features(self, mapobject_type_name):
         '''Gets features for a given object type.

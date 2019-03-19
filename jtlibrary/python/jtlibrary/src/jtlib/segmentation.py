@@ -1,4 +1,4 @@
-# Copyright 2017 Markus D. Herrmann, Scott Berry, University of Zurich
+# Copyright (C) 2017-2018 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -211,6 +211,9 @@ def find_concave_regions(mask, max_dist):
     return mh.label(concave_img)
 
 
+# All the labeling is done with 8-connectivity (not the default 4 of mahotas)
+NEIGHBORHOOD8 = np.ones((3,3), np.bool)
+
 def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
         max_circularity, max_convexity):
     '''Separates objects in `clumps_image` based on morphological criteria.
@@ -242,7 +245,8 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     '''
 
     logger.info('separate clumped objects')
-    label_image, n_objects = mh.label(clumps_image)
+
+    label_image, n_objects = mh.label(clumps_image, NEIGHBORHOOD8)
     if n_objects == 0:
         logger.debug('no objects')
         return label_image
@@ -253,7 +257,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
     while True:
         logger.info('cutting pass #%d', cutting_pass)
         cutting_pass += 1
-        label_image = mh.label(label_image > 0)[0]
+        label_image = mh.label(label_image > 0, NEIGHBORHOOD8)[0]
 
         f = Morphology(label_image)
         values = f.extract()
@@ -313,9 +317,9 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
 
             # Use the line separating watershed regions to make the cut
             se = np.ones((3,3), np.bool)
-            line = mh.labeled.borders(regions, Bc=se)
+            line = mh.labeled.borders(regions, NEIGHBORHOOD8)
             line[~obj_image] = 0
-            line = mh.morph.dilate(line)
+            line = mh.morph.dilate(line, NEIGHBORHOOD8)
 
             # Ensure that cut is reasonable given user-defined criteria
             test_cut_image = obj_image.copy()
@@ -342,4 +346,4 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
                 logger.debug('don\'t cut object #%d', oid)
                 mh.labeled.remove_regions(label_image, oid, inplace=True)
 
-    return mh.label(separated_image)[0]
+    return mh.label(separated_image, NEIGHBORHOOD8)[0]

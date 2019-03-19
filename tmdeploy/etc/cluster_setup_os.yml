@@ -17,7 +17,6 @@ architecture:
             - name: tissuemaps_server
               vars:
                 tm_version: v0.3.2
-                nginx_processes: 4
                 uwsgi_processes: 4
                 tm_compute_cores: 4
                 tm_compute_memory: 24000

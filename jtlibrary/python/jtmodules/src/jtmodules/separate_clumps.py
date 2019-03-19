@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
+# Copyright (C) 2016-2018 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import collections
 from jtlib.segmentation import separate_clumped_objects
 from jtlib.features import Morphology, create_feature_image
 
-VERSION = '0.2.0'
+VERSION = '0.2.2'
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,8 @@ Output = collections.namedtuple('Output', ['separated_mask', 'figure'])
 
 def main(mask, intensity_image, min_area, max_area,
         min_cut_area, max_circularity, max_convexity,
-        plot=False, selection_test_mode=False):
+        plot=False, selection_test_mode=False,
+        selection_test_show_remaining=False):
     '''Detects clumps in `mask` given criteria provided by the user
     and cuts them along the borders of watershed regions, which are determined
     based on the distance transform of `mask`.
@@ -64,6 +65,11 @@ def main(mask, intensity_image, min_area, max_area,
         display values of the selection criteria *area*, *circularity* and
         *convexity* for each individual object in `mask` as well as
         the selected "clumps" based on the criteria provided by the user
+    selection_test_show_remaining: bool, optional
+        whether the selection test plot should be made on the remaining image
+        after the cuts were performed (helps to see why some objects were not
+        cut, especially if there are complicated clumps that require multiple
+        cuts). Defaults to false, thus showing the values in the original image
 
     Returns
     -------
@@ -77,9 +83,27 @@ def main(mask, intensity_image, min_area, max_area,
 
     if plot:
         from jtlib import plotting
+
+        clumps_mask = np.zeros(mask.shape, bool)
+        initial_objects_label_image, n_initial_objects = mh.label(mask > 0)
+        for n in range(1, n_initial_objects+1):
+            obj = (initial_objects_label_image == n)
+            if len(np.unique(separated_mask[obj])) > 1:
+                clumps_mask[obj] = True
+
+        cut_mask = (mask > 0) & (separated_mask == 0)
+        cutlines = mh.morph.dilate(mh.labeled.bwperim(cut_mask))
+
         if selection_test_mode:
             logger.info('create plot for selection test mode')
-            labeled_mask, n_objects = mh.label(mask)
+
+            # Check if selection_test_show_remaining is active
+            # If so, show values on processed image, not original
+            if selection_test_show_remaining:
+                labeled_mask, n_objects = mh.label(separated_mask > 0)
+                logger.info('Selection test mode plot with processed image')
+            else:
+                labeled_mask, n_objects = mh.label(mask)
             f = Morphology(labeled_mask)
             values = f.extract()
             area_img = create_feature_image(
@@ -91,56 +115,38 @@ def main(mask, intensity_image, min_area, max_area,
             circularity_img = create_feature_image(
                 values['Morphology_Circularity'].values, labeled_mask
             )
-            area_colorscale = plotting.create_colorscale(
-                'Greens', n_objects,
-                add_background=True, background_color='white'
-            )
-            circularity_colorscale = plotting.create_colorscale(
-                'Blues', n_objects,
-                add_background=True, background_color='white'
-            )
-            convexity_colorscale = plotting.create_colorscale(
-                'Reds', n_objects,
-                add_background=True, background_color='white'
-            )
             plots = [
                 plotting.create_float_image_plot(
-                    area_img, 'ul', colorscale=area_colorscale
+                    area_img, 'ul'
                 ),
                 plotting.create_float_image_plot(
-                    convexity_img, 'ur', colorscale=convexity_colorscale
+                    convexity_img, 'ur'
                 ),
                 plotting.create_float_image_plot(
-                    circularity_img, 'll', colorscale=circularity_colorscale
+                    circularity_img, 'll'
                 ),
-                plotting.create_mask_image_plot(
-                    clumps_mask, 'lr'
+                plotting.create_mask_overlay_image_plot(
+                    clumps_mask, cutlines, 'lr'
                 ),
             ]
             figure = plotting.create_figure(
                 plots,
                 title=(
-                    'Selection criteria: "area" (green), "convexity" (red) '
-                    'and "circularity" (blue)'
+                    'Selection criteria:'
+                    ' "area" (top left),'
+                    ' "convexity" (top-right),'
+                    ' and "circularity" (bottom-left);'
+                    ' cuts made (bottom right).'
                 )
             )
         else:
             logger.info('create plot')
-
-            cut_mask = (mask > 0) - (separated_mask > 0)
-            clumps_mask = np.zeros(mask.shape, bool)
-            initial_objects_label_image, n_initial_objects = mh.label(mask > 0)
-            for i in range(1, n_initial_objects+1):
-                index = initial_objects_label_image == i
-                if len(np.unique(separated_mask[index])) > 1:
-                    clumps_mask[index] = True
 
             n_objects = len(np.unique(separated_mask[separated_mask > 0]))
             colorscale = plotting.create_colorscale(
                 'Spectral', n=n_objects, permute=True, add_background=True
             )
             outlines = mh.morph.dilate(mh.labeled.bwperim(separated_mask > 0))
-            cutlines = mh.morph.dilate(mh.labeled.bwperim(cut_mask))
             plots = [
                 plotting.create_mask_image_plot(
                     separated_mask, 'ul', colorscale=colorscale

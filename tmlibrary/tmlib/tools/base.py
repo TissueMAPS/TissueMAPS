@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,6 @@ from sklearn.cluster import KMeans
 
 from tmlib import cfg
 import tmlib.models as tm
-from tmlib.config import DEFAULT_LIB, IMPLEMENTED_LIBS
 from tmlib.utils import (
     same_docstring_as, autocreate_directory_property, assert_type,
     create_partitions

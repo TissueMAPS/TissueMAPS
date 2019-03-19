@@ -15,14 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install apt package for NGINX
-  apt:
-    name: nginx
-    state: installed
-  tags:
-    - web-server
-    - nginx
-
 - name: Download NodeJS
   shell: wget -qO- https://deb.nodesource.com/setup_6.x | bash -
   tags:
@@ -36,14 +28,3 @@
   tags:
     - web-server
     - tissuemaps
-
-- name: Install apt package for SSL
-  apt:
-    name: "{{ item }}"
-    state: installed
-  with_items:
-    - openssl
-    - pki-base
-  tags:
-    - web-server
-    - nginx

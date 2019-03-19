@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 # Copyright (C) 2018  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
@@ -610,16 +610,16 @@ class Workflow(SequentialTaskCollection, State):
             experiment = session.query(tmlib.models.ExperimentReference).\
                 get(self.experiment_id)
             self.name = experiment.name
-            super(Workflow, self).__init__(tasks=None, jobname=self.name)
-        self.update_description(description)
+        super(Workflow, self).__init__(tasks=[], jobname=self.name)
         self.parent_id = None
         self.persistent_id = idfactory.new(self)
+        self.update_description(description)
         self._current_task = 0
         self._add_stages()
         # Update the first stage and its first step to start the workflow
         self.update_stage(0)
 
-    @assert_type(description='tmlib.workflow.description.WorkflowDescription')
+    @assert_type(description=WorkflowDescription)
     def update_description(self, description):
         '''Updates the workflow description by removing *inactive* stages/steps
         from the description that will ultimately be used to dynamically
@@ -648,14 +648,14 @@ class Workflow(SequentialTaskCollection, State):
                         steps_to_process.append(step)
                     else:
                         logger.debug(
-                            'ignore inactive step "%s" of workflow "%s"',
+                            'skipping inactive step "%s" of workflow "%s"',
                             step.name, self.name
                         )
                 stage.steps = steps_to_process
                 self.description.stages.append(stage)
             else:
                 logger.debug(
-                    'ignore inactive stage "%s" of workflow "%s"',
+                    'skipping inactive stage "%s" of workflow "%s"',
                     stage.name, self.name
                 )
 
@@ -710,11 +710,17 @@ class Workflow(SequentialTaskCollection, State):
         if index > len(self.tasks) - 1:
             stage = self._create_stage(stage_description)
             self.tasks.append(stage)
-        self.tasks[index].description = stage_description
-        if stage_description.mode == 'sequential':
-            self.tasks[index].update_step(0)
+        task = self.tasks[index]
+        task.description = stage_description
+        if isinstance(task, SequentialWorkflowStage):
+            task.update_step(0)
+        elif isinstance(task, ParallelWorkflowStage):
+            task._update_all_steps()
         else:
-            self.tasks[index]._update_all_steps()
+            raise AssertionError(
+                "Unhandled class %r of stage %s "
+                % (task.__class__, task)
+            )
 
     def next(self, done):
         '''Progresses to next stage.

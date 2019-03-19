@@ -232,7 +232,7 @@ def create_joblist(experiment_id):
             order_by(tm.Site.id).\
             all()
         for index, record in enumerate(query):
-            metadata[index+1] = {
+            metadata[index] = {
                 'plate': record.plate,
                 'well': record.well,
                 'y': record.y,
