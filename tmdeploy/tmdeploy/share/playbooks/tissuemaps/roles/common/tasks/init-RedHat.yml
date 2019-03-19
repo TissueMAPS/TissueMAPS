@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 - name: Install EPEL release
   yum:
     name: epel-release
-    state: installed
+    state: present
 
 - name: Put SELinux in permissive mode
   selinux:
@@ -34,7 +34,7 @@
 - name: Install generally required yum packages
   yum:
     name: "{{ item }}"
-    state: installed
+    state: present
   with_items:
     - gcc
     - gcc-c++

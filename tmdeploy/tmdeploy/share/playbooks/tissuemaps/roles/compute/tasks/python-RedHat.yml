@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 - name: Install yum packages required for Python
   yum:
     name: "{{ item }}"
-    state: installed
+    state: present
   with_items:
     - python-devel
     - python-pip
@@ -34,7 +34,7 @@
 - name: Install yum packages required by Python packages
   yum:
     name: "{{ item }}"
-    state: installed
+    state: present
   with_items:
     - openblas-devel
     # gc3pie:
@@ -53,4 +53,3 @@
   when: ansible_os_family == 'RedHat'
   tags:
     - python
-
