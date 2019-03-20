@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018  University of Zurich
+# Copyright (C) 2016-2019  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,13 +14,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include: install-{{ ansible_os_family }}.yml
+- include_tasks: install-{{ ansible_os_family }}.yml
 
-- include: data_dir.yml
+- import_tasks: data_dir.yml
 
-- include: create_cluster.yml
+- import_tasks: create_cluster.yml
 
-- include: configure.yml
+- import_tasks: configure.yml
 
 - name: Start database cluster
   tags:
@@ -32,9 +32,9 @@
   become: yes
   become_user: '{{ db_user }}'
 
-- include: create_database.yml
+- import_tasks: create_database.yml
 
-- include: create_users.yml
+- import_tasks: create_users.yml
 
 - name: Stop database cluster
   tags:
