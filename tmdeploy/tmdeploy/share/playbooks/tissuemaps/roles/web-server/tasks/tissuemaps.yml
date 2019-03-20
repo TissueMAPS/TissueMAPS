@@ -28,9 +28,14 @@
     - tissuemaps
 
 - name: Install dependencies from `package.json`
-  npm:
-    path: "{{ tmui_dir }}/src"
-    state: present
+  # for some reason, calling Ansible's `npm state=present path=...`
+  # does not install all required modules (perhaps it just checks for
+  # the existence of `node_modules/` and exits early?) so let's revert
+  # to explicitly running the needed command and relying on `npm` not
+  # to re-do work
+  command: npm install
+  args:
+    chdir: "{{ tmui_dir }}/src"
   tags:
     - web-server
     - tissuemaps
