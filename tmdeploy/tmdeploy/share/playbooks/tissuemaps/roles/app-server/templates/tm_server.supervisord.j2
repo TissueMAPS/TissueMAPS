@@ -3,14 +3,16 @@
 # (http://supervisord.org/)
 #
 
-[program:tm_server]
+[fcgi-program:tm_server]
 command=uwsgi --ini {{ tm_home }}/.tmaps/uwsgi.ini
+socket=tcp://0.0.0.0:80
 # user switching is done by uWSGI
 user=root
 
 directory={{ tm_home }}
 autostart=true
 autorestart=true
+startretries=1
 
 redirect_stderr=true
 stdout_logfile=/var/log/tm_server.supervisord.log

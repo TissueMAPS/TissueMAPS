@@ -18,9 +18,9 @@ vacuum = true
 
 ## HTTP serving config
 {% if (web_port is not defined) or (web_port|int < 1024) %}
-# assume the network socket has been opened by SystemD,
-# and passed on to uWSGI as fd 3 (which might not always be the case?)
-http-socket = fd://3
+# Supervisord uses fd 0 to pass the listening socket,
+# see: http://supervisord.org/configuration.html#fcgi-program-x-section-settings
+http-socket = fd://0
 {% else %}
 http-socket = :{{ app_port }}
 {% endif %}
