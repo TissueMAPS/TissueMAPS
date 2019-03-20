@@ -65,6 +65,8 @@
     - tissuemaps_db_master
   gather_facts: yes
   any_errors_fatal: yes
+  vars_files:
+    - roles/common/defaults/main.yml
   tasks:
   - name: Add Citus worker nodes
     shell: |
