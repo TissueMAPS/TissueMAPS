@@ -49,21 +49,6 @@
     - web-server
     - tissuemaps
 
-- name: Update gulp proxy settings
-  replace:
-    dest: "{{ tmui_dir }}/src/tasks/server.js"
-    regexp: '{{ item.search }}'
-    replace: '{{ item.replace }}'
-  with_items:
-    - search: 'target:\s.http.*$'
-      replace: "target: 'http://{{ app_host }}:{{ app_port }}',"
-    - search: 'changeOrigin:\s.*$'
-      replace: "xfwd: true"
-  when: app_host != 'unix'
-  tags:
-    - web-server
-    - tissuemaps
-
 - name: Build client code for production deployment
   command: node_modules/.bin/gulp build --prod
   args:
