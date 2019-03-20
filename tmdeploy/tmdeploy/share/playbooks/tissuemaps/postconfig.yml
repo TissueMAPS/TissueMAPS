@@ -105,22 +105,3 @@
     become_user: '{{ tm_user }}'
     with_items: "{{ tm_users }}"
     when: ansible_env.ANSIBLE_CONTAINER is undefined
-
-
-- name: Start TissueMAPS web and application servers
-  hosts: tissuemaps_server
-  gather_facts: yes
-  any_errors_fatal: yes
-  tasks:
-    - name: Start web server socket at boot
-      systemd:
-        name: uwsgi.socket
-        state: started
-        daemon_reload: yes
-        enabled: yes
-    - name: Enable uWSGI at boot
-      systemd:
-        name: uwsgi
-        state: restarted
-        daemon_reload: yes
-        enabled: yes
