@@ -29,7 +29,7 @@
 
 - name: Install dependencies from `package.json`
   npm:
-    path: "{{ tmui_dir }}/src/"
+    path: "{{ tmui_dir }}/src"
     state: present
   tags:
     - web-server
@@ -39,6 +39,7 @@
   bower:
     path: "{{ tmui_dir }}/src"
     state: present
+    relative_execpath: 'node_modules/.bin'
   tags:
     - web-server
     - tissuemaps
@@ -59,7 +60,7 @@
     - tissuemaps
 
 - name: Build client code for production deployment
-  command: gulp build --prod
+  command: node_modules/.bin/gulp build --prod
   args:
     chdir: "{{ tmui_dir }}/src"
   tags:
