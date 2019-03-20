@@ -87,3 +87,12 @@
   tags:
     - app-server
     - uwsgi
+
+
+- name: Install uWSGI
+  package:
+    name:
+      - uwsgi
+      - uwsgi-plugin-python
+      - uwsgi-plugin-gevent-python
+    state: present
