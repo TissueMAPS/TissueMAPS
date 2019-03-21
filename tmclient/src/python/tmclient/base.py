@@ -1,4 +1,4 @@
-# Copyright 2016 Markus D. Herrmann, University of Zurich
+# Copyright 2016, 2019 Markus D. Herrmann, University of Zurich
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ from itertools import chain
 import multiprocessing.dummy as mp
 
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 try:
     from urllib import urlencode
 except ImportError:
@@ -68,6 +70,14 @@ class HttpClient(object):
         a multiprocessing pool.
         '''
         self._real_session = requests.Session()
+        # see: https://www.peterbe.com/plog/best-practice-with-retries-with-requests
+        retry = Retry(
+            total=3,
+            backoff_factor=0.3,
+            status_forcelist=[104],
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self._real_session.mount('http://', adapter)
         # FIXME: this fails when one runs HTTPS on non-standard ports,
         # e.g. https://tissuemaps.example.org:8443/
         if self._port == 443:
