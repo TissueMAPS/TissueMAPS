@@ -72,7 +72,6 @@ setuptools.setup(
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'Topic :: Internet :: WWW/HTTP',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 3',
         'Development Status :: 4 - Beta'
     ],
     entry_points={
