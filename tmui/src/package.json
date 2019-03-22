@@ -1,6 +1,6 @@
 {
   "name": "TissueMAPS",
-  "version": "1.0.0",
+  "version": "0.4.2",
   "description": "Web based user interface for TissueMAPS.",
   "main": "gulpfile.js",
   "scripts": {

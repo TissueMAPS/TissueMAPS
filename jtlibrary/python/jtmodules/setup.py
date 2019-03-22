@@ -14,17 +14,9 @@ from os.path import abspath, dirname, join, splitext
 import setuptools
 
 
-def get_version():
-    src_path = join(abspath(dirname(__file__)),
-                    'src', 'jtmodules', '__init__.py')
-    ctx = {}
-    execfile(src_path, ctx, ctx)
-    return ctx['__version__']
-
-
 setuptools.setup(
     name='jtmodules',
-    version=get_version(),
+    version='0.4.2',  # use bumpversion to advance
     description='Jterator modules.',
     author='Markus D. Herrmann',
     url='https://github.com/tissuemaps/jtmodules',

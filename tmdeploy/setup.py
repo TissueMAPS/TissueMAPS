@@ -64,19 +64,9 @@ def find_scripts():
     return scripts
 
 
-def get_version():
-    logger.info('get package version')
-    src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'tmdeploy'
-    )
-    sys.path = [src_path] + sys.path
-    import version
-    return version.__version__
-
-
 setuptools.setup(
     name='tmdeploy',
-    version=get_version(),
+    version='0.4.2',  # use bumpversion to advance
     description='TissueMAPS deployment in virtual environments.',
     url='https://github.com/tissuemaps/tmdeploy',
     author='Markus D. Herrmann',

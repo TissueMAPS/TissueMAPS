@@ -54,18 +54,9 @@ except ImportError:
 import setuptools
 
 
-def get_version():
-    src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'src', 'python', 'tmclient'
-    )
-    sys.path = [src_path] + sys.path
-    import version
-    return version.__version__
-
-
 setuptools.setup(
     name='tmclient',
-    version=get_version(),
+    version='0.4.2',  # use bumpversion to advance
     description='RESTful API client for TissueMAPS.',
     author='Markus D. Herrmann',
     license='Apache-2.0',

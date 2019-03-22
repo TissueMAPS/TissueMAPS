@@ -13,17 +13,9 @@ from os.path import abspath, dirname, join, splitext
 import setuptools
 
 
-def get_version():
-    src_path = join(dirname(abspath(__file__)),
-                    'src', 'jtlib', '__init__.py')
-    ctx = {}
-    execfile(src_path, ctx, ctx)
-    return ctx['__version__']
-
-
 setuptools.setup(
     name='jtlibrary',
-    version=get_version(),
+    version='0.4.2',  # use bumpversion to advance
     description='Jterator library.',
     author='Markus D. Herrmann',
     url='https://github.com/tissuemaps/jtlibrary',

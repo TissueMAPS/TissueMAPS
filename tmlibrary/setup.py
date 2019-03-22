@@ -100,16 +100,9 @@ def build_console_scripts():
     return cli_tools
 
 
-def get_version():
-    src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'tmlib')
-    sys.path = [src_path] + sys.path
-    import version
-    return version.__version__
-
-
 setuptools.setup(
     name='tmlibrary',
-    version=get_version(),
+    version='0.4.2',  # use bumpversion to advance
     description='TissueMAPS library for distibuted image analysis routines.',
     author='Markus D. Herrmann',
     url='https://github.com/tissuemaps/tmlibrary',
