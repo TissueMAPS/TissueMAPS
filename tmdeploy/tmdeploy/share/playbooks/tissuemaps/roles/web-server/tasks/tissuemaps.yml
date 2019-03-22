@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018  University of Zurich
+# Copyright (C) 2016-2019  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,49 +20,38 @@
     name: "{{ item }}"
     state: present
     path: "{{ tmui_dir }}/src"
-    global: yes
-  with_items:
+  loop:
     - bower
     - gulp
   tags:
     - web-server
     - tissuemaps
 
-- name: Install node dependencies
-  npm:
-    path: "{{ tmui_dir }}/src/app"
-    state: present
+- name: Install dependencies from `package.json`
+  # for some reason, calling Ansible's `npm state=present path=...`
+  # does not install all required modules (perhaps it just checks for
+  # the existence of `node_modules/` and exits early?) so let's revert
+  # to explicitly running the needed command and relying on `npm` not
+  # to re-do work
+  command: npm install
+  args:
+    chdir: "{{ tmui_dir }}/src"
   tags:
     - web-server
     - tissuemaps
 
-- name: Install bower dependencies
+- name: Install dependencies from `bower.json`
   bower:
     path: "{{ tmui_dir }}/src"
     state: present
-  tags:
-    - web-server
-    - tissuemaps
-
-- name: Update gulp proxy settings
-  replace:
-    dest: "{{ tmui_dir }}/src/tasks/server.js"
-    regexp: '{{ item.search }}'
-    replace: '{{ item.replace }}'
-  with_items:
-    - search: 'target:\s.http.*$'
-      replace: "target: 'http://{{ app_host }}:{{ app_port }}',"
-    - search: 'changeOrigin:\s.*$'
-      replace: "xfwd: true"
-  when: app_host != 'unix'
+    relative_execpath: 'node_modules/.bin'
   tags:
     - web-server
     - tissuemaps
 
 - name: Build client code for production deployment
-  shell: gulp build --prod
+  command: node_modules/.bin/gulp build --prod
   args:
-    executable: /bin/bash
     chdir: "{{ tmui_dir }}/src"
   tags:
     - web-server

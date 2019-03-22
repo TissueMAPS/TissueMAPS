@@ -1,5 +1,4 @@
-ansible==2.3.2.0
-ansible-container==0.3.0
+ansible>=2.5
 apache-libcloud==2.1.0
 appdirs==1.4.3
 asn1crypto==0.22.0

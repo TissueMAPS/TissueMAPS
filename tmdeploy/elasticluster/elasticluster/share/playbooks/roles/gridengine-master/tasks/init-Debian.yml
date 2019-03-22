@@ -8,11 +8,12 @@
     - gridengine
     - gridengine-master
   set_fact:
+    # qmaster service name
+    gridengine_master_service: 'gridengine-master'
     # packages to install
     gridengine_master_packages:
       - gridengine-client
       - gridengine-common
       - gridengine-master
       - gridengine-qmon
-  when:
-    'is_debian_compatible'
+  when: is_debian_compatible

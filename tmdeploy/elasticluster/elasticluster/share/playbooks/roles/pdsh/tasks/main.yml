@@ -2,19 +2,19 @@
 
 - name: Install pdsh packages (Debian-family)
   apt:
-    name=pdsh
-    state=present
+    name: pdsh
+    state: '{{ pkg_install_state }}'
+    allow_unauthenticated: '{{ not insecure_https_downloads|default("no")|bool }}'
   when: is_debian_or_ubuntu
 
   # note: the following requires EPEL repos
 - name: Install pdsh packages (RHEL-family)
   package:
-    name={{item}}
-    state=present
-  with_items:
-    - pdsh
-    - pdsh-rcmd-ssh
-    - pdsh-mod-genders
+    name:
+      - pdsh
+      - pdsh-rcmd-ssh
+      - pdsh-mod-genders
+    state: '{{ pkg_install_state }}'
   when: is_centos
 
 - name: Create genders file for PDSH
@@ -32,5 +32,3 @@
     mode=0444
     owner=root
     group=root
-
-  

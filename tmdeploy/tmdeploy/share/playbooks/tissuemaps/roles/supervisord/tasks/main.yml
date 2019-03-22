@@ -10,7 +10,7 @@
 - name: Install SW dependencies
   apt:
     name: 'supervisor'
-    state: '{{ pkg_install_state }}'
+    state: '{{ pkg_install_state|default("latest") }}'
     allow_unauthenticated: '{{ not insecure_https_downloads|default("no")|bool }}'
 
 

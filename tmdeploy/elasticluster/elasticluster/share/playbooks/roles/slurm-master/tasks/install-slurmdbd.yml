@@ -18,18 +18,17 @@
 
 - name: Install SLURM DBD packages
   package:
-    pkg='{{item}}'
-    state=latest
-  with_items: '{{ slurmdbd_packages }}'
+    name: '{{ slurmdbd_packages }}'
+    state: '{{ pkg_install_state }}'
 
 
 - name: Ensure `slurmdbd` is running
-  tags: 
+  tags:
     - slurm
     - slurmdbd
   service:
     name='{{item}}'
     enabled=yes
     state=started
-  with_items:
+  loop:
     - '{{slurmdbd_service_name}}'

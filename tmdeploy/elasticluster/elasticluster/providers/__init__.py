@@ -38,6 +38,13 @@ class AbstractCloudProvider:
         pass
 
     @abstractmethod
+    def to_vars_dict(self):
+        """
+        Return local state which is relevant for the cluster setup process.
+        """
+        return {}
+
+    @abstractmethod
     def start_instance(self, key_name, public_key_path, private_key_path,
                        security_group, flavor, image_id, image_userdata,
                        username=None, node_name=None):
@@ -57,6 +64,26 @@ class AbstractCloudProvider:
         :param str username: username for the given ssh key, default None
 
         :return: str - instance id of the started instance
+        """
+        pass
+
+    @abstractmethod
+    def pause_instance(self, instance_id):
+        """Pauses the instance - retaining disks and configuration.
+
+        :param str instance_id: instance identifier
+
+        :return: dict - Dictionary of configuration required to restart instance.
+        """
+        pass
+
+    @abstractmethod
+    def resume_instance(self, instance_config):
+        """Restart an instance from a dictionary of configuration.
+
+        :param dict instance_config - Dictionary of configuration returned
+                                      from pause_instance
+        :return: str - instance_id
         """
         pass
 

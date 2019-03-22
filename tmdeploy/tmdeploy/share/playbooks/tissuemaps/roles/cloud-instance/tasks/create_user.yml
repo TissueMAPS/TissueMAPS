@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018  University of Zurich
+# Copyright (C) 2016-2019  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,19 +45,34 @@
     createhome: yes
     append: yes
 
-- name: Add tm_user to sudoers
+- name: Allow tm_user to use SLURM's `sacctmgr`
   become: yes
   lineinfile:
-    dest: /etc/sudoers.d/{{ tm_user }}
-    line: "{{ item }}"
+    dest: '/etc/sudoers.d/{{ tm_user }}'
+    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/sacctmgr"
     state: present
     create: yes
-  with_items:
-    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/sacctmgr"
-    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi start"
-    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi restart"
-    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi stop"
-    - "{{ tm_user }} ALL=(root) NOPASSWD:/usr/sbin/service uwsgi status"
+
+- name: Allow tm_user to control TM services (I)
+  become: yes
+  lineinfile:
+    dest: '/etc/sudoers.d/{{ tm_user }}'
+    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl {{ item[0] }} {{ item[1] }}"
+    state: present
+    create: yes
+  with_nested:
+    # actions
+    - ['start', 'restart', 'stop', 'update']
+    # services
+    - ['tm_server', 'tm_jobdaemon']
+
+- name: Allow tm_user to control TM services (II)
+  become: yes
+  lineinfile:
+    dest: '/etc/sudoers.d/{{ tm_user }}'
+    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl reread"
+    state: present
+    create: yes
 
 - name: Create SSH directory for tm_user
   become: yes

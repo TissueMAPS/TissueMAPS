@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- include: ssh_keys.yml
+- import_tasks: ssh_keys.yml
 
-- include: env.yml
+- import_tasks: env.yml
 
-- include: gc3pie.yml
+- import_tasks: gc3pie.yml
 
-- include: uwsgi.yml
+- import_tasks: uwsgi.yml
 
-- include: tissuemaps.yml
+- import_tasks: tissuemaps.yml

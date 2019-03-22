@@ -69,7 +69,7 @@
     - app-server
     - uwsgi
 
-- name: Deploy system-level uWSGI config files
+- name: Deploy system-level supervisord config files
   template:
     src: '{{ item.src }}'
     dest: '{{ item.dest }}'
@@ -81,9 +81,18 @@
     # FIXME: we are using internal details of the `supervisord` role,
     # this may break if Ansible changes the visibility of role variables
     - src: tm_server.supervisord.j2
-      dest: '{{ supervisor_conf_dir }}/tm_server.{{ supervisor_conf_suffix }}'
+      dest: '{{ supervisor_conf_dir }}/tm_server{{ supervisor_conf_suffix }}'
     - src: tm_jobdaemon.supervisord.j2
-      dest: '{{ supervisor_conf_dir }}/tm_jobdaemon.{{ supervisor_conf_suffix }}'
+      dest: '{{ supervisor_conf_dir }}/tm_jobdaemon{{ supervisor_conf_suffix }}'
   tags:
     - app-server
     - uwsgi
+
+
+- name: Install uWSGI
+  package:
+    name:
+      - uwsgi
+      - uwsgi-plugin-python
+      - uwsgi-plugin-gevent-python
+    state: present

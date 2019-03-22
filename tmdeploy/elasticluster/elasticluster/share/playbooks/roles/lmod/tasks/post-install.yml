@@ -4,6 +4,20 @@
 # Post-installation configuration for Lmod
 #
 
+# these directories are referenced in Lmod's default "profile" script;
+# although Lmod runs fine even if they're non-existent, ensuring they
+# are means that we can just drop files in there from other
+# roles/playbooks
+- name: Ensure modulefiles directories exist
+  file:
+    dest: '{{item}}'
+    state: directory
+  loop:
+    - '/etc/modulefiles'
+    - '/etc/modulefiles/Core'
+    - '/etc/modulefiles/Linux'
+
+
 ## automatically load Lmod for profile shells
 
 - name: Check for existence of `/etc/profile.d`
@@ -12,18 +26,15 @@
   register: lmod_check_for__etc_profile_d
 
 - name: Deploy shell profile snippets to load Lmod
-  # validate the file by loading it: if it loads correctly, we
-  # assume it also provides the functionality
   file:
-    state=link
-    src="{{ lmod_root }}/lmod/{{ LMOD_VERSION }}/init/{{item.shell}}"
-    path="/etc/profile.d/lmod.{{item.shell}}"
-    mode=0444
-    validate="{{item.shell}} -c '{{item.source_cmd}} %s'"
-  with_items:
-    - { shell: 'sh',  source_cmd: '.' }
-    - { shell: 'csh', source_cmd: 'source' }
-  when: lmod_check_for__etc_profile_d|success
+    state: link
+    src: "{{ lmod_root }}/lmod/{{ LMOD_VERSION }}/init/{{item.script}}"
+    dest: '/etc/profile.d/modules.{{item.shell}}'
+    mode: 0444
+  loop:
+    - { shell: 'sh',  script: 'profile' }
+    - { shell: 'csh', script: 'cshrc'   }
+  when: lmod_check_for__etc_profile_d is successful
 
 
 - name: Deploy additional initialization scripts (verbatim)
@@ -31,7 +42,7 @@
     dest="/{{item}}"
     src="{{item}}"
     mode=0444
-  with_items:
+  loop:
     - "etc/profile.d/000_user_is_root.sh"
 
 
@@ -40,7 +51,7 @@
     dest="/{{item}}"
     src="{{item}}.j2"
     mode=0444
-  with_items:
+  loop:
     - "etc/profile.d/z80_StdEnv.sh"
     - "etc/profile.d/z80_StdEnv.csh"
 
@@ -57,4 +68,4 @@
     path='/etc/bash_completion.d/lmod'
     state=link
     src='{{ lmod_root }}/lmod/lmod/init/lmod_bash_completions'
-  when: lmod_check_for__etc_bash_completion_d|success
+  when: lmod_check_for__etc_bash_completion_d is successful

@@ -16,23 +16,22 @@
 #
 
 - name: Load distribution-specific data
-  include: 'init-{{ansible_os_family}}.yml'
+  include_tasks: 'init-{{ansible_os_family}}.yml'
   tags: iptables
 
 
-- name: Temporarily disable SELinux (RHEL-family)
-  when: is_rhel_compatible
+- name: Temporarily put SELinux in "permissive" mode (RHEL-family)
+  when: 'is_rhel_compatible and ansible_selinux.status == "enabled" and not disable_selinux|default("no")|bool'
   selinux:
-    policy=targeted
-    state=permissive
+    policy: targeted
+    state: permissive
 
 
 - name: Install iptables packages
   tags: iptables
   package:
-    name={{item}}
-    state=present
-  with_items: '{{ packages }}'
+    name: '{{ packages }}'
+    state: '{{ pkg_install_state }}'
 
 
 - name: Deploy netfilter rules
@@ -47,7 +46,7 @@
   become: yes
   become_user: root
   notify: '{{reload}}'
-  with_items:
+  loop:
     - 'etc/iptables/rules.v4'
     - 'etc/iptables/rules.v6'
 
@@ -59,9 +58,13 @@
     name: '{{service[item]}}'
     enabled: yes
     state: started
+  # line `ignore_errors:` is here to handle the case in issue #609
+  # when reboots are not allowed yet we want the playbook to continue
+  # despite possibly failing installing ip6tables...
+  ignore_errors: '{{ is_debian_9_or_later and debian_kernel_upgraded }}'
   become: yes
   become_user: root
-  with_items:
+  loop:
     - 'iptables'
     - 'ip6tables'
 
@@ -71,13 +74,13 @@
 
 
 - name: Enable SELinux (RHEL-family)
-  when: is_rhel_compatible
+  when: 'is_rhel_compatible and ansible_selinux.status == "enabled" and not disable_selinux|default("no")|bool'
   selinux:
-    policy=targeted
-    state=enforcing
+    policy: targeted
+    state: enforcing
 
 
 - name: Restore SELinux labels on `/` (RHEL-family)
   command: |
     restorecon -r /
-  when: 'is_rhel_compatible'
+  when: 'is_rhel_compatible and ansible_selinux.status == "enabled" and not disable_selinux|default("no")|bool'

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-#
 #
-# Copyright (C) 2016 University of Zurich. All rights reserved.
+# Copyright (C) 2016, 2018 University of Zurich. All rights reserved.
 #
 #
 # This program is free software; you can redistribute it and/or modify it
@@ -26,7 +26,9 @@ import functools
 import os
 import re
 import signal
+import shutil
 import sys
+import tempfile
 import time
 import UserDict
 
@@ -83,6 +85,90 @@ def environment(**kv):
         del os.environ[key]
     for key in changed:
         os.environ[key] = changed[key]
+
+
+def expand_ssh_proxy_command(command, user, addr, port=22):
+    """
+    Expand spacial digraphs ``%h``, ``%p``, and ``%r``.
+
+    Return a copy of `command` with the following string
+    substitutions applied:
+
+    * ``%h`` is replaced by *addr*
+    * ``%p`` is replaced by *port*
+    * ``%r`` is replaced by *user*
+    * ``%%`` is replaced by ``%``.
+
+    See also: man page ``ssh_config``, section "TOKENS".
+    """
+    translated = []
+    subst = {
+        'h': list(str(addr)),
+        'p': list(str(port)),
+        'r': list(str(user)),
+        '%': ['%'],
+    }
+    escaped = False
+    for char in command:
+        if char == '%':
+            escaped = True
+            continue
+        if escaped:
+           try:
+               translated.extend(subst[char])
+               escaped = False
+               continue
+           except KeyError:
+               raise ValueError(
+                   "Unknown digraph `%{0}`"
+                   " in proxy command string `{1}`"
+                   .format(char, command))
+        else:
+            translated.append(char)
+            continue
+    return str.join('', translated)
+
+
+def get_num_processors():
+    """
+    Return number of online processor cores.
+    """
+    # try different strategies and use first one that succeeeds
+    try:
+        return os.cpu_count()  # Py3 only
+    except AttributeError:
+        pass
+    try:
+        import multiprocessing
+        return multiprocessing.cpu_count()
+    except ImportError:  # no multiprocessing?
+        pass
+    except NotImplementedError:
+        # multiprocessing cannot determine CPU count
+        pass
+    try:
+        from subprocess32 import check_output
+        ncpus = check_output('nproc')
+        return int(ncpus)
+    except CalledProcessError:  # no `/usr/bin/nproc`
+        pass
+    except (ValueError, TypeError):
+        # unexpected output from `nproc`
+        pass
+    except ImportError:  # no subprocess32?
+        pass
+    try:
+        from subprocess import check_output
+        ncpus = check_output('nproc')
+        return int(ncpus)
+    except CalledProcessError:  # no `/usr/bin/nproc`
+        pass
+    except (ValueError, TypeError):
+        # unexpected output from `nproc`
+        pass
+    except ImportError:  # no subprocess.check_call (Py 2.6)
+        pass
+    raise RuntimeError("Cannot determine number of processors")
 
 
 def has_nested_keys(mapping, k1, *more):
@@ -389,6 +475,27 @@ def sighandler(signum, handler):
     signal.signal(signum, handler)
     yield
     signal.signal(signum, prev_handler)
+
+
+@contextmanager
+def temporary_dir(delete=True, dir=None,
+                  prefix='elasticluster.', suffix='.d'):
+    """
+    Make a temporary directory and make it current for the code in this context.
+
+    Delete temporary directory upon exit from the context, unless
+    ``delete=False`` is passed in the arguments.
+
+    Arguments *suffix*, *prefix* and *dir* are exactly as in
+    :func:`tempfile.mkdtemp()` (but have different defaults).
+    """
+    cwd = os.getcwd()
+    tmpdir = tempfile.mkdtemp(suffix, prefix, dir)
+    os.chdir(tmpdir)
+    yield
+    os.chdir(cwd)
+    if delete:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 @contextmanager

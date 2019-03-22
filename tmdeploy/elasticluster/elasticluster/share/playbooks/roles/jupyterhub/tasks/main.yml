@@ -9,7 +9,7 @@
 - name: Fail if not Debian/Ubuntu compatible
   fail:
     msg: The JupyterHub role currently only supports Debian/Ubuntu
-  when: 'not {{is_debian_compatible}}'
+  when: 'not is_debian_compatible'
 
 
 - name: Create directories
@@ -17,54 +17,65 @@
     path: '{{item}}'
     state: directory
     mode: 0755
-  with_items:
+  loop:
     - /etc/jupyterhub
     - /var/lib/jupyterhub
 
+- name: Nodejs apt signing key
+  apt_key:
+    url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+    state: present
+
+- name: Nodejs apt repo
+  apt_repository:
+    repo: deb https://deb.nodesource.com/node_8.x {{ansible_distribution_release}} main
+    state: present
 
 - name: Install SW dependencies
   apt:
-    name='{{item}}'
-    state=present
-  with_items:
-    - nodejs-legacy
-    - npm
-    - supervisor
+    name: 'nodejs'
+    state: '{{ pkg_install_state }}'
+    allow_unauthenticated: '{{ not insecure_https_downloads|default("no")|bool }}'
 
-
-# FIXME: Could this be replaced by Ansible's `npm` module?
-- name: Install HTTP proxy service
+- name: Install JupyterHub
   command: |
-    npm install -g configurable-http-proxy
-  args:
-    creates: /usr/local/lib/node_modules/configurable-http-proxy/bin/configurable-http-proxy
+    /opt/anaconda3/bin/conda install jupyterhub -c conda-forge
 
 
-- name: Install JupyterHub SW
-  pip:
-    name: 'jupyterhub'
-    state: present
-    executable: '/opt/anaconda3/bin/pip'
-
-
-- name: Create cookie secret file
+- name: Create secret tokens
   shell: |
-    openssl rand -base64 2048 | tr -d '\n' > /var/lib/jupyterhub/jupyterhub_cookie_secret
+    openssl rand -hex {{ item.bytes/2 }} | tr -d '\n' > '/var/lib/jupyterhub/{{ item.name }}'
   args:
-    creates: /var/lib/jupyterhub/jupyterhub_cookie_secret
+    creates: '/var/lib/jupyterhub/{{ item.name }}'
+  loop:
+    - { name: jupyterhub_cookie_secret, bytes: 32 }
+    - { name: jupyterhub_proxy_auth_token, bytes: 64 }
 
 
-- name: Create proxy auth token file
-  shell: |
-    openssl rand -hex 32 | tr -d '\n' > /var/lib/jupyterhub/jupyterhub_proxy_auth_token
-  args:
-    creates: /var/lib/jupyterhub/jupyterhub_proxy_auth_token
+# the following stanzas are needed to determine what exactly is the
+# correct value for Jupyter's `data_files_path` config; Ansible's
+# `with_first_found:` won't help since it's a *lookup* hence local to
+# the machine where Ansible is running...
+- name: Set Jupyter HTML data directory path
+  set_fact:
+    jupyterhub_data_files_path: '/opt/anaconda3/share/jupyterhub'
+- name: Check that Jupyter data files path exists
+  stat:
+    path: '{{ jupyterhub_data_files_path }}'
+    get_attributes: no
+    get_checksum: no
+    get_mime: no
+  register: _jupyterhub_data_files
+- name: Use older Jupyter HTML data directory path
+  set_fact:
+    jupyterhub_data_files_path: '/opt/anaconda3/share/jupyter/hub'
+  when: 'not _jupyterhub_data_files.stat.exists'
 
 
 - name: Deploy configuration file
-  copy:
+  template:
     dest: '/etc/jupyterhub/jupyterhub_config.py'
-    src:  'etc/jupyterhub/jupyterhub_config.py'
+    src:  'etc/jupyterhub/jupyterhub_config.py.j2'
     mode: 0400
 
 
@@ -75,24 +86,37 @@
   args:
     creates: /etc/jupyterhub/jupyterhub.key.pem
 
-# FIXME: should the following be reworked into an independent `supervisord` role?
+
 - name: Manage JupyterHub with `supervisord`
-  copy:
-    dest: '/etc/supervisor/conf.d/jupyterhub.conf'
-    src: 'etc/supervisor/conf.d/jupyterhub.conf'
-    mode: 0444
-  notify:
-    - reread supervisord configuration
+  import_role:
+    name: supervisord
+  vars:
+    svd_program: jupyterhub
+    svd_config: |
+      # THIS FILE IS CONTROLLED BY ELASTICLUSTER
+      # local modifications will be overwritten
+      # the next time `elasticluster setup` is run!
+      #
 
-- name: Ensure supervisord is running and starts again at boot
-  service:
-    name: supervisor
-    enabled: yes
-    state: started
+      # Control (auto)start of JupyterHub through `supervisor` (http://supervisord.org/)
+      #
+      # Initial version taken from:
+      # https://github.com/jupyterhub/jupyterhub-tutorial/blob/master/supervisor/jupyterhub.conf
 
-- name: Ensure JupyterHub has been started by supervisord
-  command: |
-    supervisorctl start jupyterhub
+      [program:jupyterhub]
+      command=/opt/anaconda3/bin/jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
+      directory=/var/lib/jupyterhub
+      autostart=true
+      autorestart=true
+      startretries=3
+      exitcodes=0,2
+      stopsignal=TERM
+      redirect_stderr=true
+      stdout_logfile=/var/log/jupyterhub.log
+      stdout_logfile_maxbytes=1MB
+      stdout_logfile_backups=10
+      user=root
+
 
 - name: Allow inbound HTTPS connections
   iptables:

@@ -5,13 +5,14 @@
 #
 
 - name: Install OS-level dependecies
-  include: 'deps-{{ansible_os_family}}.yml'
+  include_tasks: 'deps-{{ansible_os_family}}.yml'
 
 
 - name: Download bootstrap script
   get_url:
-    url='{{ easybuild_bootstrap_url }}'
-    dest='{{ easybuild_build_dir }}/bootstrap_eb.py'
+    url: '{{ easybuild_bootstrap_url }}'
+    dest: '{{ easybuild_build_dir }}/bootstrap_eb.py'
+    validate_certs: '{{ not insecure_https_downloads|default("no")|bool }}'
 
 
 - name: Set EasyBuild user name
@@ -41,7 +42,7 @@
     mode='ug+rwx,g+s'
     owner='{{easybuild_user}}'
     group='easybuild'
-  with_items:
+  loop:
     - "{{ EASYBUILD_PREFIX }}/"
     - "{{ EASYBUILD_PREFIX }}/modules/all/EasyBuild/"
     - "{{ EASYBUILD_PREFIX }}/modules/tools/EasyBuild/"
@@ -67,7 +68,7 @@
 # If this is installed, `eb -l` can colorize output
 - name: Install the `coloredlogs` Python package
   pip:
-    name=coloredlogs
+    name: coloredlogs
   become: yes
   become_user: root
   ignore_errors: yes
@@ -78,7 +79,7 @@
     src='{{item}}.j2'
     dest='/{{item}}'
     mode=0444
-  with_items:
+  loop:
     - 'etc/easybuild.cfg'
     - 'etc/profile.d/easybuild.sh'
 
@@ -87,7 +88,7 @@
   shell:
     set -e
     . /etc/profile.d/easybuild.sh
-    . /etc/profile.d/lmod.sh
+    . /etc/profile.d/modules.sh
     module load EasyBuild
     eb {{ EASYBUILD_INSTALL|join(' ') }}
-  when: '{{ EASYBUILD_INSTALL|length > 0 }}'
+  when: 'EASYBUILD_INSTALL|length > 0'

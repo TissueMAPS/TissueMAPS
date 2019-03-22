@@ -67,7 +67,7 @@
     section: DEFAULT
     state: present
     option: db_nodes
-    value: "{{ db_nodes }}"
+    value: "{{ db_host_workers|length|default(1)|int }}"
     owner: "{{ tm_user }}"
   tags:
     - database

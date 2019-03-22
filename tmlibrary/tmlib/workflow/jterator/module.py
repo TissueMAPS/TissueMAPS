@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -180,7 +180,9 @@ class ImageAnalysisModule(object):
         module = imp.load_source(module_name, self.source_file)
         if module.VERSION != self.handles.version:
             raise PipelineRunError(
-                'Version of source and handles is not the same.'
+                "Module source file `%s` has version %s"
+                " but handles are version %s."
+                % (self.source_file, module,VERSION, self.handles.version)
             )
         func = getattr(module, 'main', None)
         if func is None:

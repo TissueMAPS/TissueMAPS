@@ -25,10 +25,9 @@
     - spark
     - worker
   package:
-    name='{{item}}'
-    state=present
-  with_items:
-    - spark-worker # Server for Spark worker
+    name:
+      - spark-worker # Server for Spark worker
+    state: '{{ pkg_install_state }}'
 
 
 - name: Disable and stop Spark worker services
@@ -40,5 +39,5 @@
     name="{{item}}"
     state=stopped
     enabled=no
-  with_items:
+  loop:
     - spark-worker # Server for Spark worker

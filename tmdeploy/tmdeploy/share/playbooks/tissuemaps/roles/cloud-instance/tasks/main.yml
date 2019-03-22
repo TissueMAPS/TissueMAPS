@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- include: "{{provider}}.yml"
+- include_tasks: "{{provider}}.yml"
 
 - name: Refresh dynamic inventory
   run_once: yes
@@ -30,26 +30,26 @@
     minutes: 1
     prompt: "Wait 1 minute for instance."
 
-- include: python.yml
+- import_tasks: python.yml
   delegate_to: "{{ instance_name }}"
   delegate_facts: yes
   when: instance_state == "present"
 
-- include: format.yml
+- import_tasks: format.yml
   delegate_to: "{{ instance_name }}"
   delegate_facts: yes
   when:
     - volume_size is defined
     - instance_state == "present"
 
-- include: mount.yml
+- import_tasks: mount.yml
   delegate_to: "{{ instance_name }}"
   delegate_facts: yes
   when:
     - volume_size is defined
     - instance_state == "present"
 
-- include: create_user.yml
+- import_tasks: create_user.yml
   delegate_to: "{{ instance_name }}"
   delegate_facts: yes
   when: instance_state == "present"
