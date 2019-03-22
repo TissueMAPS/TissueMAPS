@@ -190,10 +190,4 @@ setuptools.setup(
            'matlab-wrapper>=0.9.6', # Requires Matlab
         ]
     },
-    dependency_links=[
-        # The dependency_links functionality has been deprecated, but it can
-        # be activated via --process-dependency-links
-        'https://github.com/tissuemaps/gc3pie/tarball/master#egg=gc3pie-2.5.dev',
-        # 'https://github.com/tissuemaps/sqlalchemy-utils/tarball/master#egg=sqlalchemy_utils'
-    ]
 )
