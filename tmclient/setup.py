@@ -56,7 +56,7 @@ import setuptools
 
 setuptools.setup(
     name='tmclient',
-    version='0.4.2',  # use bumpversion to advance
+    version='0.4.3',  # use bumpversion to advance
     description='RESTful API client for TissueMAPS.',
     author='Markus D. Herrmann',
     license='Apache-2.0',

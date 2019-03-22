@@ -102,7 +102,7 @@ def build_console_scripts():
 
 setuptools.setup(
     name='tmlibrary',
-    version='0.4.2',  # use bumpversion to advance
+    version='0.4.3',  # use bumpversion to advance
     description='TissueMAPS library for distibuted image analysis routines.',
     author='Markus D. Herrmann',
     url='https://github.com/tissuemaps/tmlibrary',

@@ -63,7 +63,7 @@ def find_scripts():
 
 setuptools.setup(
     name='tmserver',
-    version='0.4.2',  # use bumpversion to advance
+    version='0.4.3',  # use bumpversion to advance
     description='TissueMAPS server application.',
     author='Markus D. Herrmann and Robin Hafen',
     author_email='markusdherrmann@gmail.com',
