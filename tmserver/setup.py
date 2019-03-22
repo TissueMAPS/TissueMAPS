@@ -96,7 +96,7 @@ setuptools.setup(
         'flask-redis>=0.1.0',
         'Flask-uWSGI-WebSocket>=0.5.2',
         'Werkzeug>=0.10.4',
-        'gc3pie>=2.5.1',
+        'gc3pie>=2.5.2',
         'gevent>=1.1.1',
         'itsdangerous>=0.24',
         'Jinja2>=2.8',

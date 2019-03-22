@@ -180,7 +180,7 @@ setuptools.setup(
        #    sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        'whichcraft>=0.4.0',
-       'gc3pie>=2.5',
+       'gc3pie>=2.5.2',
     ],
     extras_require = {
        'jterator_r_modules': [
@@ -192,7 +192,7 @@ setuptools.setup(
     },
     dependency_links=[
         # The dependency_links functionality has been deprecated, but it can
-        # be activaeted via --process-dependency-links
+        # be activated via --process-dependency-links
         'https://github.com/tissuemaps/gc3pie/tarball/master#egg=gc3pie-2.5.dev',
         # 'https://github.com/tissuemaps/sqlalchemy-utils/tarball/master#egg=sqlalchemy_utils'
     ]

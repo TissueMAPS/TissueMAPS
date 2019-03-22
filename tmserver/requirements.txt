@@ -30,4 +30,4 @@ SQLAlchemy==1.1.9
 tzlocal==1.4
 uWSGI==2.0.15
 Werkzeug==0.12.1
-git+https://github.com/uzh/gc3pie@v2.5.1#egg=gc3pie-2.5.1
+git+https://github.com/uzh/gc3pie@v2.5.2#egg=gc3pie-2.5.2
