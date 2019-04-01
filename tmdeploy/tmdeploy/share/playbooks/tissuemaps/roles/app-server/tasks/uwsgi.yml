@@ -69,26 +69,6 @@
     - app-server
     - uwsgi
 
-- name: Deploy system-level supervisord config files
-  template:
-    src: '{{ item.src }}'
-    dest: '{{ item.dest }}'
-    owner: root
-    group: root
-  with_items:
-    - src: uwsgi.logrotate.j2
-      dest: '/etc/logrotate.d/tissuemaps.conf'
-    # FIXME: we are using internal details of the `supervisord` role,
-    # this may break if Ansible changes the visibility of role variables
-    - src: tm_server.supervisord.j2
-      dest: '{{ supervisor_conf_dir }}/tm_server{{ supervisor_conf_suffix }}'
-    - src: tm_jobdaemon.supervisord.j2
-      dest: '{{ supervisor_conf_dir }}/tm_jobdaemon{{ supervisor_conf_suffix }}'
-  tags:
-    - app-server
-    - uwsgi
-
-
 - name: Install uWSGI
   package:
     name:

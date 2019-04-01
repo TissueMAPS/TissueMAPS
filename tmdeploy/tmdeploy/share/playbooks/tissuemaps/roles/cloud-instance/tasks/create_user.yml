@@ -64,7 +64,7 @@
     # actions
     - ['start', 'restart', 'stop', 'update']
     # services
-    - ['tm_server', 'tm_jobdaemon']
+    - ['tm_server', 'tm_httpd', 'tm_jobdaemon']
 
 - name: Allow tm_user to control TM services (II)
   become: yes

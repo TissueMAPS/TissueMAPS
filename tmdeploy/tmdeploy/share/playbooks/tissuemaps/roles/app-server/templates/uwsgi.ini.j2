@@ -1,5 +1,14 @@
 [uwsgi]
-plugins = logfile, python
+# this is needed for the `uwsgi` binary that comes with Debian/Ubuntu
+# packages, but is not needed if `uwsgi` is installed with `pip`
+plugins = http, logfile, python
+
+
+## communication with NginX upstream
+protocol = uwsgi
+# use TCP port so we don't need to mess with chmod and permissions
+socket = localhost:8000
+
 
 ## main uWSGI master/worker setup
 master = true
@@ -15,19 +24,6 @@ master-fifo = /var/run/uwsgi/master.fifo
 
 # remove all of the generated file/sockets on exit
 vacuum = true
-
-
-## HTTP serving config
-{% if (web_port is not defined) or (web_port|int < 1024) %}
-# Supervisord uses fd 0 to pass the listening socket,
-# see: http://supervisord.org/configuration.html#fcgi-program-x-section-settings
-http-socket = fd://0
-{% else %}
-http-socket = :{{ app_port }}
-{% endif %}
-static-map = /={{ tm_www_root }}
-static-index = index.html
-offload-threads = {{ uwsgi_offload_threads|default("%k") }}
 
 
 ## TM application configuration
