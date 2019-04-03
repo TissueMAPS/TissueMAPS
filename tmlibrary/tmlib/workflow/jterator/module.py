@@ -182,7 +182,7 @@ class ImageAnalysisModule(object):
             raise PipelineRunError(
                 "Module source file `%s` has version %s"
                 " but handles are version %s."
-                % (self.source_file, module,VERSION, self.handles.version)
+                % (self.source_file, module.VERSION, self.handles.version)
             )
         func = getattr(module, 'main', None)
         if func is None:
