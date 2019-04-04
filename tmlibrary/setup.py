@@ -175,7 +175,6 @@ setuptools.setup(
        #    sudo apt-get -y install libpq-dev
        'psycopg2>=2.7',
        'tables>=3.2.2',
-       'ruamel.yaml>=0.10.11',
        # Ubuntu:
        #    sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',

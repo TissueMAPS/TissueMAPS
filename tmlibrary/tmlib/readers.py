@@ -19,7 +19,7 @@ import re
 import h5py
 import logging
 import json
-import ruamel.yaml
+import yaml
 import traceback
 import lxml.etree
 import cv2
@@ -163,21 +163,6 @@ class JsonReader(Reader):
         return load_json(self._stream.read())
 
 
-def load_yaml(string):
-    '''Converts YAML string to Python object.
-
-    Parameters
-    ----------
-    string: str
-        YAML string
-
-    Returns
-    -------
-    dict or list
-    '''
-    return ruamel.yaml.load(string, ruamel.yaml.RoundTripLoader)
-
-
 class YamlReader(Reader):
 
     '''Class for reading data from files in YAML 1.2 format.'''
@@ -195,7 +180,7 @@ class YamlReader(Reader):
             file content
         '''
         logger.debug('read YAML data from file: %s', self.filename)
-        return load_yaml(self._stream.read())
+        return yaml.safe_load(self._stream)
 
 
 class DatatableReader(Reader):
