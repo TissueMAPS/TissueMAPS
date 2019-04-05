@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -180,7 +180,7 @@ class YamlReader(Reader):
             file content
         '''
         logger.debug('read YAML data from file: %s', self.filename)
-        return yaml.safe_load(self._stream)
+        return yaml.load(self._stream)
 
 
 class DatatableReader(Reader):
