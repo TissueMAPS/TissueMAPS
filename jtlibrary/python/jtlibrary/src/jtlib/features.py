@@ -21,12 +21,11 @@ from abc import abstractproperty
 from abc import abstractmethod
 from cached_property import cached_property
 from skimage import measure
-from skimage import filters
 from scipy import ndimage as ndi
 # from mahotas.features import surf
-from scipy.spatial.distance import squareform, cdist
 from centrosome.filter import gabor
 from jtlib import utils
+from tmlib.errors import PipelineRunError
 
 
 logger = logging.getLogger(__name__)
@@ -59,13 +58,19 @@ class Features(object):
         TypeError
             when `intensity_image` doesn't have unsigned integer type
         ValueError
-            when `intensity_image` and `label_image` don't have identical shape
-            or when `label_image` is not 2D
+            when `intensity_image` and `label_image` don't have identical shape,
+             when `label_image` is not 2D, or when labels in `label_image` are
+            not consecutive
         '''
         self.label_image = label_image
         if len(label_image.shape) > 2:
             raise ValueError(
                 'Feature extraction is only implemented for 2D images.'
+            )
+        if len(set(np.unique(self.label_image)) - {0}) != np.max(self.label_image):
+            raise ValueError(
+                'Label image contains non-consecutive labels.'
+                ' Consider re-labelling.'
             )
         self.intensity_image = intensity_image
         if self.intensity_image is not None:
@@ -134,7 +139,10 @@ class Features(object):
                 'Image "ref_label_image" has incorrect dimensions.'
             )
         if not aggregate:
-            if np.any((self.label_image - ref_label_image) > 0):
+            # If labels match, and objects are one-to-one, then label_minus_ref
+            # should contain only zeros where label_image is non-zero.
+            label_minus_ref = self.label_image - ref_label_image
+            if np.any(label_minus_ref[self.label_image > 0] != 0):
                 raise ValueError(
                     'Should this be an aggregate measurement?'
                     'Some assigned objects contain more than one of the objects'
@@ -388,14 +396,22 @@ class Morphology(Features):
         regionprops = measure.regionprops(
             label_image=self.label_image,
             intensity_image=distances)
-        for obj in self.object_ids:
+        for obj_index, obj in enumerate(self.object_ids):
             mask = self.get_object_mask_image(obj)
             roundness = mh.features.roundness(mask)
 
-            # skimage ignores label = 0 and starts list of objects at n=1
-            sk_obj = obj - 1
+            # skimage.measure.regionprops returns a list which is indexed
+            # as [0,len(self.object_ids)-1] rather than by the labels in
+            # self.label_image. If labels are not consecutive, this can
+            # cause problems. We therefore access these by obj_index
+            # instead of obj and then check that the labels match.
             try:
-                obj_props = regionprops[sk_obj]
+                obj_props = regionprops[obj_index]
+                if (obj_props.label != obj):
+                    logger.error(
+                        "Measurements of object #%d should not be assigned"
+                        "to object #%d", obj_props.label, obj)
+                    raise PipelineRunError
             except IndexError:
                 logger.error(
                     "No properties computed for object with label %s"
