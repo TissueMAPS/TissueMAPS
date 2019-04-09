@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -47,10 +47,9 @@
 - name: Install apt packages for PostgreSQL client
   apt:
     name: "{{ item }}"
-    state: installed
+    state: present
   with_items:
     - postgresql-client-{{ postgresql_version }}
     - libpq-dev
   tags:
     - database
-

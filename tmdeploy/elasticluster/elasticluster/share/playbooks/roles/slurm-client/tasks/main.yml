@@ -1,20 +1,28 @@
 # slurm-client/tasks/main.yml
 ---
 
-- name: Install required SLURM packages (Debian/Ubuntu)
-  package:
-    pkg={{item}}
-    state=latest
-  with_items:
-    - libpmi0-dev
-    - libslurm-dev
-    - libslurm-perl
-    - libslurmdb-perl
-    - slurm-client
-    - slurm-drmaa-dev
-    - slurm-wlm-torque
-    - sview
-  when: '{{is_debian_8_or_later}} or {{is_ubuntu_15_10_or_later}}'
+- block:
+    - name: Install required SLURM packages (Debian/Ubuntu)
+      package:
+        name:
+          - libpmi0-dev
+          - libslurm-dev
+          - libslurm-perl
+          - libslurmdb-perl
+          - slurm-client
+          - slurm-wlm-torque
+          - sview
+        state: '{{ pkg_install_state }}'
+    # these are present in some but not all releases of Debian/Ubuntu;
+    # rather than writing complex `when:` clauses, it's just easier to
+    # try to install them and ignore failure...
+    - name: Install optional SLURM packages (Debian/Ubuntu)
+      package:
+        name:
+          - slurm-drmaa-dev
+        state: '{{ pkg_install_state }}'
+      ignore_errors: yes
+  when: 'is_debian_8_or_later or is_ubuntu_15_10_or_later'
 
 
 - block:
@@ -22,54 +30,48 @@
   # `slurm-llnl`, we have to install it and *then* stop all the services
     - name: Install required SLURM packages (older Debian/Ubuntu)
       package:
-        pkg={{item}}
-        state=latest
-      with_items:
-        - libpmi0-dev
-        - libslurm-dev
-        - libslurm-perl
-        - libslurmdb-perl
-        - slurm-llnl
-        - slurm-llnl-sview
-        - slurm-llnl-torque
+        name:
+          - libpmi0-dev
+          - libslurm-dev
+          - libslurm-perl
+          - libslurmdb-perl
+          - slurm-llnl
+          - slurm-llnl-sview
+          - slurm-llnl-torque
+        state: '{{ pkg_install_state }}'
     - service:
-        name={{item}}
-        enabled=no
-        state=stopped
-      with_items:
-        - slurm-llnl
-  when:
-    '{{is_debian_or_ubuntu}} and not ({{is_debian_8_or_later}} or {{is_ubuntu_15_10_or_later}})'
+        name: 'slurm-llnl'
+        enabled: no
+        state: stopped
+  when: 'is_debian_or_ubuntu and not (is_debian_8_or_later or is_ubuntu_15_10_or_later)'
 
 
 # since all the SLURM binaries are bundled in a single package
 # `slurm`, we have to install it and *then* stop all the services
 - name: Install SLURM packages (RHEL-compatible)
   package:
-    name={{item}}
-    state=present
-  with_items:
-    - slurm
-    - slurm-devel
-    - slurm-perlapi
-    - slurm-sjobexit
-    - slurm-sjstat
-    - slurm-torque
+    name:
+      - slurm
+      - slurm-devel
+      - slurm-perlapi
+      - slurm-contribs
+      - slurm-torque
+    state: '{{ pkg_install_state }}'
   when: 'is_rhel_compatible'
 
 - name: Stop SLURM services (RHEL/CentOS 6.x)
   service:
-    name='slurm'
-    enabled=no
-    state=stopped
+    name: 'slurm'
+    enabled: no
+    state: stopped
   when: 'is_rhel6_compatible'
 
 - name: Stop SLURM services (RHEL/CentOS 7.x)
   service:
-    name={{item}}
-    enabled=no
-    state=stopped
-  with_items:
+    name: '{{item}}'
+    enabled: no
+    state: stopped
+  loop:
     - slurmd
     - slurmctld
   when: 'is_rhel7_compatible'

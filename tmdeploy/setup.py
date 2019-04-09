@@ -64,19 +64,9 @@ def find_scripts():
     return scripts
 
 
-def get_version():
-    logger.info('get package version')
-    src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'tmdeploy'
-    )
-    sys.path = [src_path] + sys.path
-    import version
-    return version.__version__
-
-
 setuptools.setup(
     name='tmdeploy',
-    version=get_version(),
+    version='0.4.3',  # use bumpversion to advance
     description='TissueMAPS deployment in virtual environments.',
     url='https://github.com/tissuemaps/tmdeploy',
     author='Markus D. Herrmann',
@@ -106,7 +96,7 @@ setuptools.setup(
     include_package_data=True,
     install_requires=[
         # Ansible 2.4 introduces changes incompatible with elasticluster roles.
-       'ansible>=2.3,<2.4',
+       'ansible>=2.5',
        'apache-libcloud>=1.3.0',
        'boto>=2.48',
        'boto3>=1.4.1',

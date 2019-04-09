@@ -9,7 +9,7 @@
     - apache2
     - http
     - web
-  include: 'init-{{ansible_os_family}}.yml'
+  include_tasks: 'init-{{ansible_os_family}}.yml'
 
 
 - name: Install Ganglia web frontend software
@@ -22,9 +22,8 @@
     - http
     - web
   package:
-    pkg: '{{item}}'
-    state: installed
-  with_items: '{{ ganglia_web_packages }}'
+    name: '{{ ganglia_web_packages }}'
+    state: '{{ pkg_install_state }}'
 
 
 - block:
@@ -33,6 +32,9 @@
     stat:
       path: '/etc/apache2/conf-available'
       follow: no
+      get_attributes: no
+      get_checksum: no
+      get_mime: no
     register: apache_conf_available_d
 
   - name: Configure Ganglia web endpoint in /etc/apache2/conf-available (Debian/Ubuntu)
@@ -52,6 +54,9 @@
     stat:
       path: '/etc/apache2/conf.d'
       follow: no
+      get_attributes: no
+      get_checksum: no
+      get_mime: no
     register: apache_conf_d
 
   - name: Configure Ganglia web endpoint in /etc/apache2/conf.d (Debian/Ubuntu)
@@ -72,12 +77,6 @@
     - web
   when: is_debian_compatible
 
-- name: Set correct permissions for /usr/share/ganglia
-  file:
-    path: /usr/share/ganglia
-    state: directory
-    recurse: yes
-    mode: 0755
 
 - name: Configure Ganglia web endpoint (RHEL/CentOS)
   tags:
@@ -94,6 +93,7 @@
   notify: restart apache
   when: is_rhel_compatible
 
+
 - name: Ensure ganglia daemons are running
   tags:
     - ganglia
@@ -107,4 +107,4 @@
     name: '{{item}}'
     state: started
     enabled: yes
-  with_items: '{{ ganglia_web_services }}'
+  loop: '{{ ganglia_web_services }}'

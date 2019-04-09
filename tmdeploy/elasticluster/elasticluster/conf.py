@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-# Copyright (C) 2013-2016 University of Zurich.
+# Copyright (C) 2013-2016, 2018, 2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -53,15 +53,19 @@ from schema import Schema, SchemaError, Optional, Or, Regex, Use
 from elasticluster import log
 from elasticluster.exceptions import ConfigurationError
 from elasticluster.providers.ansible_provider import AnsibleSetupProvider
-from elasticluster.cluster import Cluster
+from elasticluster.cluster import Cluster, NodeNamingPolicy
 from elasticluster.repository import MultiDiskRepository
 from elasticluster.utils import environment
 from elasticluster.validate import (
+    alert,
     boolean,
     executable_file,
+    existing_file,
     hostname,
     nonempty_str,
+    nonnegative_int,
     nova_api_version,
+    positive_int,
     readable_file,
     url,
 )
@@ -92,7 +96,7 @@ SCHEMA = {
         'provider': Or('azure', 'ec2_boto', 'google', 'openstack', 'libcloud'),
         # allow other keys w/out restrictions; each cloud provider has its own
         # set of keys, which are handled separately
-        str: str,
+        Optional(str): str,
     },
     'cluster': {
         'cloud': str,
@@ -103,23 +107,45 @@ SCHEMA = {
                 'flavor': nonempty_str,
                 'image_id': nonempty_str,
                 Optional('image_userdata', default=''): str,
-                'security_group': str,  ## FIXME: alphanumeric?
+                Optional('security_group', default='default'): str,  ## FIXME: alphanumeric?
                 Optional('network_ids'): str,
                 # these are auto-generated but already there by the time
                 # validation is run
                 'login': nonempty_str,
                 'num': int,
                 'min_num': int,
-                # allow other keys w/out restrictions
+                # only on Google Cloud
+                Optional("accelerator_count", default=0): nonnegative_int,
+                Optional("accelerator_type"): nonempty_str,
+                Optional("local_ssd_count", default=0): nonnegative_int,
+                Optional("local_ssd_interface", default='SCSI'): Or('NVME', 'SCSI'),
+                Optional("min_cpu_platform"): nonempty_str,
+                # only on OpenStack
+                Optional('floating_network_id'): str,
+                Optional("request_floating_ip"): boolean,
+                # allow other string keys w/out restrictions
                 Optional(str): str,
             },
         },
-        # allow other keys w/out restrictions
+        Optional("ssh_probe_timeout", default=5): positive_int,
+        Optional("ssh_proxy_command", default=''): str,
+        Optional("start_timeout", default=600): positive_int,
+        # only on Google Cloud
+        Optional("accelerator_count", default=0): nonnegative_int,
+        Optional("accelerator_type"): nonempty_str,
+        Optional("allow_project_ssh_keys", default=True): boolean,
+        Optional("local_ssd_count", default=0): nonnegative_int,
+        Optional("local_ssd_interface", default='SCSI'): Or('NVME', 'SCSI'),
+        Optional("min_cpu_platform"): nonempty_str,
+        # only on OpenStack
+        Optional('floating_network_id'): str,
+        Optional("request_floating_ip"): boolean,
+        # allow other string keys w/out restrictions
         Optional(str): str,
     },
     'login': {
         'image_user': nonempty_str,
-        'image_sudo': boolean,
+        Optional('image_sudo', default=True): boolean,
         Optional('image_user_sudo', default="root"): nonempty_str,
         Optional('image_userdata', default=''): str,
         'user_key_name': str,  # FIXME: are there restrictions? (e.g., alphanumeric)
@@ -131,7 +157,7 @@ SCHEMA = {
         Optional("playbook_path",
                  default=os.path.join(
                      resource_filename('elasticluster', 'share/playbooks'),
-                     'site.yml')): readable_file,
+                     'main.yml')): readable_file,
         Optional("ansible_command"): executable_file,
         Optional("ansible_extra_args"): str,
         #Optional("ansible_ssh_pipelining"): boolean,
@@ -140,7 +166,7 @@ SCHEMA = {
     },
     'storage': {
         Optional('storage_path', default=os.path.expanduser("~/.elasticluster/storage")): str,
-        Optional('storage_type'): ['yaml', 'json', 'pickle'],
+        Optional('storage_type'): Or('yaml', 'json', 'pickle'),
     },
 }
 
@@ -148,8 +174,19 @@ SCHEMA = {
 CLOUD_PROVIDER_SCHEMAS = {
     'azure': {
         "provider": 'azure',
-        "subscription_id": nonempty_str,
-        "certificate": nonempty_str,
+        Optional("subscription_id", default=os.getenv('AZURE_SUBSCRIPTION_ID', '')): nonempty_str,
+        Optional("tenant_id", default=os.getenv('AZURE_TENANT_ID', '')): nonempty_str,
+        Optional("client_id", default=os.getenv('AZURE_CLIENT_ID', '')): nonempty_str,
+        Optional("secret", default=os.getenv('AZURE_CLIENT_SECRET', '')): nonempty_str,
+        Optional("location", default="westus"): nonempty_str,
+        Optional("certificate"): alert(
+            "The `certificate` setting is no longer valid"
+            " in the Azure configuration."
+            " Please remove it from your configuration file."),
+        Optional("wait_timeout"): alert(
+            "The `wait_timeout` setting is no longer valid"
+            " in the Azure configuration."
+            " Please remove it from your configuration file."),
     },
 
     'ec2_boto': {
@@ -167,27 +204,31 @@ CLOUD_PROVIDER_SCHEMAS = {
 
     'google': {
         "provider": 'google',
-        "gce_client_id": nonempty_str,
-        "gce_client_secret": nonempty_str,
         "gce_project_id": nonempty_str,
+        Optional("gce_client_id"): nonempty_str,
+        Optional("gce_client_secret"): nonempty_str,
+        Optional("network", default="default"): nonempty_str,
         Optional("noauth_local_webserver"): boolean,
         Optional("zone", default="us-central1-a"): nonempty_str,
-        Optional("network", default="default"): nonempty_str,
     },
 
     'openstack': {
         "provider": 'openstack',
-        Optional("auth_url", default=os.getenv('OS_AUTH_URL', '')): url,
-        Optional("username", default=os.getenv('OS_USERNAME', '')): nonempty_str,
-        Optional("password", default=os.getenv('OS_PASSWORD', '')): nonempty_str,
-        Optional("project_name",
-                 # if OS_PROJECT_NAME is not defined,
-                 # try legacy variable OS_TENANT_NAME as a fallback
-                 default=os.getenv('OS_PROJECT_NAME',
-                                   os.getenv('OS_TENANT_NAME', ''))): nonempty_str,
-        Optional("request_floating_ip"): boolean,
+        Optional("auth_url"): url,
+        Optional("cacert"): existing_file,
+        Optional("username"): nonempty_str,
+        Optional("password"): nonempty_str,
+        Optional("user_domain_name"): nonempty_str,
+        Optional("project_domain_name"): nonempty_str,
+        Optional("project_name"): nonempty_str,
+        Optional("request_floating_ip"): boolean,  ## DEPRECATED, place in cluster or node config
         Optional("region_name"): nonempty_str,
-        Optional("nova_api_version"): nova_api_version,
+        Optional("compute_api_version"): Or('1.1', '2'),
+        Optional("image_api_version"): Or('1', '2'),
+        Optional("network_api_version"): Or('2.0'),
+        Optional("volume_api_version"): Or('1', '2', '3'),
+        Optional("identity_api_version"): Or('3', '2'),  # no default, can auto-detect
+        Optional("nova_api_version"): nova_api_version,  ## DEPRECATED, use `compute_api_version` instead
     },
 
     'libcloud': {
@@ -245,7 +286,7 @@ def _make_defaults_dict():
     """
     env = {}
     # default location of Ansible playbooks; make it also available as
-    # `%(elasticluster_playbooks)` so one can write `%(elasticluster_playbooks)s/site.yml`
+    # `%(elasticluster_playbooks)` so one can write `%(elasticluster_playbooks)s/main.yml`
     env['ansible_pb_dir'] = env['elasticluster_playbooks'] \
                              = resource_filename('elasticluster', 'share/playbooks')
     return env
@@ -366,8 +407,10 @@ def _read_config_files(paths):
     """
     # read given config files
     configparser = SafeConfigParser()
+    # Preventing automatic lowercase of config keys
+    # see: https://stackoverflow.com/questions/19359556/configparser-reads-capital-keys-and-make-them-lower-case
+    configparser.optionxform = str
     configparser.read(paths)
-
     # temporarily modify environment to allow both `${...}` and `%(...)s`
     # variable substitution in config values
     defaults = _make_defaults_dict()
@@ -380,7 +423,6 @@ def _read_config_files(paths):
                 value = configparser.get(section, key, vars=defaults)
                 # `expandvars()` performs the `${...}` substitutions
                 config[section][key] = expandvars(value)
-
     return config
 
 
@@ -635,10 +677,19 @@ def _gather_node_kind_info(kind_name, cluster_name, cluster_conf):
             'network_ids',
             'security_group',
             'node_name',
+            'ssh_proxy_command',
+            # Google Cloud only
+            'accelerator_count',
+            'accelerator_type',
+            'allow_project_ssh_keys',
             'boot_disk_size',
             'boot_disk_type',
+            'min_cpu_platform',
             'scheduling',
             'tags'
+            # OpenStack only
+            'floating_network_id',
+            'request_floating_ip',
             #'user_key_name',    ## from `login/*`
             #'user_key_private', ## from `login/*`
             #'user_key_public',  ## from `login/*`
@@ -749,11 +800,18 @@ def _cross_validate_final_config(objtree, evict_on_error=True):
                 break
 
         # ensure `ssh_to` has a valid value
-        if 'ssh_to' in cluster and cluster['ssh_to'] not in cluster['nodes']:
-            log.error("Cluster `%s` is configured to SSH into nodes of kind `%s`,"
-                      " but no such kind is defined.",
-                      name, cluster['ssh_to'])
-            valid = False
+        if 'ssh_to' in cluster:
+            ssh_to = cluster['ssh_to']
+            try:
+                # extract node kind if this is a node name (e.g., `master001` => `master`)
+                parts = NodeNamingPolicy.parse(ssh_to)
+                ssh_to = parts['kind']
+            except ValueError:
+                pass
+            if ssh_to not in cluster['nodes']:
+                log.error("Cluster `%s` is configured to SSH into nodes of kind `%s`,"
+                          " but no such kind is defined.", name, ssh_to)
+                valid = False
 
         # EC2-specific checks
         if cluster['cloud']['provider'] == 'ec2_boto':
@@ -864,9 +922,32 @@ class Creator(object):
         :return: cloud provider instance that fulfills the contract of
                  :py:class:`elasticluster.providers.AbstractCloudProvider`
         """
-        cloud_conf = self.cluster_conf[cluster_template]['cloud']
-        provider = cloud_conf['provider']
-
+        try:
+            conf_template = self.cluster_conf[cluster_template]
+        except KeyError:
+            raise ConfigurationError(
+                "No cluster template `{0}` found in configuration file"
+                .format(cluster_template))
+        try:
+            cloud_conf = conf_template['cloud']
+        except KeyError:
+            # this should have been caught during config validation!
+            raise ConfigurationError(
+                "No cloud section for cluster template `{0}`"
+                " found in configuration file"
+                .format(cluster_template))
+        try:
+            provider = cloud_conf['provider']
+        except KeyError:
+            # this should have been caught during config validation!
+            raise ConfigurationError(
+                "No `provider` configuration defined"
+                " in cloud section `{0}`"
+                " of cluster template `{1}`"
+                .format(
+                    cloud_conf.get('name', '***'),
+                    cluster_template
+                ))
         try:
             ctor = _get_provider(provider, CLOUD_PROVIDERS)
         except KeyError:
@@ -882,7 +963,36 @@ class Creator(object):
         provider_conf = cloud_conf.copy()
         provider_conf.pop('provider')
 
-        return ctor(storage_path=self.storage_path, **provider_conf)
+        # use a single keyword args dictionary for instanciating
+        # provider, so we can detect missing arguments in case of error
+        provider_conf['storage_path'] = self.storage_path
+        try:
+            return ctor(**provider_conf)
+        except TypeError:
+            # check that required parameters are given, and try to
+            # give a sensible error message if not; if we do not
+            # do this, users only see a message like this::
+            #
+            #   ERROR Error: __init__() takes at least 5 arguments (4 given)
+            #
+            # which gives no clue about what to correct!
+            import inspect
+            args, varargs, keywords, defaults = inspect.getargspec(ctor.__init__)
+            if defaults is not None:
+                # `defaults` is a list of default values for the last N args
+                defaulted = dict((argname, value)
+                                 for argname, value in zip(reversed(args),
+                                                           reversed(defaults)))
+            else:
+                # no default values at all
+                defaulted = {}
+            for argname in args[1:]:  # skip `self`
+                if argname not in provider_conf and argname not in defaulted:
+                    raise ConfigurationError(
+                        "Missing required configuration parameter `{0}`"
+                        " in cloud section for cluster `{1}`"
+                        .format(argname, cluster_template))
+
 
 
     def create_cluster(self, template, name=None, cloud=None, setup=None):
@@ -949,7 +1059,20 @@ class Creator(object):
         :param str cluster_template: template of the cluster
         :param str name: name of the cluster to read configuration properties
         """
-        conf = self.cluster_conf[cluster_template]['setup']
+        try:
+            conf_template = self.cluster_conf[cluster_template]
+        except KeyError as err:
+            raise ConfigurationError(
+                "No cluster template `{0}` found in configuration file"
+                .format(cluster_template))
+        try:
+            conf = conf_template['setup']
+        except KeyError as err:
+            # this should have been caught during config validation!
+            raise ConfigurationError(
+                "No setup section for cluster template `{0}`"
+                " found in configuration file"
+                .format(cluster_template))
         if name:
             conf['cluster_name'] = name
         conf_login = self.cluster_conf[cluster_template]['login']
@@ -999,7 +1122,7 @@ class Creator(object):
                 continue
             node_kind = key[:-len('_groups')]
             group_names = [group_name.strip()
-                           for group_name in value.split(',')]
+                           for group_name in value.split(',') if group_name.strip()]
             for group_name in group_names:
                 # handle renames
                 if group_name in self._RENAMED_NODE_GROUPS:
@@ -1020,9 +1143,13 @@ class Creator(object):
 
     _RENAMED_NODE_GROUPS = {
         # old name     ->  (new name             will be removed in...
+        'condor_workers':  ('condor_worker',     '1.4'),
         'gluster_client':  ('glusterfs_client',  '1.4'),
         'gluster_data' :   ('glusterfs_server',  '1.4'),
         'gridengine_clients': ('gridengine_worker', '2.0'),
+        'maui_master':     ('torque_master',     '2.0'),
+        'pbs_clients':     ('torque_worker',     '2.0'),
+        'pbs_master':      ('torque_master',     '2.0'),
         'slurm_clients':   ('slurm_worker',      '2.0'),
         'slurm_workers':   ('slurm_worker',      '1.4'),
     }

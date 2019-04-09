@@ -6,14 +6,12 @@
     slurmctld_packages:
       - mailx
       - slurm-plugins
-      - slurm-slurmdb-direct
       - slurm
     slurmdbd_service_name: slurmdbd
     slurmdbd_packages:
       - slurm-sql
       - slurm-slurmdbd
-  when:
-    'is_rhel7_compatible'
+  when: is_rhel7_compatible
 
 
 - name: Set SLURM playbook params (RHEL 6.x compatible)
@@ -22,11 +20,9 @@
     slurmctld_packages:
       - mailx
       - slurm-plugins
-      - slurm-slurmdb-direct
       - slurm
     slurmdbd_service_name: slurmdbd
     slurmdbd_packages:
       - slurm-sql
       - slurm-slurmdbd
-  when:
-    'is_rhel6_compatible'
+  when: is_rhel6_compatible

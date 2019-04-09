@@ -5,7 +5,7 @@
     - ganglia
     - ganglia-gmond
     - gmond
-  include: 'init-{{ansible_os_family}}.yml'
+  include_tasks: 'init-{{ansible_os_family}}.yml'
 
 
 - name: Install Ganglia `gmond` software
@@ -14,9 +14,8 @@
     - ganglia-gmond
     - gmond
   package:
-    pkg: '{{item}}'
-    state: present
-  with_items: '{{ ganglia_gmond_packages }}'
+    pkg: '{{ ganglia_gmond_packages }}'
+    state: '{{ pkg_install_state }}'
 
 
 - name: Configure `gmond`
@@ -40,4 +39,4 @@
     name: '{{ item }}'
     state: started
     enabled: yes
-  with_items: '{{ ganglia_gmond_services }}'
+  loop: '{{ ganglia_gmond_services }}'

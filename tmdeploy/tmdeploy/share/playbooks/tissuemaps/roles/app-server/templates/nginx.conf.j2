@@ -1,0 +1,64 @@
+# Minimal NginX configuration for serving TM's static UI files
+# and proxying any other request to the Flask backend.
+#
+# See: https://www.netnea.com/cms/nginx-tutorial-2_minimal-nginx-configuration/
+#
+
+# this is needed to run under `supervisord`
+daemon            off;
+
+worker_processes  {{ uwsgi_processes|default(2) }};
+
+# these require that `nginx` is started with `root` permissions
+user              {{ tm_user }};
+group             {{ tm_group }};
+
+events {
+    use           epoll;
+    worker_connections  128;
+}
+
+http {
+    # general HTTP config
+    include       /etc/nginx/mime.types;
+    charset       utf-8;
+
+    # NginX default of 2M max request size is too small for image uploads
+    client_max_body_size 100M;
+
+    # FIXME: I'm not sure this is needed at all, and what problem it
+    # is here to fix.  NginX's default for lingering is 5s; `tm_client`
+    # might be slower than that but it's entirely my speculation
+    lingering_timeout 30s;
+
+    # TM-related logs
+    access_log {{ tm_home }}/tissuemaps-access.log;
+    error_log {{ tm_home }}/tissuemaps-error.log warn;
+
+    # params for talking to TM server application
+    uwsgi_buffering on;
+    uwsgi_request_buffering off;
+    uwsgi_next_upstream off;
+
+    server {
+
+        listen {{ web_port }};
+
+        server_name _;
+
+        # all non-api requests are file requests and should be served
+        # from the gulp built directory
+        root {{ tm_src_dir }}/tmui/src/build;
+        location / {
+            try_files $uri $uri/ @proxy;
+        }
+
+        # all other request (e.g. with /api or /auth prefix) are redirected to uwsgi
+        location @proxy {
+            include /etc/nginx/uwsgi_params;
+            uwsgi_pass localhost:8000;
+            uwsgi_send_timeout 120s;
+            uwsgi_read_timeout 360s;
+        }
+    }
+}

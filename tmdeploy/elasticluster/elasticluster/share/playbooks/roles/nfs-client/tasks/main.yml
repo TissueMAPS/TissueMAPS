@@ -5,10 +5,10 @@
     - nfs
     - nfs-client
   package:
-    pkg='{{item}}'
-    state=present
-  with_items:
-    - nfs-common
+    name:
+      - nfs-common
+      - nfs4-acl-tools
+    state: '{{pkg_install_state}}'
   when: is_debian_compatible
 
 - name: install NFS client software (RHEL-compatible)
@@ -16,10 +16,10 @@
     - nfs
     - nfs-client
   package:
-    pkg='{{item}}'
-    state=present
-  with_items:
-    - nfs-utils
+    name:
+      - nfs-utils
+      - nfs4-acl-tools
+    state: '{{pkg_install_state}}'
   when: is_rhel_compatible
 
 
@@ -53,9 +53,10 @@
 
 
 - name: Mount NFS filesystems
-  tags: 
+  tags:
     - nfs
     - nfs-client
-  include: nfsmount.yml fs='{{item}}'
-  with_items: '{{NFS_MOUNTS}}'
-    
+  include_tasks: nfsmount.yml
+  vars:
+    fs: '{{item}}'
+  loop: '{{NFS_MOUNTS}}'

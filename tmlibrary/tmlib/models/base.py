@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -238,7 +238,7 @@ class FileSystemModel(ExperimentModel, IdMixIn):
 
     __abstract__ = True
 
-    _location = Column('location', String(200))
+    _location = Column('location', String(4096))
 
     @abstractproperty
     def location(self):
@@ -285,4 +285,3 @@ class FileModel(FileSystemModel):
     def put(self, data):
         '''Puts `data` to the file.'''
         pass
-

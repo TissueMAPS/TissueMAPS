@@ -1,0 +1,28 @@
+# hpc-common/tasks/main.yml
+---
+
+- name: Load distribution-specific parameters
+  include_tasks: 'init-{{ansible_os_family}}.yml'
+
+
+- name: Install common HPC software
+  package:
+    name: '{{hpc_common_packages}}'
+    state: '{{ pkg_install_state }}'
+
+
+- name: Ensure modulefiles directories exist
+  file:
+    dest: '{{item}}'
+    state: directory
+  loop:
+    - '/etc/modulefiles'
+    - '/etc/modulefiles/Core'
+    - '/etc/modulefiles/Core/mpi'
+
+
+- name: Deploy OpenMPI environment module
+  template:
+    dest: '/etc/modulefiles/Core/mpi/openmpi.lua'
+    src: 'etc/modulefiles/Core/mpi/openmpi.lua.j2'
+    mode: 0444

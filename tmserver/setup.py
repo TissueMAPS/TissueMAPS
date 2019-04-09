@@ -61,18 +61,9 @@ def find_scripts():
     return scripts
 
 
-def get_version():
-    src_path = os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'tmserver'
-    )
-    sys.path = [src_path] + sys.path
-    import version
-    return version.__version__
-
-
 setuptools.setup(
     name='tmserver',
-    version=get_version(),
+    version='0.4.3',  # use bumpversion to advance
     description='TissueMAPS server application.',
     author='Markus D. Herrmann and Robin Hafen',
     author_email='markusdherrmann@gmail.com',
@@ -105,7 +96,7 @@ setuptools.setup(
         'flask-redis>=0.1.0',
         'Flask-uWSGI-WebSocket>=0.5.2',
         'Werkzeug>=0.10.4',
-        'gc3pie>=2.5.1',
+        'gc3pie>=2.5.2',
         'gevent>=1.1.1',
         'itsdangerous>=0.24',
         'Jinja2>=2.8',

@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018  University of Zurich
+# Copyright (C) 2016-2019  University of Zurich
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -39,7 +39,7 @@
     - tissuemaps
     - jtlibrary
     - tmlibrary
-  include: _install_python_pkg.yml
+  include_tasks: _install_python_pkg.yml
   loop_control:
     loop_var: 'pkg_dir'
   with_items:

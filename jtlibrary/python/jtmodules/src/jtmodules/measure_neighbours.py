@@ -1,4 +1,5 @@
-# Copyright 2019 Scott Berry, University of Zurich
+# Copyright 2019 University of Zurich
+# Author: Scott Berry
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,21 +12,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 '''Jterator module for measuring neighbour features.'''
+
+# stdlib imports
 import collections
-import jtlib.features
 import logging
+
+# 3rd party imports
+from scipy import ndimage as ndi
+import mahotas as mh
 import numpy as np
 import pandas as pd
-import mahotas as mh
-from scipy import ndimage as ndi
 
+# local package imports
+import jtlib.features
+
+## metadata and global variables
 VERSION = '0.0.1'
 
 Output = collections.namedtuple('Output', ['measurements', 'figure'])
 
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 class Neighbours(jtlib.features.Features):
     '''Class for calculating neighbour features.
@@ -47,7 +56,7 @@ class Neighbours(jtlib.features.Features):
     def _feature_names(self):
         return ['Neighbours_Count', 'Neighbours_List', 'Fraction_Touching']
 
-    def get_bbox_containing_neighbours(self, object_id, pad):
+    def _get_bbox_containing_neighbours(self, object_id, pad):
         '''Extracts the bounding box for a given object from
         :attr:`label_image <jtlib.features.Features.label_image>`.
 
@@ -58,10 +67,14 @@ class Neighbours(jtlib.features.Features):
             of the same type
         '''
         bbox = self._bboxes[object_id]
-        ymin = bbox[0] - pad if bbox[0] - pad > 0 else 0
-        ymax = bbox[1] + pad if bbox[1] + pad < self.label_image.shape[0] else self.label_image.shape[0]
-        xmin = bbox[2] - pad if bbox[2] - pad > 0 else 0
-        xmax = bbox[3] + pad if bbox[3] + pad < self.label_image.shape[1] else self.label_image.shape[1]
+        ymin = (bbox[0] - pad if bbox[0] - pad > 0
+                else 0)
+        ymax = (bbox[1] + pad if bbox[1] + pad < self.label_image.shape[0]
+                else self.label_image.shape[0])
+        xmin = (bbox[2] - pad if bbox[2] - pad > 0
+                else 0)
+        xmax = (bbox[3] + pad if bbox[3] + pad < self.label_image.shape[1]
+                else self.label_image.shape[1])
         img = self.label_image[ymin:ymax, xmin:xmax]
         return img
 
@@ -79,7 +92,7 @@ class Neighbours(jtlib.features.Features):
 
         for obj in self.object_ids:
             pad = max(self.neighbour_distance, self.touching_distance)
-            object_image = self.get_bbox_containing_neighbours(obj,pad)
+            object_image = self._get_bbox_containing_neighbours(obj, pad)
 
             # dilate the current object
             object_image_dilate = mh.dilate(
@@ -127,7 +140,8 @@ class Neighbours(jtlib.features.Features):
             features, columns=self.names, index=self.object_ids)
 
 
-def main(extract_objects, assign_objects, neighbour_distance, touching_distance, plot=False):
+def main(extract_objects, assign_objects,
+         neighbour_distance, touching_distance, plot=False):
     '''Measures neighbour features for objects in `extract_objects`
      and assigns them to `assign_objects`.
 
@@ -151,18 +165,18 @@ def main(extract_objects, assign_objects, neighbour_distance, touching_distance,
     :class:`Neighbours`
     '''
 
-    f = Neighbours(
+    result = Neighbours(
         label_image=extract_objects,
         neighbour_distance=neighbour_distance,
         touching_distance=touching_distance
     )
 
-    f.check_assignment(assign_objects, aggregate=False)
-    measurements = [f.extract()]
+    result.check_assignment(assign_objects, aggregate=False)
+    measurements = [result.extract()]
 
     if plot:
-        figure = f.plot()
+        figure = result.plot()
     else:
-        figure = str()
+        figure = ''
 
     return Output(measurements, figure)

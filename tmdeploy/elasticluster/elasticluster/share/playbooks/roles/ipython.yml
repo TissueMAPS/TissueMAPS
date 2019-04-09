@@ -2,12 +2,12 @@
 - name: IPython cluster Playbook
   hosts: ipython_controller:ipython_engine
   handlers:
-    - include: common/handlers/main.yml
+    - import_tasks: common/handlers/main.yml
   tasks:
     - name: Install PIP (Ubuntu)
       action: apt name={{item}}
       when: is_debian_or_ubuntu
-      with_items:
+      loop:
         - build-essential
         - gfortran
         - python-pip
@@ -19,7 +19,7 @@
 
     - name: Install PIP (CentOS)
       action: yum name={{item}}
-      with_items:
+      loop:
         - gcc
         - gcc-c++
         - python-pip
@@ -34,7 +34,7 @@
     # Note: ipython[all] does not seem to work.
     - name: Install ipython and commonly used Python packages
       action: pip name={{item}} use_mirrors=no
-      with_items:
+      loop:
         - ipython
         - ipython-cluster-helper
         - numpy
@@ -61,19 +61,19 @@
 
     - name: Deploy ipcluster configuration file
       action: template src=ipython/templates/ipcluster_config.py.j2 dest=~/.ipython/profile_default/ipcluster_config.py
-      tags: 
+      tags:
         - ipython
 
     - name: Deploy ipcontroller configuration file
       action: template src=ipython/templates/ipcontroller_config.py.j2 dest=~/.ipython/profile_default/ipcontroller_config.py
-      tags: 
+      tags:
         - ipython
 
     - name: Create ipython cluster!
       action: shell ipcluster start
       when: 'inventory_hostname in groups["ipython_controller"]'
-      tags: 
+      tags:
         - ipython
 
   handlers:
-    - include: common/handlers/main.yml
+    - import_tasks: common/handlers/main.yml

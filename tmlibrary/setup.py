@@ -100,16 +100,9 @@ def build_console_scripts():
     return cli_tools
 
 
-def get_version():
-    src_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'tmlib')
-    sys.path = [src_path] + sys.path
-    import version
-    return version.__version__
-
-
 setuptools.setup(
     name='tmlibrary',
-    version=get_version(),
+    version='0.4.3',  # use bumpversion to advance
     description='TissueMAPS library for distibuted image analysis routines.',
     author='Markus D. Herrmann',
     url='https://github.com/tissuemaps/tmlibrary',
@@ -182,12 +175,11 @@ setuptools.setup(
        #    sudo apt-get -y install libpq-dev
        'psycopg2>=2.7',
        'tables>=3.2.2',
-       'ruamel.yaml>=0.10.11',
        # Ubuntu:
        #    sudo apt-get -y install libxml2-dev libxslt1-dev zlib1g-dev
        'lxml',
        'whichcraft>=0.4.0',
-       'gc3pie>=2.5',
+       'gc3pie>=2.5.2',
     ],
     extras_require = {
        'jterator_r_modules': [
@@ -197,10 +189,4 @@ setuptools.setup(
            'matlab-wrapper>=0.9.6', # Requires Matlab
         ]
     },
-    dependency_links=[
-        # The dependency_links functionality has been deprecated, but it can
-        # be activaeted via --process-dependency-links
-        'https://github.com/tissuemaps/gc3pie/tarball/master#egg=gc3pie-2.5.dev',
-        # 'https://github.com/tissuemaps/sqlalchemy-utils/tarball/master#egg=sqlalchemy_utils'
-    ]
 )

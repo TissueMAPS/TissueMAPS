@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-#   Copyright (C) 2013-2016 S3IT, University of Zurich
+#   Copyright (C) 2013-2016, 2018 S3IT, University of Zurich
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -23,6 +23,10 @@ import shutil
 import sys
 import utils
 import warnings
+
+# workaround for issue #592 -- must be applied before we get a chance
+# to `import boto`
+os.environ['BOTO_USE_ENDPOINT_HEURISTICS'] = 'True'
 
 # External modules
 import cli.app
@@ -48,6 +52,8 @@ from elasticluster.subcommands import (
     SshFrontend,
     Start,
     Stop,
+    Resume,
+    Pause,
 )
 from elasticluster.conf import Creator
 from elasticluster.exceptions import ConfigurationError
@@ -56,7 +62,8 @@ from elasticluster.migration_tools import MigrationCommand
 
 __author__ = ', '.join([
     'Nicolas Baer <nicolas.baer@uzh.ch>',
-    'Antonio Messina <antonio.s.messina@gmail.com>'
+    'Antonio Messina <antonio.s.messina@gmail.com>',
+    'Riccardo Murri <riccardo.murri@gmail.com>',
 ])
 
 
@@ -93,6 +100,8 @@ class ElastiCluster(cli.app.CommandLineApp):
         # subcommands.abstract_command contract
         commands = [Start(self.params),
                     Stop(self.params),
+                    Pause(self.params),
+                    Resume(self.params),
                     ListClusters(self.params),
                     ListNodes(self.params),
                     ListTemplates(self.params),
@@ -110,12 +119,12 @@ class ElastiCluster(cli.app.CommandLineApp):
         # to parse subcommands
         self.subparsers = self.argparser.add_subparsers(
             title="COMMANDS",
-            help=("Available commands. Run `elasticluster cmd --help`"
-                  " to have information on command `cmd`."))
+            help=("Available commands. Run `elasticluster CMD --help`"
+                  " to have information on command `CMD`."))
 
         for command in commands:
-            if isinstance(command, AbstractCommand):
-                command.setup(self.subparsers)
+            command.setup(self.subparsers)
+
 
     def pre_run(self):
         # Hack around http://bugs.python.org/issue9253 ?
@@ -137,9 +146,8 @@ class ElastiCluster(cli.app.CommandLineApp):
         coloredlogs.install(logger=log, level=loglevel)
         log.setLevel(loglevel)
 
-        # In debug mode, avoid forking
+        # ensure we print tracebacks in DEBUG mode
         if self.params.verbose > 3:
-            log.DO_NOT_FORK = True
             log.raiseExceptions = True
 
         if not os.path.isdir(self.params.storage):

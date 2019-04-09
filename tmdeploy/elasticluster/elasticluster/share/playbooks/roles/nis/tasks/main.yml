@@ -1,7 +1,7 @@
 ---
 
 - name: Load distribution-specific parameters
-  include: 'init-{{ansible_os_family}}.yml'
+  include_tasks: 'init-{{ansible_os_family}}.yml'
 
 
 - name: Pre-load debconf answer to questions (Debian/Ubuntu)
@@ -20,7 +20,7 @@
     dest: '/{{item}}'
     src: '{{item}}.j2'
     mode: 0444
-  with_items:
+  loop:
     - etc/default/nis
     - etc/defaultdomain
   when: 'is_debian_compatible'
@@ -38,14 +38,13 @@
 
 - name: Install NIS common packages
   package:
-    name: '{{item}}'
-    state: present
-  with_items: '{{nis_common_packages}}'
+    name: '{{nis_common_packages}}'
+    state: '{{ pkg_install_state }}'
 
 
-- include: ypserv.yml
+- import_tasks: ypserv.yml
   when: 'is_nis_server'
 
 
-- include: ypbind.yml
+- import_tasks: ypbind.yml
   when: 'is_nis_client'

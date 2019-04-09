@@ -394,13 +394,30 @@ class Morphology(Features):
 
             # skimage ignores label = 0 and starts list of objects at n=1
             sk_obj = obj - 1
+            try:
+                obj_props = regionprops[sk_obj]
+            except IndexError:
+                logger.error(
+                    "No properties computed for object with label %s"
+                    " -- using `NaN` for all columns", obj)
+                # use NaN's for all the feature values
+                features.append([np.NaN for _ in self.names])
+                continue
 
             # calculate centroid, area and perimeter for selected object
-            local_centroid_x = regionprops[sk_obj].centroid[1]
-            local_centroid_y = regionprops[sk_obj].centroid[0]
-            area = regionprops[sk_obj].area
-            perimeter = regionprops[sk_obj].perimeter
-            extent = regionprops[sk_obj].extent
+            if 'centroid' in obj_props:  # skimage < 0.16
+                local_centroid_x, local_centroid_y = obj_props.centroid
+            elif 'centroidarray' in obj_props:  # skimage >= 0.16
+                local_centroid_x, local_centroid_y = obj_props.centroidarray
+            else:
+                logger.error(
+                    "No centroid coordinates computed for object with label %s"
+                    " -- using `NaN` instead!", obj)
+                local_centroid_x = np.NaN
+                local_centroid_y = np.NaN
+            area = obj_props.area
+            perimeter = obj_props.perimeter
+            extent = obj_props.extent
 
             # calculate circularity (a.k.a. form factor)
             if perimeter == 0:
@@ -409,22 +426,22 @@ class Morphology(Features):
                 circularity = (4.0 * np.pi * area) / (perimeter**2)
 
             # calculate convexity (a.k.a solidity)
-            area_convex_hull = regionprops[sk_obj].convex_area
+            area_convex_hull = obj_props.convex_area
             convexity = area / float(area_convex_hull)
 
             # calculate ellipse features
-            eccentricity = regionprops[sk_obj].eccentricity
-            equivalent_diameter = regionprops[sk_obj].equivalent_diameter
-            major_axis = regionprops[sk_obj].major_axis_length
-            minor_axis = regionprops[sk_obj].minor_axis_length
+            eccentricity = obj_props.eccentricity
+            equivalent_diameter = obj_props.equivalent_diameter
+            major_axis = obj_props.major_axis_length
+            minor_axis = obj_props.minor_axis_length
             if major_axis == 0:
                 elongation = np.nan
             else:
                 elongation = (major_axis - minor_axis) / major_axis
 
             # calculate "distance" features
-            max_radius = regionprops[sk_obj].max_intensity
-            mean_radius = regionprops[sk_obj].mean_intensity
+            max_radius = obj_props.max_intensity
+            mean_radius = obj_props.mean_intensity
 
             values = [
                 local_centroid_x, local_centroid_y,

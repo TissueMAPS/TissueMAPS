@@ -1,0 +1,57 @@
+---
+
+
+- name: Ensure SAMBA configuration directory exists
+  file:
+    name: '/etc/samba'
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+
+- name: Deploy SAMBA configuration
+  template:
+    dest: '/etc/samba/smb.conf'
+    src: 'etc/samba/smb.conf.j2'
+    owner: root
+    group: root
+    mode: 0444
+
+
+- name: Install Samba server packages
+  package:
+    name:
+      - cifs-utils
+      - samba
+      - smbclient
+    state: '{{ pkg_install_state }}'
+
+
+- name: Ensure SAMBA servers are started at boot
+  service:
+    name: '{{ item }}'
+    state: started
+    enabled: yes
+  loop:
+    - smbd
+    - nmbd
+  when: 'not samba_with_ctdb'
+
+
+- name: Set up SAMBA with CTDB
+  import_tasks: ctdb.yml
+  when: 'samba_with_ctdb'
+
+
+- name: Ensure users are given SMB access when created
+  copy:
+    dest: '/etc/{{ item }}.d/smb-server'
+    src:  'etc/{{ item }}.d/smb-server'
+    owner: root
+    group: root
+    mode: 0555
+  loop:
+    - adduser
+    - deluser
+  when: 'is_debian_compatible and multiuser_cluster|default("true")|bool'

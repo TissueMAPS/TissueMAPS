@@ -3,13 +3,20 @@
 # (http://supervisord.org/)
 #
 
-[program:tm_server]
-command={{ tm_home }}/.local/bin/tm_jobdaemon.py --working-dir {{jobdaemon_directory}} --listen localhost:9197 -s {{jobdaemon_directory}} -u "postgresql://tissuemaps@{{ tm_db_host }}/tissuemaps#table=tasks"
+[program:tm_jobdaemon]
+command={{ tm_home }}/.local/bin/tm_jobdaemon.py --foreground --working-dir {{jobdaemon_directory}} --listen localhost:9197 -s {{jobdaemon_directory}} -u "postgresql://tissuemaps@{{ tm_db_host }}/tissuemaps#table=tasks"
 user={{ tm_user }}
+environment=HOME="{{ tm_home }}",USER="{{ tm_user }}",LOGNAME="{{ tm_user }}",SHELL="/bin/sh",PATH="{{ tm_home }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin",TMAPS_DB_HOST="{{ tm_db_host }}"
+
+
+# mark process as failed if it exists before this nr. of seconds
+startsecs=30
+stopwaitsecs=30
 
 directory={{ tm_home }}
 autostart=true
 autorestart=true
+startretries=1
 
 redirect_stderr=true
-stdout_logfile=/var/log/tm_server.supervisord.log
+stdout_logfile=/var/log/tm_jobdaemon.supervisord.log

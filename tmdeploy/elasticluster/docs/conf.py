@@ -54,6 +54,8 @@ MOCK_MODULES = [
     'apiclient.discovery',
     'apiclient.errors',
     'boto',
+    'boto.ec2',
+    'boto.vpc',
     'cli',
     'cli.app',
     'configobj',
@@ -67,6 +69,7 @@ MOCK_MODULES = [
     'oauth2client.tools',
     'paramiko',
     'paramiko.ssh_exception',
+    'yaml',
     ]
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = Mock()
@@ -99,7 +102,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'elasticluster'
-copyright = u'2013-2015, Services and Support for Science IT, University of Zurich'
+copyright = u'2013-2019, University of Zurich'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

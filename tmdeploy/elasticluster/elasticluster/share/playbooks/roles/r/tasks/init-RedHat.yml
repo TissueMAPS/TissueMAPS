@@ -10,5 +10,7 @@
       - czmq-devel
       # more dependencies, as appear in R pkg compile logs
       - libssh2-devel
-  when:
-    '{{is_rhel_compatible}}'
+      # more dependency packages, notes from CSCS' workshop on Spark
+      - openssl-devel
+      - libcurl-devel
+  when: is_rhel_compatible

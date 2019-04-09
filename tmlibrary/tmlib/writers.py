@@ -23,7 +23,7 @@ import pandas as pd
 import logging
 import lxml.etree
 import json
-import ruamel.yaml
+import yaml
 import traceback
 from abc import ABCMeta
 from abc import abstractmethod
@@ -161,11 +161,7 @@ class YamlWriter(Writer):
         `filename` will be truncated in case it already exists.
         '''
         logger.debug('write YAML data to file: %s' % self.filename)
-        self._stream.write(
-            ruamel.yaml.dump(
-                data, Dumper=ruamel.yaml.RoundTripDumper, explicit_start=True
-            )
-        )
+        yaml.dump(data, self._stream, explicit_start=True)
 
 
 class ImageWriter(Writer):

@@ -1,5 +1,5 @@
 # TmDeploy - Automated deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ def to_yaml(description):
 
 
 def from_yaml(description):
-    return yaml.safe_load(description)
+    return yaml.load(description)
 
 
 def read_json_file(filename):

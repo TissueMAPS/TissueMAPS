@@ -5,7 +5,7 @@
     - ganglia
     - ganglia-gmetad
     - gmetad
-  include: 'init-{{ansible_os_family}}.yml'
+  include_tasks: 'init-{{ansible_os_family}}.yml'
 
 
 - name: Install `gmetad`
@@ -14,17 +14,9 @@
     - ganglia-gmetad
     - gmetad
   package:
-    pkg: '{{item}}'
-    state: installed
-  with_items: '{{ ganglia_gmetad_packages }}'
+    name: '{{ ganglia_gmetad_packages }}'
+    state: '{{ pkg_install_state }}'
 
-- name: Set permissions for /var/lib/ganglia/rrds
-  file:
-    path: /var/lib/ganglia/rrds
-    state: directory
-    recurse: yes
-    owner: nobody
-    group: root
 
 - name: Configure `gmetad`
   tags:

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-#   Copyright (C) 2016 S3IT, University of Zurich
+#   Copyright (C) 2016, 2018 S3IT, University of Zurich
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -53,7 +53,9 @@ provider = openstack
 auth_url = http://openstack.example.com:5000/v2.0
 username = ${USER}
 password = XXXXXX
-tenant_name = test-tenant
+project_domain_name = Default
+user_domain_name = Default
+project_name = test-tenant
         """,
 
         'google':"""
@@ -235,16 +237,18 @@ _CONFIG_KV = {
             "security_group": "default",
             "setup": {
                 "misc_groups": "whatever",
-                "playbook_path": "/home/rmurri/w/elasticluster/elasticluster/share/playbooks/site.yml",
+                "playbook_path": "/home/rmurri/w/elasticluster/elasticluster/share/playbooks/main.yml",
                 "provider": "ansible"
             }
         },
         "example_openstack": {
             "cloud": {
-                "auth_url": "http://openstack.example.com:5000/v2.0",
+                "auth_url": "http://openstack.example.com:35357",
                 "password": "XXXXXX",
                 "project_name": "test-tenant",
                 "provider": "openstack",
+                "project_domain_name": "Default",
+                "user_domain_name": "Default",
                 "username": "rmurri"
             },
             "compute_nodes": "2",
@@ -284,7 +288,7 @@ _CONFIG_KV = {
             "setup": {
                 "compute_groups": "slurm_worker",
                 "frontend_groups": "slurm_master",
-                "playbook_path": "/home/rmurri/w/elasticluster/elasticluster/share/playbooks/site.yml",
+                "playbook_path": "/home/rmurri/w/elasticluster/elasticluster/share/playbooks/main.yml",
                 "provider": "ansible"
             }
         }
@@ -311,7 +315,7 @@ class Configuration(object):
             "mycluster": {
                 "setup": {
                     "provider": "ansible",
-                    "playbook_path": "%(ansible_pb_dir)s/site.yml",
+                    "playbook_path": "%(ansible_pb_dir)s/main.yml",
                     "frontend_groups": "slurm_master",
                     "compute_groups": "slurm_worker",
                     },
@@ -354,15 +358,17 @@ class Configuration(object):
             "os-cluster": {
                 "setup": {
                     "provider": "ansible",
-                    "playbook_path": "%(ansible_pb_dir)s/site.yml",
+                    "playbook_path": "%(ansible_pb_dir)s/main.yml",
                     "frontend_groups": "slurm_master",
                     "compute_groups": "slurm_worker",
                     },
                 "cloud": {
                     "provider": "openstack",
-                    "auth_url": "http://cloud.gc3.uzh.ch:5000/v2.0",
+                    "auth_url": "http://cloud.gc3.uzh.ch:35357",
                     "username": "myusername",
                     "password": "mypassword",
+                    "project_domain_name": "Default",
+                    "user_domain_name": "Default",
                     "project_name": "myproject",
                     },
                 "login": {

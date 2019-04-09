@@ -5,21 +5,20 @@
   tags:
     - hadoop
   package:
-    name=default-jre-headless
-    state=present
+    name: default-jre-headless
+    state: '{{ pkg_install_state }}'
 
-    
+
 - name: Install Hadoop packages (common)
   tags:
     - hadoop
   package:
-    name='{{item}}'
-    state=present
-  with_items:
-    - hadoop # Hadoop is a software platform for processing vast amounts of data
-    - hadoop-client # Hadoop client side dependencies
-    - hadoop-doc # Hadoop Documentation
-    - hadoop-hdfs-fuse # Mountable HDFS
+    name:
+      - hadoop # Hadoop is a software platform for processing vast amounts of data
+      - hadoop-client # Hadoop client side dependencies
+      - hadoop-doc # Hadoop Documentation
+      - hadoop-hdfs-fuse # Mountable HDFS
+    state: '{{ pkg_install_state }}'
 
 
 - name: Ensure Hadoop configuration directory exists
@@ -28,22 +27,22 @@
   file:
     path='{{HADOOP_CONF_DIR}}'
     state=directory
-    
-    
+
+
 - name: Copy Hadoop/BigTop default configuration files
   tags:
     - hadoop
   command:
     'rsync -ax --update --backup /etc/hadoop/conf.empty/ {{HADOOP_CONF_DIR}}/'
 
-  
+
 - name: Deploy Hadoop/ElastiCluster configuration files
   tags:
     - hadoop
   template:
     src='{{item}}.j2'
     dest='{{HADOOP_CONF_DIR}}/{{item}}'
-  with_items:
+  loop:
     - capacity-scheduler.xml
     - core-site.xml
     - hdfs-site.xml

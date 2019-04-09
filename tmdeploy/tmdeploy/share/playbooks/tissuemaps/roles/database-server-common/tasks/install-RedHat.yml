@@ -32,7 +32,7 @@
 
 - name: Install RPM packages required by Citus PostgreSQL
   yum:
-    state: installed
+    state: present
     name: "{{ item }}"
   with_items:
     - citus{{ citus_version | regex_replace('(\.)', '') }}_{{ postgresql_version | regex_replace('(\.)', '') }}

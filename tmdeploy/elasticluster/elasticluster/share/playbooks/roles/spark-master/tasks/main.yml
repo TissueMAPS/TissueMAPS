@@ -22,7 +22,7 @@
     owner=spark
     group=spark
     mode=0755
-  when: '"{{_spark_history_storage_schema}}" == "file"'
+  when: '_spark_history_storage_schema == "file"'
 
 
 - name: Ensure Spark history storage directory exists in HDFS
@@ -32,7 +32,7 @@
     - master
   command: |
     hdfs dfs -mkdir {{_spark_history_storage_location}}
-  when: '"{{_spark_history_storage_schema}}" == "hdfs"'
+  when: '_spark_history_storage_schema == "hdfs"'
 
 
 - name: Deploy Spark environment configuration
@@ -52,11 +52,10 @@
     - spark
     - master
   package:
-    name='{{item}}'
-    state=present
-  with_items:
-    - spark-history-server # History server for Apache Spark
-    - spark-master # Server for Spark master
+    name:
+      - spark-history-server # History server for Apache Spark
+      - spark-master # Server for Spark master
+    state: '{{ pkg_install_state }}'
 
 
 - name: Start Spark master services
@@ -68,6 +67,5 @@
     name="{{item}}"
     state=started
     enabled=yes
-  with_items:
+  loop:
     - spark-master
-

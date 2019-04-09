@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-#   Copyright (C) 2013, 2015 S3IT, University of Zurich
+#   Copyright (C) 2013-2018 University of Zurich
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -22,6 +22,10 @@ __author__ = '''
 
 
 class ConfigurationError(Exception):
+    pass
+
+
+class CredentialsError(Exception):
     pass
 
 
@@ -70,7 +74,7 @@ class TimeoutError(Exception):
     pass
 
 
-class ClusterNotFound(Exception):
+class ClusterNotFound(LookupError):
     pass
 
 
@@ -78,7 +82,22 @@ class ClusterError(Exception):
     pass
 
 
-class NodeNotFound(Exception):
+class ClusterSizeError(ClusterError):
+    """
+    Not enough nodes (of one or more kinds) are available.
+    """
+    def __init__(self, msg=None):
+        super(ClusterSizeError, self).__init__(msg or
+            "The cluster does not provide the minimum"
+            " amount of nodes specified in the"
+            " configuration. Some nodes are running,"
+            " but the cluster will not be set up yet."
+            " Please change the minimum amount of nodes in the"
+            " configuration or try to start a new cluster"
+            " after checking the cloud provider settings.")
+
+
+class NodeNotFound(LookupError):
     pass
 
 

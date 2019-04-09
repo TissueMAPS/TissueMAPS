@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 #
-#   Copyright (C) 2013, 2015, 2016 S3IT, University of Zurich
+#   Copyright (C) 2013, 2015, 2016, 2018 S3IT, University of Zurich
 #
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public License as published by
@@ -45,6 +45,89 @@ from elasticluster.providers.ansible_provider import AnsibleSetupProvider
 from elasticluster.providers.ec2_boto import BotoCloudProvider
 
 from _helpers.config import make_config_snippet
+
+
+def test_gce_accelerator1(tmpdir):
+    wd = tmpdir.strpath
+    ssh_key_path = os.path.join(wd, 'id_rsa.pem')
+    with open(ssh_key_path, 'w+') as ssh_key_file:
+        # don't really care about SSH key, just that the file exists
+        ssh_key_file.write('')
+        ssh_key_file.flush()
+    config_path = os.path.join(wd, 'config.ini')
+    with open(config_path, 'w+') as config_file:
+        config_file.write(
+            make_config_snippet("cluster", "example_google",
+                                '[cluster/example_google/misc]',
+                                'accelerator_count=1')
+#             # ask for one GPU
+#             """
+# [cluster/slurm]
+# cloud=google
+# login=ubuntu
+# setup=slurm_setup
+# security_group=default
+# image_id=**not important**
+# flavor=n1-standard-1
+# master_nodes=1
+# worker_nodes=4
+# ssh_to=master
+
+# [cluster/slurm/worker]
+# accelerator_count=1
+#     """
+            + make_config_snippet("cloud", "google")
+            + make_config_snippet("login", "ubuntu", keyname='test_gce_accelerator', valid_path=ssh_key_path)
+            + make_config_snippet("setup", "misc_setup")
+        )
+        config_file.flush()
+    creator = make_creator(config_path)
+    cluster = creator.create_cluster('example_google')
+    # "master" nodes take values from their specific config section
+    #assert cluster.nodes['master'][0].extra['accelerator_count'] == 0
+    # "worker" nodes take values from the cluster defaults
+    assert 'accelerator_count' in cluster.nodes['misc'][0].extra
+    assert cluster.nodes['misc'][0].extra['accelerator_count'] == 1
+
+
+def test_gce_accelerator2(tmpdir):
+    wd = tmpdir.strpath
+    ssh_key_path = os.path.join(wd, 'id_rsa.pem')
+    with open(ssh_key_path, 'w+') as ssh_key_file:
+        # don't really care about SSH key, just that the file exists
+        ssh_key_file.write('')
+        ssh_key_file.flush()
+    config_path = os.path.join(wd, 'config.ini')
+    with open(config_path, 'w+') as config_file:
+        config_file.write(
+            # ask for two GPU on `worker` nodes only
+            """
+[cluster/test]
+cloud=google
+login=ubuntu
+setup=slurm_setup
+security_group=default
+image_id=**not important**
+flavor=n1-standard-1
+master_nodes=1
+worker_nodes=4
+ssh_to=master
+
+[cluster/test/worker]
+accelerator_count=2
+    """
+            + make_config_snippet("cloud", "google")
+            + make_config_snippet("login", "ubuntu", keyname='test_gce_accelerator', valid_path=ssh_key_path)
+            + make_config_snippet("setup", "slurm_setup")
+        )
+        config_file.flush()
+    creator = make_creator(config_path)
+    cluster = creator.create_cluster('test')
+    # "master" nodes take values from their specific config section
+    assert cluster.nodes['master'][0].extra['accelerator_count'] == 0
+    # "worker" nodes take values from the cluster defaults
+    assert 'accelerator_count' in cluster.nodes['worker'][0].extra
+    assert cluster.nodes['worker'][0].extra['accelerator_count'] == 2
 
 
 def test_issue_376(tmpdir):
@@ -371,7 +454,7 @@ compute_groups = slurm_worker
 #         self.assertEqual(groups, provider.groups)
 
 #         playbook_path = resource_filename('elasticluster',
-#                                           'share/playbooks/site.yml')
+#                                           'share/playbooks/main.yml')
 #         self.assertEqual(playbook_path, provider._playbook_path)
 
 #         storage_path = configurator.general_conf['storage_path']

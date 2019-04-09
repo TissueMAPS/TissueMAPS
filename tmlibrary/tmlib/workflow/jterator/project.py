@@ -20,7 +20,6 @@ except ImportError:
 import os
 import re
 import glob
-import ruamel.yaml
 import yaml
 import logging
 import shutil
@@ -361,19 +360,8 @@ class Project(object):
         dict
         '''
         attrs = dict()
-        attrs['pipe'] = yaml.safe_load(
-            ruamel.yaml.dump(
-                self.pipe.to_dict(), Dumper=ruamel.yaml.RoundTripDumper
-            )
-        )
-        attrs['handles'] = [
-            yaml.safe_load(
-                ruamel.yaml.dump(
-                    h.to_dict(), Dumper=ruamel.yaml.RoundTripDumper
-                )
-            )
-            for h in self.handles
-        ]
+        attrs['pipe'] = self.pipe.to_dict()
+        attrs['handles'] = [ h.to_dict() for h in self.handles ]
         return attrs
 
     def save(self):

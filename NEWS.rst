@@ -34,6 +34,43 @@
 v0.5.x (*in development*)
 =========================
 
+v0.4.3
+======
+
+New features
+------------
+
+* Jterator's `measure_morphology` module now provides centroid
+  location and all features computed by scikit-image's `regionprops()`
+  function (thanks to @scottberry)
+* Improvements to Jterator's `separate_clumps` module, in particular:
+  change the "separate clumps" procedure to 8-connectivity to avoid
+  loss of nuclei, and improve selection test mode (thanks to @jluethi)
+* New `mapobject exhibit` command to display the neighborhood of a
+  given mapobject with segmentation countours overlaid (thanks to
+  Micha Mueller)
+
+Deployment chages
+-----------------
+
+There are a number of changes in the way TissueMAPS is deployed by `tm_deploy`:
+
+* All TM processes are now managed by `supervisord`. Hence, commands
+  to (re)start and stop the TM daemons are now::
+
+    sudo supervisorctl start tm_server # or: tm_jobdaemon
+    sudo supervisorctl start tm_server # or: tm_jobdaemon
+
+* HTTPS is no longer enabled at all.  While this is contrary to
+  current web deployment best practices, no-one was really using it
+  (because the playbooks did not deploy a valid certificate) and even
+  getting a valid verifiable certificate can be tricky for private
+  installations.  HTTPS support will be reinstated when the code is
+  more stable and we are going to go public.
+* NginX is no longer needed, now all HTTP serving is handled by uWSGI.
+* PostGreSQL 11 is now installed by default.
+
+
 v0.4.2
 ======
 

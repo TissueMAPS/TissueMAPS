@@ -67,11 +67,14 @@ class TmapsConfig(object):
         if 'TMAPS_CONFIG_FILE' in os.environ:
             self._config_file = os.environ['TMAPS_CONFIG_FILE']
             logger.info(
-                'use config file set by environment variable TMAPS_CONFIG_FILE'
+                'using config file `%s`,'
+                ' as set by environment variable TMAPS_CONFIG_FILE',
+                self._config_file
             )
         else:
             self._config_file = CONFIG_FILE
-            logger.info('use default config file')
+            logger.info(
+                'using default config file `%s`', self._config_file)
         logger.debug('config file: %s', self._config_file)
         if not os.path.exists(self._config_file):
             logger.warn(

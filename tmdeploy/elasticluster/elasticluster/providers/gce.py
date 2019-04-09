@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2013, 2015, 2016 S3IT, University of Zurich
+# Copyright (C) 2013-2019 University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,15 +19,16 @@ Cloud provider for the Google Compute Engine.
 
 See <https://code.google.com/p/google-cloud-platform-samples/source/browse/python-client-library-example/gce.py?repo=compute> for reference.
 """
-__author__ = 'Riccardo Murri <riccardo.murri@uzh.ch>, ' \
-             'Nicolas Baer <nicolas.baer@gmail.com>, '  \
-             'Antonio Messina <antonio.s.messina@gmail.com>'
+__author__ = ', '.join([
+    'Riccardo Murri <riccardo.murri@uzh.ch>',
+    'Nicolas Baer <nicolas.baer@gmail.com>',
+    'Antonio Messina <antonio.s.messina@gmail.com>'
+])
 
 
 # stdlib imports
 import collections
 import copy
-import httplib2
 import os
 import random
 import threading
@@ -38,15 +39,20 @@ import uuid
 # External modules
 from apiclient.discovery import build
 from apiclient.errors import HttpError
+import googleapiclient
+import httplib2
 from oauth2client.file import Storage
 from oauth2client.client import OAuth2WebServerFlow
+from oauth2client.client import GoogleCredentials
+from oauth2client.client import ApplicationDefaultCredentialsError
 from oauth2client.tools import run_flow
 from oauth2client.tools import argparser
+import pkg_resources
 
 # Elasticluster imports
 from elasticluster import log
 from elasticluster.providers import AbstractCloudProvider
-from elasticluster.exceptions import ImageError, InstanceError, InstanceNotFoundError, CloudProviderError
+from elasticluster.exceptions import InstanceError, InstanceNotFoundError, CloudProviderError, CredentialsError
 
 
 # constants and defaults
@@ -55,7 +61,7 @@ from elasticluster.exceptions import ImageError, InstanceError, InstanceNotFound
 GCE_SCOPE = 'https://www.googleapis.com/auth/compute'
 GCE_API_NAME = 'compute'
 GCE_API_VERSION = 'v1'
-GCE_URL = 'https://www.googleapis.com/compute/%s/projects/' % GCE_API_VERSION
+GCE_URL = ('https://www.googleapis.com/compute/%s/projects/' % GCE_API_VERSION)
 GCE_DEFAULT_ZONE = 'us-central1-a'
 GCE_DEFAULT_SERVICE_EMAIL = 'default'
 GCE_DEFAULT_SCOPES = ['https://www.googleapis.com/auth/devstorage'
@@ -88,22 +94,24 @@ class GoogleCloudProvider(AbstractCloudProvider):
     __gce_lock = threading.Lock()
 
     def __init__(self,
-                 gce_client_id,
-                 gce_client_secret,
                  gce_project_id,
+                 gce_client_id='',
+                 gce_client_secret='',
+                 email=GCE_DEFAULT_SERVICE_EMAIL,
+                 network='default',
                  noauth_local_webserver=False,
                  zone=GCE_DEFAULT_ZONE,
-                 network='default',
-                 email=GCE_DEFAULT_SERVICE_EMAIL,
                  storage_path=None):
         self._client_id = gce_client_id
         self._client_secret = gce_client_secret
         self._project_id = gce_project_id
-        self._zone = zone
-        self._network = network
+
         self._email = email
-        self._storage_path = storage_path
+        self._network = network
         self._noauth_local_webserver = noauth_local_webserver
+        self._zone = zone
+
+        self._storage_path = storage_path
 
         # will be initialized upon first connect
         self._gce = None
@@ -112,19 +120,20 @@ class GoogleCloudProvider(AbstractCloudProvider):
         self._cached_instances = []
         self._images = None
 
-    def _connect(self):
-        """Connects to the cloud web services. If this is the first
-        authentication, a web browser will be started to authenticate
-        against google and provide access to elasticluster.
-
-        :return: A Resource object with methods for interacting with the
-                 service.
+    def to_vars_dict(self):
         """
-        # check for existing connection
-        with GoogleCloudProvider.__gce_lock:
-            if self._gce:
-                return self._gce
+        Return local state which is relevant for the cluster setup process.
+        """
+        return {
+            'gcloud_client_id':      self._client_id,
+            'gcloud_client_secret':  self._client_secret,
+            'gcloud_network':        self._network,
+            'gcloud_project_id':     self._project_id,
+            'gcloud_zone':           self._zone,
+        }
 
+    def _get_credentials(self):
+        if self._client_id and self._client_secret:
             flow = OAuth2WebServerFlow(self._client_id, self._client_secret,
                                        GCE_SCOPE)
             # The `Storage` object holds the credentials that your
@@ -139,25 +148,53 @@ class GoogleCloudProvider(AbstractCloudProvider):
             storage = Storage(storage_path)
 
             credentials = storage.get()
-            if credentials is None or credentials.invalid:
-                args = argparser.parse_args([])
-                args.noauth_local_webserver = self._noauth_local_webserver
-                # try to start a browser to have the user authenticate with Google
-                # TODO: what kind of exception is raised if the browser
-                #       cannot be started?
-                try:
-                    credentials = run_flow(flow, storage, flags=args)
-                except:
-                    import sys
-                    print "Unexpected error:", sys.exc_info()[0]
-                    raise
+            if credentials is not None and not credentials.invalid:
+                return credentials
+            else:
+                log.info("Determined that provided credentials are not valid.")
 
-            http = httplib2.Http()
-            self._auth_http = credentials.authorize(http)
+        try:
+            # Next, check to see if there is a set of application
+            # default credentials to use.
+            log.info("Attempting to use Google Application Default Credentials.")
+            return GoogleCredentials.get_application_default()
+        except ApplicationDefaultCredentialsError:
+            log.info("Failed to use Google Application Default Credentials, falling back to config.")
+            log.debug("(Original traceback follows.)", exc_info=True)
 
-            self._gce = build(GCE_API_NAME, GCE_API_VERSION, http=http)
+        try:
+            # Finally, try to start a browser to have the user authenticate with Google
+            args = argparser.parse_args([])
+            args.noauth_local_webserver = self._noauth_local_webserver
+            return run_flow(flow, storage, flags=args)
+        except Exception as err:
+            log.error("Could not run authentication flow: %s", err)
+            log.debug("(Original traceback follows.)", exc_info=True)
+        raise CredentialsError("No method to obtain GCE credentials was successful!  Either "
+                               "set up Application Default Credentials using gcloud, or "
+                               "provide a client id and client secret from an oauth flow, "
+                               "or go through the oauth flow that elasticluster runs.")
 
-            return self._gce
+    def _connect(self):
+        """Connects to the cloud web services. If this is the first
+        authentication, a web browser will be started to authenticate
+        against google and provide access to elasticluster.
+
+        :return: A Resource object with methods for interacting with the
+                 service.
+        """
+        # ensure only one thread runs the authentication process, if needed
+        with GoogleCloudProvider.__gce_lock:
+            # check for existing connection
+            if not self._gce:
+                version = pkg_resources.get_distribution("elasticluster").version
+                http = googleapiclient.http.set_user_agent(httplib2.Http(), "elasticluster/%s" % version)
+                credentials = self._get_credentials()
+                self._auth_http = credentials.authorize(http)
+
+                self._gce = build(GCE_API_NAME, GCE_API_VERSION, http=http)
+
+        return self._gce
 
     def _execute_request(self, request):
         """Helper method to execute a request, since a lock should be used
@@ -206,6 +243,48 @@ class GoogleCloudProvider(AbstractCloudProvider):
                 status = response['status']
         return response
 
+
+    # This list can be regenerated or updated by running::
+    #
+    #     $ gcloud compute images list \
+    #           | perl -e 'while(<STDIN>) { \
+    #               chomp; \
+    #               my ($name, $cloud, $ignore1, $ignore2) = split; \
+    #               my @parts = split (/-/, $name); \
+    #               print "$parts[0] $cloud\n"; \
+    #             }' \
+    #           | sort -u
+    #
+    IMAGE_NAME_SHORTCUTS = {
+        # image prefix       project name
+        # =================  ================
+        'backports-debian': 'debian-cloud',
+        'centos':           'centos-cloud',
+        'container-vm':     'google-containers',
+        'coreos':           'coreos-cloud',
+        'cos':              'cos-cloud',
+        'debian':           'debian-cloud',
+        'rhel':             'rhel-cloud',
+        #'rhel':             'rhel-sap-cloud',
+        'sles':             'suse-cloud',
+        #'sles':             'suse-sap-cloud',
+        #'sql':              'windows-sql-cloud',
+        'ubuntu':           'ubuntu-os-cloud',
+        #'windows':          'windows-cloud',
+    }
+    """
+    Map image names to projects, based on prefix.
+
+    The image names and full resource URLs for several Google-
+    provided images (debian, centos, etc.) follow a consistent
+    pattern, and so ElastiCluster supports a short-hand of just
+    an image name, such as::
+
+      "debian-7-wheezy-v20150526
+
+    The cloud project in this case is then ``debian-cloud``.
+    """
+
     def start_instance(self,
                        # these are common to any
                        # CloudProvider.start_instance() call
@@ -219,8 +298,15 @@ class GoogleCloudProvider(AbstractCloudProvider):
                        boot_disk_size=10,
                        tags=None,
                        scheduling=None,
+                       accelerator_count=0,
+                       accelerator_type='default',
+                       allow_project_ssh_keys=True,
+                       local_ssd_count=0,
+                       local_ssd_interface='SCSI',
+                       min_cpu_platform=None,
                        **kwargs):
-        """Starts a new instance with the given properties and returns
+        """
+        Starts a new instance with the given properties and returns
         the instance id.
 
         :param str key_name: name of the ssh key to connect
@@ -233,12 +319,26 @@ class GoogleCloudProvider(AbstractCloudProvider):
         :param str image_userdata: command to execute after startup
         :param str username: username for the given ssh key, default None
         :param str node_name: name of the instance
-        :param str tags: comma-separated list of "tags" to label the instance
-        :param str scheduling: scheduling option to use for the instance ("preemptible")
         :param str|Sequence tags: "Tags" to label the instance.
+          Can be either a single string (individual tags are comma-separated),
+          or a sequence of strings (each string being a single tag).
+        :param str scheduling: scheduling option to use for the instance ("preemptible")
+        :param int accelerator_count: Number of accelerators (e.g., GPUs) to make available in instance
+        :param str accelerator_type: Type of accelerator to request.  Can be one of:
 
-        Can be either a single string (individual tags are comma-separated),
-        or a sequence of strings (each string being a single tag).
+          * Full URL specifying an accelerator type valid for the zone and project VMs are being created in.  For example, ``https://www.googleapis.com/compute/v1/projects/[PROJECT_ID]/zones/[ZONE]/acceleratorTypes/[ACCELERATOR_TYPE]``
+          * An accelerator type name (any string which is not a valid URL).  This is internally prefixed with the string ``https://www.googleapis.com/compute/v1/projects/[PROJECT_ID]/zones/[ZONE]/acceleratorTypes/`` to form a full URL.
+        :param bool allow_project_ssh_keys:
+          When ``True`` (default), SSH login is allowed to a node
+          using any of the project-wide SSH keys (if they are
+          defined).  When ``False``, only the SSH key specified by
+          ElastiCluster config's ``[login/*]`` section will be allowed
+          to log in (instance-level key).
+        :param int local_ssd_count: Number of local SSD disks (each 375GB size) to make available in instance
+        :param int local_ssd_interface: Attachment interface for local SSD disks; either ``'SCSI'`` (default) or ``'NVME'``.
+        :param str min_cpu_platform: require CPUs of this type or better (e.g., "Intel Skylake")
+
+          Only used if ``accelerator_count`` is > 0.
 
         :return: str - instance id of the started instance
         """
@@ -255,39 +355,22 @@ class GoogleCloudProvider(AbstractCloudProvider):
         if image_id.startswith('http://') or image_id.startswith('https://'):
             image_url = image_id
         else:
-            # The image names and full resource URLs for several Google-
-            # provided images (debian, centos, etc.) follow a consistent
-            # pattern, and so elasticluster supports a short-hand of just
-            # an image name, such as
-            #   "debian-7-wheezy-v20150526".
-            # The cloud project in this case is then "debian-cloud".
-            #
-            # Several images do not follow this convention, and so are
-            # special-cased here:
-            #   backports-debian -> debian-cloud
-            #   ubuntu           -> ubuntu-os-cloud
-            #   containter-vm    -> google-containers
-            if image_id.startswith('container-vm-'):
-              os_cloud = 'google-containers'
-            elif image_id.startswith('backports-debian-'):
-              os_cloud = 'debian-cloud'
-            elif image_id.startswith('ubuntu-'):
-              os_cloud = 'ubuntu-os-cloud'
+            # allow image shortcuts (see docstring for IMAGE_NAME_SHORTCUTS)
+            for prefix, os_cloud in self.IMAGE_NAME_SHORTCUTS.iteritems():
+                if image_id.startswith(prefix + '-'):
+                    image_url = '%s%s/global/images/%s' % (
+                        GCE_URL, os_cloud, image_id)
+                    break
             else:
-              os = image_id.split("-")[0]
-              os_cloud = "%s-cloud" % os
+                raise InstanceError(
+                    "Unknown image name shortcut '{0}',"
+                    " please use the full `https://...` self-link URL."
+                    .format(image_id))
 
-            image_url = '%s%s/global/images/%s' % (
-                GCE_URL, os_cloud, image_id)
-
-        if scheduling is None:
-            # use GCE's default
-            scheduling_option = {}
-        elif scheduling == 'preemptible':
-            scheduling_option = {
-              'preemptible': True
-            }
-        else:
+        scheduling_option = {}
+        if scheduling == 'preemptible':
+            scheduling_option['preemptible'] = True
+        elif scheduling is not None:
             raise InstanceError("Unknown scheduling option: '%s'" % scheduling)
 
         if isinstance(tags, types.StringTypes):
@@ -301,14 +384,30 @@ class GoogleCloudProvider(AbstractCloudProvider):
                 " should be a string or a list, got {T} instead"
                 .format(T=type(tags)))
 
+        with open(public_key_path, 'r') as f:
+            public_key_content = f.read()
+
+        compute_metadata = [
+            {
+                "key": "ssh-keys",
+                "value": "%s:%s" % (username, public_key_content),
+            },
+            {
+                "key": "block-project-ssh-keys",
+                "value": (not allow_project_ssh_keys),
+            },
+        ]
+        if image_userdata:
+            compute_metadata.append({
+                "key": "startup-script",
+                "value": image_userdata,
+            })
+
         # construct the request body
         if node_name:
             instance_id = node_name.lower().replace('_', '-')  # GCE doesn't allow "_"
         else:
             instance_id = 'elasticluster-%s' % uuid.uuid4()
-
-        with open(public_key_path, 'r') as f:
-            public_key_content = f.read()
 
         instance = {
             'name': instance_id,
@@ -317,17 +416,19 @@ class GoogleCloudProvider(AbstractCloudProvider):
               'items': tags,
             },
             'scheduling': scheduling_option,
-            'disks': [{
-                'autoDelete': 'true',
-                'boot': 'true',
-                'type': 'PERSISTENT',
-                'initializeParams' : {
-                    'diskName': "%s-disk" % instance_id,
-                    'diskType': boot_disk_type_url,
-                    'diskSizeGb': boot_disk_size_gb,
-                    'sourceImage': image_url
-                    }
-                }],
+            'disks': [
+                {
+                    'type': 'PERSISTENT',
+                    'boot': 'true',
+                    'initializeParams' : {
+                        'diskName': "%s-disk" % instance_id,
+                        'diskType': boot_disk_type_url,
+                        'diskSizeGb': boot_disk_size_gb,
+                        'sourceImage': image_url,
+                    },
+                    'autoDelete': 'true',
+                },
+            ],
             'networkInterfaces': [
                 {'accessConfigs': [
                     {'type': 'ONE_TO_ONE_NAT',
@@ -341,14 +442,77 @@ class GoogleCloudProvider(AbstractCloudProvider):
                 }],
             "metadata": {
                 "kind": "compute#metadata",
-                "items": [
-                    {
-                        "key": "sshKeys",
-                        "value": "%s:%s" % (username, public_key_content)
-                    }
-                ]
+                "items": compute_metadata,
             }
         }
+
+        if min_cpu_platform is not None:
+            instance['minCpuPlatform'] = min_cpu_platform
+
+        # add accelerators/GPUs if requested
+        if accelerator_count > 0:
+            if (accelerator_type.startswith('https://')
+                or accelerator_type.startswith('http://')):
+                # use URL as-is
+                accelerator_type_url = accelerator_type
+            else:
+                accelerator_type_url = (
+                    'https://www.googleapis.com/compute/{api_version}/'
+                    'projects/{project_id}/zones/{zone}/'
+                    'acceleratorTypes/{accelerator_type}'
+                    .format(
+                        api_version=GCE_API_VERSION,
+                        project_id=self._project_id,
+                        zone=self._zone,
+                        accelerator_type=accelerator_type
+                    ))
+            log.debug(
+                "VM instance `%s`:"
+                " Requesting %d accelerator%s of type '%s'",
+                instance_id, accelerator_count,
+                ('s' if accelerator_count > 1 else ''),
+                accelerator_type_url)
+            instance['guestAccelerators'] = [
+             {
+                 'acceleratorCount': accelerator_count,
+                 'acceleratorType': accelerator_type_url,
+             }
+            ]
+            # no live migration with GPUs,
+            # see: https://cloud.google.com/compute/docs/gpus#restrictions
+            instance['scheduling']['onHostMaintenance'] = 'TERMINATE'
+
+        # add local SSDs if requested
+        if local_ssd_count > 0:
+            log.debug(
+                "VM instance `%s`:"
+                " Requesting %d local SSD%s with %s interface",
+                instance_id, local_ssd_count,
+                ('s' if local_ssd_count > 1 else ''),
+                local_ssd_interface)
+            for n in range(local_ssd_count):
+                instance['disks'].append({
+                    'type': 'SCRATCH',
+                    'initializeParams' : {
+                        #'diskName': ("local-ssd-%d" % n),
+                        'diskType': (
+                            'https://www.googleapis.com/compute/v1'
+                            '/projects/{project_id}'
+                            '/zones/{zone}'
+                            '/diskTypes/local-ssd'
+                            .format(
+                                project_id=self._project_id,
+                                zone=self._zone,
+                            )
+                        ),
+                    },
+                    'interface': local_ssd_interface,
+                    'autoDelete': 'true',
+                })
+
+        # preemptible instances cannot be restarted automatically
+        instance['scheduling']['automaticRestart'] = (
+            not instance['scheduling'].get('preemptible', False))
 
         # create the instance
         gce = self._connect()
@@ -363,6 +527,60 @@ class GoogleCloudProvider(AbstractCloudProvider):
             log.error("Error creating instance `%s`" % e)
             raise InstanceError("Error creating instance `%s`" % e)
 
+    def pause_instance(self, instance_id):
+        """Pauses the instance, retaining disk and config.
+
+        :param str instance_id: instance identifier
+        :raises: `InstanceError` if instance cannot be paused
+
+        :return: dict - information needed to restart instance.
+        """
+
+        if not instance_id:
+            log.info("Instance to pause has no instance id.")
+            return
+
+        gce = self._connect()
+
+        try:
+            request = gce.instances().stop(project=self._project_id,
+                                           instance=instance_id,
+                                           zone=self._zone)
+            operation = self._execute_request(request)
+            response = self._wait_until_done(operation)
+            self._check_response(response)
+            return {"instance_id": instance_id}
+        except HttpError as e:
+            log.error("Error stopping instance: `%s", e)
+            raise InstanceError("Error stopping instance `%s`", e)
+
+    def resume_instance(self, paused_info):
+        """Restarts a paused instance, retaining disk and config.
+
+        :param str instance_id: instance identifier
+        :raises: `InstanceError` if instance cannot be resumed.
+
+        :return: dict - information needed to restart instance.
+        """
+
+        if not paused_info.get("instance_id"):
+            log.info("Instance to stop has no instance id.")
+            return
+
+        gce = self._connect()
+
+        try:
+            request = gce.instances().start(project=self._project_id,
+                                            instance=paused_info["instance_id"],
+                                            zone=self._zone)
+            operation = self._execute_request(request)
+            response = self._wait_until_done(operation)
+            self._check_response(response)
+            return
+        except HttpError as e:
+            log.error("Error restarting instance: `%s", e)
+            raise InstanceError("Error restarting instance `%s`", e)
+
     def stop_instance(self, instance_id):
         """Stops the instance gracefully.
 
@@ -370,8 +588,8 @@ class GoogleCloudProvider(AbstractCloudProvider):
         :raises: `InstanceError` if instance can not be stopped
         """
         if not instance_id:
-          log.info("Instance to stop has no instance id")
-          return
+            log.info("Instance to stop has no instance id")
+            return
 
         gce = self._connect()
 
@@ -472,29 +690,6 @@ class GoogleCloudProvider(AbstractCloudProvider):
             if item['status'] == 'RUNNING':
                 return True
         return False
-
-    def _get_image_url(self, image_id):
-        """Gets the url for the specified image. Unfortunatly this only works
-        for images uploaded by the user. The images provided by google will
-        not be found.
-
-        :param str image_id: image identifier
-        :return: str - api url of the image
-        """
-        gce = self._connect()
-        filter = "name eq %s" % image_id
-        request = gce.images().list(project=self._project_id, filter=filter)
-        response = self._execute_request(request)
-        response = self._wait_until_done(response)
-
-        image_url = None
-        if "items" in response:
-            image_url = response["items"][0]["selfLink"]
-
-        if image_url:
-            return image_url
-        else:
-            raise ImageError("Could not find given image id `%s`" % image_id)
 
     def _check_response(self, response):
         """Checks the response from GCE for error messages.

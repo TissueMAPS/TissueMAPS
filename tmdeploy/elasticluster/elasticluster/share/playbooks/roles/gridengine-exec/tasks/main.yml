@@ -7,14 +7,13 @@
   tags:
     - gridengine
     - gridengine-common
-  include: 'init-{{ansible_os_family}}.yml'
+  include_tasks: 'init-{{ansible_os_family}}.yml'
 
 
 - name: Install GridEngine execd packages
   package:
-    pkg='{{item}}'
-    state=present
-  with_items: '{{gridengine_execd_packages}}'
+    name: '{{gridengine_execd_packages}}'
+    state: '{{ pkg_install_state }}'
 
 
 # - name: deploy execd installer config (RHEL/CentOS)
@@ -45,7 +44,7 @@
     dest='/etc/profile.d/gridengine.{{item}}'
     src='{{SGE_VAR}}/{{SGE_CELL}}/common/settings.{{item}}'
     state=link
-  with_items:
+  loop:
     - sh
     - csh
   when: is_rhel_compatible
@@ -74,7 +73,7 @@
 
 - name: Reload systemd service units (RHEL/CentOS 7.x)
   command: systemctl daemon-reload
-  when: 'create_systemd_gridengine_execd_service|changed and ({{is_rhel7_compatible}})'
+  when: 'is_rhel7_compatible and create_systemd_gridengine_execd_service is changed'
 
 
 # - name: ensure cell points to the right qmaster
@@ -90,6 +89,6 @@
     - gridengine
     - gridengine-execd
   service:
-    name='{{gridengine_execd_service}}'
-    state=running
-    enabled=yes
+    name: '{{gridengine_execd_service}}'
+    state: started
+    enabled: yes

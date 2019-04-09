@@ -1,0 +1,10 @@
+---
+
+# Release channel. As of Feb. 2019, three channels are available:
+# stable, test, and nightly
+docker_release_channel: 'stable'
+
+# List of users that we want to add to the `docker` group.
+# We add at least the user running ansible and the current username (they may be different)
+docker_group_members:
+  - '{{ansible_user}}'
