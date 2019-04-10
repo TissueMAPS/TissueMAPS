@@ -466,7 +466,7 @@ class Morphology(Features):
                 ' regionprops ({}) does not match the number'
                 ' of labels ({})'.format(len(set(labels)),
                                          len(self.object_ids)))
-            raise PipelineRunError
+            raise PipelineRunError()
         return pd.DataFrame(features, columns=self.names, index=labels)
 
 
