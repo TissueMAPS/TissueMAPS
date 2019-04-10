@@ -391,34 +391,16 @@ class Morphology(Features):
             extracted feature values for each object in `label_image`
         '''
         logger.info('extract morphology features')
-        features = list()
         distances = ndi.morphology.distance_transform_edt(self.label_image)
         regionprops = measure.regionprops(
             label_image=self.label_image,
             intensity_image=distances)
-        for obj_index, obj in enumerate(self.object_ids):
+        labels = []
+        features = []
+        for obj_props in regionprops:
+            obj = obj_props.label
             mask = self.get_object_mask_image(obj)
             roundness = mh.features.roundness(mask)
-
-            # skimage.measure.regionprops returns a list which is indexed
-            # as [0,len(self.object_ids)-1] rather than by the labels in
-            # self.label_image. If labels are not consecutive, this can
-            # cause problems. We therefore access these by obj_index
-            # instead of obj and then check that the labels match.
-            try:
-                obj_props = regionprops[obj_index]
-                if (obj_props.label != obj):
-                    logger.error(
-                        "Measurements of object #%d should not be assigned"
-                        "to object #%d", obj_props.label, obj)
-                    raise PipelineRunError
-            except IndexError:
-                logger.error(
-                    "No properties computed for object with label %s"
-                    " -- using `NaN` for all columns", obj)
-                # use NaN's for all the feature values
-                features.append([np.NaN for _ in self.names])
-                continue
 
             # calculate centroid, area and perimeter for selected object
             if 'centroid' in obj_props:  # skimage < 0.16
@@ -476,7 +458,16 @@ class Morphology(Features):
                 )
                 values.extend(zernike_values)
             features.append(values)
-        return pd.DataFrame(features, columns=self.names, index=self.object_ids)
+            labels.append(obj)
+
+        if len(set(labels)) != len(self.object_ids):
+            logger.error(
+                'Number of unique objects with measurements returned by'
+                ' regionprops ({}) does not match the number'
+                ' of labels ({})'.format(len(set(labels)),
+                                         len(self.object_ids)))
+            raise PipelineRunError
+        return pd.DataFrame(features, columns=self.names, index=labels)
 
 
 class Texture(Features):
