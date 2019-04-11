@@ -74,9 +74,9 @@ input:
 
 output:
 
-  - name: separated_mask
-    type: MaskImage
-    key: separate_clumps.separated_mask
+  - name: separated_label_image
+    type: LabelImage
+    key: separate_clumps.separated_label_image
     help: Labeled output image with separated objects.
 
   - name: figure

@@ -28,7 +28,7 @@ VERSION = '0.2.3'
 
 logger = logging.getLogger(__name__)
 
-Output = collections.namedtuple('Output', ['separated_mask', 'figure'])
+Output = collections.namedtuple('Output', ['separated_label_image', 'figure'])
 
 
 
@@ -79,7 +79,7 @@ def main(mask, intensity_image, min_area, max_area,
     jtmodules.separate_clumps.Output
     '''
 
-    separated_mask = separate_clumped_objects(
+    separated_label_image = separate_clumped_objects(
         mask, min_cut_area, min_area, max_area,
         max_circularity, max_convexity, allow_trimming = trimming
     )
@@ -91,10 +91,10 @@ def main(mask, intensity_image, min_area, max_area,
         initial_objects_label_image, n_initial_objects = mh.label(mask > 0)
         for n in range(1, n_initial_objects+1):
             obj = (initial_objects_label_image == n)
-            if len(np.unique(separated_mask[obj])) > 1:
+            if len(np.unique(separated_label_image[obj])) > 1:
                 clumps_mask[obj] = True
 
-        cut_mask = (mask > 0) & (separated_mask == 0)
+        cut_mask = (mask > 0) & (separated_label_image == 0)
         cutlines = mh.morph.dilate(mh.labeled.bwperim(cut_mask))
 
         if selection_test_mode:
@@ -103,7 +103,7 @@ def main(mask, intensity_image, min_area, max_area,
             # Check if selection_test_show_remaining is active
             # If so, show values on processed image, not original
             if selection_test_show_remaining:
-                labeled_mask, n_objects = mh.label(separated_mask > 0)
+                labeled_mask, n_objects = mh.label(separated_label_image > 0)
                 logger.info('Selection test mode plot with processed image')
             else:
                 labeled_mask, n_objects = mh.label(mask)
@@ -145,14 +145,14 @@ def main(mask, intensity_image, min_area, max_area,
         else:
             logger.info('create plot')
 
-            n_objects = len(np.unique(separated_mask[separated_mask > 0]))
+            n_objects = len(np.unique(separated_label_image[separated_label_image > 0]))
             colorscale = plotting.create_colorscale(
                 'Spectral', n=n_objects, permute=True, add_background=True
             )
-            outlines = mh.morph.dilate(mh.labeled.bwperim(separated_mask > 0))
+            outlines = mh.morph.dilate(mh.labeled.bwperim(separated_label_image > 0))
             plots = [
                 plotting.create_mask_image_plot(
-                    separated_mask, 'ul', colorscale=colorscale
+                    separated_label_image, 'ul', colorscale=colorscale
                 ),
                 plotting.create_intensity_overlay_image_plot(
                     intensity_image, outlines, 'ur'
@@ -167,4 +167,4 @@ def main(mask, intensity_image, min_area, max_area,
     else:
         figure = str()
 
-    return Output(separated_mask, figure)
+    return Output(separated_label_image, figure)
