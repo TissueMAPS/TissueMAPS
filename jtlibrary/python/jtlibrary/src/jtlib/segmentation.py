@@ -27,7 +27,6 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
         deblend_cont=0):
     '''Detects blobs in `image` using an implementation of
     `SExtractor <http://www.astromatic.net/software/sextractor>`_ [1].
-
     Parameters
     ----------
     image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
@@ -44,12 +43,10 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
         number of deblending thresholds (default: ``500``)
     deblend_cont: int, optional
         minimum contrast ratio for deblending (default: ``0``)
-
     Returns
     -------
     Tuple[numpy.ndarray[numpy.int32]]
         detected blobs and the corresponding centroids
-
     References
     ----------
     .. [1] Bertin, E. & Arnouts, S. 1996: SExtractor: Software for source
@@ -103,7 +100,6 @@ def detect_blobs(image, mask, threshold, min_area, deblend_nthresh=500,
 def expand_objects_watershed(seeds_image, background_image, intensity_image):
     '''Expands objects in `seeds_image` using a watershed transform
     on `intensity_image`.
-
     Parameters
     ----------
     seeds_image: numpy.ndarray[numpy.int32]
@@ -114,7 +110,6 @@ def expand_objects_watershed(seeds_image, background_image, intensity_image):
     intensity_image: numpy.ndarray[Union[numpy.uint8, numpy.uint16]]
         grayscale image; pixel intensities determine how far individual
         objects are expanded
-
     Returns
     -------
     numpy.ndarray[numpy.int32]
@@ -182,7 +177,6 @@ def expand_objects_watershed(seeds_image, background_image, intensity_image):
 
 def find_concave_regions(mask, max_dist):
     '''Finds convace regions along the contour of `mask`.
-
     Parameters
     ----------
     mask: numpy.ndarray[numpy.bool]
@@ -215,9 +209,8 @@ def find_concave_regions(mask, max_dist):
 NEIGHBORHOOD8 = np.ones((3,3), np.bool)
 
 def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
-        max_circularity, max_convexity):
+        max_circularity, max_convexity, allow_trimming = True):
     '''Separates objects in `clumps_image` based on morphological criteria.
-
     Parameters
     ----------
     clumps_image: numpy.ndarray[Union[numpy.int32, numpy.bool]]
@@ -233,18 +226,20 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
         maximal circularity an object must have to be considerd a clump
     max_convexity: float
         maximal convexity an object must have to be considerd a clump
-
+    allow_trimming: boolean
+        Some cuts may create a tiny third object. If this boolean is true,
+        tertiary objects < trimming_threshold (10) pixels will be removed
     Returns
     -------
     numpy.ndarray[numpy.uint32]
         separated objects
-
     See also
     --------
     :class:`jtlib.features.Morphology`
     '''
 
     logger.info('separate clumped objects')
+    trimming_threshold = 10
 
     label_image, n_objects = mh.label(clumps_image, NEIGHBORHOOD8)
     if n_objects == 0:
@@ -316,19 +311,38 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
             regions = mh.cwatershed(np.invert(dist), peaks)
 
             # Use the line separating watershed regions to make the cut
-            se = np.ones((3,3), np.bool)
             line = mh.labeled.borders(regions, NEIGHBORHOOD8)
             line[~obj_image] = 0
-            line = mh.morph.dilate(line, NEIGHBORHOOD8)
 
             # Ensure that cut is reasonable given user-defined criteria
             test_cut_image = obj_image.copy()
             test_cut_image[line] = False
-            subobjects, n_subobjects = mh.label(test_cut_image)
+            subobjects, n_subobjects = mh.label(test_cut_image, NEIGHBORHOOD8)
             sizes = mh.labeled.labeled_size(subobjects)
             smaller_object_area = np.min(sizes)
-            smaller_id = np.where(sizes == smaller_object_area)[0][0]
-            smaller_object = subobjects == smaller_id
+
+            # Deal with an edge-case: If trimming is active & there are more
+            # than 2 objects created by the cut, check if they are very small.
+            # If so, remove them.
+            if allow_trimming:
+                if n_subobjects > 2:
+                    if smaller_object_area < trimming_threshold:
+                        tiny_objects = list(np.where(sizes < trimming_threshold)[0])
+                        # Remove objects by adding them to the cutting line
+                        for trim_obj in tiny_objects:
+                            line[subobjects == trim_obj] = True
+                            logger.debug('Trimming an object of size: {}'.format(sizes[trim_obj]))
+
+                        # Redo calculation if split should be applied
+                        test_cut_image = obj_image.copy()
+                        test_cut_image[line] = False
+                        subobjects, n_subobjects = mh.label(test_cut_image,
+                                                            NEIGHBORHOOD8)
+                        sizes = mh.labeled.labeled_size(subobjects)
+                        smaller_object_area = np.min(sizes)
+
+
+            logger.debug('Number of objects: {}'.format(n_subobjects))
 
             do_cut = (
                 (smaller_object_area > min_cut_area) &
@@ -337,7 +351,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
             if do_cut:
                 logger.debug('cut object #%d', oid)
                 y, x = np.where(line)
-                y_offset, x_offset = bboxes[oid][[0, 2]] - pad - 1
+                y_offset, x_offset = bboxes[oid][[0, 2]] - pad
                 y += y_offset
                 x += x_offset
                 label_image[y, x] = 0
