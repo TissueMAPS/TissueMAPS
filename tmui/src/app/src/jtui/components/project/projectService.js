@@ -1,4 +1,4 @@
-// Copyright (C) 2016-2018 University of Zurich.
+// Copyright (C) 2016-2019 University of Zurich.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ angular.module('jtui.project')
     function values2yaml(jtproject) {
         // The angular <input> directive converts all input to string.
         // Therefore, we'll convert the string back to YAML.
-        var data = angular.copy(jtproject);  // removes the $$hashKeys elements  
+        var data = angular.copy(jtproject);  // removes the $$hashKeys elements
         var changedHandles = _.map(data.handles, function (h) {
             for (var i in h.description.input) {
                 if ('key' in h.description.input[i]) {
@@ -141,8 +141,7 @@ angular.module('jtui.project')
 
         // console.log('changed project:', values2yaml(project))
 
-        var url = '/jtui/experiments/' + project.experiment_id +
-                  '/project/' + '/check';
+        var url = '/jtui/experiments/' + project.experiment_id + '/project/check';
         var request = $http({
             method: 'post',
             url: url,
