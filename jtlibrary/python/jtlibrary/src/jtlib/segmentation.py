@@ -332,22 +332,20 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
             # Deal with an edge-case: If trimming is active & there are more
             # than 2 objects created by the cut, check if they are very small.
             # If so, remove them.
-            if allow_trimming:
-                if n_subobjects > 2:
-                    if smaller_object_area < trimming_threshold:
-                        tiny_objects = list(np.where(sizes < trimming_threshold)[0])
-                        # Remove objects by adding them to the cutting line
-                        for trim_obj in tiny_objects:
-                            line[subobjects == trim_obj] = True
-                            logger.debug('Trimming an object of size: {}'.format(sizes[trim_obj]))
+            if allow_trimming and n_subobjects > 2 and smaller_object_area < trimming_threshold:
+                tiny_objects = list(np.where(sizes < trimming_threshold)[0])
+                # Remove objects by adding them to the cutting line
+                for trim_obj in tiny_objects:
+                    line[subobjects == trim_obj] = True
+                    logger.debug('Trimming an object of size: {}'.format(sizes[trim_obj]))
 
-                        # Redo calculation if split should be applied
-                        test_cut_image = obj_image.copy()
-                        test_cut_image[line] = False
-                        subobjects, n_subobjects = mh.label(test_cut_image,
-                                                            NEIGHBORHOOD8)
-                        sizes = mh.labeled.labeled_size(subobjects)
-                        smaller_object_area = np.min(sizes)
+                # Redo calculation if split should be applied
+                test_cut_image = obj_image.copy()
+                test_cut_image[line] = False
+                subobjects, n_subobjects = mh.label(test_cut_image,
+                                                    NEIGHBORHOOD8)
+                sizes = mh.labeled.labeled_size(subobjects)
+                smaller_object_area = np.min(sizes)
 
 
             logger.debug('Number of objects: {}'.format(n_subobjects))
