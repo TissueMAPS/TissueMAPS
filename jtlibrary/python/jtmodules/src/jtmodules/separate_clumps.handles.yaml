@@ -1,5 +1,5 @@
 ---
-version: 0.2.2
+version: 0.3.0
 
 input:
 
@@ -65,11 +65,18 @@ input:
       Should the values of the selection criteria of the remaining objects
       (after performing the cuts) be shown?
 
+  - name: trimming
+    type: Boolean
+    value: true
+    help: >
+      Some cuts may create a tiny third object. If this boolean is true, 
+      tertiary objects < trimming_threshold (10) pixels will be removed
+
 output:
 
-  - name: separated_mask
-    type: MaskImage
-    key: separate_clumps.separated_mask
+  - name: separated_label_image
+    type: LabelImage
+    key: separate_clumps.separated_label_image
     help: Labeled output image with separated objects.
 
   - name: figure
