@@ -333,7 +333,7 @@ def separate_clumped_objects(clumps_image, min_cut_area, min_area, max_area,
             # than 2 objects created by the cut, check if they are very small.
             # If so, remove them.
             if allow_trimming and n_subobjects > 2 and smaller_object_area < trimming_threshold:
-                tiny_objects = list(np.where(sizes < trimming_threshold)[0])
+                tiny_objects = np.nonzero(sizes < trimming_threshold)[0].tolist()
                 # Remove objects by adding them to the cutting line
                 for trim_obj in tiny_objects:
                     line[subobjects == trim_obj] = True
