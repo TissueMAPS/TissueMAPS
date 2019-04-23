@@ -1,6 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
-# Copyright (C) 2018  University of Zurich
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -16,13 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import shutil
-import random
 import logging
 import inspect
 import collections
 from copy import copy
 from threading import Thread
 from itertools import chain
+from time import sleep
+from random import random
 
 import pandas as pd
 import sqlalchemy
@@ -393,8 +393,10 @@ class _SQLAlchemy_Session(object):
         '''database connection'''
         return self._session.get_bind()
 
-    def get_or_create(self, model, **kwargs):
-        '''Gets an instance of a model class if it already exists or
+    def get_or_create(self, model, max_retries=10, max_wait=0.1,
+                      **kwargs):
+        '''
+        Gets an instance of a model class if it already exists or
         creates it otherwise.
 
         Parameters
@@ -402,6 +404,12 @@ class _SQLAlchemy_Session(object):
         model: type
             an implementation of :class:`tmlib.models.base.MainModel` or
             :class:`tmlib.models.base.ExperimentModel`
+        max_retries: int
+            If no instance can be retrieved or created+inserted in
+            the DB after this number of attempts, raise a ``RuntimeError``.
+        max_wait: float
+            Wait up to this time (in seconds, or factions thereof) between
+            discrete attempts to read or create a model instance.
         **kwargs: dict
             keyword arguments for the instance that can be passed to the
             constructor of `model` or to
@@ -414,52 +422,71 @@ class _SQLAlchemy_Session(object):
 
         Note
         ----
-        Adds and commits created instance. The approach can be useful when
-        different processes may try to insert an instance constructed with the
-        same arguments, but only one instance should be inserted and the other
-        processes should re-use the instance without creation a duplication.
-        The approach relies on uniqueness constraints of the corresponding table
-        to decide whether a new entry would be considred a duplication.
+        This function will first *(i)* query the DB for an *exact*
+        match of all the parameters given in ``kwargs``; if no match
+        can be found, it proceeds to *(ii)* creating a new model
+        instance and *(iii)* inserting it into the DB.
+
+        This approach has a design bug: the query statement *(i)*
+        checks that *all* parameters are matched, but the insertion
+        statement *(iii)* fails if a uniqueness constraint is
+        violated, which may involve only *some* of the constructor
+        parameters, thus entering an endless loop of failed query (not
+        all params matched), creation, failed insert (duplicate subset
+        of params).  An example of this is the creation of
+        :class:`Site`, where the construction parameters include an
+        image's height and width; so if two images belonging to the
+        same site (e.g., same field on different time points) have
+        different dimensions, the second call to `.get_or_create()`
+        will never be able to succeed.
         '''
-        try:
-            instance = self._session.query(model).\
+        # We have to protect against situations when several worker
+        # nodes are trying to insert the same row simultaneously,
+        # so perform a try read / try create cycle until one succeeds
+        session = self._session
+        for attempt_nr in xrange(max_retries):
+            # try reading
+            instance = session.query(model).\
                 filter_by(**kwargs).\
-                one()
-            logger.debug('found existing instance: %r', instance)
-        except sqlalchemy.orm.exc.NoResultFound:
-            # We have to protect against situations when several worker
-            # nodes are trying to insert the same row simultaneously.
+                one_or_none()
+            if instance:
+                logger.debug('using existing instance: %r', instance)
+                return instance
+            # try creating
             try:
-                instance = model(**kwargs)
-                self._session.add(instance)
-                if not self._session.autocommit:
-                    self._session.commit()
+                try:
+                    instance = model(**kwargs)
+                except TypeError:
+                    raise TypeError(
+                        'Wrong arguments for instantiation of model class "%s".'
+                        % model.__name__
+                    )
+                logger.debug(
+                    'adding %s to session %s (attempt %d) ...',
+                    instance, session, attempt_nr)
+                session.add(instance)
+                if not session.autocommit:
+                    session.commit()
                 else:
-                    self._session.flush()
+                    session.flush()
                 logger.debug('created new instance: %r', instance)
+                return instance
             except sqlalchemy.exc.IntegrityError as err:
                 logger.error(
-                    'creation of %s instance failed:\n%s', model, str(err)
-                )
-                if not self._session.autocommit:
-                    self._session.rollback()
-                try:
-                    instance = self._session.query(model).\
-                        filter_by(**kwargs).\
-                        one()
-                    logger.debug('found existing instance: %r', instance)
-                except:
-                    raise
-            except TypeError:
-                raise TypeError(
-                    'Wrong arguments for instantiation of model class "%s".'
-                    % model.__name__
-                )
-            except:
-                raise
-        except:
-            raise
-        return instance
+                    'creation of %s instance failed (attempt %d): %s',
+                    model, err, attempt_nr)
+                if not session.autocommit:
+                    logger.debug(
+                        'rolling back session %s (attempt %d) ...',
+                        session, attempt_nr)
+                    session.rollback()
+            # wait a bit in case we hit a concurrency issue
+            sleep(max_wait * random())
+        # if we get to this point, all attempts were unsuccessful
+        raise RuntimeError(
+            "Could not get or create instance of %s with parameters %r"
+            % (model.__name__, kwargs))
+
 
     def drop_table(self, model):
         '''Drops a database table for the given `model`. It also removes
