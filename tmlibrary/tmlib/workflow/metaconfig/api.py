@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -245,15 +245,15 @@ class MetadataConfigurator(WorkflowStepAPI):
                     get(batch['acquisition_id'])
 
                 logger.info('create well "%s"', w)
-                w_index = md.well_name == w
+                w_index = (md.well_name == w)
                 well = session.get_or_create(
                     tm.Well, plate_id=acquisition.plate.id, name=w
                 )
 
-                channel_image_files = list()
+                channel_image_files = []
                 for s in np.unique(md.loc[w_index, 'site']):
                     logger.debug('create site #%d', s)
-                    s_index = md.site == s
+                    s_index = (md.site == s)
                     y = md.loc[s_index, 'well_position_y'].values[0]
                     x = md.loc[s_index, 'well_position_x'].values[0]
                     height = md.loc[s_index, 'height'].values[0]
