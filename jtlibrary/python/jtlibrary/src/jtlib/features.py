@@ -404,9 +404,9 @@ class Morphology(Features):
 
             # calculate centroid, area and perimeter for selected object
             if 'centroid' in obj_props:  # skimage < 0.16
-                local_centroid_x, local_centroid_y = obj_props.centroid
+                local_centroid_y, local_centroid_x = obj_props.centroid
             elif 'centroidarray' in obj_props:  # skimage >= 0.16
-                local_centroid_x, local_centroid_y = obj_props.centroidarray
+                local_centroid_y, local_centroid_x = obj_props.centroidarray
             else:
                 logger.error(
                     "No centroid coordinates computed for object with label %s"
