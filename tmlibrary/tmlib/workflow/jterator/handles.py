@@ -840,6 +840,24 @@ class Set(InputHandle):
     def __str__(self):
         return '<Set(name=%r)>' % self.name
 
+    def to_dict(self):
+        '''
+        Serialize handle to a Python dictionary.
+
+        We override the like-named method defined in the superclass,
+        because Python ``set`` types cannot be serialized to JSON.  So
+        we convert the `value` item to a list; it will be converted
+        back to a ``set`` if and when the unmarshalled dictionary is
+        passed as keyword arguments to the `Set`:class: constructor.
+
+        Return
+        ------
+        dict
+        '''
+        attrs = super(Set, self).to_dict()
+        attrs['value'] = list(attrs['value'])
+        return attrs
+
 
 class Plot(InputHandle):
 
