@@ -1,6 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016, 2018  University of Zurich
-# Copyright (C) 2018  University of Zurich
+# Copyright (C) 2016-2019  University of Zurich
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -685,11 +684,11 @@ class WorkflowStepAPI(object):
         logger.info(
             'create "init" job for submission %d', job_collection.submission_id
         )
-        memory = cfg.resource.max_memory_per_core
+        # FIXME: this should depend on batch size; also 1'750MB seems
+        # to be quite larger than the largest init job we could sample
+        # on any of the Pelkmans Lab clusters or VM.
+        memory = 1750  # MB
         cores = 1
-        logger.debug('allocated time for "init" job: %s', duration)
-        logger.debug('allocated memory for "init" job: %s', memory)
-        logger.debug('allocated cores for "init" job: %d', cores)
         job = InitJob(
             step_name=self.step_name,
             arguments=self._build_init_command(batch_args, verbosity),
@@ -729,11 +728,11 @@ class WorkflowStepAPI(object):
         logger.info(
             'create "collect" job for submission %d', job_collection.submission_id
         )
-        memory = cfg.resource.max_memory_per_core
+        # FIXME: this should depend on batch size; also 1'750MB seems
+        # to be quite larger than the largest init job we could sample
+        # on any of the Pelkmans Lab clusters or VM.
+        memory = 1750  # MB
         cores = 1
-        logger.debug('allocated time for "collect" job: %s', duration)
-        logger.debug('allocated memory for "collect" job: %s', memory)
-        logger.debug('allocated cores for "collect" job: %d', cores)
         job = CollectJob(
             step_name=self.step_name,
             arguments=self._build_collect_command(verbosity),
