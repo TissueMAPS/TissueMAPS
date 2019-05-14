@@ -90,5 +90,7 @@ setuptools.setup(
         'prettytable>=0.7.2',
         'PyYAML>=3.11',
         'requests>=2.11.0',
+        'scikit-image',
+        'seaborn',
     ]
 )
