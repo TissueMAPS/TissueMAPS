@@ -22,6 +22,7 @@ from abc import abstractmethod
 from cached_property import cached_property
 from skimage import measure
 from scipy import ndimage as ndi
+from scipy.spatial.distance import cdist
 # from mahotas.features import surf
 from centrosome.filter import gabor
 from jtlib import utils
