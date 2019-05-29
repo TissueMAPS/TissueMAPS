@@ -474,7 +474,7 @@ class _SQLAlchemy_Session(object):
             except sqlalchemy.exc.IntegrityError as err:
                 logger.error(
                     'creation of %s instance failed (attempt %d): %s',
-                    model, err, attempt_nr)
+                    model, attempt_nr, err)
                 if not session.autocommit:
                     logger.debug(
                         'rolling back session %s (attempt %d) ...',
