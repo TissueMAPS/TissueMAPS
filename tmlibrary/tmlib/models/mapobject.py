@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -392,7 +392,7 @@ class MapobjectType(ExperimentModel, IdMixIn):
         return s
 
     def __repr__(self):
-        return '<MapobjectType(id=%d, name=%r)>' % (self.id, self.name)
+        return '<MapobjectType(id=%s, name=%r)>' % (self.id, self.name)
 
 
 class Mapobject(DistributedExperimentModel):
