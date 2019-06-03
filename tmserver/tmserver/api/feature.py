@@ -1,5 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -247,7 +247,7 @@ def add_feature_values(experiment_id, mapobject_type_id):
                     partition_key=site_id, mapobject_id=mapobject_id,
                     values=data.loc[label], tpoint=tpoint
                 )
-            except IndexError:
+            except (KeyError, IndexError):
                 raise ResourceNotFoundError(
                     tm.MapobjectSegmentation, label=label
                 )
