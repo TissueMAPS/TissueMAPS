@@ -64,7 +64,7 @@ def _get_matching_wells(session, plate_name, well_name):
             tm.Well.name.label('well_name'),
             tm.Plate.name.label('plate_name')
         ).\
-        join(tm.Plate)
+        join(tm.Plate, tm.Well.plate_id == tm.Plate.id)
     if plate_name is not None:
         logger.debug('filter metadata by plate "%s"', plate_name)
         results = session.query(tm.Plate.id).\
@@ -92,8 +92,8 @@ def _get_matching_sites(session, plate_name, well_name, well_pos_y, well_pos_x):
             tm.Well.name.label('well_name'),
             tm.Plate.name.label('plate_name')
         ).\
-        join(tm.Well).\
-        join(tm.Plate)
+        join(tm.Well, tm.Site.well_id == tm.Well.id).\
+        join(tm.Plate, tm.Well.plate_id == tm.Plate.id)
     if plate_name is not None:
         logger.debug('filter metadata by plate "%s"', plate_name)
         results = session.query(tm.Plate.id).\
