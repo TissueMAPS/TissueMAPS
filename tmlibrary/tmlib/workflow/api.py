@@ -684,10 +684,11 @@ class WorkflowStepAPI(object):
         logger.info(
             'create "init" job for submission %d', job_collection.submission_id
         )
-        # FIXME: this should depend on batch size; also 1'750MB seems
-        # to be quite larger than the largest init job we could sample
-        # on any of the Pelkmans Lab clusters or VM.
-        memory = 1750  # MB
+        # FIXME: this should depend on batch and total size and on the
+        # program being run; although 2'500MB seems a lot, it has
+        # shown to be barely enough for `illuminati init` jobs in
+        # large experiments.  (But is plenty for most other uses.)
+        memory = 2500  # MB
         cores = 1
         job = InitJob(
             step_name=self.step_name,
@@ -728,10 +729,9 @@ class WorkflowStepAPI(object):
         logger.info(
             'create "collect" job for submission %d', job_collection.submission_id
         )
-        # FIXME: this should depend on batch size; also 1'750MB seems
-        # to be quite larger than the largest init job we could sample
-        # on any of the Pelkmans Lab clusters or VM.
-        memory = 1750  # MB
+        # FIXME: See similar comment in `create_init_job` about the
+        # amount of memory to allocate.
+        memory = 2500  # MB
         cores = 1
         job = CollectJob(
             step_name=self.step_name,
