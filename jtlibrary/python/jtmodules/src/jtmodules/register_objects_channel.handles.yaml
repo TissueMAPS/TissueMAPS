@@ -1,0 +1,17 @@
+---
+version: 0.1.0
+
+input:
+
+    - name: mask
+      type: IntensityImage
+      key:
+      help: >
+        Labeled mask image which was uploaded as individual channel containing the objects
+        (connected pixel components) that should be registered.
+output:
+
+    - name: objects
+      type: SegmentedObjects
+      key:
+      help: Name that should be given to the objects in "mask".
