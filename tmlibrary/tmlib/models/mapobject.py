@@ -970,6 +970,6 @@ class SegmentationLayer(ExperimentModel, IdMixIn):
 
     def __repr__(self):
         return (
-            '<%s(id=%d, mapobject_type_id=%r)>'
+            '<%s(id=%s, mapobject_type_id=%r)>'
             % (self.__class__.__name__, self.id, self.mapobject_type_id)
         )
