@@ -1,0 +1,45 @@
+---
+
+- name: Install prerequisite software (Debian/Ubuntu)
+  apt:
+    name:
+      # Java (python-javabridge wants the JDK...)
+      - openjdk-8-jdk-headless
+      # build tools (for Python C-based extensions)
+      - acl
+      - gcc
+      - g++
+      - make
+      # needed to build the Python venv and some common general
+      # packages (e.g. `cffi`, `paramiko`)
+      - libffi-dev
+      - libssl-dev
+      - python-dev
+      - python-pip
+      - python-virtualenv
+      - python-wheel
+      - virtualenv
+      - virtualenvwrapper
+      # NumPy:
+      - libopenblas-dev
+      # gc3pie:
+      - time
+      # h5py:
+      - libhdf5-dev
+      - hdf5-tools
+      # lxml:
+      - libxml2-dev
+      - libxslt1-dev
+      # matplotlib:
+      - libfreetype6-dev
+      - pyqt4-dev-tools
+      - python-tk
+      # shapely:
+      - libgeos-dev
+    state: present
+
+
+- name: Load distribution-dependent parameters (Debian)
+  set_fact:
+    # keep in sync with JDK package above!
+    java_home: '/usr/lib/jvm/java-8-openjdk-amd64'

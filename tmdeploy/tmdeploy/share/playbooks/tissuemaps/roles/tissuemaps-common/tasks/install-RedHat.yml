@@ -1,0 +1,43 @@
+---
+
+- name: Install prerequisite software (CentOS/RedHat)
+  package:
+    name:
+      # Java (python-javabridge wants the JDK...)
+      - java-1.8.0-openjdk-devel
+      # build tools (for Python C-based extensions)
+      - acl
+      - gcc
+      - g++
+      - make
+      # needed to build the Python venv and some common general
+      # packages (e.g. `cffi`, `paramiko`)
+      - libffi-devel
+      - python-devel
+      - python-pip
+      - python-setuptools
+      - python-virtualenv
+      - python-wheel
+      - readline-devel
+      - virtualenv
+      - virtualenvwrapper
+      # NumPy:
+      - openblas-devel
+      # gc3pie:
+      - time
+      # h5py:
+      - hdf5-devel
+      # lxml:
+      - libxml2-devel
+      - libxslt-devel
+      # matplotlib:
+      - tk-devel
+      - tkinter
+      # shapely:
+      - geos-devel
+    state: present
+  with_items:
+
+- name: Load distribution-dependent parameters (CentOS/RedHat)
+  set_fact:
+    java_home: '/usr/lib/jvm/java'

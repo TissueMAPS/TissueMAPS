@@ -1,0 +1,37 @@
+[auth/noauth]
+type=none
+
+{# TissueMAPS requires that the GC3Pie configuration file has only one enabled resource #}
+{%- set cluster_mode = 'slurm_worker' in groups -%}
+
+{% if not cluster_mode %}
+[resource/localhost]
+enabled=yes
+type=shellcmd
+spooldir=/var/tmp
+transport=local
+auth=noauth
+architecture=x64_64
+max_cores={{ ansible_processor_vcpus }}
+max_cores_per_job={{ ansible_processor_vcpus }}
+max_memory_per_core={{ ansible_memfree_mb }} MB
+max_walltime=48 hours
+override=yes
+{% endif %}
+
+{% if cluster_mode %}
+[resource/cluster]
+enabled=yes
+type=slurm
+frontend={{ ansible_hostname }}
+transport=local
+auth=noauth
+architecture=x86_64
+{% set slurm_workers_total_vcpus = groups.slurm_worker|map('extract', hostvars, 'ansible_processor_vcpus')|list|sum %}
+max_cores={{ slurm_workers_total_vcpus }}
+{% set slurm_workers_max_vcpus = groups.slurm_worker|map('extract', hostvars, 'ansible_processor_vcpus')|list|max %}
+max_cores_per_job={{ slurm_workers_max_vcpus }}
+{% set slurm_workers_max_mem = groups.slurm_worker|map('extract', hostvars, 'ansible_memfree_mb')|list|max %}
+max_memory_per_core={{ slurm_workers_max_mem }} MB
+max_walltime=48 hours
+{% endif %}
