@@ -16,8 +16,6 @@
 
 ---
 
-matlab_version: '2016b'
-
 # NOTE: Make sure this matches the PostgreSQL version provided by Citus
 # (see ../database-server-common/defaults/main.yml)
 postgresql_version: '11'
@@ -28,27 +26,7 @@ tm_home: '/home/{{ tm_user }}'
 
 tm_repo_url: https://github.com/TissueMAPS/TissueMAPS
 tm_version: master
-# where the TM sources will be checked out
-tm_src_dir: "{{ tm_home }}/TissueMAPS"
 
 # user account to populate the DB with; array of mappings with keys
 # "name", "password" and "email"
 tm_users: []
-
-storage_directory: /storage
-tm_config_file: "{{ tm_home }}/.tmaps/tissuemaps.cfg"
-jobdaemon_directory: "{{ storage_directory }}/jobdaemon"
-
-
-# connection parameters of DB master and workers
-db_host_master: "{{ hostvars[groups.tissuemaps_db_master[0]].ansible_host }}"
-db_port_master: 5432
-
-db_host_workers: "{{ groups.tissuemaps_db_worker|map('extract', hostvars, ['ansible_host'])|list }}"
-db_port_worker: 9700
-
-# PostGreSQL DB auth parameters
-db_user: postgres
-db_group: "{{ db_user }}"
-db_role: tissuemaps
-db_name: tissuemaps

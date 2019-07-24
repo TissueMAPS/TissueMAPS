@@ -25,11 +25,23 @@
 
 - name: Install generally required apt packages
   apt:
-    name: "{{ item }}"
+    name:
+      - cmake
+      - g++
+      - gcc
+      - git
+      - libc6-dev
+      - make
+      - openssl
+      - wget
+      - zlib1g-dev
     state: present
-  with_items:
-    - build-essential
-    - cmake
-    - wget
-    - git
-    - openssl
+
+
+- name: Install useful packages
+  apt:
+    name:
+      - silversearcher-ag
+      - unzip
+      - vim
+    install_recommends: no
