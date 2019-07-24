@@ -26,6 +26,46 @@
     - common
 
 
+# Install database before the TM server, so the server processes can
+# already connect to it upon startup and not error out
+
+- name: Configure PostgreSQL workers
+  tags:
+    - database
+  hosts:
+    - tissuemaps_db_worker
+  gather_facts: yes
+  any_errors_fatal: yes
+  roles:
+    - role: citus-db
+      db_node_kind: worker
+      # performance and opt settings
+      # (directly written into `postgresql.conf`)
+      # Turn off Write Ahead Log (WAL) on worker nodes - sacrifice reliability for performance
+      # FIXME(rm): I'm not convinced this is the right thing to do here *in general*
+      # It may be a worthwhile tradeoff for very large experiments but I tend to think
+      # PostGreSQL default is a better choice... Anyway, need some data to back this up.
+      pg_fsync: off
+      pg_synchronous_commit: off
+
+
+- name: Configure PostgreSQL master
+  tags:
+    - database
+  hosts:
+    - tissuemaps_db_master
+  gather_facts: yes
+  any_errors_fatal: yes
+  roles:
+    - role: citus-db
+      db_node_kind: master
+      db_workers: '{{ groups.tissuemaps_db_worker }}'
+      # performance and opt settings
+      # (directly written into `postgresql.conf`)
+      pg_fsync: on
+      pg_synchronous_commit: on
+
+
 # this must happen before we install compute nodes, as the latter
 # mount the TM root directory via NFS from the former
 - name: Install web and application servers
@@ -50,101 +90,15 @@
     - tissuemaps-compute
 
 
-- name: Configure PostgreSQL workers
-  hosts:
-    - tissuemaps_db_worker
-  gather_facts: yes
-  any_errors_fatal: yes
-  roles:
-    - database-server-worker
-  tags:
-    - database
-
-
-- name: Configure PostgreSQL master
-  hosts:
-    - tissuemaps_db_master
-  gather_facts: yes
-  any_errors_fatal: yes
-  roles:
-    - database-server-master
-  tags:
-    - database
-
-
-# (Re)start services and enable them such that they will be automatically
-# started upon system startup.
-
-- name: Initialize database master server
-  hosts:
-    - tissuemaps_db_master
-  gather_facts: yes
-  any_errors_fatal: yes
-  tasks:
-    - name: Enable and start postgresql service
-      systemd:
-        name: postgresql@master
-        daemon_reload: yes
-        state: restarted
-        enabled: yes
-
-
-- name: Initialize database worker servers
-  hosts:
-    - tissuemaps_db_worker
-  gather_facts: yes
-  any_errors_fatal: yes
-  tasks:
-    - name: Enable and start postgresql service
-      systemd:
-        name: postgresql@worker
-        daemon_reload: yes
-        state: restarted
-        enabled: yes
-
-
-- name: Set up Citus distributed DB
-  hosts:
-    - tissuemaps_db_master
-  gather_facts: yes
-  any_errors_fatal: yes
-  vars_files:
-    - roles/common/defaults/main.yml
-  tasks:
-  - name: Add Citus worker nodes
-    shell: |
-      if ! (psql -d '{{ db_name }}' \
-              -t -P format=unaligned \
-              -c "SELECT * FROM master_get_active_worker_nodes();" \
-              | egrep -q '^{{ item }}|');
-      then
-        psql -d '{{ db_name }}' -c "SELECT * FROM master_add_node('{{ item }}', {{ db_port_worker }});"
-      fi
-    with_items: "{{ groups.tissuemaps_db_worker }}"
-    become: yes
-    become_user: postgres
-
-  - name: Create database tables
-    tags:
-      - database
-      - tissuemaps
-    command: |
-      {{ tm_home }}/.local/bin/tm_create_tables
-    args:
-      chdir: "{{ tm_home }}"
-    become: yes
-    become_user: '{{ tm_user }}'
-    when: ansible_env.ANSIBLE_CONTAINER is undefined
-
-  - name: Create TissueMAPS users
-    tags:
-      - database
-      - tissuemaps
-    command: |
-      {{ tm_home }}/.local/bin/tm_add user --name {{ item['name'] }} --password {{ item['password'] | string | quote }} --email {{ item['email'] }}
-    args:
-      chdir: "{{ tm_home }}"
-    become: yes
-    become_user: '{{ tm_user }}'
-    with_items: "{{ tm_users }}"
-    when: ansible_env.ANSIBLE_CONTAINER is undefined
+  # - name: Create TissueMAPS users
+  #   tags:
+  #     - database
+  #     - tissuemaps
+  #   command: |
+  #     {{ tm_home }}/.local/bin/tm_add user --name {{ item['name'] }} --password {{ item['password'] | string | quote }} --email {{ item['email'] }}
+  #   args:
+  #     chdir: "{{ tm_home }}"
+  #   become: yes
+  #   become_user: '{{ tm_user }}'
+  #   with_items: "{{ tm_users }}"
+  #   when: ansible_env.ANSIBLE_CONTAINER is undefined

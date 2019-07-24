@@ -23,18 +23,11 @@ host    all             postgres        127.0.0.1/32    trust
 host    all             postgres        ::1/128         trust
 
 # Trust user `tissuemaps` on the local host
-host    tissuemaps      tissuemaps      {{ loaddr }}/32 trust
-host    tissuemaps      tissuemaps      127.0.0.1/32    trust
-host    tissuemaps      tissuemaps      ::1/128         trust
+host    tissuemaps      {{ tm_user }}      {{ loaddr }}/32 trust
+host    tissuemaps      {{ tm_user }}      127.0.0.1/32    trust
+host    tissuemaps      {{ tm_user }}      ::1/128         trust
 
 # Trust user `tissuemaps` on the cluster
-{% for host in groups.slurm_worker %}
-host    tissuemaps      tissuemaps      {{ hostvars[host].ansible_default_ipv4.address }}/32 trust
+{% for host in groups.tissuemaps_compute %}
+host    tissuemaps      {{ tm_user }}      {{ hostvars[host].ansible_default_ipv4.address }}/32 trust
 {% endfor %}
-
-{# access to dedicated TM frontends (if any) #}
-{% if 'tumorprofiler2_db' in group_names %}
-# DB for the `tumorp2` TM must be accessible from the frontend
-host    tissuemaps      tissuemaps      pelkmanslab-tm-frontend-tumorp2  trust
-host    all             postgres        pelkmanslab-tm-frontend-tumorp2  trust
-{% endif %}
