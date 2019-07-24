@@ -27,15 +27,15 @@
 - name: Unpack bftools
   unarchive:
     src: /root/bftools.zip
-    dest: /usr/local/lib
+    dest: '{{ tm_root }}'
     copy: no
   tags:
     - bioformats
 
 - name: Install selected bftools
   file:
-    src: /usr/local/lib/bftools/{{ item }}
-    dest: /usr/local/bin/{{ item }}
+    src: '{{ tm_root }}/bftools/{{ item }}'
+    dest: '{{ tm_root }}/bin/{{ item }}'
     state: link
   with_items:
     - bfconvert
@@ -43,3 +43,15 @@
     - mkfake
   tags:
     - bioformats
+
+
+- name: Ensure bftools are on PATH
+  tags:
+    - tissuemaps
+    - matlab
+  template:
+    src: bftools.sh.j2
+    dest: "/etc/profile.d/bftools.sh"
+    owner: root
+    group: root
+    mode: 0444
