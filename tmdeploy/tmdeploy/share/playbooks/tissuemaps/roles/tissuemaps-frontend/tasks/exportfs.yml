@@ -14,16 +14,28 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- import_tasks: ssh_keys.yml
 
-- import_tasks: env.yml
+#
+# Export TM directory to other hosts in the cluster
+#
+- name: Install NFS server software
+  package:
+    name: 'nfs-kernel-server'
+    state: present
 
-- import_tasks: gc3pie.yml
+- name: Export `/srv/tissuemaps` via NFS
+  lineinfile:
+    dest: '/etc/exports'
+    regexp: '^ *{{ tm_root }}'
+    line: '{{ tm_root }} {{ item }}(rw,async,no_root_squash,no_subtree_check)'
+    state: present
+    create: yes
+    backup: no
+  loop: '{{ groups.slurm_worker }}'
+  notify: exportfs
 
-- import_tasks: nginx.yml
-
-- import_tasks: uwsgi.yml
-
-- import_tasks: supervisord.yml
-
-- import_tasks: tissuemaps.yml
+- name: Ensure NFS kernel server (re)starts at boot
+  service:
+    name: nfs-kernel-server
+    state: started
+    enabled: yes

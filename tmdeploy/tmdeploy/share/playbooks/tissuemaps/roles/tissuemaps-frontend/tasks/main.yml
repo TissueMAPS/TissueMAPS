@@ -1,0 +1,102 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016-2019 University of Zurich.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+
+- name: Install additional software
+  package:
+    name:
+      - nginx
+      - uwsgi
+      - uwsgi-plugin-python
+      - uwsgi-plugin-gevent-python
+    state: present
+
+
+- name: (De)Configure NginX for use with TissueMAPS
+  import_tasks: nginx.yml
+
+
+- name: Compile JS assets
+  import_tasks: tmui.yml
+
+
+# this must be done *after* we create the virtualenv, otherwise
+# the `virtualenv` command will fail
+- name: Make service directories for TM
+  file:
+    path: '{{ item }}'
+    state: directory
+    mode: '0755'
+    owner: '{{ tm_user }}'
+    group: '{{ tm_user }}'
+  loop:
+    - '{{ tm_root }}/bin'
+    - '{{ tm_root }}/etc'
+    - '{{ tm_root }}/log'
+    - '{{ tm_root }}/log/metrics'
+    - '{{ tm_root }}/run'
+    - '{{ tm_root }}/var'
+    - '{{ tm_root }}/var/filesystem'
+    - '{{ tm_root }}/var/jobdaemon'
+    - '/home/{{ tm_user }}/.gc3'
+
+
+- name: Deploy TM configuration files
+  template:
+    dest: '{{ item.dest }}'
+    src:  '{{ item.src }}'
+    owner: root
+    group: root
+  loop:
+    # the following files are shared among *all* TM instances, so
+    # their content should include a parameter depending on the host name
+    - src: 'tm_jobdaemon.log.conf.j2'
+      dest: '/home/{{ tm_user }}/.gc3/tm_jobdaemon.log.conf'
+    # the following files reside on a local filesystem on each TM instance
+    - src: 'uwsgi.ini.j2'
+      dest: '{{ tm_root }}/etc/uwsgi.ini'
+    - src: 'nginx.conf.j2'
+      dest: '{{ tm_root }}/etc/nginx.conf'
+    - src: 'tm_httpd.sh.j2'
+      dest: '{{ tm_root }}/bin/tm_httpd.sh'
+    - src: 'tm_jobdaemon.sh.j2'
+      dest: '{{ tm_root }}/bin/tm_jobdaemon.sh'
+    - src: 'tm_server.sh.j2'
+      dest: '{{ tm_root }}/bin/tm_server.sh'
+    - src: 'tm_httpd.supervisord.j2'
+      dest: '/etc/supervisor/conf.d/tm_httpd.conf'
+    - src: 'tm_jobdaemon.supervisord.j2'
+      dest: '/etc/supervisor/conf.d/tm_jobdaemon.conf'
+    - src: 'tm_server.supervisord.j2'
+      dest: '/etc/supervisor/conf.d/tm_server.conf'
+    - src: 'tissuemaps.logrotate.j2'
+      dest: '/etc/logrotate.d/tissuemaps.conf'
+
+
+- name: Make TM start scripts executable
+  file:
+    path: '{{ item }}'
+    mode: 'a+rx'
+  notify: supervisord reread
+  loop:
+    - '{{ tm_root }}/bin/tm_httpd.sh'
+    - '{{ tm_root }}/bin/tm_jobdaemon.sh'
+    - '{{ tm_root }}/bin/tm_server.sh'
+
+
+- name: Export TM directory to compute nodes
+  include_tasks: exportfs.yml
+  when: '"slurm_worker" in groups'

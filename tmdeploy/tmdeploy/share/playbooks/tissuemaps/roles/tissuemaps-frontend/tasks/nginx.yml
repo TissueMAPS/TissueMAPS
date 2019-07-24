@@ -1,0 +1,44 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016-2019 University of Zurich.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+
+# TissueMAPS' NginX is managed through supervisord,
+# so disable the system startup options
+- name: Ensure NginX is *not* started at boot
+  service:
+    name: nginx
+    state: stopped
+    enable: no
+  when: 'tm_web_port|int in [80, 443]'
+
+# on Ubuntu 16.04, service `nginx` is still managed through a
+# SysV-init script, so systemd ignores `systemctl disable` hence
+# we need to "mask" the system for preventing its startup
+- name: Ensure NginX is *really* not started at boot
+  command: |
+    systemctl mask nginx
+  when: 'tm_web_port|int in [80, 443]'
+
+- name: Ensure user `tissuemaps` can access NginX directories
+  # I'm unsure of whether Ansible's `user:` module can cope with
+  # NIS/YP, so let us use Debian's `adduser` which for sure works
+  shell: |
+    if getent group nginx; then
+      gpasswd --add '{{ tm_user|default("tissuemaps") }}' nginx
+    else
+      true
+    fi

@@ -1,0 +1,29 @@
+#! /bin/sh
+
+# reconstruct std environment (not there when running under supervisord)
+export HOME="/home/{{ tm_user }}"
+export USER="{{ tm_user }}"
+export LOGNAME="{{ tm_user }}"
+export SHELL="/bin/sh"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
+
+# ensure ASCII locale, so no weird stuff in the logs
+unset LANG LANGUAGE
+export LC_ALL=C
+
+# TM-specific settings
+export GC3PIE_CONF='{{ tm_root }}/etc/gc3pie.conf'
+export PATH="{{ tm_root }}/bin:$HOME/.local/bin:$PATH"
+export LD_LIBRARY_PATH={{ java_home }}/jre/lib/amd64/server
+export TMAPS_DB_HOST="{{ tm_db_host|default(inventory_hostname) }}"
+export TMAPS_CONFIG_FILE={{ tm_root }}/etc/tissuemaps.cfg
+
+. {{ tm_root }}/bin/activate
+
+# run GC3Pie jobdaemon
+jobdaemon_dir='{{ tm_root }}/var/jobdaemon'
+exec tm_jobdaemon.py --foreground \
+     --working-dir "$jobdaemon_dir" \
+     --listen localhost:9197 \
+     --session "$jobdaemon_dir" \
+     -u "postgresql://{{ tm_user }}@{{ tm_db_host|default(inventory_hostname) }}/tissuemaps#table=tasks"

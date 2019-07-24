@@ -1,0 +1,17 @@
+#
+# Control (auto)start of TM Flask App through `supervisor`
+# (http://supervisord.org/)
+#
+
+[program:tm_server]
+command={{ tm_root }}/bin/tm_server.sh
+# user switching is done by uWSGI
+user=root
+
+directory={{ tm_root }}
+autostart=true
+autorestart=true
+startretries=1
+
+redirect_stderr=true
+stdout_logfile={{ tm_root }}/log/tm_server.supervisord.log

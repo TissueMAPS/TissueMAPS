@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,12 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-- name: Create .bash_profile file
-  template:
-    src: bash_profile.j2
-    dest: "{{ tm_home }}/.bash_profile"
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
-  tags:
-    - tissuemaps
 
+- name: exportfs
+  command:
+    exportfs -rav
+
+- name: supervisord reread
+  shell: |
+    supervisorctl reread && supervisorctl update

@@ -15,23 +15,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# should GC3Pie autodiscover resource features? (only on localhost)
-tm_compute_autodiscover: yes
-
-# total number of nodes in the cluster
-tm_compute_nodes: "{{ groups.tissuemaps_compute|length|default(1) }}"
-
-# usable number of CPU cores per node, defaults to all available cores
-tm_compute_cores:  "{{ansible_processor_vcpus}}"
-
-# usable memory of a node, defaults to 80% of node memory
-tm_compute_memory: "{{ (ansible_memtotal_mb * 80 / 100) |int }}"
-
-# FIXME: should this be raised? DB scans for large experiments take even more...
-uwsgi_timeout: 300
-
-# Github user names of administrators
+# Github user names of administrators;
+# these people will have their SSH key deployed
+# on to all nodes
 tm_admins: []
+
+# user name of the system user running the TM services
+tm_user: tissuemaps
+
+# what TCP port should TM be accessible on
+tm_web_port: 80
 
 # contact data for the database server
 #
@@ -40,5 +33,4 @@ tm_admins: []
 # only applies to the master, the real data connections are to the
 # workers, which are always contacted via TCP...
 #
-app_host: "{{ hostvars[inventory_hostname].ansible_host }}"
-tm_db_host: "{{ db_host_master if db_host_master != app_host else 'localhost' }}"
+tm_db_host: "{{ groups.tissuemaps_db_master[0] if groups.tissuemaps_db_master else 'localhost' }}"

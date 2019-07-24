@@ -7,11 +7,10 @@
 # this is needed to run under `supervisord`
 daemon            off;
 
-worker_processes  {{ uwsgi_processes|default(2) }};
+worker_processes  2;
 
 # these require that `nginx` is started with `root` permissions
-user              {{ tm_user }};
-group             {{ tm_group }};
+user {{ tm_user }} {{ tm_user }};
 
 events {
     use           epoll;
@@ -32,8 +31,8 @@ http {
     lingering_timeout 30s;
 
     # TM-related logs
-    access_log {{ tm_home }}/tissuemaps-access.log;
-    error_log {{ tm_home }}/tissuemaps-error.log warn;
+    access_log {{ tm_root }}/log/tm_httpd.access.log;
+    error_log  {{ tm_root }}/log/tm_httpd.error.log warn;
 
     # params for talking to TM server application
     uwsgi_buffering on;
@@ -42,13 +41,13 @@ http {
 
     server {
 
-        listen {{ web_port }};
+        listen 80;
 
         server_name _;
 
         # all non-api requests are file requests and should be served
         # from the gulp built directory
-        root {{ tm_src_dir }}/tmui/src/build;
+        root {{ tm_root }}/src/tmui/src/build;
         location / {
             try_files $uri $uri/ @proxy;
         }
@@ -56,7 +55,7 @@ http {
         # all other request (e.g. with /api or /auth prefix) are redirected to uwsgi
         location @proxy {
             include /etc/nginx/uwsgi_params;
-            uwsgi_pass localhost:8000;
+            uwsgi_pass localhost:4857;
             uwsgi_send_timeout 120s;
             uwsgi_read_timeout 360s;
         }

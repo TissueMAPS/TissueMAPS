@@ -7,26 +7,27 @@ plugins = http, logfile, python
 ## communication with NginX upstream
 protocol = uwsgi
 # use TCP port so we don't need to mess with chmod and permissions
-socket = localhost:8000
+socket = localhost:4857
 
 
 ## main uWSGI master/worker setup
 master = true
 workers = {{ uwsgi_processes|default("%k") }}
-pidfile = /var/run/uwsgi/tissuemaps.pid
-uid = {{ tm_user }}
-gid = {{ tm_group }}
+pidfile = {{ tm_root }}/run/tm_server.pid
+uid = {{ tm_user|default("tissuemaps") }}
+gid = {{ tm_group|default("tissuemaps") }}
 need-app = true
 die-on-term = true
 
 # this is used in /etc/logrotate.d/tissuemaps.conf to trigger log rotation
-master-fifo = /var/run/uwsgi/master.fifo
+master-fifo = {{ tm_root }}/run/tm_server.fifo
 
 # remove all of the generated file/sockets on exit
 vacuum = true
 
 
 ## TM application configuration
+virtualenv = {{ tm_root }}
 module = tmserver.wsgi:app
 gevent = 10
 
@@ -36,41 +37,17 @@ gevent = 10
 log-master = true
 
 # log requests and stderr to file
-logger = file:/var/log/uwsgi/tissuemaps.log
-req-logger = file:/var/log/uwsgi/access.log
+logger = file:{{ tm_root }}/log/tm_server.main.log
+req-logger = file:{{ tm_root }}/log/tm_server.access.log
 
 # re-open log if modified
-touch-logreopen = /var/log/uwsgi/tissuemaps.log
+touch-logreopen = /var/lib/logrotate/status
 
 # where to store uWSGI "metrics", see:
-metrics-dir = /var/log/uwsgi/metrics
+metrics-dir = {{ tm_root }}/log/metrics
 
 # prepend timestamp to log lines
 log-encoder = format ${strftime:%%Y-%%m-%%d %%H:%%M:%%S}| ${msgnl}
 
 # use Apache "common" log format for requests
 log-format = %(addr) - %(user) [%(ltime)] "%(method) %(uri) %(proto)" %(status) %(size) "%(referer)" "%(uagent)"
-
-# log responses without body
-#log-zero = true
-
-# log requests slower than the specified number of milliseconds
-#log-slow = true
-
-# log requests with a 4xx response
-#log-4xx = true
-
-# log requests with a 5xx response
-#log-5xx = true
-
-# log requests bigger than the specified size
-#log-big = true
-
-# log sendfile requests
-#log-sendfile = true
-
-# log requests with io errors
-#log-ioerror = true
-
-# use the ip from X-Forwarded-For header instead of REMOTE_ADDR
-#log-x-forwarded-for = true

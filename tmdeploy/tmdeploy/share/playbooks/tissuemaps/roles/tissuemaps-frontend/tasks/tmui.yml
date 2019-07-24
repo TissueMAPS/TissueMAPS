@@ -15,11 +15,18 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+#
+# Compile JS modules and assets
+#
+
+- name: Install NodeJS 6.x and NPM
+  include_tasks: 'tmui-{{ ansible_os_family }}.yml'
+
 - name: Install bower and gulp node packages
   npm:
     name: "{{ item }}"
     state: present
-    path: "{{ tmui_dir }}/src"
+    path: "{{ tm_root }}/src/tmui/src"
   loop:
     - bower
     - gulp
@@ -35,14 +42,14 @@
   # to re-do work
   command: npm install
   args:
-    chdir: "{{ tmui_dir }}/src"
+    chdir: "{{ tm_root }}/src/tmui/src"
   tags:
     - web-server
     - tissuemaps
 
 - name: Install dependencies from `bower.json`
   bower:
-    path: "{{ tmui_dir }}/src"
+    path: "{{ tm_root }}/src/tmui/src"
     state: present
     relative_execpath: 'node_modules/.bin'
   tags:
@@ -52,7 +59,7 @@
 - name: Build client code for production deployment
   command: node_modules/.bin/gulp build --prod
   args:
-    chdir: "{{ tmui_dir }}/src"
+    chdir: "{{ tm_root }}/src/tmui/src"
   tags:
     - web-server
     - tissuemaps
@@ -62,7 +69,7 @@
     - web-server
     - tissuemaps
   file:
-    path: "{{ tm_www_root }}"
+    path: "{{ tm_root }}/src/tmui/src"
     state: directory
     recurse: yes
     mode: 'a+rX'

@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-cluster_mode: no
 
 matlab_version: '2016b'
 
@@ -38,7 +37,6 @@ tm_users: []
 
 storage_directory: /storage
 tm_config_file: "{{ tm_home }}/.tmaps/tissuemaps.cfg"
-fs_data_directory: "{{ storage_directory }}/filesystem"
 jobdaemon_directory: "{{ storage_directory }}/jobdaemon"
 
 

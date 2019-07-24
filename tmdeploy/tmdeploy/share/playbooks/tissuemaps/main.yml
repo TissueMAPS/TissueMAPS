@@ -26,6 +26,17 @@
     - common
 
 
+- name: Install web and application servers
+  tags:
+    - tissuemaps
+    - web
+  hosts: tissuemaps_server
+  gather_facts: yes
+  any_errors_fatal: yes
+  roles:
+    - tissuemaps-frontend
+
+
 - name: Deploy TissueMAPS compute components
   tags:
     - tissuemaps
@@ -35,21 +46,6 @@
   any_errors_fatal: yes
   roles:
     - tissuemaps-compute
-
-
-- name: Install web and application servers
-  hosts: tissuemaps_server
-  gather_facts: yes
-  vars:
-    app_host: unix                                                  # 127.0.0.1
-    app_port: /var/run/uwsgi/tissuemaps.sock                        # 4852
-    tm_compute_nodes: "{{ groups['tissuemaps_compute']|length|int if 'tissuemaps_compute' in groups else 1 }}"
-  any_errors_fatal: yes
-  roles:
-    - web-server
-    - app-server
-  tags:
-    - web
 
 
 - name: Configure PostgreSQL workers
@@ -76,20 +72,6 @@
 
 # (Re)start services and enable them such that they will be automatically
 # started upon system startup.
-# We don't do this within the respective roles for compatibility with
-# Ansible-container.
-- name: Refresh tmpfiles.d
-  hosts: all
-  gather_facts: yes
-  any_errors_fatal: yes
-  tasks:
-    - name: Create directories defined in tmpfiles.d
-      command: systemd-tmpfiles --create
-    - name: Restart ssh daemon service
-      systemd:
-        name: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
-        state: restarted
-
 
 - name: Initialize database master server
   hosts:

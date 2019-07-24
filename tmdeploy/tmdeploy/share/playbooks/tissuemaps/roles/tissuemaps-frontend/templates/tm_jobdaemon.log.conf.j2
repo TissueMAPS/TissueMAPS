@@ -1,0 +1,54 @@
+# ~/.gc3/logging.conf
+#
+# Configuration file for gc3utils logging
+#
+# See http://docs.python.org/release/2.4/lib/logging-config-fileformat.html
+# for the syntax of the configuration directives.
+#
+
+[loggers]
+keys=root,gc3
+
+[logger_root]
+# The "root" logger gets messages from all running code, not just gc3utils
+# (e.g., from Paramiko); dump all this into a logfile at the most verbose level
+level=NOTSET
+handlers=logfile
+
+[logger_gc3]
+# The "gc3" logger is the root logger for all GC3 stuff.
+qualname=gc3
+# If you change this, it will take precedence over command-line options.
+level=NOTSET
+handlers=stderr
+# This ensures that anything is also logged by the root/logfile logger above.
+propagate=1
+
+[handlers]
+keys=logfile,stderr
+
+[handler_logfile]
+# verbose output to logfile located in ~/.gc3/gc3utils.log
+# rotate logfile on monday every week
+level=DEBUG
+class=handlers.TimedRotatingFileHandler
+args=('{{ tm_root }}/log/tm_jobdaemon.log','w0',1,5)
+formatter=logfile
+
+[handler_stderr]
+# console output level should not be set here, as it
+# will limit the effectiveness of option "-v"
+level=NOTSET
+class=StreamHandler
+args=(sys.stderr,)
+formatter=console
+
+[formatters]
+keys=logfile,console
+
+[formatter_logfile]
+format=[%(asctime)s] %(name)-12s %(levelname)-8s: %(message)s
+datefmt=%Y-%m-%d %H:%M:%S
+
+[formatter_console]
+format=%(name)s: %(levelname)s: %(message)s
