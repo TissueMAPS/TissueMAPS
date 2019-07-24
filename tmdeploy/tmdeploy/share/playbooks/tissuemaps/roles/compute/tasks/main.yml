@@ -17,16 +17,7 @@
 ---
 - import_tasks: env.yml
 
-- include_tasks: python-{{ ansible_os_family }}.yml
-
-- import_tasks: pip.yml
-
-- include_tasks: java-{{ ansible_os_family }}.yml
-
 - import_tasks: tissuemaps.yml
-  when: ('slurm_master' in group_names) or ('slurm_worker' not in groups)
-
-- import_tasks: data_dir.yml
   when: ('slurm_master' in group_names) or ('slurm_worker' not in groups)
 
 - import_tasks: bioformats.yml

@@ -14,40 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-# NOTE: We install all TissueMAPS python packages into the home folder because
-# we export this folder on the cluster. This is convenient, because packages
-# can then be updated on the frontend only and these changes become immediately
-# effective on all compute nodes.
-
-# This shouldn't be necessary, but some packages don't build correctly
-# unless Cython and NumPy are already installed.
-- name: Install cython and numpy packages
-  shell: |
-    env PYTHONUSERBASE={{ tm_home }}/.local \
-        pip install --user --no-cache-dir {{ item }}
-  args:
-    chdir: "{{ tm_home }}"
-    executable: /bin/bash
-  with_items:
-    - cython==0.25.2
-    - numpy==1.12.1
-  tags:
-    - tissuemaps
-
-- name: Install JtLibrary, JtModules, and TmLibrary
-  tags:
-    - tissuemaps
-    - jtlibrary
-    - tmlibrary
-  include_tasks: _install_python_pkg.yml
-  loop_control:
-    loop_var: 'pkg_dir'
-  with_items:
-    # TmLibrary and JtModules both depend on JtLibrary, so install it 1st
-    - "{{ jtlibrary_dir }}/python/jtlibrary"
-    - "{{ jtlibrary_dir }}/python/jtmodules"
-    - "{{ tmlibrary_dir }}"
-    - "{{ tmclient_dir }}"
 
 - name: Compile MEX files in JtLibrary
   tags:
@@ -56,20 +22,14 @@
     - matlab
   shell: |
     if (command -v matlab > /dev/null); then
-      dirname=$(dirname "{{ item }}")
-      filename=$(basename "{{ item }}")
+      dirname=$(dirname '{{ item }}')
+      filename=$(basename '{{ item }}')
       mexname=${filename%%.*}
-      cd "{{ jtlibrary_dir }}/matlab/$dirname"
+      cd "{{ tm_root }}/src/jtlibrary/matlab/$dirname"
       matlab -r "mex ${mexname}"
     else
       echo "Cannot find 'matlab' executable on PATH - skipping MEX compilation"
     fi
+    exit 0
   with_items:
     - 'jtlibrary/+cpsub/IdentifySecPropagateSubfunction.cpp'
-
-- name: Create directory for TissueMAPS related files
-  file:
-    path: "{{ tm_home }}/.tmaps"
-    state: directory
-  tags:
-    - tissuemaps
