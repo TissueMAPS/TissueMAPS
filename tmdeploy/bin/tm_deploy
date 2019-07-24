@@ -36,14 +36,22 @@ SUPPORTED_EC_GROUPS = {
 SUPPORTED_GROUPS = SUPPORTED_TM_GROUPS.union(SUPPORTED_EC_GROUPS)
 
 
-def _get_playbooks_dir(name):
-    logger.debug('get playbooks directory for "%s"', name)
-    rel_path = os.path.join('share', 'playbooks', name)
-    path = os.path.abspath(resource_filename('tmdeploy', rel_path))
+def _get_playbooks_dir(resource, relpath):
+    logger.debug(
+        'Checking out playbooks directory from "%s" ...', resource)
+    path = os.path.abspath(resource_filename(resource, relpath))
     if not os.path.exists(path):
         logger.error('playbooks directory does not exist: %s', path)
-        sys.exit(1)
+        sys.exit(os.EX_OSFILE)
     return path
+
+
+def _get_elasticluster_playbooks_dir():
+    return _get_playbooks_dir('elasticluster', 'share/playbooks')
+
+
+def _get_tmdeploy_playbooks_dir():
+    return _get_playbooks_dir('tmdeploy', 'share/playbooks/tissuemaps')
 
 
 def _get_host_groups(setup_file):
@@ -73,7 +81,8 @@ def _get_host_groups(setup_file):
 
 def _get_roles_and_variables_directories(name):
     logger.debug('get roles and group_vars directory for "%s"', name)
-    playbooks_dir = _get_playbooks_dir(name)
+    playbooks_dir = (_get_tmdeploy_playbooks_dir() if name == 'tissuemaps'
+                     else _get_elasticluster_playbooks_dir())
     roles_dir = os.path.join(playbooks_dir, 'roles')
     vars_dir = os.path.join(playbooks_dir, 'group_vars')
     return (roles_dir, vars_dir)
@@ -102,7 +111,7 @@ def _get_group_variables(vars_dir):
 
 
 def _build_ansible_container_command(verbosity, action_command):
-    playbooks_dir = _get_playbooks_dir('tissuemaps')
+    playbooks_dir = _get_tmdeploy_playbooks_dir()
     roles_dir, vars_dir = _get_roles_and_variables_directories('tissuemaps')
     project_dir = os.path.join(
         playbooks_dir, '../../container/projects/tissuemaps'
@@ -154,7 +163,7 @@ def _run_container_commands(commands):
 def _run_vm_commands(commands, setup_file):
     logger.info('run Ansible commands')
     config_file = os.path.join(
-        _get_playbooks_dir('tissuemaps'), 'ansible.cfg'
+        _get_tmdeploy_playbooks_dir(), 'ansible.cfg'
     )
     logger.debug('using Ansible config file: %s', config_file)
     env = dict(os.environ)
@@ -180,7 +189,7 @@ def deploy_vm(args):
     if use_elasticluster:
         # NOTE: This playbook also configures SSH host-based authentication,
         # so we shouldn't run this only on a subset of groups!
-        elasticluster_playbooks_dir = _get_playbooks_dir('elasticluster')
+        elasticluster_playbooks_dir = _get_elasticluster_playbooks_dir()
         playbook = os.path.join(elasticluster_playbooks_dir, 'main.yml')
         logger.debug('build command for playbook: %s', playbook)
         cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
@@ -206,7 +215,7 @@ def deploy_vm(args):
         cmd.extend(['-e', '@extra_vars.yml'])
         commands.append(cmd)
     # Run the TissueMAPS-specific playbooks implemented in tmdeploy
-    tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
+    tmdeploy_playbooks_dir = _get_tmdeploy_playbooks_dir()
     playbook = os.path.join(tmdeploy_playbooks_dir, 'main.yml')
     logger.debug('build command for playbook: %s', playbook)
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
@@ -220,7 +229,7 @@ def launch_vm(args):
     variables = {'instance_state': 'present', 'tm_setup_file': args.setup_file}
     commands = list()
     commands.append(['tm_inventory', '--refresh-cache'])
-    tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
+    tmdeploy_playbooks_dir = _get_tmdeploy_playbooks_dir()
     playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
     commands.append(cmd)
@@ -232,7 +241,7 @@ def terminate_vm(args):
     variables = {'instance_state': 'absent', 'tm_setup_file': args.setup_file}
     commands = list()
     commands.append(['tm_inventory', '--refresh-cache'])
-    tmdeploy_playbooks_dir = _get_playbooks_dir('tissuemaps')
+    tmdeploy_playbooks_dir = _get_tmdeploy_playbooks_dir()
     playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
     commands.append(cmd)

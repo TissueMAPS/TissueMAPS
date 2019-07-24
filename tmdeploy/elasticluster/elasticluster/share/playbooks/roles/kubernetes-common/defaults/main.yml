@@ -1,4 +1,0 @@
-kubernetes_version:
-  apt:
-    label: 1.10.2-00
-    install: false

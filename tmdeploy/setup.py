@@ -100,6 +100,7 @@ setuptools.setup(
        'apache-libcloud>=1.3.0',
        'boto>=2.48',
        'boto3>=1.4.1',
+       'elasticluster>=1.3.dev20',
        'PyYAML>=3.11',
        'psycopg2>=2.6.1',
        'pycrypto>=2.6.1',
