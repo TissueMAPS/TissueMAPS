@@ -8,7 +8,7 @@ class: no new tasks are ever created (as the ``new_tasks`` hook, and the
 ``created``/``modified``/``deleted`` handlers are not overridden), but one
 must connect to the XML-RPC interface to manage existing tasks.
 """
-# Copyright (C) 2018, University of Zurich. All rights reserved.
+# Copyright (C) 2018, 2019, University of Zurich. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -49,6 +49,11 @@ class DbProcessingDaemon(SessionBasedDaemon):
     # setting `version` is required to instanciate the
     # `SessionBasedDaemon` class
     version = '1.4.0'
+
+    # this is not just for aesthetics: GC3Pie will now load a logging
+    # configuration file named `tm_jobdaemon.log.conf` instead of the
+    # generic `gc3pie.log.conf`
+    name = 'tm_jobdaemon'
 
     class Commands(SessionBasedDaemon.Commands):
         """
