@@ -1,3 +1,6 @@
 ---
+tm_admins: []
 
 tm_root: '/srv/tissuemaps'
+
+tm_user: tissuemaps
