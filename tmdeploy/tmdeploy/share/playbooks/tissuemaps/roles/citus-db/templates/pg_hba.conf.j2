@@ -1,0 +1,40 @@
+# pg_hba.conf -- PostGreSQL access control
+#
+# For the syntax and meaning of options in this file, see:
+# https://www.postgresql.org/docs/11/auth-pg-hba-conf.html
+#
+{%- set loaddr = ansible_default_ipv4.address %}
+
+# TYPE  DATABASE        USER            ADDRESS         METHOD
+# ----  --------------  --------------  --------------  ------
+
+# "local" is for Unix domain socket connections only
+local   all             all                             trust
+
+# Allow replication connections from localhost,
+# by a user with the replication privilege.
+local   replication     all                             trust
+host    replication     all             127.0.0.1/32    trust
+host    replication     all             ::1/128         trust
+
+# Allow administration from the local host
+host    all             postgres        {{ loaddr }}/32 trust
+host    all             postgres        127.0.0.1/32    trust
+host    all             postgres        ::1/128         trust
+
+# Trust user `tissuemaps` on the local host
+host    tissuemaps      tissuemaps      {{ loaddr }}/32 trust
+host    tissuemaps      tissuemaps      127.0.0.1/32    trust
+host    tissuemaps      tissuemaps      ::1/128         trust
+
+# Trust user `tissuemaps` on the cluster
+{% for host in groups.slurm_worker %}
+host    tissuemaps      tissuemaps      {{ hostvars[host].ansible_default_ipv4.address }}/32 trust
+{% endfor %}
+
+{# access to dedicated TM frontends (if any) #}
+{% if 'tumorprofiler2_db' in group_names %}
+# DB for the `tumorp2` TM must be accessible from the frontend
+host    tissuemaps      tissuemaps      pelkmanslab-tm-frontend-tumorp2  trust
+host    all             postgres        pelkmanslab-tm-frontend-tumorp2  trust
+{% endif %}

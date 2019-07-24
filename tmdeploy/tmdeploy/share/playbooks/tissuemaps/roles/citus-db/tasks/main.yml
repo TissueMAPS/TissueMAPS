@@ -1,0 +1,116 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016-2019  University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+
+- include_tasks: 'install-{{ ansible_os_family }}.yml'
+  tags:
+    - database
+
+
+- name: Install PostGreSQL and extension packages
+  package:
+    name: '{{ db_packages }}'
+    state: present
+
+
+- import_tasks: create_cluster.yml
+  tags:
+    - database
+
+
+- name: Increase kernel limits for semaphores permanently
+  template:
+    src: pg_semaphores_limit.conf.j2
+    dest: /etc/sysctl.d/99-pg_semaphores_limit.conf
+
+
+- name: Increase runtime kernel limits for semaphores
+  shell: sysctl -p /etc/sysctl.d/99-pg_semaphores_limit.conf
+
+
+- name: Increase limit for number of open files
+  lineinfile:
+    dest: /etc/security/limits.conf
+    line: "postgres soft nofile {{ pg_max_files_per_process }}"
+
+
+- name: Deploy PostgreSQL systemd config file
+  template:
+    src: postgresql.service.j2
+    dest: /etc/systemd/system/postgresql@{{ db_node_kind }}.service
+    owner: root
+    group: root
+
+
+- name: Ensure directory for PostGreSQL lock files exist (I)
+  copy:
+    content: |
+      # THIS FILE IS CONTROLLED BY ANSIBLE
+      #
+      # Local modifications will be overwritten
+      # next time the Ansible playbook is run.
+      #
+      d /var/run/postgresql 0700 postgres postgres
+    dest: /etc/tmpfiles.d/postgresql.conf
+    owner: root
+    group: root
+    mode: 0444
+  register: _citusdb_deploy_tmpfiles_conf
+
+
+- name: Ensure directory for PostGreSQL lock files exist (II)
+  command: |
+    systemd-tmpfiles --create
+
+
+- name: Create log directory
+  file:
+    path: "{{ db_log_directory }}"
+    state: directory
+    owner: "postgres"
+    group: "postgres"
+    mode: 0755
+  when: '_citusdb_deploy_tmpfiles_conf is changed'
+
+
+- name: Deploy PostGreSQL configuration files
+  tags:
+    - database
+  template:
+    dest: "{{ db_data_directory }}/{{ db_node_kind }}/{{ item }}"
+    src: '{{ item }}.j2'
+    owner: "postgres"
+    group: "postgres"
+    mode: 0400
+  loop:
+    - 'postgresql.conf'
+    - 'pg_hba.conf'
+
+
+- import_tasks: tissuemaps.yml
+  tags:
+    - database
+    - tissuemaps
+
+
+- name: Enable and start postgresql service
+  tags:
+    - database
+  systemd:
+    name: 'postgresql@{% if db_node_kind == "master" %}master{% else %}worker{% endif %}'
+    state: started
+    enabled: yes
+    daemon_reload: yes

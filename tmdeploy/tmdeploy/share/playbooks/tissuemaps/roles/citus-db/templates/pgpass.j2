@@ -1,0 +1,2 @@
+{{ db_host_master if db_host_master != client_host else 'localhost' }}:{{ db_port['master'] }}:tissuemaps:tissuemaps:{{ db_password }}
+{{ db_host_master if db_host_master != client_host else 'localhost' }}:{{ db_port['master'] }}:postgres:postgres:{{ db_password }}
