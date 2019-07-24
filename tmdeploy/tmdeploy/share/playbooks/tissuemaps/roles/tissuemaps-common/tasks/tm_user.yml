@@ -1,0 +1,34 @@
+---
+
+- name: Create TM system group
+  user:
+    name: '{{ tm_user }}'
+    system: yes
+    state: present
+
+- name: Create TM system user
+  user:
+    name: '{{ tm_user }}'
+    group: '{{ tm_user }}'
+    home: '{{ tm_root }}'
+    comment: "System user for running TissueMAPS services"
+    system: yes
+    state: present
+
+- name: Ensure `~/.ssh` directory exists
+  file:
+    path: '{{ tm_root }}/.ssh'
+    owner: '{{ tm_user }}'
+    group: '{{ tm_user }}'
+    mode: 0755
+    state: directory
+
+- name: Deploy SSH keys of authorized users
+  tags:
+    - tissuemaps
+    - ssh
+  authorized_key:
+    user: "{{ tm_user }}"
+    key: https://github.com/{{ item }}.keys
+  loop: "{{ tm_admins }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined

@@ -1,7 +1,20 @@
 ---
 
+- name: Deploy sysadmin SSH keys and ensure they are authorized for `root` user
+  tags:
+    - tissuemaps
+    - ssh
+  authorized_key:
+    user: root
+    key: 'https://github.com/{{ item }}.keys'
+  loop: "{{ tm_admins }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+
 - name: Perform distribution-dependent initialization
   include_tasks: 'install-{{ ansible_os_family }}.yml'
+
+- name: Create TM system user
+  import_tasks: tm_user.yml
 
 - name: Create virtualenv for TissueMAPS
   pip:

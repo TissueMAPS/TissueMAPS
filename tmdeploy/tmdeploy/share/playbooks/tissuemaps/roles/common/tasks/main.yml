@@ -47,10 +47,6 @@
 
 - include_tasks: utils-{{ ansible_os_family }}.yml
   when: ansible_env.ANSIBLE_CONTAINER is undefined
-
-- import_tasks: ssh.yml
-  when: ansible_env.ANSIBLE_CONTAINER is undefined
-
 - name: Clone TissueMAPS source code repository
   git:
     repo: "{{ tm_repo_url }}"
