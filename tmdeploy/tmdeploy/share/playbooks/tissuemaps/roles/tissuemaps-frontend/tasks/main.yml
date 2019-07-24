@@ -97,6 +97,6 @@
     - '{{ tm_root }}/bin/tm_server.sh'
 
 
-- name: Export TM directory to compute nodes
-  include_tasks: exportfs.yml
+- name: Export TM root to compute nodes
+  include_tasks: export_tm_root.yml
   when: '"slurm_worker" in groups'

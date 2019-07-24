@@ -15,7 +15,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-dependencies:
-  - common
-  - citus-db-client
-  - r
+
+- name: Install NFS support (Debian/Ubuntu)
+  apt:
+    name:
+      - nfs-common
+  when: 'ansible_os_family == "Debian"'
+
+- name: Install NFS support (CentOS/RHEL)
+  apt:
+    name:
+      - nfs-utils
+  when: 'ansible_os_family == "RedHat"'
+
+- name: Mount TM root from front-end server
+  mount:
+    path: '{{ tm_root }}'
+    src: 'groups.tissuemaps_server[0]:{{ tm_root }}'
+    fstype: nfs
+    opts: rw,async
+    state: present

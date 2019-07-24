@@ -15,6 +15,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
+
+- name: Mount TM home from main server
+  include_tasks: mount_tm_root.yml
+  when: '"tissuemaps_server" not in group_names'
+
+- name: Run the `tissuemaps-common` role
+  include_role:
+    name: tissuemaps-common
+
 - name: Is a `matlab` command available?
   command: |
     matlab -n

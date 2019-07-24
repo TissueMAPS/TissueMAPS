@@ -26,6 +26,8 @@
     - common
 
 
+# this must happen before we install compute nodes, as the latter
+# mount the TM root directory via NFS from the former
 - name: Install web and application servers
   tags:
     - tissuemaps
