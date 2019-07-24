@@ -15,16 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-# Playbook for deployment of all TissueMAPS components on already existing
-# virtual machine instance(s).
-
-- name: Install general requirements on all hosts
-  hosts: all
-  gather_facts: yes
-  any_errors_fatal: yes
-  roles:
-    - common
-
 
 # Install database before the TM server, so the server processes can
 # already connect to it upon startup and not error out
