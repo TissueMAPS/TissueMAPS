@@ -17,8 +17,6 @@
 ---
 - import_tasks: env.yml
 
-- include_tasks: postgresql-{{ ansible_os_family }}.yml
-
 - include_tasks: python-{{ ansible_os_family }}.yml
 
 - import_tasks: pip.yml
