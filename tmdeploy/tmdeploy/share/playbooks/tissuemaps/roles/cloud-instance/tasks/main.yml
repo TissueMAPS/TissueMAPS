@@ -42,14 +42,19 @@
     - volume_size is defined
     - instance_state == "present"
 
-- import_tasks: mount.yml
+- name: Mount storage volume
+  tags:
+    - volume
+  mount:
+    name: "{{ volume_mountpoint }}"
+    fstype: "{{ volume_fstype }}"
+    passno: 0
+    src: "{{ volume_device_mapping[provider].mountpoint }}"
+    state: mounted
+    # opts: "{{ item.mount_options }}"
+  become: yes
   delegate_to: "{{ instance_name }}"
   delegate_facts: yes
   when:
     - volume_size is defined
     - instance_state == "present"
-
-- import_tasks: create_user.yml
-  delegate_to: "{{ instance_name }}"
-  delegate_facts: yes
-  when: instance_state == "present"
