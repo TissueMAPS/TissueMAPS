@@ -16,23 +16,38 @@
 
 ---
 
-- name: Is a `matlab` command available?
-  command: |
-    matlab -n
-  ignore_errors: yes
-  register: matlab_run
-
 - name: Find MATLAB root directory
+  tags:
+    - tissuemaps
+    - matlab
   shell: |
     matlab -nojvm -nodesktop -nodisplay -nosplash -r "dir = matlabroot; fprintf('MATLABROOT=%s\n', dir); exit" | grep "^MATLABROOT=" | cut -d= -f2
   register: matlab_root
-  when: matlab_run is success
 
-- name: Create .bashrc file
-  template:
-    src: bashrc.j2
-    dest: "{{ tm_home }}/.bashrc"
-    owner: "{{ tm_user }}"
-    group: "{{ tm_group }}"
+
+- name: Load MATLAB env at login
   tags:
     - tissuemaps
+    - matlab
+  template:
+    src: matlab.sh.j2
+    dest: "/etc/profile.d/matlab.sh"
+    owner: root
+    group: root
+    mode: 0444
+
+
+- name: Compile MEX files in JtLibrary
+  tags:
+    - tissuemaps
+    - jtlibrary
+    - matlab
+  shell: |
+      set -ex
+      dirname=$(dirname '{{ item }}')
+      filename=$(basename '{{ item }}')
+      mexname=${filename%%.*}
+      cd "{{ tm_root }}/src/jtlibrary/matlab/$dirname"
+      mex "${mexname}"
+  with_items:
+    - 'jtlibrary/+cpsub/IdentifySecPropagateSubfunction.cpp'

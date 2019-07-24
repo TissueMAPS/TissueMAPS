@@ -1,0 +1,7 @@
+{% if matlab_run is success %}
+## MATLAB
+export MATLABROOT={{ matlab_root.stdout }}
+export MATLABHOME="${MATLABROOT}"
+export MATLABPATH="{{ tm_root }}/src/jtlibrary/matlab/jtlibrary:$MATLABPATH"
+export MATLABPATH="{{ tm_root }}/src/jtlibrary/matlab/jtmodules:$MATLABPATH"
+{% endif %}
