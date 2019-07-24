@@ -18,3 +18,4 @@
 dependencies:
   - common
   - citus-db-client
+  - r

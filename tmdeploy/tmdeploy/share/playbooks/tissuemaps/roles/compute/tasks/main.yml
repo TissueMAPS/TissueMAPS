@@ -21,8 +21,6 @@
 
 - import_tasks: pip.yml
 
-- include_tasks: r-{{ ansible_os_family }}.yml
-
 - include_tasks: java-{{ ansible_os_family }}.yml
 
 - import_tasks: tissuemaps.yml
