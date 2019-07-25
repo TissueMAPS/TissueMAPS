@@ -22,7 +22,7 @@
   service:
     name: nginx
     state: stopped
-    enable: no
+    enabled: no
   when: 'tm_web_port|int in [80, 443]'
 
 # on Ubuntu 16.04, service `nginx` is still managed through a
