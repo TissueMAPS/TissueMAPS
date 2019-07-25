@@ -14,9 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
-postgresql_version: '11'
-citus_version: '8.1'
-postgis_version: '2.5'
 
 tm_root: '/srv/tissuemaps'
 
