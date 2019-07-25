@@ -23,6 +23,7 @@
 - name: Run the `tissuemaps-common` role
   include_role:
     name: tissuemaps-common
+    public: yes
 
 - name: Is a `matlab` command available?
   command: |
