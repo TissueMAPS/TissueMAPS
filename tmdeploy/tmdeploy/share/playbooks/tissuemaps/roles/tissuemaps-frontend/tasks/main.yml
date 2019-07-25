@@ -70,6 +70,8 @@
       dest: '{{ tm_root }}/etc/uwsgi.ini'
     - src: 'nginx.conf.j2'
       dest: '{{ tm_root }}/etc/nginx.conf'
+    - src: 'env.sh.j2'
+      dest: '{{ tm_root }}/bin/env.sh'
     - src: 'tm_httpd.sh.j2'
       dest: '{{ tm_root }}/bin/tm_httpd.sh'
     - src: 'tm_jobdaemon.sh.j2'
