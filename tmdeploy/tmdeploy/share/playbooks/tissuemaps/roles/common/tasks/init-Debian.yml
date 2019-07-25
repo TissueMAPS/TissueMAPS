@@ -15,9 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install aptitude
-  raw: apt-get update && apt-get install -y aptitude
-
 - name: Update apt packages
   apt:
     upgrade: safe
