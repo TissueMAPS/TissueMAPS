@@ -143,6 +143,29 @@ def _build_ansible_vm_command(verbosity, playbook, variables=None):
                 cmd.extend(['-e', json.dumps({k: v})])
             else:
                 cmd.extend(['-e', '='.join([k, v])])
+    cmd.append('--become')
+    # since commit e50157f, ElastiCluster is passing down the
+    # cluster definition to the playbooks in the `elasticluster`
+    # global dictionary; however, as of 2019-03-19, the only two
+    # keys that are used from this definition are
+    # `elasticluster.output_dir` and
+    # `elasticluster.cloud.gce_project_id` -- so create here the
+    # minimal structure that is actually needed to get the
+    # playbooks going
+    extra_vars = {
+        'elasticluster': {
+            'cloud': {},
+            'output_dir': os.getcwd(),
+        },
+        'pkg_install_state': 'present',
+    }
+    with open('extra_vars.yml', 'w') as extra_vars_output:
+        # ensure output file is not readable to other users,
+        # as it may contain passwords
+        os.fchmod(extra_vars_output.fileno(), 0o600)
+        # dump variables in YAML format for Ansible to read
+        yaml.dump(extra_vars, extra_vars_output)
+    cmd.extend(['-e', '@extra_vars.yml'])
     return cmd
 
 
@@ -193,33 +216,12 @@ def deploy_vm(args):
         playbook = os.path.join(elasticluster_playbooks_dir, 'main.yml')
         logger.debug('build command for playbook: %s', playbook)
         cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
-        cmd.append('--become')
-        # since commit e50157f, ElastiCluster is passing down the
-        # cluster definition to the playbooks in the `elasticluster`
-        # global dictionary; however, as of 2019-03-19, the only two
-        # keys that are used from this definition are
-        # `elasticluster.output_dir` and
-        # `elasticluster.cloud.gce_project_id` -- so create here the
-        # minimal structure that is actually needed to get the
-        # playbooks going
-        extra_vars = {
-            'output_dir': os.getcwd(),
-            'cloud': {},
-        }
-        with open('extra_vars.yml', 'w') as extra_vars_output:
-            # ensure output file is not readable to other users,
-            # as it may contain passwords
-            os.fchmod(extra_vars_output.fileno(), 0o600)
-            # dump variables in YAML format for Ansible to read
-            yaml.dump({ 'elasticluster': extra_vars }, extra_vars_output)
-        cmd.extend(['-e', '@extra_vars.yml'])
         commands.append(cmd)
     # Run the TissueMAPS-specific playbooks implemented in tmdeploy
     tmdeploy_playbooks_dir = _get_tmdeploy_playbooks_dir()
     playbook = os.path.join(tmdeploy_playbooks_dir, 'main.yml')
     logger.debug('build command for playbook: %s', playbook)
     cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
-    cmd.append('--become')
     commands.append(cmd)
     _run_vm_commands(commands, args.setup_file)
 
