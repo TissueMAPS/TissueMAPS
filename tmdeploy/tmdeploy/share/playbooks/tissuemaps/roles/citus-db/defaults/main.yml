@@ -15,8 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ---
 
-tm_root: '/srv/tissuemaps'
-
 db_port:
   master: 5432
   worker: 9700
@@ -41,3 +39,8 @@ pg_shared_buffers: "{{ (ansible_memory_mb.nocache.free * 0.3)|int }}MB"
 
 # this depends only on the Linux distro (if it varies at all)
 db_log_directory: /var/log/postgresql
+
+# this is only here to make it possible to run this role independently
+# (or before) the main TM roles, but should be overwritten by a
+# playbook-level variable in any serious usage
+tm_root: '/srv/tissuemaps'
