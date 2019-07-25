@@ -18,8 +18,9 @@
 - name: Ensure NodeJS repository is enabled
   shell: |
     wget -qO- https://deb.nodesource.com/setup_6.x | bash -
-  # silence Ansible warning about using `get_url:` instead of wget
-  warn: no
+  args:
+    # silence Ansible warning about using `get_url:` instead of wget
+    warn: no
   tags:
     - web-server
     - tissuemaps
