@@ -26,7 +26,7 @@ pg_autovacuum_max_workers: 6
 pg_checkpoint_timeout: 30min
 pg_effective_cache_size: "{{ (ansible_memory_mb.nocache.free * 0.6)|int }}MB"
 pg_maintenance_work_mem: 64MB  # default
-pg_max_connections: "{{ groups.tissuemaps_compute|map('extract', hostvars, 'ansible_processor_vcpus')|list|sum * 4 }}"
+pg_max_connections: "{{ groups.tissuemaps_compute|map('extract', hostvars, 'ansible_processor_vcpus')|list|sum * 16 }}"
 pg_max_files_per_process: 10000
 pg_max_parallel_workers: "{{ ansible_processor_vcpus * 2 }}"
 pg_max_parallel_workers_per_gather: "{{ ansible_processor_vcpus }}"
