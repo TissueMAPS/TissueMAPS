@@ -102,3 +102,26 @@
 - name: Export TM root to compute nodes
   include_tasks: export_tm_root.yml
   when: '"slurm_worker" in groups'
+
+
+# we need services to be up before we attempt to create users, so
+# force running handlers here and now
+- name: Run handlers
+  meta: flush_handlers
+
+
+- name: Create TissueMAPS users
+  tags:
+    - database
+    - tissuemaps
+    - users
+  shell: |
+    . {{ tm_root }}/bin/env.sh
+    . {{ tm_root }}/bin/activate
+    tm_add user \
+      --name {{ item['name'] }} \
+      --password {{ item['password'] | string | quote }} \
+      --email {{ item['email'] }}
+  become: yes
+  become_user: '{{ tm_user }}'
+  loop: "{{ tm_create_users|default([]) }}"

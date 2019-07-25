@@ -4,6 +4,24 @@
 # on to all nodes
 tm_admins: []
 
+# Create user accounts on the TissueMAPS service.
+# This should be a YAML list, each item of which
+# must have three fields: name, password, and email.
+# Example:
+#
+#   tm_create_users:
+#     - name: foo
+#       password: bar
+#       email: foo@example.org
+#     - name: baz
+#       password: xyz
+#       email: baz@example.org
+#
+# Note that passwords are cleartext here!
+#
+# The default is not to create any TM-level user.
+tm_create_users: []
+
 tm_repo_url: https://github.com/TissueMAPS/TissueMAPS.git
 tm_version: master
 

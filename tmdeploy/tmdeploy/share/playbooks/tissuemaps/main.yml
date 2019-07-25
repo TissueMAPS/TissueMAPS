@@ -78,17 +78,3 @@
   any_errors_fatal: yes
   roles:
     - tissuemaps-compute
-
-
-  # - name: Create TissueMAPS users
-  #   tags:
-  #     - database
-  #     - tissuemaps
-  #   command: |
-  #     {{ tm_home }}/.local/bin/tm_add user --name {{ item['name'] }} --password {{ item['password'] | string | quote }} --email {{ item['email'] }}
-  #   args:
-  #     chdir: "{{ tm_home }}"
-  #   become: yes
-  #   become_user: '{{ tm_user }}'
-  #   with_items: "{{ tm_users }}"
-  #   when: ansible_env.ANSIBLE_CONTAINER is undefined
