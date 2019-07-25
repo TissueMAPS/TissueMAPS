@@ -23,8 +23,9 @@
 
 - name: Check out TissueMAPS sources
   git:
-    dest: {{ tm_root }}/src
-    repo: https://github.com/TissueMAPS/TissueMAPS.git
+    dest: '{{ tm_root }}/src'
+    repo: '{{ tm_repo_url }}'
+    version: '{{ tm_version|default("master") }}'
     # do not overwrite local modifications
     force: no
     update: no

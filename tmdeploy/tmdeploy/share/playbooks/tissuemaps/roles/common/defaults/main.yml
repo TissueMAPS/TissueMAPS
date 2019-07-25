@@ -24,9 +24,6 @@ tm_user: tissuemaps
 tm_group: "{{ tm_user }}"
 tm_home: '/home/{{ tm_user }}'
 
-tm_repo_url: https://github.com/TissueMAPS/TissueMAPS
-tm_version: master
-
 # user account to populate the DB with; array of mappings with keys
 # "name", "password" and "email"
 tm_users: []
