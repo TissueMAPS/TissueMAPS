@@ -7,9 +7,13 @@ tm_admins: []
 tm_repo_url: https://github.com/TissueMAPS/TissueMAPS.git
 tm_version: master
 
+# root directory for all TissueMAPS-related files
 tm_root: '/srv/tissuemaps'
 
-# UNIX user name of the system user running the TM services
+# where the TM server will store uploaded files, workflow results, etc
+tm_storage_home: '{{ tm_root }}/var/filesystem'
+
+# UNIX user data of the system user running TM services
 tm_user: tissuemaps
 tm_group: tissuemaps
 tm_home: '/home/{{ tm_user }}'

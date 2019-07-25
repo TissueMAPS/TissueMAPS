@@ -3,7 +3,7 @@ logging_verbosity = 3
 jobdaemon_session = {{ tm_root }}/var/jobdaemon
 
 [tmlib]
-storage_home = {{ tm_root }}/var/filesystem
+storage_home = {{ tm_storage_home }}
 modules_path = /home/{{ tm_user }}/jtmodules, {{ tm_root }}/src/jtlibrary/matlab/jtmodules, {{ tm_root }}/src/jtlibrary/python/jtmodules/src/jtmodules, {{ tm_root }}/src/jtlibrary/r/jtmodules
 
 [DEFAULT]

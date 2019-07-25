@@ -81,7 +81,7 @@
     - '{{ tm_root }}/run'
     - '{{ tm_root }}/var'
     - '{{ tm_root }}/var/jobdaemon'
-    - '{{ tm_root }}/var/filesystem'
+    - '{{ tm_storage_home }}'
 
 - name: Deploy TM configuration files (common)
   template:

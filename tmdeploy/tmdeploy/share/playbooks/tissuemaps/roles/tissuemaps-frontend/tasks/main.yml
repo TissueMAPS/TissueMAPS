@@ -49,7 +49,7 @@
     - '{{ tm_root }}/log/metrics'
     - '{{ tm_root }}/run'
     - '{{ tm_root }}/var'
-    - '{{ tm_root }}/var/filesystem'
+    - '{{ tm_storage_home }}'
     - '{{ tm_root }}/var/jobdaemon'
     - '/home/{{ tm_user }}/.gc3'
 
