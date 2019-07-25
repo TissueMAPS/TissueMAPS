@@ -1,12 +1,27 @@
 ---
-tm_repo_url: https://github.com/TissueMAPS/TissueMAPS.git
-tm_version: master
-
 # Github user names of administrators;
 # these people will have their SSH key deployed
 # on to all nodes
 tm_admins: []
 
+tm_repo_url: https://github.com/TissueMAPS/TissueMAPS.git
+tm_version: master
+
 tm_root: '/srv/tissuemaps'
 
+# UNIX user name of the system user running the TM services
 tm_user: tissuemaps
+tm_group: tissuemaps
+tm_home: '/home/{{ tm_user }}'
+
+# what TCP port should TM be accessible on
+tm_web_port: 80
+
+# contact data for the database server
+#
+# FIXME: I'm not sure it makes much sense to go through hoops just to
+# have connections go to `localhost` or a UNIX-domain socket; this
+# only applies to the master, the real data connections are to the
+# workers, which are always contacted via TCP...
+#
+tm_db_host: "{{ groups.tissuemaps_db_master[0] if groups.tissuemaps_db_master else 'localhost' }}"

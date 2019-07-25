@@ -19,11 +19,3 @@
 # NOTE: Make sure this matches the PostgreSQL version provided by Citus
 # (see ../database-server-common/defaults/main.yml)
 postgresql_version: '11'
-
-tm_user: tissuemaps
-tm_group: "{{ tm_user }}"
-tm_home: '/home/{{ tm_user }}'
-
-# user account to populate the DB with; array of mappings with keys
-# "name", "password" and "email"
-tm_users: []
