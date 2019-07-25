@@ -98,7 +98,7 @@ def _get_group_variables(vars_dir):
             )
             with open(filename) as f:
                 for line in f.readlines():
-                    var_mapping = yaml.load(line)
+                    var_mapping = yaml.safe_load(line)
                     if var_mapping is None:
                         continue
                     for k, v in var_mapping.items():
