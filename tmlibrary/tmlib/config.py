@@ -288,13 +288,14 @@ class LibraryConfig(TmapsConfig):
             resources = [r for r in conf.resources.values() if r.enabled]
             if len(resources) == 0:
                 raise ValueError(
-                    'No enabled GC3Pie resource found. Check configuration file: %s'
-                    % conf_file
+                    'No enabled GC3Pie resource found.'
+                    ' Check configuration file(s): %r'
+                    % (conf_files,)
                 )
             elif len(resources) > 1:
                 raise ValueError(
                     'More than one enabled GC3Pie resource found. '
-                    'Check configuration file: %s' % conf_file
+                    'Check configuration file(s): %r' % (conf_files,)
                 )
             self._resource = resources[0]
         return self._resource
