@@ -191,6 +191,11 @@ def _run_vm_commands(commands, setup_file):
     logger.debug('using Ansible config file: %s', config_file)
     env = dict(os.environ)
     env['ANSIBLE_CONFIG'] = os.path.abspath(config_file)
+    env['ANSIBLE_ROLES_PATH'] = ':'.join(
+        os.path.join(d, 'roles') for d in [
+            _get_tmdeploy_playbooks_dir(),
+            _get_elasticluster_playbooks_dir(),
+    ])
     env['TM_SETUP'] = os.path.abspath(
         os.path.expandvars(os.path.expanduser(setup_file))
     )
