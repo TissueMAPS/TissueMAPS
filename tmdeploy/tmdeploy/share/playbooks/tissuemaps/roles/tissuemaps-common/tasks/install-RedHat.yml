@@ -1,5 +1,38 @@
 ---
 
+- name: Put SELinux in permissive mode
+  selinux:
+    policy: targeted
+    state: permissive
+
+- name: Install EPEL release
+  yum:
+    name: epel-release
+    state: present
+
+- name: Install generally required yum packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - gcc
+    - gcc-c++
+    - bzip2
+    - cmake
+    - git
+    - wget
+    - openssl
+    - openssl-devel
+    - glibc-static
+
+- name: Install useful yum packages
+  yum:
+    name:
+      - bash-completion
+      - the_silver_searcher
+      - unzip
+      - vim
+
 - name: Install prerequisite software (CentOS/RedHat)
   package:
     name:

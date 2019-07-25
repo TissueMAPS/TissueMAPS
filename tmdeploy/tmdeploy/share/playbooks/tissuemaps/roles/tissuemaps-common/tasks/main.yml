@@ -1,5 +1,8 @@
 ---
 
+- name: Check compatibility with base OS
+  import_tasks: check_compatibility.yml
+
 - name: Deploy sysadmin SSH keys and ensure they are authorized for `root` user
   tags:
     - tissuemaps

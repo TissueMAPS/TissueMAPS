@@ -1,5 +1,35 @@
 ---
 
+- name: Update apt packages
+  apt:
+    upgrade: safe
+    update_cache: yes
+
+
+- name: Install generally required APT packages
+  apt:
+    name:
+      - cmake
+      - g++
+      - gcc
+      - git
+      - libc6-dev
+      - make
+      - openssl
+      - wget
+      - zlib1g-dev
+    state: present
+
+
+- name: Install useful packages
+  apt:
+    name:
+      - silversearcher-ag
+      - unzip
+      - vim
+    install_recommends: no
+
+
 - name: Install prerequisite software (Debian/Ubuntu)
   apt:
     name:
