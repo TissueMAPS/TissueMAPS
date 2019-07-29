@@ -32,12 +32,7 @@ except ImportError:
     from io import StringIO
 from subprocess import check_call, check_output, CalledProcessError
 import tempfile
-try:
-    from functools import reduce
-except ImportError:
-    # This is only necessary in python 3
-    pass
-
+from functools import reduce
 
 import cv2
 from prettytable import PrettyTable
@@ -2268,7 +2263,7 @@ class TmClient(HttpClient):
                 countour, color = cc
                 return imoverlay(img, countour.astype(np.bool), color)
             return reduce(overlay_countour_with_color,
-                          zip(segmentation_contours, colors),
+                          zip(list(segmentation_contours), colors),
                           # according to Python'd doc for `reduce()`,
                           # this extra argument is prepended to the
                           # list to be reduced and serves as the `x`
@@ -2279,7 +2274,7 @@ class TmClient(HttpClient):
         y_min, y_max, x_min, x_max = lims
         def overlay_segmentation_contours_on_layer(layer_idx):
             return all_objects_overlay(
-                segmentation_contours,
+                list(segmentation_contours),
                 layers[y_min:y_max, x_min:x_max, layer_idx])
         channels_with_overlaid_segmentation = map(
             overlay_segmentation_contours_on_layer, range(len(channel_names)))
