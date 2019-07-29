@@ -32,6 +32,12 @@ except ImportError:
     from io import StringIO
 from subprocess import check_call, check_output, CalledProcessError
 import tempfile
+try:
+    from functools import reduce
+except ImportError:
+    # This is only necessary in python 3
+    pass
+
 
 import cv2
 from prettytable import PrettyTable
