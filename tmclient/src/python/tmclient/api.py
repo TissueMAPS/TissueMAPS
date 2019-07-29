@@ -2256,7 +2256,7 @@ class TmClient(HttpClient):
                     cv2.MORPH_GRADIENT,
                     kernel)
             return map(outline, cropped_obj_masks)
-        segmentation_contours = find_segmentation_contours(cropped_obj_masks)
+        segmentation_contours = list(find_segmentation_contours(cropped_obj_masks))
 
         # function to overlay the mask and the channel-images
         def imoverlay(img, mask, color, alpha=0.6):
@@ -2275,7 +2275,7 @@ class TmClient(HttpClient):
                 countour, color = cc
                 return imoverlay(img, countour.astype(np.bool), color)
             return reduce(overlay_countour_with_color,
-                          zip(list(segmentation_contours), colors),
+                          zip(segmentation_contours, colors),
                           # according to Python'd doc for `reduce()`,
                           # this extra argument is prepended to the
                           # list to be reduced and serves as the `x`
@@ -2286,7 +2286,7 @@ class TmClient(HttpClient):
         y_min, y_max, x_min, x_max = lims
         def overlay_segmentation_contours_on_layer(layer_idx):
             return all_objects_overlay(
-                list(segmentation_contours),
+                segmentation_contours,
                 layers[y_min:y_max, x_min:x_max, layer_idx])
         channels_with_overlaid_segmentation = map(
             overlay_segmentation_contours_on_layer, range(len(channel_names)))
