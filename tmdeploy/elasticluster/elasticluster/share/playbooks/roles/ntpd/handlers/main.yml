@@ -1,6 +1,0 @@
----
-
-- name: restart ntpd
-  service:
-    name='{{ntpd_service}}'
-    state=restarted

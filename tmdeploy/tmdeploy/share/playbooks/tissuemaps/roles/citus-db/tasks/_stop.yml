@@ -1,0 +1,33 @@
+#
+# Stop an instance of a PostGreSQL DB cluster
+#
+---
+
+- name: Check if data directory exists
+  stat:
+    path: "{{ datadir }}"
+  register: _citus_datadir
+
+
+- name: Check if DB process is running
+  stat:
+    path: "{{ datadir }}/postmaster.pid"
+  register: _citus_pidfile
+
+
+- name: Stop running default database server
+  command: |
+    {{ db_executable_directory }}/pg_ctl stop -D {{ datadir }}
+  args:
+    chdir: "{{ datadir }}"
+  become: yes
+  become_user: 'postgres'
+  when:
+    - _citus_datadir.stat.exists
+    - _citus_pidfile.stat.exists
+
+
+- name: Make sure PID file does not exist
+  file:
+    path: "{{ datadir }}/postmaster.pid"
+    state: absent

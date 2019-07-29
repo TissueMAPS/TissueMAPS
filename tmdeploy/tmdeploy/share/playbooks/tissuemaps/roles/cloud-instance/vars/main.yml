@@ -1,5 +1,5 @@
 # TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,6 @@
 volume_fstype: ext4
 instance_name: "{{ inventory_hostname }}"
 volume_name: "{{ instance_name }}-storage"
-volume_user: root
 volume_device_mapping:
   os:
     name: /dev/vdb
@@ -29,5 +28,3 @@ volume_device_mapping:
   gce:
     name: /dev/disk/by-id/google-{{ volume_name }}
     mountpoint: /dev/disk/by-id/google-{{ volume_name }}
-tm_home: /home/{{ tm_user }}
-tm_config_file: "{{ tm_home }}/.tmaps/tissuemaps.cfg"

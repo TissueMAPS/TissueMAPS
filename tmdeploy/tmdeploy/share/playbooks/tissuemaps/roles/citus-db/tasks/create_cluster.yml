@@ -1,0 +1,74 @@
+#
+# Create Citus DB cluster for TissueMAPS
+#
+---
+
+- name: Disable default PostGreSQL services
+  service:
+    name: 'postgresql@{{ item }}.service'
+    state: stopped
+    enabled: no
+  ignore_errors: yes
+  loop:
+    - '9.3-main'
+    - '9.4-main'
+    - '9.5-main'
+    - '9.6-main'
+    - '10-main'
+    - '11-main'
+
+
+# need to remove existing database clusters, otherwise initdb will fail.
+- name: Ensure default cluster is not running
+  include_tasks: _stop.yml
+  vars:
+    datadir: "{{ db_default_cluster_data_directory }}"
+
+
+- name: Remove existing default data directory
+  file:
+    path: "{{ db_default_cluster_data_directory }}"
+    state: absent
+
+
+- name: Stop DB cluster (if running)
+  include_tasks: _stop.yml
+  vars:
+    datadir: "{{ db_data_directory }}/{{ db_node_kind }}"
+
+
+- name: Create root directory for database files
+  file:
+    path: "{{ db_data_directory | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+
+- name: Create DB data directory
+  file:
+    path: '{{ db_data_directory }}'
+    state: directory
+    owner: "postgres"
+    group: "postgres"
+    mode: 0700
+
+
+- name: Initialize DB cluster
+  command: |
+    {{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ db_node_kind }} -l {{ db_log_directory }}/initdb-{{ db_node_kind }}.log -o '--locale=en_US.UTF-8'
+  args:
+    chdir: "{{ db_data_directory }}"
+    creates: "{{ db_data_directory }}/{{ db_node_kind }}/PG_VERSION"
+  become: yes
+  become_user: 'postgres'
+
+
+- name: Fix permissions on DB data directory
+  file:
+    path: '{{ db_data_directory }}'
+    recurse: yes
+    owner: "postgres"
+    group: "postgres"
+    mode: 'go-rwx'

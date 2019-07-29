@@ -1,0 +1,75 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016-2019  University of Zurich
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+#
+# Compile JS modules and assets
+#
+
+- name: Install NodeJS 6.x and NPM
+  include_tasks: 'tmui-{{ ansible_os_family }}.yml'
+
+- name: Install bower and gulp node packages
+  npm:
+    name: "{{ item }}"
+    state: present
+    path: "{{ tm_root }}/src/tmui/src"
+  loop:
+    - bower
+    - gulp
+  tags:
+    - web-server
+    - tissuemaps
+
+- name: Install dependencies from `package.json`
+  # for some reason, calling Ansible's `npm state=present path=...`
+  # does not install all required modules (perhaps it just checks for
+  # the existence of `node_modules/` and exits early?) so let's revert
+  # to explicitly running the needed command and relying on `npm` not
+  # to re-do work
+  command: npm install
+  args:
+    chdir: "{{ tm_root }}/src/tmui/src"
+  tags:
+    - web-server
+    - tissuemaps
+
+- name: Install dependencies from `bower.json`
+  bower:
+    path: "{{ tm_root }}/src/tmui/src"
+    state: present
+    relative_execpath: 'node_modules/.bin'
+  tags:
+    - web-server
+    - tissuemaps
+
+- name: Build client code for production deployment
+  command: node_modules/.bin/gulp build --prod
+  args:
+    chdir: "{{ tm_root }}/src/tmui/src"
+  tags:
+    - web-server
+    - tissuemaps
+
+- name: Allow web server to read TmUI JS files
+  tags:
+    - web-server
+    - tissuemaps
+  file:
+    path: "{{ tm_root }}/src/tmui/src"
+    state: directory
+    recurse: yes
+    mode: 'a+rX'

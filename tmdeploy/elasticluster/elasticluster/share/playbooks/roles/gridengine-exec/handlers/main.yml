@@ -1,5 +1,0 @@
----
-- name: restart execd
-  service:
-    name='{{gridengine_exec_service}}'
-    state=restarted

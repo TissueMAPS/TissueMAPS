@@ -15,9 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ---
-- name: Install aptitude
-  raw: apt-get update && apt-get install -y aptitude
-
 - name: Update apt packages
   apt:
     upgrade: safe
@@ -25,11 +22,23 @@
 
 - name: Install generally required apt packages
   apt:
-    name: "{{ item }}"
+    name:
+      - cmake
+      - g++
+      - gcc
+      - git
+      - libc6-dev
+      - make
+      - openssl
+      - wget
+      - zlib1g-dev
     state: present
-  with_items:
-    - build-essential
-    - cmake
-    - wget
-    - git
-    - openssl
+
+
+- name: Install useful packages
+  apt:
+    name:
+      - silversearcher-ag
+      - unzip
+      - vim
+    install_recommends: no

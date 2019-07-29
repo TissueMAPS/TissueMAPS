@@ -1,0 +1,94 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016-2019 University of Zurich.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+
+# Install database before the TM server, so the server processes can
+# already connect to it upon startup and not error out
+
+- name: Configure PostgreSQL workers
+  tags:
+    - database
+  hosts:
+    - tissuemaps_db_worker
+  gather_facts: yes
+  any_errors_fatal: yes
+  roles:
+    - role: citus-db
+      db_node_kind: worker
+      # performance and opt settings
+      # (directly written into `postgresql.conf`)
+      # Turn off Write Ahead Log (WAL) on worker nodes - sacrifice reliability for performance
+      # FIXME(rm): I'm not convinced this is the right thing to do here *in general*
+      # It may be a worthwhile tradeoff for very large experiments but I tend to think
+      # PostGreSQL default is a better choice... Anyway, need some data to back this up.
+      pg_fsync: off
+      pg_synchronous_commit: off
+
+
+- name: Configure PostgreSQL master
+  tags:
+    - database
+  hosts:
+    - tissuemaps_db_master
+  gather_facts: yes
+  any_errors_fatal: yes
+  roles:
+    - role: citus-db
+      db_node_kind: master
+      db_workers: '{{ groups.tissuemaps_db_worker }}'
+      # performance and opt settings
+      # (directly written into `postgresql.conf`)
+      pg_fsync: on
+      pg_synchronous_commit: on
+
+
+# this must happen before we install compute nodes, as the latter
+# mount the TM root directory via NFS from the former
+- name: Install web and application servers
+  tags:
+    - tissuemaps
+    - web
+  hosts: tissuemaps_server
+  gather_facts: yes
+  any_errors_fatal: yes
+  roles:
+    - tissuemaps-frontend
+
+
+- name: Deploy TissueMAPS compute components
+  tags:
+    - tissuemaps
+    - compute
+  hosts: tissuemaps_compute
+  gather_facts: yes
+  any_errors_fatal: yes
+  roles:
+    - tissuemaps-compute
+
+
+  # - name: Create TissueMAPS users
+  #   tags:
+  #     - database
+  #     - tissuemaps
+  #   command: |
+  #     {{ tm_home }}/.local/bin/tm_add user --name {{ item['name'] }} --password {{ item['password'] | string | quote }} --email {{ item['email'] }}
+  #   args:
+  #     chdir: "{{ tm_home }}"
+  #   become: yes
+  #   become_user: '{{ tm_user }}'
+  #   with_items: "{{ tm_users }}"
+  #   when: ansible_env.ANSIBLE_CONTAINER is undefined

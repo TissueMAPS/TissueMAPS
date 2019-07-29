@@ -1,5 +1,0 @@
-# hdfs-datanode/meta/main.yml
----
-
-dependencies:
-  - { role: hadoop-common }

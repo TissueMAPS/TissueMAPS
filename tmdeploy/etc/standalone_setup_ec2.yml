@@ -12,24 +12,26 @@ architecture:
         - name: server
           count: 1
           groups:
+            # a standalone TM installation has all the 4 components on
+            # the same machine
             - name: tissuemaps_server
               vars:
-                tm_version: v0.3.2
-                tm_compute_autodiscover: no
-                uwsgi_processes: 4
-                tm_compute_cores: 4
-                tm_compute_memory: 14500
+                # this defaults to "master", i.e., the latest (and
+                # possibly untested) code
+                tm_version: v0.4.4
+            - name: tissuemaps_compute
             - name: tissuemaps_db_master
-              vars:
-                db_master_cores: 1
-                db_master_memory: 3625
             - name: tissuemaps_db_worker
-              vars:
-                db_worker_cores: 1
-                db_worker_memory: 3625
           instance:
-            image: ami-7cbc6e13 #ami-fa2df395
-            ssh_user: centos
+            # AMIs vary with the EC2 region, storage type and
+            # architecture, so this will be different if you run
+            # e.g. in the us-west-1 region; see:
+            # https://cloud-images.ubuntu.com/locator/ec2/
+            image: ami-0085d4f8878cddc81
+            # SSH user name depends on the selected image; for Ubuntu
+            # official images, this is `ubuntu` and for CentOS ones it
+            # is typically `centos`
+            ssh_user: ubuntu
             flavor: m4.2xlarge
             volume_size: 1000
             tags:

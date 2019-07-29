@@ -1,0 +1,17 @@
+#
+# Control (auto)start of NginX through `supervisor`
+# (http://supervisord.org/)
+#
+
+[program:tm_httpd]
+command={{ tm_root }}/bin/tm_httpd.sh
+# user switching is done by NginX
+user=root
+
+directory={{ tm_root }}
+autostart=true
+autorestart=true
+startretries=1
+
+redirect_stderr=true
+stdout_logfile={{ tm_root }}/log/tm_httpd.supervisord.log

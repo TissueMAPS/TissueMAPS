@@ -45,3 +45,12 @@
     - openssl
     - openssl-devel
     - glibc-static
+
+- name: Install useful yum packages
+  yum:
+    name: 
+      - bash-completion
+      - the_silver_searcher
+      - unzip
+      - vim
+    

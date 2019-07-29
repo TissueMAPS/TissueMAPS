@@ -1,0 +1,12 @@
+---
+tm_repo_url: https://github.com/TissueMAPS/TissueMAPS.git
+tm_version: master
+
+# Github user names of administrators;
+# these people will have their SSH key deployed
+# on to all nodes
+tm_admins: []
+
+tm_root: '/srv/tissuemaps'
+
+tm_user: tissuemaps

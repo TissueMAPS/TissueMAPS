@@ -1,0 +1,57 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016-2019 University of Zurich.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+---
+
+- name: Get bftools
+  get_url:
+    url: 'https://downloads.openmicroscopy.org/bio-formats/{{ bf_version }}/artifacts/bftools.zip'
+    dest: /root
+    timeout: 60
+  tags:
+    - bioformats
+
+- name: Unpack bftools
+  unarchive:
+    src: /root/bftools.zip
+    dest: '{{ tm_root }}'
+    copy: no
+  tags:
+    - bioformats
+
+- name: Install selected bftools
+  file:
+    src: '{{ tm_root }}/bftools/{{ item }}'
+    dest: '{{ tm_root }}/bin/{{ item }}'
+    state: link
+  with_items:
+    - bfconvert
+    - showinf
+    - mkfake
+  tags:
+    - bioformats
+
+
+- name: Ensure bftools are on PATH
+  tags:
+    - tissuemaps
+    - matlab
+  template:
+    src: bftools.sh.j2
+    dest: "/etc/profile.d/bftools.sh"
+    owner: root
+    group: root
+    mode: 0444

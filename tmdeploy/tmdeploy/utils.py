@@ -36,7 +36,7 @@ def to_yaml(description):
 
 
 def from_yaml(description):
-    return yaml.load(description)
+    return yaml.safe_load(description)
 
 
 def read_json_file(filename):
@@ -52,7 +52,7 @@ def read_yaml_file(filename):
     if not os.path.exists(filename):
         raise OSError('File does not exist: {0}'.format(filename))
     with open(filename) as f:
-        return yaml.load(f)
+        return yaml.safe_load(f)
 
 
 def write_yaml_file(filename, content):

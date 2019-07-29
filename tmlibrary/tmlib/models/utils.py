@@ -82,8 +82,8 @@ def create_db_engine(db_uri, cache=True):
     '''
     if db_uri not in DATABASE_ENGINES:
         logger.debug(
-            'create database engine for process %d with pool size %d',
-            os.getpid(), POOL_SIZE
+            'create database engine for DB URI `%s` with pool size %d',
+            db_uri, POOL_SIZE
         )
         if POOL_SIZE > 1:
             overflow_size = POOL_SIZE * 2
@@ -105,7 +105,7 @@ def create_db_engine(db_uri, cache=True):
             logger.debug('cache database engine for reuse')
             DATABASE_ENGINES[db_uri] = engine
     else:
-        logger.debug('reuse cached database engine for process %d', os.getpid())
+        logger.debug('reuse cached database engine for DB URI `%s`', db_uri)
         engine = DATABASE_ENGINES[db_uri]
     return engine
 

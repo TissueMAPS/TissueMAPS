@@ -1,0 +1,46 @@
+# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
+# Copyright (C) 2016-2019 University of Zurich.
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+---
+postgresql_version: '11'
+citus_version: '8.1'
+postgis_version: '2.5'
+
+tm_root: '/srv/tissuemaps'
+
+db_port:
+  master: 5432
+  worker: 9700
+db_data_directory: "{{ tm_root }}/var/database"
+
+# performance and opt settings
+# (directly written into `postgresql.conf`)
+pg_autovacuum_max_workers: 6
+pg_checkpoint_timeout: 30min
+pg_effective_cache_size: "{{ (ansible_memory_mb.nocache.free * 0.6)|int }}MB"
+pg_maintenance_work_mem: 64MB  # default
+pg_max_connections: "{{ groups.tissuemaps_compute|map('extract', hostvars, 'ansible_processor_vcpus')|list|sum * 4 }}"
+pg_max_files_per_process: 10000
+pg_max_parallel_workers: "{{ ansible_processor_vcpus * 2 }}"
+pg_max_parallel_workers_per_gather: "{{ ansible_processor_vcpus }}"
+pg_max_wal_size: 30GB
+pg_max_worker_processes: "{{ ansible_processor_vcpus * 4 }}"
+pg_shared_buffers: "{{ (ansible_memory_mb.nocache.free * 0.3)|int }}MB"
+
+
+### NO CUSTOMIZATION NECESSARY BELOW THIS LINE ###
+
+# this depends only on the Linux distro (if it varies at all)
+db_log_directory: /var/log/postgresql

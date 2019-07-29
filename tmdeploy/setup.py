@@ -95,11 +95,11 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     install_requires=[
-        # Ansible 2.4 introduces changes incompatible with elasticluster roles.
-       'ansible>=2.5',
+       'ansible>=2.7',
        'apache-libcloud>=1.3.0',
        'boto>=2.48',
        'boto3>=1.4.1',
+       'elasticluster>=1.3.dev20',
        'PyYAML>=3.11',
        'psycopg2>=2.6.1',
        'pycrypto>=2.6.1',

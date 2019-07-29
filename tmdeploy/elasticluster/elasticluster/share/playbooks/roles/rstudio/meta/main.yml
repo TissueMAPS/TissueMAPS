@@ -1,5 +1,0 @@
-# rstudio/meta/main.yml
----
-
-dependencies:
-  - r

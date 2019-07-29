@@ -1,6 +1,0 @@
----
-
-NFS_EXPORTS:
-  - path: '/data'
-    clients: '{{ nfs_clients|default(groups.all)|list }}'
-    options: 'rw,no_root_squash,async,no_subtree_check,crossmnt'

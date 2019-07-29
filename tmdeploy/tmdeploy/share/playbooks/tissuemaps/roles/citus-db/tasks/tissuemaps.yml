@@ -1,0 +1,113 @@
+#
+# TissueMAPS specific configuration
+# for the Citus DB cluster
+#
+---
+
+- name: Start database cluster
+  tags:
+    - database
+  command: |
+    {{ db_executable_directory }}/pg_ctl start -w -o "-p {{ db_port[db_node_kind] }}" -D {{ db_data_directory }}/{{ db_node_kind }} -l {{ db_log_directory }}/setup-{{ db_node_kind }}.log
+  args:
+    chdir: "{{ db_data_directory }}"
+  become: yes
+  become_user: 'postgres'
+
+- name: Create database
+  tags:
+    - database
+  postgresql_db:
+    name: "tissuemaps"
+    port: "{{ db_port[db_node_kind] }}"
+    login_host: 127.0.0.1
+    login_user: "postgres"
+
+- name: Create PostGreSQL extensions
+  tags:
+    - database
+  postgresql_ext:
+    name: '{{ item }}'
+    db: "tissuemaps"
+    port: "{{ db_port[db_node_kind] }}"
+    login_host: 127.0.0.1
+    login_user: "postgres"
+  loop:
+    - citus
+    - postgis
+    - hstore
+
+- name: Change password of database superuser
+  postgresql_user:
+    db: postgres
+    port: "{{ db_port[db_node_kind] }}"
+    user: "postgres"
+    login_user: "postgres"
+    login_host: 127.0.0.1
+  tags:
+    - database
+
+- name: Create database user
+  postgresql_user:
+    db: "tissuemaps"
+    port: "{{ db_port[db_node_kind] }}"
+    user: "tissuemaps"
+    role_attr_flags: LOGIN
+    login_user: "postgres"
+    login_host: 127.0.0.1
+  tags:
+    - database
+
+- name: Grant database user all permissions for tissuemaps database
+  postgresql_privs:
+    db: postgres
+    type: database
+    obj: "tissuemaps"
+    port: "{{ db_port[db_node_kind] }}"
+    role: "tissuemaps"
+    privs: ALL
+    login_user: "postgres"
+    login_host: 127.0.0.1
+  tags:
+    - database
+
+- name: Grant privileges on the `tissuemaps` DB
+  tags:
+    - database
+  postgresql_privs:
+    db: tissuemaps
+    objs: '{{ item.objs }}'
+    privs: '{{ item.privs }}'
+    type: table
+    schema: pg_catalog
+    port: "{{ db_port[db_node_kind] }}"
+    role: "tissuemaps"
+    login_user: "postgres"
+    login_host: 127.0.0.1
+  loop:
+    - { privs: SELECT, objs: "pg_dist_partition,pg_dist_shard,pg_dist_shard_placement" }
+    - { privs: UPDATE, objs: "pg_dist_partition,pg_dist_shard" }
+
+- name: Add Citus worker nodes
+  shell: |
+      if ! (psql -d 'tissuemaps' \
+              -t -P format=unaligned \
+              -c "SELECT * FROM master_get_active_worker_nodes();" \
+              | egrep -q '^{{ item }}|');
+      then
+        psql -d 'tissuemaps' -c "SELECT * FROM master_add_node('{{ item }}', {{ db_port['worker'] }});"
+      fi
+  become: yes
+  become_user: postgres
+  loop: '{{ db_workers|default(groups.tissuemaps_db_worker) }}'
+  when: 'db_node_kind == "master"'
+
+- name: Stop database cluster
+  tags:
+    - database
+  command: |
+    {{ db_executable_directory }}/pg_ctl stop -w -m smart -o "-p {{ db_port[db_node_kind] }}" -D {{ db_data_directory }}/{{ db_node_kind }}
+  args:
+    chdir: "{{ db_data_directory }}"
+  become: yes
+  become_user: 'postgres'

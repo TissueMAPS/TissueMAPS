@@ -276,8 +276,15 @@ class LibraryConfig(TmapsConfig):
         '''gc3libs.utils.Struct: information about the enabled *GC3Pie* resource
         '''
         if self._resource is None:
-            conf_file = os.path.expanduser('~/.gc3/gc3pie.conf')
-            conf = Configuration(conf_file)
+            conf_files = []
+            for path in [
+                    # later matches override
+                    os.path.expanduser('~/.gc3/gc3pie.conf'),
+                    os.environ.get('GC3PIE_CONF', ''),
+            ]:
+                if path and os.path.exists(path):
+                    conf_files.append(path)
+            conf = Configuration(*conf_files)
             resources = [r for r in conf.resources.values() if r.enabled]
             if len(resources) == 0:
                 raise ValueError(

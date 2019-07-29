@@ -1,0 +1,63 @@
+---
+
+- name: Create TM system group
+  user:
+    name: '{{ tm_user }}'
+    system: yes
+    state: present
+
+- name: Create TM system user
+  user:
+    name: '{{ tm_user }}'
+    group: '{{ tm_user }}'
+    home: '{{ tm_root }}'
+    comment: "System user for running TissueMAPS services"
+    system: yes
+    state: present
+
+- name: Ensure `~/.ssh` directory exists
+  file:
+    path: '{{ tm_root }}/.ssh'
+    owner: '{{ tm_user }}'
+    group: '{{ tm_user }}'
+    mode: 0755
+    state: directory
+
+- name: Deploy SSH keys of authorized users
+  tags:
+    - tissuemaps
+    - ssh
+  authorized_key:
+    user: "{{ tm_user }}"
+    key: https://github.com/{{ item }}.keys
+  loop: "{{ tm_admins }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+
+- name: Allow tm_user to use SLURM's `sacctmgr`
+  become: yes
+  lineinfile:
+    dest: '/etc/sudoers.d/tissuemaps'
+    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/sacctmgr"
+    state: present
+    create: yes
+
+- name: Allow tm_user to control TM services (I)
+  become: yes
+  lineinfile:
+    dest: '/etc/sudoers.d/tissuemaps'
+    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl {{ item[0] }} {{ item[1] }}"
+    state: present
+    create: yes
+  with_nested:
+    # actions
+    - ['start', 'restart', 'stop', 'update']
+    # services
+    - ['tm_server', 'tm_httpd', 'tm_jobdaemon']
+
+- name: Allow tm_user to control TM services (II)
+  become: yes
+  lineinfile:
+    dest: '/etc/sudoers.d/tissuemaps'
+    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl reread"
+    state: present
+    create: yes

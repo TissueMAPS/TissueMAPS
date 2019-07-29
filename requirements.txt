@@ -26,7 +26,7 @@ funcsigs==1.0.2
 functools32==3.2.3.post2
 future==0.16.0
 futures==3.1.1
-git+https://github.com/uzh/gc3pie@v2.5.2#egg=gc3pie-2.5.2
+git+https://github.com/uzh/gc3pie@v2.5.3#egg=gc3pie-2.5.3
 GeoAlchemy2==0.4.0
 gevent==1.2.1
 greenlet==0.4.12

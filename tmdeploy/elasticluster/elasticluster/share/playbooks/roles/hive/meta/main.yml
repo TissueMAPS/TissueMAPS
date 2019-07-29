@@ -1,5 +1,0 @@
-# hive/meta/main.yml
----
-
-dependencies:
-  - { role: bigtop }

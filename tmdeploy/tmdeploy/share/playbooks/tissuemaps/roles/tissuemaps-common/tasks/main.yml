@@ -1,0 +1,96 @@
+---
+
+- name: Deploy sysadmin SSH keys and ensure they are authorized for `root` user
+  tags:
+    - tissuemaps
+    - ssh
+  authorized_key:
+    user: root
+    key: 'https://github.com/{{ item }}.keys'
+  loop: "{{ tm_admins }}"
+  when: ansible_env.ANSIBLE_CONTAINER is undefined
+
+- name: Perform distribution-dependent initialization
+  include_tasks: 'install-{{ ansible_os_family }}.yml'
+
+- name: Create TM system user
+  import_tasks: tm_user.yml
+
+- name: Create virtualenv for TissueMAPS
+  pip:
+    name: 'pip'
+    virtualenv: '{{ tm_root }}'
+
+- name: Check out TissueMAPS sources
+  git:
+    dest: '{{ tm_root }}/src'
+    repo: '{{ tm_repo_url }}'
+    version: '{{ tm_version|default("master") }}'
+    # do not overwrite local modifications
+    force: no
+    update: no
+
+# some packages pre-depend on others (i.e., they need them during
+# for their `setup.py` to even run) so we need to install those
+# first, and then we can proceed to deploying `requirements.txt`
+- name: Install TissueMAPS requirements (I)
+  pip:
+    virtualenv: '{{ tm_root }}'
+    name:
+      - 'Cython==0.25.2'
+      - 'numpy==1.12.1'
+    state: present
+
+- name: Install TissueMAPS requirements (II)
+  pip:
+    virtualenv: '{{ tm_root }}'
+    requirements: '{{ tm_root }}/src/requirements.txt'
+    state: present
+  environment:
+    # needed by `javabridge` for installing correctly
+    JAVA_HOME: '{{ java_home }}'
+
+- name: Install TissueMAPS code
+  pip:
+    virtualenv: '{{ tm_root }}'
+    name: './{{ item }}'
+    state: present
+    editable: yes
+    chdir: '{{ tm_root }}/src'
+  loop:
+    # order is important, as later libraries depend on earlier ones
+    - 'jtlibrary/python/jtlibrary'
+    - 'jtlibrary/python/jtmodules'
+    - 'tmlibrary'
+    - 'tmserver'
+
+# this must be done *after* we create the virtualenv, otherwise
+# the `virtualenv` command will fail
+- name: Make service directories for TM
+  file:
+    path: '{{ item }}'
+    state: directory
+    mode: '0755'
+    owner: tissuemaps
+    group: tissuemaps
+  loop:
+    - '{{ tm_root }}/bin'
+    - '{{ tm_root }}/etc'
+    - '{{ tm_root }}/log'
+    - '{{ tm_root }}/log/metrics'
+    - '{{ tm_root }}/run'
+    - '{{ tm_root }}/var'
+    - '{{ tm_root }}/var/jobdaemon'
+    - '{{ tm_root }}/var/filesystem'
+
+- name: Deploy TM configuration files (common)
+  template:
+    dest: '{{ item.dest }}'
+    src:  '{{ item.src }}'
+    owner: root
+    group: root
+  loop:
+    - src: 'tissuemaps.cfg.j2'
+      dest: '{{ tm_root }}/etc/tissuemaps.cfg'
+    - src: 'gc3pie.conf.j2'
+      dest: '{{ tm_root }}/etc/gc3pie.conf'

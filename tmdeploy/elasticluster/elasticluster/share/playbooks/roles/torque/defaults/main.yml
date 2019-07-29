@@ -1,3 +1,0 @@
----
-
-torque_master_host: '{{ groups.torque_master[0]|default("torque") }}'

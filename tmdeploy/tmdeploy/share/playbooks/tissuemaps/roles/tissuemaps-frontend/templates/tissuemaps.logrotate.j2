@@ -1,0 +1,28 @@
+{{ tm_root }}/log/tm_server.main.log
+{{ tm_root }}/log/tm_server.access.log
+{
+  rotate 8
+  weekly
+  compress
+  delaycompress
+  missingok
+  create 0770 {{ tm_user }} {{ tm_user }}
+  postrotate
+    echo 'l' > {{ tm_root }}/run/tm_server.fifo
+  endscript
+}
+
+
+{{ tm_root }}/log/tm_httpd.access.log
+{{ tm_root }}/log/tm_httpd.error.log
+{
+  rotate 8
+  weekly
+  compress
+  delaycompress
+  missingok
+  create 0770 {{ tm_user }} {{ tm_user }}
+  postrotate
+    # tell NginX to reopen logs!
+  endscript
+}

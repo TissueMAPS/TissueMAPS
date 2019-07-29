@@ -1,9 +1,0 @@
----
-
-- name: Configure Samba servers
-  tags:
-    - samba
-  hosts: samba
-  become: yes
-  roles:
-    - role: smb-server
