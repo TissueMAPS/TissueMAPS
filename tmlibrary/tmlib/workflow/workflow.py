@@ -104,7 +104,7 @@ class WorkflowStep(AbortOnError, SequentialTaskCollection, State):
         --------
         :class:`tmlib.workflow.description.WorkflowStepDescription`
         '''
-        logger.debug('instantiate step "%s"', name)
+        logger.debug('instanciate step "%s"', name)
         super(WorkflowStep, self).__init__(tasks=[], jobname=name)
         self.name = name
         self.experiment_id = experiment_id
