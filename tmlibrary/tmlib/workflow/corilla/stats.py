@@ -97,7 +97,7 @@ class OnlineStatistics(object):
                 self._mean += norm_delta_mean
             except Exception as ex:
                 raise MemoryError(
-                    "unsufficiant memory available for updating "
+                    "insufficient memory available for updating "
                     "online statistics"
                 )
             self._M2 = self._M2 + delta_mean * (array - self._mean)
