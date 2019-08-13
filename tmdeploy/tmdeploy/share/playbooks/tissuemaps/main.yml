@@ -16,9 +16,16 @@
 
 ---
 
+# We need to do this, otherwise later plays may file with "undefined
+# variable" error when referencing `hostvars[...]`
+- name: Gather facts about all hosts
+  hosts: all
+  gather_facts: yes
+  any_errors_fatal: yes
+
+
 # Install database before the TM server, so the server processes can
 # already connect to it upon startup and not error out
-
 - name: Configure PostgreSQL workers
   tags:
     - database
