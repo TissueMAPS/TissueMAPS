@@ -1,10 +1,25 @@
 ---
 
+# Ansible uses `usermod`, which is not able to modify NIS-based
+# records, so skip creation of user and group if they are not local to
+# /etc/passwd
+
+- name: Does the TM system group exist yet?
+  command: |
+    getent group {{ tm_group }}
+  register: _tm_group_exists
+
 - name: Create TM system group
-  user:
+  group:
     name: '{{ tm_user }}'
     system: yes
     state: present
+  when: _tm_group_exists is failed
+
+- name: Does the TM system user exist yet?
+  command: |
+    getent passwd {{ tm_group }}
+  register: _tm_user_exists
 
 - name: Create TM system user
   user:
@@ -14,6 +29,7 @@
     comment: "System user for running TissueMAPS services"
     system: yes
     state: present
+  when: _tm_user_exists is failed
 
 - name: Ensure `~/.ssh` directory exists
   file:
