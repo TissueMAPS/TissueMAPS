@@ -1,5 +1,5 @@
 # TmDeploy - Automated deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -117,7 +117,7 @@ def build_inventory(setup):
                         # Every server is part of the "compute-storage"
                         # security group, which is important for servers to be
                         # able to connect to each other when part of a cluster.
-                        security_groups = 'compute-storage'
+                        security_groups = 'default,compute-storage'
                         if 'web' in v:
                             host_vars['assign_public_ip'] = 'yes'
                             security_groups = ','.join([
