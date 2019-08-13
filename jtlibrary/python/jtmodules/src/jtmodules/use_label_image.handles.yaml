@@ -8,11 +8,6 @@ input:
       key:
       help: Image that should be used as a "label image".
 
-    - name: plot
-      type: Plot
-      value: false
-      help: Should a figure be created?
-
 output:
 
     - name: label_image
@@ -21,6 +16,3 @@ output:
       help: >
         Labeled image: pixels belonging to the same object
         have a unique non-zero value.
-
-    - name: figure
-      type: Figure

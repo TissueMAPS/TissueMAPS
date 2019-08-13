@@ -16,7 +16,7 @@ import collections
 
 VERSION = '0.1.0'
 
-Output = collections.namedtuple('Output', ['label_image', 'figure'])
+Output = collections.namedtuple('Output', ['label_image'])
 
 
 def main(input_image, plot=False):
@@ -40,9 +40,4 @@ def main(input_image, plot=False):
     -------
     jtmodules.label.Output[Union[numpy.ndarray, str]]
     '''
-    if plot:
-        figure = f.plot()
-    else:
-        figure = str()
-
-    return Output(input_image, figure)
+    return Output(input_image)
