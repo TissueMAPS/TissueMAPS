@@ -1,7 +1,7 @@
 #! /bin/sh
 
 # reconstruct std environment (not there when running under supervisord)
-export HOME="/home/{{ tm_user }}"
+export HOME="{{ tm_user_home }}"
 export USER="{{ tm_user }}"
 export LOGNAME="{{ tm_user }}"
 export SHELL="/bin/sh"

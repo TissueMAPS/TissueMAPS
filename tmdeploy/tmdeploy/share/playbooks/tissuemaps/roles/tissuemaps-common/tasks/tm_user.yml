@@ -10,14 +10,14 @@
   user:
     name: '{{ tm_user }}'
     group: '{{ tm_user }}'
-    home: '{{ tm_root }}'
+    home: '{{ tm_user_home }}'
     comment: "System user for running TissueMAPS services"
     system: yes
     state: present
 
 - name: Ensure `~/.ssh` directory exists
   file:
-    path: '{{ tm_root }}/.ssh'
+    path: '{{ tm_user_home }}/.ssh'
     owner: '{{ tm_user }}'
     group: '{{ tm_user }}'
     mode: 0755

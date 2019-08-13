@@ -51,7 +51,7 @@
     - '{{ tm_root }}/var'
     - '{{ tm_storage_home }}'
     - '{{ tm_root }}/var/jobdaemon'
-    - '/home/{{ tm_user }}/.gc3'
+    - '{{ tm_user_home }}/.gc3'
 
 
 - name: Deploy TM configuration files
@@ -64,7 +64,7 @@
     # the following files are shared among *all* TM instances, so
     # their content should include a parameter depending on the host name
     - src: 'tm_jobdaemon.log.conf.j2'
-      dest: '/home/{{ tm_user }}/.gc3/tm_jobdaemon.log.conf'
+      dest: '{{ tm_user_home }}/.gc3/tm_jobdaemon.log.conf'
     # the following files reside on a local filesystem on each TM instance
     - src: 'uwsgi.ini.j2'
       dest: '{{ tm_root }}/etc/uwsgi.ini'

@@ -34,7 +34,7 @@ tm_storage_home: '{{ tm_root }}/var/filesystem'
 # UNIX user data of the system user running TM services
 tm_user: tissuemaps
 tm_group: tissuemaps
-tm_home: '/home/{{ tm_user }}'
+tm_user_home: '/home/{{ tm_user }}'
 
 # what TCP port should TM be accessible on
 tm_web_port: 80
