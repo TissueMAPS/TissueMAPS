@@ -51,7 +51,7 @@
   postgresql_user:
     db: "tissuemaps"
     port: "{{ db_port[db_node_kind] }}"
-    user: "tissuemaps"
+    user: "{{ tm_user }}"
     role_attr_flags: LOGIN
     login_user: "postgres"
     login_host: 127.0.0.1
@@ -64,7 +64,7 @@
     type: database
     obj: "tissuemaps"
     port: "{{ db_port[db_node_kind] }}"
-    role: "tissuemaps"
+    role: "{{ tm_user }}"
     privs: ALL
     login_user: "postgres"
     login_host: 127.0.0.1
@@ -81,7 +81,7 @@
     type: table
     schema: pg_catalog
     port: "{{ db_port[db_node_kind] }}"
-    role: "tissuemaps"
+    role: "{{ tm_user }}"
     login_user: "postgres"
     login_host: 127.0.0.1
   loop:

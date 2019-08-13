@@ -44,3 +44,4 @@ db_log_directory: /var/log/postgresql
 # (or before) the main TM roles, but should be overwritten by a
 # playbook-level variable in any serious usage
 tm_root: '/srv/tissuemaps'
+tm_user: 'tissuemaps'
