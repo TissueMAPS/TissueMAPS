@@ -16,3 +16,7 @@
 
 ---
 bf_version: '5.2.3'
+
+# root directory for all TissueMAPS-related files
+# (this is needed for tasks that run before the inclusion of `tissuemaps-common`)
+tm_root: '/srv/tissuemaps'
