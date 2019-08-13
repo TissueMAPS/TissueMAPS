@@ -129,7 +129,7 @@ def _build_ansible_container_command(verbosity, action_command):
     return cmd
 
 
-def _build_ansible_vm_command(verbosity, playbook, variables=None):
+def _build_ansible_vm_command(verbosity, playbook, variables=None, become=True):
     # The "tm_inventory" script should be on the path upon installation.
     inventory_file = which('tm_inventory')
     cmd = ['ansible-playbook', '-i', inventory_file, playbook]
@@ -143,7 +143,8 @@ def _build_ansible_vm_command(verbosity, playbook, variables=None):
                 cmd.extend(['-e', json.dumps({k: v})])
             else:
                 cmd.extend(['-e', '='.join([k, v])])
-    cmd.append('--become')
+    if become:
+        cmd.append('--become')
     # since commit e50157f, ElastiCluster is passing down the
     # cluster definition to the playbooks in the `elasticluster`
     # global dictionary; however, as of 2019-03-19, the only two
@@ -238,7 +239,7 @@ def launch_vm(args):
     commands.append(['tm_inventory', '--refresh-cache'])
     tmdeploy_playbooks_dir = _get_tmdeploy_playbooks_dir()
     playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
-    cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
+    cmd = _build_ansible_vm_command(args.verbosity, playbook, variables, become=False)
     commands.append(cmd)
     _run_vm_commands(commands, args.setup_file)
 
@@ -250,7 +251,7 @@ def terminate_vm(args):
     commands.append(['tm_inventory', '--refresh-cache'])
     tmdeploy_playbooks_dir = _get_tmdeploy_playbooks_dir()
     playbook = os.path.join(tmdeploy_playbooks_dir, 'instance.yml')
-    cmd = _build_ansible_vm_command(args.verbosity, playbook, variables)
+    cmd = _build_ansible_vm_command(args.verbosity, playbook, variables, become=False)
     commands.append(cmd)
     _run_vm_commands(commands, args.setup_file)
 
