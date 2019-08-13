@@ -15,8 +15,19 @@ export LC_ALL=C
 . {{ tm_root }}/bin/env.sh
 . {{ tm_root }}/bin/activate
 
-# run GC3Pie jobdaemon
 jobdaemon_dir='{{ tm_root }}/var/jobdaemon'
+pidfile="${jobdaemon_dir}/tm_jobdaemon.pid"
+
+# remove PID file if stale
+if [ -r "$pidfile" ]; then
+    pid=$(cat "$pidfile")
+    if ! (test "$pid" -gt 0 && test -d /proc/$pid); then
+        echo 1>&2 "PID file '$pidfile' references non-existing process $pid; removing it ..."
+        rm -v -f "$pidfile"
+    fi
+fi
+
+# run GC3Pie jobdaemon
 exec tm_jobdaemon.py --foreground \
      --working-dir "$jobdaemon_dir" \
      --listen localhost:9197 \
