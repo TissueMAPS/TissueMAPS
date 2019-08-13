@@ -6,7 +6,7 @@ input:
     - name: input_image
       type: IntensityImage
       key:
-      help: Image that should be converted.
+      help: Image that should be used as a "label image".
 
     - name: plot
       type: Plot
@@ -19,10 +19,8 @@ output:
       type: LabelImage
       key: label.label_image
       help: >
-        Labeled image with pixels of each connected component
-        having a unique non-zero value.
+        Labeled image: pixels belonging to the same object
+        have a unique non-zero value.
 
     - name: figure
       type: Figure
-
-

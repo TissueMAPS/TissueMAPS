@@ -20,22 +20,25 @@ Output = collections.namedtuple('Output', ['label_image', 'figure'])
 
 
 def main(input_image, plot=False):
-    '''Takes in an `intensity_image` and converts it to a `label_image` (not
-    changing anything in the image => it already needs to be a label image, e.g.
-    a label image created in cellprofiler and uploaded to TissueMaps).
+    '''
+    Takes in an `intensity_image` (i.e., a TissueMAPS input image) and
+    re-uses it as a `label_image` (i.e., pixels belonging to the same
+    object have the same unique non-zero integer value).
+
+    Nothing is changed in the input image: it already needs to be a
+    label image, e.g.  a label image created in cellprofiler and
+    uploaded to TissueMaps.
 
     Parameters
     ----------
     input_image: numpy.ndarray[int32]
-        intensity image that should be converted to a label image
+        intensity image that should be re-used as a label image
     plot: bool, optional
         whether a plot should be generated (default: ``False``)
 
     Returns
     -------
     jtmodules.label.Output[Union[numpy.ndarray, str]]
-
-
     '''
     if plot:
         figure = f.plot()
