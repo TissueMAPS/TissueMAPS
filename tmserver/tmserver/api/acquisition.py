@@ -340,6 +340,15 @@ def register(experiment_id, acquisition_id):
     path = data['path']
     logger.info('Registering microscope files from path `%s` ...', path)
 
+    if not os.path.isabs(path):
+        raise MalformedRequestError("Cannot register relative paths.")
+
+    if not os.path.isdir(path):
+        raise MalformedRequestError(
+            "Path `{}` is not an existing directory on this TM server"
+            .format(path)
+        )
+
     try:
         filenames = [
             f for f in os.listdir(path)
@@ -347,8 +356,9 @@ def register(experiment_id, acquisition_id):
                 and not os.path.isdir(os.path.join(path, f)))
         ]
     except OSError as err:
-        logger.error("Cannot list directory `%s`: %s", path, err)
-        raise
+        msg = "Cannot list directory `{}`: {}".format(path, err)
+        logger.error(msg)
+        raise MalformedRequestError(msg)
 
     with tm.utils.ExperimentSession(experiment_id) as session:
         experiment = session.query(tm.Experiment).one()

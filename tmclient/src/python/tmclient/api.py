@@ -1269,6 +1269,13 @@ class TmClient(HttpClient):
             names of registered files
         '''
 
+        if not os.path.isdir(os.path.abspath(path)):
+            msg = (
+                "Path {} does not point to an existing directory."
+                .format(path))
+            logger.error(msg)
+            return msg
+
         logger.info(
             'register directory `%s` for experiment "%s",'
             ' plate "%s" and acquisition "%s"',
