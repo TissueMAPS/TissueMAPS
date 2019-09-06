@@ -1,5 +1,5 @@
 # TmServer - TissueMAPS server application.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -396,7 +396,7 @@ def register(experiment_id, acquisition_id):
             try:
                 os.symlink(path, path_to_link)
             except Exception as err:
-                logger.debug(
+                logger.error(
                     "Error linking source directory `%s` to TM directory `%s`: %s",
                     path, path_to_link, err)
                 raise
@@ -411,7 +411,7 @@ def register(experiment_id, acquisition_id):
                     .format(
                         a=acquisition.id,
                         p=plate.id,
-                        e=epxeriment.id,
+                        e=experiment.id,
                         d=p1))
 
         microscope_files = session.query(tm.MicroscopeImageFile).filter_by(acquisition_id=acquisition.id).all()
