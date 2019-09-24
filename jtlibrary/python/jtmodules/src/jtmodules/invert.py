@@ -1,4 +1,4 @@
-# Copyright (C) 2016 University of Zurich.
+# Copyright (C) 2016, 2019 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,11 +63,9 @@ def main(image, plot=False):
         else:
             data = [
                 plotting.create_mask_image_plot(
-                    image, 'ul', clip=True,
-                ),
+                    image, 'ul'),
                 plotting.create_mask_image_plot(
-                    inverted_image, 'ur', clip=True,
-                ),
+                    inverted_image, 'ur'),
             ]
         figure = plotting.create_figure(
             data, title='original and inverted image'
