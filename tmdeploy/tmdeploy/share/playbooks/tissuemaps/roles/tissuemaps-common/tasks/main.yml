@@ -74,8 +74,8 @@
     path: '{{ item }}'
     state: directory
     mode: '0755'
-    owner: tissuemaps
-    group: tissuemaps
+    owner: '{{ tm_user }}'
+    group: '{{ tm_group }}'
   loop:
     - '{{ tm_root }}/bin'
     - '{{ tm_root }}/etc'
@@ -85,6 +85,7 @@
     - '{{ tm_root }}/var'
     - '{{ tm_root }}/var/jobdaemon'
     - '{{ tm_storage_home }}'
+    - '{{ tm_user_home }}/.gc3'
 
 - name: Deploy TM configuration files (common)
   template:

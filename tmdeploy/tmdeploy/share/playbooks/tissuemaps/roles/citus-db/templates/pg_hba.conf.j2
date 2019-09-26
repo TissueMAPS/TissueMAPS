@@ -22,12 +22,12 @@ host    all             postgres        {{ loaddr }}/32 trust
 host    all             postgres        127.0.0.1/32    trust
 host    all             postgres        ::1/128         trust
 
-# Trust user `tissuemaps` on the local host
+# Trust user `{{tm_user}}` on the local host
 host    tissuemaps      {{ tm_user }}      {{ loaddr }}/32 trust
 host    tissuemaps      {{ tm_user }}      127.0.0.1/32    trust
 host    tissuemaps      {{ tm_user }}      ::1/128         trust
 
-# Trust user `tissuemaps` on the cluster
+# Trust user `{{tm_user}}` on the cluster
 {% for host in groups.tissuemaps_compute %}
 host    tissuemaps      {{ tm_user }}      {{ hostvars[host].ansible_default_ipv4.address }}/32 trust
 {% endfor %}
