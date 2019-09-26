@@ -1,16 +1,62 @@
-# TmDeploy - Automated setup and deployment of TissueMAPS in the cloud.
-# Copyright (C) 2016-2018 University of Zurich.
+# Set semaphore limits for PostGreSQL;
+# for more information, see:
+# - https://www.postgresql.org/docs/9.6/kernel-resources.html
+# - https://gerardnico.com/os/linux/semaphore
+#
+# If the limits are set incorrectly, the PostGreSQL server fails to
+# start with an error like this:
+#
+#     FATAL:  XX000: could not create semaphores: No space left on device
+#     DETAIL:  Failed system call was semget(5432065, 17, 03600).
+#     HINT: This error does *not* mean that you have run out of disk
+#       space.  It occurs when either the system limit for the maximum
+#       number of semaphore sets (SEMMNI), or the system wide maximum
+#       number of semaphores (SEMMNS), would be exceeded.  You need to
+#       raise the respective kernel parameter.  Alternatively, reduce
+#       PostgreSQL's consumption of semaphores by reducing its
+#       max_connections parameter.  The PostgreSQL documentation
+#       contains more information about configuring your system for
+#       PostgreSQL.
+#
 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+{#
+ SEMMSL: Maximum number of semaphores per set
 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+ PostGreSQL recommends "at least 17", but Linux 3.19+ defaults to 32000
+ #}
+{% set SEMMSL = 32000 %}
 
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-kernel.sem = 250 60000 32 250
+{#
+ SEMMNS: Maximum number of semaphores system-wide
+
+ PostGreSQL docs say this should be at least `(max_connections +
+ autovacuum_max_workers + max_worker_processes + 5) / 16)`
+ plus room for other applications.
+
+ Double that number since we may be running two large PostGreSQL
+ processes on the same VM (master and worker DB).
+ #}
+{% set SEMMNS = [64000, 2*(pg_max_connections|int + 2*pg_max_worker_processes|int)/16]|max %}
+
+{#
+ SEMOPM: Maximum number of operations per `semop()` call
+
+ Linux defaults to 32; there seems to be no reason to change this.
+ Oracle recommends that SEMOPM is set to the same number as SEMMSL,
+ but I can find no such recommendation for PostGreSQL.
+ #}
+{% set SEMOPM = 32 %}
+
+{#
+ SEMMNI: Maximum number of semaphore identifiers (i.e., sets)
+
+ PostGreSQL docs say this should be at least `(max_connections +
+ autovacuum_max_workers + max_worker_processes + 5) / 16)`; but
+ Linux 3.19+ defaults to 32000 so do not lower that.
+
+ Double that number since we may be running two large PostGreSQL
+ processes on the same VM (master and worker DB).
+#}
+{% set SEMMNI = [32000, 2*(pg_max_connections|int + 2*pg_max_worker_processes|int)/16]|max %}
+
+kernel.sem = {{SEMMSL}} {{SEMMNS}} {{SEMOPM}} {{SEMMNI}}
