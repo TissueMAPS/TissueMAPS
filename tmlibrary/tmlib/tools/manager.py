@@ -135,11 +135,9 @@ class ToolRequestManager(SubmissionManager):
             )
             cores = cfg.resource.max_cores_per_job
 
-        # FIXME: this needs to be revisited when GC3Pie issue #624 is fixed;
-        # for the moment, see https://github.com/uzh/gc3pie/issues/624#issuecomment-328122862
-        # as to why this is the right way to compute max memory
+        # Until issue gc3pie#624 is fixed, `max_memory_per_core`
+        # doubles up as "total memory per node"
         max_memory_per_node = cfg.resource.max_memory_per_core.amount(Memory.MB)
-        max_memory_per_core = max_memory_per_node / cfg.resource.max_cores_per_job
         if memory > max_memory_per_node:
             logger.warn(
                 'requested memory exceeds available memory per node: %d MB',
@@ -151,17 +149,16 @@ class ToolRequestManager(SubmissionManager):
         logger.debug('allocated time for job: %s', duration)
         logger.debug('allocated memory for job: %s MB', memory)
         logger.debug('allocated cores for job: %d', cores)
-        job = ToolJob(
+        return ToolJob(
             tool_name=self.tool_name,
             arguments=self._build_command(submission_id),
             output_dir=self._log_location,
             submission_id=submission_id,
-            user_name=user_name
+            user_name=user_name,
+            requested_walltime=Duration(duration),
+            requested_memory=Memory(memory, Memory.MB),
+            requested_cores=cores,
         )
-        job.requested_walltime = Duration(duration)
-        job.requested_memory = Memory(memory, Memory.MB)
-        job.requested_cores = cores
-        return job
 
     def get_log_output(self, submission_id):
         '''Gets log output (standard output and error).
