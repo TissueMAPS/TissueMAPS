@@ -7,6 +7,7 @@
 - name: Does the TM system group exist yet?
   command: |
     getent group {{ tm_group }}
+  ignore_errors: yes
   register: _tm_group_exists
 
 - name: Create TM system group
@@ -19,6 +20,7 @@
 - name: Does the TM system user exist yet?
   command: |
     getent passwd {{ tm_group }}
+  ignore_errors: yes
   register: _tm_user_exists
 
 - name: Create TM system user
