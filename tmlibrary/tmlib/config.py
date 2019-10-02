@@ -267,7 +267,7 @@ class LibraryConfig(TmapsConfig):
             '~/TissueMAPS/jtlibrary/modules',  # compat with TM <=0.3.3
         ]
         self.formats_home = '~/tmformats'
-        self.storage_home = '/storage/filesystem'
+        self.storage_home = '/srv/tissuemaps/var/filesystem'
         self._resource = None
         self.read()
 
