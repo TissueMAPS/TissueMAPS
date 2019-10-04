@@ -28,10 +28,9 @@
       - nfs-utils
   when: 'ansible_os_family == "RedHat"'
 
-- name: Mount TM root from front-end server
-  mount:
-    path: '{{ tm_root }}'
-    src: 'groups.tissuemaps_server[0]:{{ tm_root }}'
-    fstype: nfs
-    opts: rw,async
-    state: present
+- name: Mount TM root from front-end server on-demand
+  file:
+    state: link
+    src: '/net/nfs4/{{ groups.tissuemaps_server[0] }}:{{ tm_root }}'
+    dest: '{{ tm_root }}'
+    force: yes
