@@ -76,7 +76,7 @@ class ExperimentInfo(object):
         if not os.path.exists(filename):
             raise OSError('YAML file does not exist: {0}'.format(filename))
         with open(filename) as f:
-            return yaml.load(f)
+            return yaml.safe_load(f)
 
     @staticmethod
     def _load_csv(filename):

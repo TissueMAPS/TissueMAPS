@@ -180,7 +180,7 @@ class YamlReader(Reader):
             file content
         '''
         logger.debug('read YAML data from file: %s', self.filename)
-        return yaml.load(self._stream)
+        return yaml.safe_load(self._stream)
 
 
 class DatatableReader(Reader):

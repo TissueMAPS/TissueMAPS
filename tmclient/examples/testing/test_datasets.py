@@ -750,7 +750,7 @@ def load_test_params(dataset_dir, filename='TEST.yml'):
                 .format(basename(filename), dataset_dir))
     logging.debug("Loading test parameters file `%s` ...", filename)
     with open(filename) as stream:
-        test_params = yaml.load(stream)
+        test_params = yaml.safe_load(stream)
     logging.info("Loaded parameters for datasets: %r", test_params.keys())
     return test_params
 

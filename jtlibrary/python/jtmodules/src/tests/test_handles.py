@@ -1,4 +1,4 @@
-# Copyright (C) 2016 University of Zurich.
+# Copyright (C) 2016, 2019 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ def test_handles_yaml_syntax(handles):
     for name, filename in handles.iteritems():
         with open(filename, 'r') as f:
             try:
-                yaml.load(f)
+                yaml.safe_load(f)
             except yaml.error.YAMLError as err:
                 error_message = (
                     'Handles file "%s" doesn\'t have correct YAML syntax:\n%s'
@@ -90,7 +90,6 @@ def test_handles_content(handles):
     for name, filename in handles.iteritems():
         print 'test handles "%s"' % name
         with open(filename, 'r') as f:
-            description = yaml.load(f)
+            description = yaml.safe_load(f)
         _check_handles_structure(description, filename)
         _check_handles_input_output(description, filename)
-
