@@ -48,6 +48,11 @@ from tmclient.errors import ResourceError
 from tmclient.auth import prompt_for_credentials, load_credentials_from_file
 
 
+# see: https://stackoverflow.com/a/27519509/459543
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/unicode",
+    lambda loader, node: node.value)
+
 logger = logging.getLogger(__name__)
 
 
