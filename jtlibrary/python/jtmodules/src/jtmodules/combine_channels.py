@@ -21,7 +21,7 @@ import collections
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.2'
+VERSION = '0.0.3'
 
 Output = collections.namedtuple('Output', ['combined_image', 'figure'])
 
@@ -35,9 +35,9 @@ def main(image_1, image_2, weight_1, weight_2, plot=False):
         2D unsigned integer array
     input_mask_2: numpy.ndarray[numpy.uint8 or numpy.uint16]
         2D unsigned integer array
-    weight_1: int
+    weight_1: float
         weight for `image_1`
-    weight_2: int
+    weight_2: float
         weight for `image_2`
 
     Returns
@@ -47,19 +47,9 @@ def main(image_1, image_2, weight_1, weight_2, plot=False):
     Raises
     ------
     ValueError
-        when `weight_1` or `weight_2` are not positive integers
-    ValueError
         when `image_1` and `image_2` don't have the same dimensions
         and data type and if they don't have unsigned integer type
     '''
-    if not isinstance(weight_1, int):
-        raise TypeError('Weight #1 must have integer type.')
-    if not isinstance(weight_2, int):
-        raise TypeError('Weight #2 must have integer type.')
-    if weight_1 < 1:
-        raise ValueError('Weight #1 must be a positive integer.')
-    if weight_2 < 1:
-        raise ValueError('Weight #2 must be a positive integer.')
     logger.info('weight for first image: %d', weight_1)
     logger.info('weight for second image: %d', weight_2)
 
@@ -75,13 +65,20 @@ def main(image_1, image_2, weight_1, weight_2, plot=False):
     else:
         raise ValueError('The two images must have unsigned integer type.')
 
-    logger.info('cast images to type float for arythmetics')
-    img_1 = mh.stretch(image_1, 0, 1, float)
-    img_2 = mh.stretch(image_2, 0, 1, float)
+    #logger.info('cast images to type float for arythmetics')
+    #img_1 = mh.stretch(image_1, 0, 1, float)
+    #img_2 = mh.stretch(image_2, 0, 1, float)
     logger.info('combine images using the provided weights')
-    combined_image = img_1 * weight_1 + img_2 * weight_2
+    #combined_image = img_1 * weight_1 + img_2 * weight_2
+    combined_image = image_1 * weight_1 + image_2 * weight_2
+    # Set all values below 0 to 0
+    combined_image[combined_image < 0] = 0
+    combined_image[combined_image > max_val] = max_val
     logger.info('cast combined image back to correct data type')
-    combined_image = mh.stretch(combined_image, 0, max_val, image_1.dtype)
+    #combined_image = mh.stretch(combined_image, 0, max_val, image_1.dtype)
+
+    # Cast image to the same type as the input image
+    combined_image = combined_image.astype(image_1.dtype)
 
     if plot:
         from jtlib import plotting
