@@ -16,6 +16,10 @@ import yaml
 import logging
 import getpass
 
+# see: https://stackoverflow.com/a/27519509/459543
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/unicode",
+    lambda loader, node: node.value)
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +57,7 @@ def load_credentials_from_file(username):
     filename = os.path.expandvars(os.path.join('$HOME', '.tm_pass'))
     try:
         with open(filename) as f:
-            credentials = yaml.load(f.read())
+            credentials = yaml.safe_load(f.read())
     except Exception as err:
         raise RuntimeError(
             'Cannot read credentials from file `{0}`: {1}'

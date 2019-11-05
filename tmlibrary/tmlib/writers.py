@@ -1,5 +1,5 @@
 # TmLibrary - TissueMAPS library for distibuted image analysis routines.
-# Copyright (C) 2016-2018 University of Zurich.
+# Copyright (C) 2016-2019 University of Zurich.
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
@@ -29,6 +29,11 @@ from abc import ABCMeta
 from abc import abstractmethod
 
 from tmlib.utils import same_docstring_as
+
+# see: https://stackoverflow.com/a/27519509/459543
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/unicode",
+    lambda loader, node: node.value)
 
 logger = logging.getLogger(__name__)
 

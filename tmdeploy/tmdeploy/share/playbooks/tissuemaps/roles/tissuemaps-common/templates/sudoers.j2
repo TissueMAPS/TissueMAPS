@@ -1,0 +1,20 @@
+#
+# THIS FILE IS CONTROLLED BY ANSIBLE!
+# Local modifications will be overwritten
+# next time the playbook is run.
+#
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/sacctmgr
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl reread
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl restart tm_httpd
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl restart tm_jobdaemon
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl restart tm_server
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl start tm_httpd
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl start tm_jobdaemon
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl start tm_server
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl status
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl stop tm_httpd
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl stop tm_jobdaemon
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl stop tm_server
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl update tm_httpd
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl update tm_jobdaemon
+{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl update tm_server

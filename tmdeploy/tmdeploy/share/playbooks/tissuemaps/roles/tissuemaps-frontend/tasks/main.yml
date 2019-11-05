@@ -33,27 +33,8 @@
   import_tasks: tmui.yml
 
 
-# this must be done *after* we create the virtualenv, otherwise
-# the `virtualenv` command will fail
-- name: Make service directories for TM
-  file:
-    path: '{{ item }}'
-    state: directory
-    mode: '0755'
-    owner: '{{ tm_user }}'
-    group: '{{ tm_user }}'
-  loop:
-    - '{{ tm_root }}/bin'
-    - '{{ tm_root }}/etc'
-    - '{{ tm_root }}/log'
-    - '{{ tm_root }}/log/metrics'
-    - '{{ tm_root }}/run'
-    - '{{ tm_root }}/var'
-    - '{{ tm_storage_home }}'
-    - '{{ tm_root }}/var/jobdaemon'
-    - '{{ tm_user_home }}/.gc3'
-
-
+# destination directories have been created in role
+# `tissuemaps-common` already
 - name: Deploy TM configuration files
   template:
     dest: '{{ item.dest }}'
@@ -97,6 +78,19 @@
     - '{{ tm_root }}/bin/tm_httpd.sh'
     - '{{ tm_root }}/bin/tm_jobdaemon.sh'
     - '{{ tm_root }}/bin/tm_server.sh'
+
+
+- name: 'Ensure relevant directories are owner by {{ tm_user }}'
+  file:
+    path: '{{ item }}'
+    owner: '{{ tm_user }}'
+    group: '{{ tm_group }}'
+    recurse: yes
+  loop:
+    - '{{ tm_root }}/log'
+    - '{{ tm_root }}/run'
+    - '{{ tm_root }}/src'
+    - '{{ tm_root }}/var/jobdaemon'
 
 
 - name: Export TM root to compute nodes

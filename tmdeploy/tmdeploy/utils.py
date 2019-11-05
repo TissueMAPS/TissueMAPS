@@ -20,6 +20,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# see: https://stackoverflow.com/a/27519509/459543
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/unicode",
+    lambda loader, node: node.value)
 
 def to_json(description):
     return json.dumps(description, sort_keys=True, indent=2)

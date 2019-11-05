@@ -48,6 +48,11 @@ from tmclient.errors import ResourceError
 from tmclient.auth import prompt_for_credentials, load_credentials_from_file
 
 
+# see: https://stackoverflow.com/a/27519509/459543
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/unicode",
+    lambda loader, node: node.value)
+
 logger = logging.getLogger(__name__)
 
 
@@ -2811,7 +2816,7 @@ class TmClient(HttpClient):
             raise ResourceError('filename must have "yaml" or "yml" extension')
         with open(filename) as f:
             logger.info('load workflow description from file: %s', filename)
-            description = yaml.load(f.read())
+            description = yaml.safe_load(f.read())
         self.upload_workflow_description(description)
 
     def submit_workflow(self, description=None):
@@ -3148,7 +3153,7 @@ class TmClient(HttpClient):
             )
         logger.debug('load pipeline filename: %s', pipeline_filename)
         with open(pipeline_filename) as f:
-            pipeline_description = yaml.load(f.read())
+            pipeline_description = yaml.safe_load(f.read())
 
         handles_subdirectory = os.path.join(directory, 'handles')
         if not os.path.exists(handles_subdirectory):
@@ -3165,7 +3170,7 @@ class TmClient(HttpClient):
             )[0])[0]
             logger.debug('load handles file: %s', handles_filename)
             with open(handles_filename) as f:
-                handles_descriptions[name] = yaml.load(f.read())
+                handles_descriptions[name] = yaml.safe_load(f.read())
 
         self.upload_jterator_project(
             pipeline_description, handles_descriptions

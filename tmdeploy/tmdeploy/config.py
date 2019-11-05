@@ -556,7 +556,7 @@ class AnsibleHostVariableSection(_SetupSection):
     }
 
     def __init__(self, description):
-        self.volume_mountpoint = '/storage'
+        self.volume_mountpoint = '/srv/tissuemaps/var'
         self.ssh_user = 'ubuntu'
         self.tm_user = 'tissuemaps'
         self._tm_group = None

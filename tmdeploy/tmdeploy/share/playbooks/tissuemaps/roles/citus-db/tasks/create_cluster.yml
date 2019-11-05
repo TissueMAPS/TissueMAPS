@@ -55,6 +55,16 @@
     mode: 0700
 
 
+# If permissions are screwed, cluster DN init will fail.
+- name: Ensure DB data directory has the right permissions
+  file:
+    path: '{{ db_data_directory }}'
+    recurse: yes
+    owner: "postgres"
+    group: "postgres"
+    mode: 'go-rwx'
+
+
 - name: Initialize DB cluster
   command: |
     {{ db_executable_directory }}/pg_ctl init -D {{ db_data_directory }}/{{ db_node_kind }} -l {{ db_log_directory }}/initdb-{{ db_node_kind }}.log -o '--locale=en_US.UTF-8'
@@ -63,12 +73,3 @@
     creates: "{{ db_data_directory }}/{{ db_node_kind }}/PG_VERSION"
   become: yes
   become_user: 'postgres'
-
-
-- name: Fix permissions on DB data directory
-  file:
-    path: '{{ db_data_directory }}'
-    recurse: yes
-    owner: "postgres"
-    group: "postgres"
-    mode: 'go-rwx'

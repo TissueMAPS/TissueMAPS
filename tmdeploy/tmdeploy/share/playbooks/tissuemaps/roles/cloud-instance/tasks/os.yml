@@ -82,20 +82,6 @@
   run_once: yes
   when: instance_state == "present"
 
-- name: Create ingress TCP (HTTP 8080) rule for web security group
-  local_action: os_security_group_rule
-  args:
-    state: present
-    security_group: web
-    protocol: tcp
-    direction: ingress
-    port_range_min: 8002
-    port_range_max: 8002
-    remote_ip_prefix: 0.0.0.0/0
-    region_name: "{{ region }}"
-  run_once: yes
-  when: instance_state == "present"
-
 - name: Create ingress TCP (HTTP 80) rule for web security group
   local_action: os_security_group_rule
   args:

@@ -7,6 +7,7 @@
 - name: Does the TM system group exist yet?
   command: |
     getent group {{ tm_group }}
+  ignore_errors: yes
   register: _tm_group_exists
 
 - name: Create TM system group
@@ -19,6 +20,7 @@
 - name: Does the TM system user exist yet?
   command: |
     getent passwd {{ tm_group }}
+  ignore_errors: yes
   register: _tm_user_exists
 
 - name: Create TM system user
@@ -49,31 +51,11 @@
   loop: "{{ tm_admins }}"
   when: ansible_env.ANSIBLE_CONTAINER is undefined
 
-- name: Allow tm_user to use SLURM's `sacctmgr`
+- name: Allow tm_user to control TM services
   become: yes
-  lineinfile:
+  template:
+    src: 'sudoers.j2'
     dest: '/etc/sudoers.d/tissuemaps'
-    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/sacctmgr"
-    state: present
-    create: yes
-
-- name: Allow tm_user to control TM services (I)
-  become: yes
-  lineinfile:
-    dest: '/etc/sudoers.d/tissuemaps'
-    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl {{ item[0] }} {{ item[1] }}"
-    state: present
-    create: yes
-  with_nested:
-    # actions
-    - ['start', 'restart', 'stop', 'update']
-    # services
-    - ['tm_server', 'tm_httpd', 'tm_jobdaemon']
-
-- name: Allow tm_user to control TM services (II)
-  become: yes
-  lineinfile:
-    dest: '/etc/sudoers.d/tissuemaps'
-    line: "{{ tm_user }} ALL=(root) NOPASSWD:/usr/bin/supervisorctl reread"
-    state: present
-    create: yes
+    owner: root
+    group: root
+    mode: 0440

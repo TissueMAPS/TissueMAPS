@@ -1,4 +1,4 @@
-# Copyright (C) 2016 University of Zurich.
+# Copyright (C) 2016, 2019 University of Zurich.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,11 @@ import yaml
 import pytest
 import inspect
 import importlib
+
+# see: https://stackoverflow.com/a/27519509/459543
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/unicode",
+    lambda loader, node: node.value)
 
 
 def _check_module_structure(name):
@@ -44,7 +49,7 @@ def _check_module_parameters(name, handles_filename):
     module = importlib.import_module('jtmodules.%s' % name)
     functions = inspect.getmembers(module, predicate=inspect.isfunction)
     with open(handles_filename, 'r') as f:
-        handles_description = yaml.load(f)
+        handles_description = yaml.safe_load(f)
     input_handles_names = [h['name'] for h in handles_description['input']]
     for func_name, func in functions:
         if func_name == 'main':

@@ -45,6 +45,11 @@ from yattag import Doc as XML, indent
 
 from tmclient.api import TmClient
 
+# see: https://stackoverflow.com/a/27519509/459543
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/unicode",
+    lambda loader, node: node.value)
+
 
 ## aux functions
 
@@ -750,7 +755,7 @@ def load_test_params(dataset_dir, filename='TEST.yml'):
                 .format(basename(filename), dataset_dir))
     logging.debug("Loading test parameters file `%s` ...", filename)
     with open(filename) as stream:
-        test_params = yaml.load(stream)
+        test_params = yaml.safe_load(stream)
     logging.info("Loaded parameters for datasets: %r", test_params.keys())
     return test_params
 
@@ -867,11 +872,11 @@ def write_junit_xml(report, tests_file, dataset_dir, dataset_name=None):
               help=("Whether to use the `tm_client` command (`cli`)"
                     " or the `TmClient` Python object API (`api`)."
                     " to perform requests to the server."))
-@click.option('-i', '--polling-interval', '--interval',
+@click.option('-i', '--interval', '--polling-interval',
               type=int, default=30,
               help=("How often to poll for status updates"
                     " when running workflows."))
-@click.option('-j', '--jobs', '--concurrent',
+@click.option('-j', '--concurrent', '--jobs',
               type=int, default=1,
               help=("Test this many datasets in parallel."
                     " Use '-j0' to run on as many threads"
@@ -887,7 +892,7 @@ def write_junit_xml(report, tests_file, dataset_dir, dataset_name=None):
 @click.option('--aggregate/--no-aggregate', default=False,
               help=("Write a single JUnit XML report"
                     " containing results for all datasets."))
-@click.option('-n', '--no-act', '--just-print',
+@click.option('-n', '--just-print', '--no-act',
               is_flag=True, default=False,
               help=("Only print what would be executed,"
                     " but do not perform any actual"

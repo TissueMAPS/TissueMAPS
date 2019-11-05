@@ -19,6 +19,11 @@ from tmdeploy.inventory import HOSTNAME_FORMAT
 from tmdeploy.errors import SetupDescriptionError, SetupEnvironmentError
 from tmdeploy.utils import to_yaml, to_json
 
+# see: https://stackoverflow.com/a/27519509/459543
+yaml.SafeLoader.add_constructor(
+    "tag:yaml.org,2002:python/unicode",
+    lambda loader, node: node.value)
+
 logger = logging.getLogger(os.path.basename(__file__))
 
 REQUIRED_TM_GROUPS = {
