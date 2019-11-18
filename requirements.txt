@@ -100,5 +100,5 @@ tables==3.4.2
 tox==2.7.0
 traitlets==4.3.2
 tzlocal==1.4
-Werkzeug==0.12.1
+Werkzeug==0.15.3
 whichcraft==0.4.0
