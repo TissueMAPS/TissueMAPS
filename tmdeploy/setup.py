@@ -66,7 +66,7 @@ def find_scripts():
 
 setuptools.setup(
     name='tmdeploy',
-    version='0.4.3',  # use bumpversion to advance
+    version='0.5.0',  # use bumpversion to advance
     description='TissueMAPS deployment in virtual environments.',
     url='https://github.com/tissuemaps/tmdeploy',
     author='Markus D. Herrmann',
