@@ -83,7 +83,7 @@ pytz==2017.2
 PyWavelets==0.5.2
 PyYAML==3.12
 redis==2.10.5
-requests==2.13.0
+requests==2.20.0
 rpy2==2.8.5
 scikit-image==0.13.0
 scikit-learn==0.18.1
