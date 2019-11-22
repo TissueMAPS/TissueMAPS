@@ -32,6 +32,7 @@ except ImportError:
     from io import StringIO
 from subprocess import check_call, check_output, CalledProcessError
 import tempfile
+from functools import reduce
 
 import cv2
 from prettytable import PrettyTable
@@ -2255,7 +2256,7 @@ class TmClient(HttpClient):
                     cv2.MORPH_GRADIENT,
                     kernel)
             return map(outline, cropped_obj_masks)
-        segmentation_contours = find_segmentation_contours(cropped_obj_masks)
+        segmentation_contours = list(find_segmentation_contours(cropped_obj_masks))
 
         # function to overlay the mask and the channel-images
         def imoverlay(img, mask, color, alpha=0.6):
