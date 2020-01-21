@@ -69,6 +69,40 @@
               Remove
             </button>
 
+          </div>
+
+          <p>Select <b>object types</b> that should be available in the pipeline:</p>
+          <p></p>
+
+          <div class="col-sm-12">
+            <form class="form-horizontal">
+              <div class="form-group"
+                  ng-repeat="object in project.pipe.description.input.objects">
+
+                <select class="form-control" id="objectName"
+                    ng-model="object.name"
+                    ng-options="n for n in getSelectableInputObjectNames($index)">
+                </select>
+
+              </div>
+            </form>
+          </div>
+
+          <div btn-group role="group">
+            <button type="button" class="btn btn-default"
+                                  ng-click="addInputObject()">
+              <i class="fa fa-plus"></i>
+              Add
+            </button>
+
+            <button type="button" class="btn btn-default"
+                                ng-click="removeInputObject()">
+              <i class="fa fa-minus"></i>
+              Remove
+            </button>
+          </div>
+
+          <div btn-group role="group">
             <button type="button" class="btn btn-default"
                                 ng-click="listJobs()">
               <i class="fa fa-list-ol"></i>
@@ -187,7 +221,7 @@
 
                 <select class="form-control" id="objectName"
                     ng-model="object.name"
-                    ng-options="n for n in getSelectableObjectNames($index)">
+                    ng-options="n for n in getSelectableOutputObjectNames($index)">
                 </select>
 
                 <span>Represent as polygons</span>
@@ -199,13 +233,13 @@
 
           <div btn-group role="group">
             <button type="button" class="btn btn-default"
-                                  ng-click="addObject()">
+                                  ng-click="addOutputObject()">
               <i class="fa fa-plus"></i>
               Add
             </button>
 
             <button type="button" class="btn btn-default"
-                                ng-click="removeObject()">
+                                ng-click="removeOutputObject()">
               <i class="fa fa-minus"></i>
               Remove
             </button>

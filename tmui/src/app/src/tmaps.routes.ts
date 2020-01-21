@@ -313,6 +313,10 @@ angular.module('tmaps.ui')
             channels: ['experiment', 'projectService', '$stateParams',
                         function(experiment, projectService, $stateParams) {
                         return projectService.getChannels(experiment.id);
+            }],
+            objects: ['experiment', 'projectService', '$stateParams',
+                        function(experiment, projectService, $stateParams) {
+                        return projectService.getObjectTypes(experiment.id);
             }]
         },
         views: {

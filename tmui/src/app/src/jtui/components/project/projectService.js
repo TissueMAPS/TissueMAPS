@@ -108,6 +108,18 @@ angular.module('jtui.project')
         return(channelsDef.promise)
     }
 
+    function getObjectTypes(experimentID) {
+
+        var objectTypesDef = $q.defer();
+        var url = '/jtui/experiments/' + experimentID + '/available_object_types';
+        $http.get(url).success(function (data) {
+            // console.log('available object types: ', data.object_types)
+            objectTypesDef.resolve(data.object_types)
+        });
+
+        return(objectTypesDef.promise)
+    }
+
     function getModuleFigure(experimentID, moduleName, jobID) {
 
         var figureDef = $q.defer();
@@ -168,6 +180,7 @@ angular.module('jtui.project')
     return({
         getProject: getProject,
         getChannels: getChannels,
+        getObjectTypes: getObjectTypes,
         getModuleFigure: getModuleFigure,
         saveProject: saveProject,
         checkProject: checkProject,

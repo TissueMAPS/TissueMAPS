@@ -349,8 +349,8 @@ class PipelineChannelInputDescription(object):
         correct: bool, optional
             whether images should be corrected (default: ``True``)
         '''
-        self.name = name
-        self.correct = correct
+        self._name = name
+        self._correct = correct
 
     @property
     def name(self):
@@ -391,7 +391,7 @@ class PipelineObjectInputDescription(object):
     should be made available to the pipeline.
     '''
 
-    __slots__ = ('name', )
+    __slots__ = ('_name', )
 
     def __init__(self, name):
         '''
@@ -400,7 +400,7 @@ class PipelineObjectInputDescription(object):
         name: str
             name of the object type
         '''
-        self.name = name
+        self._name = name
 
     @property
     def name(self):
@@ -411,7 +411,7 @@ class PipelineObjectInputDescription(object):
     def name(self, value):
         if not isinstance(value, basestring):
             raise TypeError('Attribute "name" must have type basestring.')
-        self._name = str(name)
+        self._name = str(value)
 
     def to_dict(self):
         '''Returns attribute "name" as key-value pair.
