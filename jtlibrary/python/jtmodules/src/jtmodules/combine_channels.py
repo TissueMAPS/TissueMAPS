@@ -65,17 +65,12 @@ def main(image_1, image_2, weight_1, weight_2, plot=False):
     else:
         raise ValueError('The two images must have unsigned integer type.')
 
-    #logger.info('cast images to type float for arythmetics')
-    #img_1 = mh.stretch(image_1, 0, 1, float)
-    #img_2 = mh.stretch(image_2, 0, 1, float)
     logger.info('combine images using the provided weights')
-    #combined_image = img_1 * weight_1 + img_2 * weight_2
     combined_image = image_1 * weight_1 + image_2 * weight_2
     # Set all values below 0 to 0
     combined_image[combined_image < 0] = 0
     combined_image[combined_image > max_val] = max_val
     logger.info('cast combined image back to correct data type')
-    #combined_image = mh.stretch(combined_image, 0, max_val, image_1.dtype)
 
     # Cast image to the same type as the input image
     combined_image = combined_image.astype(image_1.dtype)
