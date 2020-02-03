@@ -31,8 +31,58 @@
 .. contents::
 
 
-v0.5.x (*in development*)
-=========================
+v0.5.x
+======
+
+The minor version change is warranted by the many changes on the
+deployment side (basically, the Ansible playbooks were completely
+rewritten); little has changed however on the side of TM
+functionality.
+
+New features
+------------
+
+* New module ``use_label_image`` to import segmentation images
+  produced by external utilities (e.g. CellProfiler)
+
+Deployment changes
+------------------
+
+* Allow deploying TissueMAPS as an arbitrary user.
+* Only read one GC3Pie configuration file. Environmental variable
+  ``GC3PIE_CONF`` takes precendence; otherwise the default
+  ``~/.gc3/gc3pie.conf`` is used.
+* Set PostGreSQL-related env vars. So that running `psql` when
+    TissueMAPS' environment is loaded connects you to the relevant DB.
+* ``tm_deploy``: Do *not* grant SSH port access to the world.
+    SSH access should be only granted to the admin's computers through the
+    "default" security group (or any other security group that can be
+    added to the VMs).
+* ``tm_deploy``: Allow selecting Git repo and branch for TissueMAPS sources.
+* Consolidate requirements for all packages into a single
+  ``requirements.txt`` file. Only ``tmclient/`` and ``tmdeploy/`` keep
+  their own requirements lists, since they are more likely to be
+  installed independently of the server code.
+
+Important bug fixes
+-------------------
+
+* ``tm_client``: Raise error if path for acquisition dir registration is invalid.
+* Fix oder of x and y coordinates in centroid (#173), thanks to @scottberry
+* Improved separate clumps module (#170), thanks to Joel Luehti
+* Protect against non-consecutive labels in label image (#168), thanks to @scottberry
+* Fix ``IndexError`` in computing morphology features. Occasionally,
+  ``skimage.regionprops`` will not compute features for a certain
+  labelled object.  In this case, fill the corresponding row with
+  NaN's.
+* Use ``yaml.safe_load()`` instead of insecure ``yaml.load()``. This
+  silences the warnings that newer versions of PyYAML emit when
+  ``yaml.load()`` is used with the default loader.
+* Raise memory limit for "init" and "collect" jobs to 2500MB.  Having
+  a hard-coded limit independent of experiment size is still a bug,
+  but at least the new limit seems to be fine in most cases found so
+  far at the Pelkmans Lab.
+
 
 v0.4.3
 ======
@@ -50,8 +100,8 @@ New features
   given mapobject with segmentation countours overlaid (thanks to
   Micha Mueller)
 
-Deployment chages
------------------
+Deployment changes
+------------------
 
 There are a number of changes in the way TissueMAPS is deployed by `tm_deploy`:
 
