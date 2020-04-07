@@ -94,23 +94,46 @@ class Classification(Classifier):
             unique_labels=unique_labels, label_map=label_map
         )
 
-        training_set = self.load_feature_values(
-            mapobject_type_name, feature_names, labels.keys()
-        )
-        logger.info('train classifier')
-        model, scaler = self.train_supervised(
-            training_set, labels, method, n_fold_cv
+        # Save the labels used for this classification
+        logger.info('Save current selections')
+        # TODO: Make the name entered in the interface appear as the name of the saved selection
+        # Also deal with potential name duplications here
+        # name = payload['name']
+
+        # TODO: Create a "predicted labels" kind of pandas.Series for the labels.keys()
+        # keys are mapobject ids, values are the actual labels
+        # mapobject ids should be indices of the pandas Series afterwards
+        label_series = pd.DataFrame().from_dict(labels, orient='index').squeeze()
+        logger.info("Created a results series of type {}".format(type(label_series)))
+
+        label_result_id = self.register_result(
+             submission_id, mapobject_type_name,
+             result_type='SupervisedClassifierToolResult',
+             unique_labels=unique_labels, label_map=label_map
+         )
+
+        self.save_result_values(
+            mapobject_type_name, label_result_id, label_series
         )
 
-        n_test = 10**5
-        logger.debug('set batch size to %d', n_test)
-        batches = self.partition_mapobjects(mapobject_type_name, n_test)
-        for i, mapobject_ids in enumerate(batches):
-            logger.info('predict labels for batch #%d', i)
-            test_set = self.load_feature_values(
-                mapobject_type_name, feature_names, mapobject_ids
-            )
-            predicted_labels = self.predict(test_set, model, scaler)
-            self.save_result_values(
-                mapobject_type_name, result_id, predicted_labels
-            )
+        # # Train the classifier
+        # training_set = self.load_feature_values(
+        #     mapobject_type_name, feature_names, labels.keys()
+        # )
+        # logger.info('train classifier')
+        # model, scaler = self.train_supervised(
+        #     training_set, labels, method, n_fold_cv
+        # )
+        #
+        # n_test = 10**5
+        # logger.debug('set batch size to %d', n_test)
+        # batches = self.partition_mapobjects(mapobject_type_name, n_test)
+        # for i, mapobject_ids in enumerate(batches):
+        #     logger.info('predict labels for batch #%d', i)
+        #     test_set = self.load_feature_values(
+        #         mapobject_type_name, feature_names, mapobject_ids
+        #     )
+        #     predicted_labels = self.predict(test_set, model, scaler)
+        #     self.save_result_values(
+        #         mapobject_type_name, result_id, predicted_labels
+        #     )
