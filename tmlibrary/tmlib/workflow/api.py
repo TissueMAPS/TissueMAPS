@@ -688,7 +688,7 @@ class WorkflowStepAPI(object):
         # program being run; although 2'500MB seems a lot, it has
         # shown to be barely enough for `illuminati init` jobs in
         # large experiments.  (But is plenty for most other uses.)
-        memory = 3500  # MB
+        memory = 15000  # MB
         cores = 1
         job = InitJob(
             step_name=self.step_name,
@@ -731,7 +731,7 @@ class WorkflowStepAPI(object):
         )
         # FIXME: See similar comment in `create_init_job` about the
         # amount of memory to allocate.
-        memory = 3500  # MB
+        memory = 15000  # MB
         cores = 1
         job = CollectJob(
             step_name=self.step_name,
