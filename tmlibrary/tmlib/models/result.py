@@ -204,6 +204,38 @@ class SupervisedClassifierToolResult(ScalarToolResult):
             label_map=label_map, unique_labels=unique_labels, **extra_attributes
         )
 
+class SavedSelectionsToolResult(ScalarToolResult):
+
+    '''Results of a saved selection tool
+    '''
+
+    __mapper_args__ = {'polymorphic_identity': 'SavedSelectionsToolResult'}
+
+    def __init__(self, submission_id, tool_name, mapobject_type_id,
+            unique_labels, label_map, **extra_attributes):
+        '''
+        Parameters
+        ----------
+        submission_id: int
+            ID of the respective job
+            :class:`Submission <tmlib.models.submission.Submission>`
+        tool_name: str
+            name of the :class:`Tool <tmlib.tools.base.Tool>` that generated
+            the result
+        mapobject_type_id: int
+            ID of the selected
+            :class:`MapobjectType <tmlib.models.mapobject.MapobjectType>`
+        unique_labels : List[int]
+            unique label values
+        label_map : dict[float, str]
+            mapping of label value to color strings of format ``"#ffffff"``
+        **extra_attributes: dict, optional
+            additional tool-specific attributes that be need to be saved
+        '''
+        super(SavedSelectionsToolResult, self).__init__(
+            submission_id, tool_name, mapobject_type_id,
+            label_map=label_map, unique_labels=unique_labels, **extra_attributes
+        )
 
 class ContinuousToolResult(ToolResult):
 
@@ -399,4 +431,3 @@ class LabelValues(ExperimentModel):
             '<LabelValues(id=%r, tpoint=%r, mapobject_id=%r)>'
             % (self.id, self.tpoint, self.mapobject_id)
         )
-

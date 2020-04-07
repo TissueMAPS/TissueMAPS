@@ -119,12 +119,15 @@ class Classification(Classifier):
         label_array = np.array(labels.values())
         label_series = pd.Series(label_array, index=index)
 
+        # TODO: Handle name inputs & parsing
+        name = 'SavedSelection'
+
         label_result_id = self.register_result(
-             submission_id, mapobject_type_name,
-             result_type='SupervisedClassifierToolResult',
+             submission_id, name,
+             result_type='SavedSelectionsToolResult',
              unique_labels=unique_labels, label_map=label_map
         )
-
+        logger.info(label_map)
         logger.info(label_series)
 
         self.save_result_values(
