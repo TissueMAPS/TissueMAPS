@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 import logging
+import pandas as pd
 
 import tmlib.models as tm
 from tmlib.utils import same_docstring_as
@@ -100,17 +101,31 @@ class Classification(Classifier):
         # Also deal with potential name duplications here
         # name = payload['name']
 
-        # TODO: Create a "predicted labels" kind of pandas.Series for the labels.keys()
-        # keys are mapobject ids, values are the actual labels
-        # mapobject ids should be indices of the pandas Series afterwards
-        label_series = pd.DataFrame().from_dict(labels, orient='index').squeeze()
-        logger.info("Created a results series of type {}".format(type(label_series)))
+        # Create a MultiIndex pandas.Series for the input labels, because
+        # the save_results_values expects such a pandas Series.
+        # Keys are mapobject ids, values are the actual labels
+        # TODO: Don't hard-code tpoint 0. Check how it's done in
+        # load_feature_values
+
+        indices = []
+        tpoint = 0
+        for label in labels.keys():
+            indices.append((label, tpoint))
+
+        index = pd.MultiIndex.from_tuples(
+            indices, names=['mapobject_id', 'tpoint']
+        )
+
+        label_array = np.array(labels.values())
+        label_series = pd.Series(label_array, index=index)
 
         label_result_id = self.register_result(
              submission_id, mapobject_type_name,
              result_type='SupervisedClassifierToolResult',
              unique_labels=unique_labels, label_map=label_map
-         )
+        )
+
+        logger.info(label_series)
 
         self.save_result_values(
             mapobject_type_name, label_result_id, label_series
