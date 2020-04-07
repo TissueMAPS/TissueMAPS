@@ -89,11 +89,11 @@ class Classification(Classifier):
             label_map[float(i)] = {'name': cls['name'], 'color': cls['color']}
 
         unique_labels = np.unique(labels.values())
-        result_id = self.register_result(
-            submission_id, mapobject_type_name,
-            result_type='SupervisedClassifierToolResult',
-            unique_labels=unique_labels, label_map=label_map
-        )
+        #result_id = self.register_result(
+        #    submission_id, mapobject_type_name,
+        #    result_type='SupervisedClassifierToolResult',
+        #    unique_labels=unique_labels, label_map=label_map
+        #)
 
         # Save the labels used for this classification
         logger.info('Save current selections')
@@ -123,12 +123,10 @@ class Classification(Classifier):
         name = 'SavedSelection'
 
         label_result_id = self.register_result(
-             submission_id, name,
-             result_type='SavedSelectionsToolResult',
+             submission_id, mapobject_type_name,
+             result_type='SavedSelectionsToolResult', name=name,
              unique_labels=unique_labels, label_map=label_map
         )
-        logger.info(label_map)
-        logger.info(label_series)
 
         self.save_result_values(
             mapobject_type_name, label_result_id, label_series
