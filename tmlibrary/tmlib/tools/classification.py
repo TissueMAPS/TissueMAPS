@@ -90,38 +90,8 @@ class Classification(Classifier):
 
         unique_labels = np.unique(labels.values())
 
-        # Save the labels used for this classification
-        logger.info('Save current selections')
-
-        # Create a MultiIndex pandas.Series for the input labels, because
-        # the save_results_values expects such a pandas Series.
-        # Keys are mapobject ids, values are the actual labels
-        indices = []
-        # TODO: Don't hard-code tpoint 0. Check how it's done in
-        # load_feature_values
-        tpoint = 0
-        for label in labels.keys():
-            indices.append((label, tpoint))
-
-        index = pd.MultiIndex.from_tuples(
-            indices, names=['mapobject_id', 'tpoint']
-        )
-
-        label_array = np.array(labels.values())
-        label_series = pd.Series(label_array, index=index)
-
-        # TODO: Handle name parsing from the interface
-        name = 'PlacedLabels'
-
-        label_result_id = self.register_result(
-             submission_id, mapobject_type_name,
-             result_type='SavedSelectionsToolResult', name=name,
-             unique_labels=unique_labels, label_map=label_map
-        )
-
-        self.save_result_values(
-            mapobject_type_name, label_result_id, label_series
-        )
+        # Save the selections made in the viewer
+        self.save_selections(submission_id, mapobject_type_name, labels, label_map)
 
         # Train the classifier
         result_id = self.register_result(
@@ -149,3 +119,39 @@ class Classification(Classifier):
             self.save_result_values(
                 mapobject_type_name, result_id, predicted_labels
             )
+
+    def save_selections(submission_id, mapobject_type_name, labels, label_map):
+        # Save the labels used for this classification
+        logger.info('Save current selections')
+
+        # Create a MultiIndex pandas.Series for the input labels, because
+        # the save_results_values expects such a pandas Series.
+        # Keys are mapobject ids, values are the actual labels
+        indices = []
+        # TODO: Don't hard-code tpoint 0. Check how it's done in
+        # load_feature_values
+        tpoint = 0
+        for label in labels.keys():
+            indices.append((label, tpoint))
+
+        index = pd.MultiIndex.from_tuples(
+            indices, names=['mapobject_id', 'tpoint']
+        )
+
+        label_array = np.array(labels.values())
+        label_series = pd.Series(label_array, index=index)
+
+        # TODO: Handle name parsing from the interface
+        name = 'PlacedLabels'
+
+        unique_labels = np.unique(labels.values())
+
+        label_result_id = self.register_result(
+             submission_id, mapobject_type_name,
+             result_type='SavedSelectionsToolResult', name=name,
+             unique_labels=unique_labels, label_map=label_map
+        )
+
+        self.save_result_values(
+            mapobject_type_name, label_result_id, label_series
+        )
