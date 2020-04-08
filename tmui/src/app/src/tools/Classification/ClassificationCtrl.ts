@@ -23,6 +23,7 @@ class ClassificationCtrl extends ToolCtrl {
 
     method: string = 'randomforest';
     nCrossvalidations: number = 5;
+    name: string = 'Classification'
 
     constructor(public $scope: ClassificationScope,
                 public viewer: Viewer) {
@@ -50,7 +51,8 @@ class ClassificationCtrl extends ToolCtrl {
                 method: this.method,
                 n_fold_cv: this.nCrossvalidations
             },
-            task: 'classification'
+            task: 'saveLabels',
+            name: this.name
         });
 
         this.sendRequest({
@@ -61,7 +63,8 @@ class ClassificationCtrl extends ToolCtrl {
                 method: this.method,
                 n_fold_cv: this.nCrossvalidations
             },
-            task: 'saveLabels'
+            task: 'classification',
+            name: this.name
         });
     }
 }

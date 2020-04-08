@@ -149,10 +149,12 @@ class Classification(Classifier):
 
         unique_labels = np.unique(labels.values())
 
+        result_name = payload['name'] + '-' + str(submission_id)
+
         # Train the classifier
         result_id = self.register_result(
            submission_id, mapobject_type_name,
-           result_type='SupervisedClassifierToolResult',
+           result_type='SupervisedClassifierToolResult', name=result_name,
            unique_labels=unique_labels, label_map=label_map
         )
         logger.info('Result id')
@@ -182,9 +184,6 @@ class Classification(Classifier):
         logger.info('Save current selections')
         mapobject_type_name = payload['chosen_object_type']
 
-        if method not in self.__options__['method']:
-            raise ValueError('Unknown method "%s".' % method)
-
         labels = dict()
         label_map = dict()
         for i, cls in enumerate(payload['training_classes']):
@@ -211,13 +210,13 @@ class Classification(Classifier):
         label_series = pd.Series(label_array, index=index)
 
         # TODO: Handle name parsing from the interface
-        name = 'PlacedLabels' + '-' + str(submission_id)
+        label_name = payload['name'] + '-Labels-' + str(submission_id)
 
         unique_labels = np.unique(labels.values())
 
         label_result_id = self.register_result(
              submission_id, mapobject_type_name,
-             result_type='SavedSelectionsToolResult', name=name,
+             result_type='SavedSelectionsToolResult', name=label_name,
              unique_labels=unique_labels, label_map=label_map
         )
         logger.info('Label ID')
