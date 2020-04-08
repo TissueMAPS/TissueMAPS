@@ -219,7 +219,7 @@ class Classification(Classifier):
 
         label_result_id = self.register_result(
              submission_id, mapobject_type_name,
-             result_type='SavedSelectionsToolResult', name=label_name,
+             result_type='SupervisedClassifierToolResult', name=label_name,
              unique_labels=unique_labels, label_map=label_map
         )
         logger.info('Label ID')
