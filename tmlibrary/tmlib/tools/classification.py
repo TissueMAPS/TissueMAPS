@@ -85,7 +85,7 @@ class Classification(Classifier):
         elif payload['task'] == 'saveLabels':
             self.save_selections(submission_id, payload)
         else:
-            raise Exception('Tool {} is not implemented'.format(payload['task']))
+            raise ValueError('Tool {} is not implemented'.format(payload['task']))
 
 
     def perform_classification(self, submission_id, payload):
@@ -120,7 +120,7 @@ class Classification(Classifier):
         payload: dict
             description of the tool job
         '''
-        logger.info('perform supervised classification')
+        logger.debug('perform supervised classification')
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
         method = payload['options']['method']
@@ -131,9 +131,10 @@ class Classification(Classifier):
 
         labels = dict()
         label_map = dict()
-        for i, cls in enumerate(payload['training_classes']):
-            labels.update({j: float(i) for j in cls['object_ids']})
-            label_map[float(i)] = {'name': cls['name'], 'color': cls['color']}
+        for cls_id, cls in enumerate(payload['training_classes']):
+            labels.update({val: float(cls_id) for val in cls['object_ids']})
+            label_map[float(cls_id)] = {'name': cls['name'],
+                                        'color': cls['color']}
 
         unique_labels = np.unique(labels.values())
 
@@ -143,12 +144,11 @@ class Classification(Classifier):
 
         # Train the classifier
         result_id = self.register_result(
-           submission_id, mapobject_type_name,
-           result_type='SupervisedClassifierToolResult', name=result_name,
-           unique_labels=unique_labels, label_map=label_map
+            submission_id, mapobject_type_name,
+            result_type='SupervisedClassifierToolResult', name=result_name,
+            unique_labels=unique_labels, label_map=label_map
         )
-        logger.info('Result id')
-        logger.info(result_id)
+
         training_set = self.load_feature_values(
             mapobject_type_name, feature_names, labels.keys()
         )
@@ -202,29 +202,29 @@ class Classification(Classifier):
         payload: dict
             description of the tool job
         '''
-        logger.info('Save current selections')
+        logger.debug('Saving current selections for submission id: '
+                     + str(submission_id))
         mapobject_type_name = payload['chosen_object_type']
 
         labels = dict()
         label_map = dict()
-        for i, cls in enumerate(payload['training_classes']):
-            labels.update({j: float(i) for j in cls['object_ids']})
-            label_map[float(i)] = {'name': cls['name'], 'color': cls['color']}
+        for cls_id, cls in enumerate(payload['training_classes']):
+            labels.update({val: float(cls_id) for val in cls['object_ids']})
+            label_map[float(cls_id)] = {'name': cls['name'],
+                                        'color': cls['color']}
 
         unique_labels = np.unique(labels.values())
 
         # Create a MultiIndex pandas.Series for the input labels, because
         # the save_results_values expects such a pandas Series.
         # Keys are mapobject ids, values are the actual labels
-        indices = []
         # Hard-coding tpoint = 0 is suboptimal, but I don't know how I
         # would get the actual tpoint information and as far as I can see, it
         # does not matter. It's just required to create the same kind of data
         # structure to be saved as in perform_classification.
         # To fix this, check how it's done in load_feature_values
         tpoint = 0
-        for label in labels.keys():
-            indices.append((label, tpoint))
+        indices = [(label, tpoint) for label in labels.keys()]
 
         index = pd.MultiIndex.from_tuples(
             indices, names=['mapobject_id', 'tpoint']
@@ -237,15 +237,12 @@ class Classification(Classifier):
         # input names after character 20. (limited by database settings)
         label_name = payload['name'][:20] + '-Lbs-' + str(submission_id)
 
-        unique_labels = np.unique(labels.values())
-
         label_result_id = self.register_result(
              submission_id, mapobject_type_name,
              result_type='SupervisedClassifierToolResult', name=label_name,
              unique_labels=unique_labels, label_map=label_map
         )
-        logger.info('Label ID')
-        logger.info(label_result_id)
+
         self.save_result_values(
             mapobject_type_name, label_result_id, label_series
         )
