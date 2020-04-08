@@ -62,7 +62,8 @@ class Classification(Classifier):
                 "options": {
                     "method": str,
                     "n_fold_cv": int
-                }
+                },
+                "task": str (either 'classification' or 'saveLabels')
 
             }
 
@@ -73,6 +74,64 @@ class Classification(Classifier):
         payload: dict
             description of the tool job
         '''
+        if payload['task'] == 'classification':
+            self.perform_classification(submission_id, payload)
+        elif payload['task'] == 'saveLabels':
+            self.save_selections(submission_id, payload)
+        else:
+            raise Exception('Tool {} is not implemented'.format(payload['task']))
+        # logger.info('perform supervised classification')
+        # mapobject_type_name = payload['chosen_object_type']
+        # feature_names = payload['selected_features']
+        # method = payload['options']['method']
+        # n_fold_cv = payload['options']['n_fold_cv']
+        #
+        # if method not in self.__options__['method']:
+        #     raise ValueError('Unknown method "%s".' % method)
+        #
+        # labels = dict()
+        # label_map = dict()
+        # for i, cls in enumerate(payload['training_classes']):
+        #     labels.update({j: float(i) for j in cls['object_ids']})
+        #     label_map[float(i)] = {'name': cls['name'], 'color': cls['color']}
+        #
+        # unique_labels = np.unique(labels.values())
+
+        # # Save the selections made in the viewer
+        # self.save_selections(submission_id, mapobject_type_name, labels, label_map)
+        # import time
+        # time.sleep(15)
+        #
+        # # Train the classifier
+        # result_id = self.register_result(
+        #    submission_id, mapobject_type_name,
+        #    result_type='SupervisedClassifierToolResult',
+        #    unique_labels=unique_labels, label_map=label_map
+        # )
+        # logger.info('Result id')
+        # logger.info(result_id)
+        # training_set = self.load_feature_values(
+        #     mapobject_type_name, feature_names, labels.keys()
+        # )
+        # logger.info('train classifier')
+        # model, scaler = self.train_supervised(
+        #     training_set, labels, method, n_fold_cv
+        # )
+        #
+        # n_test = 10**5
+        # logger.debug('set batch size to %d', n_test)
+        # batches = self.partition_mapobjects(mapobject_type_name, n_test)
+        # for i, mapobject_ids in enumerate(batches):
+        #     logger.info('predict labels for batch #%d', i)
+        #     test_set = self.load_feature_values(
+        #         mapobject_type_name, feature_names, mapobject_ids
+        #     )
+        #     predicted_labels = self.predict(test_set, model, scaler)
+        #     self.save_result_values(
+        #         mapobject_type_name, result_id, predicted_labels
+        #     )
+
+    def perform_classification(self, submission_id, payload):
         logger.info('perform supervised classification')
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
@@ -90,11 +149,6 @@ class Classification(Classifier):
 
         unique_labels = np.unique(labels.values())
 
-        # Save the selections made in the viewer
-        self.save_selections(submission_id, mapobject_type_name, labels, label_map)
-        import time
-        time.sleep(15)
-        
         # Train the classifier
         result_id = self.register_result(
            submission_id, mapobject_type_name,
@@ -123,11 +177,21 @@ class Classification(Classifier):
             self.save_result_values(
                 mapobject_type_name, result_id, predicted_labels
             )
-        
 
-    def save_selections(self, submission_id, mapobject_type_name, labels, label_map):
-        # Save the labels used for this classification
+    def save_selections(self, submission_id, payload):
         logger.info('Save current selections')
+        mapobject_type_name = payload['chosen_object_type']
+
+        if method not in self.__options__['method']:
+            raise ValueError('Unknown method "%s".' % method)
+
+        labels = dict()
+        label_map = dict()
+        for i, cls in enumerate(payload['training_classes']):
+            labels.update({j: float(i) for j in cls['object_ids']})
+            label_map[float(i)] = {'name': cls['name'], 'color': cls['color']}
+
+        unique_labels = np.unique(labels.values())
 
         # Create a MultiIndex pandas.Series for the input labels, because
         # the save_results_values expects such a pandas Series.

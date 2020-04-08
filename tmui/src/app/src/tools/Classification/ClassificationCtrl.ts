@@ -49,7 +49,19 @@ class ClassificationCtrl extends ToolCtrl {
             options: {
                 method: this.method,
                 n_fold_cv: this.nCrossvalidations
-            }
+            },
+            task: 'classification'
+        });
+
+        this.sendRequest({
+            chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
+            selected_features: selectedFeatures,
+            training_classes: trainingClasses,
+            options: {
+                method: this.method,
+                n_fold_cv: this.nCrossvalidations
+            },
+            task: 'saveLabels'
         });
     }
 }
