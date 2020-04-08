@@ -45,7 +45,12 @@ class Classification(Classifier):
 
     def process_request(self, submission_id, payload):
         '''Processes a client tool request and inserts the generated result
-        into the database.
+        into the database. This function delegates to one of two helper
+        functions depending on the input. Because TissueMaps generates a single
+        submission_id per request and the submission id is required to save
+        results to the database, doing everything within the same submission
+        does not work and this more complicated way was necessary.
+
         The `payload` is expected to have the following form::
 
             {
@@ -63,7 +68,8 @@ class Classification(Classifier):
                     "method": str,
                     "n_fold_cv": int
                 },
-                "task": str (either 'classification' or 'saveLabels')
+                "task": str (either 'classification' or 'saveLabels'),
+                name: str
 
             }
 
@@ -80,58 +86,40 @@ class Classification(Classifier):
             self.save_selections(submission_id, payload)
         else:
             raise Exception('Tool {} is not implemented'.format(payload['task']))
-        # logger.info('perform supervised classification')
-        # mapobject_type_name = payload['chosen_object_type']
-        # feature_names = payload['selected_features']
-        # method = payload['options']['method']
-        # n_fold_cv = payload['options']['n_fold_cv']
-        #
-        # if method not in self.__options__['method']:
-        #     raise ValueError('Unknown method "%s".' % method)
-        #
-        # labels = dict()
-        # label_map = dict()
-        # for i, cls in enumerate(payload['training_classes']):
-        #     labels.update({j: float(i) for j in cls['object_ids']})
-        #     label_map[float(i)] = {'name': cls['name'], 'color': cls['color']}
-        #
-        # unique_labels = np.unique(labels.values())
 
-        # # Save the selections made in the viewer
-        # self.save_selections(submission_id, mapobject_type_name, labels, label_map)
-        # import time
-        # time.sleep(15)
-        #
-        # # Train the classifier
-        # result_id = self.register_result(
-        #    submission_id, mapobject_type_name,
-        #    result_type='SupervisedClassifierToolResult',
-        #    unique_labels=unique_labels, label_map=label_map
-        # )
-        # logger.info('Result id')
-        # logger.info(result_id)
-        # training_set = self.load_feature_values(
-        #     mapobject_type_name, feature_names, labels.keys()
-        # )
-        # logger.info('train classifier')
-        # model, scaler = self.train_supervised(
-        #     training_set, labels, method, n_fold_cv
-        # )
-        #
-        # n_test = 10**5
-        # logger.debug('set batch size to %d', n_test)
-        # batches = self.partition_mapobjects(mapobject_type_name, n_test)
-        # for i, mapobject_ids in enumerate(batches):
-        #     logger.info('predict labels for batch #%d', i)
-        #     test_set = self.load_feature_values(
-        #         mapobject_type_name, feature_names, mapobject_ids
-        #     )
-        #     predicted_labels = self.predict(test_set, model, scaler)
-        #     self.save_result_values(
-        #         mapobject_type_name, result_id, predicted_labels
-        #     )
 
     def perform_classification(self, submission_id, payload):
+        '''Processes a client tool request and inserts the generated result
+        into the database. This function deals with the classification jobs.
+        The `payload` is expected to have the following form::
+
+            {
+                "choosen_object_type": str,
+                "selected_features": [str, ...],
+                "training_classes": [
+                    {
+                        "name": str,
+                        "object_ids": [int, ...],
+                        "color": str
+                    },
+                    ...
+                ],
+                "options": {
+                    "method": str,
+                    "n_fold_cv": int
+                },
+                "task": str (either 'classification' or 'saveLabels'),
+                name: str
+
+            }
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding job submission
+        payload: dict
+            description of the tool job
+        '''
         logger.info('perform supervised classification')
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
@@ -183,6 +171,37 @@ class Classification(Classifier):
             )
 
     def save_selections(self, submission_id, payload):
+        '''Processes a client tool request and inserts the generated result
+        into the database. This function deals with the save labels jobs.
+        The `payload` is expected to have the following form::
+
+            {
+                "choosen_object_type": str,
+                "selected_features": [str, ...],
+                "training_classes": [
+                    {
+                        "name": str,
+                        "object_ids": [int, ...],
+                        "color": str
+                    },
+                    ...
+                ],
+                "options": {
+                    "method": str,
+                    "n_fold_cv": int
+                },
+                "task": str (either 'classification' or 'saveLabels'),
+                name: str
+
+            }
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding job submission
+        payload: dict
+            description of the tool job
+        '''
         logger.info('Save current selections')
         mapobject_type_name = payload['chosen_object_type']
 
@@ -198,8 +217,11 @@ class Classification(Classifier):
         # the save_results_values expects such a pandas Series.
         # Keys are mapobject ids, values are the actual labels
         indices = []
-        # TODO: Don't hard-code tpoint 0. Check how it's done in
-        # load_feature_values
+        # Hard-coding tpoint = 0 is suboptimal, but I don't know how I
+        # would get the actual tpoint information and as far as I can see, it
+        # does not matter. It's just required to create the same kind of data
+        # structure to be saved as in perform_classification.
+        # To fix this, check how it's done in load_feature_values
         tpoint = 0
         for label in labels.keys():
             indices.append((label, tpoint))

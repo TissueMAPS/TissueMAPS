@@ -45,9 +45,6 @@ class ClassificationCtrl extends ToolCtrl {
             });
         });
 
-        console.log(this.runClassifier);
-        console.log(this.saveLabels);
-
         if(this.saveLabels){
           this.sendRequest({
               chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
