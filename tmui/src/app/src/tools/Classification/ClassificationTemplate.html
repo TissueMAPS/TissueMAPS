@@ -33,6 +33,15 @@
     <input type="text" class="form-control" ng-model="toolCtrl.name">
   </p>
 
+  <p class="form-group">
+    <form>
+      <input type="checkbox" name="runClassifier" value="runClassifier" ng-model="runClassifier">
+      <label for="runClassifier"> Run Classifier</label><br>
+      <input type="checkbox" name="saveLabels" value="saveLabels" ng-model="runClassifier">
+      <label for="saveLabels"> Save Selection Labels</label>
+    </form>
+  </p>
+
   <p>
     <button class="btn btn-primary"
       ng-disabled="featureWidget.selectedFeatures.length == 0"

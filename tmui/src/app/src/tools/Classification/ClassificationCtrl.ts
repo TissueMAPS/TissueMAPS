@@ -23,7 +23,9 @@ class ClassificationCtrl extends ToolCtrl {
 
     method: string = 'randomforest';
     nCrossvalidations: number = 5;
-    name: string = 'Classification'
+    name: string = 'Classification';
+    runClassifier : true;
+    saveLabels : true;
 
     constructor(public $scope: ClassificationScope,
                 public viewer: Viewer) {
