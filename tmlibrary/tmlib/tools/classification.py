@@ -92,13 +92,17 @@ class Classification(Classifier):
 
         # Save the selections made in the viewer
         self.save_selections(submission_id, mapobject_type_name, labels, label_map)
-
+        import time
+        time.sleep(15)
+        
         # Train the classifier
         result_id = self.register_result(
            submission_id, mapobject_type_name,
            result_type='SupervisedClassifierToolResult',
            unique_labels=unique_labels, label_map=label_map
         )
+        logger.info('Result id')
+        logger.info(result_id)
         training_set = self.load_feature_values(
             mapobject_type_name, feature_names, labels.keys()
         )
@@ -119,8 +123,9 @@ class Classification(Classifier):
             self.save_result_values(
                 mapobject_type_name, result_id, predicted_labels
             )
+        
 
-    def save_selections(submission_id, mapobject_type_name, labels, label_map):
+    def save_selections(self, submission_id, mapobject_type_name, labels, label_map):
         # Save the labels used for this classification
         logger.info('Save current selections')
 
@@ -142,7 +147,7 @@ class Classification(Classifier):
         label_series = pd.Series(label_array, index=index)
 
         # TODO: Handle name parsing from the interface
-        name = 'PlacedLabels'
+        name = 'PlacedLabels' + '-' + str(submission_id)
 
         unique_labels = np.unique(labels.values())
 
@@ -151,7 +156,8 @@ class Classification(Classifier):
              result_type='SavedSelectionsToolResult', name=name,
              unique_labels=unique_labels, label_map=label_map
         )
-
+        logger.info('Label ID')
+        logger.info(label_result_id)
         self.save_result_values(
             mapobject_type_name, label_result_id, label_series
         )

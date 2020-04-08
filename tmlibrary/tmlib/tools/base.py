@@ -470,7 +470,7 @@ class Tool(object):
                 if 'name' in result_attributes.keys():
                     name = result_attributes['name']
                 else:
-                    name = self.__class__.__name__ + 'TEST'
+                    name = self.__class__.__name__
                 result = tm.ToolResult(
                     submission_id, name, mapobject_type.id,
                     type=result_type, **result_attributes
