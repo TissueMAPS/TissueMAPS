@@ -77,7 +77,8 @@ abstract class LabelLayer extends VectorTileLayer {
             var geomType = feature.getGeometry().getType();
             var label = feature.get('label');
             var fillColor: ol.Color;
-            if (label === "None") {
+            if (label == "None") {
+                // If no label is provided, color the cell in black
                 fillColor = ol.Color.BLACK;
             } else {
                 fillColor = this.colorMapper(label).toOlColor();
