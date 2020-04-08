@@ -78,7 +78,10 @@ abstract class LabelLayer extends VectorTileLayer {
             var label = feature.get('label');
             var fillColor: ol.Color;
             if (label == "None") {
-                fillColor = '#000000'
+                // If no label is provided, color the cell in black
+                // This string assignment results in an error when using 
+                // gulp --prod, but it still works fine in the interface. 
+                fillColor = '#000000';
             } else {
                 fillColor = this.colorMapper(label).toOlColor();
             }
