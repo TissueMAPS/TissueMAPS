@@ -35,14 +35,14 @@
 
   <p class="form-group">
     <form>
-      <input type="checkbox" name="runClassifier" value="runClassifier"
-              ng-model="runClassifier" ng-true-value="'true'"
-              ng-false-value="'false'">
-      <label for="runClassifier"> Run Classifier</label>
-      <input type="checkbox" name="saveLabels" value="saveLabels"
-              ng-model="saveLabels" ng-true-value="'true'" 
-              ng-false-value="'false'">
-      <label for="saveLabels"> Save Selection Labels</label>
+      <input type="checkbox"
+              ng-model="toolCtrl.runClassifier" ng-true-value="true"
+              ng-false-value="false">
+      <label> Run Classifier</label>
+      <input type="checkbox"
+              ng-model="toolCtrl.saveLabels" ng-true-value="true" 
+              ng-false-value="false">
+      <label> Save Selection Labels</label>
     </form>
   </p>
 

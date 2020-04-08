@@ -24,8 +24,8 @@ class ClassificationCtrl extends ToolCtrl {
     method: string = 'randomforest';
     nCrossvalidations: number = 5;
     name: string = 'Classification';
-    runClassifier : string = "true";
-    saveLabels : string = "true";
+    runClassifier: boolean = true;
+    saveLabels: boolean = true;
 
     constructor(public $scope: ClassificationScope,
                 public viewer: Viewer) {
@@ -45,7 +45,10 @@ class ClassificationCtrl extends ToolCtrl {
             });
         });
 
-        if(this.saveLabels == "true"){
+        console.log(this.runClassifier);
+        console.log(this.saveLabels);
+
+        if(this.saveLabels){
           this.sendRequest({
               chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
               selected_features: selectedFeatures,
@@ -59,7 +62,7 @@ class ClassificationCtrl extends ToolCtrl {
           });
         }
 
-        if(this.runClassifier == "true"){
+        if(this.runClassifier){
           this.sendRequest({
               chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
               selected_features: selectedFeatures,
