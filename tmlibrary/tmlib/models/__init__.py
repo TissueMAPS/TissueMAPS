@@ -154,6 +154,6 @@ from tmlib.models.file import (
 from tmlib.models.result import (
     ToolResult, LabelValues,
     ScalarToolResult, SupervisedClassifierToolResult,
-    ContinuousToolResult, HeatmapToolResult
+    SavedSelectionsToolResult, ContinuousToolResult, HeatmapToolResult
 )
 from tmlib.models.plot import Plot

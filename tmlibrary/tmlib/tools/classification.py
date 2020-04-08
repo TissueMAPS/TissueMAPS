@@ -149,7 +149,9 @@ class Classification(Classifier):
 
         unique_labels = np.unique(labels.values())
 
-        result_name = payload['name'] + '-' + str(submission_id)
+        # Build a name for the result, max. 30 characters in total. Cuts off
+        # input names after character 20. (limited by database settings)
+        result_name = payload['name'][:20] + '-' + str(submission_id)
 
         # Train the classifier
         result_id = self.register_result(
@@ -209,8 +211,9 @@ class Classification(Classifier):
         label_array = np.array(labels.values())
         label_series = pd.Series(label_array, index=index)
 
-        # TODO: Handle name parsing from the interface
-        label_name = payload['name'] + '-Labels-' + str(submission_id)
+        # Build a name for the result, max. 30 characters in total. Cuts off
+        # input names after character 20. (limited by database settings)
+        label_name = payload['name'][:20] + '-Lbs-' + str(submission_id)
 
         unique_labels = np.unique(labels.values())
 
