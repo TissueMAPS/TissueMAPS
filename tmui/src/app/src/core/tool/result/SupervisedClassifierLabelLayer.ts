@@ -16,8 +16,10 @@ class SupervisedClassifierLabelLayer extends LabelLayer {
         var colorMap = {};
         // Convert from hex strings to Color objects
         for (var label in this.attributes.label_map) {
+          console.log(label)
             // Workaround for NAs: Cells that were not assigned a label
           if (!label) {
+            console.log('Going in undefined workflow')
             colorMap[label] = Color.fromHex('#000000');
           }
           else {

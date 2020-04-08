@@ -77,10 +77,10 @@ abstract class LabelLayer extends VectorTileLayer {
             var geomType = feature.getGeometry().getType();
             var label = feature.get('label');
             var fillColor: ol.Color;
-            if (label !== undefined) {
-                fillColor = this.colorMapper(label).toOlColor();
+            if (label == "None") {
+                fillColor = '#40000000'
             } else {
-                throw new Error('Feature has no property "label"!');
+                fillColor = this.colorMapper(label).toOlColor();
             }
             if (geomType === 'Polygon' || geomType === 'Point') {
                 return [
