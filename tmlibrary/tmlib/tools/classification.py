@@ -68,7 +68,7 @@ class Classification(Classifier):
                     "method": str,
                     "n_fold_cv": int
                 },
-                "task": str (either 'classification' or 'saveLabels'),
+                "task": str (either 'classification' or 'save_labels'),
                 name: str
 
             }
@@ -82,7 +82,7 @@ class Classification(Classifier):
         '''
         if payload['task'] == 'classification':
             self.perform_classification(submission_id, payload)
-        elif payload['task'] == 'saveLabels':
+        elif payload['task'] == 'save_labels':
             self.save_selections(submission_id, payload)
         else:
             raise ValueError('Tool {} is not implemented'.format(payload['task']))
@@ -108,7 +108,7 @@ class Classification(Classifier):
                     "method": str,
                     "n_fold_cv": int
                 },
-                "task": str (either 'classification' or 'saveLabels'),
+                "task": str (either 'classification' or 'save_labels'),
                 name: str
 
             }
@@ -190,7 +190,7 @@ class Classification(Classifier):
                     "method": str,
                     "n_fold_cv": int
                 },
-                "task": str (either 'classification' or 'saveLabels'),
+                "task": str (either 'classification' or 'save_labels'),
                 name: str
 
             }

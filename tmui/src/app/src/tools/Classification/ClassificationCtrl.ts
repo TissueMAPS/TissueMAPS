@@ -25,7 +25,7 @@ class ClassificationCtrl extends ToolCtrl {
     nCrossvalidations: number = 5;
     name: string = 'Classification';
     runClassifier: boolean = true;
-    saveLabels: boolean = true;
+    save_labels: boolean = true;
 
     constructor(public $scope: ClassificationScope,
                 public viewer: Viewer) {
@@ -45,7 +45,7 @@ class ClassificationCtrl extends ToolCtrl {
             });
         });
 
-        if(this.saveLabels){
+        if(this.save_labels){
           this.sendRequest({
               chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
               selected_features: selectedFeatures,
@@ -54,7 +54,7 @@ class ClassificationCtrl extends ToolCtrl {
                   method: this.method,
                   n_fold_cv: this.nCrossvalidations
               },
-              task: 'saveLabels',
+              task: 'save_labels',
               name: this.name
           });
         }
