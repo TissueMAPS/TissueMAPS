@@ -1,5 +1,5 @@
 ---
-version: 0.0.2
+version: 0.0.3
 
 input:
 
@@ -16,12 +16,12 @@ input:
     - name: weight_1
       type: Numeric
       value:
-      help: Weight for first image (positive integer).
+      help: Weight for first image.
 
     - name: weight_2
       type: Numeric
       value:
-      help: Weight for second image (positive integer).
+      help: Weight for second image.
 
     - name: plot
       type: Plot
