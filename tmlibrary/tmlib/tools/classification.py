@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy as np
 import logging
+import pandas as pd
 
 import tmlib.models as tm
 from tmlib.utils import same_docstring_as
@@ -44,7 +45,12 @@ class Classification(Classifier):
 
     def process_request(self, submission_id, payload):
         '''Processes a client tool request and inserts the generated result
-        into the database.
+        into the database. This function delegates to one of two helper
+        functions depending on the input. Because TissueMaps generates a single
+        submission_id per request and the submission id is required to save
+        results to the database, doing everything within the same submission
+        does not work and this more complicated way was necessary.
+
         The `payload` is expected to have the following form::
 
             {
@@ -61,7 +67,9 @@ class Classification(Classifier):
                 "options": {
                     "method": str,
                     "n_fold_cv": int
-                }
+                },
+                "task": str (either 'classification' or 'save_labels'),
+                name: str
 
             }
 
@@ -72,7 +80,47 @@ class Classification(Classifier):
         payload: dict
             description of the tool job
         '''
-        logger.info('perform supervised classification')
+        if payload['task'] == 'classification':
+            self.perform_classification(submission_id, payload)
+        elif payload['task'] == 'save_labels':
+            self.save_selections(submission_id, payload)
+        else:
+            raise ValueError('Tool {} is not implemented'.format(payload['task']))
+
+
+    def perform_classification(self, submission_id, payload):
+        '''Processes a client tool request and inserts the generated result
+        into the database. This function deals with the classification jobs.
+        The `payload` is expected to have the following form::
+
+            {
+                "choosen_object_type": str,
+                "selected_features": [str, ...],
+                "training_classes": [
+                    {
+                        "name": str,
+                        "object_ids": [int, ...],
+                        "color": str
+                    },
+                    ...
+                ],
+                "options": {
+                    "method": str,
+                    "n_fold_cv": int
+                },
+                "task": str (either 'classification' or 'save_labels'),
+                name: str
+
+            }
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding job submission
+        payload: dict
+            description of the tool job
+        '''
+        logger.debug('perform supervised classification')
         mapobject_type_name = payload['chosen_object_type']
         feature_names = payload['selected_features']
         method = payload['options']['method']
@@ -83,14 +131,21 @@ class Classification(Classifier):
 
         labels = dict()
         label_map = dict()
-        for i, cls in enumerate(payload['training_classes']):
-            labels.update({j: float(i) for j in cls['object_ids']})
-            label_map[float(i)] = {'name': cls['name'], 'color': cls['color']}
+        for cls_id, cls in enumerate(payload['training_classes']):
+            labels.update({val: float(cls_id) for val in cls['object_ids']})
+            label_map[float(cls_id)] = {'name': cls['name'],
+                                        'color': cls['color']}
 
         unique_labels = np.unique(labels.values())
+
+        # Build a name for the result, max. 30 characters in total. Cuts off
+        # input names after character 20. (limited by database settings)
+        result_name = payload['name'][:20] + '-' + str(submission_id)
+
+        # Train the classifier
         result_id = self.register_result(
             submission_id, mapobject_type_name,
-            result_type='SupervisedClassifierToolResult',
+            result_type='SupervisedClassifierToolResult', name=result_name,
             unique_labels=unique_labels, label_map=label_map
         )
 
@@ -114,3 +169,80 @@ class Classification(Classifier):
             self.save_result_values(
                 mapobject_type_name, result_id, predicted_labels
             )
+
+    def save_selections(self, submission_id, payload):
+        '''Processes a client tool request and inserts the generated result
+        into the database. This function deals with the save labels jobs.
+        The `payload` is expected to have the following form::
+
+            {
+                "choosen_object_type": str,
+                "selected_features": [str, ...],
+                "training_classes": [
+                    {
+                        "name": str,
+                        "object_ids": [int, ...],
+                        "color": str
+                    },
+                    ...
+                ],
+                "options": {
+                    "method": str,
+                    "n_fold_cv": int
+                },
+                "task": str (either 'classification' or 'save_labels'),
+                name: str
+
+            }
+
+        Parameters
+        ----------
+        submission_id: int
+            ID of the corresponding job submission
+        payload: dict
+            description of the tool job
+        '''
+        logger.debug('Saving current selections for submission id: '
+                     + str(submission_id))
+        mapobject_type_name = payload['chosen_object_type']
+
+        labels = dict()
+        label_map = dict()
+        for cls_id, cls in enumerate(payload['training_classes']):
+            labels.update({val: float(cls_id) for val in cls['object_ids']})
+            label_map[float(cls_id)] = {'name': cls['name'],
+                                        'color': cls['color']}
+
+        unique_labels = np.unique(labels.values())
+
+        # Create a MultiIndex pandas.Series for the input labels, because
+        # the save_results_values expects such a pandas Series.
+        # Keys are mapobject ids, values are the actual labels
+        # Hard-coding tpoint = 0 is suboptimal, but I don't know how I
+        # would get the actual tpoint information and as far as I can see, it
+        # does not matter. It's just required to create the same kind of data
+        # structure to be saved as in perform_classification.
+        # To fix this, check how it's done in load_feature_values
+        tpoint = 0
+        indices = [(label, tpoint) for label in labels.keys()]
+
+        index = pd.MultiIndex.from_tuples(
+            indices, names=['mapobject_id', 'tpoint']
+        )
+
+        label_array = np.array(labels.values())
+        label_series = pd.Series(label_array, index=index)
+
+        # Build a name for the result, max. 30 characters in total. Cuts off
+        # input names after character 20. (limited by database settings)
+        label_name = payload['name'][:20] + '-Lbs-' + str(submission_id)
+
+        label_result_id = self.register_result(
+             submission_id, mapobject_type_name,
+             result_type='SupervisedClassifierToolResult', name=label_name,
+             unique_labels=unique_labels, label_map=label_map
+        )
+
+        self.save_result_values(
+            mapobject_type_name, label_result_id, label_series
+        )

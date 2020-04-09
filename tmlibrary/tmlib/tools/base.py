@@ -465,8 +465,11 @@ class Tool(object):
                 filter_by(submission_id=submission_id).\
                 one_or_none()
             if result is None:
+                # Define the name. If a name is set in the input args, that's the
+                # name. Otherwise, it's the name of the submitting class
+                name = result_attributes.get('name', self.__class__.__name__)
                 result = tm.ToolResult(
-                    submission_id, self.__class__.__name__, mapobject_type.id,
+                    submission_id, name, mapobject_type.id,
                     type=result_type, **result_attributes
                 )
                 session.add(result)

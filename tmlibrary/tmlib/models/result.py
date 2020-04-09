@@ -399,4 +399,3 @@ class LabelValues(ExperimentModel):
             '<LabelValues(id=%r, tpoint=%r, mapobject_id=%r)>'
             % (self.id, self.tpoint, self.mapobject_id)
         )
-

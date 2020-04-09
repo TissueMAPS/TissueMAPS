@@ -23,6 +23,9 @@ class ClassificationCtrl extends ToolCtrl {
 
     method: string = 'randomforest';
     nCrossvalidations: number = 5;
+    name: string = 'Classification';
+    runClassifier: boolean = true;
+    save_labels: boolean = true;
 
     constructor(public $scope: ClassificationScope,
                 public viewer: Viewer) {
@@ -42,14 +45,32 @@ class ClassificationCtrl extends ToolCtrl {
             });
         });
 
-        this.sendRequest({
-            chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
-            selected_features: selectedFeatures,
-            training_classes: trainingClasses,
-            options: {
-                method: this.method,
-                n_fold_cv: this.nCrossvalidations
-            }
-        });
+        if(this.save_labels){
+          this.sendRequest({
+              chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
+              selected_features: selectedFeatures,
+              training_classes: trainingClasses,
+              options: {
+                  method: this.method,
+                  n_fold_cv: this.nCrossvalidations
+              },
+              task: 'save_labels',
+              name: this.name
+          });
+        }
+
+        if(this.runClassifier){
+          this.sendRequest({
+              chosen_object_type: this.$scope.mapobjectTypeWidget.selectedType,
+              selected_features: selectedFeatures,
+              training_classes: trainingClasses,
+              options: {
+                  method: this.method,
+                  n_fold_cv: this.nCrossvalidations
+              },
+              task: 'classification',
+              name: this.name
+          });
+        }
     }
 }
