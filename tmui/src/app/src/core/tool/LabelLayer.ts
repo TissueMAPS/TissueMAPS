@@ -81,7 +81,7 @@ abstract class LabelLayer extends VectorTileLayer {
                 // If no label is provided, color the cell in black
                 // This string assignment results in an error when using 
                 // gulp --prod, but it still works fine in the interface. 
-                fillColor = '#000000';
+                fillColor = Color.BLACK.toOlColor();
             } else {
                 fillColor = this.colorMapper(label).toOlColor();
             }
