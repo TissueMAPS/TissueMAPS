@@ -31,6 +31,27 @@
 .. contents::
 
 
+v0.6.0
+======
+
+Feature addition release; note that the `tm_client Python package on pypi`_
+hasn't been updated since TM v0.3.3 (October 2017), similarly to the
+`TissueMaps docker image`_ (August 2017).
+
+.. _`tm_client Python package on pypi`: https://pypi.org/project/tmclient/
+.. _`TissueMaps docker image`: https://hub.docker.com/r/tissuemaps/
+
+
+New features
+------------
+
+* Add experiment list ordering capability, by Joel Luehti (`PR #2 on pelkmanslab/TissueMAPS`_)
+* Save training labels of classifiers, by Joel Luehti (`PR #4 on pelkmanslab/TissueMAPS`_)
+
+.. _`PR #2 on pelkmanslab/TissueMAPS`: https://github.com/pelkmanslab/TissueMAPS/pull/2
+.. _`PR #4 on pelkmanslab/TissueMAPS`: https://github.com/pelkmanslab/TissueMAPS/pull/4
+
+
 v0.5.x
 ======
 
@@ -68,7 +89,7 @@ Important bug fixes
 -------------------
 
 * ``tm_client``: Raise error if path for acquisition dir registration is invalid.
-* Fix oder of x and y coordinates in centroid (#173), thanks to @scottberry
+* Fix order of x and y coordinates in centroid (#173), thanks to @scottberry
 * Improved separate clumps module (#170), thanks to Joel Luehti
 * Protect against non-consecutive labels in label image (#168), thanks to @scottberry
 * Fix ``IndexError`` in computing morphology features. Occasionally,
