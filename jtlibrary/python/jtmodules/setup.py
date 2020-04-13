@@ -16,7 +16,7 @@ import setuptools
 
 setuptools.setup(
     name='jtmodules',
-    version='0.5.0',  # use bumpversion to advance
+    version='0.6.0',  # use bumpversion to advance
     description='Jterator modules.',
     author='Markus D. Herrmann',
     url='https://github.com/tissuemaps/jtmodules',

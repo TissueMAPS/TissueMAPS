@@ -15,7 +15,7 @@ import setuptools
 
 setuptools.setup(
     name='jtlibrary',
-    version='0.5.0',  # use bumpversion to advance
+    version='0.6.0',  # use bumpversion to advance
     description='Jterator library.',
     author='Markus D. Herrmann',
     url='https://github.com/tissuemaps/jtlibrary',
