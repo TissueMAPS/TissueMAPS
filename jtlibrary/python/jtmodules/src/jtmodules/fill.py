@@ -19,7 +19,7 @@ import mahotas as mh
 
 logger = logging.getLogger(__name__)
 
-VERSION = '0.0.1'
+VERSION = '0.0.2'
 
 Output = collections.namedtuple('Output', ['filled_mask', 'figure'])
 

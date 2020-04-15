@@ -1,10 +1,10 @@
 ---
-version: 0.0.1
+version: 0.0.2
 
 input:
 
     - name: mask
-      type: BinaryImage
+      type: MaskImage
       key:
       help: >
         Mask with holes in connected pixel components that
