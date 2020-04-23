@@ -48,7 +48,7 @@
 
   <p>
     <button class="btn btn-primary"
-      ng-disabled="featureWidget.selectedFeatures.length == 0"
-      ng-click="toolCtrl.doClassify()">Classify</button>
+      ng-disabled="((featureWidget.selectedFeatures.length) == 0 && (toolCtrl.runClassifier)) || ((! toolCtrl.runClassifier) && (! toolCtrl.save_labels))"
+      ng-click="toolCtrl.doClassify()">Run</button>
   </p>
 </div>
