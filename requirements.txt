@@ -37,7 +37,7 @@ ipaddress==1.0.18
 ipython-genutils==0.2.0
 itsdangerous==0.24
 javabridge==1.0.14
-Jinja2==2.9.6
+Jinja2==2.11.3
 jsonschema==2.6.0
 jupyter-core==4.3.0
 lxml==3.7.3
