@@ -68,7 +68,7 @@ plotly==2.0.7
 pluggy==0.4.0
 prettytable==0.7.2
 psycopg2==2.7.1
-py==1.4.33
+py==1.10.0
 pyasn1==0.2.3
 pycparser==2.17
 PyJWT==1.4.2
