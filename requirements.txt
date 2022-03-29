@@ -59,7 +59,7 @@ opencv-contrib-python==3.2.0.7
 openslide-python==1.1.1
 packaging==16.8
 pandas==0.19.2
-paramiko==2.1.2
+paramiko==2.10.1
 parsedatetime==2.3
 passlib==1.7.1
 pbr==3.0.0
