@@ -42,7 +42,7 @@ jsonschema==2.6.0
 jupyter-core==4.3.0
 lxml==3.7.3
 mahotas==1.4.3
-Mako==1.0.6
+Mako==1.2.2
 MarkupSafe==1.0
 matlab-wrapper==0.9.8
 matplotlib==2.0.0
